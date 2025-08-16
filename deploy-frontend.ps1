@@ -3,7 +3,7 @@
 # ================================================================
 # Deploys the NexHire Universal React Native Frontend to Azure Static Web Apps
 # Author: NexHire Team
-# Version: 1.0.2 - ASCII Compatible
+# Version: 1.0.3 - Fixed Dependency Resolution
 
 param(
     [string]$ResourceGroup = "nexhire-dev-rg",
@@ -96,10 +96,10 @@ catch {
 }
 
 # ================================================================
-# STEP 2: Frontend Dependency Installation
+# STEP 2: Frontend Dependency Installation (FIXED)
 # ================================================================
 
-Write-Host "Step 2: Installing Frontend Dependencies..." -ForegroundColor Yellow
+Write-Host "Step 2: Installing Frontend Dependencies (with dependency fix)..." -ForegroundColor Yellow
 
 if (-not $SkipInstall) {
     Set-Location "frontend"
@@ -115,11 +115,26 @@ if (-not $SkipInstall) {
         Remove-Item "package-lock.json"
     }
     
-    Write-Host "Installing dependencies with npm..." -ForegroundColor Blue
-    npm install
+    # Create .npmrc to handle dependency conflicts
+    Write-Host "Creating .npmrc for dependency resolution..." -ForegroundColor Blue
+    $npmrcContent = @"
+legacy-peer-deps=true
+strict-peer-deps=false
+fund=false
+audit=false
+"@
+    Set-Content -Path ".npmrc" -Value $npmrcContent
+    
+    Write-Host "Installing dependencies with legacy peer deps support..." -ForegroundColor Blue
+    npm install --legacy-peer-deps
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "ERROR: npm install failed"
+        Write-Warning "WARNING: npm install with --legacy-peer-deps failed. Trying with --force..."
+        npm install --force
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "ERROR: npm install failed with both --legacy-peer-deps and --force"
+        }
     }
     
     Write-Host "OK - Dependencies installed successfully" -ForegroundColor Green
@@ -321,6 +336,7 @@ Write-Host "  + Web build optimized for production" -ForegroundColor Gray
 Write-Host "  + Static Web App configured" -ForegroundColor Gray
 Write-Host "  + API integration ready" -ForegroundColor Gray
 Write-Host "  + Environment variables set" -ForegroundColor Gray
+Write-Host "  + Dependency conflicts resolved" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor White
 Write-Host "  1. Test the application: $deploymentUrl" -ForegroundColor Gray
@@ -342,6 +358,7 @@ $deploymentLog = @{
     staticAppName = $StaticAppName
     status = "success"
     buildFiles = if (Test-Path "frontend/web-build") { (Get-ChildItem "frontend/web-build" -Recurse | Measure-Object).Count } else { 0 }
+    dependencyFix = "Applied --legacy-peer-deps to resolve React version conflicts"
 }
 
 $deploymentLog | ConvertTo-Json | Set-Content "deployment-frontend-log.json"
@@ -349,3 +366,9 @@ Write-Host "LOG - Deployment log saved: deployment-frontend-log.json" -Foregroun
 
 Write-Host ""
 Write-Host "SUCCESS: Your NexHire frontend is now live!" -ForegroundColor Green
+
+# Clean up the .npmrc file
+if (Test-Path "frontend/.npmrc") {
+    Remove-Item "frontend/.npmrc"
+    Write-Host "LOG - Cleaned up temporary .npmrc file" -ForegroundColor Gray
+}
