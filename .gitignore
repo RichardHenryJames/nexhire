@@ -37,3 +37,7 @@ Thumbs.db
 # IDE specific
 *.sublime-workspace
 *.vscode/
+
+frontend/web-build/*
+
+frontend/.expo/*
