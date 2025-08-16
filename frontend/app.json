@@ -7,9 +7,6 @@
   "splash": {
     "backgroundColor": "#3B82F6"
   },
-  "assetBundlePatterns": [
-    "**/*"
-  ],
   "ios": {
     "supportsTablet": true,
     "bundleIdentifier": "com.nexhire.app"

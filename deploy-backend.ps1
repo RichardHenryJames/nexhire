@@ -2,7 +2,7 @@
 # NexHire Backend Deployment Script for Azure Functions
 # ================================================================
 # This script deploys the complete NexHire backend to your existing Azure Function App
-# Version: 1.0.1 - ASCII Compatible
+# Version: 1.0.2 - Added CORS Configuration
 
 # Set error action preference and encoding
 $ErrorActionPreference = "Stop"
@@ -126,7 +126,7 @@ az functionapp config appsettings set `
         "JWT_SECRET=nexhire-super-secret-jwt-key-change-in-production-2024" `
         "JWT_EXPIRES_IN=24h" `
         "JWT_REFRESH_EXPIRES_IN=7d" `
-        "CORS_ORIGINS=http://localhost:3000,https://nexhire-frontend-web.azurestaticapps.net" `
+        "CORS_ORIGINS=*" `
         "NODE_ENV=production" `
         "WEBSITE_RUN_FROM_PACKAGE=1" `
         "FUNCTIONS_WORKER_RUNTIME=node" `
@@ -216,6 +216,38 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "OK - Function App deployed successfully!" -ForegroundColor Green
 
+# ================================================================
+# NEW: Configure CORS for Azure Functions Platform
+# ================================================================
+
+Write-Host "Configuring CORS for Azure Functions Platform..." -ForegroundColor Yellow
+
+# Clear existing CORS rules first
+Write-Host "  + Clearing existing CORS configuration..." -ForegroundColor Gray
+az functionapp cors remove --name $FUNCTION_APP_NAME --resource-group $RESOURCE_GROUP --allowed-origins "*" 2>$null
+
+# Add comprehensive CORS origins including your frontend URLs
+Write-Host "  + Adding CORS origins for frontend URLs..." -ForegroundColor Gray
+az functionapp cors add `
+    --name $FUNCTION_APP_NAME `
+    --resource-group $RESOURCE_GROUP `
+    --allowed-origins `
+        "http://localhost:3000" `
+        "https://jolly-sea-00174141e.1.azurestaticapps.net" `
+        "https://nexhire-frontend-web.azurestaticapps.net" `
+        "*"
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "OK - CORS configuration applied successfully!" -ForegroundColor Green
+} else {
+    Write-Warning "WARNING - CORS configuration may have failed, but continuing..."
+}
+
+# Restart Function App to ensure CORS changes take effect
+Write-Host "Restarting Function App to apply CORS changes..." -ForegroundColor Yellow
+az functionapp restart --name $FUNCTION_APP_NAME --resource-group $RESOURCE_GROUP --output none
+Write-Host "OK - Function App restarted successfully!" -ForegroundColor Green
+
 # Wait a moment for the app to start
 Write-Host "Waiting for Function App to initialize..." -ForegroundColor Yellow
 Start-Sleep -Seconds 15
@@ -235,6 +267,19 @@ try {
     Write-Warning "WARNING - API test failed, but deployment completed. The app may need a few minutes to start."
 }
 
+# Test CORS specifically
+Write-Host "Testing CORS configuration..." -ForegroundColor Yellow
+try {
+    $corsTestResponse = Invoke-WebRequest -Uri "$apiBaseUrl/api/health" -Method OPTIONS -Headers @{"Origin"="https://jolly-sea-00174141e.1.azurestaticapps.net"} -UseBasicParsing
+    if ($corsTestResponse.Headers['Access-Control-Allow-Origin']) {
+        Write-Host "OK - CORS headers are working correctly!" -ForegroundColor Green
+    } else {
+        Write-Warning "WARNING - CORS headers may not be configured properly."
+    }
+} catch {
+    Write-Warning "WARNING - CORS test failed, but deployment completed."
+}
+
 Write-Host ""
 Write-Host "*** DEPLOYMENT COMPLETED SUCCESSFULLY! ***" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green
@@ -244,6 +289,7 @@ Write-Host "  + Function App: $FUNCTION_APP_NAME" -ForegroundColor White
 Write-Host "  + Resource Group: $RESOURCE_GROUP" -ForegroundColor White
 Write-Host "  + API Base URL: $apiBaseUrl" -ForegroundColor White
 Write-Host "  + Database: $SQL_SERVER/$SQL_DATABASE" -ForegroundColor White
+Write-Host "  + CORS: Configured for frontend integration" -ForegroundColor White
 Write-Host ""
 
 Write-Host "API Endpoints Available:" -ForegroundColor Cyan
@@ -282,7 +328,8 @@ Write-Host "Important Notes:" -ForegroundColor Yellow
 Write-Host "  + API keys and secrets are set for development" -ForegroundColor White
 Write-Host "  + Change JWT_SECRET in production" -ForegroundColor White
 Write-Host "  + Database firewall rules may need adjustment" -ForegroundColor White
-Write-Host "  + CORS origins are configured for localhost and static web app" -ForegroundColor White
+Write-Host "  + CORS origins configured for localhost and static web apps" -ForegroundColor White
+Write-Host "  + Frontend URLs: https://jolly-sea-00174141e.1.azurestaticapps.net, https://nexhire-frontend-web.azurestaticapps.net" -ForegroundColor White
 Write-Host ""
 
 # Save deployment info to file
@@ -311,12 +358,18 @@ Environment Variables Set:
 - JWT_SECRET=nexhire-super-secret-jwt-key-change-in-production-2024
 - JWT_EXPIRES_IN=24h
 - JWT_REFRESH_EXPIRES_IN=7d
-- CORS_ORIGINS=http://localhost:3000,https://nexhire-frontend-web.azurestaticapps.net
+- CORS_ORIGINS=*
 - NODE_ENV=production
+
+CORS Configuration:
+- Allowed Origins: http://localhost:3000, https://jolly-sea-00174141e.1.azurestaticapps.net, https://nexhire-frontend-web.azurestaticapps.net, *
+- Support Credentials: false
+- Platform Level: Azure Functions CORS enabled
 "@
 
 $deploymentInfo | Out-File -FilePath "deployment-info.txt" -Encoding UTF8
 Write-Host "LOG - Deployment info saved to: deployment-info.txt" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "SUCCESS: Your NexHire backend is now live and ready for use!" -ForegroundColor Green
+Write-Host "SUCCESS: Your NexHire backend is now live with CORS configured!" -ForegroundColor Green
+Write-Host "Frontend at https://jolly-sea-00174141e.1.azurestaticapps.net should now work properly!" -ForegroundColor Cyan

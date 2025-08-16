@@ -44,6 +44,9 @@
 
 import { app } from '@azure/functions';
 
+// FIXED: Import CORS middleware
+import { withErrorHandling, corsHeaders } from './src/middleware';
+
 // Import controllers
 import { 
     register, 
@@ -84,65 +87,65 @@ import {
 // ========================================================================
 
 app.http('auth-register', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'auth/register',
-    handler: register
+    handler: withErrorHandling(register)
 });
 
 app.http('auth-login', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'auth/login',
-    handler: login
+    handler: withErrorHandling(login)
 });
 
 app.http('auth-refresh', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'auth/refresh',
-    handler: refreshToken
+    handler: withErrorHandling(refreshToken)
 });
 
 app.http('users-profile', {
-    methods: ['GET', 'PUT'],
+    methods: ['GET', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/profile',
-    handler: async (req, context) => {
+    handler: withErrorHandling(async (req, context) => {
         if (req.method === 'GET') {
             return await getProfile(req, context);
         } else {
             return await updateProfile(req, context);
         }
-    }
+    })
 });
 
 app.http('users-change-password', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/change-password',
-    handler: changePassword
+    handler: withErrorHandling(changePassword)
 });
 
 app.http('users-verify-email', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/verify-email',
-    handler: verifyEmail
+    handler: withErrorHandling(verifyEmail)
 });
 
 app.http('users-dashboard-stats', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/dashboard-stats',
-    handler: getDashboardStats
+    handler: withErrorHandling(getDashboardStats)
 });
 
 app.http('users-deactivate', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/deactivate',
-    handler: deactivateAccount
+    handler: withErrorHandling(deactivateAccount)
 });
 
 // ========================================================================
@@ -150,23 +153,23 @@ app.http('users-deactivate', {
 // ========================================================================
 
 app.http('jobs', {
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs',
-    handler: async (req, context) => {
+    handler: withErrorHandling(async (req, context) => {
         if (req.method === 'GET') {
             return await getJobs(req, context);
         } else {
             return await createJob(req, context);
         }
-    }
+    })
 });
 
 app.http('jobs-by-id', {
-    methods: ['GET', 'PUT', 'DELETE'],
+    methods: ['GET', 'PUT', 'DELETE', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs/{id}',
-    handler: async (req, context) => {
+    handler: withErrorHandling(async (req, context) => {
         if (req.method === 'GET') {
             return await getJobById(req, context);
         } else if (req.method === 'PUT') {
@@ -174,28 +177,28 @@ app.http('jobs-by-id', {
         } else {
             return await deleteJob(req, context);
         }
-    }
+    })
 });
 
 app.http('jobs-publish', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs/{id}/publish',
-    handler: publishJob
+    handler: withErrorHandling(publishJob)
 });
 
 app.http('jobs-close', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs/{id}/close',
-    handler: closeJob
+    handler: withErrorHandling(closeJob)
 });
 
 app.http('jobs-search', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs/search',
-    handler: searchJobs
+    handler: withErrorHandling(searchJobs)
 });
 
 // ========================================================================
@@ -203,52 +206,52 @@ app.http('jobs-search', {
 // ========================================================================
 
 app.http('applications', {
-    methods: ['POST'],
+    methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications',
-    handler: applyForJob
+    handler: withErrorHandling(applyForJob)
 });
 
 app.http('applications-my', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/my',
-    handler: getMyApplications
+    handler: withErrorHandling(getMyApplications)
 });
 
 app.http('job-applications', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs/{jobId}/applications',
-    handler: getJobApplications
+    handler: withErrorHandling(getJobApplications)
 });
 
 app.http('applications-update-status', {
-    methods: ['PUT'],
+    methods: ['PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/{applicationId}/status',
-    handler: updateApplicationStatus
+    handler: withErrorHandling(updateApplicationStatus)
 });
 
 app.http('applications-withdraw', {
-    methods: ['DELETE'],
+    methods: ['DELETE', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/{applicationId}',
-    handler: withdrawApplication
+    handler: withErrorHandling(withdrawApplication)
 });
 
 app.http('applications-details', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/{applicationId}',
-    handler: getApplicationDetails
+    handler: withErrorHandling(getApplicationDetails)
 });
 
 app.http('applications-stats', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/stats',
-    handler: getApplicationStats
+    handler: withErrorHandling(getApplicationStats)
 });
 
 // ========================================================================
@@ -256,17 +259,17 @@ app.http('applications-stats', {
 // ========================================================================
 
 app.http('reference-job-types', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'reference/job-types',
-    handler: getJobTypes
+    handler: withErrorHandling(getJobTypes)
 });
 
 app.http('reference-currencies', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'reference/currencies',
-    handler: async (req, context) => {
+    handler: withErrorHandling(async (req, context) => {
         // Get currencies reference data
         const { dbService } = await import('./src/services/database.service');
         
@@ -292,7 +295,7 @@ app.http('reference-currencies', {
                 }
             };
         }
-    }
+    })
 });
 
 // ========================================================================
@@ -300,10 +303,10 @@ app.http('reference-currencies', {
 // ========================================================================
 
 app.http('health', {
-    methods: ['GET'],
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'health',
-    handler: async (req, context) => {
+    handler: withErrorHandling(async (req, context) => {
         return {
             status: 200,
             jsonBody: {
@@ -313,7 +316,7 @@ app.http('health', {
                 version: '1.0.0'
             }
         };
-    }
+    })
 });
 
 // ========================================================================
@@ -324,6 +327,7 @@ console.log(' NexHire Backend API - All functions registered');
 console.log(' Total endpoints: 18');
 console.log(' API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('? Ready for deployment to Azure Functions v4');
+console.log('? CORS middleware enabled for all endpoints');
 
 export {};
 

@@ -1,5 +1,5 @@
 ﻿NexHire Backend Deployment Info
-Generated: 08/16/2025 19:29:57
+Generated: 08/16/2025 23:34:00
 
 API Base URL: https://nexhire-api-func.azurewebsites.net
 Function App: nexhire-api-func
@@ -22,5 +22,5 @@ Environment Variables Set:
 - JWT_SECRET=nexhire-super-secret-jwt-key-change-in-production-2024
 - JWT_EXPIRES_IN=24h
 - JWT_REFRESH_EXPIRES_IN=7d
-- CORS_ORIGINS=http://localhost:3000,https://nexhire-frontend-web.azurestaticapps.net
+- CORS_ORIGINS=*
 - NODE_ENV=production
