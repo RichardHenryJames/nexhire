@@ -1,5 +1,5 @@
 NexHire Backend Deployment Info
-Generated: 08/16/2025 13:39:50
+Generated: 08/16/2025 14:58:57
 
 API Base URL: https://nexhire-api-func.azurewebsites.net
 Function App: nexhire-api-func
