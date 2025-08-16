@@ -9,7 +9,9 @@ import {
     extractRequestBody, 
     extractQueryParams,
     validateRequest,
-    paginationSchema
+    paginationSchema,
+    jobApplicationsPaginationSchema,
+    isValidGuid
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
@@ -42,11 +44,10 @@ export const getMyApplications = withAuth(async (req: HttpRequest, context: Invo
     };
 }, ['read:applications']);
 
-// Get applications for a job (employer)
+// Get applications for a job (employer) - FIXED: Use extended validation schema
 export const getJobApplications = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.jobId;
     const params = extractQueryParams(req);
-    const validatedParams = validateRequest<PaginationParams>(paginationSchema, params);
     
     if (!jobId) {
         return {
@@ -54,6 +55,17 @@ export const getJobApplications = withAuth(async (req: HttpRequest, context: Inv
             jsonBody: { success: false, error: 'Job ID is required' }
         };
     }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
+        };
+    }
+    
+    // FIXED: Use extended pagination schema that allows search parameters
+    const validatedParams = validateRequest<PaginationParams>(jobApplicationsPaginationSchema, params);
     
     const statusFilter = params.statusFilter ? parseInt(params.statusFilter as string) : undefined;
     const result = await JobApplicationService.getApplicationsByJob(
@@ -73,7 +85,7 @@ export const getJobApplications = withAuth(async (req: HttpRequest, context: Inv
     };
 }, ['read:applications']);
 
-// Update application status (employer)
+// Update application status (employer) - FIXED: Add GUID validation
 export const updateApplicationStatus = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const applicationId = req.params.applicationId;
     const { statusId, notes } = await extractRequestBody(req);
@@ -82,6 +94,14 @@ export const updateApplicationStatus = withAuth(async (req: HttpRequest, context
         return {
             status: 400,
             jsonBody: { success: false, error: 'Application ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(applicationId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Application ID format' }
         };
     }
     
@@ -105,7 +125,7 @@ export const updateApplicationStatus = withAuth(async (req: HttpRequest, context
     };
 }, ['write:applications']);
 
-// Withdraw application (job seeker)
+// Withdraw application (job seeker) - FIXED: Add GUID validation
 export const withdrawApplication = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const applicationId = req.params.applicationId;
     
@@ -113,6 +133,14 @@ export const withdrawApplication = withAuth(async (req: HttpRequest, context: In
         return {
             status: 400,
             jsonBody: { success: false, error: 'Application ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(applicationId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Application ID format' }
         };
     }
     
@@ -124,7 +152,7 @@ export const withdrawApplication = withAuth(async (req: HttpRequest, context: In
     };
 }, ['write:applications']);
 
-// Get application details
+// Get application details - FIXED: Add GUID validation
 export const getApplicationDetails = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const applicationId = req.params.applicationId;
     
@@ -132,6 +160,14 @@ export const getApplicationDetails = withAuth(async (req: HttpRequest, context: 
         return {
             status: 400,
             jsonBody: { success: false, error: 'Application ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(applicationId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Application ID format' }
         };
     }
     

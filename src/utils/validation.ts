@@ -37,6 +37,13 @@ export class ConflictError extends Error {
     }
 }
 
+// GUID validation utility - FIX for "Conversion failed when converting from a character string to uniqueidentifier"
+export const isValidGuid = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return guidRegex.test(value);
+};
+
 // Response helpers
 export const successResponse = <T>(data: T, message?: string, meta?: any): ApiResponse<T> => ({
     success: true,
@@ -171,19 +178,42 @@ export const applicantProfileSchema = Joi.object({
     tags: Joi.string().optional()
 });
 
+// FIX: Updated job application schema to include availabilityDate
 export const jobApplicationSchema = Joi.object({
     jobID: Joi.string().guid().required(),
     coverLetter: Joi.string().min(50).optional(),
     expectedSalary: Joi.number().positive().optional(),
     expectedCurrencyID: Joi.number().integer().positive().optional(),
-    availableFromDate: Joi.date().min('now').optional()
+    availableFromDate: Joi.date().min('now').optional(),
+    // FIXED: Add availabilityDate field that was causing validation error
+    availabilityDate: Joi.date().min('now').optional()
 });
 
+// FIX: Updated pagination schema to allow search and filter parameters
 export const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     pageSize: Joi.number().integer().min(1).max(100).default(20),
     sortBy: Joi.string().optional(),
     sortOrder: Joi.string().valid('asc', 'desc').default('desc')
+});
+
+// FIX: New extended pagination schema for job applications with search parameters
+export const jobApplicationsPaginationSchema = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    pageSize: Joi.number().integer().min(1).max(100).default(20),
+    sortBy: Joi.string().optional(),
+    sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
+    // FIXED: Add all the parameters that were being rejected
+    search: Joi.string().optional(),
+    q: Joi.string().optional(),
+    filters: Joi.object().optional(),
+    location: Joi.string().optional(),
+    jobType: Joi.string().optional(),
+    experienceLevel: Joi.string().optional(),
+    isRemote: Joi.boolean().optional(),
+    salaryMin: Joi.number().positive().optional(),
+    salaryMax: Joi.number().positive().optional(),
+    statusFilter: Joi.number().integer().optional()
 });
 
 // Validation helper function with proper typing
@@ -228,7 +258,8 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         experienceLevel: query.get('experienceLevel') || undefined,
         isRemote: query.get('isRemote') ? query.get('isRemote') === 'true' : undefined,
         salaryMin: query.get('salaryMin') ? parseInt(query.get('salaryMin')!) : undefined,
-        salaryMax: query.get('salaryMax') ? parseInt(query.get('salaryMax')!) : undefined
+        salaryMax: query.get('salaryMax') ? parseInt(query.get('salaryMax')!) : undefined,
+        statusFilter: query.get('statusFilter') ? parseInt(query.get('statusFilter')!) : undefined
     };
 };
 

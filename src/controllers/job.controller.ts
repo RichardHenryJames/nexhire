@@ -10,7 +10,8 @@ import {
     extractRequestBody, 
     extractQueryParams,
     validateRequest,
-    paginationSchema
+    paginationSchema,
+    isValidGuid
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
@@ -81,7 +82,7 @@ export const getJobs = withErrorHandling(async (req: HttpRequest, context: Invoc
     }
 });
 
-// Get job by ID
+// Get job by ID - FIXED: Add GUID validation
 export const getJobById = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
     
@@ -89,6 +90,14 @@ export const getJobById = withErrorHandling(async (req: HttpRequest, context: In
         return {
             status: 400,
             jsonBody: { success: false, error: 'Job ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
         };
     }
 
@@ -107,7 +116,7 @@ export const getJobById = withErrorHandling(async (req: HttpRequest, context: In
     };
 });
 
-// Update job
+// Update job - FIXED: Add GUID validation
 export const updateJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
     const updateData = await extractRequestBody(req);
@@ -119,6 +128,14 @@ export const updateJob = withAuth(async (req: HttpRequest, context: InvocationCo
         };
     }
 
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
+        };
+    }
+
     const updatedJob = await JobService.updateJob(jobId, updateData, user.userId);
     
     return {
@@ -127,7 +144,7 @@ export const updateJob = withAuth(async (req: HttpRequest, context: InvocationCo
     };
 }, ['write:jobs']);
 
-// Publish job
+// Publish job - FIXED: Add GUID validation
 export const publishJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
     
@@ -135,6 +152,14 @@ export const publishJob = withAuth(async (req: HttpRequest, context: InvocationC
         return {
             status: 400,
             jsonBody: { success: false, error: 'Job ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
         };
     }
 
@@ -146,7 +171,7 @@ export const publishJob = withAuth(async (req: HttpRequest, context: InvocationC
     };
 }, ['write:jobs']);
 
-// Close job
+// Close job - FIXED: Add GUID validation
 export const closeJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
     
@@ -154,6 +179,14 @@ export const closeJob = withAuth(async (req: HttpRequest, context: InvocationCon
         return {
             status: 400,
             jsonBody: { success: false, error: 'Job ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
         };
     }
 
@@ -165,7 +198,7 @@ export const closeJob = withAuth(async (req: HttpRequest, context: InvocationCon
     };
 }, ['write:jobs']);
 
-// Delete job
+// Delete job - FIXED: Add GUID validation
 export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
     
@@ -173,6 +206,14 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
         return {
             status: 400,
             jsonBody: { success: false, error: 'Job ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(jobId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Job ID format' }
         };
     }
 
@@ -193,7 +234,7 @@ export const searchJobs = withErrorHandling(async (req: HttpRequest, context: In
         const safeParams = {
             page: searchParams.page || 1,
             pageSize: searchParams.pageSize || 20,
-            search: searchParams.search || '',
+            search: searchParams.search || searchParams.q || '',
             sortBy: searchParams.sortBy || 'CreatedAt',
             sortOrder: searchParams.sortOrder || 'desc',
             filters: searchParams.filters || {}
@@ -222,7 +263,7 @@ export const searchJobs = withErrorHandling(async (req: HttpRequest, context: In
     }
 });
 
-// Get jobs by organization
+// Get jobs by organization - FIXED: Add GUID validation
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
@@ -238,6 +279,14 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
         return {
             status: 400,
             jsonBody: { success: false, error: 'Organization ID is required' }
+        };
+    }
+
+    // FIXED: Validate GUID format before database call
+    if (!isValidGuid(organizationId)) {
+        return {
+            status: 400,
+            jsonBody: { success: false, error: 'Invalid Organization ID format' }
         };
     }
 
