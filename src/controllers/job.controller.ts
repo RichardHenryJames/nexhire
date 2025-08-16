@@ -15,26 +15,69 @@ import {
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
-// Create job
+// Create job - FIXED: Check UserType instead of Employers table
 export const createJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobData = await extractRequestBody(req);
     
-    // Get user's organization (assuming employer has one organization for now)
-    // In a real app, you might need to pass organizationId in the request
-    const orgQuery = `
-        SELECT OrganizationID FROM Employers 
-        WHERE UserID = @param0 AND CanPostJobs = 1
-    `;
-    const orgResult = await dbService.executeQuery(orgQuery, [user.userId]);
-    
-    if (!orgResult.recordset || orgResult.recordset.length === 0) {
+    // FIXED: Check if user is an Employer by UserType instead of Employers table
+    if (user.userType !== 'Employer') {
         return {
             status: 403,
-            jsonBody: { success: false, error: 'User not authorized to post jobs' }
+            jsonBody: { success: false, error: 'Only employers can post jobs' }
         };
     }
 
-    const organizationID = orgResult.recordset[0].OrganizationID;
+    // Create a default organization for the employer if they don't have one
+    let organizationID;
+    
+    // First check if user already has an organization
+    const existingOrgQuery = `
+        SELECT OrganizationID FROM Employers 
+        WHERE UserID = @param0
+    `;
+    const existingOrgResult = await dbService.executeQuery(existingOrgQuery, [user.userId]);
+    
+    if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
+        organizationID = existingOrgResult.recordset[0].OrganizationID;
+    } else {
+        // Create a default organization and employer profile
+        const { AuthService } = await import('../services/auth.service');
+        organizationID = AuthService.generateUniqueId();
+        const employerID = AuthService.generateUniqueId();
+        
+        // Get user details for organization creation
+        const userQuery = `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`;
+        const userResult = await dbService.executeQuery(userQuery, [user.userId]);
+        const userData = userResult.recordset[0];
+        
+        // Create organization
+        const createOrgQuery = `
+            INSERT INTO Organizations (
+                OrganizationID, Name, Description,
+                Website, IsVerified, CreatedAt, UpdatedAt
+            ) VALUES (
+                @param0, @param1, @param2,
+                '', 0, GETUTCDATE(), GETUTCDATE()
+            )
+        `;
+        const orgName = `${userData.FirstName} ${userData.LastName}'s Company`;
+        const orgDescription = `Organization for ${userData.FirstName} ${userData.LastName}`;
+        
+        await dbService.executeQuery(createOrgQuery, [organizationID, orgName, orgDescription]);
+        
+        // Create employer profile
+        const createEmployerQuery = `
+            INSERT INTO Employers (
+                EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
+                CanScheduleInterviews, CanSendMessages, IsActive, JoinedAt
+            ) VALUES (
+                @param0, @param1, @param2, 1, 1, 1, 1, 1, GETUTCDATE()
+            )
+        `;
+        
+        await dbService.executeQuery(createEmployerQuery, [employerID, user.userId, organizationID]);
+    }
+
     const job = await JobService.createJob(jobData, user.userId, organizationID);
     
     return {

@@ -318,9 +318,8 @@ export default function ProfileScreen() {
                 <Ionicons name="create" size={20} color={colors.white} />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
-            )
+            )}
 
-            }
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Ionicons name="log-out" size={20} color={colors.danger} />
               <Text style={styles.logoutButtonText}>Logout</Text>
