@@ -1,6 +1,7 @@
 # ========================================
 # NexHire API Complete Test Script - IMPROVED
 # Tests all 17 API endpoints with proper error handling
+# Version: 1.0.1 - ASCII Compatible
 # ========================================
 
 param(
@@ -10,14 +11,15 @@ param(
     [switch]$ShowErrors
 )
 
-# Configure PowerShell for better JSON handling
+# Set encoding and configure PowerShell for better JSON handling
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ProgressPreference = 'SilentlyContinue'
 
 # Colors for output
-function Write-Success { param($Message) Write-Host "? $Message" -ForegroundColor Green }
-function Write-Error { param($Message) Write-Host "? $Message" -ForegroundColor Red }
+function Write-Success { param($Message) Write-Host "OK - $Message" -ForegroundColor Green }
+function Write-Error { param($Message) Write-Host "ERROR - $Message" -ForegroundColor Red }
 function Write-Info { param($Message) Write-Host "  $Message" -ForegroundColor Cyan }
-function Write-Warning { param($Message) Write-Host "  $Message" -ForegroundColor Yellow }
+function Write-Warning { param($Message) Write-Host "WARNING - $Message" -ForegroundColor Yellow }
 
 # Global variables
 $global:AccessToken = ""
@@ -138,7 +140,7 @@ function Invoke-ApiTest {
 }
 
 # Start testing
-Write-Host " Starting NexHire API Complete Test Suite - IMPROVED" -ForegroundColor Magenta
+Write-Host "Starting NexHire API Complete Test Suite - IMPROVED" -ForegroundColor Magenta
 Write-Host "Base URL: $BaseUrl" -ForegroundColor Magenta
 Write-Host "Timestamp: $(Get-Date)" -ForegroundColor Magenta
 Write-Host ("=" * 60) -ForegroundColor Magenta
@@ -148,7 +150,7 @@ Write-Host ""
 # 1. REFERENCE DATA TESTS (No Auth Required)
 # ========================================
 
-Write-Host " TESTING REFERENCE DATA APIs" -ForegroundColor Blue
+Write-Host "TESTING REFERENCE DATA APIs" -ForegroundColor Blue
 Write-Host ("-" * 40) -ForegroundColor Blue
 
 # Test 1: Get Job Types
@@ -161,7 +163,7 @@ $currencies = Invoke-ApiTest -Method "GET" -Endpoint "/reference/currencies" -Te
 # 2. AUTHENTICATION TESTS
 # ========================================
 
-Write-Host " TESTING AUTHENTICATION APIs" -ForegroundColor Blue
+Write-Host "TESTING AUTHENTICATION APIs" -ForegroundColor Blue
 Write-Host ("-" * 40) -ForegroundColor Blue
 
 # Test 3: Register User
@@ -200,7 +202,7 @@ if ($registerResponse -and $registerResponse.success) {
 # ========================================
 
 if ($global:AccessToken) {
-    Write-Host " TESTING USER PROFILE APIs" -ForegroundColor Blue
+    Write-Host "TESTING USER PROFILE APIs" -ForegroundColor Blue
     Write-Host ("-" * 40) -ForegroundColor Blue
 
     $authHeaders = @{ "Authorization" = "Bearer $global:AccessToken" }
@@ -225,7 +227,7 @@ if ($global:AccessToken) {
 # 4. JOB MANAGEMENT TESTS
 # ========================================
 
-Write-Host " TESTING JOB MANAGEMENT APIs" -ForegroundColor Blue
+Write-Host "TESTING JOB MANAGEMENT APIs" -ForegroundColor Blue
 Write-Host ("-" * 40) -ForegroundColor Blue
 
 # Test 7: Get All Jobs (FIXED with pagination)
@@ -283,7 +285,7 @@ if ($global:AccessToken) {
 # ========================================
 
 if ($global:AccessToken -and $global:JobId) {
-    Write-Host " TESTING APPLICATION APIs" -ForegroundColor Blue
+    Write-Host "TESTING APPLICATION APIs" -ForegroundColor Blue
     Write-Host ("-" * 40) -ForegroundColor Blue
 
     $authHeaders = @{ "Authorization" = "Bearer $global:AccessToken" }
@@ -314,7 +316,7 @@ if ($global:AccessToken -and $global:JobId) {
 # ADDITIONAL TESTS
 # ========================================
 
-Write-Host " TESTING ADDITIONAL SCENARIOS" -ForegroundColor Blue
+Write-Host "TESTING ADDITIONAL SCENARIOS" -ForegroundColor Blue
 Write-Host ("-" * 40) -ForegroundColor Blue
 
 # Test 16: Invalid endpoint
@@ -328,7 +330,7 @@ $unauthorizedAccess = Invoke-ApiTest -Method "GET" -Endpoint "/users/profile" -T
 # ========================================
 
 Write-Host ""
-Write-Host " DETAILED TEST SUMMARY" -ForegroundColor Magenta
+Write-Host "DETAILED TEST SUMMARY" -ForegroundColor Magenta
 Write-Host ("=" * 60) -ForegroundColor Magenta
 
 $totalTests = $TestResults.Count
@@ -356,16 +358,16 @@ $expectedFailures = $TestResults | Where-Object { $_.TestName -like "*Expected*"
 $unexpectedFailures = $TestResults | Where-Object { $_.Success -eq $false -and $_.TestName -notlike "*Expected*" }
 
 Write-Host "ANALYSIS:" -ForegroundColor White
-Write-Host "? Successful Tests: $passedTests" -ForegroundColor Green
+Write-Host "+ Successful Tests: $passedTests" -ForegroundColor Green
 Write-Host "  Expected Failures: $($expectedFailures.Count)" -ForegroundColor Yellow
-Write-Host "? Unexpected Failures: $($unexpectedFailures.Count)" -ForegroundColor Red
+Write-Host "- Unexpected Failures: $($unexpectedFailures.Count)" -ForegroundColor Red
 Write-Host ""
 
 # Show unexpected failures
 if ($unexpectedFailures.Count -gt 0) {
-    Write-Host " UNEXPECTED FAILURES REQUIRING ATTENTION:" -ForegroundColor Red
+    Write-Host "UNEXPECTED FAILURES REQUIRING ATTENTION:" -ForegroundColor Red
     $unexpectedFailures | ForEach-Object {
-        Write-Host "? $($_.TestName) - Status: $($_.StatusCode) - Error: $($_.Error)" -ForegroundColor Red
+        Write-Host "- $($_.TestName) - Status: $($_.StatusCode) - Error: $($_.Error)" -ForegroundColor Red
     }
     Write-Host ""
 }
@@ -377,18 +379,18 @@ $TestResults | Format-Table -Property TestName, Method, StatusCode, Success, Res
 # Save results to file if requested
 if ($SaveResponses) {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $resultsFile = "nexhire-api-$timestamp.json"
+    $resultsFile = "nexhire-api-test-$timestamp.json"
     $TestResults | ConvertTo-Json -Depth 4 | Out-File -FilePath $resultsFile -Encoding UTF8
     Write-Success "Test results saved to: $resultsFile"
 }
 
 Write-Host ""
-Write-Host " NexHire API Test Suite Complete - IMPROVED!" -ForegroundColor Magenta
+Write-Host "NexHire API Test Suite Complete - IMPROVED!" -ForegroundColor Magenta
 Write-Host "Timestamp: $(Get-Date)" -ForegroundColor Magenta
 Write-Host ""
 
 # Recommendations
-Write-Host " RECOMMENDATIONS:" -ForegroundColor Cyan
+Write-Host "RECOMMENDATIONS:" -ForegroundColor Cyan
 Write-Host "1. Check Azure Function logs for 500 errors: func azure functionapp logstream nexhire-api-func" -ForegroundColor White
 Write-Host "2. Investigate job pagination and search implementation" -ForegroundColor White
 Write-Host "3. Verify profile update validation schema" -ForegroundColor White
