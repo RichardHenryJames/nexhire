@@ -1,10 +1,10 @@
-# ?? NexHire Backend Deployment Guide
+#  NexHire Backend Deployment Guide
 
 ## ? **Implementation Status: 100% COMPLETE**
 
 All core APIs have been successfully implemented and are ready for deployment!
 
-### **?? What's Included:**
+### ** What's Included:**
 - ? **16 API Endpoints** - Complete job platform functionality
 - ? **Authentication System** - JWT with refresh tokens
 - ? **Job Management** - Full CRUD with advanced features
@@ -17,7 +17,7 @@ All core APIs have been successfully implemented and are ready for deployment!
 
 ---
 
-## ??? **Prerequisites**
+##  **Prerequisites**
 
 Before deployment, ensure you have:
 
@@ -45,7 +45,7 @@ az login
 
 ---
 
-## ?? **Deployment Steps**
+##  **Deployment Steps**
 
 ### **Step 1: Clone/Navigate to Project**
 ```powershell
@@ -93,27 +93,27 @@ cd C:\Users\parimalkumar\Desktop\NexHire\
 
 ---
 
-## ?? **Your API Endpoints**
+##  **Your API Endpoints**
 
 After deployment, your APIs will be available at:
 ```
 https://nexhire-api-func.azurewebsites.net/api
 ```
 
-### **?? Authentication APIs**
+### ** Authentication APIs**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/auth/register` | User registration |
 | POST | `/auth/login` | User login |
 | POST | `/auth/refresh` | Refresh JWT token |
 
-### **?? User Management APIs**  
+### ** User Management APIs**  
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/users/profile` | Get user profile |
 | PUT | `/users/profile` | Update user profile |
 
-### **?? Job Management APIs**
+### ** Job Management APIs**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/jobs` | List all jobs |
@@ -125,14 +125,14 @@ https://nexhire-api-func.azurewebsites.net/api
 | POST | `/jobs/{id}/publish` | Publish job |
 | POST | `/jobs/{id}/close` | Close job |
 
-### **?? Application APIs**
+### ** Application APIs**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/applications` | Apply for job |
 | GET | `/applications/my` | Get my applications |
 | GET | `/jobs/{jobId}/applications` | Get job applications |
 
-### **?? Reference Data APIs**
+### ** Reference Data APIs**
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/reference/job-types` | Get job types |
@@ -140,7 +140,7 @@ https://nexhire-api-func.azurewebsites.net/api
 
 ---
 
-## ?? **Configuration**
+##  **Configuration**
 
 ### **Environment Variables (Auto-configured):**
 ```env
@@ -163,7 +163,7 @@ NODE_ENV=production
 
 ---
 
-## ?? **Testing Your APIs**
+##  **Testing Your APIs**
 
 ### **Quick Test with curl:**
 ```bash
@@ -190,7 +190,7 @@ curl -X POST https://nexhire-api-func.azurewebsites.net/api/auth/register \
 
 ---
 
-## ?? **Frontend Integration**
+##  **Frontend Integration**
 
 ### **For React/React Native:**
 ```javascript
@@ -247,7 +247,7 @@ const profileResponse = await fetch(`${API_BASE_URL}/users/profile`, {
 
 ---
 
-## ?? **Security Features**
+##  **Security Features**
 
 ### **Implemented Security:**
 - ? **JWT Authentication** with access & refresh tokens
@@ -270,7 +270,7 @@ const profileResponse = await fetch(`${API_BASE_URL}/users/profile`, {
 
 ---
 
-## ?? **Monitoring & Logging**
+##  **Monitoring & Logging**
 
 ### **Built-in Monitoring:**
 - ? **Application Insights** integration
@@ -290,11 +290,11 @@ func azure functionapp logstream nexhire-api-func
 
 ---
 
-## ?? **Troubleshooting**
+##  **Troubleshooting**
 
 ### **Common Issues:**
 
-#### **?? Deployment Failed**
+#### ** Deployment Failed**
 ```powershell
 # Check Azure CLI login
 az account show
@@ -306,7 +306,7 @@ az functionapp show --name nexhire-api-func --resource-group nexhire-dev-rg
 func azure functionapp logstream nexhire-api-func
 ```
 
-#### **?? Database Connection Issues**
+#### ** Database Connection Issues**
 ```powershell
 # Test database connectivity
 .\deploy-sample-data.ps1
@@ -315,20 +315,20 @@ func azure functionapp logstream nexhire-api-func
 az sql server firewall-rule list --server nexhire-sql-srv --resource-group nexhire-dev-rg
 ```
 
-#### **?? API Returns 500 Error**
+#### ** API Returns 500 Error**
 - Check Function App logs in Azure Portal
 - Verify environment variables are set
 - Test database connection
 - Check for missing dependencies
 
-#### **?? CORS Issues**
+#### ** CORS Issues**
 - Verify CORS_ORIGINS environment variable
 - Check frontend URL matches configured origins
 - Test with Postman (no CORS restrictions)
 
 ---
 
-## ?? **Performance Optimization**
+##  **Performance Optimization**
 
 ### **Already Implemented:**
 - ? **Connection Pooling** for database
@@ -345,7 +345,7 @@ az sql server firewall-rule list --server nexhire-sql-srv --resource-group nexhi
 
 ---
 
-## ?? **Scaling & Production**
+##  **Scaling & Production**
 
 ### **Current Setup (Development):**
 - **Function App**: Consumption Plan (Pay-per-execution)
@@ -361,7 +361,7 @@ az sql server firewall-rule list --server nexhire-sql-srv --resource-group nexhi
 
 ---
 
-## ?? **Deployment Complete!**
+##  **Deployment Complete!**
 
 Your **NexHire Backend** is now:
 
@@ -381,7 +381,7 @@ Your **NexHire Backend** is now:
 
 ---
 
-## ?? **Support**
+##  **Support**
 
 If you encounter any issues:
 
@@ -391,4 +391,4 @@ If you encounter any issues:
 4. **Check database connectivity** and data
 5. **Review API documentation** for correct usage
 
-Your **NexHire job platform backend is now live and ready for use!** ??
+Your **NexHire job platform backend is now live and ready for use!** 

@@ -3,7 +3,7 @@
  * NexHire Backend API - Azure Functions v4 Single Entry Point
  * ========================================================================
  * 
- * ??  IMPORTANT: CLEANUP LEGACY FOLDERS ??
+ *   IMPORTANT: CLEANUP LEGACY FOLDERS
  * 
  * This project uses Azure Functions v4 Programming Model where ALL functions
  * are registered in this single file. The individual function folders are
@@ -320,9 +320,9 @@ app.http('health', {
 // STARTUP LOG
 // ========================================================================
 
-console.log('?? NexHire Backend API - All functions registered');
-console.log('?? Total endpoints: 18');
-console.log('?? API Base URL: https://nexhire-api-func.azurewebsites.net/api');
+console.log(' NexHire Backend API - All functions registered');
+console.log(' Total endpoints: 18');
+console.log(' API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('? Ready for deployment to Azure Functions v4');
 
 export {};
@@ -332,13 +332,13 @@ export {};
  * COMPLETE API ENDPOINT LIST (18 total):
  * ========================================================================
  * 
- * ?? AUTHENTICATION (4 endpoints):
+ *  AUTHENTICATION (4 endpoints):
  * POST   /auth/register               - User registration
  * POST   /auth/login                  - User login
  * POST   /auth/refresh                - Refresh JWT token
  * GET    /health                      - Health check
  * 
- * ?? USER MANAGEMENT (5 endpoints):
+ *  USER MANAGEMENT (5 endpoints):
  * GET    /users/profile               - Get user profile
  * PUT    /users/profile               - Update user profile
  * POST   /users/change-password       - Change password
@@ -346,7 +346,7 @@ export {};
  * GET    /users/dashboard-stats       - Get dashboard stats
  * POST   /users/deactivate            - Deactivate account
  * 
- * ?? JOB MANAGEMENT (6 endpoints):
+ *  JOB MANAGEMENT (6 endpoints):
  * GET    /jobs                        - List all jobs
  * POST   /jobs                        - Create new job
  * GET    /jobs/{id}                   - Get job details
@@ -356,7 +356,7 @@ export {};
  * POST   /jobs/{id}/close             - Close job
  * GET    /jobs/search                 - Search jobs
  * 
- * ?? JOB APPLICATIONS (6 endpoints):
+ *  JOB APPLICATIONS (6 endpoints):
  * POST   /applications                - Apply for job
  * GET    /applications/my             - Get my applications
  * GET    /applications/stats          - Get application stats
@@ -365,7 +365,7 @@ export {};
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- * ?? REFERENCE DATA (2 endpoints):
+ *  REFERENCE DATA (2 endpoints):
  * GET    /reference/job-types         - Get job types
  * GET    /reference/currencies        - Get currencies
  * 

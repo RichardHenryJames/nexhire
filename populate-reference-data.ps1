@@ -5,11 +5,11 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? Populating Essential Reference Data..." -ForegroundColor Green
+Write-Host " Populating Essential Reference Data..." -ForegroundColor Green
 
 # Install SqlServer module if not present
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host " Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 
@@ -37,13 +37,13 @@ DBCC CHECKIDENT ('Currencies', RESEED, 0);
 
 INSERT INTO Currencies (Code, Name, Symbol, IsActive) VALUES
 ('USD', 'US Dollar', '$', 1),
-('EUR', 'Euro', '€', 1),
-('GBP', 'British Pound', '£', 1),
+('EUR', 'Euro', 'ï¿½', 1),
+('GBP', 'British Pound', 'ï¿½', 1),
 ('INR', 'Indian Rupee', '?', 1),
 ('CAD', 'Canadian Dollar', 'C$', 1),
 ('AUD', 'Australian Dollar', 'A$', 1),
-('JPY', 'Japanese Yen', '¥', 1),
-('CNY', 'Chinese Yuan', '¥', 1),
+('JPY', 'Japanese Yen', 'ï¿½', 1),
+('CNY', 'Chinese Yuan', 'ï¿½', 1),
 ('SGD', 'Singapore Dollar', 'S$', 1),
 ('AED', 'UAE Dirham', '?.?', 1);
 
@@ -85,12 +85,12 @@ END
 "@
 
 try {
-    Write-Host "?? Populating reference data..." -ForegroundColor Yellow
+    Write-Host " Populating reference data..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referenceDataSQL -QueryTimeout 60
     Write-Host "? Reference data populated successfully!" -ForegroundColor Green
     
     # Verify the data
-    Write-Host "?? Verifying reference data..." -ForegroundColor Yellow
+    Write-Host " Verifying reference data..." -ForegroundColor Yellow
     
     $jobTypesCount = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM JobTypes WHERE IsActive = 1" -QueryTimeout 30
     $currenciesCount = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Currencies WHERE IsActive = 1" -QueryTimeout 30
@@ -98,10 +98,10 @@ try {
     $orgCount = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Organizations WHERE IsActive = 1" -QueryTimeout 30
     
     Write-Host "? Reference data verification:" -ForegroundColor Green
-    Write-Host "  • Job Types: $($jobTypesCount.Count)" -ForegroundColor Cyan
-    Write-Host "  • Currencies: $($currenciesCount.Count)" -ForegroundColor Cyan
-    Write-Host "  • Application Statuses: $($statusesCount.Count)" -ForegroundColor Cyan
-    Write-Host "  • Organizations: $($orgCount.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Job Types: $($jobTypesCount.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Currencies: $($currenciesCount.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Application Statuses: $($statusesCount.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Organizations: $($orgCount.Count)" -ForegroundColor Cyan
     
 } catch {
     Write-Error "? Reference data population failed: $($_.Exception.Message)"
@@ -109,8 +109,8 @@ try {
 }
 
 Write-Host ""
-Write-Host "?? Reference data is ready!" -ForegroundColor Green
+Write-Host " Reference data is ready!" -ForegroundColor Green
 Write-Host "? Your APIs should now work correctly." -ForegroundColor Green
 Write-Host ""
-Write-Host "?? Test your APIs now:" -ForegroundColor Cyan
+Write-Host " Test your APIs now:" -ForegroundColor Cyan
 Write-Host "  .\test-api.ps1 -BaseUrl 'https://nexhire-api-func.azurewebsites.net/api'" -ForegroundColor Yellow

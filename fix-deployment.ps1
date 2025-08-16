@@ -1,33 +1,33 @@
 # Quick Fix Script for NexHire Backend Deployment
 # Run this if you encounter any deployment issues
 
-Write-Host "?? NexHire Backend Quick Fix Script" -ForegroundColor Green
+Write-Host " NexHire Backend Quick Fix Script" -ForegroundColor Green
 Write-Host "===================================" -ForegroundColor Green
 Write-Host ""
 
 # Clean and reset everything
-Write-Host "?? Cleaning project..." -ForegroundColor Yellow
+Write-Host " Cleaning project..." -ForegroundColor Yellow
 
 # Remove node_modules and package-lock.json if they exist
 if (Test-Path "node_modules") {
-    Write-Host "  • Removing node_modules..." -ForegroundColor Gray
+    Write-Host "  ï¿½ Removing node_modules..." -ForegroundColor Gray
     Remove-Item -Recurse -Force "node_modules"
 }
 
 if (Test-Path "package-lock.json") {
-    Write-Host "  • Removing package-lock.json..." -ForegroundColor Gray
+    Write-Host "  ï¿½ Removing package-lock.json..." -ForegroundColor Gray
     Remove-Item -Force "package-lock.json"
 }
 
 if (Test-Path "dist") {
-    Write-Host "  • Removing dist folder..." -ForegroundColor Gray
+    Write-Host "  ï¿½ Removing dist folder..." -ForegroundColor Gray
     Remove-Item -Recurse -Force "dist"
 }
 
 Write-Host "? Project cleaned" -ForegroundColor Green
 
 # Fresh install
-Write-Host "?? Fresh install of dependencies..." -ForegroundColor Yellow
+Write-Host " Fresh install of dependencies..." -ForegroundColor Yellow
 npm install
 if ($LASTEXITCODE -ne 0) {
     Write-Error "? npm install failed!"
@@ -36,21 +36,21 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "? Dependencies installed" -ForegroundColor Green
 
 # Test TypeScript compilation
-Write-Host "?? Testing TypeScript compilation..." -ForegroundColor Yellow
+Write-Host " Testing TypeScript compilation..." -ForegroundColor Yellow
 npm run build
 if ($LASTEXITCODE -ne 0) {
     Write-Error "? TypeScript build failed!"
     Write-Host ""
-    Write-Host "?? Common TypeScript issues:" -ForegroundColor Yellow
-    Write-Host "  • Check for syntax errors in TypeScript files" -ForegroundColor White
-    Write-Host "  • Verify all imports are correct" -ForegroundColor White
-    Write-Host "  • Make sure tsconfig.json is valid" -ForegroundColor White
+    Write-Host " Common TypeScript issues:" -ForegroundColor Yellow
+    Write-Host "  ï¿½ Check for syntax errors in TypeScript files" -ForegroundColor White
+    Write-Host "  ï¿½ Verify all imports are correct" -ForegroundColor White
+    Write-Host "  ï¿½ Make sure tsconfig.json is valid" -ForegroundColor White
     exit 1
 }
 Write-Host "? TypeScript compilation successful" -ForegroundColor Green
 
 # Verify all function files exist
-Write-Host "?? Verifying Azure Functions..." -ForegroundColor Yellow
+Write-Host " Verifying Azure Functions..." -ForegroundColor Yellow
 
 $requiredFunctions = @(
     "auth-register",
@@ -84,7 +84,7 @@ if ($missingFunctions.Count -gt 0) {
 }
 
 # Verify built JavaScript files exist
-Write-Host "?? Verifying built files..." -ForegroundColor Yellow
+Write-Host " Verifying built files..." -ForegroundColor Yellow
 if (-not (Test-Path "dist")) {
     Write-Error "? dist folder not found! TypeScript build may have failed."
     exit 1
@@ -99,7 +99,7 @@ if ($builtFiles.Count -eq 0) {
 Write-Host "? Found $($builtFiles.Count) built JavaScript files" -ForegroundColor Green
 
 # Check Azure CLI login
-Write-Host "?? Checking Azure CLI..." -ForegroundColor Yellow
+Write-Host " Checking Azure CLI..." -ForegroundColor Yellow
 $account = az account show --query "user.name" -o tsv 2>$null
 if (-not $account) {
     Write-Host "? Not logged into Azure CLI" -ForegroundColor Red
@@ -109,7 +109,7 @@ if (-not $account) {
 Write-Host "? Logged into Azure as: $account" -ForegroundColor Green
 
 # Check Function App exists
-Write-Host "?? Checking Function App..." -ForegroundColor Yellow
+Write-Host " Checking Function App..." -ForegroundColor Yellow
 $functionApp = az functionapp show --name "nexhire-api-func" --resource-group "nexhire-dev-rg" --query "name" -o tsv 2>$null
 if (-not $functionApp) {
     Write-Error "? Function App 'nexhire-api-func' not found!"
@@ -119,7 +119,7 @@ if (-not $functionApp) {
 Write-Host "? Function App found: $functionApp" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "?? ALL CHECKS PASSED!" -ForegroundColor Green
+Write-Host " ALL CHECKS PASSED!" -ForegroundColor Green
 Write-Host "==================" -ForegroundColor Green
 Write-Host ""
 Write-Host "? Project is clean and ready for deployment" -ForegroundColor White
@@ -130,5 +130,5 @@ Write-Host "? Built files are ready" -ForegroundColor White
 Write-Host "? Azure CLI is configured" -ForegroundColor White
 Write-Host "? Function App exists and is accessible" -ForegroundColor White
 Write-Host ""
-Write-Host "?? Now run: .\deploy-backend.ps1" -ForegroundColor Cyan
+Write-Host " Now run: .\deploy-backend.ps1" -ForegroundColor Cyan
 Write-Host ""

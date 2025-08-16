@@ -5,19 +5,19 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "??? Deploying Sample Data to NexHire Database..." -ForegroundColor Green
+Write-Host " Deploying Sample Data to NexHire Database..." -ForegroundColor Green
 Write-Host ""
 
 # Check if SqlServer module is available
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host " Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 
 Import-Module SqlServer -Force
 
 # Test connection
-Write-Host "?? Testing database connection..." -ForegroundColor Yellow
+Write-Host " Testing database connection..." -ForegroundColor Yellow
 try {
     $testResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT 1 as TestConnection" -QueryTimeout 10
     if ($testResult.TestConnection -eq 1) {
@@ -29,29 +29,29 @@ try {
 }
 
 # Check if sample data already exists
-Write-Host "?? Checking for existing data..." -ForegroundColor Yellow
+Write-Host " Checking for existing data..." -ForegroundColor Yellow
 $userCount = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Users" -QueryTimeout 10
 $jobCount = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Jobs" -QueryTimeout 10
 
-Write-Host "?? Current data count:" -ForegroundColor Cyan
-Write-Host "  • Users: $($userCount.Count)" -ForegroundColor White
-Write-Host "  • Jobs: $($jobCount.Count)" -ForegroundColor White
+Write-Host " Current data count:" -ForegroundColor Cyan
+Write-Host "  ï¿½ Users: $($userCount.Count)" -ForegroundColor White
+Write-Host "  ï¿½ Jobs: $($jobCount.Count)" -ForegroundColor White
 Write-Host ""
 
 if ($userCount.Count -gt 0 -or $jobCount.Count -gt 0) {
-    $response = Read-Host "?? Database already contains data. Do you want to add more sample data? (y/N)"
+    $response = Read-Host " Database already contains data. Do you want to add more sample data? (y/N)"
     if ($response -ne 'y' -and $response -ne 'Y') {
-        Write-Host "?? Sample data deployment cancelled." -ForegroundColor Yellow
+        Write-Host " Sample data deployment cancelled." -ForegroundColor Yellow
         exit 0
     }
 }
 
 # Deploy sample data
-Write-Host "?? Checking for insert_table.sql file..." -ForegroundColor Yellow
+Write-Host " Checking for insert_table.sql file..." -ForegroundColor Yellow
 
 if (Test-Path "insert_table.sql") {
-    Write-Host "?? Found insert_table.sql file" -ForegroundColor Green
-    Write-Host "?? Executing sample data script..." -ForegroundColor Yellow
+    Write-Host " Found insert_table.sql file" -ForegroundColor Green
+    Write-Host " Executing sample data script..." -ForegroundColor Yellow
     Write-Host "? This may take 1-2 minutes..." -ForegroundColor Cyan
     
     try {
@@ -62,7 +62,7 @@ if (Test-Path "insert_table.sql") {
         exit 1
     }
 } else {
-    Write-Host "?? insert_table.sql not found. Creating basic sample data..." -ForegroundColor Yellow
+    Write-Host " insert_table.sql not found. Creating basic sample data..." -ForegroundColor Yellow
     
     # Create basic sample data if the file doesn't exist
     $basicSampleData = @"
@@ -76,8 +76,8 @@ INSERT INTO JobTypes (Type, Description, IsActive, CreatedAt, UpdatedAt) VALUES
 
 INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt, UpdatedAt) VALUES
 ('USD', 'US Dollar', '$', 1, 1.0000, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
-('EUR', 'Euro', '€', 1, 0.8500, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
-('GBP', 'British Pound', '£', 1, 0.7500, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
+('EUR', 'Euro', 'ï¿½', 1, 0.8500, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
+('GBP', 'British Pound', 'ï¿½', 1, 0.7500, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
 ('INR', 'Indian Rupee', '?', 1, 83.0000, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
 ('AUD', 'Australian Dollar', 'A$', 1, 1.5000, GETUTCDATE(), GETUTCDATE(), GETUTCDATE()),
 ('CAD', 'Canadian Dollar', 'C$', 1, 1.3500, GETUTCDATE(), GETUTCDATE(), GETUTCDATE());
@@ -108,7 +108,7 @@ INSERT INTO InternalStatusTypes (Status, Description, IsActive, DisplayOrder, Cr
 }
 
 # Verify data
-Write-Host "?? Verifying deployed data..." -ForegroundColor Yellow
+Write-Host " Verifying deployed data..." -ForegroundColor Yellow
 
 $verification = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query @"
 SELECT 
@@ -130,14 +130,14 @@ SELECT 'ApplicationStatuses', COUNT(*) FROM ApplicationStatuses
 ORDER BY TableName
 "@ -QueryTimeout 30
 
-Write-Host "?? Data Verification Results:" -ForegroundColor Cyan
+Write-Host " Data Verification Results:" -ForegroundColor Cyan
 foreach ($row in $verification) {
-    Write-Host "  • $($row.TableName): $($row.RecordCount) records" -ForegroundColor White
+    Write-Host "  ï¿½ $($row.TableName): $($row.RecordCount) records" -ForegroundColor White
 }
 Write-Host ""
 
 # Create a sample admin user for testing
-Write-Host "?? Creating test admin user..." -ForegroundColor Yellow
+Write-Host " Creating test admin user..." -ForegroundColor Yellow
 $adminUserQuery = @"
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'admin@nexhire.com')
 BEGIN
@@ -165,28 +165,28 @@ try {
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $adminUserQuery -QueryTimeout 30
     Write-Host "? Test admin user ready" -ForegroundColor Green
 } catch {
-    Write-Warning "?? Could not create admin user: $($_.Exception.Message)"
+    Write-Warning " Could not create admin user: $($_.Exception.Message)"
 }
 
 Write-Host ""
-Write-Host "?? DATABASE SETUP COMPLETED!" -ForegroundColor Green
+Write-Host " DATABASE SETUP COMPLETED!" -ForegroundColor Green
 Write-Host "=============================" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "?? Test Accounts Created:" -ForegroundColor Cyan
-Write-Host "  • Admin: admin@nexhire.com / admin123" -ForegroundColor White
+Write-Host " Test Accounts Created:" -ForegroundColor Cyan
+Write-Host "  ï¿½ Admin: admin@nexhire.com / admin123" -ForegroundColor White
 Write-Host ""
 
-Write-Host "?? Ready for API Testing:" -ForegroundColor Cyan
-Write-Host "  • Run: .\test-api.ps1" -ForegroundColor White
-Write-Host "  • Or use Postman with your API endpoints" -ForegroundColor White
+Write-Host " Ready for API Testing:" -ForegroundColor Cyan
+Write-Host "  ï¿½ Run: .\test-api.ps1" -ForegroundColor White
+Write-Host "  ï¿½ Or use Postman with your API endpoints" -ForegroundColor White
 Write-Host ""
 
-Write-Host "?? Next Steps:" -ForegroundColor Cyan
+Write-Host " Next Steps:" -ForegroundColor Cyan
 Write-Host "  1. Test API endpoints with sample data" -ForegroundColor White
 Write-Host "  2. Create additional test users as needed" -ForegroundColor White
 Write-Host "  3. Configure frontend to use the API" -ForegroundColor White
 Write-Host "  4. Set up additional organizations and jobs" -ForegroundColor White
 Write-Host ""
 
-Write-Host "?? Database is ready for your NexHire application!" -ForegroundColor Green
+Write-Host " Database is ready for your NexHire application!" -ForegroundColor Green

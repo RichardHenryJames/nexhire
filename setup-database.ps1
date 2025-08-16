@@ -5,11 +5,11 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "??? Setting up NexHire Database Schema..." -ForegroundColor Green
+Write-Host " Setting up NexHire Database Schema..." -ForegroundColor Green
 
 # Install SqlServer module if not present
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host " Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 
@@ -319,13 +319,13 @@ IF NOT EXISTS (SELECT * FROM Currencies WHERE Code = 'USD')
 BEGIN
     INSERT INTO Currencies (Code, Name, Symbol) VALUES
     ('USD', 'US Dollar', '$'),
-    ('EUR', 'Euro', '€'),
-    ('GBP', 'British Pound', '£'),
+    ('EUR', 'Euro', 'ï¿½'),
+    ('GBP', 'British Pound', 'ï¿½'),
     ('INR', 'Indian Rupee', '?'),
     ('CAD', 'Canadian Dollar', 'C$'),
     ('AUD', 'Australian Dollar', 'A$'),
-    ('JPY', 'Japanese Yen', '¥'),
-    ('CNY', 'Chinese Yuan', '¥'),
+    ('JPY', 'Japanese Yen', 'ï¿½'),
+    ('CNY', 'Chinese Yuan', 'ï¿½'),
     ('SGD', 'Singapore Dollar', 'S$'),
     ('AED', 'UAE Dirham', '?.?');
 END
@@ -356,22 +356,22 @@ END
 "@
 
 try {
-    Write-Host "?? Creating database schema..." -ForegroundColor Yellow
+    Write-Host " Creating database schema..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $schemaSQL -QueryTimeout 120
     Write-Host "? Database schema created successfully" -ForegroundColor Green
     
-    Write-Host "?? Inserting reference data..." -ForegroundColor Yellow
+    Write-Host " Inserting reference data..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referenceDataSQL -QueryTimeout 60
     Write-Host "? Reference data inserted successfully" -ForegroundColor Green
     
     # Test the reference data endpoints
-    Write-Host "?? Testing database setup..." -ForegroundColor Yellow
+    Write-Host " Testing database setup..." -ForegroundColor Yellow
     $testJobTypes = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM JobTypes" -QueryTimeout 30
     $testCurrencies = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Currencies" -QueryTimeout 30
     
     Write-Host "? Database setup completed successfully!" -ForegroundColor Green
-    Write-Host "  • Job Types: $($testJobTypes.Count)" -ForegroundColor Cyan
-    Write-Host "  • Currencies: $($testCurrencies.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Job Types: $($testJobTypes.Count)" -ForegroundColor Cyan
+    Write-Host "  ï¿½ Currencies: $($testCurrencies.Count)" -ForegroundColor Cyan
     
 } catch {
     Write-Error "? Database setup failed: $($_.Exception.Message)"
@@ -379,5 +379,5 @@ try {
 }
 
 Write-Host ""
-Write-Host "?? Database is ready for NexHire APIs!" -ForegroundColor Green
+Write-Host " Database is ready for NexHire APIs!" -ForegroundColor Green
 Write-Host "Now test your APIs: .\test-api.ps1 -BaseUrl 'https://nexhire-api-func.azurewebsites.net/api'" -ForegroundColor Cyan

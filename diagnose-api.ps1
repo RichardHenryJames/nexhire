@@ -1,7 +1,7 @@
 # Quick API Diagnostic Script
 # Tests the exact API endpoints and shows detailed error information
 
-Write-Host "?? NexHire API Diagnostic Test" -ForegroundColor Green
+Write-Host " NexHire API Diagnostic Test" -ForegroundColor Green
 Write-Host "============================" -ForegroundColor Green
 
 $baseUrl = "https://nexhire-api-func.azurewebsites.net"
@@ -14,7 +14,7 @@ $endpoints = @(
 )
 
 foreach ($endpoint in $endpoints) {
-    Write-Host "`n?? Testing: $($endpoint.Name)" -ForegroundColor Yellow
+    Write-Host "`n Testing: $($endpoint.Name)" -ForegroundColor Yellow
     Write-Host "   URL: $($endpoint.Url)" -ForegroundColor Gray
     
     try {
@@ -25,7 +25,7 @@ foreach ($endpoint in $endpoints) {
         if ($content.success -eq $true) {
             Write-Host "   ? Response: SUCCESS" -ForegroundColor Green
             if ($content.data) {
-                Write-Host "   ?? Data Count: $($content.data.Count)" -ForegroundColor Cyan
+                Write-Host "    Data Count: $($content.data.Count)" -ForegroundColor Cyan
             }
         } else {
             Write-Host "   ? Response: FAILED" -ForegroundColor Red
@@ -52,7 +52,7 @@ foreach ($endpoint in $endpoints) {
     }
 }
 
-Write-Host "`n?? Troubleshooting Commands:" -ForegroundColor Cyan
+Write-Host "`n Troubleshooting Commands:" -ForegroundColor Cyan
 Write-Host "1. Check Function App logs:" -ForegroundColor White
 Write-Host "   func azure functionapp logstream nexhire-api-func" -ForegroundColor Gray
 Write-Host "`n2. Check database connection:" -ForegroundColor White
