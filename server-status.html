@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Status Check</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .status-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            margin: 20px 0;
+        }
+        .status-ok { border-left: 5px solid #00d4aa; }
+        .status-error { border-left: 5px solid #ff4444; }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #FF6B6B;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover { background: #E55555; }
+        .server-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-card status-ok">
+        <h1> Minglee Server Status</h1>
+        <p><strong>Server Restarted Successfully!</strong></p>
+        
+        <div class="server-info">
+            <strong>Server Details:</strong><br>
+            URL: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a><br>
+            Port: 3000<br>
+            Status: Running ?<br>
+            Time: <span id="current-time"></span>
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <a href="http://localhost:3000" class="btn"> Open Minglee App</a>
+            <a href="http://localhost:3000/database-test.html" class="btn"> Database Test</a>
+            <a href="http://localhost:3000/firebase-test.html" class="btn"> Firebase Test</a>
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 14px; color: #666;">
+            <p><strong>Quick Debug Commands:</strong></p>
+            <p>Open browser console (F12) and try:</p>
+            <code style="background: #f0f0f0; padding: 5px;">
+                window.debugMinglee.getState()
+            </code>
+        </div>
+    </div>
+
+    <script>
+        // Update current time
+        document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+        
+        // Check if server is actually responding
+        fetch('/')
+            .then(() => {
+                console.log('? Server is responding');
+            })
+            .catch(err => {
+                console.error('? Server check failed:', err);
+                document.querySelector('.status-card').className = 'status-card status-error';
+                document.querySelector('.status-card h1').innerHTML = '? Server Connection Issue';
+            });
+        
+        // Auto-refresh every 30 seconds
+        setTimeout(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

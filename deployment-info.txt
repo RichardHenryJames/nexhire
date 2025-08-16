@@ -1,0 +1,26 @@
+NexHire Backend Deployment Info
+Generated: 08/16/2025 13:39:50
+
+API Base URL: https://nexhire-api-func.azurewebsites.net
+Function App: nexhire-api-func
+Resource Group: nexhire-dev-rg
+Database: nexhire-sql-srv/nexhire-sql-db
+
+Test Endpoint: https://nexhire-api-func.azurewebsites.net/api/reference/job-types
+
+To test the deployment:
+.\test-api.ps1 -BaseUrl "https://nexhire-api-func.azurewebsites.net/api"
+
+To deploy sample data:
+.\deploy-sample-data.ps1
+
+Environment Variables Set:
+- DB_SERVER=nexhire-sql-srv.database.windows.net
+- DB_NAME=nexhire-sql-db
+- DB_USER=sqladmin
+- DB_PASSWORD=P@ssw0rd1234!
+- JWT_SECRET=nexhire-super-secret-jwt-key-change-in-production-2024
+- JWT_EXPIRES_IN=24h
+- JWT_REFRESH_EXPIRES_IN=7d
+- CORS_ORIGINS=http://localhost:3000,https://nexhire-frontend-web.azurestaticapps.net
+- NODE_ENV=production
