@@ -1,0 +1,24 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  },
+  "globalHeaders": {
+    "cache-control": "no-cache, no-store, must-revalidate",
+    "pragma": "no-cache",
+    "expires": "0"
+  },
+  "routes": [
+    {
+      "route": "/index.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "route": "/",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    }
+  ]
+}

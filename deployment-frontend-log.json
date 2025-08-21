@@ -1,14 +1,14 @@
 {
-  "environment": "production",
-  "resourceGroup": "nexhire-dev-rg",
-  "productionDeployment": "Deployed to production environment",
-  "buildWorkaround": "Build completed successfully despite minimatch CLI error",
-  "deploymentUrl": "https://jolly-sea-00174141e.1.azurestaticapps.net",
-  "buildFiles": 54,
-  "status": "success",
-  "minimatchFix": "Temporarily removed assetBundlePatterns to bypass minimatch error",
-  "dependencyFix": "Applied --legacy-peer-deps to resolve React version conflicts",
-  "staticAppName": "nexhire-frontend-web",
-  "timestamp": "2025-08-20 21:30:27",
-  "cspFix": "Applied permissive CSP for React Native Web compatibility"
+    "staticAppName":  "nexhire-frontend-web",
+    "environment":  "production",
+    "minimatchFix":  "Temporarily removed assetBundlePatterns to bypass minimatch error",
+    "cspFix":  "Applied permissive CSP for React Native Web compatibility",
+    "buildFiles":  54,
+    "timestamp":  "2025-08-21 21:59:02",
+    "resourceGroup":  "nexhire-dev-rg",
+    "dependencyFix":  "Applied --legacy-peer-deps to resolve React version conflicts",
+    "productionDeployment":  "Deployed to production environment",
+    "status":  "success",
+    "deploymentUrl":  "https://jolly-sea-00174141e.1.azurestaticapps.net",
+    "buildWorkaround":  "Build completed successfully despite minimatch CLI error"
 }

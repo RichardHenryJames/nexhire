@@ -84,12 +84,35 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       
       console.log('Attempting registration for:', userData.email);
-      const result = await nexhireAPI.register(userData);
+      
+      // Separate education data from registration data
+      const { educationData, ...registrationData } = userData;
+      
+      const result = await nexhireAPI.register(registrationData);
       
       if (result.success) {
         console.log('Registration successful, attempting auto-login...');
         // Auto-login after successful registration
-        return await login(userData.email, userData.password);
+        const loginResult = await login(userData.email, userData.password);
+        
+        if (loginResult.success && educationData) {
+          console.log('Auto-login successful, saving education data...');
+          try {
+            // Now that user is authenticated, save education data
+            const educationResult = await nexhireAPI.updateEducation(educationData);
+            if (educationResult.success) {
+              console.log('? Education data saved successfully');
+            } else {
+              console.warn('?? Education data save failed:', educationResult.error);
+              // Don't fail the entire registration for this
+            }
+          } catch (educationError) {
+            console.warn('?? Error saving education data:', educationError);
+            // Don't fail the entire registration for this
+          }
+        }
+        
+        return loginResult;
       } else {
         const errorMessage = result.message || 'Registration failed';
         console.error('Registration failed:', errorMessage);

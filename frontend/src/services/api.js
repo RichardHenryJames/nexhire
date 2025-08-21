@@ -225,6 +225,11 @@ class NexHireAPI {
 
   // NEW: Update education data
   async updateEducation(educationData) {
+    // If not authenticated yet, don't call the API; allow flow to continue
+    if (!this.token) {
+      console.warn('updateEducation called without auth token. Deferring until after login.');
+      return { success: true, data: null, message: 'Deferred until login' };
+    }
     return this.apiCall('/users/education', {
       method: 'PUT',
       body: JSON.stringify(educationData),

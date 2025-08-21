@@ -171,46 +171,16 @@ export default function EducationDetailsScreen({ navigation, route }) {
       return;
     }
 
-    try {
-      setLoading(true);
-      
-      // Save education data to database via API
-      console.log('Saving education data:', formData);
-      
-      const response = await nexhireAPI.updateEducation(formData);
-      
-      if (response.success) {
-        console.log('? Education data saved successfully');
-        
-        // Continue to next screen
-        navigation.navigate('JobPreferencesScreen', { 
-          userType, 
-          experienceType,
-          educationData: formData
-        });
-      } else {
-        throw new Error(response.error || 'Failed to save education data');
-      }
-      
-    } catch (error) {
-      console.error('? Error saving education data:', error);
-      Alert.alert(
-        'Save Error', 
-        'Failed to save your education information. Please try again.',
-        [
-          { text: 'Retry', onPress: handleContinue },
-          { text: 'Continue anyway', onPress: () => {
-            navigation.navigate('JobPreferencesScreen', { 
-              userType, 
-              experienceType,
-              educationData: formData
-            });
-          }}
-        ]
-      );
-    } finally {
-      setLoading(false);
-    }
+    // Don't call API during registration - user is not authenticated yet
+    // Just store the data locally and pass to next screen
+    console.log('?? Education data prepared for registration:', formData);
+    
+    // Continue to next screen with education data
+    navigation.navigate('JobPreferencesScreen', { 
+      userType, 
+      experienceType,
+      educationData: formData
+    });
   };
 
   const handleCountryChange = (country) => {
