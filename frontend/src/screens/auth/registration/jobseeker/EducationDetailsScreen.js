@@ -438,13 +438,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
               </View>
             )}
 
-            {/* API Info Display */}
-            <View style={styles.apiInfoContainer}>
-              <Ionicons name="information-circle" size={16} color={colors.gray500} />
-              <Text style={styles.apiInfoText}>
-                Universities data powered by Hipolabs API - Real-time, comprehensive database
-              </Text>
-            </View>
           </View>
 
           <TouchableOpacity
