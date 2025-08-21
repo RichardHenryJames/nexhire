@@ -92,6 +92,9 @@ import {
 } from './src/controllers/reference.controller';
 import { initializeEmployer } from './src/controllers/employer.controller';
 
+// Import profile services
+import { ApplicantService, EmployerService } from './src/services/profile.service';
+
 // ========================================================================
 // AUTHENTICATION & USER MANAGEMENT ENDPOINTS
 // ========================================================================
@@ -179,6 +182,134 @@ app.http('employers-initialize', {
     authLevel: 'anonymous',
     route: 'employers/initialize',
     handler: withErrorHandling(initializeEmployer)
+});
+
+// ========================================================================
+// APPLICANT/EMPLOYER PROFILE ENDPOINTS (UPDATED WITH REAL IMPLEMENTATION)
+// ========================================================================
+
+// Applicant Profile Management - FIXED: Real implementation
+app.http('applicants-profile-get', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'applicants/{userId}/profile',
+    handler: withErrorHandling(async (req, context) => {
+        const userId = req.params.userId;
+        
+        try {
+            const profile = await ApplicantService.getApplicantProfile(userId);
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: profile
+                }
+            };
+        } catch (error) {
+            console.error('Error getting applicant profile:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to get applicant profile'
+                }
+            };
+        }
+    })
+});
+
+app.http('applicants-profile-update', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'applicants/{userId}/profile',
+    handler: withErrorHandling(async (req, context) => {
+        const userId = req.params.userId;
+        
+        try {
+            const profileData = await req.json() as any; // Fix TypeScript error with type assertion
+            const updatedProfile = await ApplicantService.updateApplicantProfile(userId, profileData);
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: updatedProfile,
+                    message: 'Applicant profile updated successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Error updating applicant profile:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update applicant profile'
+                }
+            };
+        }
+    })
+});
+
+// Employer Profile Management - FIXED: Real implementation
+app.http('employers-profile-get', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'employers/{userId}/profile',
+    handler: withErrorHandling(async (req, context) => {
+        const userId = req.params.userId;
+        
+        try {
+            const profile = await EmployerService.getEmployerProfile(userId);
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: profile
+                }
+            };
+        } catch (error) {
+            console.error('Error getting employer profile:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to get employer profile'
+                }
+            };
+        }
+    })
+});
+
+app.http('employers-profile-update', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'employers/{userId}/profile',
+    handler: withErrorHandling(async (req, context) => {
+        const userId = req.params.userId;
+        
+        try {
+            const profileData = await req.json() as any; // Fix TypeScript error with type assertion
+            const updatedProfile = await EmployerService.updateEmployerProfile(userId, profileData);
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: updatedProfile,
+                    message: 'Employer profile updated successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Error updating employer profile:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update employer profile'
+                }
+            };
+        }
+    })
 });
 
 // ========================================================================
@@ -358,8 +489,8 @@ app.http('health', {
 // STARTUP LOG
 // ========================================================================
 
-console.log('? NexHire Backend API - All functions registered');
-console.log('? Total endpoints: 24');  // Updated count
+console.log('NexHire Backend API - All functions registered');
+console.log('Total endpoints: 28');  // Updated count (24 + 4 new profile endpoints)
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('Ready for deployment to Azure Functions v4');
 console.log('CORS middleware enabled for all endpoints');
@@ -368,7 +499,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (24 total):
+ * COMPLETE API ENDPOINT LIST (28 total):
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):
@@ -386,6 +517,12 @@ export {};
  * GET    /users/dashboard-stats       - Get dashboard stats
  * POST   /users/deactivate            - Deactivate account
  * POST   /employers/initialize        - Initialize employer profile (NEW)
+ * 
+ * APPLICANT/EMPLOYER PROFILE (4 endpoints):
+ * GET    /applicants/{userId}/profile          - Get applicant profile (NEW)
+ * PUT    /applicants/{userId}/profile          - Update applicant profile (NEW)
+ * GET    /employers/{userId}/profile           - Get employer profile (NEW)
+ * PUT    /employers/{userId}/profile           - Update employer profile (NEW)
  * 
  * JOB MANAGEMENT (6 endpoints):
  * GET    /jobs                        - List all jobs

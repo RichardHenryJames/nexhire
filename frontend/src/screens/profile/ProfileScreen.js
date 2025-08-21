@@ -161,90 +161,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleCompleteJobSeeker = async () => {
-    try {
-      setLoading(true);
-      // Check if user already has job seeker profile data
-      const hasJobSeekerData = jobSeekerProfile.headline || jobSeekerProfile.currentJobTitle || 
-                              jobSeekerProfile.primarySkills.length > 0;
-      
-      if (hasJobSeekerData) {
-        Alert.alert('Profile Complete', 'Your job seeker profile is already set up!');
-        return;
-      }
-
-      // Initialize basic job seeker profile data
-      const payload = {
-        headline: 'Looking for new opportunities',
-        currentJobTitle: '',
-        currentCompany: '',
-        yearsOfExperience: 0,
-        expectedSalary: '',
-        currencyPreference: 'USD',
-        location: '',
-        relocatable: false,
-        remotePreference: 'Hybrid',
-        primarySkills: [],
-        secondarySkills: [],
-        workAuthorization: '',
-        noticePeriod: '',
-        bio: 'Passionate professional seeking new challenges',
-        isOpenToWork: true,
-        allowRecruitersToContact: true,
-        hideCurrentCompany: false,
-        preferredJobTypes: [],
-        industries: [],
-      };
-
-      const res = await nexhireAPI.updateApplicantProfile(user.UserID, payload);
-      if (!res?.success) throw new Error(res?.error || 'Failed to initialize job seeker profile');
-      
-      Alert.alert('Success', 'Job seeker profile initialized! You can now edit your details.');
-      await loadExtendedProfile();
-    } catch (e) {
-      Alert.alert('Error', e.message || 'Could not complete job seeker setup');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompleteEmployer = async () => {
-    try {
-      setLoading(true);
-      const payload = {
-        organizationName: `${profile.firstName} ${profile.lastName}`.trim() ? `${profile.firstName} ${profile.lastName}'s Company` : 'My Organization',
-        organizationIndustry: 'Technology',
-        organizationSize: '1-10',
-        organizationWebsite: '',
-        organizationType: 'Company',
-        jobTitle: 'Hiring Manager',
-        department: 'Human Resources',
-        linkedInProfile: '',
-        bio: '',
-      };
-      const res = await nexhireAPI.initializeEmployerProfile(payload);
-      if (!res?.success) throw new Error(res?.error || 'Failed');
-      Alert.alert('Success', 'Employer profile initialized');
-      setProfile(p => ({ ...p, userType: 'Employer' }));
-      await loadExtendedProfile();
-    } catch (e) {
-      Alert.alert('Error', e.message || 'Could not complete employer setup');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Check if profile is complete based on user type
-  const isJobSeekerProfileComplete = () => {
-    return jobSeekerProfile.headline || jobSeekerProfile.currentJobTitle || 
-           jobSeekerProfile.primarySkills.length > 0 || jobSeekerProfile.bio;
-  };
-
-  const isEmployerProfileComplete = () => {
-    return employerProfile.organizationName || employerProfile.jobTitle || 
-           employerProfile.department || employerProfile.bio;
-  };
-
   // Validation functions
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -376,6 +292,7 @@ export default function ProfileScreen() {
         primarySkills: [...jobSeekerProfile.primarySkills, newSkill.trim()]
       });
       setNewSkill('');
+      setShowSkillsModal(false); // Close modal after adding skill
     }
   };
 
@@ -720,7 +637,7 @@ export default function ProfileScreen() {
             {renderField('profileVisibility', 'Profile Visibility', '', { choices: visibilityOptions })}
           </View>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - REMOVED REDUNDANT BUTTONS */}
           <View style={styles.actionSection}>
             {editing ? (
               <View style={styles.editActions}>
@@ -752,33 +669,6 @@ export default function ProfileScreen() {
               >
                 <Ionicons name="create" size={20} color={colors.white} />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Profile Completion Buttons - Show based on user type and completion status */}
-            {userType === 'JobSeeker' && !isJobSeekerProfileComplete() && (
-              <TouchableOpacity 
-                style={styles.completeJobSeekerButton} 
-                onPress={handleCompleteJobSeeker} 
-                disabled={loading}
-              >
-                <Ionicons name="person" size={20} color={colors.white} />
-                <Text style={styles.completeJobSeekerButtonText}>
-                  {loading ? 'Please wait...' : 'Complete Job Seeker Profile'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {userType !== 'Employer' && !isEmployerProfileComplete() && (
-              <TouchableOpacity 
-                style={styles.completeEmployerButton} 
-                onPress={handleCompleteEmployer} 
-                disabled={loading}
-              >
-                <Ionicons name="briefcase" size={20} color={colors.white} />
-                <Text style={styles.completeEmployerButtonText}>
-                  {loading ? 'Please wait...' : 'Complete Employer Profile'}
-                </Text>
               </TouchableOpacity>
             )}
 
@@ -1092,36 +982,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   editButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.white,
-    marginLeft: 8,
-  },
-  completeEmployerButton: {
-    flexDirection: 'row',
-    backgroundColor: colors.success,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  completeEmployerButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.white,
-    marginLeft: 8,
-  },
-  completeJobSeekerButton: {
-    flexDirection: 'row',
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  completeJobSeekerButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.white,

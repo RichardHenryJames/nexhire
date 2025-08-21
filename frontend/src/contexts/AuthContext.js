@@ -103,11 +103,11 @@ export const AuthProvider = ({ children }) => {
             if (educationResult.success) {
               console.log('? Education data saved successfully');
             } else {
-              console.warn('?? Education data save failed:', educationResult.error);
+              console.warn('Education data save failed:', educationResult.error);
               // Don't fail the entire registration for this
             }
           } catch (educationError) {
-            console.warn('?? Error saving education data:', educationError);
+            console.warn('Error saving education data:', educationError);
             // Don't fail the entire registration for this
           }
         }

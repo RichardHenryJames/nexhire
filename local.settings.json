@@ -1,0 +1,21 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "WEBSITE_NODE_DEFAULT_VERSION": "~20",
+    "languageWorkers__node__arguments": "--inspect=5858",
+    "DB_SERVER": "nexhire-sql-srv.database.windows.net",
+    "DB_NAME": "nexhire-sql-db",
+    "DB_USER": "sqladmin",
+    "DB_PASSWORD": "P@ssw0rd1234!",
+    "JWT_SECRET": "nexhire-super-secret-jwt-key-change-in-production-2024",
+    "JWT_EXPIRES_IN": "24h",
+    "JWT_REFRESH_EXPIRES_IN": "7d",
+    "CORS_ORIGINS": "http://localhost:3000,https://nexhire-frontend-web.azurestaticapps.net",
+    "NODE_ENV": "development"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

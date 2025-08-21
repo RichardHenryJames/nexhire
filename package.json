@@ -8,7 +8,9 @@
     "watch": "tsc --watch",
     "prestart": "npm run build",
     "start": "func start",
-    "test": "echo \"No tests yet\""
+    "test": "echo \"No tests yet\"",
+    "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --build local --force",
+    "deploy": "npm run deploy:backend"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",
@@ -42,7 +44,7 @@
     "eslint": "^9.33.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=20.0.0"

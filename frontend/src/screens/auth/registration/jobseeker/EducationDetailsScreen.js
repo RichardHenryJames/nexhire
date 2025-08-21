@@ -173,7 +173,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
     // Don't call API during registration - user is not authenticated yet
     // Just store the data locally and pass to next screen
-    console.log('?? Education data prepared for registration:', formData);
+    console.log('Education data prepared for registration:', formData);
     
     // Continue to next screen with education data
     navigation.navigate('JobPreferencesScreen', { 
