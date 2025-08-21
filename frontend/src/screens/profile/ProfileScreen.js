@@ -161,6 +161,53 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleCompleteJobSeeker = async () => {
+    try {
+      setLoading(true);
+      // Check if user already has job seeker profile data
+      const hasJobSeekerData = jobSeekerProfile.headline || jobSeekerProfile.currentJobTitle || 
+                              jobSeekerProfile.primarySkills.length > 0;
+      
+      if (hasJobSeekerData) {
+        Alert.alert('Profile Complete', 'Your job seeker profile is already set up!');
+        return;
+      }
+
+      // Initialize basic job seeker profile data
+      const payload = {
+        headline: 'Looking for new opportunities',
+        currentJobTitle: '',
+        currentCompany: '',
+        yearsOfExperience: 0,
+        expectedSalary: '',
+        currencyPreference: 'USD',
+        location: '',
+        relocatable: false,
+        remotePreference: 'Hybrid',
+        primarySkills: [],
+        secondarySkills: [],
+        workAuthorization: '',
+        noticePeriod: '',
+        bio: 'Passionate professional seeking new challenges',
+        isOpenToWork: true,
+        allowRecruitersToContact: true,
+        hideCurrentCompany: false,
+        preferredJobTypes: [],
+        industries: [],
+      };
+
+      const res = await nexhireAPI.updateApplicantProfile(user.UserID, payload);
+      if (!res?.success) throw new Error(res?.error || 'Failed to initialize job seeker profile');
+      
+      Alert.alert('Success', 'Job seeker profile initialized! You can now edit your details.');
+      await loadExtendedProfile();
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Could not complete job seeker setup');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCompleteEmployer = async () => {
     try {
       setLoading(true);
@@ -185,6 +232,17 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if profile is complete based on user type
+  const isJobSeekerProfileComplete = () => {
+    return jobSeekerProfile.headline || jobSeekerProfile.currentJobTitle || 
+           jobSeekerProfile.primarySkills.length > 0 || jobSeekerProfile.bio;
+  };
+
+  const isEmployerProfileComplete = () => {
+    return employerProfile.organizationName || employerProfile.jobTitle || 
+           employerProfile.department || employerProfile.bio;
   };
 
   // Validation functions
@@ -697,10 +755,30 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
 
-            {profile.userType !== 'Employer' && (
-              <TouchableOpacity style={styles.completeEmployerButton} onPress={handleCompleteEmployer} disabled={loading}>
+            {/* Profile Completion Buttons - Show based on user type and completion status */}
+            {userType === 'JobSeeker' && !isJobSeekerProfileComplete() && (
+              <TouchableOpacity 
+                style={styles.completeJobSeekerButton} 
+                onPress={handleCompleteJobSeeker} 
+                disabled={loading}
+              >
+                <Ionicons name="person" size={20} color={colors.white} />
+                <Text style={styles.completeJobSeekerButtonText}>
+                  {loading ? 'Please wait...' : 'Complete Job Seeker Profile'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {userType !== 'Employer' && !isEmployerProfileComplete() && (
+              <TouchableOpacity 
+                style={styles.completeEmployerButton} 
+                onPress={handleCompleteEmployer} 
+                disabled={loading}
+              >
                 <Ionicons name="briefcase" size={20} color={colors.white} />
-                <Text style={styles.completeEmployerButtonText}>{loading ? 'Please wait...' : 'Complete Employer Profile'}</Text>
+                <Text style={styles.completeEmployerButtonText}>
+                  {loading ? 'Please wait...' : 'Complete Employer Profile'}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -1029,6 +1107,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   completeEmployerButtonText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+    marginLeft: 8,
+  },
+  completeJobSeekerButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  completeJobSeekerButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.white,
