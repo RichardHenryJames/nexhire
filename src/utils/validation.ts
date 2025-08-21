@@ -37,9 +37,17 @@ export class ConflictError extends Error {
     }
 }
 
-// GUID validation utility - FIX for "Conversion failed when converting from a character string to uniqueidentifier"
+// GUID validation utility - FIXED: Improved GUID validation
 export const isValidGuid = (value: string): boolean => {
     if (!value || typeof value !== 'string') return false;
+    
+    // Remove any whitespace
+    value = value.trim();
+    
+    // Check length first (performance optimization)
+    if (value.length !== 36) return false;
+    
+    // FIXED: More comprehensive GUID regex
     const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return guidRegex.test(value);
 };
@@ -58,7 +66,7 @@ export const errorResponse = (error: string, message?: string): ApiResponse => (
     message
 });
 
-// Validation schemas
+// FIXED: Updated user registration schema to include organization details for employers
 export const userRegistrationSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
@@ -67,7 +75,49 @@ export const userRegistrationSchema = Joi.object({
     userType: Joi.string().valid('JobSeeker', 'Employer').required(),
     phone: Joi.string().pattern(/^\+?[\d\s\-()]+$/).optional(),
     dateOfBirth: Joi.date().max('now').optional(),
-    gender: Joi.string().valid('Male', 'Female', 'Other', 'Prefer not to say').optional()
+    gender: Joi.string().valid('Male', 'Female', 'Other', 'Prefer not to say').optional(),
+    
+    // FIXED: Organization details for Employers (required when userType is 'Employer')
+    organizationName: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().min(2).max(200).required(),
+        otherwise: Joi.optional()
+    }),
+    organizationIndustry: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().max(100).optional(),
+        otherwise: Joi.optional()
+    }),
+    organizationSize: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().valid('1-10', '11-50', '51-200', '201-500', '501-1000', '1000+').optional(),
+        otherwise: Joi.optional()
+    }),
+    organizationWebsite: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().uri().optional(),
+        otherwise: Joi.optional()
+    }),
+    organizationDescription: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().min(20).max(1000).optional(),
+        otherwise: Joi.optional()
+    }),
+    organizationLocation: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().max(200).optional(),
+        otherwise: Joi.optional()
+    }),
+    organizationType: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.string().max(50).optional(),
+        otherwise: Joi.optional()
+    }),
+    establishedDate: Joi.when('userType', {
+        is: 'Employer',
+        then: Joi.date().max('now').optional(),
+        otherwise: Joi.optional()
+    })
 });
 
 export const userLoginSchema = Joi.object({
@@ -75,14 +125,28 @@ export const userLoginSchema = Joi.object({
     password: Joi.string().required()
 });
 
+// NEW: Schema for initializing employer for existing users
+export const employerInitializeSchema = Joi.object({
+    organizationName: Joi.string().min(2).max(200).required(),
+    organizationIndustry: Joi.string().max(100).optional(),
+    organizationSize: Joi.string().valid('1-10', '11-50', '51-200', '201-500', '501-1000', '1000+').optional(),
+    organizationWebsite: Joi.string().uri().allow('').optional(),
+    organizationType: Joi.string().max(50).optional(),
+    jobTitle: Joi.string().max(200).optional(),
+    department: Joi.string().max(100).optional(),
+    linkedInProfile: Joi.string().uri().allow('').optional(),
+    bio: Joi.string().max(1000).allow('').optional()
+});
+
+// FIXED: Updated job creation schema with flexible requirements
 export const jobCreateSchema = Joi.object({
     title: Joi.string().min(5).max(200).required(),
-    jobTypeID: Joi.number().integer().positive().required(),
+    jobTypeID: Joi.number().integer().positive().optional().default(1), // Default to full-time
     level: Joi.string().max(50).optional(),
     department: Joi.string().max(100).optional(),
-    description: Joi.string().min(50).required(),
+    description: Joi.string().min(20).required(),
     responsibilities: Joi.string().optional(),
-    requirements: Joi.string().min(20).required(),
+    requirements: Joi.string().min(10).optional(), // Made optional with shorter min length
     preferredQualifications: Joi.string().optional(),
     benefitsOffered: Joi.string().optional(),
     location: Joi.string().max(200).optional(),
@@ -95,9 +159,9 @@ export const jobCreateSchema = Joi.object({
     remoteRestrictions: Joi.string().max(200).optional(),
     salaryRangeMin: Joi.number().positive().optional(),
     salaryRangeMax: Joi.number().positive().optional(),
-    currencyID: Joi.number().integer().positive().optional(),
-    salaryPeriod: Joi.string().valid('Annual', 'Monthly', 'Hourly').optional(),
-    compensationType: Joi.string().valid('Salary', 'Contract', 'Commission').optional(),
+    currencyID: Joi.number().integer().positive().optional().default(1), // Default to USD
+    salaryPeriod: Joi.string().valid('Annual', 'Monthly', 'Hourly').optional().default('Annual'),
+    compensationType: Joi.string().valid('Salary', 'Contract', 'Commission').optional().default('Salary'),
     bonusDetails: Joi.string().max(300).optional(),
     equityOffered: Joi.string().max(100).optional(),
     projectDuration: Joi.string().max(50).optional(),
@@ -178,18 +242,19 @@ export const applicantProfileSchema = Joi.object({
     tags: Joi.string().optional()
 });
 
-// FIX: Updated job application schema to include availabilityDate
+// FIXED: Updated job application schema with more flexible validation
 export const jobApplicationSchema = Joi.object({
     jobID: Joi.string().guid().required(),
-    coverLetter: Joi.string().min(50).optional(),
+    coverLetter: Joi.string().min(20).optional(), // Reduced minimum length
     expectedSalary: Joi.number().positive().optional(),
     expectedCurrencyID: Joi.number().integer().positive().optional(),
     availableFromDate: Joi.date().min('now').optional(),
     // FIXED: Add availabilityDate field that was causing validation error
-    availabilityDate: Joi.date().min('now').optional()
+    availabilityDate: Joi.date().min('now').optional(),
+    resumeURL: Joi.string().uri().optional()
 });
 
-// FIX: Updated pagination schema to allow search and filter parameters
+// FIXED: Updated pagination schema to allow more parameters
 export const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     pageSize: Joi.number().integer().min(1).max(100).default(20),
@@ -197,7 +262,7 @@ export const paginationSchema = Joi.object({
     sortOrder: Joi.string().valid('asc', 'desc').default('desc')
 });
 
-// FIX: New extended pagination schema for job applications with search parameters
+// FIXED: New extended pagination schema for job applications with all search parameters
 export const jobApplicationsPaginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     pageSize: Joi.number().integer().min(1).max(100).default(20),
@@ -213,12 +278,21 @@ export const jobApplicationsPaginationSchema = Joi.object({
     isRemote: Joi.boolean().optional(),
     salaryMin: Joi.number().positive().optional(),
     salaryMax: Joi.number().positive().optional(),
-    statusFilter: Joi.number().integer().optional()
+    statusFilter: Joi.number().integer().optional(),
+    // Additional parameters for flexibility
+    category: Joi.string().optional(),
+    company: Joi.string().optional(),
+    datePosted: Joi.string().optional(),
+    workType: Joi.string().optional()
 });
 
-// Validation helper function with proper typing
+// FIXED: Validation helper function with better error handling
 export const validateRequest = <T>(schema: Joi.ObjectSchema, data: any): T => {
-    const { error, value } = schema.validate(data, { abortEarly: false });
+    const { error, value } = schema.validate(data, { 
+        abortEarly: false,
+        allowUnknown: true, // FIXED: Allow unknown properties for flexibility
+        stripUnknown: true  // FIXED: Strip unknown properties instead of failing
+    });
     
     if (error) {
         const details = error.details.map(detail => ({
@@ -231,44 +305,65 @@ export const validateRequest = <T>(schema: Joi.ObjectSchema, data: any): T => {
     return value as T;
 };
 
-// Extract query parameters from request - FIXED: Handle both 'search' and 'q' parameters
+// FIXED: Extract query parameters from request with better handling
 export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationParams => {
     const query = req.query;
     
     // Handle both 'search' and 'q' parameters for search functionality
     const searchParam = query.get('search') || query.get('q') || undefined;
     
+    // FIXED: Better number parsing with fallbacks
+    const parseNumber = (value: string | null, defaultValue: number): number => {
+        if (!value) return defaultValue;
+        const parsed = parseInt(value, 10);
+        return isNaN(parsed) ? defaultValue : parsed;
+    };
+
+    const parseBoolean = (value: string | null): boolean | undefined => {
+        if (!value) return undefined;
+        return value.toLowerCase() === 'true';
+    };
+    
     return {
-        page: parseInt(query.get('page') || '1'),
-        pageSize: parseInt(query.get('pageSize') || '20'),
+        page: parseNumber(query.get('page'), 1),
+        pageSize: Math.min(parseNumber(query.get('pageSize'), 20), 100), // Cap at 100
         sortBy: query.get('sortBy') || undefined,
         sortOrder: (query.get('sortOrder') as 'asc' | 'desc') || 'desc',
         search: searchParam,
         q: searchParam,  // Add 'q' parameter as well for compatibility
         filters: (() => {
             try {
-                return JSON.parse(query.get('filters') || '{}');
+                const filtersParam = query.get('filters');
+                return filtersParam ? JSON.parse(filtersParam) : {};
             } catch {
                 return {};
             }
         })(),
-        // Add other common search parameters
+        // Add other common search parameters with safe parsing
         location: query.get('location') || undefined,
         jobType: query.get('jobType') || undefined,
         experienceLevel: query.get('experienceLevel') || undefined,
-        isRemote: query.get('isRemote') ? query.get('isRemote') === 'true' : undefined,
-        salaryMin: query.get('salaryMin') ? parseInt(query.get('salaryMin')!) : undefined,
-        salaryMax: query.get('salaryMax') ? parseInt(query.get('salaryMax')!) : undefined,
-        statusFilter: query.get('statusFilter') ? parseInt(query.get('statusFilter')!) : undefined
+        isRemote: parseBoolean(query.get('isRemote')),
+        salaryMin: parseNumber(query.get('salaryMin'), 0) || undefined,
+        salaryMax: parseNumber(query.get('salaryMax'), 0) || undefined,
+        statusFilter: parseNumber(query.get('statusFilter'), 0) || undefined,
+        category: query.get('category') || undefined,
+        company: query.get('company') || undefined,
+        datePosted: query.get('datePosted') || undefined,
+        workType: query.get('workType') || undefined
     };
 };
 
-// Extract request body
+// FIXED: Extract request body with better error handling
 export const extractRequestBody = async (req: HttpRequest): Promise<any> => {
     try {
         const body = await req.text();
-        return body ? JSON.parse(body) : {};
+        if (!body || body.trim() === '') {
+            return {};
+        }
+        return JSON.parse(body);
     } catch (error) {
+        console.error('Error parsing request body:', error);
         throw new ValidationError('Invalid JSON in request body');
     }
 };

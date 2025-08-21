@@ -15,75 +15,83 @@ import {
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
-// Create job - FIXED: Check UserType instead of Employers table
+// FIXED: Create job - Require existing organization (no random creation) + Fix database column references
 export const createJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    const jobData = await extractRequestBody(req);
-    
-    // FIXED: Check if user is an Employer by UserType instead of Employers table
-    if (user.userType !== 'Employer') {
+    try {
+        const jobData = await extractRequestBody(req);
+        
+        // Check if user is an Employer
+        if (user.userType !== 'Employer') {
+            return {
+                status: 403,
+                jsonBody: { success: false, error: 'Only employers can post jobs' }
+            };
+        }
+
+        // FIXED: Updated query to match actual database schema (removed IsActive)
+        const employerQuery = `
+            SELECT e.EmployerID, e.OrganizationID, o.Name as OrganizationName
+            FROM Employers e
+            INNER JOIN Organizations o ON e.OrganizationID = o.OrganizationID
+            WHERE e.UserID = @param0
+        `;
+        const employerResult = await dbService.executeQuery(employerQuery, [user.userId]);
+        
+        if (!employerResult.recordset || employerResult.recordset.length === 0) {
+            return {
+                status: 400,
+                jsonBody: { 
+                    success: false, 
+                    error: 'Employer profile not found. Please complete your employer registration first.',
+                    code: 'EMPLOYER_PROFILE_MISSING'
+                }
+            };
+        }
+
+        const employer = employerResult.recordset[0];
+        const organizationID = employer.OrganizationID;
+
+        // Validate required job data
+        if (!jobData.title || !jobData.description) {
+            return {
+                status: 400,
+                jsonBody: { success: false, error: 'Title and description are required' }
+            };
+        }
+
+        // Create the job using the employer's existing organization
+        const job = await JobService.createJob(jobData, user.userId, organizationID);
+        
         return {
-            status: 403,
-            jsonBody: { success: false, error: 'Only employers can post jobs' }
+            status: 201,
+            jsonBody: successResponse(job, 'Job created successfully')
+        };
+    } catch (error) {
+        console.error('Error in createJob:', error);
+        
+        // FIXED: Better error handling for database schema issues
+        if (error instanceof Error) {
+            if (error.message.includes('Invalid column name')) {
+                return {
+                    status: 500,
+                    jsonBody: { 
+                        success: false, 
+                        error: 'Database schema error', 
+                        message: 'Please contact support - database schema needs updating'
+                    }
+                };
+            }
+        }
+        
+        return {
+            status: 500,
+            jsonBody: { 
+                success: false, 
+                error: 'Internal server error', 
+                message: error instanceof Error ? error.message : 'Unknown error occurred'
+            }
         };
     }
-
-    // Create a default organization for the employer if they don't have one
-    let organizationID;
-    
-    // First check if user already has an organization
-    const existingOrgQuery = `
-        SELECT OrganizationID FROM Employers 
-        WHERE UserID = @param0
-    `;
-    const existingOrgResult = await dbService.executeQuery(existingOrgQuery, [user.userId]);
-    
-    if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
-        organizationID = existingOrgResult.recordset[0].OrganizationID;
-    } else {
-        // Create a default organization and employer profile
-        const { AuthService } = await import('../services/auth.service');
-        organizationID = AuthService.generateUniqueId();
-        const employerID = AuthService.generateUniqueId();
-        
-        // Get user details for organization creation
-        const userQuery = `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`;
-        const userResult = await dbService.executeQuery(userQuery, [user.userId]);
-        const userData = userResult.recordset[0];
-        
-        // Create organization
-        const createOrgQuery = `
-            INSERT INTO Organizations (
-                OrganizationID, Name, Description,
-                Website, IsVerified, CreatedAt, UpdatedAt
-            ) VALUES (
-                @param0, @param1, @param2,
-                '', 0, GETUTCDATE(), GETUTCDATE()
-            )
-        `;
-        const orgName = `${userData.FirstName} ${userData.LastName}'s Company`;
-        const orgDescription = `Organization for ${userData.FirstName} ${userData.LastName}`;
-        
-        await dbService.executeQuery(createOrgQuery, [organizationID, orgName, orgDescription]);
-        
-        // Create employer profile
-        const createEmployerQuery = `
-            INSERT INTO Employers (
-                EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
-                CanScheduleInterviews, CanSendMessages, IsActive, JoinedAt
-            ) VALUES (
-                @param0, @param1, @param2, 1, 1, 1, 1, 1, GETUTCDATE()
-            )
-        `;
-        
-        await dbService.executeQuery(createEmployerQuery, [employerID, user.userId, organizationID]);
-    }
-
-    const job = await JobService.createJob(jobData, user.userId, organizationID);
-    
-    return {
-        status: 201,
-        jsonBody: successResponse(job, 'Job created successfully')
-    };
 }, ['write:jobs']);
 
 // Get all jobs with pagination and filtering - FIXED: Handle optional pagination
@@ -144,25 +152,32 @@ export const getJobById = withErrorHandling(async (req: HttpRequest, context: In
         };
     }
 
-    const job = await JobService.getJobById(jobId);
-    
-    if (!job) {
+    try {
+        const job = await JobService.getJobById(jobId);
+        
+        if (!job) {
+            return {
+                status: 404,
+                jsonBody: { success: false, error: 'Job not found' }
+            };
+        }
+
         return {
-            status: 404,
-            jsonBody: { success: false, error: 'Job not found' }
+            status: 200,
+            jsonBody: successResponse(job, 'Job retrieved successfully')
+        };
+    } catch (error) {
+        console.error('Error in getJobById:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve job' }
         };
     }
-
-    return {
-        status: 200,
-        jsonBody: successResponse(job, 'Job retrieved successfully')
-    };
 });
 
 // Update job - FIXED: Add GUID validation
 export const updateJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const jobId = req.params.id;
-    const updateData = await extractRequestBody(req);
     
     if (!jobId) {
         return {
@@ -179,12 +194,21 @@ export const updateJob = withAuth(async (req: HttpRequest, context: InvocationCo
         };
     }
 
-    const updatedJob = await JobService.updateJob(jobId, updateData, user.userId);
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(updatedJob, 'Job updated successfully')
-    };
+    try {
+        const updateData = await extractRequestBody(req);
+        const updatedJob = await JobService.updateJob(jobId, updateData, user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(updatedJob, 'Job updated successfully')
+        };
+    } catch (error) {
+        console.error('Error in updateJob:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to update job' }
+        };
+    }
 }, ['write:jobs']);
 
 // Publish job - FIXED: Add GUID validation
@@ -206,12 +230,20 @@ export const publishJob = withAuth(async (req: HttpRequest, context: InvocationC
         };
     }
 
-    const publishedJob = await JobService.publishJob(jobId, user.userId);
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(publishedJob, 'Job published successfully')
-    };
+    try {
+        const publishedJob = await JobService.publishJob(jobId, user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(publishedJob, 'Job published successfully')
+        };
+    } catch (error) {
+        console.error('Error in publishJob:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to publish job' }
+        };
+    }
 }, ['write:jobs']);
 
 // Close job - FIXED: Add GUID validation
@@ -233,12 +265,20 @@ export const closeJob = withAuth(async (req: HttpRequest, context: InvocationCon
         };
     }
 
-    await JobService.closeJob(jobId, user.userId);
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(null, 'Job closed successfully')
-    };
+    try {
+        await JobService.closeJob(jobId, user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(null, 'Job closed successfully')
+        };
+    } catch (error) {
+        console.error('Error in closeJob:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to close job' }
+        };
+    }
 }, ['write:jobs']);
 
 // Delete job - FIXED: Add GUID validation
@@ -260,12 +300,20 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
         };
     }
 
-    await JobService.deleteJob(jobId, user.userId);
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(null, 'Job deleted successfully')
-    };
+    try {
+        await JobService.deleteJob(jobId, user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(null, 'Job deleted successfully')
+        };
+    } catch (error) {
+        console.error('Error in deleteJob:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to delete job' }
+        };
+    }
 }, ['delete:jobs']);
 
 // Search jobs - FIXED: Better error handling and optional parameters
@@ -306,7 +354,7 @@ export const searchJobs = withErrorHandling(async (req: HttpRequest, context: In
     }
 });
 
-// Get jobs by organization - FIXED: Add GUID validation
+// Get jobs by organization - FIXED: Add GUID validation and fix database query
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
@@ -333,49 +381,73 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
         };
     }
 
-    // Check if user has access to this organization
-    const accessQuery = `
-        SELECT 1 FROM Employers 
-        WHERE UserID = @param0 AND OrganizationID = @param1
-    `;
-    const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]);
-    
-    if (!accessResult.recordset || accessResult.recordset.length === 0) {
+    try {
+        // FIXED: Simplified access check without IsActive column
+        const accessQuery = `
+            SELECT 1 FROM Employers 
+            WHERE UserID = @param0 AND OrganizationID = @param1
+        `;
+        const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]);
+        
+        if (!accessResult.recordset || accessResult.recordset.length === 0) {
+            return {
+                status: 403,
+                jsonBody: { success: false, error: 'Access denied to this organization' }
+            };
+        }
+
+        const result = await JobService.getJobsByOrganization(organizationId, validatedParams);
+        
         return {
-            status: 403,
-            jsonBody: { success: false, error: 'Access denied to this organization' }
+            status: 200,
+            jsonBody: successResponse(result.jobs, 'Organization jobs retrieved successfully', {
+                page: validatedParams.page,
+                pageSize: validatedParams.pageSize,
+                total: result.total,
+                totalPages: result.totalPages
+            })
+        };
+    } catch (error) {
+        console.error('Error in getJobsByOrganization:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve organization jobs' }
         };
     }
-
-    const result = await JobService.getJobsByOrganization(organizationId, validatedParams);
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(result.jobs, 'Organization jobs retrieved successfully', {
-            page: validatedParams.page,
-            pageSize: validatedParams.pageSize,
-            total: result.total,
-            totalPages: result.totalPages
-        })
-    };
 }, ['read:jobs']);
 
 // Get job types (reference data)
 export const getJobTypes = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    const jobTypes = await JobService.getJobTypes();
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(jobTypes, 'Job types retrieved successfully')
-    };
+    try {
+        const jobTypes = await JobService.getJobTypes();
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(jobTypes, 'Job types retrieved successfully')
+        };
+    } catch (error) {
+        console.error('Error in getJobTypes:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve job types' }
+        };
+    }
 });
 
 // Get currencies (reference data)
 export const getCurrencies = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    const currencies = await JobService.getCurrencies();
-    
-    return {
-        status: 200,
-        jsonBody: successResponse(currencies, 'Currencies retrieved successfully')
-    };
+    try {
+        const currencies = await JobService.getCurrencies();
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(currencies, 'Currencies retrieved successfully')
+        };
+    } catch (error) {
+        console.error('Error in getCurrencies:', error);
+        return {
+            status: 500,
+            jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve currencies' }
+        };
+    }
 });

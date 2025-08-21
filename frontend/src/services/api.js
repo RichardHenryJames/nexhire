@@ -58,7 +58,7 @@ class NexHireAPI {
       if (this.token) {
         console.log('? Found stored auth token');
       } else {
-        console.log('?? No stored auth token found');
+        console.log('No stored auth token found');
       }
     } catch (error) {
       console.error('? Error initializing API:', error);
@@ -100,7 +100,7 @@ class NexHireAPI {
     }
 
     try {
-      console.log(`?? API Call: ${options.method || 'GET'} ${url}`);
+      console.log(`API Call: ${options.method || 'GET'} ${url}`);
       
       const response = await fetch(url, {
         ...options,
@@ -118,7 +118,7 @@ class NexHireAPI {
         data = await response.json();
       } else {
         const text = await response.text();
-        console.warn(`?? Non-JSON response for ${endpoint}:`, text);
+        console.warn(`Non-JSON response for ${endpoint}:`, text);
         throw new Error(`Invalid response format: ${response.status}`);
       }
 
@@ -185,8 +185,30 @@ class NexHireAPI {
   }
 
   async logout() {
-    await this.clearTokens();
-    return { success: true };
+    try {
+      // FIXED: Call backend logout endpoint first
+      console.log('Calling backend logout endpoint...');
+      
+      // Make backend call to log the logout activity
+      const result = await this.apiCall('/auth/logout', {
+        method: 'POST',
+      });
+      
+      console.log('? Backend logout successful:', result.message);
+      
+      // Clear local tokens after successful backend call
+      await this.clearTokens();
+      
+      return { success: true, message: 'Logout successful' };
+    } catch (error) {
+      console.error('? Backend logout failed:', error.message);
+      
+      // Even if backend call fails, still clear local tokens for security
+      await this.clearTokens();
+      
+      // Return success anyway since tokens are cleared
+      return { success: true, message: 'Logout completed (tokens cleared)' };
+    }
   }
 
   // User Profile APIs
@@ -198,6 +220,14 @@ class NexHireAPI {
     return this.apiCall('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(profileData),
+    });
+  }
+
+  // NEW: Update education data
+  async updateEducation(educationData) {
+    return this.apiCall('/users/education', {
+      method: 'PUT',
+      body: JSON.stringify(educationData),
     });
   }
 
@@ -259,14 +289,16 @@ class NexHireAPI {
     try {
       return await this.apiCall('/reference/job-types');
     } catch (error) {
-      console.warn('?? Failed to load job types:', error.message);
+      console.warn('Failed to load job types:', error.message);
       // Return fallback data
       return {
         success: true,
         data: [
           { JobTypeID: 1, Type: 'Full-Time' },
           { JobTypeID: 2, Type: 'Contract' },
-          { JobTypeID: 3, Type: 'Part-Time' }
+          { JobTypeID: 3, Type: 'Part-Time' },
+          { JobTypeID: 4, Type: 'Internship' },
+          { JobTypeID: 5, Type: 'Freelance' }
         ]
       };
     }
@@ -276,16 +308,139 @@ class NexHireAPI {
     try {
       return await this.apiCall('/reference/currencies');
     } catch (error) {
-      console.warn('?? Failed to load currencies:', error.message);
+      console.warn('Failed to load currencies:', error.message);
       // Return fallback data
       return {
         success: true,
         data: [
           { CurrencyID: 1, Code: 'USD', Symbol: '$', Name: 'US Dollar' },
-          { CurrencyID: 2, Code: 'EUR', Symbol: '€', Name: 'Euro' }
+          { CurrencyID: 2, Code: 'EUR', Symbol: 'ï¿½', Name: 'Euro' }
         ]
       };
     }
+  }
+
+  // NEW: Reference data APIs for registration flow
+  async getColleges(country = 'India', searchName = '') {
+    try {
+      // Build query parameters for the external API
+      const params = new URLSearchParams();
+      if (country) params.append('country', country);
+      if (searchName) params.append('name', searchName);
+      
+      const endpoint = `/reference/colleges${params.toString() ? `?${params.toString()}` : ''}`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.warn('Failed to load colleges:', error.message);
+      // Return comprehensive fallback data with Indian focus
+      return {
+        success: true,
+        data: [
+          // Top Indian Universities
+          { id: 1, name: 'Indian Institute of Technology (IIT) Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.iitd.ac.in' },
+          { id: 2, name: 'Indian Institute of Technology (IIT) Bombay', type: 'University', country: 'India', state: 'Maharashtra', website: 'https://www.iitb.ac.in' },
+          { id: 3, name: 'Indian Institute of Technology (IIT) Kanpur', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.iitk.ac.in' },
+          { id: 4, name: 'Indian Institute of Technology (IIT) Madras', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.iitm.ac.in' },
+          { id: 5, name: 'Indian Institute of Science (IISc) Bangalore', type: 'University', country: 'India', state: 'Karnataka', website: 'https://www.iisc.ac.in' },
+          { id: 6, name: 'All India Institute of Medical Sciences (AIIMS) Delhi', type: 'Medical University', country: 'India', state: 'Delhi', website: 'https://www.aiims.edu' },
+          { id: 7, name: 'Jawaharlal Nehru University (JNU)', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jnu.ac.in' },
+          { id: 8, name: 'University of Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.du.ac.in' },
+          { id: 9, name: 'Banaras Hindu University (BHU)', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.bhu.ac.in' },
+          { id: 10, name: 'Jamia Millia Islamia', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jmi.ac.in' },
+          { id: 11, name: 'Aligarh Muslim University', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.amu.ac.in' },
+          { id: 12, name: 'Jadavpur University', type: 'University', country: 'India', state: 'West Bengal', website: 'https://www.jaduniv.edu.in' },
+          { id: 13, name: 'Anna University', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.annauniv.edu' },
+          { id: 14, name: 'Indian Statistical Institute (ISI)', type: 'University', country: 'India', state: 'West Bengal', website: 'https://www.isical.ac.in' },
+          { id: 15, name: 'Birla Institute of Technology and Science (BITS) Pilani', type: 'University', country: 'India', state: 'Rajasthan', website: 'https://www.bits-pilani.ac.in' },
+          
+          // International Universities (if country is India, show some popular international options)
+          { id: 51, name: 'Harvard University', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.harvard.edu' },
+          { id: 52, name: 'Stanford University', type: 'University', country: 'United States', state: 'California', website: 'https://www.stanford.edu' },
+          { id: 53, name: 'Massachusetts Institute of Technology (MIT)', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.mit.edu' },
+          { id: 54, name: 'University of Oxford', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ox.ac.uk' },
+          { id: 55, name: 'University of Cambridge', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.cam.ac.uk' },
+          
+          // Other option
+          { id: 999999, name: 'Other', type: 'Other', country: 'Various', state: null, website: null },
+        ]
+      };
+    }
+  }
+
+  // NEW: Get universities by specific country (for employer job posting)
+  async getUniversitiesByCountry(country) {
+    try {
+      const params = new URLSearchParams({ country });
+      return await this.apiCall(`/reference/universities-by-country?${params.toString()}`);
+    } catch (error) {
+      console.warn('Failed to load universities by country:', error.message);
+      return {
+        success: true,
+        data: {
+          country: country,
+          totalUniversities: 0,
+          universitiesByState: {}
+        }
+      };
+    }
+  }
+
+  // NEW: Get organizations (companies) with improved parameters and fallback data
+  async getOrganizations(source = 'database', country = 'IN', limit = 1000) {
+    try {
+      // Build query parameters for external company fetching
+      const params = new URLSearchParams({
+        source: source,        // database, external, or all
+        limit: limit.toString() // Limit number of results
+      });
+      // Only pass country when calling external sources to avoid confusion
+      if (source !== 'database' && country) {
+        params.append('country', country);
+      }
+
+      const res = await this.apiCall(`/reference/organizations?${params.toString()}`);
+
+      // Normalize response to always return an array at data level
+      const organizations = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.organizations)
+          ? res.data.organizations
+          : [];
+
+      return { success: true, data: organizations };
+    } catch (error) {
+      console.warn('Failed to load organizations:', error.message);
+      // Return comprehensive fallback data as a flat array
+      return {
+        success: true,
+        data: [
+          { id: 1, name: 'Google', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 2, name: 'Microsoft', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 3, name: 'Apple', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 4, name: 'Amazon', industry: 'E-commerce', size: '1000+', type: 'Corporation' },
+          { id: 5, name: 'Meta (Facebook)', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 6, name: 'Tesla', industry: 'Automotive', size: '201-1000', type: 'Corporation' },
+          { id: 7, name: 'Netflix', industry: 'Entertainment', size: '201-1000', type: 'Corporation' },
+          { id: 8, name: 'Spotify', industry: 'Entertainment', size: '51-200', type: 'Corporation' },
+          // Indian companies
+          { id: 20, name: 'Tata Consultancy Services', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 21, name: 'Infosys', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 22, name: 'Wipro', industry: 'Technology', size: '1000+', type: 'Corporation' },
+          { id: 23, name: 'Flipkart', industry: 'E-commerce', size: '201-1000', type: 'Corporation' },
+          { id: 24, name: 'Zomato', industry: 'Food Delivery', size: '51-200', type: 'Corporation' },
+          { id: 25, name: 'Paytm', industry: 'Fintech', size: '51-200', type: 'Corporation' },
+          { id: 999999, name: 'My company is not listed', industry: 'Other', size: 'Unknown', type: 'Other' }
+        ]
+      };
+    }
+  }
+
+  // Initialize employer profile + organization for an existing user
+  async initializeEmployerProfile(data) {
+    return this.apiCall('/employers/initialize', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // Health check

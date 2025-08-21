@@ -12,7 +12,7 @@ import {
 import { appConstants } from '../config';
 
 export class UserService {
-    // Register new user
+    // FIXED: Register new user with organization creation for employers (now fully transactional)
     static async register(userData: any): Promise<User> {
         const validatedData = validateRequest<UserRegistrationRequest>(userRegistrationSchema, userData);
         
@@ -28,49 +28,187 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
-        // Insert user into database
-        const query = `
-            INSERT INTO Users (
-                UserID, Email, Password, UserType, FirstName, LastName, 
-                Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
-                ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
-                TwoFactorEnabled, LoginAttempts
+        // Start transaction for user and organization/applicant creation
+        const tx = await dbService.beginTransaction();
+        try {
+            // Insert user into database
+            const userQuery = `
+                INSERT INTO Users (
+                    UserID, Email, Password, UserType, FirstName, LastName, 
+                    Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                    ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
+                    TwoFactorEnabled, LoginAttempts
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5,
+                    @param6, @param7, @param8, 0, 0,
+                    'Public', GETUTCDATE(), GETUTCDATE(), 1,
+                    0, 0
+                );
+                
+                SELECT * FROM Users WHERE UserID = @param0;
+            `;
+
+            const userParameters = [
+                userId,
+                validatedData.email,
+                hashedPassword,
+                validatedData.userType,
+                validatedData.firstName,
+                validatedData.lastName,
+                validatedData.phone || null,
+                validatedData.dateOfBirth || null,
+                validatedData.gender || null
+            ];
+
+            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
+            
+            if (!userResult.recordset || userResult.recordset.length === 0) {
+                throw new Error('Failed to create user');
+            }
+
+            const user = userResult.recordset[0];
+            
+            // Create organization and employer profile if user is an employer
+            if (validatedData.userType === appConstants.userTypes.EMPLOYER) {
+                await this.createEmployerProfileWithOrganizationTx(tx, userId, validatedData);
+            }
+            // Create applicant profile if user is a job seeker
+            else if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
+                await this.createApplicantProfileTx(tx, userId);
+            }
+
+            await tx.commit();
+            return user;
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            console.error('Error during user registration (rolled back):', error);
+            if (error instanceof ConflictError) throw error;
+            throw new Error('Registration failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    }
+
+    // FIXED: Create employer profile with organization during registration (transactional)
+    private static async createEmployerProfileWithOrganizationTx(tx: any, userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
+        // Generate IDs
+        const organizationId = AuthService.generateUniqueId();
+        const employerId = AuthService.generateUniqueId();
+        
+        // Updated organization creation to match actual database schema
+        const orgQuery = `
+            INSERT INTO Organizations (
+                OrganizationID, Name, Description, Industry, Size, Location, 
+                Website, Type, EstablishedDate, CreatedAt, UpdatedAt
             ) VALUES (
                 @param0, @param1, @param2, @param3, @param4, @param5,
-                @param6, @param7, @param8, 0, 0,
-                'Public', GETUTCDATE(), GETUTCDATE(), 1,
-                0, 0
-            );
-            
-            SELECT * FROM Users WHERE UserID = @param0;
+                @param6, @param7, @param8, GETUTCDATE(), GETUTCDATE()
+            )
         `;
 
-        const parameters = [
-            userId,
-            validatedData.email,
-            hashedPassword,
-            validatedData.userType,
-            validatedData.firstName,
-            validatedData.lastName,
-            validatedData.phone || null,
-            validatedData.dateOfBirth || null,
-            validatedData.gender || null
+        const orgParameters = [
+            organizationId,
+            userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`,
+            userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
+            userData.organizationIndustry || 'Technology',
+            userData.organizationSize || 'Small',
+            userData.organizationLocation || 'Remote',
+            userData.organizationWebsite || '',
+            userData.organizationType || 'Company',
+            userData.establishedDate || null
         ];
 
-        const result = await dbService.executeQuery<User>(query, parameters);
+        await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
         
-        if (!result.recordset || result.recordset.length === 0) {
-            throw new Error('Failed to create user');
+        // Employer profile creation
+        const employerQuery = `
+            INSERT INTO Employers (
+                EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
+                CanScheduleInterviews, CanSendMessages, JoinedAt
+            ) VALUES (
+                @param0, @param1, @param2, 1, 1, 1, 1, GETUTCDATE()
+            )
+        `;
+
+        await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
+        
+        console.log(`? (TX) Created organization ${organizationId} and employer profile ${employerId} for user ${userId}`);
+        return { organizationId, employerId };
+    }
+
+    // Legacy non-transactional helper (kept for backward compatibility; prefer the TX version)
+    private static async createEmployerProfileWithOrganization(userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
+        const tx = await dbService.beginTransaction();
+        try {
+            const res = await this.createEmployerProfileWithOrganizationTx(tx, userId, userData);
+            await tx.commit();
+            return res;
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            throw error;
+        }
+    }
+
+    // Create applicant profile (transactional)
+    private static async createApplicantProfileTx(tx: any, userId: string): Promise<void> {
+        const applicantId = AuthService.generateUniqueId();
+        const query = `
+            INSERT INTO Applicants (
+                ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
+                AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
+                ImmediatelyAvailable, WillingToRelocate, IsFeatured
+            ) VALUES (
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
+            )
+        `;
+        await dbService.executeTransactionQuery(tx, query, [applicantId, userId]);
+    }
+
+    // Legacy non-transactional applicant helper
+    private static async createApplicantProfile(userId: string): Promise<void> {
+        const tx = await dbService.beginTransaction();
+        try {
+            await this.createApplicantProfileTx(tx, userId);
+            await tx.commit();
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            throw error;
+        }
+    }
+
+    // NEW: Initialize employer profile for an existing authenticated user (transactional)
+    static async initializeEmployerProfile(userId: string, data: any): Promise<{ organizationId: string; employerId: string }> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
         }
 
-        const user = result.recordset[0];
-        
-        // Create applicant profile if user is a job seeker
-        if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
-            await this.createApplicantProfile(userId);
+        // Prevent duplicate employer creation if already employer and record exists
+        if (user.UserType === appConstants.userTypes.EMPLOYER) {
+            const existing = await dbService.executeQuery(
+                'SELECT EmployerID FROM Employers WHERE UserID = @param0',
+                [userId]
+            );
+            if (existing.recordset && existing.recordset.length > 0) {
+                throw new ConflictError('Employer profile already exists');
+            }
         }
 
-        return user;
+        const tx = await dbService.beginTransaction();
+        try {
+            // Upgrade user type to Employer if needed
+            if (user.UserType !== appConstants.userTypes.EMPLOYER) {
+                await dbService.executeTransactionQuery(tx,
+                    `UPDATE Users SET UserType = 'Employer', UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
+                    [userId]
+                );
+            }
+            // Create org + employer under same transaction
+            const result = await this.createEmployerProfileWithOrganizationTx(tx, userId, data);
+            await tx.commit();
+            return result;
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            throw error;
+        }
     }
 
     // Login user
@@ -260,22 +398,6 @@ export class UserService {
     }
 
     // Private helper methods
-    private static async createApplicantProfile(userId: string): Promise<void> {
-        const applicantId = AuthService.generateUniqueId();
-        
-        const query = `
-            INSERT INTO Applicants (
-                ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-                AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                ImmediatelyAvailable, WillingToRelocate, IsFeatured
-            ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
-            )
-        `;
-
-        await dbService.executeQuery(query, [applicantId, userId]);
-    }
-
     private static async incrementLoginAttempts(userId: string): Promise<void> {
         const query = `
             UPDATE Users 
@@ -337,5 +459,85 @@ export class UserService {
 
         const result = await dbService.executeQuery(query, [userId]);
         return result.recordset[0] || {};
+    }
+
+    // Update applicant education data
+    static async updateEducation(userId: string, educationData: any): Promise<any> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        // Ensure user is a job seeker
+        if (user.UserType !== appConstants.userTypes.JOB_SEEKER) {
+            throw new ValidationError('Only job seekers can update education data');
+        }
+
+        // Get applicant ID
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+        
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+
+        // Build education JSON object from the frontend data
+        const educationRecord = {
+            college: educationData.college || null,
+            customCollege: educationData.customCollege || '',
+            degreeType: educationData.degreeType || '',
+            fieldOfStudy: educationData.fieldOfStudy || '',
+            yearInCollege: educationData.yearInCollege || '',
+            selectedCountry: educationData.selectedCountry || 'India',
+            updatedAt: new Date().toISOString()
+        };
+
+        // Update the Applicants table with education information
+        const updateQuery = `
+            UPDATE Applicants 
+            SET 
+                HighestEducation = @param1,
+                FieldOfStudy = @param2,
+                Education = @param3,
+                ProfileCompleteness = CASE 
+                    WHEN ProfileCompleteness < 40 THEN 40 
+                    ELSE ProfileCompleteness 
+                END
+            WHERE ApplicantID = @param0;
+            
+            -- Return updated applicant profile
+            SELECT 
+                a.*,
+                u.FirstName,
+                u.LastName,
+                u.Email
+            FROM Applicants a
+            INNER JOIN Users u ON a.UserID = u.UserID
+            WHERE a.ApplicantID = @param0;
+        `;
+
+        const parameters = [
+            applicantId,
+            educationData.degreeType || null,  // HighestEducation
+            educationData.fieldOfStudy || null,  // FieldOfStudy
+            JSON.stringify(educationRecord)  // Education (complete JSON)
+        ];
+
+        const result = await dbService.executeQuery(updateQuery, parameters);
+
+        if (!result.recordset || result.recordset.length === 0) {
+            throw new Error('Failed to update education data');
+        }
+
+        console.log(`? Updated education data for user ${userId}:`, {
+            college: educationData.college?.name || educationData.customCollege,
+            degreeType: educationData.degreeType,
+            fieldOfStudy: educationData.fieldOfStudy,
+            country: educationData.selectedCountry
+        });
+
+        return result.recordset[0];
     }
 }

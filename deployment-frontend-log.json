@@ -9,6 +9,6 @@
   "minimatchFix": "Temporarily removed assetBundlePatterns to bypass minimatch error",
   "dependencyFix": "Applied --legacy-peer-deps to resolve React version conflicts",
   "staticAppName": "nexhire-frontend-web",
-  "timestamp": "2025-08-17 00:23:38",
+  "timestamp": "2025-08-20 21:30:27",
   "cspFix": "Applied permissive CSP for React Native Web compatibility"
 }

@@ -33,6 +33,32 @@ export const login = withErrorHandling(async (req: HttpRequest, context: Invocat
     };
 });
 
+// Logout user
+export const logout = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    try {
+        console.log('User logout:', user.userId, user.email);
+        
+        // Here you could add additional logout logic like:
+        // - Invalidate refresh tokens in database
+        // - Log logout activity
+        // - Clear any user sessions
+        
+        // For now, we'll just acknowledge the logout
+        // The client will clear the tokens locally
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(null, 'Logout successful')
+        };
+    } catch (error) {
+        console.error('Logout error:', error);
+        return {
+            status: 500,
+            jsonBody: errorResponse('Logout failed', 'An error occurred during logout')
+        };
+    }
+}, []);
+
 // Get user profile
 export const getProfile = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const userProfile = await UserService.findById(user.userId);
@@ -139,3 +165,23 @@ export const refreshToken = withErrorHandling(async (req: HttpRequest, context: 
         jsonBody: successResponse(tokens, 'Token refreshed successfully')
     };
 });
+
+// Update applicant education data
+export const updateEducation = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    const educationData = await extractRequestBody(req);
+    
+    // Ensure user is a job seeker
+    if (user.userType !== 'JobSeeker') {
+        return {
+            status: 403,
+            jsonBody: errorResponse('Access denied', 'Only job seekers can update education data')
+        };
+    }
+
+    const updatedProfile = await UserService.updateEducation(user.userId, educationData);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse(updatedProfile, 'Education data updated successfully')
+    };
+}, ['write:profile']);

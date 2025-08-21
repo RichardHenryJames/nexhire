@@ -212,7 +212,7 @@ export interface ApplicationTracking {
     LastUpdatedAt: Date;
 }
 
-// Validation request interfaces
+// FIXED: Updated UserRegistrationRequest to include organization fields for employers
 export interface UserRegistrationRequest {
     email: string;
     password: string;
@@ -222,6 +222,16 @@ export interface UserRegistrationRequest {
     phone?: string;
     dateOfBirth?: Date;
     gender?: string;
+    
+    // Organization fields for employers
+    organizationName?: string;
+    organizationIndustry?: string;
+    organizationSize?: string;
+    organizationWebsite?: string;
+    organizationDescription?: string;
+    organizationLocation?: string;
+    organizationType?: string;
+    establishedDate?: Date;
 }
 
 export interface UserLoginRequest {

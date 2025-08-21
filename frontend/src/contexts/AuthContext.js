@@ -109,12 +109,28 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       console.log('Logging out user:', user?.Email);
-      await nexhireAPI.logout();
+      setLoading(true);
+      
+      // FIXED: Call API logout which now makes backend call
+      const result = await nexhireAPI.logout();
+      
+      if (result.success) {
+        console.log('? Logout successful:', result.message);
+        setUser(null);
+        setError(null);
+      } else {
+        console.warn('Logout had issues but continuing:', result.message);
+        // Still clear user state for security
+        setUser(null);
+        setError(null);
+      }
+    } catch (error) {
+      console.error('? Logout error:', error);
+      // Always clear user state even if logout call fails
       setUser(null);
       setError(null);
-      console.log('Logout successful');
-    } catch (error) {
-      console.error('Logout error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -51,27 +51,29 @@ import { withErrorHandling, corsHeaders } from './src/middleware';
 import { 
     register, 
     login, 
+    logout,  // FIXED: Add logout import
     getProfile, 
-    updateProfile, 
+    updateProfile,
+    updateEducation,  // NEW: Add education update import
     changePassword, 
     verifyEmail, 
     getDashboardStats, 
-    deactivateAccount,
+    deactivateAccount, 
     refreshToken 
 } from './src/controllers/user.controller';
-
 import { 
-    getJobs, 
     createJob, 
+    getJobs, 
     getJobById, 
     updateJob, 
     deleteJob, 
     publishJob, 
     closeJob, 
     searchJobs, 
-    getJobTypes 
+    getJobsByOrganization, 
+    getJobTypes, 
+    getCurrencies 
 } from './src/controllers/job.controller';
-
 import { 
     applyForJob, 
     getMyApplications, 
@@ -81,6 +83,13 @@ import {
     getApplicationDetails, 
     getApplicationStats 
 } from './src/controllers/job-application.controller';
+import {
+    getOrganizations,
+    getColleges,
+    getUniversitiesByCountry,
+    getIndustries
+} from './src/controllers/reference.controller';
+import { initializeEmployer } from './src/controllers/employer.controller';
 
 // ========================================================================
 // AUTHENTICATION & USER MANAGEMENT ENDPOINTS
@@ -98,6 +107,14 @@ app.http('auth-login', {
     authLevel: 'anonymous',
     route: 'auth/login',
     handler: withErrorHandling(login)
+});
+
+// FIXED: Add logout endpoint
+app.http('auth-logout', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'auth/logout',
+    handler: withErrorHandling(logout)
 });
 
 app.http('auth-refresh', {
@@ -141,11 +158,26 @@ app.http('users-dashboard-stats', {
     handler: withErrorHandling(getDashboardStats)
 });
 
+app.http('users-update-education', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/education',
+    handler: withErrorHandling(updateEducation)
+});
+
 app.http('users-deactivate', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/deactivate',
     handler: withErrorHandling(deactivateAccount)
+});
+
+// NEW: Employers initialize endpoint
+app.http('employers-initialize', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'employers/initialize',
+    handler: withErrorHandling(initializeEmployer)
 });
 
 // ========================================================================
@@ -269,33 +301,35 @@ app.http('reference-currencies', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'reference/currencies',
-    handler: withErrorHandling(async (req, context) => {
-        // Get currencies reference data
-        const { dbService } = await import('./src/services/database.service');
-        
-        try {
-            const query = 'SELECT CurrencyID, Code, Symbol, Name FROM Currencies ORDER BY Code';
-            const result = await dbService.executeQuery(query);
-            
-            return {
-                status: 200,
-                jsonBody: {
-                    success: true,
-                    data: result.recordset || [],
-                    message: 'Currencies retrieved successfully'
-                }
-            };
-        } catch (error) {
-            return {
-                status: 500,
-                jsonBody: {
-                    success: false,
-                    error: 'Internal server error',
-                    message: 'Failed to retrieve currencies'
-                }
-            };
-        }
-    })
+    handler: withErrorHandling(getCurrencies)
+});
+
+app.http('reference-organizations', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/organizations',
+    handler: withErrorHandling(getOrganizations)
+});
+
+app.http('reference-colleges', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/colleges',
+    handler: withErrorHandling(getColleges)
+});
+
+app.http('reference-universities-by-country', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/universities-by-country',
+    handler: withErrorHandling(getUniversitiesByCountry)
+});
+
+app.http('reference-industries', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/industries',
+    handler: withErrorHandling(getIndustries)
 });
 
 // ========================================================================
@@ -323,34 +357,36 @@ app.http('health', {
 // STARTUP LOG
 // ========================================================================
 
-console.log(' NexHire Backend API - All functions registered');
-console.log(' Total endpoints: 18');
-console.log(' API Base URL: https://nexhire-api-func.azurewebsites.net/api');
-console.log('? Ready for deployment to Azure Functions v4');
-console.log('? CORS middleware enabled for all endpoints');
+console.log('? NexHire Backend API - All functions registered');
+console.log('? Total endpoints: 24');  // Updated count
+console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
+console.log('Ready for deployment to Azure Functions v4');
+console.log('CORS middleware enabled for all endpoints');
 
 export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (18 total):
+ * COMPLETE API ENDPOINT LIST (24 total):
  * ========================================================================
  * 
- *  AUTHENTICATION (4 endpoints):
+ * AUTHENTICATION (5 endpoints):
  * POST   /auth/register               - User registration
  * POST   /auth/login                  - User login
+ * POST   /auth/logout                 - User logout
  * POST   /auth/refresh                - Refresh JWT token
  * GET    /health                      - Health check
  * 
- *  USER MANAGEMENT (5 endpoints):
+ * USER MANAGEMENT (6 endpoints):
  * GET    /users/profile               - Get user profile
  * PUT    /users/profile               - Update user profile
  * POST   /users/change-password       - Change password
  * POST   /users/verify-email          - Verify email
  * GET    /users/dashboard-stats       - Get dashboard stats
  * POST   /users/deactivate            - Deactivate account
+ * POST   /employers/initialize        - Initialize employer profile (NEW)
  * 
- *  JOB MANAGEMENT (6 endpoints):
+ * JOB MANAGEMENT (6 endpoints):
  * GET    /jobs                        - List all jobs
  * POST   /jobs                        - Create new job
  * GET    /jobs/{id}                   - Get job details
@@ -360,7 +396,7 @@ export {};
  * POST   /jobs/{id}/close             - Close job
  * GET    /jobs/search                 - Search jobs
  * 
- *  JOB APPLICATIONS (6 endpoints):
+ * JOB APPLICATIONS (6 endpoints):
  * POST   /applications                - Apply for job
  * GET    /applications/my             - Get my applications
  * GET    /applications/stats          - Get application stats
@@ -369,9 +405,12 @@ export {};
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- *  REFERENCE DATA (2 endpoints):
+ * REFERENCE DATA (5 endpoints):
  * GET    /reference/job-types         - Get job types
  * GET    /reference/currencies        - Get currencies
- * 
+ * GET    /reference/organizations     - Get organizations
+ * GET    /reference/colleges          - Get colleges/universities
+ * GET    /reference/industries        - Get industries
+ * GET    /reference/universities-by-country - Get universities by country and state
  * ========================================================================
  */
