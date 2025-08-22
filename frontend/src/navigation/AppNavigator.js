@@ -1,152 +1,147 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../styles/theme';
+import LoadingScreen from '../screens/LoadingScreen';
 
 // Auth Screens
-import LoginScreen from '../screens/auth/LoginScreen';
 import UserTypeSelectionScreen from '../screens/auth/registration/UserTypeSelectionScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
 
-// Job Seeker Registration Flow
-import ExperienceTypeSelectionScreen from '../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen';
-import EducationDetailsScreen from '../screens/auth/registration/jobseeker/EducationDetailsScreen';
-import JobPreferencesScreen from '../screens/auth/registration/jobseeker/JobPreferencesScreen';
-import PersonalDetailsScreen from '../screens/auth/registration/jobseeker/PersonalDetailsScreen';
-
-// Employer Registration Flow
-import EmployerTypeSelectionScreen from '../screens/auth/registration/employer/EmployerTypeSelectionScreen';
-import OrganizationDetailsScreen from '../screens/auth/registration/employer/OrganizationDetailsScreen';
-import EmployerPersonalDetailsScreen from '../screens/auth/registration/employer/EmployerPersonalDetailsScreen';
-import EmployerAccountScreen from '../screens/auth/registration/employer/EmployerAccountScreen';
-
-// FIXED: Main App Screens - using correct paths
+// Main App Screens
 import HomeScreen from '../screens/HomeScreen';
 import JobsScreen from '../screens/jobs/JobsScreen';
 import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
+import ApplicationsScreen from '../screens/applications/ApplicationsScreen'; // Fixed path
 import ProfileScreen from '../screens/profile/ProfileScreen';
+
+import { colors } from '../styles/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Job Seeker Registration Stack
-function JobSeekerRegistrationStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
-      }}
-    >
-      <Stack.Screen 
-        name="ExperienceTypeSelection" 
-        component={ExperienceTypeSelectionScreen} 
-      />
-      <Stack.Screen 
-        name="EducationDetailsScreen" 
-        component={EducationDetailsScreen} 
-      />
-      <Stack.Screen 
-        name="JobPreferencesScreen" 
-        component={JobPreferencesScreen} 
-      />
-      <Stack.Screen 
-        name="PersonalDetailsScreen" 
-        component={PersonalDetailsScreen} 
-      />
-    </Stack.Navigator>
-  );
-}
-
-// Employer Registration Stack
-function EmployerRegistrationStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
-      }}
-    >
-      <Stack.Screen 
-        name="EmployerTypeSelection" 
-        component={EmployerTypeSelectionScreen} 
-      />
-      <Stack.Screen 
-        name="OrganizationDetailsScreen" 
-        component={OrganizationDetailsScreen} 
-      />
-      <Stack.Screen 
-        name="EmployerPersonalDetailsScreen" 
-        component={EmployerPersonalDetailsScreen} 
-      />
-      <Stack.Screen 
-        name="EmployerAccountScreen" 
-        component={EmployerAccountScreen} 
-      />
-    </Stack.Navigator>
-  );
-}
-
-// Authentication Stack
+// Auth Stack Navigator
 function AuthStack() {
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
       }}
     >
-      <Stack.Screen 
-        name="UserTypeSelection" 
-        component={UserTypeSelectionScreen} 
-      />
-      <Stack.Screen 
-        name="JobSeekerFlow" 
-        component={JobSeekerRegistrationStack} 
-      />
-      <Stack.Screen 
-        name="EmployerFlow" 
-        component={EmployerRegistrationStack} 
-      />
+      <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }
 
-// Main App Tabs
-function MainTabs() {
+// Main App Tab Navigator
+function MainTabNavigator() {
+  const { userType, isEmployer } = useAuth();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#999',
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = 'home';
-          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          if (route.name === 'Jobs') iconName = focused ? 'briefcase' : 'briefcase-outline';
-          if (route.name === 'Create Job') iconName = focused ? 'add-circle' : 'add-circle-outline';
-          if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          let iconName;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Jobs') {
+            iconName = focused ? 'briefcase' : 'briefcase-outline';
+          } else if (route.name === 'CreateJob') {
+            iconName = focused ? 'add-circle' : 'add-circle-outline';
+          } else if (route.name === 'Applications') {
+            iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
           return <Ionicons name={iconName} size={size} color={color} />;
         },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.gray500,
+        tabBarStyle: {
+          backgroundColor: colors.white,
+          borderTopWidth: 1,
+          borderTopColor: colors.gray200,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 70,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        headerShown: false,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Jobs" component={JobsScreen} />
-      <Tab.Screen name="Create Job" component={CreateJobScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ title: 'Home' }}
+      />
+      <Tab.Screen 
+        name="Jobs" 
+        component={JobsScreen}
+        options={{ title: 'Jobs' }}
+      />
+      {isEmployer && (
+        <Tab.Screen 
+          name="CreateJob" 
+          component={CreateJobScreen}
+          options={{ title: 'Post Job' }}
+        />
+      )}
+      <Tab.Screen 
+        name="Applications" 
+        component={ApplicationsScreen}
+        options={{ title: 'Applications' }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
     </Tab.Navigator>
   );
 }
 
+// Main Stack Navigator with nested Tab Navigator
+function MainStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+      <Stack.Screen 
+        name="JobDetails" 
+        component={JobDetailsScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Job Details',
+          headerBackTitleVisible: false,
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Root Navigator
 export default function AppNavigator() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <MainTabs /> : <AuthStack />;
+  const { loading, isAuthenticated } = useAuth();
+
+  // Show loading screen while checking authentication state
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // Show appropriate stack based on authentication state
+  return isAuthenticated ? <MainStack /> : <AuthStack />;
 }

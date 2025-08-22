@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const [errors, setErrors] = useState({});
   const [extendedProfile, setExtendedProfile] = useState(null);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false); // New state for logout modal
   const [newSkill, setNewSkill] = useState('');
   
   // Initialize basic profile with correct backend field names
@@ -673,14 +674,8 @@ export default function ProfileScreen() {
             )}
 
             <TouchableOpacity style={styles.logoutButton} onPress={() => {
-              Alert.alert(
-                'Logout',
-                'Are you sure you want to logout?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Logout', style: 'destructive', onPress: logout },
-                ]
-              );
+              console.log('Logout button pressed!');
+              setShowLogoutModal(true); // Show custom modal instead of browser alert
             }}>
               <Ionicons name="log-out" size={20} color={colors.danger} />
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -714,6 +709,55 @@ export default function ProfileScreen() {
               placeholder="Enter a skill..."
               autoFocus
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Beautiful Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        animationType="fade"
+        transparent={true}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <View style={styles.logoutModalContainer}>
+            {/* Icon */}
+            <View style={styles.logoutModalIconContainer}>
+              <Ionicons name="log-out-outline" size={48} color={colors.danger} />
+            </View>
+
+            {/* Title */}
+            <Text style={styles.logoutModalTitle}>Logout</Text>
+            
+            {/* Message */}
+            <Text style={styles.logoutModalMessage}>
+              Are you sure you want to logout? You'll need to sign in again to access your account.
+            </Text>
+
+            {/* Buttons */}
+            <View style={styles.logoutModalButtons}>
+              <TouchableOpacity
+                style={styles.logoutModalCancelButton}
+                onPress={() => {
+                  console.log('Logout cancelled');
+                  setShowLogoutModal(false);
+                }}
+              >
+                <Text style={styles.logoutModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.logoutModalConfirmButton}
+                onPress={() => {
+                  console.log('Logout confirmed, calling logout function...');
+                  setShowLogoutModal(false);
+                  logout();
+                }}
+              >
+                <Text style={styles.logoutModalConfirmText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1041,5 +1085,86 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: typography.sizes.md,
     color: colors.text,
+  },
+  
+  // Beautiful Logout Modal Styles
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logoutModalContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  logoutModalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.danger + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoutModalTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  logoutModalMessage: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  logoutModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  logoutModalCancelButton: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  logoutModalCancelText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    color: colors.text,
+  },
+  logoutModalConfirmButton: {
+    flex: 1,
+    backgroundColor: colors.danger,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  logoutModalConfirmText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
   },
 });

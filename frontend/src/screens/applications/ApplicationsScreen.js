@@ -13,7 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 
-export default function ApplicationsScreen() {
+export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function ApplicationsScreen() {
 
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [],);
 
   const fetchApplications = async (resetPage = false) => {
     try {
@@ -133,7 +133,9 @@ export default function ApplicationsScreen() {
       style={styles.applicationCard}
       onPress={() => {
         // Navigate to job details or application details
-        // navigation.navigate('JobDetails', { jobId: application.JobID });
+        if (application.JobID) {
+          navigation.navigate('JobDetails', { jobId: application.JobID });
+        }
       }}
     >
       <View style={styles.applicationHeader}>
@@ -224,7 +226,7 @@ export default function ApplicationsScreen() {
           style={styles.browseJobsButton}
           onPress={() => {
             // Navigate to jobs screen
-            // navigation.navigate('Jobs');
+            navigation.navigate('Jobs');
           }}
         >
           <Text style={styles.browseJobsButtonText}>Browse Jobs</Text>

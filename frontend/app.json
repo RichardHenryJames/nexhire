@@ -1,21 +1,28 @@
 {
-  "name": "NexHire",
-  "slug": "nexhire",
-  "version": "1.0.0",
-  "orientation": "portrait",
-  "userInterfaceStyle": "light",
-  "splash": {
-    "backgroundColor": "#3B82F6"
-  },
-  "ios": {
-    "supportsTablet": true,
-    "bundleIdentifier": "com.nexhire.app"
-  },
-  "android": {
-    "package": "com.nexhire.app"
-  },
-  "web": {
-    "bundler": "metro"
-  },
-  "plugins": []
+  "expo": {
+    "name": "NexHire",
+    "slug": "nexhire",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#3B82F6"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexhire.app"
+    },
+    "android": {
+      "package": "com.nexhire.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": []
+  }
 }
