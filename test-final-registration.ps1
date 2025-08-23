@@ -6,11 +6,11 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? === FINAL REGISTRATION FLOW TEST ===" -ForegroundColor Green
+Write-Host "=== FINAL REGISTRATION FLOW TEST ===" -ForegroundColor Green
 
 # Install required modules
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host "Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 Import-Module SqlServer -Force
@@ -19,7 +19,7 @@ Import-Module SqlServer -Force
 $testEmail = "test.final.$(Get-Date -Format 'yyyyMMddHHmmss')@nexhire.test"
 $testPassword = "TestPassword123!"
 
-Write-Host "?? Test Email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test Email: $testEmail" -ForegroundColor Cyan
 
 # Test 1: Register Experienced Professional
 Write-Host "`n?? STEP 1: Register Experienced Professional" -ForegroundColor Yellow
@@ -71,7 +71,7 @@ $registrationData = @{
     }
 } | ConvertTo-Json -Depth 5
 
-Write-Host "?? Complete Registration Payload:" -ForegroundColor Cyan
+Write-Host "Complete Registration Payload:" -ForegroundColor Cyan
 Write-Host $registrationData -ForegroundColor Gray
 
 try {
@@ -121,7 +121,7 @@ try {
     $userQuery = "SELECT * FROM Users WHERE UserID = '$userId'"
     $userResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $userQuery
     
-    Write-Host "?? User Record:" -ForegroundColor Green
+    Write-Host "User Record:" -ForegroundColor Green
     Write-Host "  Email: $($userResult.Email)" -ForegroundColor Gray
     Write-Host "  Name: $($userResult.FirstName) $($userResult.LastName)" -ForegroundColor Gray
     Write-Host "  Type: $($userResult.UserType)" -ForegroundColor Gray
@@ -188,9 +188,9 @@ WHERE UserID = '$userId'
         Write-Host "`n?? Test Results: $passedTests/$totalTests passed ($successRate%)" -ForegroundColor Cyan
         
         if ($successRate -ge 80) {
-            Write-Host "?? EXCELLENT - Field mapping is working correctly!" -ForegroundColor Green
+            Write-Host "EXCELLENT - Field mapping is working correctly!" -ForegroundColor Green
         } elseif ($successRate -ge 60) {
-            Write-Host "?? GOOD - Most fields are mapped, some need attention" -ForegroundColor Yellow
+            Write-Host "GOOD - Most fields are mapped, some need attention" -ForegroundColor Yellow
         } else {
             Write-Host "? POOR - Field mapping needs significant fixes" -ForegroundColor Red
         }
@@ -209,10 +209,10 @@ WHERE UserID = '$userId'
 }
 
 Write-Host "`n?? === TEST SUMMARY ===" -ForegroundColor Green
-Write-Host "?? Test User: $testEmail" -ForegroundColor Cyan
-Write-Host "?? User ID: $userId" -ForegroundColor Cyan
-Write-Host "?? Frontend: https://jolly-sea-00174141e.1.azurestaticapps.net" -ForegroundColor Cyan
-Write-Host "?? Backend: $BaseUrl" -ForegroundColor Cyan
+Write-Host "Test User: $testEmail" -ForegroundColor Cyan
+Write-Host "User ID: $userId" -ForegroundColor Cyan
+Write-Host "Frontend: https://jolly-sea-00174141e.1.azurestaticapps.net" -ForegroundColor Cyan
+Write-Host "Backend: $BaseUrl" -ForegroundColor Cyan
 
 if ($successRate -ge 80) {
     Write-Host "`n?? REGISTRATION FLOW WORKING CORRECTLY!" -ForegroundColor Green

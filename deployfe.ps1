@@ -68,7 +68,7 @@ if ($Environment -eq "production") {
 }
 
 Write-Host "=== Deployment Completed Successfully ===" -ForegroundColor Green
-Write-Host "?? Your app should be available at: https://$StaticAppName.azurestaticapps.net" -ForegroundColor Cyan
+Write-Host "Your app should be available at: https://$StaticAppName.azurestaticapps.net" -ForegroundColor Cyan
 
 # Return to root directory
 Set-Location ..

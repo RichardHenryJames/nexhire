@@ -6,11 +6,11 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? === COMPREHENSIVE APPLICANTS TABLE DATA TEST ===" -ForegroundColor Green
+Write-Host "=== COMPREHENSIVE APPLICANTS TABLE DATA TEST ===" -ForegroundColor Green
 
 # Install required modules
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host "Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 Import-Module SqlServer -Force
@@ -19,7 +19,7 @@ Import-Module SqlServer -Force
 $testEmail = "test.complete.$(Get-Date -Format 'yyyyMMddHHmmss')@nexhire.test"
 $testPassword = "TestPassword123!"
 
-Write-Host "?? Test Email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test Email: $testEmail" -ForegroundColor Cyan
 
 # Step 1: Register User
 Write-Host "`n?? STEP 1: Register Job Seeker User" -ForegroundColor Yellow
@@ -35,7 +35,7 @@ $registrationData = @{
     gender = "Male"
 } | ConvertTo-Json
 
-Write-Host "?? Registration Payload:" -ForegroundColor Cyan
+Write-Host "Registration Payload:" -ForegroundColor Cyan
 Write-Host $registrationData -ForegroundColor Gray
 
 try {
@@ -114,7 +114,7 @@ WHERE UserID = '$userId'
             }
         }
         
-        Write-Host "?? Initial State - Populated: $initialPopulatedCount, NULL/Empty: $initialNullCount" -ForegroundColor Cyan
+        Write-Host "Initial State - Populated: $initialPopulatedCount, NULL/Empty: $initialNullCount" -ForegroundColor Cyan
     } else {
         Write-Host "? No applicant record found!" -ForegroundColor Red
         exit 1
@@ -146,7 +146,7 @@ $educationData = @{
     selectedCountry = "India"
 } | ConvertTo-Json -Depth 4
 
-Write-Host "?? Complete Education Payload:" -ForegroundColor Cyan
+Write-Host "Complete Education Payload:" -ForegroundColor Cyan
 Write-Host $educationData -ForegroundColor Gray
 
 try {
@@ -190,7 +190,7 @@ $workExperienceData = @{
     certifications = "AWS Certified Developer, React Certified"
 } | ConvertTo-Json -Depth 3
 
-Write-Host "?? Complete Work Experience Payload:" -ForegroundColor Cyan
+Write-Host "Complete Work Experience Payload:" -ForegroundColor Cyan
 Write-Host $workExperienceData -ForegroundColor Gray
 
 try {
@@ -278,7 +278,7 @@ $criticalFields = @{
 }
 
 if ($finalResult) {
-    Write-Host "?? Critical Field Verification:" -ForegroundColor Cyan
+    Write-Host "Critical Field Verification:" -ForegroundColor Cyan
     $passedTests = 0
     $totalTests = $criticalFields.Count
     
@@ -298,9 +298,9 @@ if ($finalResult) {
     Write-Host "`n?? Test Results: $passedTests/$totalTests passed ($successRate%)" -ForegroundColor Cyan
     
     if ($successRate -ge 80) {
-        Write-Host "?? EXCELLENT - Most critical fields are populated!" -ForegroundColor Green
+        Write-Host "EXCELLENT - Most critical fields are populated!" -ForegroundColor Green
     } elseif ($successRate -ge 60) {
-        Write-Host "?? GOOD - Some critical fields need attention" -ForegroundColor Yellow
+        Write-Host "GOOD - Some critical fields need attention" -ForegroundColor Yellow
     } else {
         Write-Host "? POOR - Many critical fields are missing" -ForegroundColor Red
     }
@@ -340,7 +340,7 @@ WHERE a.UserID = '$userId'
 
 try {
     $verificationResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $verificationQuery
-    Write-Host "?? SQL Verification Results:" -ForegroundColor Green
+    Write-Host "SQL Verification Results:" -ForegroundColor Green
     $verificationResult | Format-Table -AutoSize
 } catch {
     Write-Host "? SQL verification failed:" -ForegroundColor Red
@@ -348,7 +348,7 @@ try {
 }
 
 Write-Host "`n?? === COMPREHENSIVE TEST COMPLETED ===" -ForegroundColor Green
-Write-Host "?? Test User: $testEmail" -ForegroundColor Cyan
-Write-Host "?? User ID: $userId" -ForegroundColor Cyan
-Write-Host "?? Frontend URL: https://jolly-sea-00174141e.1.azurestaticapps.net" -ForegroundColor Cyan
+Write-Host "Test User: $testEmail" -ForegroundColor Cyan
+Write-Host "User ID: $userId" -ForegroundColor Cyan
+Write-Host "Frontend URL: https://jolly-sea-00174141e.1.azurestaticapps.net" -ForegroundColor Cyan
 Write-Host "`n?? Next: Test the frontend registration with this same data structure" -ForegroundColor Yellow

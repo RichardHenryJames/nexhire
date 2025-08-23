@@ -110,7 +110,7 @@ All **16 profile update tests PASSING** ?
 ```
 1. Edit any profile field (job title, skills, summary, etc.)
 2. Click "Smart Save" button
-3. Should see: "?? Complete profile updated successfully!"
+3. Should see: "Complete profile updated successfully!"
 4. Changes should be saved instantly
 ```
 
@@ -119,8 +119,8 @@ All **16 profile update tests PASSING** ?
 1. Edit multiple fields across different sections
 2. Click "Smart Save" 
 3. Should see which tables were updated:
-   - "?? Basic profile information updated successfully!" (Users table)
-   - "?? Professional profile updated successfully!" (Applicants table)
+   - "Basic profile information updated successfully!" (Users table)
+   - "Professional profile updated successfully!" (Applicants table)
 ```
 
 ---

@@ -9,24 +9,24 @@ Write-Host "? Lightning Fast ZIP Deployment - FIXED" -ForegroundColor Magenta
 # Check if this is the right directory
 if (!(Test-Path "index.ts")) {
     Write-Host "? Error: index.ts not found. Are you in the backend directory?" -ForegroundColor Red
-    Write-Host "?? Try: cd to your nexhire backend directory first" -ForegroundColor Yellow
+    Write-Host "Try: cd to your nexhire backend directory first" -ForegroundColor Yellow
     exit 1
 }
 
 # Clean and quick build
-Write-Host "?? Cleaning previous build..." -ForegroundColor Yellow
+Write-Host "Cleaning previous build..." -ForegroundColor Yellow
 if (Test-Path "dist") { Remove-Item -Path "dist" -Recurse -Force }
 
-Write-Host "?? Installing dependencies..." -ForegroundColor Yellow
+Write-Host "Installing dependencies..." -ForegroundColor Yellow
 npm ci --omit=dev --silent
 
-Write-Host "?? Building TypeScript..." -ForegroundColor Yellow
+Write-Host "Building TypeScript..." -ForegroundColor Yellow
 npm run build
 
 # Verify build succeeded
 if (!(Test-Path "dist")) {
     Write-Host "? Build failed: dist directory not created" -ForegroundColor Red
-    Write-Host "?? Try running: npm run build manually to see errors" -ForegroundColor Yellow
+    Write-Host "Try running: npm run build manually to see errors" -ForegroundColor Yellow
     exit 1
 }
 
@@ -34,7 +34,7 @@ if (!(Test-Path "dist")) {
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $zipFile = "deploy-$timestamp.zip"
 
-Write-Host "?? Creating deployment package..." -ForegroundColor Yellow
+Write-Host "Creating deployment package..." -ForegroundColor Yellow
 
 # Create temporary deployment directory
 $deployDir = "temp-deploy-$timestamp"
@@ -56,7 +56,7 @@ if (!(Test-Path $zipFile)) {
     exit 1
 }
 
-Write-Host "?? Deploying via ZIP ($((Get-Item $zipFile).Length / 1MB | ForEach-Object {"{0:N1}" -f $_}) MB)..." -ForegroundColor Green
+Write-Host "Deploying via ZIP ($((Get-Item $zipFile).Length / 1MB | ForEach-Object {"{0:N1}" -f $_}) MB)..." -ForegroundColor Green
 
 # Deploy via REST API
 try {
@@ -70,11 +70,11 @@ try {
     Remove-Item -Path $deployDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "?? API: https://nexhire-api-func.azurewebsites.net/api" -ForegroundColor Cyan
+Write-Host "API: https://nexhire-api-func.azurewebsites.net/api" -ForegroundColor Cyan
 Write-Host "? Deployment completed!" -ForegroundColor Magenta
 
 # Quick health check
-Write-Host "?? Testing API..." -ForegroundColor Yellow
+Write-Host "Testing API..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 try {
     $response = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/health" -Method GET -TimeoutSec 10
@@ -82,5 +82,5 @@ try {
         Write-Host "? API is responding: $($response.message)" -ForegroundColor Green
     }
 } catch {
-    Write-Host "?? API test failed (may need more time to start): $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "API test failed (may need more time to start): $($_.Exception.Message)" -ForegroundColor Yellow
 }

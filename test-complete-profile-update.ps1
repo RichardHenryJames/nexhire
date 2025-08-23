@@ -6,7 +6,7 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? === COMPLETE APPLICANT PROFILE UPDATE TEST ===" -ForegroundColor Green
+Write-Host "=== COMPLETE APPLICANT PROFILE UPDATE TEST ===" -ForegroundColor Green
 
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
@@ -124,13 +124,13 @@ $completeProfileData = @{
     tags = "React, Node.js, Full-Stack, Senior, JavaScript"
 } | ConvertTo-Json -Depth 3
 
-Write-Host "?? Profile data payload:" -ForegroundColor Cyan
+Write-Host "Profile data payload:" -ForegroundColor Cyan
 Write-Host $completeProfileData -ForegroundColor Gray
 
 try {
     $profileResponse = Invoke-RestMethod -Uri "$BaseUrl/applicants/$userId/profile" -Method PUT -Body $completeProfileData -Headers $headers
     Write-Host "? Profile update successful" -ForegroundColor Green
-    Write-Host "?? Profile completeness: $($profileResponse.data.ProfileCompleteness)%" -ForegroundColor Cyan
+    Write-Host "Profile completeness: $($profileResponse.data.ProfileCompleteness)%" -ForegroundColor Cyan
 } catch {
     Write-Host "? Profile update failed: $($_.Exception.Message)" -ForegroundColor Red
     if ($_.ErrorDetails.Message) {
@@ -193,14 +193,14 @@ WHERE UserID = '$userId'
         
         $populationRate = [math]::Round(($populatedFields.Count / $dbResult.PSObject.Properties.Count) * 100, 1)
         Write-Host "`n?? POPULATION RATE: $populationRate%" -ForegroundColor Cyan
-        Write-Host "?? PROFILE COMPLETENESS: $($dbResult.ProfileCompleteness)%" -ForegroundColor Cyan
+        Write-Host "PROFILE COMPLETENESS: $($dbResult.ProfileCompleteness)%" -ForegroundColor Cyan
         
         if ($populationRate -ge 80) {
-            Write-Host "?? EXCELLENT - Most fields are populated correctly!" -ForegroundColor Green
+            Write-Host "EXCELLENT - Most fields are populated correctly!" -ForegroundColor Green
         } elseif ($populationRate -ge 60) {
             Write-Host "? GOOD - Decent field population" -ForegroundColor Yellow
         } else {
-            Write-Host "?? NEEDS IMPROVEMENT - Low field population" -ForegroundColor Red
+            Write-Host "NEEDS IMPROVEMENT - Low field population" -ForegroundColor Red
         }
         
     } else {
@@ -223,13 +223,13 @@ $partialUpdateData = @{
 try {
     $partialResponse = Invoke-RestMethod -Uri "$BaseUrl/applicants/$userId/profile" -Method PUT -Body $partialUpdateData -Headers $headers
     Write-Host "? Partial update successful" -ForegroundColor Green
-    Write-Host "?? Updated profile completeness: $($partialResponse.data.ProfileCompleteness)%" -ForegroundColor Cyan
+    Write-Host "Updated profile completeness: $($partialResponse.data.ProfileCompleteness)%" -ForegroundColor Cyan
 } catch {
     Write-Host "? Partial update failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 Write-Host "`n?? === TEST SUMMARY ===" -ForegroundColor Green
-Write-Host "?? Test User: $testEmail" -ForegroundColor Cyan
-Write-Host "?? User ID: $userId" -ForegroundColor Cyan
-Write-Host "?? API Base: $BaseUrl" -ForegroundColor Cyan
+Write-Host "Test User: $testEmail" -ForegroundColor Cyan
+Write-Host "User ID: $userId" -ForegroundColor Cyan
+Write-Host "API Base: $BaseUrl" -ForegroundColor Cyan
 Write-Host "`n? This test validates the complete profile update functionality with all possible fields" -ForegroundColor Yellow

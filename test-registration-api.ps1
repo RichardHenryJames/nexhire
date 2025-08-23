@@ -6,11 +6,11 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? === NEXHIRE REGISTRATION API TESTING ===" -ForegroundColor Green
+Write-Host "=== NEXHIRE REGISTRATION API TESTING ===" -ForegroundColor Green
 
 # Install required modules
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
-    Write-Host "?? Installing SqlServer PowerShell module..." -ForegroundColor Yellow
+    Write-Host "Installing SqlServer PowerShell module..." -ForegroundColor Yellow
     Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
 }
 Import-Module SqlServer -Force
@@ -19,7 +19,7 @@ Import-Module SqlServer -Force
 $testEmail = "test.user.$(Get-Date -Format 'yyyyMMddHHmmss')@nexhire.test"
 $testPassword = "TestPassword123!"
 
-Write-Host "?? Test Email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test Email: $testEmail" -ForegroundColor Cyan
 
 # Test 1: Register a Job Seeker
 Write-Host "`n?? TEST 1: Job Seeker Registration" -ForegroundColor Yellow
@@ -35,7 +35,7 @@ $registrationData = @{
     gender = "Other"
 } | ConvertTo-Json
 
-Write-Host "?? Registration Payload:" -ForegroundColor Cyan
+Write-Host "Registration Payload:" -ForegroundColor Cyan
 Write-Host $registrationData -ForegroundColor Gray
 
 try {
@@ -80,10 +80,10 @@ try {
     Write-Host ($loginResponse | ConvertTo-Json -Depth 3) -ForegroundColor Gray
     
     $accessToken = $loginResponse.data.tokens.accessToken
-    Write-Host "?? Access Token: $($accessToken.Substring(0, 50))..." -ForegroundColor Cyan
+    Write-Host "Access Token: $($accessToken.Substring(0, 50))..." -ForegroundColor Cyan
     
     $userId = $loginResponse.data.user.UserID
-    Write-Host "?? User ID: $userId" -ForegroundColor Cyan
+    Write-Host "User ID: $userId" -ForegroundColor Cyan
 } catch {
     Write-Host "? Login Failed:" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
@@ -98,17 +98,17 @@ try {
     $userQuery = "SELECT UserID, Email, FirstName, LastName, UserType, Phone, Gender, DateOfBirth FROM Users WHERE UserID = '$userId'"
     $userResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $userQuery
     
-    Write-Host "?? User Record:" -ForegroundColor Green
+    Write-Host "User Record:" -ForegroundColor Green
     $userResult | Format-Table -AutoSize
     
     # Check Applicants table
     $applicantQuery = "SELECT * FROM Applicants WHERE UserID = '$userId'"
     $applicantResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $applicantQuery
     
-    Write-Host "?? Initial Applicant Record:" -ForegroundColor Green
+    Write-Host "Initial Applicant Record:" -ForegroundColor Green
     if ($applicantResult) {
         $applicantResult | Format-List
-        Write-Host "?? Non-null fields count: $((($applicantResult | Get-Member -MemberType Properties).Name | ForEach-Object { if ($applicantResult.$_ -ne $null -and $applicantResult.$_ -ne '') { $_ } }).Count)" -ForegroundColor Cyan
+        Write-Host "Non-null fields count: $((($applicantResult | Get-Member -MemberType Properties).Name | ForEach-Object { if ($applicantResult.$_ -ne $null -and $applicantResult.$_ -ne '') { $_ } }).Count)" -ForegroundColor Cyan
     } else {
         Write-Host "? No applicant record found!" -ForegroundColor Red
     }
@@ -135,7 +135,7 @@ $educationData = @{
     selectedCountry = "India"
 } | ConvertTo-Json -Depth 3
 
-Write-Host "?? Education Payload:" -ForegroundColor Cyan
+Write-Host "Education Payload:" -ForegroundColor Cyan
 Write-Host $educationData -ForegroundColor Gray
 
 try {
@@ -153,7 +153,7 @@ try {
     
     # Check if response has more details
     if ($_.ErrorDetails.Message) {
-        Write-Host "?? Error Details:" -ForegroundColor Red
+        Write-Host "Error Details:" -ForegroundColor Red
         Write-Host $_.ErrorDetails.Message -ForegroundColor Red
     }
 }
@@ -172,7 +172,7 @@ $workExperienceData = @{
     preferredJobTypes = "Full-time"
 } | ConvertTo-Json -Depth 3
 
-Write-Host "?? Work Experience Payload:" -ForegroundColor Cyan
+Write-Host "Work Experience Payload:" -ForegroundColor Cyan
 Write-Host $workExperienceData -ForegroundColor Gray
 
 try {
@@ -184,7 +184,7 @@ try {
     Write-Host $_.Exception.Message -ForegroundColor Red
     
     if ($_.ErrorDetails.Message) {
-        Write-Host "?? Error Details:" -ForegroundColor Red
+        Write-Host "Error Details:" -ForegroundColor Red
         Write-Host $_.ErrorDetails.Message -ForegroundColor Red
     }
 }
@@ -196,7 +196,7 @@ try {
     # Check updated Applicants table
     $finalApplicantResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $applicantQuery
     
-    Write-Host "?? Final Applicant Record:" -ForegroundColor Green
+    Write-Host "Final Applicant Record:" -ForegroundColor Green
     if ($finalApplicantResult) {
         $finalApplicantResult | Format-List
         
@@ -211,8 +211,8 @@ try {
         }
         
         Write-Host "`n?? Total fields: $((($finalApplicantResult | Get-Member -MemberType Properties).Name).Count)" -ForegroundColor Cyan
-        Write-Host "?? Non-null fields: $(($nonNullFields).Count)" -ForegroundColor Green
-        Write-Host "?? Completion percentage: $([math]::Round((($nonNullFields).Count / (($finalApplicantResult | Get-Member -MemberType Properties).Name).Count) * 100, 2))%" -ForegroundColor Yellow
+        Write-Host "Non-null fields: $(($nonNullFields).Count)" -ForegroundColor Green
+        Write-Host "Completion percentage: $([math]::Round((($nonNullFields).Count / (($finalApplicantResult | Get-Member -MemberType Properties).Name).Count) * 100, 2))%" -ForegroundColor Yellow
     } else {
         Write-Host "? Still no applicant record found!" -ForegroundColor Red
     }
@@ -236,7 +236,7 @@ $expectedFields = @{
 }
 
 if ($finalApplicantResult) {
-    Write-Host "?? Expected vs Actual Field Values:" -ForegroundColor Cyan
+    Write-Host "Expected vs Actual Field Values:" -ForegroundColor Cyan
     foreach ($field in $expectedFields.Keys) {
         $expected = $expectedFields[$field]
         $actual = $finalApplicantResult.$field
@@ -250,5 +250,5 @@ if ($finalApplicantResult) {
 }
 
 Write-Host "`n?? === TESTING COMPLETED ===" -ForegroundColor Green
-Write-Host "?? Test user email: $testEmail" -ForegroundColor Cyan
-Write-Host "?? Test user ID: $userId" -ForegroundColor Cyan
+Write-Host "Test user email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test user ID: $userId" -ForegroundColor Cyan

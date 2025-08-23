@@ -6,7 +6,7 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? === COMPLETE APPLICANTS TABLE POPULATION TEST ===" -ForegroundColor Green
+Write-Host "=== COMPLETE APPLICANTS TABLE POPULATION TEST ===" -ForegroundColor Green
 
 # Install required modules
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
@@ -17,7 +17,7 @@ Import-Module SqlServer -Force
 $testEmail = "complete.test.$(Get-Date -Format 'yyyyMMddHHmmss')@nexhire.test"
 $testPassword = "TestPassword123!"
 
-Write-Host "?? Test Email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test Email: $testEmail" -ForegroundColor Cyan
 
 # Step 1: Basic Registration (backend supports this)
 Write-Host "`n?? STEP 1: Basic User Registration" -ForegroundColor Yellow
@@ -281,9 +281,9 @@ try {
         Write-Host "`n?? CRITICAL MAPPING SUCCESS RATE: $passedMappings/$($criticalMappings.Count) ($mappingSuccessRate%)" -ForegroundColor Cyan
         
         if ($mappingSuccessRate -ge 80) {
-            Write-Host "?? EXCELLENT - Field mapping is working correctly!" -ForegroundColor Green
+            Write-Host "EXCELLENT - Field mapping is working correctly!" -ForegroundColor Green
         } elseif ($mappingSuccessRate -ge 60) {
-            Write-Host "?? GOOD - Most mappings work, some need fixes" -ForegroundColor Yellow
+            Write-Host "GOOD - Most mappings work, some need fixes" -ForegroundColor Yellow
         } else {
             Write-Host "? POOR - Field mapping needs significant work" -ForegroundColor Red
         }
@@ -296,7 +296,7 @@ try {
 }
 
 Write-Host "`n?? === TEST SUMMARY ===" -ForegroundColor Green
-Write-Host "?? Test User: $testEmail" -ForegroundColor Cyan
-Write-Host "?? User ID: $userId" -ForegroundColor Cyan
-Write-Host "?? API Base: $BaseUrl" -ForegroundColor Cyan
+Write-Host "Test User: $testEmail" -ForegroundColor Cyan
+Write-Host "User ID: $userId" -ForegroundColor Cyan
+Write-Host "API Base: $BaseUrl" -ForegroundColor Cyan
 Write-Host "`n?? This test verifies step-by-step API calls to populate the Applicants table" -ForegroundColor Yellow

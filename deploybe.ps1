@@ -49,30 +49,30 @@ try {
 }
 
 # Quick Deploy Script for Azure Functions
-Write-Host "?? NexHire Backend - Quick Deploy Script" -ForegroundColor Cyan
+Write-Host "NexHire Backend - Quick Deploy Script" -ForegroundColor Cyan
 
 # Step 1: Check if deployment is already running
 $runningProcesses = Get-Process | Where-Object { $_.ProcessName -like "*func*" -or $_.ProcessName -like "*node*" }
 if ($runningProcesses) {
-    Write-Host "??  Stopping any running func processes..." -ForegroundColor Yellow
+    Write-Host " Stopping any running func processes..." -ForegroundColor Yellow
     $runningProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
 }
 
 # Step 2: Clean build
-Write-Host "?? Cleaning previous build..." -ForegroundColor Yellow
+Write-Host "Cleaning previous build..." -ForegroundColor Yellow
 if (Test-Path "dist") { Remove-Item "dist" -Recurse -Force }
 
 # Step 3: Build TypeScript
-Write-Host "?? Building TypeScript..." -ForegroundColor Green
+Write-Host "Building TypeScript..." -ForegroundColor Green
 npm run build
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "? Build failed! Trying alternative method..." -ForegroundColor Red
-    Write-Host "?? Installing dependencies..." -ForegroundColor Yellow
+    Write-Host "Installing dependencies..." -ForegroundColor Yellow
     npm install
     
-    Write-Host "?? Rebuilding..." -ForegroundColor Green
+    Write-Host "Rebuilding..." -ForegroundColor Green
     npm run build
     
     if ($LASTEXITCODE -ne 0) {
@@ -90,7 +90,7 @@ if (!(Test-Path "dist")) {
 Write-Host "? Build successful! Found dist folder." -ForegroundColor Green
 
 # Step 5: Deploy with reliable method
-Write-Host "?? Deploying to Azure Functions..." -ForegroundColor Cyan
+Write-Host "Deploying to Azure Functions..." -ForegroundColor Cyan
 Write-Host "   Using reliable deployment method (no --typescript flag)..." -ForegroundColor Gray
 
 # Try the most reliable deployment command
@@ -98,7 +98,7 @@ func azure functionapp publish nexhire-api-func --no-build --force
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "? Deployment successful!" -ForegroundColor Green
-    Write-Host "?? Your APIs are now available at:" -ForegroundColor Cyan
+    Write-Host "Your APIs are now available at:" -ForegroundColor Cyan
     Write-Host "   https://nexhire-api-func.azurewebsites.net/api" -ForegroundColor White
     
     Write-Host "`n?? Testing health endpoint..." -ForegroundColor Yellow
@@ -107,10 +107,10 @@ if ($LASTEXITCODE -eq 0) {
         if ($response.success) {
             Write-Host "? Health check passed! API is working." -ForegroundColor Green
         } else {
-            Write-Host "??  Health check returned unexpected response." -ForegroundColor Yellow
+            Write-Host " Health check returned unexpected response." -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "??  Health check failed, but deployment may still be successful." -ForegroundColor Yellow
+        Write-Host " Health check failed, but deployment may still be successful." -ForegroundColor Yellow
         Write-Host "   APIs may take 1-2 minutes to become available after deployment." -ForegroundColor Gray
     }
     

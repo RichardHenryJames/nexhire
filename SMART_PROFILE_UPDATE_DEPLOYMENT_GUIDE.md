@@ -109,7 +109,7 @@ PUT /applicants/{userId}/profile # For hideCurrentCompany, hideSalaryDetails, et
 ```javascript
 // Users see exactly what happened:
 "? Hide Current Company enabled successfully!"
-"?? Complete profile updated successfully!"
+"Complete profile updated successfully!"
 ```
 
 ## **?? Troubleshooting**
@@ -119,7 +119,7 @@ PUT /applicants/{userId}/profile # For hideCurrentCompany, hideSalaryDetails, et
 1. **Check Console Logs:**
 ```javascript
 // Look for these messages:
-"?? Toggling hideCurrentCompany to true using smart update..."
+"Toggling hideCurrentCompany to true using smart update..."
 "? Applicants table updated successfully"
 ```
 

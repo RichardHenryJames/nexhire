@@ -4,13 +4,13 @@ param(
     [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host "?? SIMPLE REGISTRATION TEST" -ForegroundColor Green
+Write-Host "SIMPLE REGISTRATION TEST" -ForegroundColor Green
 
 # Import SQL module
 Import-Module SqlServer -Force
 
 $testEmail = "simple.test.$(Get-Date -Format 'yyyyMMddHHmmss')@nexhire.test"
-Write-Host "?? Test Email: $testEmail" -ForegroundColor Cyan
+Write-Host "Test Email: $testEmail" -ForegroundColor Cyan
 
 # Register user
 $registrationData = @{
@@ -56,7 +56,7 @@ try {
     $applicantQuery = "SELECT * FROM Applicants WHERE UserID = '$userId'"
     $applicantResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $applicantQuery
     
-    Write-Host "?? User Record:" -ForegroundColor Green
+    Write-Host "User Record:" -ForegroundColor Green
     Write-Host "  Email: $($userResult.Email)" -ForegroundColor Gray
     Write-Host "  Name: $($userResult.FirstName) $($userResult.LastName)" -ForegroundColor Gray
     Write-Host "  Type: $($userResult.UserType)" -ForegroundColor Gray

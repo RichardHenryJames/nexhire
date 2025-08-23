@@ -1,7 +1,7 @@
 # Database Schema Coverage Analysis
 # Compares current registration flow with complete Applicants table schema
 
-Write-Host "?? === APPLICANTS TABLE SCHEMA COVERAGE ANALYSIS ===" -ForegroundColor Green
+Write-Host "=== APPLICANTS TABLE SCHEMA COVERAGE ANALYSIS ===" -ForegroundColor Green
 
 # Your complete Applicants table schema
 $databaseFields = @(
@@ -72,7 +72,7 @@ $registrationFields = @(
 )
 
 foreach ($field in $registrationFields) {
-    Write-Host "  • $field" -ForegroundColor Green
+    Write-Host "  ï¿½ $field" -ForegroundColor Green
 }
 
 Write-Host "`n?? NOW AVAILABLE IN PROFILE EDIT:" -ForegroundColor Yellow
@@ -113,7 +113,7 @@ $profileOnlyFields = @(
 )
 
 foreach ($field in $profileOnlyFields) {
-    Write-Host "  • $field" -ForegroundColor Yellow
+    Write-Host "  ï¿½ $field" -ForegroundColor Yellow
 }
 
 Write-Host "`n?? AUTO-MANAGED SYSTEM FIELDS:" -ForegroundColor Cyan
@@ -126,7 +126,7 @@ $systemFields = @(
 )
 
 foreach ($field in $systemFields) {
-    Write-Host "  • $field" -ForegroundColor Cyan
+    Write-Host "  ï¿½ $field" -ForegroundColor Cyan
 }
 
 Write-Host "`n?? COVERAGE STATISTICS:" -ForegroundColor White
