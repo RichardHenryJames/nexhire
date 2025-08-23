@@ -26,3 +26,16 @@ coverage/
 *.user
 *.suo
 *.cache
+
+# Additional optimization for faster deployment
+temp*/
+verify-*.js
+final-*.js
+NEXHIRE_*.md
+COUNTRIES_*.md
+SMART_*.md
+jest.config.js
+.eslintrc.*
+*.tmp
+frontend/
+package-lock.json
