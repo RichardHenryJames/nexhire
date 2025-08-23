@@ -80,12 +80,12 @@ export const getOrganizations = async (req: any): Promise<any> => {
         }
 
         // Remove duplicates based on name
-        const uniqueOrganizations = organizations.filter((org, index, self) => 
-            index === self.findIndex(o => o.name?.toLowerCase() === org.name?.toLowerCase())
+        const uniqueOrganizations: any[] = organizations.filter((org: any, index: number, self: any[]) => 
+            index === self.findIndex((o: any) => o.name?.toLowerCase() === org.name?.toLowerCase())
         );
 
         // Limit results if specified
-        const limitedOrganizations = uniqueOrganizations.slice(0, limit);
+        const limitedOrganizations: any[] = uniqueOrganizations.slice(0, limit);
 
         // Add "My company is not listed" option at the end
         limitedOrganizations.push({
