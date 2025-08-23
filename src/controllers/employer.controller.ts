@@ -4,6 +4,7 @@ import { extractRequestBody, successResponse, validateRequest, employerInitializ
 import { UserService } from '../services/user.service';
 
 
+
 // POST /employers/initialize
 // Allows an authenticated existing user to initialize an employer profile + organization
 export const initializeEmployer = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
