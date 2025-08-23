@@ -56,6 +56,7 @@ import {
     getProfile, 
     updateProfile,
     updateEducation,  // NEW: Add education update import
+    updateWorkExperience,  // NEW: Add work experience update import
     changePassword, 
     verifyEmail, 
     getDashboardStats, 
@@ -169,6 +170,14 @@ app.http('users-update-education', {
     handler: withErrorHandling(updateEducation)
 });
 
+// NEW: Work experience endpoint
+app.http('users-update-work-experience', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/work-experience',
+    handler: withErrorHandling(updateWorkExperience)
+});
+
 // NEW: Job preferences endpoint
 app.http('users-update-job-preferences', {
     methods: ['PUT', 'OPTIONS'],
@@ -230,8 +239,8 @@ app.http('employers-initialize', {
 // APPLICANT/EMPLOYER PROFILE ENDPOINTS (UPDATED WITH REAL IMPLEMENTATION)
 // ========================================================================
 
-// Applicant Profile Management - FIXED: Real implementation
-app.http('applicants-profile-get', {
+// Applicant Profile Management - FIXED: Simplified function names for Azure deployment
+app.http('applicants-get', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applicants/{userId}/profile',
@@ -260,17 +269,28 @@ app.http('applicants-profile-get', {
     })
 });
 
-app.http('applicants-profile-update', {
+app.http('applicants-update', {
     methods: ['PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applicants/{userId}/profile',
     handler: withErrorHandling(async (req, context) => {
-        const userId = req.params.userId;
-        
         try {
-            const profileData = await req.json() as any; // Fix TypeScript error with type assertion
+            // Skip auth for OPTIONS requests
+            if (req.method === 'OPTIONS') {
+                return { status: 200 };
+            }
+            
+            const userId = req.params.userId;
+            console.log('?? Updating applicant profile for user:', userId);
+            
+            const profileData = await req.json() as any;
+            console.log('?? Profile data received fields:', Object.keys(profileData));
+            console.log('?? hideCurrentCompany:', profileData.hideCurrentCompany);
+            console.log('?? hideSalaryDetails:', profileData.hideSalaryDetails);
+            
             const updatedProfile = await ApplicantService.updateApplicantProfile(userId, profileData);
             
+            console.log('? Profile updated successfully');
             return {
                 status: 200,
                 jsonBody: {
@@ -280,7 +300,7 @@ app.http('applicants-profile-update', {
                 }
             };
         } catch (error) {
-            console.error('Error updating applicant profile:', error);
+            console.error('? Error updating applicant profile:', error);
             return {
                 status: 500,
                 jsonBody: {
@@ -292,8 +312,8 @@ app.http('applicants-profile-update', {
     })
 });
 
-// Employer Profile Management - FIXED: Real implementation
-app.http('employers-profile-get', {
+// Employer Profile Management - FIXED: Simplified function names
+app.http('employers-get', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'employers/{userId}/profile',
@@ -322,7 +342,7 @@ app.http('employers-profile-get', {
     })
 });
 
-app.http('employers-profile-update', {
+app.http('employers-update', {
     methods: ['PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'employers/{userId}/profile',
@@ -330,7 +350,7 @@ app.http('employers-profile-update', {
         const userId = req.params.userId;
         
         try {
-            const profileData = await req.json() as any; // Fix TypeScript error with type assertion
+            const profileData = await req.json() as any;
             const updatedProfile = await EmployerService.updateEmployerProfile(userId, profileData);
             
             return {
@@ -532,7 +552,7 @@ app.http('health', {
 // ========================================================================
 
 console.log('NexHire Backend API - All functions registered');
-console.log('Total endpoints: 28');  // Updated count (24 + 4 new profile endpoints)
+console.log('Total endpoints: 30');  // Updated count (28 + 1 work experience + 1 job preferences endpoint)
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('Ready for deployment to Azure Functions v4');
 console.log('CORS middleware enabled for all endpoints');
@@ -541,7 +561,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (28 total):
+ * COMPLETE API ENDPOINT LIST (30 total):
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):

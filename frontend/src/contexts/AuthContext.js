@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import nexhireAPI from '../services/api';
+import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 
 const AuthContext = createContext();
 
@@ -15,6 +16,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // ?? NEW: Initialize smart auth methods (THE FIX!)
+  const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
 
   // Initialize auth state on app start
   useEffect(() => {
@@ -208,28 +212,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ?? EXISTING: Legacy updateProfile for compatibility
   const updateProfile = async (profileData) => {
     try {
       setError(null);
-      console.log('Updating profile for:', user?.Email);
+      console.log('?? Updating profile for:', user?.Email);
       const result = await nexhireAPI.updateProfile(profileData);
       
       if (result.success) {
-        console.log('Profile updated successfully');
+        console.log('? Profile updated successfully');
         setUser(result.data);
         return { success: true };
       } else {
         const errorMessage = result.message || 'Profile update failed';
-        console.error('Profile update failed:', errorMessage);
+        console.error('? Profile update failed:', errorMessage);
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       const errorMessage = error.message || 'Profile update failed';
-      console.error('Profile update error:', error);
+      console.error('? Profile update error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
+  };
+
+  // ?? NEW: Smart profile update methods (THE FIX!)
+  const updateProfileSmart = async (profileData) => {
+    return await smartMethods.updateProfileSmart(profileData);
+  };
+
+  const togglePrivacySetting = async (setting, value) => {
+    return await smartMethods.togglePrivacySetting(setting, value);
+  };
+
+  const updateCompleteProfile = async (profileData) => {
+    return await smartMethods.updateCompleteProfile(profileData);
   };
 
   const clearError = () => {
@@ -242,13 +260,18 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     
-    // Actions
+    // Actions - EXISTING (keep all your current functionality)
     login,
     register,
     logout,
-    updateProfile,
+    updateProfile,           // Legacy method for compatibility
     clearError,
     checkAuthState,
+    
+    // ?? NEW: Smart profile update methods (THE FIX!)
+    updateProfileSmart,      // Smart routing method
+    togglePrivacySetting,    // Quick privacy toggles
+    updateCompleteProfile,   // Bulk updates with smart routing
     
     // Computed values
     isAuthenticated: !!user,

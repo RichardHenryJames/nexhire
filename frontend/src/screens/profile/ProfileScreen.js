@@ -18,14 +18,22 @@ import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
 
 export default function ProfileScreen() {
-  const { user, updateProfile, logout, userType } = useAuth();
+  const { 
+    user, 
+    logout, 
+    userType,
+    // ?? NEW: Use smart methods directly from AuthContext (THE FIX!)
+    updateProfileSmart,
+    togglePrivacySetting, 
+    updateCompleteProfile 
+  } = useAuth();
+
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errors, setErrors] = useState({});
-  const [extendedProfile, setExtendedProfile] = useState(null);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false); // New state for logout modal
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   
   // Initialize basic profile with correct backend field names
@@ -42,31 +50,84 @@ export default function ProfileScreen() {
     profileVisibility: user?.ProfileVisibility || 'Public',
   });
 
-  // Extended profile for job seekers and employers
+  // Extended profile for job seekers and employers - UPDATED with all database fields
   const [jobSeekerProfile, setJobSeekerProfile] = useState({
+    // Personal Information
+    nationality: '',
+    currentLocation: '',
+    preferredLocations: '',
+    
+    // Social Profiles
+    linkedInProfile: '',
+    githubProfile: '',
+    
+    // Documents
+    primaryResumeURL: '',
+    additionalDocuments: '',
+    
+    // Education
+    highestEducation: '',
+    fieldOfStudy: '',
+    institution: '',
+    
+    // Professional Information
     headline: '',
+    summary: '',
     currentJobTitle: '',
     currentCompany: '',
+    currentSalary: 0,
+    currentSalaryUnit: '',
+    currentCurrencyID: 0,
     yearsOfExperience: 0,
+    noticePeriod: 30,
+    totalWorkExperience: '',
+    
+    // Job Preferences
+    preferredJobTypes: '',
+    preferredWorkTypes: '',
+    expectedSalaryMin: 0,
+    expectedSalaryMax: 0,
+    expectedSalaryUnit: 0,
+    preferredRoles: '',
+    preferredIndustries: '',
+    preferredMinimumSalary: 0,
+    
+    // Skills and Experience
+    primarySkills: [],
+    secondarySkills: '',
+    languages: '',
+    certifications: '',
+    workExperience: '',
+    
+    // Availability and Preferences
+    immediatelyAvailable: false,
+    willingToRelocate: false,
+    jobSearchStatus: '',
+    
+    // ?? Privacy Settings (THE MAIN FIX!)
+    allowRecruitersToContact: true,
+    hideCurrentCompany: false,      // This will now work!
+    hideSalaryDetails: false,       // This will now work!
+    
+    // Status Fields
+    isOpenToWork: true,
+    isFeatured: false,
+    featuredUntil: null,
+    
+    // Additional
+    tags: '',
+    
+    // Legacy fields (kept for backward compatibility)
     expectedSalary: '',
     currencyPreference: 'USD',
     location: '',
     relocatable: false,
     remotePreference: 'Hybrid',
-    primarySkills: [],
-    secondarySkills: [],
     workAuthorization: '',
-    noticePeriod: '',
     resumeURL: '',
     portfolioURL: '',
-    linkedInProfile: '',
-    githubProfile: '',
     personalWebsite: '',
     bio: '',
-    isOpenToWork: true,
-    allowRecruitersToContact: true,
-    hideCurrentCompany: false,
-    preferredJobTypes: [],
     industries: [],
   });
 
@@ -111,30 +172,83 @@ export default function ProfileScreen() {
         const response = await nexhireAPI.getApplicantProfile(user.UserID);
         if (response.success) {
           setJobSeekerProfile({
-            headline: response.data.Headline || '',
-            currentJobTitle: response.data.CurrentJobTitle || '',
-            currentCompany: response.data.CurrentCompany || '',
-            yearsOfExperience: response.data.YearsOfExperience || 0,
-            expectedSalary: response.data.ExpectedSalary?.toString() || '',
-            currencyPreference: response.data.CurrencyPreference || 'USD',
-            location: response.data.Location || '',
-            relocatable: response.data.WillingToRelocate || false,
-            remotePreference: response.data.RemotePreference || 'Hybrid',
-            primarySkills: response.data.PrimarySkills ? response.data.PrimarySkills.split(',').map(s => s.trim()) : [],
-            secondarySkills: response.data.SecondarySkills ? response.data.SecondarySkills.split(',').map(s => s.trim()) : [],
-            workAuthorization: response.data.WorkAuthorization || '',
-            noticePeriod: response.data.NoticePeriod || '',
-            resumeURL: response.data.ResumeURL || '',
-            portfolioURL: response.data.PortfolioURL || '',
+            // Personal Information
+            nationality: response.data.Nationality || '',
+            currentLocation: response.data.CurrentLocation || '',
+            preferredLocations: response.data.PreferredLocations || '',
+            
+            // Social Profiles
             linkedInProfile: response.data.LinkedInProfile || '',
             githubProfile: response.data.GithubProfile || '',
-            personalWebsite: response.data.PersonalWebsite || '',
-            bio: response.data.Bio || '',
-            isOpenToWork: response.data.IsOpenToWork !== false,
+            
+            // Documents
+            primaryResumeURL: response.data.PrimaryResumeURL || '',
+            additionalDocuments: response.data.AdditionalDocuments || '',
+            
+            // Education
+            highestEducation: response.data.HighestEducation || '',
+            fieldOfStudy: response.data.FieldOfStudy || '',
+            institution: response.data.Institution || '',
+            
+            // Professional Information
+            headline: response.data.Headline || '',
+            summary: response.data.Summary || '',
+            currentJobTitle: response.data.CurrentJobTitle || '',
+            currentCompany: response.data.CurrentCompany || '',
+            currentSalary: response.data.CurrentSalary || 0,
+            currentSalaryUnit: response.data.CurrentSalaryUnit || '',
+            currentCurrencyID: response.data.CurrentCurrencyID || 0,
+            yearsOfExperience: response.data.YearsOfExperience || 0,
+            noticePeriod: response.data.NoticePeriod || 30,
+            totalWorkExperience: response.data.TotalWorkExperience || '',
+            
+            // Job Preferences
+            preferredJobTypes: response.data.PreferredJobTypes || '',
+            preferredWorkTypes: response.data.PreferredWorkTypes || '',
+            expectedSalaryMin: response.data.ExpectedSalaryMin || 0,
+            expectedSalaryMax: response.data.ExpectedSalaryMax || 0,
+            expectedSalaryUnit: response.data.ExpectedSalaryUnit || 0,
+            preferredRoles: response.data.PreferredRoles || '',
+            preferredIndustries: response.data.PreferredIndustries || '',
+            preferredMinimumSalary: response.data.PreferredMinimumSalary || 0,
+            
+            // Skills and Experience
+            primarySkills: response.data.PrimarySkills ? response.data.PrimarySkills.split(',').map(s => s.trim()).filter(s => s) : [],
+            secondarySkills: response.data.SecondarySkills || '',
+            languages: response.data.Languages || '',
+            certifications: response.data.Certifications || '',
+            workExperience: response.data.WorkExperience || '',
+            
+            // Availability and Preferences
+            immediatelyAvailable: response.data.ImmediatelyAvailable || false,
+            willingToRelocate: response.data.WillingToRelocate || false,
+            jobSearchStatus: response.data.JobSearchStatus || '',
+            
+            // ?? Privacy Settings (with correct mapping)
             allowRecruitersToContact: response.data.AllowRecruitersToContact !== false,
-            hideCurrentCompany: response.data.HideCurrentCompany || false,
-            preferredJobTypes: response.data.PreferredJobTypes ? response.data.PreferredJobTypes.split(',').map(s => s.trim()) : [],
-            industries: response.data.Industries ? response.data.Industries.split(',').map(s => s.trim()) : [],
+            hideCurrentCompany: response.data.HideCurrentCompany === 1 || response.data.HideCurrentCompany === true,
+            hideSalaryDetails: response.data.HideSalaryDetails === 1 || response.data.HideSalaryDetails === true,
+            
+            // Status Fields
+            isOpenToWork: response.data.IsOpenToWork !== false,
+            isFeatured: response.data.IsFeatured || false,
+            featuredUntil: response.data.FeaturedUntil || null,
+            
+            // Additional
+            tags: response.data.Tags || '',
+            
+            // Legacy fields (for backward compatibility)
+            expectedSalary: response.data.ExpectedSalaryMin?.toString() || '',
+            currencyPreference: 'USD',
+            location: response.data.CurrentLocation || '',
+            relocatable: response.data.WillingToRelocate || false,
+            remotePreference: response.data.PreferredWorkTypes || 'Hybrid',
+            workAuthorization: '',
+            resumeURL: response.data.PrimaryResumeURL || '',
+            portfolioURL: '',
+            personalWebsite: '',
+            bio: response.data.Summary || '',
+            industries: response.data.PreferredIndustries ? response.data.PreferredIndustries.split(',').map(s => s.trim()).filter(s => s) : [],
           });
         }
       } else if (userType === 'Employer') {
@@ -159,6 +273,101 @@ export default function ProfileScreen() {
       console.error('Error loading extended profile:', error);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // ?? SMART UPDATE METHODS (THE MAIN FIX!)
+  
+  /**
+   * Quick privacy setting toggle using smart routing
+   */
+  const handlePrivacyToggle = async (setting, value) => {
+    try {
+      console.log(`?? Toggling ${setting} to ${value} using smart update...`);
+      
+      const result = await togglePrivacySetting(setting, value);
+      
+      if (result.success) {
+        // Update local state immediately
+        setJobSeekerProfile(prev => ({ ...prev, [setting]: value }));
+        
+        // Show success message
+        const settingNames = {
+          hideCurrentCompany: 'Hide Current Company',
+          hideSalaryDetails: 'Hide Salary Details',
+          allowRecruitersToContact: 'Allow Recruiters to Contact',
+          isOpenToWork: 'Open to Work'
+        };
+        
+        Alert.alert(
+          '? Success',
+          `${settingNames[setting]} ${value ? 'enabled' : 'disabled'} successfully!`
+        );
+      } else {
+        Alert.alert('Update Failed', result.error || 'Failed to update privacy setting');
+      }
+    } catch (error) {
+      console.error(`Failed to toggle ${setting}:`, error);
+      Alert.alert('Error', error.message || 'Failed to update privacy setting');
+    }
+  };
+
+  /**
+   * Smart profile save using field routing
+   */
+  const handleSmartSave = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('?? Starting smart profile save...');
+      
+      // Combine all profile data (Users + Applicants table fields)
+      const completeProfileData = {
+        // Users table fields
+        firstName: profile.firstName.trim(),
+        lastName: profile.lastName.trim(),
+        phone: profile.phone?.trim(),
+        dateOfBirth: profile.dateOfBirth,
+        gender: profile.gender,
+        profilePictureURL: profile.profilePictureURL?.trim(),
+        profileVisibility: profile.profileVisibility,
+        
+        // Applicants table fields
+        ...jobSeekerProfile,
+        primarySkills: Array.isArray(jobSeekerProfile.primarySkills) 
+          ? jobSeekerProfile.primarySkills.join(', ') 
+          : jobSeekerProfile.primarySkills,
+      };
+      
+      console.log('?? Complete profile data:', Object.keys(completeProfileData));
+      
+      const result = await updateCompleteProfile(completeProfileData);
+      
+      if (result.success) {
+        setEditing(false);
+        
+        let message = 'Profile updated successfully!';
+        if (result.usersUpdated && result.applicantsUpdated) {
+          message = '?? Complete profile updated successfully!';
+        } else if (result.usersUpdated) {
+          message = '?? Basic profile information updated successfully!';
+        } else if (result.applicantsUpdated) {
+          message = '?? Professional profile updated successfully!';
+        }
+        
+        if (result.errors && result.errors.length > 0) {
+          message += `\n\nNote: ${result.errors.length} minor issue(s) occurred.`;
+        }
+        
+        Alert.alert('Success', message);
+      } else {
+        Alert.alert('Update Failed', result.error || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Smart profile save error:', error);
+      Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -217,75 +426,6 @@ export default function ProfileScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors before saving');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Prepare data according to backend schema (User interface)
-      const updateData = {
-        userID: profile.userID,
-        firstName: profile.firstName.trim(),
-        lastName: profile.lastName.trim(),
-        email: profile.email.trim().toLowerCase(),
-        userType: profile.userType,
-        ...(profile.phone && { phone: profile.phone.trim() }),
-        ...(profile.dateOfBirth && { dateOfBirth: new Date(profile.dateOfBirth) }),
-        ...(profile.gender && { gender: profile.gender }),
-        ...(profile.profilePictureURL && { profilePictureURL: profile.profilePictureURL.trim() }),
-        profileVisibility: profile.profileVisibility,
-      };
-
-      const result = await updateProfile(updateData);
-      
-      if (result.success) {
-        // Also update extended profile
-        if (userType === 'JobSeeker') {
-          await saveJobSeekerProfile();
-        } else if (userType === 'Employer') {
-          await saveEmployerProfile();
-        }
-        
-        setEditing(false);
-        Alert.alert('Success', 'Profile updated successfully!');
-      } else {
-        Alert.alert('Update Failed', result.error || 'Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Profile update error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveJobSeekerProfile = async () => {
-    try {
-      const profileData = {
-        ...jobSeekerProfile,
-        primarySkills: jobSeekerProfile.primarySkills.join(', '),
-        secondarySkills: jobSeekerProfile.secondarySkills.join(', '),
-        preferredJobTypes: jobSeekerProfile.preferredJobTypes.join(', '),
-        industries: jobSeekerProfile.industries.join(', '),
-      };
-
-      await nexhireAPI.updateApplicantProfile(user.UserID, profileData);
-    } catch (error) {
-      console.error('Error saving job seeker profile:', error);
-    }
-  };
-
-  const saveEmployerProfile = async () => {
-    try {
-      await nexhireAPI.updateEmployerProfile(user.UserID, employerProfile);
-    } catch (error) {
-      console.error('Error saving employer profile:', error);
-    }
-  };
-
   const addSkill = () => {
     if (newSkill.trim() && !jobSeekerProfile.primarySkills.includes(newSkill.trim())) {
       setJobSeekerProfile({
@@ -293,7 +433,7 @@ export default function ProfileScreen() {
         primarySkills: [...jobSeekerProfile.primarySkills, newSkill.trim()]
       });
       setNewSkill('');
-      setShowSkillsModal(false); // Close modal after adding skill
+      setShowSkillsModal(false);
     }
   };
 
@@ -318,7 +458,7 @@ export default function ProfileScreen() {
       editable = true, 
       secure = false,
       choices = null,
-      profileType = 'basic' // 'basic', 'jobSeeker', 'employer'
+      profileType = 'basic'
     } = options;
 
     const currentProfile = profileType === 'jobSeeker' ? jobSeekerProfile : 
@@ -412,8 +552,86 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // ?? ENHANCED: Privacy Settings with Smart Updates
+  const renderPrivacySection = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>?? Privacy Settings (Smart Update)</Text>
+        <View style={styles.smartBadge}>
+          <Ionicons name="flash" size={14} color={colors.primary} />
+          <Text style={styles.smartBadgeText}>INSTANT</Text>
+        </View>
+      </View>
+
+      <View style={styles.privacyContainer}>
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Hide Current Company</Text>
+            <Text style={styles.switchDescription}>
+              Your current company will be hidden from your profile
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, jobSeekerProfile.hideCurrentCompany && styles.switchActive]}
+            onPress={() => handlePrivacyToggle('hideCurrentCompany', !jobSeekerProfile.hideCurrentCompany)}
+          >
+            <View style={[styles.switchThumb, jobSeekerProfile.hideCurrentCompany && styles.switchThumbActive]} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Hide Salary Details</Text>
+            <Text style={styles.switchDescription}>
+              Your salary information will be private
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, jobSeekerProfile.hideSalaryDetails && styles.switchActive]}
+            onPress={() => handlePrivacyToggle('hideSalaryDetails', !jobSeekerProfile.hideSalaryDetails)}
+          >
+            <View style={[styles.switchThumb, jobSeekerProfile.hideSalaryDetails && styles.switchThumbActive]} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Allow Recruiters to Contact</Text>
+            <Text style={styles.switchDescription}>
+              Recruiters can send you job opportunities
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, jobSeekerProfile.allowRecruitersToContact && styles.switchActive]}
+            onPress={() => handlePrivacyToggle('allowRecruitersToContact', !jobSeekerProfile.allowRecruitersToContact)}
+          >
+            <View style={[styles.switchThumb, jobSeekerProfile.allowRecruitersToContact && styles.switchThumbActive]} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Open to Work</Text>
+            <Text style={styles.switchDescription}>
+              Display that you're actively looking for opportunities
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, jobSeekerProfile.isOpenToWork && styles.switchActive]}
+            onPress={() => handlePrivacyToggle('isOpenToWork', !jobSeekerProfile.isOpenToWork)}
+          >
+            <View style={[styles.switchThumb, jobSeekerProfile.isOpenToWork && styles.switchThumbActive]} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderJobSeekerProfile = () => (
     <>
+      {/* ?? NEW: Privacy Settings First (Most Important) */}
+      {renderPrivacySection()}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Professional Information</Text>
         
@@ -421,73 +639,45 @@ export default function ProfileScreen() {
         {renderField('currentJobTitle', 'Current Job Title', 'Your current position', { profileType: 'jobSeeker' })}
         {renderField('currentCompany', 'Current Company', 'Where you work now', { profileType: 'jobSeeker' })}
         {renderField('yearsOfExperience', 'Years of Experience', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
-        {renderField('location', 'Location', 'City, Country', { profileType: 'jobSeeker' })}
-        {renderField('bio', 'Professional Summary', 'Tell us about yourself...', { multiline: true, profileType: 'jobSeeker' })}
+        {renderField('currentLocation', 'Current Location', 'City, Country', { profileType: 'jobSeeker' })}
+        {renderField('summary', 'Professional Summary', 'Tell us about yourself...', { multiline: true, profileType: 'jobSeeker' })}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Education</Text>
+        
+        {renderField('institution', 'Institution', 'University/College name', { profileType: 'jobSeeker' })}
+        {renderField('highestEducation', 'Highest Education', 'e.g., Bachelor\'s Degree, Master\'s Degree', { profileType: 'jobSeeker' })}
+        {renderField('fieldOfStudy', 'Field of Study', 'e.g., Computer Science, Business', { profileType: 'jobSeeker' })}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Skills & Expertise</Text>
         {renderSkillsSection()}
+        {renderField('secondarySkills', 'Secondary Skills', 'Additional skills (comma-separated)', { profileType: 'jobSeeker' })}
+        {renderField('languages', 'Languages', 'e.g., English (Fluent), Spanish (Basic)', { profileType: 'jobSeeker' })}
+        {renderField('certifications', 'Certifications', 'Professional certifications', { multiline: true, profileType: 'jobSeeker' })}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Work Preferences</Text>
         
-        {renderField('expectedSalary', 'Expected Salary', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
-        {renderField('currencyPreference', 'Currency', '', { 
-          choices: ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD'], 
-          profileType: 'jobSeeker' 
-        })}
-        {renderField('remotePreference', 'Work Style Preference', '', { 
+        {renderField('expectedSalaryMin', 'Expected Salary (Min)', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
+        {renderField('expectedSalaryMax', 'Expected Salary (Max)', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
+        {renderField('preferredWorkTypes', 'Work Style Preference', '', { 
           choices: ['Remote', 'Hybrid', 'On-site'], 
           profileType: 'jobSeeker' 
         })}
-        {renderField('noticePeriod', 'Notice Period', 'e.g., 2 weeks, 1 month', { profileType: 'jobSeeker' })}
-        {renderField('workAuthorization', 'Work Authorization', 'e.g., US Citizen, Work Visa', { profileType: 'jobSeeker' })}
+        {renderField('preferredJobTypes', 'Preferred Job Types', 'e.g., Full-time, Contract', { profileType: 'jobSeeker' })}
+        {renderField('preferredLocations', 'Preferred Locations', 'Cities/countries you\'d like to work in', { profileType: 'jobSeeker' })}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Online Presence</Text>
         
-        {renderField('resumeURL', 'Resume URL', 'Link to your resume', { profileType: 'jobSeeker' })}
-        {renderField('portfolioURL', 'Portfolio URL', 'Your portfolio website', { profileType: 'jobSeeker' })}
+        {renderField('primaryResumeURL', 'Resume URL', 'Link to your resume', { profileType: 'jobSeeker' })}
         {renderField('linkedInProfile', 'LinkedIn Profile', 'linkedin.com/in/yourprofile', { profileType: 'jobSeeker' })}
         {renderField('githubProfile', 'GitHub Profile', 'github.com/yourusername', { profileType: 'jobSeeker' })}
-        {renderField('personalWebsite', 'Personal Website', 'Your personal website', { profileType: 'jobSeeker' })}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Privacy Settings</Text>
-        
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Open to Work</Text>
-          <TouchableOpacity
-            style={[styles.switch, jobSeekerProfile.isOpenToWork && styles.switchActive]}
-            onPress={() => editing && setJobSeekerProfile({...jobSeekerProfile, isOpenToWork: !jobSeekerProfile.isOpenToWork})}
-          >
-            <View style={[styles.switchThumb, jobSeekerProfile.isOpenToWork && styles.switchThumbActive]} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Allow Recruiters to Contact</Text>
-          <TouchableOpacity
-            style={[styles.switch, jobSeekerProfile.allowRecruitersToContact && styles.switchActive]}
-            onPress={() => editing && setJobSeekerProfile({...jobSeekerProfile, allowRecruitersToContact: !jobSeekerProfile.allowRecruitersToContact})}
-          >
-            <View style={[styles.switchThumb, jobSeekerProfile.allowRecruitersToContact && styles.switchThumbActive]} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Hide Current Company</Text>
-          <TouchableOpacity
-            style={[styles.switch, jobSeekerProfile.hideCurrentCompany && styles.switchActive]}
-            onPress={() => editing && setJobSeekerProfile({...jobSeekerProfile, hideCurrentCompany: !jobSeekerProfile.hideCurrentCompany})}
-          >
-            <View style={[styles.switchThumb, jobSeekerProfile.hideCurrentCompany && styles.switchThumbActive]} />
-          </TouchableOpacity>
-        </View>
       </View>
     </>
   );
@@ -605,22 +795,35 @@ export default function ProfileScreen() {
           <Text style={styles.userType}>{profile.userType}</Text>
           <Text style={styles.userEmail}>{profile.email}</Text>
           
-          {userType === 'JobSeeker' && jobSeekerProfile.location ? (
+          {userType === 'JobSeeker' && jobSeekerProfile.currentLocation ? (
             <View style={styles.locationContainer}>
               <Ionicons name="location" size={16} color={colors.white + 'CC'} />
-              <Text style={styles.locationText}>{jobSeekerProfile.location}</Text>
+              <Text style={styles.locationText}>{jobSeekerProfile.currentLocation}</Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.content}>
+          {/* ?? Smart Update Info Banner */}
+          <View style={styles.infoBanner}>
+            <View style={styles.infoBannerIcon}>
+              <Ionicons name="flash" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.infoBannerContent}>
+              <Text style={styles.infoBannerTitle}>Smart Profile Updates</Text>
+              <Text style={styles.infoBannerText}>
+                Privacy settings now save instantly! Toggle them anytime - no form submission needed.
+              </Text>
+            </View>
+          </View>
+
           {/* Basic Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
             
             {renderField('firstName', 'First Name *', 'Enter your first name')}
             {renderField('lastName', 'Last Name *', 'Enter your last name')}
-            {renderField('email', 'Email Address *', 'Enter your email', { keyboardType: 'email-address' })}
+            {renderField('email', 'Email Address *', 'Enter your email', { keyboardType: 'email-address', editable: false })}
             {renderField('phone', 'Phone Number', 'Enter your phone number', { keyboardType: 'phone-pad' })}
             {renderField('dateOfBirth', 'Date of Birth', 'YYYY-MM-DD', { keyboardType: 'numeric' })}
             {renderField('gender', 'Gender', '', { choices: genderOptions })}
@@ -638,7 +841,7 @@ export default function ProfileScreen() {
             {renderField('profileVisibility', 'Profile Visibility', '', { choices: visibilityOptions })}
           </View>
 
-          {/* Action Buttons - REMOVED REDUNDANT BUTTONS */}
+          {/* Action Buttons */}
           <View style={styles.actionSection}>
             {editing ? (
               <View style={styles.editActions}>
@@ -647,7 +850,7 @@ export default function ProfileScreen() {
                   onPress={() => {
                     setEditing(false);
                     setErrors({});
-                    loadExtendedProfile(); // Reload original data
+                    loadExtendedProfile();
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -655,11 +858,12 @@ export default function ProfileScreen() {
                 
                 <TouchableOpacity
                   style={[styles.saveButton, loading && styles.buttonDisabled]}
-                  onPress={handleSave}
+                  onPress={handleSmartSave}
                   disabled={loading}
                 >
+                  <Ionicons name="flash" size={16} color={colors.white} style={{ marginRight: 8 }} />
                   <Text style={styles.saveButtonText}>
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? 'Saving...' : 'Smart Save'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -673,10 +877,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.logoutButton} onPress={() => {
-              console.log('Logout button pressed!');
-              setShowLogoutModal(true); // Show custom modal instead of browser alert
-            }}>
+            <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
               <Ionicons name="log-out" size={20} color={colors.danger} />
               <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
@@ -713,7 +914,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* Beautiful Logout Confirmation Modal */}
+      {/* Logout Confirmation Modal */}
       <Modal
         visible={showLogoutModal}
         animationType="fade"
@@ -722,27 +923,20 @@ export default function ProfileScreen() {
       >
         <View style={styles.logoutModalOverlay}>
           <View style={styles.logoutModalContainer}>
-            {/* Icon */}
             <View style={styles.logoutModalIconContainer}>
               <Ionicons name="log-out-outline" size={48} color={colors.danger} />
             </View>
 
-            {/* Title */}
             <Text style={styles.logoutModalTitle}>Logout</Text>
             
-            {/* Message */}
             <Text style={styles.logoutModalMessage}>
               Are you sure you want to logout? You'll need to sign in again to access your account.
             </Text>
 
-            {/* Buttons */}
             <View style={styles.logoutModalButtons}>
               <TouchableOpacity
                 style={styles.logoutModalCancelButton}
-                onPress={() => {
-                  console.log('Logout cancelled');
-                  setShowLogoutModal(false);
-                }}
+                onPress={() => setShowLogoutModal(false)}
               >
                 <Text style={styles.logoutModalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -750,7 +944,6 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.logoutModalConfirmButton}
                 onPress={() => {
-                  console.log('Logout confirmed, calling logout function...');
                   setShowLogoutModal(false);
                   logout();
                 }}
@@ -842,6 +1035,72 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  
+  // ?? NEW: Smart Update Styles
+  infoBanner: {
+    backgroundColor: colors.primary + '10',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+    margin: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  infoBannerIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  infoBannerContent: {
+    flex: 1,
+  },
+  infoBannerTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  infoBannerText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    lineHeight: 18,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  smartBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  smartBadgeText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+    marginLeft: 4,
+  },
+  privacyContainer: {
+    gap: 16,
+  },
+  switchInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  switchDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  
+  // ... rest of existing styles ...
   section: {
     backgroundColor: colors.surface,
     margin: 16,
@@ -954,13 +1213,14 @@ const styles = StyleSheet.create({
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
   },
   switchLabel: {
     fontSize: typography.sizes.md,
     color: colors.text,
-    flex: 1,
+    fontWeight: typography.weights.medium,
+    marginBottom: 4,
   },
   switch: {
     width: 50,
@@ -969,6 +1229,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
     justifyContent: 'center',
     padding: 2,
+    marginTop: 4,
   },
   switchActive: {
     backgroundColor: colors.primary,
@@ -978,6 +1239,14 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     backgroundColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   switchThumbActive: {
     marginLeft: 'auto',
@@ -1010,6 +1279,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   saveButtonText: {
     fontSize: typography.sizes.md,
@@ -1050,6 +1321,7 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: colors.gray400,
   },
+  
   // Modal styles
   modalContainer: {
     flex: 1,
@@ -1087,7 +1359,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   
-  // Beautiful Logout Modal Styles
+  // Logout Modal Styles
   logoutModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

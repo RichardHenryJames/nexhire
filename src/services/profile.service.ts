@@ -31,9 +31,7 @@ export class ApplicantService {
                 throw new NotFoundError('User not found');
             }
             
-            const user = userResult.recordset[0];
-            
-            // Get or create applicant profile
+            // Get or create applicant profile - FIXED: Use exact database field names
             let applicantQuery = `
                 SELECT 
                     a.*,
@@ -68,74 +66,120 @@ export class ApplicantService {
         }
     }
 
-    // Update applicant profile
+    // Update applicant profile - COMPLETELY REWRITTEN to be dynamic and match exact schema
     static async updateApplicantProfile(userId: string, profileData: ProfileData): Promise<any> {
         try {
-            // Verify user exists and get applicant ID
-            const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-            const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
-            
-            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-                // Create applicant profile if it doesn't exist
-                await this.createApplicantProfile(userId);
-                const newApplicantResult = await dbService.executeQuery(applicantQuery, [userId]);
-                if (!newApplicantResult.recordset || newApplicantResult.recordset.length === 0) {
-                    throw new Error('Failed to create applicant profile');
-                }
-            }
-            
-            const applicantId = applicantResult.recordset?.[0]?.ApplicantID || 
-                               (await dbService.executeQuery(applicantQuery, [userId]))?.recordset?.[0]?.ApplicantID;
+            // First, get existing profile to merge with new data
+            const existingProfile = await this.getApplicantProfile(userId);
+            const applicantId = existingProfile.ApplicantID;
             
             if (!applicantId) {
                 throw new Error('Could not determine applicant ID');
             }
 
-            // Build update query dynamically based on provided fields
-            const allowedFields: ApplicantFieldMapping = {
-                'headline': 'Headline',
-                'currentJobTitle': 'CurrentJobTitle', 
-                'currentCompany': 'CurrentCompany',
-                'yearsOfExperience': 'YearsOfExperience',
-                'expectedSalary': 'ExpectedSalary',
-                'currencyPreference': 'CurrencyPreference',
-                'location': 'Location',
-                'relocatable': 'WillingToRelocate',
-                'remotePreference': 'RemotePreference',
-                'primarySkills': 'PrimarySkills',
-                'secondarySkills': 'SecondarySkills',
-                'workAuthorization': 'WorkAuthorization',
-                'noticePeriod': 'NoticePeriod',
-                'resumeURL': 'ResumeURL',
-                'portfolioURL': 'PortfolioURL',
+            // FIXED: Complete field mapping based on your exact database schema
+            const fieldMapping: ApplicantFieldMapping = {
+                // Personal Information
+                'nationality': 'Nationality',
+                'currentLocation': 'CurrentLocation',
+                'preferredLocations': 'PreferredLocations',
+                
+                // Social Profiles
                 'linkedInProfile': 'LinkedInProfile',
                 'githubProfile': 'GithubProfile',
-                'personalWebsite': 'PersonalWebsite',
-                'bio': 'Bio',
-                'isOpenToWork': 'IsOpenToWork',
+                
+                // Documents
+                'primaryResumeURL': 'PrimaryResumeURL',
+                'additionalDocuments': 'AdditionalDocuments',
+                
+                // Education (can be updated via this endpoint too)
+                'highestEducation': 'HighestEducation',
+                'fieldOfStudy': 'FieldOfStudy',
+                'institution': 'Institution',
+                
+                // Professional Information
+                'headline': 'Headline',
+                'summary': 'Summary',
+                'currentJobTitle': 'CurrentJobTitle',
+                'currentCompany': 'CurrentCompany',
+                'currentSalary': 'CurrentSalary',
+                'currentSalaryUnit': 'CurrentSalaryUnit',
+                'currentCurrencyID': 'CurrentCurrencyID',
+                'yearsOfExperience': 'YearsOfExperience',
+                'noticePeriod': 'NoticePeriod',
+                'totalWorkExperience': 'TotalWorkExperience',
+                
+                // Job Preferences
+                'preferredJobTypes': 'PreferredJobTypes',
+                'preferredWorkTypes': 'PreferredWorkTypes',
+                'expectedSalaryMin': 'ExpectedSalaryMin',
+                'expectedSalaryMax': 'ExpectedSalaryMax',
+                'expectedSalaryUnit': 'ExpectedSalaryUnit',
+                'preferredRoles': 'PreferredRoles',
+                'preferredIndustries': 'PreferredIndustries',
+                'preferredMinimumSalary': 'PreferredMinimumSalary',
+                
+                // Skills and Experience
+                'primarySkills': 'PrimarySkills',
+                'secondarySkills': 'SecondarySkills',
+                'languages': 'Languages',
+                'certifications': 'Certifications',
+                'workExperience': 'WorkExperience',
+                
+                // Availability and Preferences
+                'immediatelyAvailable': 'ImmediatelyAvailable',
+                'willingToRelocate': 'WillingToRelocate',
+                'jobSearchStatus': 'JobSearchStatus',
+                
+                // Privacy Settings
                 'allowRecruitersToContact': 'AllowRecruitersToContact',
                 'hideCurrentCompany': 'HideCurrentCompany',
-                'preferredJobTypes': 'PreferredJobTypes',
-                'industries': 'Industries'
+                'hideSalaryDetails': 'HideSalaryDetails',
+                
+                // Status Fields
+                'isOpenToWork': 'IsOpenToWork',
+                'isFeatured': 'IsFeatured',
+                'featuredUntil': 'FeaturedUntil',
+                
+                // Additional
+                'tags': 'Tags'
             };
 
+            // Build dynamic update query
             const updateFields: string[] = [];
-            const parameters: any[] = [applicantId]; // First parameter is always applicantId
+            const parameters: any[] = [applicantId];
             let paramIndex = 1;
 
-            // Process each field in the profile data
+            // Process each field from frontend data
             Object.keys(profileData).forEach(key => {
-                if (key in allowedFields && profileData[key] !== undefined) {
-                    const dbField = allowedFields[key];
+                if (key in fieldMapping && profileData[key] !== undefined && profileData[key] !== null) {
+                    const dbField = fieldMapping[key];
                     updateFields.push(`${dbField} = @param${paramIndex}`);
                     
-                    // Handle special data type conversions
+                    // Handle data type conversions based on your schema
                     let value = profileData[key];
-                    if (key === 'yearsOfExperience' || key === 'expectedSalary') {
-                        value = value ? parseInt(value.toString()) : 0;
-                    } else if (key === 'relocatable' || key === 'isOpenToWork' || 
-                               key === 'allowRecruitersToContact' || key === 'hideCurrentCompany') {
-                        value = value ? 1 : 0;
+                    
+                    // Integer fields
+                    if (['yearsOfExperience', 'noticePeriod', 'currentCurrencyID'].includes(key)) {
+                        value = value ? parseInt(value.toString()) : null;
+                    }
+                    // Decimal fields
+                    else if (['currentSalary', 'expectedSalaryMin', 'expectedSalaryMax', 'expectedSalaryUnit', 'preferredMinimumSalary'].includes(key)) {
+                        value = value ? parseFloat(value.toString()) : null;
+                    }
+                    // Boolean fields (convert to bit: 1/0)
+                    else if (['immediatelyAvailable', 'willingToRelocate', 'allowRecruitersToContact', 
+                             'hideCurrentCompany', 'hideSalaryDetails', 'isOpenToWork', 'isFeatured'].includes(key)) {
+                        // FIXED: Use frontend value, don't hardcode
+                        value = (value === true || value === 1 || value === '1' || value === 'true') ? 1 : 0;
+                    }
+                    // DateTime fields
+                    else if (['featuredUntil'].includes(key)) {
+                        value = value ? new Date(value) : null;
+                    }
+                    // String fields - keep as is, but handle empty strings
+                    else if (typeof value === 'string') {
+                        value = value.trim() || null;
                     }
                     
                     parameters.push(value);
@@ -143,25 +187,31 @@ export class ApplicantService {
                 }
             });
 
+            // If no valid fields to update, throw error
             if (updateFields.length === 0) {
                 throw new ValidationError('No valid fields provided for update');
             }
 
-            // Calculate profile completeness
-            const completenessFields = ['Headline', 'CurrentJobTitle', 'YearsOfExperience', 'PrimarySkills', 'Bio', 'Location'];
-            const completenessCheck = completenessFields.map(field => 
+            // Calculate profile completeness dynamically
+            const completenessFields = [
+                'Headline', 'CurrentJobTitle', 'YearsOfExperience', 'PrimarySkills', 
+                'Summary', 'CurrentLocation', 'PreferredJobTypes', 'HighestEducation'
+            ];
+            
+            // Count how many key fields are filled
+            const completenessLogic = completenessFields.map(field => 
                 `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
             ).join(' + ');
             
-            updateFields.push(`ProfileCompleteness = (${completenessCheck}) * 100 / ${completenessFields.length}`);
+            updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
 
+            // Build and execute update query
             const updateQuery = `
                 UPDATE Applicants 
-                SET ${updateFields.join(', ')}, 
-                    LastUpdatedAt = GETUTCDATE()
+                SET ${updateFields.join(', ')}
                 WHERE ApplicantID = @param0;
                 
-                -- Return updated profile
+                -- Return updated profile with user data
                 SELECT 
                     a.*,
                     u.FirstName,
@@ -180,35 +230,43 @@ export class ApplicantService {
             }
 
             console.log(`? Updated applicant profile for user ${userId}:`, {
-                fields: Object.keys(profileData),
-                applicantId: applicantId
+                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
+                applicantId: applicantId,
+                updateCount: updateFields.length - 1, // Exclude ProfileCompleteness
+                newCompleteness: result.recordset[0].ProfileCompleteness
             });
 
             return result.recordset[0];
         } catch (error) {
-            console.error('Error updating applicant profile:', error);
+            console.error('? Error updating applicant profile:', error);
             throw error;
         }
     }
 
-    // Create new applicant profile
+    // Create new applicant profile - FIXED: Remove hardcoded values
     private static async createApplicantProfile(userId: string): Promise<string> {
         const applicantId = AuthService.generateUniqueId();
         
+        // FIXED: Only set essential defaults, keep everything else NULL
         const query = `
             INSERT INTO Applicants (
-                ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-                AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                ImmediatelyAvailable, WillingToRelocate, IsFeatured,
-                CreatedAt, LastUpdatedAt
+                ApplicantID, 
+                UserID, 
+                ProfileCompleteness, 
+                IsOpenToWork,
+                AllowRecruitersToContact, 
+                HideCurrentCompany, 
+                HideSalaryDetails,
+                ImmediatelyAvailable, 
+                WillingToRelocate, 
+                IsFeatured
             ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
-                GETUTCDATE(), GETUTCDATE()
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
             )
         `;
         
         await dbService.executeQuery(query, [applicantId, userId]);
-        console.log(`? Created applicant profile ${applicantId} for user ${userId}`);
+        console.log(`? Created minimal applicant profile ${applicantId} for user ${userId}`);
         
         return applicantId;
     }

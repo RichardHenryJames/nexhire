@@ -254,25 +254,11 @@ class NexHireAPI {
       return { success: true, data: null, message: 'Deferred until login' };
     }
     
-    // Transform frontend work experience data to backend applicant profile format
-    const applicantProfileData = {
-      currentJobTitle: workExperienceData.currentJobTitle,
-      currentCompany: workExperienceData.currentCompany,
-      yearsOfExperience: this.parseYearsOfExperience(workExperienceData.yearsOfExperience),
-      primarySkills: workExperienceData.primarySkills,
-      secondarySkills: workExperienceData.secondarySkills,
-      bio: workExperienceData.summary,
-      preferredWorkTypes: workExperienceData.workArrangement,
-      preferredJobTypes: workExperienceData.jobType,
-    };
-    
-    console.log('🔄 Transformed applicant profile data:', JSON.stringify(applicantProfileData, null, 2));
-    
-    // Use the applicant profile update endpoint
-    const userId = this.getUserIdFromToken(); // Helper method to extract userId from token
-    console.log('👤 User ID from token:', userId);
-    
-    const result = await this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('🚀 Calling /users/work-experience endpoint with:', JSON.stringify(workExperienceData, null, 2));
+    const result = await this.apiCall('/users/work-experience', {
+      method: 'PUT',
+      body: JSON.stringify(workExperienceData),
+    });
     console.log('📋 Work experience API result:', result);
     console.log('🔍 === END API UPDATE WORK EXPERIENCE DEBUG ===');
     return result;

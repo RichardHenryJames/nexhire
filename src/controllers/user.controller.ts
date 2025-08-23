@@ -185,3 +185,23 @@ export const updateEducation = withAuth(async (req: HttpRequest, context: Invoca
         jsonBody: successResponse(updatedProfile, 'Education data updated successfully')
     };
 }, ['write:profile']);
+
+// Update applicant work experience data
+export const updateWorkExperience = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    const workExperienceData = await extractRequestBody(req);
+    
+    // Ensure user is a job seeker
+    if (user.userType !== 'JobSeeker') {
+        return {
+            status: 403,
+            jsonBody: errorResponse('Access denied', 'Only job seekers can update work experience data')
+        };
+    }
+
+    const updatedProfile = await UserService.updateWorkExperience(user.userId, workExperienceData);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse(updatedProfile, 'Work experience data updated successfully')
+    };
+}, ['write:profile']);

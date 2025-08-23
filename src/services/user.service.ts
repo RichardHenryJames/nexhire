@@ -461,7 +461,7 @@ export class UserService {
         return result.recordset[0] || {};
     }
 
-    // Update applicant education data - FIXED: Now maps to ALL relevant Applicants table fields
+    // Update applicant education data - FIXED: Use only existing database fields
     static async updateEducation(userId: string, educationData: any) {
         const user = await this.findById(userId);
         if (!user) {
@@ -479,76 +479,46 @@ export class UserService {
         }
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // Build education JSON object from the frontend data
-        const educationRecord = {
-            college: educationData.college || null,
-            customCollege: educationData.customCollege || '',
-            degreeType: educationData.degreeType || '',
-            fieldOfStudy: educationData.fieldOfStudy || '',
-            yearInCollege: educationData.yearInCollege || '',
-            selectedCountry: educationData.selectedCountry || 'India',
-            updatedAt: new Date().toISOString()
-        };
-
         // FIXED: Extract Institution name from college data
-        const institutionName = educationData.college?.name || educationData.customCollege || null;
-        
-        // FIXED: Update the Applicants table with ALL education-related fields
-        const updateQuery = `
+        const institutionName = educationData.college?.name || '';
+        const degreeType = educationData.degreeType || '';
+        const fieldOfStudy = educationData.fieldOfStudy || '';
+
+        // FIXED: Only update education-related fields in Applicants table
+        const query = `
             UPDATE Applicants 
-            SET 
-                HighestEducation = @param1,
-                FieldOfStudy = @param2,
-                Institution = @param3,
-                Education = @param4,
+            SET Institution = @param1,
+                HighestEducation = @param2,
+                FieldOfStudy = @param3,
                 ProfileCompleteness = CASE 
-                    WHEN ProfileCompleteness < 40 THEN 40 
-                    ELSE ProfileCompleteness 
+                    WHEN Institution IS NOT NULL AND HighestEducation IS NOT NULL AND FieldOfStudy IS NOT NULL 
+                    THEN 60 
+                    ELSE 40 
                 END
-            WHERE ApplicantID = @param0;
-            
-            -- Return updated applicant profile
-            SELECT 
-                a.*,
-                u.FirstName,
-                u.LastName,
-                u.Email
-            FROM Applicants a
-            INNER JOIN Users u ON a.UserID = u.UserID
-            WHERE a.ApplicantID = @param0;
+            WHERE ApplicantID = @param0
         `;
-        
-        const parameters = [
+
+        console.log('?? Updating applicant education data:', {
             applicantId,
-            educationData.degreeType || null, // HighestEducation
-            educationData.fieldOfStudy || null, // FieldOfStudy
-            institutionName, // Institution - FIXED: Now properly mapped
-            JSON.stringify(educationRecord) // Education (complete JSON)
-        ];
-        
-        const result = await dbService.executeQuery(updateQuery, parameters);
-        if (!result.recordset || result.recordset.length === 0) {
-            throw new Error('Failed to update education data');
-        }
-        console.log(`? Updated education data for user ${userId}:`, {
-            institution: institutionName,
-            college: educationData.college?.name || educationData.customCollege,
-            degreeType: educationData.degreeType,
-            fieldOfStudy: educationData.fieldOfStudy,
-            country: educationData.selectedCountry
+            institutionName,
+            degreeType,
+            fieldOfStudy
         });
-        return result.recordset[0];
+
+        await dbService.executeQuery(query, [applicantId, institutionName, degreeType, fieldOfStudy]);
+        
+        return { success: true, message: 'Education updated successfully' };
     }
 
-    // NEW: Update job preferences and work types in Applicants table
-    static async updateJobPreferences(userId: string, jobPreferencesData: any) {
+    // NEW: Update applicant work experience data - Dedicated endpoint
+    static async updateWorkExperience(userId: string, workExperienceData: any) {
         const user = await this.findById(userId);
         if (!user) {
             throw new NotFoundError('User not found');
         }
         // Ensure user is a job seeker
         if (user.UserType !== appConstants.userTypes.JOB_SEEKER) {
-            throw new ValidationError('Only job seekers can update job preferences');
+            throw new ValidationError('Only job seekers can update work experience data');
         }
         // Get applicant ID
         const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
@@ -557,60 +527,177 @@ export class UserService {
             throw new NotFoundError('Applicant profile not found');
         }
         const applicantId = applicantResult.recordset[0].ApplicantID;
+        
+        // Build update fields dynamically
+        const updateFields: string[] = [];
+        const parameters: any[] = [applicantId];
+        let paramIndex = 1;
 
-        // Transform job preferences data for database storage
-        const preferredJobTypesString = Array.isArray(jobPreferencesData.preferredJobTypes)
-            ? jobPreferencesData.preferredJobTypes.map((jt: any) => jt.Type || jt).join(', ')
-            : '';
+        // Map work experience fields to database columns
+        if (workExperienceData.currentJobTitle) {
+            updateFields.push(`CurrentJobTitle = @param${paramIndex}`);
+            parameters.push(workExperienceData.currentJobTitle);
+            paramIndex++;
+        }
         
-        const workplaceTypeMapping: { [key: string]: string } = {
-            'remote': 'Remote',
-            'hybrid': 'Hybrid',
-            'onsite': 'On-site',
-            'on-site': 'On-site'
-        };
-        const preferredWorkType = workplaceTypeMapping[jobPreferencesData.workplaceType?.toLowerCase()] || jobPreferencesData.workplaceType || '';
+        if (workExperienceData.currentCompany) {
+            updateFields.push(`CurrentCompany = @param${paramIndex}`);
+            parameters.push(workExperienceData.currentCompany);
+            paramIndex++;
+        }
         
-        // Update the Applicants table with job preferences
-        const updateQuery = `
-            UPDATE Applicants 
-            SET 
-                PreferredJobTypes = @param1,
-                PreferredWorkTypes = @param2,
-                PreferredLocations = @param3,
-                ProfileCompleteness = CASE 
-                    WHEN ProfileCompleteness < 60 THEN 60 
-                    ELSE ProfileCompleteness 
-                END
-            WHERE ApplicantID = @param0;
-            
-            -- Return updated applicant profile
-            SELECT 
-                a.*,
-                u.FirstName,
-                u.LastName,
-                u.Email
-            FROM Applicants a
-            INNER JOIN Users u ON a.UserID = u.UserID
-            WHERE a.ApplicantID = @param0;
-        `;
+        if (workExperienceData.yearsOfExperience) {
+            // Parse years of experience string to number (e.g., "3-5 years" -> 3)
+            const yearsMatch = workExperienceData.yearsOfExperience.match(/^(\d+)/);
+            const years = yearsMatch ? parseInt(yearsMatch[1]) : 0;
+            updateFields.push(`YearsOfExperience = @param${paramIndex}`);
+            parameters.push(years);
+            paramIndex++;
+        }
         
-        const parameters = [
-            applicantId,
-            preferredJobTypesString, // PreferredJobTypes
-            preferredWorkType, // PreferredWorkTypes  
-            jobPreferencesData.preferredLocations || '' // PreferredLocations
+        if (workExperienceData.primarySkills) {
+            updateFields.push(`PrimarySkills = @param${paramIndex}`);
+            parameters.push(workExperienceData.primarySkills);
+            paramIndex++;
+        }
+        
+        if (workExperienceData.secondarySkills) {
+            updateFields.push(`SecondarySkills = @param${paramIndex}`);
+            parameters.push(workExperienceData.secondarySkills);
+            paramIndex++;
+        }
+        
+        if (workExperienceData.summary) {
+            updateFields.push(`Summary = @param${paramIndex}`);
+            parameters.push(workExperienceData.summary);
+            paramIndex++;
+        }
+        
+        if (workExperienceData.workArrangement) {
+            updateFields.push(`PreferredWorkTypes = @param${paramIndex}`);
+            parameters.push(workExperienceData.workArrangement);
+            paramIndex++;
+        }
+        
+        if (workExperienceData.jobType) {
+            updateFields.push(`PreferredJobTypes = @param${paramIndex}`);
+            parameters.push(workExperienceData.jobType);
+            paramIndex++;
+        }
+
+        if (updateFields.length === 0) {
+            throw new ValidationError('No work experience data provided');
+        }
+
+        // Calculate profile completeness including work experience fields
+        const completenessFields = [
+            'Institution', 'HighestEducation', 'FieldOfStudy', 
+            'CurrentJobTitle', 'CurrentCompany', 'YearsOfExperience', 'PrimarySkills', 'Summary'
         ];
         
-        const result = await dbService.executeQuery(updateQuery, parameters);
-        if (!result.recordset || result.recordset.length === 0) {
-            throw new Error('Failed to update job preferences');
-        }
-        console.log(`? Updated job preferences for user ${userId}:`, {
-            preferredJobTypes: preferredJobTypesString,
-            preferredWorkTypes: preferredWorkType,
-            preferredLocations: jobPreferencesData.preferredLocations || 'Not specified'
+        const completenessLogic = completenessFields.map(field => 
+            `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
+        ).join(' + ');
+        
+        updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+
+        const query = `
+            UPDATE Applicants 
+            SET ${updateFields.join(', ')}
+            WHERE ApplicantID = @param0
+        `;
+
+        console.log('?? Updating applicant work experience data:', {
+            applicantId,
+            fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
+            workExperienceData: Object.keys(workExperienceData)
         });
-        return result.recordset[0];
+
+        const result = await dbService.executeQuery(query, parameters);
+        
+        return { success: true, message: 'Work experience updated successfully' };
+    }
+
+    // NEW: Update job preferences data - Dedicated endpoint
+    static async updateJobPreferences(userId: string, jobPreferencesData: any) {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+        // Ensure user is a job seeker
+        if (user.UserType !== appConstants.userTypes.JOB_SEEKER) {
+            throw new ValidationError('Only job seekers can update job preferences data');
+        }
+        // Get applicant ID
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+        
+        // Build update fields dynamically
+        const updateFields: string[] = [];
+        const parameters: any[] = [applicantId];
+        let paramIndex = 1;
+
+        // Map job preferences fields to database columns
+        if (jobPreferencesData.preferredJobTypes) {
+            // Handle array of job types
+            const jobTypes = Array.isArray(jobPreferencesData.preferredJobTypes) 
+                ? jobPreferencesData.preferredJobTypes.map((jt: any) => jt.Type || jt).join(', ')
+                : jobPreferencesData.preferredJobTypes;
+            updateFields.push(`PreferredJobTypes = @param${paramIndex}`);
+            parameters.push(jobTypes);
+            paramIndex++;
+        }
+        
+        if (jobPreferencesData.workplaceType) {
+            updateFields.push(`PreferredWorkTypes = @param${paramIndex}`);
+            parameters.push(jobPreferencesData.workplaceType);
+            paramIndex++;
+        }
+        
+        if (jobPreferencesData.preferredLocations) {
+            const locations = Array.isArray(jobPreferencesData.preferredLocations)
+                ? jobPreferencesData.preferredLocations.join(', ')
+                : jobPreferencesData.preferredLocations;
+            updateFields.push(`PreferredLocations = @param${paramIndex}`);
+            parameters.push(locations);
+            paramIndex++;
+        }
+
+        if (updateFields.length === 0) {
+            throw new ValidationError('No job preferences data provided');
+        }
+
+        // Calculate profile completeness including job preferences
+        const completenessFields = [
+            'Institution', 'HighestEducation', 'FieldOfStudy', 
+            'CurrentJobTitle', 'CurrentCompany', 'YearsOfExperience', 'PrimarySkills', 
+            'Summary', 'PreferredJobTypes', 'PreferredWorkTypes'
+        ];
+        
+        const completenessLogic = completenessFields.map(field => 
+            `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
+        ).join(' + ');
+        
+        updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+
+        const query = `
+            UPDATE Applicants 
+            SET ${updateFields.join(', ')}
+            WHERE ApplicantID = @param0
+        `;
+
+        console.log('?? Updating applicant job preferences data:', {
+            applicantId,
+            fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
+            jobPreferencesData: Object.keys(jobPreferencesData)
+        });
+
+        const result = await dbService.executeQuery(query, parameters);
+        
+        return { success: true, message: 'Job preferences updated successfully' };
     }
 }
