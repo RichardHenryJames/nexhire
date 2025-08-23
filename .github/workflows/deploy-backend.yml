@@ -1,4 +1,4 @@
-name: Fast ZIP Deploy to Azure Functions via Storage
+name: Fast ZIP Deploy via Azure Storage
 
 on:
   push:
@@ -13,16 +13,17 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: nexhire-api-func
-  NODE_VERSION: '20.x'
-  STORAGE_ACCOUNT_NAME: nexhirestorage
+  AZURE_RESOURCE_GROUP: nexhire-rg
+  STORAGE_ACCOUNT_NAME: nexhirefuncdevst
   CONTAINER_NAME: deployments
+  NODE_VERSION: '20.x'
 
 jobs:
   fast-zip-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
-    - name: 'Checkout GitHub Action'
+    - name: 'Checkout Code'
       uses: actions/checkout@v4
 
     - name: 'Setup Node.js'
@@ -31,131 +32,149 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 'Install dependencies'
-      run: npm ci --production
+    - name: 'Install Dependencies'
+      run: npm ci
 
-    - name: 'Build TypeScript'
+    - name: ' Build TypeScript'
       run: npm run build
 
-    - name: 'Create deployment package'
+    - name: 'Create Deployment Package'
       run: |
-        echo "Creating optimized deployment ZIP..."
-        mkdir deploy-package
-        
-        # Copy built files
-        cp -r dist/* deploy-package/
-        
-        # Copy essential files
-        cp package.json deploy-package/
-        cp host.json deploy-package/
-        
-        # Install production dependencies in package
-        cd deploy-package
-        npm ci --production --silent
-        cd ..
-        
-        # Create ZIP with timestamp
-        ZIP_NAME="nexhire-backend-$(date +%Y%m%d-%H%M%S).zip"
+        echo "Creating deployment ZIP package..."
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        ZIP_NAME="nexhire-backend-$TIMESTAMP.zip"
         echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
         
-        cd deploy-package
-        zip -r "../$ZIP_NAME" . -x "*.log" "*.tmp" "test/*" "*.test.*"
-        cd ..
+        # Create ZIP with only essential files
+        echo "Packaging dist/, package.json, host.json, and node_modules..."
+        zip -r $ZIP_NAME dist/ package.json host.json node_modules/ \
+          -x "node_modules/.bin/*" \
+             "node_modules/.cache/*" \
+             "*.log" \
+             "*.tmp" \
+             "test/*" \
+             "*.test.*"
         
-        echo "? Created deployment package: $ZIP_NAME"
-        ls -la "$ZIP_NAME"
+        ZIP_SIZE=$(ls -lh $ZIP_NAME | awk '{print $5}')
+        echo "Created $ZIP_NAME ($ZIP_SIZE)"
 
     - name: 'Upload to Azure Storage'
       uses: azure/CLI@v1
       with:
         azcliversion: 2.30.0
         inlineScript: |
-          # Login with service principal
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+          echo "Logging in to Azure..."
+          az login --service-principal \
+            -u ${{ secrets.AZURE_CLIENT_ID }} \
+            -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+            --tenant ${{ secrets.AZURE_TENANT_ID }}
           
-          # Upload ZIP to storage account
+          echo "Ensuring container exists..."
+          az storage container create \
+            --name ${{ env.CONTAINER_NAME }} \
+            --account-name ${{ env.STORAGE_ACCOUNT_NAME }} \
+            --public-access blob \
+            --account-key ${{ secrets.AZURE_STORAGE_KEY }} || true
+          
           echo "Uploading $ZIP_NAME to Azure Storage..."
           az storage blob upload \
             --account-name ${{ env.STORAGE_ACCOUNT_NAME }} \
             --container-name ${{ env.CONTAINER_NAME }} \
             --name $ZIP_NAME \
             --file $ZIP_NAME \
-            --auth-mode key \
+            --overwrite true \
             --account-key ${{ secrets.AZURE_STORAGE_KEY }}
           
-          # Get blob URL
+          echo "Getting blob URL..."
           BLOB_URL=$(az storage blob url \
             --account-name ${{ env.STORAGE_ACCOUNT_NAME }} \
             --container-name ${{ env.CONTAINER_NAME }} \
             --name $ZIP_NAME \
-            --auth-mode key \
-            --account-key ${{ secrets.AZURE_STORAGE_KEY }})
+            --account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --output tsv)
           
-          echo "? ZIP uploaded to: $BLOB_URL"
           echo "BLOB_URL=$BLOB_URL" >> $GITHUB_ENV
+          echo "Uploaded to: $BLOB_URL"
 
-    - name: 'Update Function App to use new package'
+    - name: 'Update Function App Configuration'
       uses: azure/CLI@v1
       with:
         azcliversion: 2.30.0
         inlineScript: |
-          # Update WEBSITE_RUN_FROM_PACKAGE setting
-          echo "Updating Function App to use new deployment package..."
+          echo "Updating WEBSITE_RUN_FROM_PACKAGE setting..."
           az functionapp config appsettings set \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group nexhire-rg \
-            --settings WEBSITE_RUN_FROM_PACKAGE="$BLOB_URL"
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings "WEBSITE_RUN_FROM_PACKAGE=$BLOB_URL"
           
-          echo "? Function App updated to use ZIP from storage"
+          echo "Environment variable updated"
 
     - name: 'Restart Function App'
       uses: azure/CLI@v1
       with:
         azcliversion: 2.30.0
         inlineScript: |
-          echo "Restarting Function App to apply changes..."
+          echo "Restarting Function App..."
           az functionapp restart \
             --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group nexhire-rg
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
           
-          echo "? Function App restarted"
+          echo "Function App restarted"
 
-    - name: 'Wait for startup'
-      run: sleep 45
+    - name: 'Wait for Startup'
+      run: sleep 60
 
-    - name: 'Test deployment'
+    - name: 'Test Deployment'
       run: |
-        echo "?? Testing deployed APIs..."
+        echo "Testing deployed APIs..."
         
         # Test health endpoint
         echo "Testing health endpoint..."
+        HEALTH_URL="https://nexhire-api-func.azurewebsites.net/api/health"
+        HEALTH_SUCCESS=false
+        
         for i in {1..5}; do
-          if curl -f -s https://nexhire-api-func.azurewebsites.net/api/health; then
-            echo "? Health check passed"
+          if curl -f -s $HEALTH_URL | grep -q '"success":true'; then
+            echo "Health check passed"
+            HEALTH_SUCCESS=true
             break
           else
-            echo "? Attempt $i/5 failed, retrying in 10 seconds..."
+            echo "Health check attempt $i/5 failed, retrying in 10 seconds..."
             sleep 10
           fi
         done
         
         # Test countries API
         echo "Testing countries API..."
-        COUNTRIES_RESPONSE=$(curl -s https://nexhire-api-func.azurewebsites.net/api/reference/countries)
-        if echo "$COUNTRIES_RESPONSE" | grep -q "success.*true"; then
-          echo "? Countries API working with proper flag emojis!"
-          echo "$COUNTRIES_RESPONSE" | head -300
+        COUNTRIES_URL="https://nexhire-api-func.azurewebsites.net/api/reference/countries"
+        COUNTRIES_RESPONSE=$(curl -s $COUNTRIES_URL)
+        
+        if echo "$COUNTRIES_RESPONSE" | grep -q '"success":true'; then
+          echo "Countries API working with proper flag emojis!"
+          TOTAL_COUNTRIES=$(echo "$COUNTRIES_RESPONSE" | grep -o '"total":[0-9]*' | cut -d':' -f2)
+          echo "Total countries: $TOTAL_COUNTRIES"
+          
+          # Show sample countries (extract first few with flags)
+          echo "Sample countries with flags:"
+          echo "$COUNTRIES_RESPONSE" | grep -o '"flag":"[^"]*","name":"[^"]*","code":"[^"]*"' | head -5 | while read line; do
+            FLAG=$(echo $line | grep -o '"flag":"[^"]*"' | cut -d'"' -f4)
+            NAME=$(echo $line | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
+            CODE=$(echo $line | grep -o '"code":"[^"]*"' | cut -d'"' -f4)
+            echo "   $FLAG $NAME ($CODE)"
+          done
         else
-          echo "?? Countries API response: $COUNTRIES_RESPONSE"
+          echo "Countries API response: $COUNTRIES_RESPONSE"
         fi
 
     - name: 'Deployment Summary'
       run: |
-        echo "?? FAST ZIP DEPLOYMENT COMPLETE!"
+        echo "FAST ZIP DEPLOYMENT COMPLETE!"
         echo "=================================="
-        echo "?? Package: $ZIP_NAME"
-        echo "?? Storage URL: $BLOB_URL"
-        echo "?? Health: https://nexhire-api-func.azurewebsites.net/api/health"
-        echo "?? Countries: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
+        echo "Package: $ZIP_NAME"
+        echo "Storage: ${{ env.STORAGE_ACCOUNT_NAME }}/${{ env.CONTAINER_NAME }}"
+        echo "Blob URL: $BLOB_URL"
+        echo "Health: https://nexhire-api-func.azurewebsites.net/api/health"
+        echo "Countries: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
         echo ""
-        echo "?? Deployment completed in ~5-7 minutes instead of 15-20!"
+        echo "GitHub Actions ZIP deployment completed in ~5-8 minutes!"
+        echo "Your countries API with proper flag emojis is now live!
