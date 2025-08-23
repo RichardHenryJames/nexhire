@@ -2,7 +2,7 @@
   "name": "nexhire-backend-api",
   "version": "1.0.0",
   "description": "NexHire Job Platform Backend APIs - Azure Functions",
-  "main": "dist/index.js",
+  "main": "index.js",
   "engines": {
     "node": ">=20.0.0"
   },

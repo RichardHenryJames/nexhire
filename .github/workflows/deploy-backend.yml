@@ -13,7 +13,7 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: nexhire-api-func
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'dist'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   NODE_VERSION: '20.x'
 
 jobs:
@@ -21,108 +21,109 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
 
-      - name: 'Setup Node.js'
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+    - name: 'Setup Node.js'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
 
-      - name: 'Install dependencies'
-        run: npm ci
+    - name: 'Install dependencies'
+      run: npm ci
 
-      - name: 'Build TypeScript'
-        run: npm run build || exit 1
+    - name: 'Build TypeScript'
+      run: npm run build
 
-      - name: 'Verify build output'
-        run: |
-          echo "Checking build output..."
-          ls -la dist/
-          echo "Checking main entry point..."
-          head -20 dist/index.js
+    - name: 'Verify build output'
+      run: |
+        echo "Checking build output..."
+        ls -la dist/
+        echo "Checking main entry point..."
+        head -20 dist/index.js
+        echo "Verifying countries controller..."
+        grep -n "getCountries" dist/src/controllers/reference.controller.js || echo "getCountries not found"
 
-      - name: 'Deploy to Azure Functions - Method 1'
-        uses: azure/functions-action@v1.5.2
-        id: deploy1
-        with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-          respect-funcignore: true
-        env:
-          AZURE_FUNCTIONS_ACTION_DEBUG: true
-        continue-on-error: true
+    - name: 'Deploy to Azure Functions'
+      uses: Azure/functions-action@v1
+      id: deploy
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
-      - name: 'Wait and retry with different approach'
-        if: steps.deploy1.outcome == 'failure'
-        run: |
-          echo "First deployment failed, waiting before retry..."
-          sleep 300
+    - name: 'Verify deployment succeeded'
+      run: |
+        if [ "${{ steps.deploy.outcome }}" != "success" ]; then
+          echo "? Deployment failed!"
+          exit 1
+        else
+          echo "? Deployment reported success"
+        fi
 
-      - name: 'Deploy to Azure Functions - Method 2 (Retry)'
-        uses: azure/functions-action@v1.5.2
-        id: deploy2
-        if: steps.deploy1.outcome == 'failure'
-        with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-          respect-funcignore: false
-        env:
-          AZURE_FUNCTIONS_ACTION_DEBUG: true
-        continue-on-error: true
+    - name: 'Wait for Azure Functions to warm up'
+      run: |
+        echo "Waiting for Azure Functions to initialize..."
+        sleep 120
 
-      - name: 'Final deployment attempt with minimal package'
-        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
-        run: |
-          echo "Creating minimal deployment package..."
-          mkdir minimal-deploy
-          cp -r dist/* minimal-deploy/
-          cp package.json minimal-deploy/
-          cp host.json minimal-deploy/
-          cd minimal-deploy && npm install --production
-          zip -r ../minimal-deploy.zip .
-          cd ..
+    - name: 'Test deployment with strict validation'
+      run: |
+        echo "Testing deployed functions with strict validation..."
+        
+        # Test health endpoint
+        echo "Testing health endpoint..."
+        HEALTH_RESPONSE=$(curl -s -w "%{http_code}" https://nexhire-api-func.azurewebsites.net/api/health)
+        HEALTH_CODE="${HEALTH_RESPONSE: -3}"
+        
+        if [ "$HEALTH_CODE" = "200" ]; then
+          echo "? Health endpoint working (200)"
+        else
+          echo "? Health endpoint failed ($HEALTH_CODE)"
+          echo "Full response: $HEALTH_RESPONSE"
+          
+          # Try one more time after additional wait
+          echo "Waiting additional 60 seconds and retrying..."
+          sleep 60
+          RETRY_RESPONSE=$(curl -s -w "%{http_code}" https://nexhire-api-func.azurewebsites.net/api/health)
+          RETRY_CODE="${RETRY_RESPONSE: -3}"
+          
+          if [ "$RETRY_CODE" = "200" ]; then
+            echo "? Health endpoint working after retry (200)"
+          else
+            echo "? Health endpoint still failing after retry ($RETRY_CODE)"
+            echo "? DEPLOYMENT VERIFICATION FAILED"
+            exit 1
+          fi
+        fi
+        
+        # Test countries API
+        echo "Testing countries API..."
+        COUNTRIES_RESPONSE=$(curl -s -w "%{http_code}" https://nexhire-api-func.azurewebsites.net/api/reference/countries)
+        COUNTRIES_CODE="${COUNTRIES_RESPONSE: -3}"
+        
+        if [ "$COUNTRIES_CODE" = "200" ]; then
+          echo "? Countries API working (200)"
+          echo "Sample response:"
+          echo "$COUNTRIES_RESPONSE" | head -500
+        else
+          echo "? Countries API failed ($COUNTRIES_CODE)"
+          echo "? COUNTRIES API VERIFICATION FAILED"
+          exit 1
+        fi
 
-      - name: 'Deploy minimal package'
-        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
-        uses: azure/functions-action@v1.5.2
-        with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: './minimal-deploy.zip'
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-        env:
-          AZURE_FUNCTIONS_ACTION_DEBUG: true
-
-      - name: 'Wait for deployment to settle'
-        run: sleep 90
-
-      - name: 'Test Health Endpoint'
-        run: |
-          echo "Testing health endpoint..."
-          for i in {1..8}; do
-            echo "Attempt $i of 8..."
-            if curl -f -s https://nexhire-api-func.azurewebsites.net/api/health; then
-              echo "? Health check passed"
-              break
-            else
-              echo "? Attempt $i failed, retrying in 20 seconds..."
-              sleep 20
-            fi
-          done || exit 1
-
-      - name: 'Test Countries API'
-        run: |
-          echo "Testing countries API..."
-          curl -f -s https://nexhire-api-func.azurewebsites.net/api/reference/countries | head -300 || echo "Countries API not ready yet"
-
-      - name: 'Deployment Summary'
-        run: |
-          echo "=== DEPLOYMENT SUMMARY ==="
-          echo "Deploy Method 1: ${{ steps.deploy1.outcome }}"
-          echo "Deploy Method 2: ${{ steps.deploy2.outcome }}"
-          echo "API Base URL: https://nexhire-api-func.azurewebsites.net/api"
-          echo "Health Check: https://nexhire-api-func.azurewebsites.net/api/health"
-          echo "Countries API: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
+    - name: 'Deployment Success Summary'
+      run: |
+        echo "?? DEPLOYMENT SUCCESSFUL!"
+        echo "=================================="
+        echo "? Build: Completed"
+        echo "? Deploy: Success"
+        echo "? Health Check: Working"
+        echo "? Countries API: Working with flag emojis"
+        echo ""
+        echo "?? API Endpoints:"
+        echo "• Health: https://nexhire-api-func.azurewebsites.net/api/health"
+        echo "• Countries: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
+        echo "• Colleges: https://nexhire-api-func.azurewebsites.net/api/reference/colleges"
+        echo ""
+        echo "?? Your countries API with proper flag emojis is now live!"
