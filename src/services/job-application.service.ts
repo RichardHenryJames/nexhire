@@ -135,11 +135,13 @@ export class JobApplicationService {
                 // Don't fail the whole operation for tracking
             }
             
-            // Update applicant's last applied date (optional)
+            // Update applicant's last applied date and search score (system-managed)
             try {
                 await this.updateApplicantLastApplication(applicantId);
+                // Also update search score to reflect application activity
+                await this.updateApplicantSearchScore(applicantUserId);
             } catch (updateError) {
-                console.warn('Failed to update applicant last application date:', updateError);
+                console.warn('Failed to update applicant metadata:', updateError);
                 // Don't fail the whole operation for this update
             }
             
@@ -472,6 +474,17 @@ export class JobApplicationService {
         `;
         
         await dbService.executeQuery(query, [applicantId]);
+    }
+    
+    private static async updateApplicantSearchScore(userId: string): Promise<void> {
+        try {
+            // Import ApplicantService to use the search score calculation
+            const { ApplicantService } = await import('./profile.service');
+            await ApplicantService.calculateAndUpdateSearchScore(userId);
+        } catch (error) {
+            console.warn('Failed to update search score:', error);
+            // Non-critical, don't throw
+        }
     }
     
     // Get application statistics for dashboard

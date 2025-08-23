@@ -77,7 +77,7 @@ export class ApplicantService {
                 throw new Error('Could not determine applicant ID');
             }
 
-            // FIXED: Complete field mapping based on your exact database schema
+            // FIXED: Complete field mapping - REMOVED system-managed fields
             const fieldMapping: ApplicantFieldMapping = {
                 // Personal Information
                 'nationality': 'Nationality',
@@ -141,8 +141,10 @@ export class ApplicantService {
                 'isFeatured': 'IsFeatured',
                 'featuredUntil': 'FeaturedUntil',
                 
-                // Additional
+                // Additional Fields
                 'tags': 'Tags'
+                
+                // REMOVED: lastJobAppliedAt, searchScore (system-managed, not user input)
             };
 
             // Build dynamic update query
@@ -172,10 +174,6 @@ export class ApplicantService {
                              'hideCurrentCompany', 'hideSalaryDetails', 'isOpenToWork', 'isFeatured'].includes(key)) {
                         // FIXED: Use frontend value, don't hardcode
                         value = (value === true || value === 1 || value === '1' || value === 'true') ? 1 : 0;
-                    }
-                    // DateTime fields
-                    else if (['featuredUntil'].includes(key)) {
-                        value = value ? new Date(value) : null;
                     }
                     // String fields - keep as is, but handle empty strings
                     else if (typeof value === 'string') {
@@ -236,6 +234,14 @@ export class ApplicantService {
                 newCompleteness: result.recordset[0].ProfileCompleteness
             });
 
+            // Automatically update search score when profile changes (system-managed)
+            try {
+                await this.calculateAndUpdateSearchScore(userId);
+            } catch (error) {
+                console.warn('Failed to update search score after profile update:', error);
+                // Non-critical, don't fail the profile update
+            }
+
             return result.recordset[0];
         } catch (error) {
             console.error('? Error updating applicant profile:', error);
@@ -269,6 +275,76 @@ export class ApplicantService {
         console.log(`? Created minimal applicant profile ${applicantId} for user ${userId}`);
         
         return applicantId;
+    }
+
+    // SYSTEM-MANAGED FIELD UPDATES (not exposed to frontend)
+    
+    /**
+     * Update LastJobAppliedAt when user applies for a job
+     * Called automatically by job application service
+     */
+    static async updateLastJobAppliedAt(userId: string): Promise<void> {
+        try {
+            const query = `
+                UPDATE Applicants 
+                SET LastJobAppliedAt = GETUTCDATE()
+                WHERE UserID = @param0
+            `;
+            
+            await dbService.executeQuery(query, [userId]);
+            console.log(`?? Updated LastJobAppliedAt for user ${userId}`);
+        } catch (error) {
+            console.error('Error updating LastJobAppliedAt:', error);
+            // Don't throw - this is non-critical
+        }
+    }
+
+    /**
+     * Update SearchScore based on profile completeness and other factors
+     * Called automatically by background job or when profile changes
+     */
+    static async calculateAndUpdateSearchScore(userId: string): Promise<void> {
+        try {
+            // Get current profile data
+            const profile = await this.getApplicantProfile(userId);
+            
+            // Calculate search score based on multiple factors
+            let searchScore = 0;
+            
+            // Profile completeness (40% weight)
+            searchScore += (profile.ProfileCompleteness || 0) * 0.4;
+            
+            // Skills presence (20% weight)
+            if (profile.PrimarySkills) searchScore += 20;
+            if (profile.SecondarySkills) searchScore += 10;
+            
+            // Experience level (20% weight)
+            const experience = profile.YearsOfExperience || 0;
+            if (experience > 0) searchScore += Math.min(experience * 2, 20);
+            
+            // Professional info (10% weight)
+            if (profile.CurrentJobTitle) searchScore += 5;
+            if (profile.Summary) searchScore += 5;
+            
+            // Social presence (10% weight)
+            if (profile.LinkedInProfile) searchScore += 5;
+            if (profile.GithubProfile) searchScore += 5;
+            
+            // Ensure score is between 0-100
+            searchScore = Math.max(0, Math.min(100, searchScore));
+            
+            const query = `
+                UPDATE Applicants 
+                SET SearchScore = @param1
+                WHERE UserID = @param0
+            `;
+            
+            await dbService.executeQuery(query, [userId, searchScore]);
+            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
+        } catch (error) {
+            console.error('Error calculating search score:', error);
+            // Don't throw - this is non-critical
+        }
     }
 }
 

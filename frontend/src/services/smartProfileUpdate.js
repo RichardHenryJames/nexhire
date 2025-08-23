@@ -82,6 +82,7 @@ const FIELD_ROUTING = {
     'isFeatured',
     'featuredUntil',
     'tags'
+    // REMOVED: lastJobAppliedAt, searchScore (system-managed fields)
   ]
 };
 
