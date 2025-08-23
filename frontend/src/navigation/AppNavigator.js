@@ -11,12 +11,22 @@ import UserTypeSelectionScreen from '../screens/auth/registration/UserTypeSelect
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 
+// Job Seeker Registration Flow
+import ExperienceTypeSelectionScreen from '../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen';
+import PersonalDetailsScreen from '../screens/auth/registration/jobseeker/PersonalDetailsScreen';
+
+// Employer Registration Flow  
+import EmployerTypeSelectionScreen from '../screens/auth/registration/employer/EmployerTypeSelectionScreen';
+import OrganizationDetailsScreen from '../screens/auth/registration/employer/OrganizationDetailsScreen';
+import EmployerPersonalDetailsScreen from '../screens/auth/registration/employer/EmployerPersonalDetailsScreen';
+import EmployerAccountScreen from '../screens/auth/registration/employer/EmployerAccountScreen';
+
 // Main App Screens
 import HomeScreen from '../screens/HomeScreen';
 import JobsScreen from '../screens/jobs/JobsScreen';
 import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
-import ApplicationsScreen from '../screens/applications/ApplicationsScreen'; // Fixed path
+import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
 import { colors } from '../styles/theme';
@@ -24,7 +34,37 @@ import { colors } from '../styles/theme';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Stack Navigator
+// Job Seeker Registration Flow
+function JobSeekerFlow() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="ExperienceTypeSelection" component={ExperienceTypeSelectionScreen} />
+      <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Employer Registration Flow
+function EmployerFlow() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="EmployerTypeSelection" component={EmployerTypeSelectionScreen} />
+      <Stack.Screen name="OrganizationDetailsScreen" component={OrganizationDetailsScreen} />
+      <Stack.Screen name="EmployerPersonalDetailsScreen" component={EmployerPersonalDetailsScreen} />
+      <Stack.Screen name="EmployerAccountScreen" component={EmployerAccountScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Auth Stack Navigator with complete registration flows
 function AuthStack() {
   return (
     <Stack.Navigator
@@ -33,6 +73,8 @@ function AuthStack() {
       }}
     >
       <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
+      <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
+      <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
