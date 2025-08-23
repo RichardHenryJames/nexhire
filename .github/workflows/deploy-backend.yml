@@ -30,31 +30,18 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 'Clean install dependencies'
-      run: |
-        npm ci --prefer-offline --no-audit
-        npm ls
+    - name: 'Install dependencies'
+      run: npm ci
 
     - name: 'Build TypeScript'
       run: npm run build
-
-    - name: 'Prepare deployment package'
-      run: |
-        echo "Creating optimized deployment package..."
-        mkdir -p deploy-package
-        cp -r dist/* deploy-package/
-        cp package.json deploy-package/
-        cp host.json deploy-package/
-        cd deploy-package && npm ci --production --prefer-offline
-        cd ..
-        ls -la deploy-package/
 
     - name: 'Deploy to Azure Functions with retry'
       uses: Azure/functions-action@v1
       id: deploy
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: './deploy-package'
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         respect-funcignore: true
       continue-on-error: true
@@ -64,7 +51,7 @@ jobs:
       uses: Azure/functions-action@v1
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: './deploy-package'
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         respect-funcignore: true
 
