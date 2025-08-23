@@ -93,7 +93,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const [showYearModal, setShowYearModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { userType, experienceType } = route.params;
+  const { userType, experienceType, workExperienceData } = route.params;
 
   useEffect(() => {
     loadColleges();
@@ -179,6 +179,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     navigation.navigate('JobPreferencesScreen', { 
       userType, 
       experienceType,
+      workExperienceData, // Pass along work experience data if it exists
       educationData: formData
     });
   };

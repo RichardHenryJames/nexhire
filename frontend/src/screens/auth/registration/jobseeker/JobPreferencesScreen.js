@@ -27,7 +27,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
   const [showWorkplaceModal, setShowWorkplaceModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { userType, experienceType, educationData } = route.params;
+  const { userType, experienceType, workExperienceData, educationData } = route.params;
 
   const WORKPLACE_TYPES = [
     { id: 'remote', name: 'Remote', icon: 'home', description: 'Work from anywhere' },
@@ -89,6 +89,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
     navigation.navigate('PersonalDetails', { 
       userType, 
       experienceType,
+      workExperienceData, // Pass along work experience data
       educationData,
       jobPreferences: formData
     });
@@ -193,7 +194,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            </TouchableOpacity
             
             <Text style={styles.title}>What type of work interests you?</Text>
             <Text style={styles.subtitle}>

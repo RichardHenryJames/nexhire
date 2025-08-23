@@ -21,11 +21,19 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       return;
     }
 
-    // Both student and experienced users go through education details first
-    navigation.navigate('EducationDetailsScreen', { 
-      userType, 
-      experienceType: selectedType 
-    });
+    if (selectedType === 'Student') {
+      // Students go directly to education details
+      navigation.navigate('EducationDetailsScreen', { 
+        userType, 
+        experienceType: selectedType 
+      });
+    } else {
+      // Experienced professionals first provide work experience
+      navigation.navigate('WorkExperienceScreen', { 
+        userType, 
+        experienceType: selectedType 
+      });
+    }
   };
 
   const ExperienceCard = ({ type, title, icon, description, examples }) => (
