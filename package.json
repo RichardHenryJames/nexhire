@@ -8,7 +8,10 @@
     "watch": "tsc --watch",
     "prestart": "npm run build",
     "start": "func start",
-    "test": "echo \"No tests yet\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false",
     "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --build local --force",
     "deploy": "npm run deploy:backend"
   },
@@ -16,9 +19,12 @@
     "@azure/functions": "^4.5.0",
     "@azure/service-bus": "^7.9.4",
     "@azure/storage-blob": "^12.17.0",
+    "@expo/metro-runtime": "~5.0.4",
     "@react-navigation/bottom-tabs": "^7.4.6",
     "@react-navigation/stack": "^7.4.7",
+    "@types/busboy": "^1.5.4",
     "bcryptjs": "^2.4.3",
+    "busboy": "^1.6.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "expo": "^53.0.20",
@@ -30,6 +36,8 @@
     "mssql": "^10.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.8",
+    "react-dom": "19.0.0",
+    "react-native-web": "^0.20.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
