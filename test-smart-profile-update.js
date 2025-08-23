@@ -81,7 +81,7 @@ const testData = {
 
 function simulateProfileUpdate(testCase, data) {
     console.log(`\n=== ${testCase} ===`);
-    console.log('?? Update Data:', JSON.stringify(data, null, 2));
+    console.log('Update Data:', JSON.stringify(data, null, 2));
     
     // Simulate what our smart profile service does
     const fieldsBeingUpdated = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null);
@@ -147,7 +147,7 @@ function simulateProfileUpdate(testCase, data) {
     };
 }
 
-console.log('?? SMART PROFILE UPDATE FEATURE TEST');
+console.log('SMART PROFILE UPDATE FEATURE TEST');
 console.log('=====================================');
 
 // Run all test cases
@@ -166,11 +166,11 @@ Object.entries(results).forEach(([test, result]) => {
 });
 
 console.log('\n? KEY FEATURES VERIFIED:');
-console.log('• Dynamic field mapping ?');
-console.log('• Boolean conversion (privacy settings) ?');
-console.log('• Bulk updates support ?');
-console.log('• Profile completeness calculation ?');
-console.log('• Type-safe parameter binding ?');
-console.log('• Null/undefined filtering ?');
+console.log('ï¿½ Dynamic field mapping ?');
+console.log('ï¿½ Boolean conversion (privacy settings) ?');
+console.log('ï¿½ Bulk updates support ?');
+console.log('ï¿½ Profile completeness calculation ?');
+console.log('ï¿½ Type-safe parameter binding ?');
+console.log('ï¿½ Null/undefined filtering ?');
 
 console.log('\n?? SMART PROFILE UPDATE FEATURE: WORKING CORRECTLY');

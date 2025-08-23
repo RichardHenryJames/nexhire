@@ -253,13 +253,13 @@ functions_1.app.http('applicants-update', {
                 return { status: 200 };
             }
             const userId = req.params.userId;
-            console.log('?? Updating applicant profile for user:', userId);
+            console.log('Updating applicant profile for user:', userId);
             const profileData = await req.json();
-            console.log('?? Profile data received fields:', Object.keys(profileData));
-            console.log('?? hideCurrentCompany:', profileData.hideCurrentCompany);
-            console.log('?? hideSalaryDetails:', profileData.hideSalaryDetails);
+            console.log('Profile data received fields:', Object.keys(profileData));
+            console.log('hideCurrentCompany:', profileData.hideCurrentCompany);
+            console.log('hideSalaryDetails:', profileData.hideSalaryDetails);
             const updatedProfile = await profile_service_1.ApplicantService.updateApplicantProfile(userId, profileData);
-            console.log('? Profile updated successfully');
+            console.log('Profile updated successfully');
             return {
                 status: 200,
                 jsonBody: {
@@ -270,7 +270,7 @@ functions_1.app.http('applicants-update', {
             };
         }
         catch (error) {
-            console.error('? Error updating applicant profile:', error);
+            console.error('Error updating applicant profile:', error);
             return {
                 status: 500,
                 jsonBody: {

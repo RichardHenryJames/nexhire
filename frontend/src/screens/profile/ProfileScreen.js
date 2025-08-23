@@ -300,7 +300,7 @@ export default function ProfileScreen() {
         };
         
         Alert.alert(
-          '? Success',
+          'Success',
           `${settingNames[setting]} ${value ? 'enabled' : 'disabled'} successfully!`
         );
       } else {
@@ -319,7 +319,7 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       
-      console.log('?? Starting smart profile save...');
+      console.log('Starting smart profile save...');
       
       // Combine all profile data (Users + Applicants table fields)
       const completeProfileData = {
@@ -339,7 +339,7 @@ export default function ProfileScreen() {
           : jobSeekerProfile.primarySkills,
       };
       
-      console.log('?? Complete profile data:', Object.keys(completeProfileData));
+      console.log('Complete profile data:', Object.keys(completeProfileData));
       
       const result = await updateCompleteProfile(completeProfileData);
       
@@ -348,11 +348,11 @@ export default function ProfileScreen() {
         
         let message = 'Profile updated successfully!';
         if (result.usersUpdated && result.applicantsUpdated) {
-          message = '?? Complete profile updated successfully!';
+          message = 'Complete profile updated successfully!';
         } else if (result.usersUpdated) {
-          message = '? Basic profile information updated successfully!';
+          message = 'Basic profile information updated successfully!';
         } else if (result.applicantsUpdated) {
-          message = '? Professional profile updated successfully!';
+          message = 'Professional profile updated successfully!';
         }
         
         if (result.errors && result.errors.length > 0) {

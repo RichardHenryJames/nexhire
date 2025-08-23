@@ -3,7 +3,7 @@
  * Test the privacy setting toggles that were failing
  */
 
-console.log('?? TESTING SMART PROFILE UPDATE FUNCTIONALITY');
+console.log('TESTING SMART PROFILE UPDATE FUNCTIONALITY');
 console.log('===============================================');
 
 // Simulate the exact API calls that the frontend makes
@@ -20,9 +20,9 @@ async function testPrivacyToggle() {
         hideSalaryDetails: false
     };
     
-    console.log('? Test Data:', testData);
-    console.log('? Expected Behavior: Should update Applicants table with boolean conversion');
-    console.log('? Backend Field Mapping:');
+    console.log('Test Data:', testData);
+    console.log('Expected Behavior: Should update Applicants table with boolean conversion');
+    console.log('Backend Field Mapping:');
     console.log('   hideCurrentCompany -> HideCurrentCompany (bit: 1)');
     console.log('   hideSalaryDetails -> HideSalaryDetails (bit: 0)');
     
@@ -67,10 +67,10 @@ async function testSmartRouting() {
         }
     });
     
-    console.log('? Input Data:', Object.keys(mixedProfileData));
-    console.log('? Routed to Users table:', Object.keys(routedData.usersData));
-    console.log('? Routed to Applicants table:', Object.keys(routedData.applicantsData));
-    console.log('? Expected API Calls:');
+    console.log('Input Data:', Object.keys(mixedProfileData));
+    console.log('Routed to Users table:', Object.keys(routedData.usersData));
+    console.log('Routed to Applicants table:', Object.keys(routedData.applicantsData));
+    console.log('Expected API Calls:');
     console.log('   1. PUT /users/profile (Users table fields)');
     console.log('   2. PUT /applicants/{userId}/profile (Applicants table fields)');
     
@@ -94,12 +94,12 @@ async function testBooleanConversion() {
         { input: 0, expected: 0, description: 'Number 0' }
     ];
     
-    console.log('? Boolean Conversion Test Cases:');
+    console.log('Boolean Conversion Test Cases:');
     booleanTestCases.forEach(testCase => {
         console.log(`   ${testCase.description}: ${testCase.input} -> ${testCase.expected}`);
     });
     
-    console.log('? This ensures privacy toggles work correctly in the database');
+    console.log('This ensures privacy toggles work correctly in the database');
     
     return {
         success: true,
@@ -120,7 +120,7 @@ async function testErrorHandling() {
         'Authentication errors (should prompt re-login)'
     ];
     
-    console.log('? Error Scenarios Covered:');
+    console.log('Error Scenarios Covered:');
     errorScenarios.forEach((scenario, index) => {
         console.log(`   ${index + 1}. ${scenario}`);
     });
@@ -133,7 +133,7 @@ async function testErrorHandling() {
 
 // Run all tests
 async function runAllTests() {
-    console.log('?? Running Smart Profile Update Tests...\n');
+    console.log('Running Smart Profile Update Tests...\n');
     
     try {
         const test1 = await testPrivacyToggle();
@@ -150,12 +150,12 @@ async function runAllTests() {
         
         console.log('\n?? ALL TESTS PASSED!');
         console.log('\n?? SMART PROFILE UPDATE FEATURE VERIFICATION:');
-        console.log('? Backend endpoints deployed and ready');
-        console.log('? Frontend smart methods fixed and bound correctly');
-        console.log('? Privacy settings now work with instant toggles');
-        console.log('? Field routing works automatically');
-        console.log('? Boolean conversion handles all edge cases');
-        console.log('? User gets clear feedback on all actions');
+        console.log('Backend endpoints deployed and ready');
+        console.log('Frontend smart methods fixed and bound correctly');
+        console.log('Privacy settings now work with instant toggles');
+        console.log('Field routing works automatically');
+        console.log('Boolean conversion handles all edge cases');
+        console.log('User gets clear feedback on all actions');
         
         console.log('\n?? YOUR SMART PROFILE UPDATE FEATURE IS READY!');
         console.log('\nTo test in your app:');
@@ -166,7 +166,7 @@ async function runAllTests() {
         console.log('5. Edit profile and save - should use smart routing!');
         
     } catch (error) {
-        console.error('? Test failed:', error);
+        console.error('Test failed:', error);
     }
 }
 

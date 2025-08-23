@@ -56,12 +56,12 @@ class NexHireAPI {
       this.refreshToken = await this.getToken('nexhire_refresh_token');
       
       if (this.token) {
-        console.log('? Found stored auth token');
+        console.log('Found stored auth token');
       } else {
         console.log('No stored auth token found');
       }
     } catch (error) {
-      console.error('? Error initializing API:', error);
+      console.error('Error initializing API:', error);
     }
   }
 
@@ -72,7 +72,7 @@ class NexHireAPI {
     
     await this.storeToken('nexhire_token', accessToken);
     await this.storeToken('nexhire_refresh_token', refreshToken);
-    console.log('? Tokens stored successfully');
+    console.log('Tokens stored successfully');
   }
 
   // Clear tokens (logout)
@@ -82,7 +82,7 @@ class NexHireAPI {
     
     await this.removeToken('nexhire_token');
     await this.removeToken('nexhire_refresh_token');
-    console.log('? Tokens cleared');
+    console.log('Tokens cleared');
   }
 
   // Generic API call with better error handling and CORS support
@@ -157,7 +157,7 @@ class NexHireAPI {
         body: JSON.stringify(userData),
       });
     } catch (error) {
-      console.error('? Registration failed:', error.message);
+      console.error('Registration failed:', error.message);
       throw error;
     }
   }
@@ -174,12 +174,12 @@ class NexHireAPI {
           result.data.tokens.accessToken,
           result.data.tokens.refreshToken
         );
-        console.log('? Login successful for:', email);
+        console.log('Login successful for:', email);
       }
 
       return result;
     } catch (error) {
-      console.error('? Login failed:', error.message);
+      console.error('Login failed:', error.message);
       throw error;
     }
   }
@@ -194,14 +194,14 @@ class NexHireAPI {
         method: 'POST',
       });
       
-      console.log('? Backend logout successful:', result.message);
+      console.log('Backend logout successful:', result.message);
       
       // Clear local tokens after successful backend call
       await this.clearTokens();
       
       return { success: true, message: 'Logout successful' };
     } catch (error) {
-      console.error('? Backend logout failed:', error.message);
+      console.error('Backend logout failed:', error.message);
       
       // Even if backend call fails, still clear local tokens for security
       await this.clearTokens();
@@ -641,7 +641,7 @@ class NexHireAPI {
     try {
       return await this.apiCall('/health');
     } catch (error) {
-      console.error('? Health check failed:', error.message);
+      console.error('Health check failed:', error.message);
       throw error;
     }
   }

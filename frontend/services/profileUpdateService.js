@@ -116,21 +116,21 @@ export class ProfileUpdateService {
    */
   async updateProfile(userId: string, profileData: Record<string, any>): Promise<ProfileUpdateResponse> {
     try {
-      console.log('?? Starting smart profile update for user:', userId);
-      console.log('?? Profile data received:', Object.keys(profileData));
+      console.log('Starting smart profile update for user:', userId);
+      console.log('Profile data received:', Object.keys(profileData));
       
       // Split data by database table
       const { usersData, applicantsData, unknownFields } = this.routeFields(profileData);
       
       // Log routing results
       if (Object.keys(usersData).length > 0) {
-        console.log('?? Users table fields:', Object.keys(usersData));
+        console.log('Users table fields:', Object.keys(usersData));
       }
       if (Object.keys(applicantsData).length > 0) {
-        console.log('?? Applicants table fields:', Object.keys(applicantsData));
+        console.log('Applicants table fields:', Object.keys(applicantsData));
       }
       if (unknownFields.length > 0) {
-        console.warn('?? Unknown fields ignored:', unknownFields);
+        console.warn('Unknown fields ignored:', unknownFields);
       }
       
       // Execute updates in parallel
@@ -143,16 +143,16 @@ export class ProfileUpdateService {
       
       // Update Users table if needed
       if (Object.keys(usersData).length > 0) {
-        console.log('?? Updating Users table...');
+        console.log('Updating Users table...');
         updatePromises.push(
           this.updateUsersTable(usersData)
             .then(result => {
               results.usersUpdated = true;
               results.usersData = result;
-              console.log('? Users table updated successfully');
+              console.log('Users table updated successfully');
             })
             .catch(error => {
-              console.error('? Users table update failed:', error);
+              console.error('Users table update failed:', error);
               results.errors!.push(`Users update failed: ${error.message}`);
             })
         );
@@ -160,16 +160,16 @@ export class ProfileUpdateService {
       
       // Update Applicants table if needed
       if (Object.keys(applicantsData).length > 0) {
-        console.log('?? Updating Applicants table...');
+        console.log('Updating Applicants table...');
         updatePromises.push(
           this.updateApplicantsTable(userId, applicantsData)
             .then(result => {
               results.applicantsUpdated = true;
               results.applicantsData = result;
-              console.log('? Applicants table updated successfully');
+              console.log('Applicants table updated successfully');
             })
             .catch(error => {
-              console.error('? Applicants table update failed:', error);
+              console.error('Applicants table update failed:', error);
               results.errors!.push(`Applicants update failed: ${error.message}`);
             })
         );
@@ -179,7 +179,7 @@ export class ProfileUpdateService {
       await Promise.all(updatePromises);
       
       // Summary
-      console.log('?? Profile update completed:', {
+      console.log('Profile update completed:', {
         usersUpdated: results.usersUpdated,
         applicantsUpdated: results.applicantsUpdated,
         errorsCount: results.errors!.length
@@ -188,7 +188,7 @@ export class ProfileUpdateService {
       return results;
       
     } catch (error) {
-      console.error('?? Profile update failed:', error);
+      console.error('Profile update failed:', error);
       throw new Error(`Profile update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -235,7 +235,7 @@ export class ProfileUpdateService {
    */
   async getCompleteProfile(userId: string) {
     try {
-      console.log('?? Fetching complete user profile...');
+      console.log('Fetching complete user profile...');
       
       const promises = [
         this.apiClient.get('/users/profile'),
@@ -250,7 +250,7 @@ export class ProfileUpdateService {
       };
       
     } catch (error) {
-      console.error('? Failed to fetch complete profile:', error);
+      console.error('Failed to fetch complete profile:', error);
       throw error;
     }
   }

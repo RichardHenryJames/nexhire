@@ -129,10 +129,10 @@ const updateUserProfile = async (userId, profileData) => {
     }
     
     await Promise.all(promises);
-    console.log('? Profile updated successfully');
+    console.log('Profile updated successfully');
     
   } catch (error) {
-    console.error('? Profile update failed:', error);
+    console.error('Profile update failed:', error);
     throw error;
   }
 };

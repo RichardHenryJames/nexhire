@@ -127,12 +127,12 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       };
 
       // ?? COMPREHENSIVE LOGGING FOR DEBUGGING
-      console.log('?? === REGISTRATION PAYLOAD DEBUG ===');
-      console.log('?? Email:', registrationData.email);
-      console.log('?? User Type:', registrationData.userType);
-      console.log('?? Experience Type:', registrationData.experienceType);
+      console.log('=== REGISTRATION PAYLOAD DEBUG ===');
+      console.log('Email:', registrationData.email);
+      console.log('User Type:', registrationData.userType);
+      console.log('Experience Type:', registrationData.experienceType);
       
-      console.log('?? Work Experience Data:', workExperienceData ? {
+      console.log('Work Experience Data:', workExperienceData ? {
         currentJobTitle: workExperienceData.currentJobTitle,
         currentCompany: workExperienceData.currentCompany,
         yearsOfExperience: workExperienceData.yearsOfExperience,
@@ -143,7 +143,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         jobType: workExperienceData.jobType
       } : 'No work experience data');
       
-      console.log('?? Education Data:', educationData ? {
+      console.log('Education Data:', educationData ? {
         college: educationData.college,
         customCollege: educationData.customCollege,
         degreeType: educationData.degreeType,
@@ -152,14 +152,14 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         selectedCountry: educationData.selectedCountry
       } : 'No education data');
       
-      console.log('?? Job Preferences:', jobPreferences ? {
+      console.log('Job Preferences:', jobPreferences ? {
         preferredJobTypes: jobPreferences.preferredJobTypes,
         workplaceType: jobPreferences.workplaceType,
         preferredLocations: jobPreferences.preferredLocations
       } : 'No job preferences');
       
-      console.log('?? Complete Registration Payload:', JSON.stringify(registrationData, null, 2));
-      console.log('?? === END REGISTRATION PAYLOAD DEBUG ===');
+      console.log('Complete Registration Payload:', JSON.stringify(registrationData, null, 2));
+      console.log('=== END REGISTRATION PAYLOAD DEBUG ===');
 
       const result = await register(registrationData);
       

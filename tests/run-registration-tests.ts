@@ -197,8 +197,8 @@ const generateTestReport = (results: { name: string; passed: boolean }[]) => {
 };
 
 const main = async () => {
-    console.log('?? NexHire Registration Flow Test Suite');
-    console.log('?? Testing all registration and profile update scenarios\n');
+    console.log('NexHire Registration Flow Test Suite');
+    console.log('Testing all registration and profile update scenarios\n');
     
     const results: { name: string; passed: boolean }[] = [];
     
@@ -210,7 +210,7 @@ const main = async () => {
     
     // Generate summary
     console.log('\n' + '='.repeat(80));
-    console.log('?? TEST SUMMARY');
+    console.log('TEST SUMMARY');
     console.log('='.repeat(80));
     
     const totalTests = results.length;
@@ -225,7 +225,7 @@ const main = async () => {
     
     console.log('\n?? Detailed Results:');
     results.forEach((result, index) => {
-        const status = result.passed ? '? PASS' : '? FAIL';
+        const status = result.passed ? 'PASS' : 'FAIL';
         console.log(`   ${index + 1}. ${result.name}: ${status}`);
     });
     
@@ -235,11 +235,11 @@ const main = async () => {
     if (failedTests === 0) {
         console.log('\n?? All tests passed! Registration flows are working correctly.');
         console.log('\n? Acceptance Criteria Met:');
-        console.log('   • Student registration populates Users + Applicants tables correctly');
-        console.log('   • Professional registration includes all work experience data');
-        console.log('   • Profile updates work for individual and bulk field changes');
-        console.log('   • Privacy settings (hideCurrentCompany, hideSalaryDetails) update properly');
-        console.log('   • API endpoints match frontend call patterns exactly');
+        console.log('   ï¿½ Student registration populates Users + Applicants tables correctly');
+        console.log('   ï¿½ Professional registration includes all work experience data');
+        console.log('   ï¿½ Profile updates work for individual and bulk field changes');
+        console.log('   ï¿½ Privacy settings (hideCurrentCompany, hideSalaryDetails) update properly');
+        console.log('   ï¿½ API endpoints match frontend call patterns exactly');
         process.exit(0);
     } else {
         console.log('\n??  Some tests failed. Please review the errors above.');
@@ -255,7 +255,7 @@ const main = async () => {
 // Run the test suite
 if (require.main === module) {
     main().catch(error => {
-        console.error('? Test runner failed:', error);
+        console.error('Test runner failed:', error);
         process.exit(1);
     });
 }

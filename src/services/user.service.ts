@@ -501,7 +501,7 @@ export class UserService {
             WHERE ApplicantID = @param0
         `;
 
-        console.log('?? Updating applicant education data:', {
+        console.log('Updating applicant education data:', {
             applicantId,
             institutionName,
             degreeType,
@@ -612,7 +612,7 @@ export class UserService {
             WHERE ApplicantID = @param0
         `;
 
-        console.log('?? Updating applicant work experience data:', {
+        console.log('Updating applicant work experience data:', {
             applicantId,
             fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
             workExperienceData: Object.keys(workExperienceData)
@@ -697,7 +697,7 @@ export class UserService {
             WHERE ApplicantID = @param0
         `;
 
-        console.log('?? Updating applicant job preferences data:', {
+        console.log('Updating applicant job preferences data:', {
             applicantId,
             fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
             jobPreferencesData: Object.keys(jobPreferencesData)

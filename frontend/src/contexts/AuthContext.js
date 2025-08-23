@@ -87,93 +87,93 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      console.log('?? === AUTH CONTEXT REGISTRATION DEBUG ===');
-      console.log('?? Attempting registration for:', userData.email);
-      console.log('?? Full userData received:', JSON.stringify(userData, null, 2));
+      console.log('=== AUTH CONTEXT REGISTRATION DEBUG ===');
+      console.log('Attempting registration for:', userData.email);
+      console.log('Full userData received:', JSON.stringify(userData, null, 2));
       
       // Separate education and work experience data from registration data
       const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
       
-      console.log('?? Separated registration data:', JSON.stringify(registrationData, null, 2));
-      console.log('?? Separated education data:', educationData ? JSON.stringify(educationData, null, 2) : 'None');
-      console.log('?? Separated work experience data:', workExperienceData ? JSON.stringify(workExperienceData, null, 2) : 'None');
-      console.log('?? Separated job preferences:', jobPreferences ? JSON.stringify(jobPreferences, null, 2) : 'None');
+      console.log('Separated registration data:', JSON.stringify(registrationData, null, 2));
+      console.log('Separated education data:', educationData ? JSON.stringify(educationData, null, 2) : 'None');
+      console.log('Separated work experience data:', workExperienceData ? JSON.stringify(workExperienceData, null, 2) : 'None');
+      console.log('Separated job preferences:', jobPreferences ? JSON.stringify(jobPreferences, null, 2) : 'None');
       
-      console.log('?? Calling API register with:', JSON.stringify(registrationData, null, 2));
+      console.log('Calling API register with:', JSON.stringify(registrationData, null, 2));
       const result = await nexhireAPI.register(registrationData);
-      console.log('?? API register result:', result);
+      console.log('API register result:', result);
       
       if (result.success) {
-        console.log('? Registration successful, attempting auto-login...');
+        console.log('Registration successful, attempting auto-login...');
         // Auto-login after successful registration
         const loginResult = await login(userData.email, userData.password);
         
         if (loginResult.success) {
-          console.log('? Auto-login successful, now saving additional profile data...');
+          console.log('Auto-login successful, now saving additional profile data...');
           
           // Save education data if provided
           if (educationData) {
-            console.log('?? Saving education data:', JSON.stringify(educationData, null, 2));
+            console.log('Saving education data:', JSON.stringify(educationData, null, 2));
             try {
               const educationResult = await nexhireAPI.updateEducation(educationData);
-              console.log('?? Education save result:', educationResult);
+              console.log('Education save result:', educationResult);
               if (educationResult.success) {
-                console.log('? Education data saved successfully');
+                console.log('Education data saved successfully');
               } else {
-                console.warn('?? Education data save failed:', educationResult.error);
+                console.warn('Education data save failed:', educationResult.error);
                 // Don't fail the entire registration for this
               }
             } catch (educationError) {
-              console.warn('? Error saving education data:', educationError);
+              console.warn('Error saving education data:', educationError);
             }
           }
           
           // Save work experience data if provided (for experienced professionals)
           if (workExperienceData) {
-            console.log('?? Saving work experience data:', JSON.stringify(workExperienceData, null, 2));
+            console.log('Saving work experience data:', JSON.stringify(workExperienceData, null, 2));
             try {
               const workExperienceResult = await nexhireAPI.updateWorkExperience(workExperienceData);
-              console.log('?? Work experience save result:', workExperienceResult);
+              console.log('Work experience save result:', workExperienceResult);
               if (workExperienceResult.success) {
-                console.log('? Work experience data saved successfully');
+                console.log('Work experience data saved successfully');
               } else {
-                console.warn('?? Work experience data save failed:', workExperienceResult.error);
+                console.warn('Work experience data save failed:', workExperienceResult.error);
               }
             } catch (workExperienceError) {
-              console.warn('? Error saving work experience data:', workExperienceError);
+              console.warn('Error saving work experience data:', workExperienceError);
             }
           }
           
           // Save job preferences if provided
           if (jobPreferences) {
-            console.log('?? Saving job preferences:', JSON.stringify(jobPreferences, null, 2));
+            console.log('Saving job preferences:', JSON.stringify(jobPreferences, null, 2));
             try {
               const jobPreferencesResult = await nexhireAPI.updateJobPreferences(jobPreferences);
-              console.log('?? Job preferences save result:', jobPreferencesResult);
+              console.log('Job preferences save result:', jobPreferencesResult);
               if (jobPreferencesResult.success) {
-                console.log('? Job preferences saved successfully');
+                console.log('Job preferences saved successfully');
               } else {
-                console.warn('?? Job preferences save failed:', jobPreferencesResult.error);
+                console.warn('Job preferences save failed:', jobPreferencesResult.error);
               }
             } catch (jobPreferencesError) {
-              console.warn('? Error saving job preferences:', jobPreferencesError);
+              console.warn('Error saving job preferences:', jobPreferencesError);
             }
           }
           
-          console.log('?? Registration flow completed successfully');
+          console.log('Registration flow completed successfully');
         }
         
-        console.log('?? === END AUTH CONTEXT REGISTRATION DEBUG ===');
+        console.log('=== END AUTH CONTEXT REGISTRATION DEBUG ===');
         return loginResult;
       } else {
         const errorMessage = result.message || 'Registration failed';
-        console.error('? Registration failed:', errorMessage);
+        console.error('Registration failed:', errorMessage);
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       const errorMessage = error.message || 'Registration failed';
-      console.error('? Registration error:', error);
+      console.error('Registration error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -216,22 +216,22 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     try {
       setError(null);
-      console.log('?? Updating profile for:', user?.Email);
+      console.log('Updating profile for:', user?.Email);
       const result = await nexhireAPI.updateProfile(profileData);
       
       if (result.success) {
-        console.log('? Profile updated successfully');
+        console.log('Profile updated successfully');
         setUser(result.data);
         return { success: true };
       } else {
         const errorMessage = result.message || 'Profile update failed';
-        console.error('? Profile update failed:', errorMessage);
+        console.error('Profile update failed:', errorMessage);
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       const errorMessage = error.message || 'Profile update failed';
-      console.error('? Profile update error:', error);
+      console.error('Profile update error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }

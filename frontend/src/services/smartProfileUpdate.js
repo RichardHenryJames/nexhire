@@ -99,21 +99,21 @@ class SmartProfileUpdateService {
    */
   async updateProfile(userId, profileData) {
     try {
-      console.log('?? Smart Profile Update - Starting...');
-      console.log('?? Input data:', Object.keys(profileData));
+      console.log('Smart Profile Update - Starting...');
+      console.log('Input data:', Object.keys(profileData));
       
       // Split data by database table
       const { usersData, applicantsData, unknownFields } = this.routeFields(profileData);
       
       // Log routing results
       if (Object.keys(usersData).length > 0) {
-        console.log('?? Users table fields:', Object.keys(usersData));
+        console.log('Users table fields:', Object.keys(usersData));
       }
       if (Object.keys(applicantsData).length > 0) {
-        console.log('?? Applicants table fields:', Object.keys(applicantsData));
+        console.log('Applicants table fields:', Object.keys(applicantsData));
       }
       if (unknownFields.length > 0) {
-        console.warn('?? Unknown fields ignored:', unknownFields);
+        console.warn('Unknown fields ignored:', unknownFields);
       }
       
       // Execute updates in parallel
@@ -128,16 +128,16 @@ class SmartProfileUpdateService {
       
       // Update Users table if needed
       if (Object.keys(usersData).length > 0) {
-        console.log('?? Updating Users table...');
+        console.log('Updating Users table...');
         updatePromises.push(
           this.updateUsersTable(usersData)
             .then(result => {
               results.usersUpdated = true;
               results.usersData = result;
-              console.log('? Users table updated successfully');
+              console.log('Users table updated successfully');
             })
             .catch(error => {
-              console.error('? Users table update failed:', error);
+              console.error('Users table update failed:', error);
               results.errors.push(`Users update failed: ${error.message}`);
             })
         );
@@ -145,16 +145,16 @@ class SmartProfileUpdateService {
       
       // Update Applicants table if needed
       if (Object.keys(applicantsData).length > 0) {
-        console.log('?? Updating Applicants table...');
+        console.log('Updating Applicants table...');
         updatePromises.push(
           this.updateApplicantsTable(userId, applicantsData)
             .then(result => {
               results.applicantsUpdated = true;
               results.applicantsData = result;
-              console.log('? Applicants table updated successfully');
+              console.log('Applicants table updated successfully');
             })
             .catch(error => {
-              console.error('? Applicants table update failed:', error);
+              console.error('Applicants table update failed:', error);
               results.errors.push(`Applicants update failed: ${error.message}`);
             })
         );
@@ -164,7 +164,7 @@ class SmartProfileUpdateService {
       await Promise.all(updatePromises);
       
       // Summary
-      console.log('?? Smart Profile Update completed:', {
+      console.log('Smart Profile Update completed:', {
         usersUpdated: results.usersUpdated,
         applicantsUpdated: results.applicantsUpdated,
         errorsCount: results.errors.length
@@ -173,7 +173,7 @@ class SmartProfileUpdateService {
       return results;
       
     } catch (error) {
-      console.error('?? Smart Profile Update failed:', error);
+      console.error('Smart Profile Update failed:', error);
       throw new Error(`Profile update failed: ${error.message}`);
     }
   }
@@ -249,7 +249,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
   const updateProfileSmart = async (profileData) => {
     try {
       setError(null);
-      console.log('?? Starting smart profile update...');
+      console.log('Starting smart profile update...');
       
       const userId = nexhireAPI.getUserIdFromToken();
       if (!userId) {
@@ -259,10 +259,10 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
       const result = await smartProfileService.updateProfile(userId, profileData);
       
       if (result.errors && result.errors.length > 0) {
-        console.warn('?? Smart update completed with some issues:', result.errors);
+        console.warn('Smart update completed with some issues:', result.errors);
         setError(`Profile updated with some issues: ${result.errors.join(', ')}`);
       } else {
-        console.log('? Smart profile update completed successfully');
+        console.log('Smart profile update completed successfully');
       }
       
       // Refresh user data if Users table was updated
@@ -282,7 +282,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
       
     } catch (error) {
       const errorMessage = error.message || 'Smart profile update failed';
-      console.error('? Smart profile update error:', error);
+      console.error('Smart profile update error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -319,7 +319,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
      * Bulk profile update with smart routing
      */
     async updateCompleteProfile(profileData) {
-      console.log('?? Updating complete profile with smart routing...');
+      console.log('Updating complete profile with smart routing...');
       return await updateProfileSmart(profileData);
     }
   };

@@ -433,7 +433,7 @@ class UserService {
                 END
             WHERE ApplicantID = @param0
         `;
-        console.log('?? Updating applicant education data:', {
+        console.log('Updating applicant education data:', {
             applicantId,
             institutionName,
             degreeType,
@@ -522,7 +522,7 @@ class UserService {
             SET ${updateFields.join(', ')}
             WHERE ApplicantID = @param0
         `;
-        console.log('?? Updating applicant work experience data:', {
+        console.log('Updating applicant work experience data:', {
             applicantId,
             fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
             workExperienceData: Object.keys(workExperienceData)
@@ -590,7 +590,7 @@ class UserService {
             SET ${updateFields.join(', ')}
             WHERE ApplicantID = @param0
         `;
-        console.log('?? Updating applicant job preferences data:', {
+        console.log('Updating applicant job preferences data:', {
             applicantId,
             fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
             jobPreferencesData: Object.keys(jobPreferencesData)

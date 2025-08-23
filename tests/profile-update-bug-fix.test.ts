@@ -49,7 +49,7 @@ describe('Profile Update Bug Reproduction', () => {
             });
 
             // Scenario 1: Profile Visibility Update (Users table) - THIS WORKS ?
-            console.log('?? Testing profile visibility update (Users table)...');
+            console.log('Testing profile visibility update (Users table)...');
             
             const profileVisibilityUpdate = { profileVisibility: 'Private' };
             
@@ -68,10 +68,10 @@ describe('Profile Update Bug Reproduction', () => {
             const profileVisibilityResult = await UserService.updateProfile('USER-123', profileVisibilityUpdate);
             expect(profileVisibilityResult.ProfileVisibility).toBe('Private');
             
-            console.log('? Profile visibility update WORKS - updates Users table');
+            console.log('Profile visibility update WORKS - updates Users table');
 
             // Scenario 2: Hide Current Company Update (Applicants table) - THIS FAILS ?
-            console.log('?? Testing hide current company update (should go to Applicants table)...');
+            console.log('Testing hide current company update (should go to Applicants table)...');
             
             const hideCurrentCompanyUpdate = { hideCurrentCompany: true };
             
@@ -80,7 +80,7 @@ describe('Profile Update Bug Reproduction', () => {
                 UserService.updateProfile('USER-123', hideCurrentCompanyUpdate)
             ).rejects.toThrow('No valid fields to update');
             
-            console.log('? Hide current company update FAILS - UserService.updateProfile only handles Users table');
+            console.log('Hide current company update FAILS - UserService.updateProfile only handles Users table');
         });
 
         it('should show the correct way to update hide current company (Applicants table)', async () => {
@@ -97,7 +97,7 @@ describe('Profile Update Bug Reproduction', () => {
             } as any);
 
             // Hide Current Company Update (via ApplicantService) - THIS WORKS ?
-            console.log('?? Testing hide current company via ApplicantService...');
+            console.log('Testing hide current company via ApplicantService...');
             
             const hideCurrentCompanyUpdate = { hideCurrentCompany: true };
             
@@ -117,7 +117,7 @@ describe('Profile Update Bug Reproduction', () => {
             const result = await ApplicantService.updateApplicantProfile('USER-123', hideCurrentCompanyUpdate);
             expect(result.HideCurrentCompany).toBe(1);
             
-            console.log('? Hide current company update WORKS via ApplicantService - updates Applicants table');
+            console.log('Hide current company update WORKS via ApplicantService - updates Applicants table');
             
             // Validate the SQL query went to Applicants table
             const updateCall = mockDbService.executeQuery.mock.calls[0];
@@ -185,9 +185,9 @@ describe('Profile Update Bug Reproduction', () => {
                 currentJobTitle: 'Senior Engineer'
             });
 
-            console.log('? Field routing works correctly:');
-            console.log('?? Users table data:', usersTableData);
-            console.log('?? Applicants table data:', applicantsTableData);
+            console.log('Field routing works correctly:');
+            console.log('Users table data:', usersTableData);
+            console.log('Applicants table data:', applicantsTableData);
         });
 
         it('should test the complete fix for mixed profile updates', async () => {
@@ -275,9 +275,9 @@ describe('Profile Update Bug Reproduction', () => {
             expect(applicantsResult.HideCurrentCompany).toBe(1);
             expect(applicantsResult.CurrentJobTitle).toBe('Senior Engineer');
 
-            console.log('? Complete fix works:');
-            console.log('?? Users table updated:', { ProfileVisibility: 'Private', FirstName: 'Updated John' });
-            console.log('?? Applicants table updated:', { HideCurrentCompany: 1, CurrentJobTitle: 'Senior Engineer' });
+            console.log('Complete fix works:');
+            console.log('Users table updated:', { ProfileVisibility: 'Private', FirstName: 'Updated John' });
+            console.log('Applicants table updated:', { HideCurrentCompany: 1, CurrentJobTitle: 'Senior Engineer' });
         });
     });
 
@@ -348,9 +348,9 @@ const updateProfile = async (userId, profileData) => {
                 hideCurrentCompany: true
             });
 
-            console.log('? Frontend logic validation passed');
-            console.log('?? Users data:', usersData);
-            console.log('?? Applicants data:', applicantsData);
+            console.log('Frontend logic validation passed');
+            console.log('Users data:', usersData);
+            console.log('Applicants data:', applicantsData);
         });
     });
 });
