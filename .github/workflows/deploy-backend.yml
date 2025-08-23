@@ -19,7 +19,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v4
@@ -36,9 +36,16 @@ jobs:
     - name: 'Build TypeScript'
       run: npm run build
 
-    - name: 'Deploy to Azure Functions with retry'
+    - name: 'Verify build output'
+      run: |
+        echo "Checking build output..."
+        ls -la dist/
+        echo "Checking main entry point..."
+        head -20 dist/index.js
+
+    - name: 'Deploy to Azure Functions - Method 1'
       uses: Azure/functions-action@v1
-      id: deploy
+      id: deploy1
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
@@ -46,32 +53,69 @@ jobs:
         respect-funcignore: true
       continue-on-error: true
 
-    - name: 'Retry deployment if failed'
-      if: steps.deploy.outcome == 'failure'
+    - name: 'Wait and retry with different approach'
+      if: steps.deploy1.outcome == 'failure'
+      run: |
+        echo "First deployment failed, waiting before retry..."
+        sleep 120
+
+    - name: 'Deploy to Azure Functions - Method 2 (Retry)'
+      if: steps.deploy1.outcome == 'failure'
       uses: Azure/functions-action@v1
+      id: deploy2
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-        respect-funcignore: true
+        respect-funcignore: false
+      continue-on-error: true
+
+    - name: 'Final deployment attempt with minimal package'
+      if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+      run: |
+        echo "Creating minimal deployment package..."
+        mkdir minimal-deploy
+        cp -r dist/* minimal-deploy/
+        cp package.json minimal-deploy/
+        cp host.json minimal-deploy/
+        cd minimal-deploy && npm install --production
+        cd ..
+
+    - name: 'Deploy minimal package'
+      if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+      uses: Azure/functions-action@v1
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: './minimal-deploy'
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
     - name: 'Wait for deployment to settle'
-      run: sleep 60
+      run: sleep 90
 
     - name: 'Test Health Endpoint'
       run: |
         echo "Testing health endpoint..."
-        for i in {1..5}; do
+        for i in {1..8}; do
+          echo "Attempt $i of 8..."
           if curl -f -s https://nexhire-api-func.azurewebsites.net/api/health; then
             echo "? Health check passed"
             break
           else
-            echo "? Attempt $i failed, retrying in 15 seconds..."
-            sleep 15
+            echo "? Attempt $i failed, retrying in 20 seconds..."
+            sleep 20
           fi
         done
 
     - name: 'Test Countries API'
       run: |
         echo "Testing countries API..."
-        curl -f -s https://nexhire-api-func.azurewebsites.net/api/reference/countries | head -200 || echo "Countries API not ready yet"
+        curl -f -s https://nexhire-api-func.azurewebsites.net/api/reference/countries | head -300 || echo "Countries API not ready yet"
+
+    - name: 'Deployment Summary'
+      run: |
+        echo "=== DEPLOYMENT SUMMARY ==="
+        echo "Deploy Method 1: ${{ steps.deploy1.outcome }}"
+        echo "Deploy Method 2: ${{ steps.deploy2.outcome }}"
+        echo "API Base URL: https://nexhire-api-func.azurewebsites.net/api"
+        echo "Health Check: https://nexhire-api-func.azurewebsites.net/api/health"
+        echo "Countries API: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
