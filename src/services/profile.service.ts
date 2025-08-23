@@ -246,7 +246,7 @@ export class ApplicantService {
 
             return result.recordset[0];
         } catch (error) {
-            console.error('? Error updating applicant profile:', error);
+            console.error('Error updating applicant profile:', error);
             throw error;
         }
     }

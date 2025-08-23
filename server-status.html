@@ -79,12 +79,12 @@
         // Check if server is actually responding
         fetch('/')
             .then(() => {
-                console.log('? Server is responding');
+                console.log('Server is responding');
             })
             .catch(err => {
-                console.error('? Server check failed:', err);
+                console.error('Server check failed:', err);
                 document.querySelector('.status-card').className = 'status-card status-error';
-                document.querySelector('.status-card h1').innerHTML = '? Server Connection Issue';
+                document.querySelector('.status-card h1').innerHTML = 'Server Connection Issue';
             });
         
         // Auto-refresh every 30 seconds
