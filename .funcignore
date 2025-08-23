@@ -1,64 +1,46 @@
-# Exclude TypeScript source files (we only need compiled JS)
-src/
+# Compiled TypeScript source files (since we deploy compiled JS from dist/)
 *.ts
+
+# Source maps (not needed in production)
 *.map
+
+# Source directory (since we use dist/)
+src/
+
+# TypeScript configuration (not needed in deployment)
 tsconfig.json
 
-# Exclude Git and IDE files
+# Git-related files
 .git/
 .gitignore
+
+# IDE and editor files
 .vscode/
 .vs/
-**/.vs/
 
-# Exclude test files
+# Test files and directories
 test/
 tests/
 *.test.*
 *.spec.*
 
-# Exclude documentation
+# Documentation
 README.md
 *.md
-NEXHIRE_*.md
-COUNTRIES_*.md
-SMART_*.md
 
-# Exclude development tools
-jest.config.js
-.eslintrc.*
-eslint.config.*
-
-# Exclude build/deploy scripts
-deploy-*.ps1
-test-*.ps1
-*.log
-
-# Exclude development dependencies (but keep package.json for production deps)
+# Node.js and npm artifacts
 node_modules/.bin/
-
-# Exclude environment files
 .env
 .env.*
-
-# Exclude temporary files
-temp*/
-*.tmp
-*.cache
-coverage/
+*.ps1
+*.log
 .npm/
 
-# Exclude frontend and other projects
-frontend/
-.github/
-deploy-package/
-
-# Exclude OS files
-.DS_Store
-Thumbs.db
-*.local
+# Build and coverage artifacts
+coverage/
+**/.vs/
+**/bin/
+**/obj/
 *.user
 *.suo
-
-# IMPORTANT: Make sure dist/ folder is INCLUDED (don't exclude it!)
-# dist/ folder contains the compiled JavaScript that Azure needs
+*.cache
