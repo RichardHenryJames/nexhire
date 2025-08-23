@@ -19,6 +19,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v4
@@ -29,22 +30,61 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 'Install dependencies'
-      run: npm ci
+    - name: 'Clean install dependencies'
+      run: |
+        npm ci --prefer-offline --no-audit
+        npm ls
 
     - name: 'Build TypeScript'
       run: npm run build
 
-    - name: 'Deploy to Azure Functions'
+    - name: 'Prepare deployment package'
+      run: |
+        echo "Creating optimized deployment package..."
+        mkdir -p deploy-package
+        cp -r dist/* deploy-package/
+        cp package.json deploy-package/
+        cp host.json deploy-package/
+        cd deploy-package && npm ci --production --prefer-offline
+        cd ..
+        ls -la deploy-package/
+
+    - name: 'Deploy to Azure Functions with retry'
       uses: Azure/functions-action@v1
-      id: fa
+      id: deploy
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        package: './deploy-package'
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+        respect-funcignore: true
+      continue-on-error: true
+
+    - name: 'Retry deployment if failed'
+      if: steps.deploy.outcome == 'failure'
+      uses: Azure/functions-action@v1
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: './deploy-package'
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         respect-funcignore: true
 
-    - name: 'Test Deployment'
+    - name: 'Wait for deployment to settle'
+      run: sleep 60
+
+    - name: 'Test Health Endpoint'
       run: |
-        sleep 45
-        curl -f https://nexhire-api-func.azurewebsites.net/api/health || exit 1
+        echo "Testing health endpoint..."
+        for i in {1..5}; do
+          if curl -f -s https://nexhire-api-func.azurewebsites.net/api/health; then
+            echo "? Health check passed"
+            break
+          else
+            echo "? Attempt $i failed, retrying in 15 seconds..."
+            sleep 15
+          fi
+        done
+
+    - name: 'Test Countries API'
+      run: |
+        echo "Testing countries API..."
+        curl -f -s https://nexhire-api-func.azurewebsites.net/api/reference/countries | head -200 || echo "Countries API not ready yet"

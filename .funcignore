@@ -27,7 +27,7 @@ coverage/
 *.suo
 *.cache
 
-# Additional optimization for faster deployment
+# Optimize deployment size
 temp*/
 verify-*.js
 final-*.js
@@ -39,3 +39,10 @@ jest.config.js
 *.tmp
 frontend/
 package-lock.json
+.github/
+deploy-package/
+
+# Development files
+*.local
+.DS_Store
+Thumbs.db
