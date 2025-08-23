@@ -154,9 +154,11 @@ export class UserService {
             INSERT INTO Applicants (
                 ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
                 AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                ImmediatelyAvailable, WillingToRelocate, IsFeatured
+                ImmediatelyAvailable, WillingToRelocate, IsFeatured,
+                CreatedAt, UpdatedAt
             ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                GETUTCDATE(), GETUTCDATE()
             )
         `;
         await dbService.executeTransactionQuery(tx, query, [applicantId, userId]);
@@ -484,7 +486,7 @@ export class UserService {
         const degreeType = educationData.degreeType || '';
         const fieldOfStudy = educationData.fieldOfStudy || '';
 
-        // FIXED: Only update education-related fields in Applicants table
+        // FIXED: Only update education-related fields in Applicants table with timestamp
         const query = `
             UPDATE Applicants 
             SET Institution = @param1,
@@ -494,7 +496,8 @@ export class UserService {
                     WHEN Institution IS NOT NULL AND HighestEducation IS NOT NULL AND FieldOfStudy IS NOT NULL 
                     THEN 60 
                     ELSE 40 
-                END
+                END,
+                UpdatedAt = GETUTCDATE()
             WHERE ApplicantID = @param0
         `;
 
@@ -600,6 +603,8 @@ export class UserService {
         ).join(' + ');
         
         updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+        // FIXED: Always update UpdatedAt timestamp
+        updateFields.push(`UpdatedAt = GETUTCDATE()`);
 
         const query = `
             UPDATE Applicants 
@@ -683,6 +688,8 @@ export class UserService {
         ).join(' + ');
         
         updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+        // FIXED: Always update UpdatedAt timestamp  
+        updateFields.push(`UpdatedAt = GETUTCDATE()`);
 
         const query = `
             UPDATE Applicants 

@@ -350,9 +350,9 @@ export default function ProfileScreen() {
         if (result.usersUpdated && result.applicantsUpdated) {
           message = '?? Complete profile updated successfully!';
         } else if (result.usersUpdated) {
-          message = '?? Basic profile information updated successfully!';
+          message = '? Basic profile information updated successfully!';
         } else if (result.applicantsUpdated) {
-          message = '?? Professional profile updated successfully!';
+          message = '? Professional profile updated successfully!';
         }
         
         if (result.errors && result.errors.length > 0) {
@@ -556,7 +556,7 @@ export default function ProfileScreen() {
   const renderPrivacySection = () => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>?? Privacy Settings (Smart Update)</Text>
+        <Text style={styles.sectionTitle}>Privacy Settings (Smart Update)</Text>
         <View style={styles.smartBadge}>
           <Ionicons name="flash" size={14} color={colors.primary} />
           <Text style={styles.smartBadgeText}>INSTANT</Text>

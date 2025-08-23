@@ -202,6 +202,8 @@ export class ApplicantService {
             ).join(' + ');
             
             updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+            // FIXED: Always update UpdatedAt timestamp
+            updateFields.push(`UpdatedAt = GETUTCDATE()`);
 
             // Build and execute update query
             const updateQuery = `
@@ -230,8 +232,8 @@ export class ApplicantService {
             console.log(`? Updated applicant profile for user ${userId}:`, {
                 fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
                 applicantId: applicantId,
-                updateCount: updateFields.length - 1, // Exclude ProfileCompleteness
-                newCompleteness: result.recordset[0].ProfileCompleteness
+                updateCount: updateFields.length - 1 // Exclude ProfileCompleteness
+                // FIXED: Always show updated fields in log
             });
 
             // Automatically update search score when profile changes (system-managed)
@@ -249,11 +251,11 @@ export class ApplicantService {
         }
     }
 
-    // Create new applicant profile - FIXED: Remove hardcoded values
+    // Create new applicant profile - FIXED: Include CreatedAt and UpdatedAt
     private static async createApplicantProfile(userId: string): Promise<string> {
         const applicantId = AuthService.generateUniqueId();
         
-        // FIXED: Only set essential defaults, keep everything else NULL
+        // FIXED: Include CreatedAt and UpdatedAt timestamps
         const query = `
             INSERT INTO Applicants (
                 ApplicantID, 
@@ -265,14 +267,17 @@ export class ApplicantService {
                 HideSalaryDetails,
                 ImmediatelyAvailable, 
                 WillingToRelocate, 
-                IsFeatured
+                IsFeatured,
+                CreatedAt,
+                UpdatedAt
             ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                GETUTCDATE(), GETUTCDATE()
             )
         `;
         
         await dbService.executeQuery(query, [applicantId, userId]);
-        console.log(`? Created minimal applicant profile ${applicantId} for user ${userId}`);
+        console.log(`? Created applicant profile ${applicantId} for user ${userId} with timestamps`);
         
         return applicantId;
     }
@@ -287,12 +292,12 @@ export class ApplicantService {
         try {
             const query = `
                 UPDATE Applicants 
-                SET LastJobAppliedAt = GETUTCDATE()
+                SET LastJobAppliedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE()
                 WHERE UserID = @param0
             `;
             
             await dbService.executeQuery(query, [userId]);
-            console.log(`?? Updated LastJobAppliedAt for user ${userId}`);
+            console.log(`?? Updated LastJobAppliedAt for user ${userId} with timestamp`);
         } catch (error) {
             console.error('Error updating LastJobAppliedAt:', error);
             // Don't throw - this is non-critical
@@ -335,12 +340,12 @@ export class ApplicantService {
             
             const query = `
                 UPDATE Applicants 
-                SET SearchScore = @param1
+                SET SearchScore = @param1, UpdatedAt = GETUTCDATE()
                 WHERE UserID = @param0
             `;
             
             await dbService.executeQuery(query, [userId, searchScore]);
-            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
+            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)} with timestamp`);
         } catch (error) {
             console.error('Error calculating search score:', error);
             // Don't throw - this is non-critical

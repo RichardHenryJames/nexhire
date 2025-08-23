@@ -153,6 +153,8 @@ BEGIN
         LastJobAppliedAt datetime2,
         SearchScore decimal(10,2),
         Tags nvarchar(500),
+        CreatedAt datetime2 DEFAULT GETUTCDATE(),
+        UpdatedAt datetime2 DEFAULT GETUTCDATE(),
         FOREIGN KEY (UserID) REFERENCES Users(UserID),
         FOREIGN KEY (PreferredCurrency) REFERENCES Currencies(CurrencyID)
     );
@@ -358,23 +360,23 @@ END
 try {
     Write-Host " Creating database schema..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $schemaSQL -QueryTimeout 120
-    Write-Host "? Database schema created successfully" -ForegroundColor Green
+    Write-Host "Database schema created successfully" -ForegroundColor Green
     
     Write-Host " Inserting reference data..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referenceDataSQL -QueryTimeout 60
-    Write-Host "? Reference data inserted successfully" -ForegroundColor Green
+    Write-Host "Reference data inserted successfully" -ForegroundColor Green
     
     # Test the reference data endpoints
     Write-Host " Testing database setup..." -ForegroundColor Yellow
     $testJobTypes = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM JobTypes" -QueryTimeout 30
     $testCurrencies = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query "SELECT COUNT(*) as Count FROM Currencies" -QueryTimeout 30
     
-    Write-Host "? Database setup completed successfully!" -ForegroundColor Green
-    Write-Host "  � Job Types: $($testJobTypes.Count)" -ForegroundColor Cyan
-    Write-Host "  � Currencies: $($testCurrencies.Count)" -ForegroundColor Cyan
+    Write-Host "Database setup completed successfully!" -ForegroundColor Green
+    Write-Host "Job Types: $($testJobTypes.Count)" -ForegroundColor Cyan
+    Write-Host "Currencies: $($testCurrencies.Count)" -ForegroundColor Cyan
     
 } catch {
-    Write-Error "? Database setup failed: $($_.Exception.Message)"
+    Write-Error "Database setup failed: $($_.Exception.Message)"
     exit 1
 }
 

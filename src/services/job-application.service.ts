@@ -30,9 +30,11 @@ export class JobApplicationService {
                 INSERT INTO Applicants (
                     ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
                     AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                    ImmediatelyAvailable, WillingToRelocate, IsFeatured
+                    ImmediatelyAvailable, WillingToRelocate, IsFeatured,
+                    CreatedAt, UpdatedAt
                 ) VALUES (
-                    @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
+                    @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                    GETUTCDATE(), GETUTCDATE()
                 )
             `;
             
@@ -171,9 +173,11 @@ export class JobApplicationService {
                     INSERT INTO Applicants (
                         ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
                         AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                        ImmediatelyAvailable, WillingToRelocate, IsFeatured
+                        ImmediatelyAvailable, WillingToRelocate, IsFeatured,
+                        CreatedAt, UpdatedAt
                     ) VALUES (
-                        @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0
+                        @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                        GETUTCDATE(), GETUTCDATE()
                     )
                 `;
                 
@@ -469,7 +473,7 @@ export class JobApplicationService {
     private static async updateApplicantLastApplication(applicantId: string): Promise<void> {
         const query = `
             UPDATE Applicants 
-            SET LastJobAppliedAt = GETUTCDATE()
+            SET LastJobAppliedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE()
             WHERE ApplicantID = @param0
         `;
         
