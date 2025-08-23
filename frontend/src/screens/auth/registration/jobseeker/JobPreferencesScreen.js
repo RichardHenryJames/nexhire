@@ -194,8 +194,8 @@ export default function JobPreferencesScreen({ navigation, route }) {
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity
-            
+            </TouchableOpacity>
+
             <Text style={styles.title}>What type of work interests you?</Text>
             <Text style={styles.subtitle}>
               Tell us about your job preferences so we can show you relevant opportunities
