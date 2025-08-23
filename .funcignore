@@ -1,57 +1,28 @@
-# Exclude TypeScript source files (we use compiled JS from dist/)
-src/
 *.ts
 *.map
+src/
 tsconfig.json
-
-# Exclude Git and IDE files
 .git/
 .gitignore
 .vscode/
 .vs/
-**/.vs/
-
-# Exclude test files
 test/
 tests/
 *.test.*
 *.spec.*
-
-# Exclude documentation
 README.md
 *.md
-
-# Exclude development tools
-jest.config.js
-.eslintrc.*
-
-# Exclude build/deploy scripts
-*.ps1
-*.log
-
-# Exclude environment files (but keep package.json for production deps)
+node_modules/.bin/
 .env
 .env.*
-
-# Exclude temporary files
-temp*/
-*.tmp
-*.cache
-coverage/
+deploy-*.ps1
+test-*.ps1
+*.log
 .npm/
-
-# Exclude frontend and other projects
-frontend/
-.github/
-
-# Exclude OS files
-.DS_Store
-Thumbs.db
-*.local
+coverage/
+**/.vs/
+**/bin/
+**/obj/
 *.user
 *.suo
-
-# IMPORTANT: dist/ folder should be INCLUDED (contains compiled JS)
-# node_modules/ should be INCLUDED (contains runtime dependencies)
-# package.json should be INCLUDED (for Azure Functions runtime)
-# host.json should be INCLUDED (Azure Functions configuration)
+*.cache
