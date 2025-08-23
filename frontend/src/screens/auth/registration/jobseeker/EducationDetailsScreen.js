@@ -166,21 +166,28 @@ export default function EducationDetailsScreen({ navigation, route }) {
       Alert.alert('Required Field', 'Please select your field of study');
       return;
     }
-    if (!formData.yearInCollege) {
-      Alert.alert('Required Field', 'Please select your year in college');
+    // Only validate yearInCollege for students
+    if (experienceType === 'Student' && !formData.yearInCollege) {
+      Alert.alert('Required Field', 'Please select your current year');
       return;
     }
 
+    // For experienced professionals, set a default year value if not set
+    const finalFormData = {
+      ...formData,
+      yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)'
+    };
+
     // Don't call API during registration - user is not authenticated yet
     // Just store the data locally and pass to next screen
-    console.log('Education data prepared for registration:', formData);
+    console.log('Education data prepared for registration:', finalFormData);
     
     // Continue to next screen with education data
     navigation.navigate('JobPreferencesScreen', { 
       userType, 
       experienceType,
       workExperienceData, // Pass along work experience data if it exists
-      educationData: formData
+      educationData: finalFormData
     });
   };
 
@@ -390,12 +397,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
               onPress={() => setShowFieldModal(true)}
             />
 
-            <SelectionButton
-              label="Current Year *"
-              value={formData.yearInCollege}
-              placeholder="Select your current year"
-              onPress={() => setShowYearModal(true)}
-            />
+            {/* Only show Current Year for students, not experienced professionals */}
+            {experienceType === 'Student' && (
+              <SelectionButton
+                label="Current Year *"
+                value={formData.yearInCollege}
+                placeholder="Select your current year"
+                onPress={() => setShowYearModal(true)}
+              />
+            )}
 
             {formData.college?.name === 'Other' && (
               <View style={styles.inputContainer}>

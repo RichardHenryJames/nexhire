@@ -461,28 +461,24 @@ export class UserService {
         return result.recordset[0] || {};
     }
 
-    // Update applicant education data
-    static async updateEducation(userId: string, educationData: any): Promise<any> {
+    // Update applicant education data - FIXED: Now maps to ALL relevant Applicants table fields
+    static async updateEducation(userId: string, educationData: any) {
         const user = await this.findById(userId);
         if (!user) {
             throw new NotFoundError('User not found');
         }
-
         // Ensure user is a job seeker
         if (user.UserType !== appConstants.userTypes.JOB_SEEKER) {
             throw new ValidationError('Only job seekers can update education data');
         }
-
         // Get applicant ID
         const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
         const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
-        
         if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
             throw new NotFoundError('Applicant profile not found');
         }
-
         const applicantId = applicantResult.recordset[0].ApplicantID;
-
+        
         // Build education JSON object from the frontend data
         const educationRecord = {
             college: educationData.college || null,
@@ -494,13 +490,17 @@ export class UserService {
             updatedAt: new Date().toISOString()
         };
 
-        // Update the Applicants table with education information
+        // FIXED: Extract Institution name from college data
+        const institutionName = educationData.college?.name || educationData.customCollege || null;
+        
+        // FIXED: Update the Applicants table with ALL education-related fields
         const updateQuery = `
             UPDATE Applicants 
             SET 
                 HighestEducation = @param1,
                 FieldOfStudy = @param2,
-                Education = @param3,
+                Institution = @param3,
+                Education = @param4,
                 ProfileCompleteness = CASE 
                     WHEN ProfileCompleteness < 40 THEN 40 
                     ELSE ProfileCompleteness 
@@ -517,27 +517,100 @@ export class UserService {
             INNER JOIN Users u ON a.UserID = u.UserID
             WHERE a.ApplicantID = @param0;
         `;
-
+        
         const parameters = [
             applicantId,
-            educationData.degreeType || null,  // HighestEducation
-            educationData.fieldOfStudy || null,  // FieldOfStudy
-            JSON.stringify(educationRecord)  // Education (complete JSON)
+            educationData.degreeType || null, // HighestEducation
+            educationData.fieldOfStudy || null, // FieldOfStudy
+            institutionName, // Institution - FIXED: Now properly mapped
+            JSON.stringify(educationRecord) // Education (complete JSON)
         ];
-
+        
         const result = await dbService.executeQuery(updateQuery, parameters);
-
         if (!result.recordset || result.recordset.length === 0) {
             throw new Error('Failed to update education data');
         }
-
         console.log(`? Updated education data for user ${userId}:`, {
+            institution: institutionName,
             college: educationData.college?.name || educationData.customCollege,
             degreeType: educationData.degreeType,
             fieldOfStudy: educationData.fieldOfStudy,
             country: educationData.selectedCountry
         });
+        return result.recordset[0];
+    }
 
+    // NEW: Update job preferences and work types in Applicants table
+    static async updateJobPreferences(userId: string, jobPreferencesData: any) {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+        // Ensure user is a job seeker
+        if (user.UserType !== appConstants.userTypes.JOB_SEEKER) {
+            throw new ValidationError('Only job seekers can update job preferences');
+        }
+        // Get applicant ID
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+
+        // Transform job preferences data for database storage
+        const preferredJobTypesString = Array.isArray(jobPreferencesData.preferredJobTypes)
+            ? jobPreferencesData.preferredJobTypes.map((jt: any) => jt.Type || jt).join(', ')
+            : '';
+        
+        const workplaceTypeMapping: { [key: string]: string } = {
+            'remote': 'Remote',
+            'hybrid': 'Hybrid',
+            'onsite': 'On-site',
+            'on-site': 'On-site'
+        };
+        const preferredWorkType = workplaceTypeMapping[jobPreferencesData.workplaceType?.toLowerCase()] || jobPreferencesData.workplaceType || '';
+        
+        // Update the Applicants table with job preferences
+        const updateQuery = `
+            UPDATE Applicants 
+            SET 
+                PreferredJobTypes = @param1,
+                PreferredWorkTypes = @param2,
+                PreferredLocations = @param3,
+                ProfileCompleteness = CASE 
+                    WHEN ProfileCompleteness < 60 THEN 60 
+                    ELSE ProfileCompleteness 
+                END
+            WHERE ApplicantID = @param0;
+            
+            -- Return updated applicant profile
+            SELECT 
+                a.*,
+                u.FirstName,
+                u.LastName,
+                u.Email
+            FROM Applicants a
+            INNER JOIN Users u ON a.UserID = u.UserID
+            WHERE a.ApplicantID = @param0;
+        `;
+        
+        const parameters = [
+            applicantId,
+            preferredJobTypesString, // PreferredJobTypes
+            preferredWorkType, // PreferredWorkTypes  
+            jobPreferencesData.preferredLocations || '' // PreferredLocations
+        ];
+        
+        const result = await dbService.executeQuery(updateQuery, parameters);
+        if (!result.recordset || result.recordset.length === 0) {
+            throw new Error('Failed to update job preferences');
+        }
+        console.log(`? Updated job preferences for user ${userId}:`, {
+            preferredJobTypes: preferredJobTypesString,
+            preferredWorkTypes: preferredWorkType,
+            preferredLocations: jobPreferencesData.preferredLocations || 'Not specified'
+        });
         return result.recordset[0];
     }
 }

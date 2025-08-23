@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -59,6 +59,39 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   const { userType, experienceType } = route.params;
 
+  // ?? PERFORMANCE FIX: Optimize text input handlers with useCallback
+  const updateField = useCallback((field, value) => {
+    setFormData(prevData => ({
+      ...prevData,
+      [field]: value
+    }));
+  }, []);
+
+  // ?? PERFORMANCE FIX: Memoize input field components
+  const InputField = useMemo(() => React.memo(({ label, value, onChangeText, placeholder, multiline = false, required = false }) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>
+        {label} {required && <Text style={styles.required}>*</Text>}
+      </Text>
+      <TextInput
+        style={[styles.textInput, multiline && styles.multilineInput]}
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : 1}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        // ?? PERFORMANCE FIX: Add these props to improve performance
+        keyboardType="default"
+        returnKeyType={multiline ? 'default' : 'next'}
+        blurOnSubmit={!multiline}
+        autoCorrect={false}
+        spellCheck={false}
+        selectTextOnFocus={false}
+      />
+    </View>
+  )), []);
+
   const handleContinue = () => {
     // Validate required fields
     if (!formData.currentJobTitle.trim()) {
@@ -110,10 +143,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 styles.modalItem,
                 currentValue === item && styles.modalItemSelected
               ]}
-              onPress={() => {
-                onSelect(item);
-                onClose();
-              }}
+              onPress={() => onSelect(item)}
             >
               <Text style={[
                 styles.modalItemText,
@@ -145,23 +175,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
         </Text>
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
-    </View>
-  );
-
-  const InputField = ({ label, value, onChangeText, placeholder, multiline = false, required = false }) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>
-        {label} {required && <Text style={styles.required}>*</Text>}
-      </Text>
-      <TextInput
-        style={[styles.textInput, multiline && styles.multilineInput]}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        numberOfLines={multiline ? 4 : 1}
-        textAlignVertical={multiline ? 'top' : 'center'}
-      />
     </View>
   );
 
@@ -206,7 +219,11 @@ export default function WorkExperienceScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollContainer} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.content}>
           <View style={styles.header}>
             <TouchableOpacity 
@@ -226,13 +243,13 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <ToggleButton
               label="Employment Status"
               value={formData.isCurrentlyWorking}
-              onToggle={(value) => setFormData({ ...formData, isCurrentlyWorking: value })}
+              onToggle={(value) => updateField('isCurrentlyWorking', value)}
             />
 
             <InputField
               label={formData.isCurrentlyWorking ? "Current Job Title" : "Most Recent Job Title"}
               value={formData.currentJobTitle}
-              onChangeText={(text) => setFormData({ ...formData, currentJobTitle: text })}
+              onChangeText={(text) => updateField('currentJobTitle', text)}
               placeholder="e.g. Software Engineer, Marketing Manager"
               required
             />
@@ -240,7 +257,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <InputField
               label={formData.isCurrentlyWorking ? "Current Company" : "Most Recent Company"}
               value={formData.currentCompany}
-              onChangeText={(text) => setFormData({ ...formData, currentCompany: text })}
+              onChangeText={(text) => updateField('currentCompany', text)}
               placeholder="e.g. Google, Microsoft, Startup Inc."
               required
             />
@@ -272,14 +289,14 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 <InputField
                   label="Previous Job Title"
                   value={formData.previousJobTitle}
-                  onChangeText={(text) => setFormData({ ...formData, previousJobTitle: text })}
+                  onChangeText={(text) => updateField('previousJobTitle', text)}
                   placeholder="Your previous role"
                 />
 
                 <InputField
                   label="Previous Company"
                   value={formData.previousCompany}
-                  onChangeText={(text) => setFormData({ ...formData, previousCompany: text })}
+                  onChangeText={(text) => updateField('previousCompany', text)}
                   placeholder="Your previous company"
                 />
               </>
@@ -288,7 +305,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <InputField
               label="Primary Skills"
               value={formData.primarySkills}
-              onChangeText={(text) => setFormData({ ...formData, primarySkills: text })}
+              onChangeText={(text) => updateField('primarySkills', text)}
               placeholder="e.g. JavaScript, React, Node.js, Project Management"
               multiline
               required
@@ -297,7 +314,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <InputField
               label="Secondary Skills"
               value={formData.secondarySkills}
-              onChangeText={(text) => setFormData({ ...formData, secondarySkills: text })}
+              onChangeText={(text) => updateField('secondarySkills', text)}
               placeholder="e.g. Python, AWS, Team Leadership, Agile"
               multiline
             />
@@ -305,7 +322,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <InputField
               label="Professional Summary"
               value={formData.summary}
-              onChangeText={(text) => setFormData({ ...formData, summary: text })}
+              onChangeText={(text) => updateField('summary', text)}
               placeholder="Brief overview of your professional experience and achievements"
               multiline
             />
@@ -321,14 +338,17 @@ export default function WorkExperienceScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Modals */}
+      {/* Modals - using useCallback for performance and auto-close */}
       <SelectionModal
         visible={showExperienceModal}
         onClose={() => setShowExperienceModal(false)}
         title="Select Experience Level"
         data={EXPERIENCE_LEVELS}
         currentValue={formData.yearsOfExperience}
-        onSelect={(value) => setFormData({ ...formData, yearsOfExperience: value })}
+        onSelect={(value) => {
+          updateField('yearsOfExperience', value);
+          setShowExperienceModal(false);
+        }}
       />
 
       <SelectionModal
@@ -337,7 +357,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
         title="Select Job Type"
         data={JOB_TYPES}
         currentValue={formData.jobType}
-        onSelect={(value) => setFormData({ ...formData, jobType: value })}
+        onSelect={(value) => {
+          updateField('jobType', value);
+          setShowJobTypeModal(false);
+        }}
       />
 
       <SelectionModal
@@ -346,7 +369,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
         title="Select Work Arrangement"
         data={WORK_ARRANGEMENTS}
         currentValue={formData.workArrangement}
-        onSelect={(value) => setFormData({ ...formData, workArrangement: value })}
+        onSelect={(value) => {
+          updateField('workArrangement', value);
+          setShowWorkArrangementModal(false);
+        }}
       />
     </KeyboardAvoidingView>
   );

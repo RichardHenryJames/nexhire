@@ -169,6 +169,48 @@ app.http('users-update-education', {
     handler: withErrorHandling(updateEducation)
 });
 
+// NEW: Job preferences endpoint
+app.http('users-update-job-preferences', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/job-preferences',
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            const { UserService } = await import('./src/services/user.service');
+            const { authenticate } = await import('./src/middleware');
+            
+            // Skip auth for OPTIONS requests
+            if (req.method === 'OPTIONS') {
+                return { status: 200 };
+            }
+            
+            // Authenticate user and get payload
+            const userPayload = authenticate(req);
+            
+            const jobPreferencesData = await req.json() as any;
+            const result = await UserService.updateJobPreferences(userPayload.userId, jobPreferencesData);
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: result,
+                    message: 'Job preferences updated successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Error updating job preferences:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update job preferences'
+                }
+            };
+        }
+    })
+});
+
 app.http('users-deactivate', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',

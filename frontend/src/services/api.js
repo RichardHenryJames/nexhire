@@ -288,18 +288,11 @@ class NexHireAPI {
       return { success: true, data: null, message: 'Deferred until login' };
     }
     
-    // Transform job preferences to applicant profile format
-    const applicantProfileData = {
-      preferredJobTypes: jobPreferencesData.preferredJobTypes.map(jt => jt.Type).join(', '),
-      remotePreference: this.mapWorkplaceTypeToRemotePreference(jobPreferencesData.workplaceType),
-    };
-    
-    console.log('🔄 Transformed job preferences data:', JSON.stringify(applicantProfileData, null, 2));
-    
-    const userId = this.getUserIdFromToken();
-    console.log('👤 User ID from token:', userId);
-    
-    const result = await this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('🚀 Calling /users/job-preferences endpoint with:', JSON.stringify(jobPreferencesData, null, 2));
+    const result = await this.apiCall('/users/job-preferences', {
+      method: 'PUT',
+      body: JSON.stringify(jobPreferencesData),
+    });
     console.log('📋 Job preferences API result:', result);
     console.log('🔍 === END API UPDATE JOB PREFERENCES DEBUG ===');
     return result;

@@ -154,7 +154,13 @@ export default function JobPreferencesScreen({ navigation, route }) {
                   styles.jobTypeItem,
                   isSelected && styles.jobTypeItemSelected
                 ]}
-                onPress={() => handleJobTypeToggle(jobType)}
+                onPress={() => {
+                  handleJobTypeToggle(jobType);
+                  // ?? FIX: Auto-close modal after a short delay to show selection
+                  setTimeout(() => {
+                    setShowJobTypesModal(false);
+                  }, 300);
+                }}
               >
                 <Text style={[
                   styles.jobTypeText,
