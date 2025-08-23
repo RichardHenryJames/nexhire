@@ -1,10 +1,10 @@
-# ?? NexHire Azure Functions API - Complete Documentation
+# NexHire Azure Functions API - Complete Documentation
 
-## ??? **Architecture Overview**
+## **Architecture Overview**
 
 The NexHire backend is built using **Azure Functions v4** with a single-entry point architecture. All 30 function endpoints are registered in `index.ts` and deployed to:
 
-**?? Base URL:** `https://nexhire-api-func.azurewebsites.net/api`
+**Base URL:** `https://nexhire-api-func.azurewebsites.net/api`
 
 ### **Tech Stack:**
 - **Runtime:** Azure Functions v4 (Node.js 18)
@@ -16,9 +16,9 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-## ?? **Function Categories (30 Total)**
+## **Function Categories (30 Total)**
 
-### ?? **1. AUTHENTICATION & USER MANAGEMENT (11 Functions)**
+### **1. AUTHENTICATION & USER MANAGEMENT (11 Functions)**
 
 #### **auth-register**
 - **Route:** `POST /auth/register`
@@ -298,7 +298,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ?? **2. EMPLOYER MANAGEMENT (1 Function)**
+### **2. EMPLOYER MANAGEMENT (1 Function)**
 
 #### **employers-initialize**
 - **Route:** `POST /employers/initialize`
@@ -322,7 +322,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ????? **3. APPLICANT/EMPLOYER PROFILE MANAGEMENT (4 Functions)**
+###  **3. APPLICANT/EMPLOYER PROFILE MANAGEMENT (4 Functions)**
 
 #### **applicants-get**
 - **Route:** `GET /applicants/{userId}/profile`
@@ -360,11 +360,11 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 - **Purpose:** Update applicant profile fields
 - **Authentication:** Bearer token required
 - **Features:**
-  - **?? SMART FIELD MAPPING:** 43 user-editable fields supported
-  - **?? PRIVACY SETTINGS:** Hide company/salary toggles
-  - **?? AUTO-CALCULATIONS:** Profile completeness, search score
-  - **?? TIMESTAMPS:** CreatedAt preserved, UpdatedAt updated
-  - **?? SYSTEM INTELLIGENCE:** Auto-scoring for search ranking
+  - **SMART FIELD MAPPING:** 43 user-editable fields supported
+  - **PRIVACY SETTINGS:** Hide company/salary toggles
+  - **AUTO-CALCULATIONS:** Profile completeness, search score
+  - **TIMESTAMPS:** CreatedAt preserved, UpdatedAt updated
+  - **SYSTEM INTELLIGENCE:** Auto-scoring for search ranking
 
 **Supported Fields (43 total):**
 ```json
@@ -421,10 +421,10 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
   "willingToRelocate": true,
   "jobSearchStatus": "Actively Looking",
   
-  // Privacy Settings (?? THE MAIN FIX!)
+  // Privacy Settings (THE MAIN FIX!)
   "allowRecruitersToContact": true,
-  "hideCurrentCompany": true,    // ? Privacy toggle works!
-  "hideSalaryDetails": false,    // ? Privacy toggle works!
+  "hideCurrentCompany": true,    // Privacy toggle works!
+  "hideSalaryDetails": false,    // Privacy toggle works!
   
   // Status Fields
   "isOpenToWork": true,
@@ -436,7 +436,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 }
 ```
 
-**?? System-Managed Fields (Auto-Updated):**
+**System-Managed Fields (Auto-Updated):**
 - `LastJobAppliedAt` - Updated when applying for jobs
 - `SearchScore` - Calculated by ML algorithms (profile completeness + activity)
 - `ProfileCompleteness` - Auto-calculated based on filled fields
@@ -459,7 +459,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ?? **4. JOB MANAGEMENT (8 Functions)**
+### **4. JOB MANAGEMENT (8 Functions)**
 
 #### **jobs**
 - **Route:** `GET/POST /jobs`
@@ -572,7 +572,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ?? **5. JOB APPLICATIONS (7 Functions)**
+### **5. JOB APPLICATIONS (7 Functions)**
 
 #### **applications**
 - **Route:** `POST /applications`
@@ -583,7 +583,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
   - Auto-creation of applicant profile if needed
   - Application tracking setup
   - Email notifications
-  - **?? AUTOMATIC TIMESTAMPS:** Updates `LastJobAppliedAt` and `UpdatedAt`
+  - **AUTOMATIC TIMESTAMPS:** Updates `LastJobAppliedAt` and `UpdatedAt`
 
 **Request Body:**
 ```json
@@ -691,7 +691,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ?? **6. REFERENCE DATA (6 Functions)**
+### **6. REFERENCE DATA (6 Functions)**
 
 #### **reference-job-types**
 - **Route:** `GET /reference/job-types`
@@ -728,7 +728,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
   "success": true,
   "data": [
     {"CurrencyID": 1, "Code": "USD", "Symbol": "$", "Name": "US Dollar"},
-    {"CurrencyID": 2, "Code": "EUR", "Symbol": "€", "Name": "Euro"},
+    {"CurrencyID": 2, "Code": "EUR", "Symbol": "ï¿½", "Name": "Euro"},
     {"CurrencyID": 3, "Code": "INR", "Symbol": "?", "Name": "Indian Rupee"}
   ]
 }
@@ -789,7 +789,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-### ?? **7. HEALTH & MONITORING (1 Function)**
+### **7. HEALTH & MONITORING (1 Function)**
 
 #### **health**
 - **Route:** `GET /health`
@@ -812,35 +812,35 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-## ?? **Technical Features**
+## **Technical Features**
 
-### **??? Security**
+### **Security**
 - **JWT Authentication:** Bearer token validation
 - **Password Security:** bcrypt hashing with salt
 - **Account Protection:** Lockout after failed attempts
 - **CORS Enabled:** Cross-origin request support
 - **SQL Injection Protection:** Parameterized queries
 
-### **?? Database Integration**
+### **Database Integration**
 - **Azure SQL Database:** Production-grade relational database
 - **Connection Pooling:** Optimized connection management
 - **Transactions:** ACID compliance for data integrity
 - **Automatic Timestamps:** CreatedAt/UpdatedAt tracking
 - **Soft Deletes:** Data retention for compliance
 
-### **?? Smart Automation**
+### **Smart Automation**
 - **Profile Completeness:** Auto-calculated percentage
 - **Search Scoring:** ML-based candidate ranking
 - **Application Tracking:** Automatic status updates
 - **Timestamp Management:** System-managed fields
 
-### **? Performance**
+### **Performance**
 - **Caching:** Reference data caching
 - **Pagination:** Large dataset handling
 - **Indexing:** Optimized database queries
 - **Error Handling:** Graceful failure recovery
 
-### **?? Frontend Integration**
+### **Frontend Integration**
 - **Universal Support:** Web, iOS, Android
 - **Real-time Updates:** Instant profile changes
 - **Smart Routing:** Automatic field routing
@@ -848,18 +848,18 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-## ?? **Deployment Information**
+## **Deployment Information**
 
-**?? Production URL:** `https://nexhire-api-func.azurewebsites.net/api`
+**Production URL:** `https://nexhire-api-func.azurewebsites.net/api`
 
-**?? Deployment Stack:**
+**Deployment Stack:**
 - Azure Functions v4 (Consumption Plan)
 - Node.js 18 Runtime
 - TypeScript Compilation
 - Automatic scaling
 - Monitoring & logging enabled
 
-**?? CI/CD Pipeline:**
+**CI/CD Pipeline:**
 - Git-based deployment
 - Automatic builds on push
 - Environment variable management
@@ -867,7 +867,7 @@ The NexHire backend is built using **Azure Functions v4** with a single-entry po
 
 ---
 
-## ?? **API Usage Examples**
+## **API Usage Examples**
 
 ### **Registration Flow:**
 ```bash
@@ -923,16 +923,16 @@ curl -X GET /applications/my \
 
 ---
 
-## ?? **Summary**
+## **Summary**
 
 The NexHire Azure Functions API provides a **comprehensive, production-ready backend** for a modern job platform with:
 
-- ? **30 Function Endpoints** covering all job platform needs
-- ? **Complete CRUD Operations** for users, jobs, applications
-- ? **Smart Profile Management** with 43 editable fields
-- ? **Advanced Security** with JWT authentication
-- ? **Real-time Features** with automatic updates
-- ? **Scalable Architecture** on Azure Functions v4
-- ? **Mobile-First Design** supporting web, iOS, Android
+- **30 Function Endpoints** covering all job platform needs
+- **Complete CRUD Operations** for users, jobs, applications
+- **Smart Profile Management** with 43 editable fields
+- **Advanced Security** with JWT authentication
+- **Real-time Features** with automatic updates
+- **Scalable Architecture** on Azure Functions v4
+- **Mobile-First Design** supporting web, iOS, Android
 
-**?? Perfect for powering a world-class job platform! ??**
+**Perfect for powering a world-class job platform! **
