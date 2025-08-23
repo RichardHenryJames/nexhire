@@ -619,32 +619,32 @@ export const getCountries = async (req: any): Promise<any> => {
         console.error('Error fetching countries from REST Countries API:', error);
         
         // Fallback country data with proper flags
-        const fallbackCountries = [
-            { id: 'IN', name: 'India', officialName: 'Republic of India', code: 'IN', code3: 'IND', flag: '????', region: 'Asia', subregion: 'Southern Asia' },
-            { id: 'US', name: 'United States', officialName: 'United States of America', code: 'US', code3: 'USA', flag: '????', region: 'Americas', subregion: 'North America' },
-            { id: 'GB', name: 'United Kingdom', officialName: 'United Kingdom of Great Britain and Northern Ireland', code: 'GB', code3: 'GBR', flag: '????', region: 'Europe', subregion: 'Northern Europe' },
-            { id: 'CA', name: 'Canada', officialName: 'Canada', code: 'CA', code3: 'CAN', flag: '????', region: 'Americas', subregion: 'North America' },
-            { id: 'AU', name: 'Australia', officialName: 'Commonwealth of Australia', code: 'AU', code3: 'AUS', flag: '????', region: 'Oceania', subregion: 'Australia and New Zealand' },
-            { id: 'DE', name: 'Germany', officialName: 'Federal Republic of Germany', code: 'DE', code3: 'DEU', flag: '????', region: 'Europe', subregion: 'Western Europe' },
-            { id: 'FR', name: 'France', officialName: 'French Republic', code: 'FR', code3: 'FRA', flag: '????', region: 'Europe', subregion: 'Western Europe' },
-            { id: 'SG', name: 'Singapore', officialName: 'Republic of Singapore', code: 'SG', code3: 'SGP', flag: '????', region: 'Asia', subregion: 'South-Eastern Asia' },
-            { id: 'JP', name: 'Japan', officialName: 'Japan', code: 'JP', code3: 'JPN', flag: '????', region: 'Asia', subregion: 'Eastern Asia' },
-            { id: 'CN', name: 'China', officialName: 'People\'s Republic of China', code: 'CN', code3: 'CHN', flag: '????', region: 'Asia', subregion: 'Eastern Asia' },
-            { id: 'BR', name: 'Brazil', officialName: 'Federative Republic of Brazil', code: 'BR', code3: 'BRA', flag: '????', region: 'Americas', subregion: 'South America' },
-            { id: 'MX', name: 'Mexico', officialName: 'United Mexican States', code: 'MX', code3: 'MEX', flag: '????', region: 'Americas', subregion: 'North America' },
-            { id: 'NL', name: 'Netherlands', officialName: 'Kingdom of the Netherlands', code: 'NL', code3: 'NLD', flag: '????', region: 'Europe', subregion: 'Western Europe' },
-            { id: 'CH', name: 'Switzerland', officialName: 'Swiss Confederation', code: 'CH', code3: 'CHE', flag: '????', region: 'Europe', subregion: 'Western Europe' },
-            { id: 'SE', name: 'Sweden', officialName: 'Kingdom of Sweden', code: 'SE', code3: 'SWE', flag: '????', region: 'Europe', subregion: 'Northern Europe' },
-            { id: 'NO', name: 'Norway', officialName: 'Kingdom of Norway', code: 'NO', code3: 'NOR', flag: '????', region: 'Europe', subregion: 'Northern Europe' },
-            { id: 'DK', name: 'Denmark', officialName: 'Kingdom of Denmark', code: 'DK', code3: 'DNK', flag: '????', region: 'Europe', subregion: 'Northern Europe' },
-            { id: 'FI', name: 'Finland', officialName: 'Republic of Finland', code: 'FI', code3: 'FIN', flag: '????', region: 'Europe', subregion: 'Northern Europe' },
-            { id: 'IT', name: 'Italy', officialName: 'Italian Republic', code: 'IT', code3: 'ITA', flag: '????', region: 'Europe', subregion: 'Southern Europe' },
-            { id: 'ES', name: 'Spain', officialName: 'Kingdom of Spain', code: 'ES', code3: 'ESP', flag: '????', region: 'Europe', subregion: 'Southern Europe' },
-            { id: 'KR', name: 'South Korea', officialName: 'Republic of Korea', code: 'KR', code3: 'KOR', flag: '????', region: 'Asia', subregion: 'Eastern Asia' },
-            { id: 'IL', name: 'Israel', officialName: 'State of Israel', code: 'IL', code3: 'ISR', flag: '????', region: 'Asia', subregion: 'Western Asia' },
-            { id: 'AE', name: 'United Arab Emirates', officialName: 'United Arab Emirates', code: 'AE', code3: 'ARE', flag: '????', region: 'Asia', subregion: 'Western Asia' },
-            { id: 'NZ', name: 'New Zealand', officialName: 'New Zealand', code: 'NZ', code3: 'NZL', flag: '????', region: 'Oceania', subregion: 'Australia and New Zealand' }
-        ];
+       const fallbackCountries = [
+           { id: 'IN', name: 'India', officialName: 'Republic of India', code: 'IN', code3: 'IND', flag: '🇮🇳', region: 'Asia', subregion: 'Southern Asia' },
+           { id: 'US', name: 'United States', officialName: 'United States of America', code: 'US', code3: 'USA', flag: '🇺🇸', region: 'Americas', subregion: 'North America' },
+           { id: 'GB', name: 'United Kingdom', officialName: 'United Kingdom of Great Britain and Northern Ireland', code: 'GB', code3: 'GBR', flag: '🇬🇧', region: 'Europe', subregion: 'Northern Europe' },
+           { id: 'CA', name: 'Canada', officialName: 'Canada', code: 'CA', code3: 'CAN', flag: '🇨🇦', region: 'Americas', subregion: 'North America' },
+           { id: 'AU', name: 'Australia', officialName: 'Commonwealth of Australia', code: 'AU', code3: 'AUS', flag: '🇦🇺', region: 'Oceania', subregion: 'Australia and New Zealand' },
+           { id: 'DE', name: 'Germany', officialName: 'Federal Republic of Germany', code: 'DE', code3: 'DEU', flag: '🇩🇪', region: 'Europe', subregion: 'Western Europe' },
+           { id: 'FR', name: 'France', officialName: 'French Republic', code: 'FR', code3: 'FRA', flag: '🇫🇷', region: 'Europe', subregion: 'Western Europe' },
+           { id: 'SG', name: 'Singapore', officialName: 'Republic of Singapore', code: 'SG', code3: 'SGP', flag: '🇸🇬', region: 'Asia', subregion: 'South-Eastern Asia' },
+           { id: 'JP', name: 'Japan', officialName: 'Japan', code: 'JP', code3: 'JPN', flag: '🇯🇵', region: 'Asia', subregion: 'Eastern Asia' },
+           { id: 'CN', name: 'China', officialName: 'People\'s Republic of China', code: 'CN', code3: 'CHN', flag: '🇨🇳', region: 'Asia', subregion: 'Eastern Asia' },
+           { id: 'BR', name: 'Brazil', officialName: 'Federative Republic of Brazil', code: 'BR', code3: 'BRA', flag: '🇧🇷', region: 'Americas', subregion: 'South America' },
+           { id: 'MX', name: 'Mexico', officialName: 'United Mexican States', code: 'MX', code3: 'MEX', flag: '🇲🇽', region: 'Americas', subregion: 'North America' },
+           { id: 'NL', name: 'Netherlands', officialName: 'Kingdom of the Netherlands', code: 'NL', code3: 'NLD', flag: '🇳🇱', region: 'Europe', subregion: 'Western Europe' },
+           { id: 'CH', name: 'Switzerland', officialName: 'Swiss Confederation', code: 'CH', code3: 'CHE', flag: '🇨🇭', region: 'Europe', subregion: 'Western Europe' },
+           { id: 'SE', name: 'Sweden', officialName: 'Kingdom of Sweden', code: 'SE', code3: 'SWE', flag: '🇸🇪', region: 'Europe', subregion: 'Northern Europe' },
+           { id: 'NO', name: 'Norway', officialName: 'Kingdom of Norway', code: 'NO', code3: 'NOR', flag: '🇳🇴', region: 'Europe', subregion: 'Northern Europe' },
+           { id: 'DK', name: 'Denmark', officialName: 'Kingdom of Denmark', code: 'DK', code3: 'DNK', flag: '🇩🇰', region: 'Europe', subregion: 'Northern Europe' },
+           { id: 'FI', name: 'Finland', officialName: 'Republic of Finland', code: 'FI', code3: 'FIN', flag: '🇫🇮', region: 'Europe', subregion: 'Northern Europe' },
+           { id: 'IT', name: 'Italy', officialName: 'Italian Republic', code: 'IT', code3: 'ITA', flag: '🇮🇹', region: 'Europe', subregion: 'Southern Europe' },
+           { id: 'ES', name: 'Spain', officialName: 'Kingdom of Spain', code: 'ES', code3: 'ESP', flag: '🇪🇸', region: 'Europe', subregion: 'Southern Europe' },
+           { id: 'KR', name: 'South Korea', officialName: 'Republic of Korea', code: 'KR', code3: 'KOR', flag: '🇰🇷', region: 'Asia', subregion: 'Eastern Asia' },
+           { id: 'IL', name: 'Israel', officialName: 'State of Israel', code: 'IL', code3: 'ISR', flag: '🇮🇱', region: 'Asia', subregion: 'Western Asia' },
+           { id: 'AE', name: 'United Arab Emirates', officialName: 'United Arab Emirates', code: 'AE', code3: 'ARE', flag: '🇦🇪', region: 'Asia', subregion: 'Western Asia' },
+           { id: 'NZ', name: 'New Zealand', officialName: 'New Zealand', code: 'NZ', code3: 'NZL', flag: '🇳🇿', region: 'Oceania', subregion: 'Australia and New Zealand' }
+       ];
         
         return {
             status: 200,
