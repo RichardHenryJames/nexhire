@@ -86,7 +86,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
       return;
     }
 
-    navigation.navigate('PersonalDetailsScreen', { 
+    navigation.navigate('PersonalDetails', { 
       userType, 
       experienceType,
       educationData,

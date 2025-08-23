@@ -13,6 +13,8 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 
 // Job Seeker Registration Flow
 import ExperienceTypeSelectionScreen from '../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen';
+import EducationDetailsScreen from '../screens/auth/registration/jobseeker/EducationDetailsScreen';
+import JobPreferencesScreen from '../screens/auth/registration/jobseeker/JobPreferencesScreen';
 import PersonalDetailsScreen from '../screens/auth/registration/jobseeker/PersonalDetailsScreen';
 
 // Employer Registration Flow  
@@ -43,6 +45,8 @@ function JobSeekerFlow() {
       }}
     >
       <Stack.Screen name="ExperienceTypeSelection" component={ExperienceTypeSelectionScreen} />
+      <Stack.Screen name="EducationDetailsScreen" component={EducationDetailsScreen} />
+      <Stack.Screen name="JobPreferencesScreen" component={JobPreferencesScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
     </Stack.Navigator>
   );
