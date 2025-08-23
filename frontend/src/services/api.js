@@ -576,20 +576,19 @@ class NexHireAPI {
     }
   }
 
+  // NEW: Update applicant profile (FIXED: Use existing endpoint that's already deployed)
   async updateApplicantProfile(userId, profileData) {
     try {
+      console.log('🔄 Updating applicant profile via EXISTING endpoint:', `/applicants/${userId}/profile`);
+      console.log('📝 Profile data:', Object.keys(profileData));
+      
       return await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData),
       });
     } catch (error) {
-      console.error('Failed to update applicant profile:', error.message);
-      // For now, return success to avoid blocking user flow
-      // In production, you might want to handle this differently
-      return {
-        success: true,
-        message: 'Profile update queued for processing'
-      };
+      console.error('❌ Failed to update applicant profile:', error.message);
+      throw error;
     }
   }
 
@@ -651,4 +650,4 @@ class NexHireAPI {
 // Create singleton instance
 const nexhireAPI = new NexHireAPI();
 
-export default nexhireAPI;
+export default nexhireAPI;export default nexhireAPI;
