@@ -225,21 +225,32 @@ class NexHireAPI {
 
   // NEW: Update education data
   async updateEducation(educationData) {
+    console.log('🔍 === API UPDATE EDUCATION DEBUG ===');
+    console.log('🎓 Input education data:', JSON.stringify(educationData, null, 2));
+    
     // If not authenticated yet, don't call the API; allow flow to continue
     if (!this.token) {
-      console.warn('updateEducation called without auth token. Deferring until after login.');
+      console.warn('⚠️ updateEducation called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
     }
-    return this.apiCall('/users/education', {
+    
+    console.log('🚀 Calling /users/education endpoint with:', JSON.stringify(educationData, null, 2));
+    const result = await this.apiCall('/users/education', {
       method: 'PUT',
       body: JSON.stringify(educationData),
     });
+    console.log('📋 Education API result:', result);
+    console.log('🔍 === END API UPDATE EDUCATION DEBUG ===');
+    return result;
   }
 
   // NEW: Update work experience data
   async updateWorkExperience(workExperienceData) {
+    console.log('🔍 === API UPDATE WORK EXPERIENCE DEBUG ===');
+    console.log('💼 Input work experience data:', JSON.stringify(workExperienceData, null, 2));
+    
     if (!this.token) {
-      console.warn('updateWorkExperience called without auth token. Deferring until after login.');
+      console.warn('⚠️ updateWorkExperience called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
     }
     
@@ -255,15 +266,25 @@ class NexHireAPI {
       preferredJobTypes: workExperienceData.jobType,
     };
     
+    console.log('🔄 Transformed applicant profile data:', JSON.stringify(applicantProfileData, null, 2));
+    
     // Use the applicant profile update endpoint
     const userId = this.getUserIdFromToken(); // Helper method to extract userId from token
-    return this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('👤 User ID from token:', userId);
+    
+    const result = await this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('📋 Work experience API result:', result);
+    console.log('🔍 === END API UPDATE WORK EXPERIENCE DEBUG ===');
+    return result;
   }
 
   // NEW: Update job preferences data
   async updateJobPreferences(jobPreferencesData) {
+    console.log('🔍 === API UPDATE JOB PREFERENCES DEBUG ===');
+    console.log('🎯 Input job preferences data:', JSON.stringify(jobPreferencesData, null, 2));
+    
     if (!this.token) {
-      console.warn('updateJobPreferences called without auth token. Deferring until after login.');
+      console.warn('⚠️ updateJobPreferences called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
     }
     
@@ -273,8 +294,15 @@ class NexHireAPI {
       remotePreference: this.mapWorkplaceTypeToRemotePreference(jobPreferencesData.workplaceType),
     };
     
+    console.log('🔄 Transformed job preferences data:', JSON.stringify(applicantProfileData, null, 2));
+    
     const userId = this.getUserIdFromToken();
-    return this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('👤 User ID from token:', userId);
+    
+    const result = await this.updateApplicantProfile(userId, applicantProfileData);
+    console.log('📋 Job preferences API result:', result);
+    console.log('🔍 === END API UPDATE JOB PREFERENCES DEBUG ===');
+    return result;
   }
 
   // Helper method to parse years of experience from string to number
