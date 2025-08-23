@@ -650,4 +650,4 @@ class NexHireAPI {
 // Create singleton instance
 const nexhireAPI = new NexHireAPI();
 
-export default nexhireAPI;export default nexhireAPI;
+export default nexhireAPI;
