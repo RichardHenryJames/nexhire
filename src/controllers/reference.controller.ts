@@ -67,8 +67,9 @@ export const getOrganizations = async (req: any): Promise<any> => {
 
                 externalCompanies.forEach((result, index) => {
                     if (result.status === 'fulfilled' && result.value) {
-                        organizations.push(...result.value);
-                        console.log(`? External API ${index + 1}: ${result.value.length} companies`);
+                        const companies = result.value as any[];
+                        organizations.push(...companies);
+                        console.log(`✅ External API ${index + 1}: ${companies.length} companies`);
                     } else {
                         console.log(`External API ${index + 1} failed:`, result.status === 'rejected' ? result.reason : 'No data');
                     }
@@ -180,7 +181,7 @@ async function fetchFromFortuneAPI(limit: number): Promise<any[]> {
         const csvData = await response.text();
         const lines = csvData.split('\n').slice(1);
         
-        const companies = [];
+        const companies: any[] = [];
         for (let i = 0; i < Math.min(lines.length, limit); i++) {
             const line = lines[i].trim();
             if (line) {
@@ -223,7 +224,7 @@ async function fetchFromUnicornAPI(limit: number): Promise<any[]> {
         const csvData = await response.text();
         const lines = csvData.split('\n').slice(1);
         
-        const companies = [];
+        const companies: any[] = [];
         for (let i = 0; i < Math.min(lines.length, limit); i++) {
             const line = lines[i].trim();
             if (line) {
@@ -573,7 +574,7 @@ export const getCountries = async (req: any): Promise<any> => {
                 officialName: country.name?.official || country.name?.common,
                 code: country.cca2 || country.cca3,
                 code3: country.cca3,
-                flag: country.flag || '???',
+                flag: country.flag || '🏳️',
                 region: country.region || 'Unknown',
                 subregion: country.subregion || 'Unknown'
             }))
