@@ -236,6 +236,86 @@ class NexHireAPI {
     });
   }
 
+  // NEW: Update work experience data
+  async updateWorkExperience(workExperienceData) {
+    if (!this.token) {
+      console.warn('updateWorkExperience called without auth token. Deferring until after login.');
+      return { success: true, data: null, message: 'Deferred until login' };
+    }
+    
+    // Transform frontend work experience data to backend applicant profile format
+    const applicantProfileData = {
+      currentJobTitle: workExperienceData.currentJobTitle,
+      currentCompany: workExperienceData.currentCompany,
+      yearsOfExperience: this.parseYearsOfExperience(workExperienceData.yearsOfExperience),
+      primarySkills: workExperienceData.primarySkills,
+      secondarySkills: workExperienceData.secondarySkills,
+      bio: workExperienceData.summary,
+      preferredWorkTypes: workExperienceData.workArrangement,
+      preferredJobTypes: workExperienceData.jobType,
+    };
+    
+    // Use the applicant profile update endpoint
+    const userId = this.getUserIdFromToken(); // Helper method to extract userId from token
+    return this.updateApplicantProfile(userId, applicantProfileData);
+  }
+
+  // NEW: Update job preferences data
+  async updateJobPreferences(jobPreferencesData) {
+    if (!this.token) {
+      console.warn('updateJobPreferences called without auth token. Deferring until after login.');
+      return { success: true, data: null, message: 'Deferred until login' };
+    }
+    
+    // Transform job preferences to applicant profile format
+    const applicantProfileData = {
+      preferredJobTypes: jobPreferencesData.preferredJobTypes.map(jt => jt.Type).join(', '),
+      remotePreference: this.mapWorkplaceTypeToRemotePreference(jobPreferencesData.workplaceType),
+    };
+    
+    const userId = this.getUserIdFromToken();
+    return this.updateApplicantProfile(userId, applicantProfileData);
+  }
+
+  // Helper method to parse years of experience from string to number
+  parseYearsOfExperience(yearsString) {
+    if (!yearsString) return 0;
+    
+    // Extract first number from strings like "3-5 years", "1-3 years", etc.
+    const match = yearsString.match(/^(\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  }
+
+  // Helper method to map workplace type to remote preference
+  mapWorkplaceTypeToRemotePreference(workplaceType) {
+    const mapping = {
+      'remote': 'Remote',
+      'hybrid': 'Hybrid', 
+      'onsite': 'On-site'
+    };
+    return mapping[workplaceType] || 'Hybrid';
+  }
+
+  // Helper method to extract user ID from JWT token (basic implementation)
+  getUserIdFromToken() {
+    if (!this.token) return null;
+    
+    try {
+      // Basic JWT payload extraction (in production, use a proper JWT library)
+      const base64Url = this.token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      return payload.userId || payload.sub || payload.id;
+    } catch (error) {
+      console.error('Error extracting user ID from token:', error);
+      return null;
+    }
+  }
+
   // Jobs APIs
   async getJobs(page = 1, pageSize = 20, filters = {}) {
     const params = new URLSearchParams({

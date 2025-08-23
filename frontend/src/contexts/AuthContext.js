@@ -85,8 +85,8 @@ export const AuthProvider = ({ children }) => {
       
       console.log('Attempting registration for:', userData.email);
       
-      // Separate education data from registration data
-      const { educationData, ...registrationData } = userData;
+      // Separate education and work experience data from registration data
+      const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
       
       const result = await nexhireAPI.register(registrationData);
       
@@ -95,20 +95,51 @@ export const AuthProvider = ({ children }) => {
         // Auto-login after successful registration
         const loginResult = await login(userData.email, userData.password);
         
-        if (loginResult.success && educationData) {
-          console.log('Auto-login successful, saving education data...');
-          try {
-            // Now that user is authenticated, save education data
-            const educationResult = await nexhireAPI.updateEducation(educationData);
-            if (educationResult.success) {
-              console.log('? Education data saved successfully');
-            } else {
-              console.warn('Education data save failed:', educationResult.error);
-              // Don't fail the entire registration for this
+        if (loginResult.success) {
+          // Save education data if provided
+          if (educationData) {
+            console.log('Auto-login successful, saving education data...');
+            try {
+              const educationResult = await nexhireAPI.updateEducation(educationData);
+              if (educationResult.success) {
+                console.log('? Education data saved successfully');
+              } else {
+                console.warn('Education data save failed:', educationResult.error);
+                // Don't fail the entire registration for this
+              }
+            } catch (educationError) {
+              console.warn('Error saving education data:', educationError);
             }
-          } catch (educationError) {
-            console.warn('Error saving education data:', educationError);
-            // Don't fail the entire registration for this
+          }
+          
+          // Save work experience data if provided (for experienced professionals)
+          if (workExperienceData) {
+            console.log('Saving work experience data...');
+            try {
+              const workExperienceResult = await nexhireAPI.updateWorkExperience(workExperienceData);
+              if (workExperienceResult.success) {
+                console.log('? Work experience data saved successfully');
+              } else {
+                console.warn('Work experience data save failed:', workExperienceResult.error);
+              }
+            } catch (workExperienceError) {
+              console.warn('Error saving work experience data:', workExperienceError);
+            }
+          }
+          
+          // Save job preferences if provided
+          if (jobPreferences) {
+            console.log('Saving job preferences...');
+            try {
+              const jobPreferencesResult = await nexhireAPI.updateJobPreferences(jobPreferences);
+              if (jobPreferencesResult.success) {
+                console.log('? Job preferences saved successfully');
+              } else {
+                console.warn('Job preferences save failed:', jobPreferencesResult.error);
+              }
+            } catch (jobPreferencesError) {
+              console.warn('Error saving job preferences:', jobPreferencesError);
+            }
           }
         }
         

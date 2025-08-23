@@ -30,7 +30,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [errors, setErrors] = useState({});
 
   const { register } = useAuth();
-  const { userType, experienceType, educationData, jobPreferences } = route.params;
+  const { userType, experienceType, workExperienceData, educationData, jobPreferences } = route.params;
 
   // Validation functions
   const validateEmail = (email) => {
@@ -120,6 +120,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         
         // Include all the collected data for profile completion
         experienceType,
+        ...(workExperienceData && { workExperienceData }),
         ...(educationData && { educationData }),
         ...(jobPreferences && { jobPreferences }),
         ...(formData.location && { location: formData.location.trim() }),
@@ -258,6 +259,23 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                 {experienceType === 'Student' ? 'Student' : 'Experienced Professional'}
               </Text>
             </View>
+            
+            {workExperienceData && (
+              <>
+                <View style={styles.summaryItem}>
+                  <Ionicons name="briefcase" size={16} color={colors.primary} />
+                  <Text style={styles.summaryText}>
+                    {workExperienceData.currentJobTitle} at {workExperienceData.currentCompany}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Ionicons name="time" size={16} color={colors.primary} />
+                  <Text style={styles.summaryText}>
+                    {workExperienceData.yearsOfExperience} experience
+                  </Text>
+                </View>
+              </>
+            )}
             
             {educationData && (
               <>
