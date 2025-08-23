@@ -123,7 +123,7 @@ class NexHireAPI {
       }
 
       if (!response.ok) {
-        console.error(`? API Error [${endpoint}]:`, response.status, data);
+        console.error(`❌ API Error [${endpoint}]:`, response.status, data);
         
         // Handle specific error cases
         if (response.status === 401) {
@@ -135,7 +135,7 @@ class NexHireAPI {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
-      console.log(`? API Success [${endpoint}]:`, response.status);
+      console.log(`✅ API Success [${endpoint}]:`, response.status);
       return data;
     } catch (error) {
       console.error(`? API Error [${endpoint}]:`, error.message);
@@ -406,7 +406,7 @@ class NexHireAPI {
         success: true,
         data: [
           { CurrencyID: 1, Code: 'USD', Symbol: '$', Name: 'US Dollar' },
-          { CurrencyID: 2, Code: 'EUR', Symbol: '�', Name: 'Euro' }
+          { CurrencyID: 2, Code: 'EUR', Symbol: '€', Name: 'Euro' }
         ]
       };
     }
@@ -424,107 +424,73 @@ class NexHireAPI {
       return await this.apiCall(endpoint);
     } catch (error) {
       console.warn('Failed to load colleges:', error.message);
-      // Return comprehensive fallback data with Indian focus
+      
+      // Return country-specific fallback data
+      const fallbackData = this.getCountrySpecificCollegeFallback(country);
+      
       return {
         success: true,
-        data: [
-          // Top Indian Universities
-          { id: 1, name: 'Indian Institute of Technology (IIT) Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.iitd.ac.in' },
-          { id: 2, name: 'Indian Institute of Technology (IIT) Bombay', type: 'University', country: 'India', state: 'Maharashtra', website: 'https://www.iitb.ac.in' },
-          { id: 3, name: 'Indian Institute of Technology (IIT) Kanpur', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.iitk.ac.in' },
-          { id: 4, name: 'Indian Institute of Technology (IIT) Madras', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.iitm.ac.in' },
-          { id: 5, name: 'Indian Institute of Science (IISc) Bangalore', type: 'University', country: 'India', state: 'Karnataka', website: 'https://www.iisc.ac.in' },
-          { id: 6, name: 'All India Institute of Medical Sciences (AIIMS) Delhi', type: 'Medical University', country: 'India', state: 'Delhi', website: 'https://www.aiims.edu' },
-          { id: 7, name: 'Jawaharlal Nehru University (JNU)', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jnu.ac.in' },
-          { id: 8, name: 'University of Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.du.ac.in' },
-          { id: 9, name: 'Banaras Hindu University (BHU)', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.bhu.ac.in' },
-          { id: 10, name: 'Jamia Millia Islamia', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jmi.ac.in' },
-          { id: 11, name: 'Aligarh Muslim University', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.amu.ac.in' },
-          { id: 12, name: 'Jadavpur University', type: 'University', country: 'India', state: 'West Bengal', website: 'https://www.jaduniv.edu.in' },
-          { id: 13, name: 'Anna University', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.annauniv.edu' },
-          { id: 14, name: 'Indian Statistical Institute (ISI)', type: 'University', country: 'India', state: 'West Bengal', website: 'https://www.isical.ac.in' },
-          { id: 15, name: 'Birla Institute of Technology and Science (BITS) Pilani', type: 'University', country: 'India', state: 'Rajasthan', website: 'https://www.bits-pilani.ac.in' },
-          
-          // International Universities (if country is India, show some popular international options)
-          { id: 51, name: 'Harvard University', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.harvard.edu' },
-          { id: 52, name: 'Stanford University', type: 'University', country: 'United States', state: 'California', website: 'https://www.stanford.edu' },
-          { id: 53, name: 'Massachusetts Institute of Technology (MIT)', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.mit.edu' },
-          { id: 54, name: 'University of Oxford', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ox.ac.uk' },
-          { id: 55, name: 'University of Cambridge', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.cam.ac.uk' },
-          
-          // Other option
-          { id: 999999, name: 'Other', type: 'Other', country: 'Various', state: null, website: null },
-        ]
+        data: fallbackData
       };
     }
   }
 
-  // NEW: Get universities by specific country (for employer job posting)
-  async getUniversitiesByCountry(country) {
-    try {
-      const params = new URLSearchParams({ country });
-      return await this.apiCall(`/reference/universities-by-country?${params.toString()}`);
-    } catch (error) {
-      console.warn('Failed to load universities by country:', error.message);
-      return {
-        success: true,
-        data: {
-          country: country,
-          totalUniversities: 0,
-          universitiesByState: {}
-        }
-      };
-    }
-  }
+  // Helper method for country-specific college fallbacks
+  getCountrySpecificCollegeFallback(country) {
+    const fallbackData = {
+      'India': [
+        { id: 1, name: 'Indian Institute of Technology (IIT) Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.iitd.ac.in' },
+        { id: 2, name: 'Indian Institute of Technology (IIT) Bombay', type: 'University', country: 'India', state: 'Maharashtra', website: 'https://www.iitb.ac.in' },
+        { id: 3, name: 'Indian Institute of Technology (IIT) Kanpur', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.iitk.ac.in' },
+        { id: 4, name: 'Indian Institute of Technology (IIT) Madras', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.iitm.ac.in' },
+        { id: 5, name: 'Indian Institute of Science (IISc) Bangalore', type: 'University', country: 'India', state: 'Karnataka', website: 'https://www.iisc.ac.in' },
+        { id: 6, name: 'All India Institute of Medical Sciences (AIIMS) Delhi', type: 'Medical University', country: 'India', state: 'Delhi', website: 'https://www.aiims.edu' },
+        { id: 7, name: 'Jawaharlal Nehru University (JNU)', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jnu.ac.in' },
+        { id: 8, name: 'University of Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.du.ac.in' },
+        { id: 9, name: 'Banaras Hindu University (BHU)', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.bhu.ac.in' },
+        { id: 10, name: 'Anna University', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.annauniv.edu' }
+      ],
+      'United States': [
+        { id: 51, name: 'Harvard University', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.harvard.edu' },
+        { id: 52, name: 'Stanford University', type: 'University', country: 'United States', state: 'California', website: 'https://www.stanford.edu' },
+        { id: 53, name: 'Massachusetts Institute of Technology (MIT)', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.mit.edu' },
+        { id: 54, name: 'California Institute of Technology (Caltech)', type: 'University', country: 'United States', state: 'California', website: 'https://www.caltech.edu' },
+        { id: 55, name: 'University of California, Berkeley', type: 'University', country: 'United States', state: 'California', website: 'https://www.berkeley.edu' },
+        { id: 56, name: 'Princeton University', type: 'University', country: 'United States', state: 'New Jersey', website: 'https://www.princeton.edu' },
+        { id: 57, name: 'Yale University', type: 'University', country: 'United States', state: 'Connecticut', website: 'https://www.yale.edu' },
+        { id: 58, name: 'Columbia University', type: 'University', country: 'United States', state: 'New York', website: 'https://www.columbia.edu' }
+      ],
+      'United Kingdom': [
+        { id: 71, name: 'University of Oxford', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ox.ac.uk' },
+        { id: 72, name: 'University of Cambridge', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.cam.ac.uk' },
+        { id: 73, name: 'Imperial College London', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.imperial.ac.uk' },
+        { id: 74, name: 'London School of Economics (LSE)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.lse.ac.uk' },
+        { id: 75, name: 'University College London (UCL)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ucl.ac.uk' },
+        { id: 76, name: 'King\'s College London', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.kcl.ac.uk' },
+        { id: 77, name: 'University of Edinburgh', type: 'University', country: 'United Kingdom', state: 'Scotland', website: 'https://www.ed.ac.uk' }
+      ],
+      'Canada': [
+        { id: 91, name: 'University of Toronto', type: 'University', country: 'Canada', state: 'Ontario', website: 'https://www.utoronto.ca' },
+        { id: 92, name: 'McGill University', type: 'University', country: 'Canada', state: 'Quebec', website: 'https://www.mcgill.ca' },
+        { id: 93, name: 'University of British Columbia', type: 'University', country: 'Canada', state: 'British Columbia', website: 'https://www.ubc.ca' },
+        { id: 94, name: 'University of Waterloo', type: 'University', country: 'Canada', state: 'Ontario', website: 'https://uwaterloo.ca' },
+        { id: 95, name: 'University of Alberta', type: 'University', country: 'Canada', state: 'Alberta', website: 'https://www.ualberta.ca' }
+      ]
+    };
 
-  // NEW: Get organizations (companies) with improved parameters and fallback data
-  async getOrganizations(source = 'database', country = 'IN', limit = 1000) {
-    try {
-      // Build query parameters for external company fetching
-      const params = new URLSearchParams({
-        source: source,        // database, external, or all
-        limit: limit.toString() // Limit number of results
-      });
-      // Only pass country when calling external sources to avoid confusion
-      if (source !== 'database' && country) {
-        params.append('country', country);
-      }
+    const countryData = fallbackData[country] || fallbackData['India'];
+    
+    // Add "Other" option
+    countryData.push({
+      id: 999999,
+      name: 'Other',
+      type: 'Other',
+      country: 'Various',
+      state: null,
+      website: null
+    });
 
-      const res = await this.apiCall(`/reference/organizations?${params.toString()}`);
-
-      // Normalize response to always return an array at data level
-      const organizations = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.organizations)
-          ? res.data.organizations
-          : [];
-
-      return { success: true, data: organizations };
-    } catch (error) {
-      console.warn('Failed to load organizations:', error.message);
-      // Return comprehensive fallback data as a flat array
-      return {
-        success: true,
-        data: [
-          { id: 1, name: 'Google', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 2, name: 'Microsoft', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 3, name: 'Apple', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 4, name: 'Amazon', industry: 'E-commerce', size: '1000+', type: 'Corporation' },
-          { id: 5, name: 'Meta (Facebook)', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 6, name: 'Tesla', industry: 'Automotive', size: '201-1000', type: 'Corporation' },
-          { id: 7, name: 'Netflix', industry: 'Entertainment', size: '201-1000', type: 'Corporation' },
-          { id: 8, name: 'Spotify', industry: 'Entertainment', size: '51-200', type: 'Corporation' },
-          // Indian companies
-          { id: 20, name: 'Tata Consultancy Services', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 21, name: 'Infosys', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 22, name: 'Wipro', industry: 'Technology', size: '1000+', type: 'Corporation' },
-          { id: 23, name: 'Flipkart', industry: 'E-commerce', size: '201-1000', type: 'Corporation' },
-          { id: 24, name: 'Zomato', industry: 'Food Delivery', size: '51-200', type: 'Corporation' },
-          { id: 25, name: 'Paytm', industry: 'Fintech', size: '51-200', type: 'Corporation' },
-          { id: 999999, name: 'My company is not listed', industry: 'Other', size: 'Unknown', type: 'Other' }
-        ]
-      };
-    }
+    return countryData;
   }
 
   // Initialize employer profile + organization for an existing user
@@ -632,6 +598,32 @@ class NexHireAPI {
       return {
         success: true,
         message: 'Profile update queued for processing'
+      };
+    }
+  }
+
+  // NEW: Get countries for education screen
+  async getCountries() {
+    try {
+      return await this.apiCall('/reference/countries');
+    } catch (error) {
+      console.warn('Failed to load countries:', error.message);
+      // Return fallback data with proper flags
+      return {
+        success: true,
+        data: {
+          countries: [
+            { id: 'IN', name: 'India', flag: '🇮🇳', code: 'IN', region: 'Asia' },
+            { id: 'US', name: 'United States', flag: '🇺🇸', code: 'US', region: 'Americas' },
+            { id: 'GB', name: 'United Kingdom', flag: '🇬🇧', code: 'GB', region: 'Europe' },
+            { id: 'CA', name: 'Canada', flag: '🇨🇦', code: 'CA', region: 'Americas' },
+            { id: 'AU', name: 'Australia', flag: '🇦🇺', code: 'AU', region: 'Oceania' },
+            { id: 'DE', name: 'Germany', flag: '🇩🇪', code: 'DE', region: 'Europe' },
+            { id: 'FR', name: 'France', flag: '🇫🇷', code: 'FR', region: 'Europe' },
+            { id: 'SG', name: 'Singapore', flag: '🇸🇬', code: 'SG', region: 'Asia' }
+          ],
+          defaultCountry: 'India'
+        }
       };
     }
   }

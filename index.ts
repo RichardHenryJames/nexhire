@@ -89,7 +89,8 @@ import {
     getOrganizations,
     getColleges,
     getUniversitiesByCountry,
-    getIndustries
+    getIndustries,
+    getCountries  // NEW: Add countries import
 } from './src/controllers/reference.controller';
 import { initializeEmployer } from './src/controllers/employer.controller';
 
@@ -526,6 +527,14 @@ app.http('reference-industries', {
     handler: withErrorHandling(getIndustries)
 });
 
+// NEW: Countries endpoint for education screen
+app.http('reference-countries', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/countries',
+    handler: withErrorHandling(getCountries)
+});
+
 // ========================================================================
 // HEALTH CHECK ENDPOINT
 // ========================================================================
@@ -552,7 +561,7 @@ app.http('health', {
 // ========================================================================
 
 console.log('NexHire Backend API - All functions registered');
-console.log('Total endpoints: 30');  // Updated count (28 + 1 work experience + 1 job preferences endpoint)
+console.log('Total endpoints: 31');  // Updated count (30 + 1 work experience + 1 job preferences endpoint)
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('Ready for deployment to Azure Functions v4');
 console.log('CORS middleware enabled for all endpoints');
@@ -561,7 +570,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (30 total):
+ * COMPLETE API ENDPOINT LIST (31 total):
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):
@@ -605,12 +614,13 @@ export {};
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- * REFERENCE DATA (5 endpoints):
+ * REFERENCE DATA (6 endpoints):
  * GET    /reference/job-types         - Get job types
  * GET    /reference/currencies        - Get currencies
  * GET    /reference/organizations     - Get organizations
  * GET    /reference/colleges          - Get colleges/universities
  * GET    /reference/industries        - Get industries
  * GET    /reference/universities-by-country - Get universities by country and state
+ * GET    /reference/countries         - Get countries (NEW)
  * ========================================================================
  */
