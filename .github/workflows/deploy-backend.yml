@@ -51,8 +51,8 @@ jobs:
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           respect-funcignore: true
-          env:
-            AZURE_FUNCTIONS_ACTION_DEBUG: true
+        env:
+          AZURE_FUNCTIONS_ACTION_DEBUG: true
         continue-on-error: true
 
       - name: 'Wait and retry with different approach'
@@ -62,16 +62,16 @@ jobs:
           sleep 300
 
       - name: 'Deploy to Azure Functions - Method 2 (Retry)'
-        if: steps.deploy1.outcome == 'failure'
         uses: azure/functions-action@v1.5.2
         id: deploy2
+        if: steps.deploy1.outcome == 'failure'
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           respect-funcignore: false
-          env:
-            AZURE_FUNCTIONS_ACTION_DEBUG: true
+        env:
+          AZURE_FUNCTIONS_ACTION_DEBUG: true
         continue-on-error: true
 
       - name: 'Final deployment attempt with minimal package'
@@ -93,8 +93,8 @@ jobs:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: './minimal-deploy.zip'
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-          env:
-            AZURE_FUNCTIONS_ACTION_DEBUG: true
+        env:
+          AZURE_FUNCTIONS_ACTION_DEBUG: true
 
       - name: 'Wait for deployment to settle'
         run: sleep 90
