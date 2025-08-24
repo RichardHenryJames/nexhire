@@ -330,11 +330,11 @@ export const getIndustries = async (req: any): Promise<any> => {
 
 // Get colleges/universities from external API
 export const getColleges = async (req: any): Promise<any> => {
+    const url = new URL(req.url);
+    const country = url.searchParams.get('country') || 'India';
+    const searchName = url.searchParams.get('name') || '';
+    
     try {
-        const url = new URL(req.url);
-        const country = url.searchParams.get('country') || 'India';
-        const searchName = url.searchParams.get('name') || '';
-        
         console.log(`Fetching universities for country: ${country}, search: ${searchName}`);
         
         let apiUrl = `http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`;
@@ -377,61 +377,10 @@ export const getColleges = async (req: any): Promise<any> => {
 
         transformedColleges.sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-        if (country === 'India' && !searchName) {
-            const internationalUniversities = [
-                {
-                    id: 99001,
-                    name: 'Harvard University',
-                    type: 'University',
-                    country: 'United States',
-                    state: 'Massachusetts',
-                    city: null,
-                    website: 'https://www.harvard.edu',
-                    domains: ['harvard.edu'],
-                    establishedYear: null,
-                    isPublic: null,
-                    globalRanking: null,
-                    description: 'Private Ivy League research university',
-                    logoURL: null,
-                    alpha_two_code: 'US'
-                },
-                {
-                    id: 99002,
-                    name: 'Stanford University',
-                    type: 'University',
-                    country: 'United States',
-                    state: 'California',
-                    city: null,
-                    website: 'https://www.stanford.edu',
-                    domains: ['stanford.edu'],
-                    establishedYear: null,
-                    isPublic: null,
-                    globalRanking: null,
-                    description: 'Private research university in Silicon Valley',
-                    logoURL: null,
-                    alpha_two_code: 'US'
-                },
-                {
-                    id: 99003,
-                    name: 'Massachusetts Institute of Technology (MIT)',
-                    type: 'University',
-                    country: 'United States',
-                    state: 'Massachusetts',
-                    city: null,
-                    website: 'https://www.mit.edu',
-                    domains: ['mit.edu'],
-                    establishedYear: null,
-                    isPublic: null,
-                    globalRanking: null,
-                    description: 'Private research university specializing in technology',
-                    logoURL: null,
-                    alpha_two_code: 'US'
-                }
-            ];
-            
-            transformedColleges.unshift(...internationalUniversities);
-        }
-
+        // 🚫 REMOVED: No more international universities mixed with country-specific results
+        // This was causing Harvard to show up when selecting India
+        
+        // Only add "Other" option
         transformedColleges.push({
             id: 999999,
             name: 'Other',
@@ -449,32 +398,76 @@ export const getColleges = async (req: any): Promise<any> => {
             alpha_two_code: null
         });
 
-        console.log(`Successfully fetched ${transformedColleges.length - 1} universities + Other option`);
+        console.log(`Successfully fetched ${transformedColleges.length - 1} universities for ${country} + Other option`);
 
         return {
             status: 200,
-            jsonBody: successResponse(transformedColleges, `Educational institutions retrieved successfully from external API (${transformedColleges.length - 1} universities)`)
+            jsonBody: successResponse(transformedColleges, `Educational institutions retrieved successfully from external API (${transformedColleges.length - 1} universities for ${country})`)
         };
         
     } catch (error) {
-        console.error('Error fetching universities from external API:', error);
+        console.error('Error fetching universidades desde la API externa:', error);
         
-        const fallbackColleges = [
-            { id: 1, name: 'Indian Institute of Technology (IIT) Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.iitd.ac.in' },
-            { id: 2, name: 'Indian Institute of Technology (IIT) Bombay', type: 'University', country: 'India', state: 'Maharashtra', website: 'https://www.iitb.ac.in' },
-            { id: 3, name: 'Indian Institute of Technology (IIT) Kanpur', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.iitk.ac.in' },
-            { id: 51, name: 'Harvard University', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.harvard.edu' },
-            { id: 52, name: 'Stanford University', type: 'University', country: 'United States', state: 'California', website: 'https://www.stanford.edu' },
-            { id: 53, name: 'Massachusetts Institute of Technology (MIT)', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.mit.edu' },
-            { id: 999999, name: 'Other', type: 'Other', country: 'Various', state: null, website: null }
-        ];
+        // 🏗️ Datos de respaldo específicos del país
+        const fallbackColleges = getFallbackCollegesByCountry(country);
         
         return {
             status: 200,
-            jsonBody: successResponse(fallbackColleges, 'Educational institutions retrieved (fallback data - external API unavailable)')
+            jsonBody: successResponse(fallbackColleges, `Instituciones educativas recuperadas (datos de respaldo para ${country} - API externa no disponible)`)
         };
     }
 };
+
+// 🌍 Helper function to get country-specific fallback colleges
+function getFallbackCollegesByCountry(country: string): any[] {
+    const fallbackData: { [key: string]: any[] } = {
+        'India': [
+            { id: 1, name: 'Indian Institute of Technology (IIT) Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.iitd.ac.in' },
+            { id: 2, name: 'Indian Institute of Technology (IIT) Bombay', type: 'University', country: 'India', state: 'Maharashtra', website: 'https://www.iitb.ac.in' },
+            { id: 3, name: 'Indian Institute of Technology (IIT) Kanpur', type: 'University', country: 'India', state: 'Uttar Pradesh', website: 'https://www.iitk.ac.in' },
+            { id: 4, name: 'Indian Institute of Technology (IIT) Madras', type: 'University', country: 'India', state: 'Tamil Nadu', website: 'https://www.iitm.ac.in' },
+            { id: 5, name: 'Indian Institute of Science (IISc) Bangalore', type: 'University', country: 'India', state: 'Karnataka', website: 'https://www.iisc.ac.in' },
+            { id: 6, name: 'All India Institute of Medical Sciences (AIIMS) Delhi', type: 'Medical University', country: 'India', state: 'Delhi', website: 'https://www.aiims.edu' },
+            { id: 7, name: 'Jawaharlal Nehru University (JNU)', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.jnu.ac.in' },
+            { id: 8, name: 'University of Delhi', type: 'University', country: 'India', state: 'Delhi', website: 'https://www.du.ac.in' }
+        ],
+        'United States': [
+            { id: 51, name: 'Harvard University', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.harvard.edu' },
+            { id: 52, name: 'Stanford University', type: 'University', country: 'United States', state: 'California', website: 'https://www.stanford.edu' },
+            { id: 53, name: 'Massachusetts Institute of Technology (MIT)', type: 'University', country: 'United States', state: 'Massachusetts', website: 'https://www.mit.edu' },
+            { id: 54, name: 'California Institute of Technology (Caltech)', type: 'University', country: 'United States', state: 'California', website: 'https://www.caltech.edu' },
+            { id: 55, name: 'University of California, Berkeley', type: 'University', country: 'United States', state: 'California', website: 'https://www.berkeley.edu' },
+            { id: 56, name: 'Princeton University', type: 'University', country: 'United States', state: 'New Jersey', website: 'https://www.princeton.edu' }
+        ],
+        'United Kingdom': [
+            { id: 71, name: 'University of Oxford', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ox.ac.uk' },
+            { id: 72, name: 'University of Cambridge', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.cam.ac.uk' },
+            { id: 73, name: 'Imperial College London', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.imperial.ac.uk' },
+            { id: 74, name: 'London School of Economics (LSE)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.lse.ac.uk' },
+            { id: 75, name: 'University College London (UCL)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ucl.ac.uk' }
+        ],
+        'Canada': [
+            { id: 91, name: 'University of Toronto', type: 'University', country: 'Canada', state: 'Ontario', website: 'https://www.utoronto.ca' },
+            { id: 92, name: 'McGill University', type: 'University', country: 'Canada', state: 'Quebec', website: 'https://www.mcgill.ca' },
+            { id: 93, name: 'University of British Columbia', type: 'University', country: 'Canada', state: 'British Columbia', website: 'https://www.ubc.ca' },
+            { id: 94, name: 'University of Waterloo', type: 'University', country: 'Canada', state: 'Ontario', website: 'https://uwaterloo.ca' }
+        ]
+    };
+
+    const countryColleges = fallbackData[country] || [];
+    
+    // Always add "Other" option
+    countryColleges.push({
+        id: 999999,
+        name: 'Other',
+        type: 'Other',
+        country: 'Various',
+        state: null,
+        website: null
+    });
+
+    return countryColleges;
+}
 
 // Get universities by country for global coverage
 export const getUniversitiesByCountry = async (req: any): Promise<any> => {

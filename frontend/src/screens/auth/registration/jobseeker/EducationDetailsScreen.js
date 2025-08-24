@@ -60,18 +60,6 @@ const YEARS_IN_COLLEGE = [
   'Other'
 ];
 
-// Popular countries for university search
-const COUNTRIES = [
-  { code: 'India', name: 'India', flag: '????' },
-  { code: 'United States', name: 'United States', flag: '????' },
-  { code: 'United Kingdom', name: 'United Kingdom', flag: '????' },
-  { code: 'Canada', name: 'Canada', flag: '????' },
-  { code: 'Australia', name: 'Australia', flag: '????' },
-  { code: 'Germany', name: 'Germany', flag: '????' },
-  { code: 'France', name: 'France', flag: '????' },
-  { code: 'Singapore', name: 'Singapore', flag: '????' },
-];
-
 export default function EducationDetailsScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
     college: null,
@@ -83,7 +71,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
   });
   
   const [colleges, setColleges] = useState([]);
+  const [countries, setCountries] = useState([]); // Add countries state
   const [loading, setLoading] = useState(false);
+  const [loadingCountries, setLoadingCountries] = useState(false); // Add countries loading
   const [error, setError] = useState(null);
   
   const [showCollegeModal, setShowCollegeModal] = useState(false);
@@ -96,15 +86,67 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const { userType, experienceType, workExperienceData } = route.params;
 
   useEffect(() => {
+    loadCountries(); // Load countries from API
     loadColleges();
+  }, []);
+
+  useEffect(() => {
+    if (formData.selectedCountry) {
+      loadColleges();
+    }
   }, [formData.selectedCountry]);
+
+  // ?? NEW: Load countries from your API with proper flag emojis
+  const loadCountries = async () => {
+    try {
+      setLoadingCountries(true);
+      console.log('?? Loading countries from API...');
+      
+      const response = await nexhireAPI.getCountries();
+      
+      if (response.success && response.data.countries) {
+        // Transform API response to match expected format
+        const transformedCountries = response.data.countries.map(country => ({
+          code: country.name, // Use name as code for compatibility
+          name: country.name,
+          flag: country.flag,
+          region: country.region,
+          id: country.id
+        }));
+        
+        setCountries(transformedCountries);
+        console.log(`? Loaded ${transformedCountries.length} countries with flag emojis`);
+      } else {
+        throw new Error(response.error || 'Failed to load countries');
+      }
+    } catch (error) {
+      console.error('? Error loading countries:', error);
+      
+      // Fallback to default countries if API fails
+      const fallbackCountries = [
+        { code: 'India', name: 'India', flag: '????', region: 'Asia' },
+        { code: 'United States', name: 'United States', flag: '????', region: 'Americas' },
+        { code: 'United Kingdom', name: 'United Kingdom', flag: '????', region: 'Europe' },
+        { code: 'Canada', name: 'Canada', flag: '????', region: 'Americas' },
+        { code: 'Australia', name: 'Australia', flag: '????', region: 'Oceania' },
+        { code: 'Germany', name: 'Germany', flag: '????', region: 'Europe' },
+        { code: 'France', name: 'France', flag: '????', region: 'Europe' },
+        { code: 'Singapore', name: 'Singapore', flag: '????', region: 'Asia' },
+      ];
+      
+      setCountries(fallbackCountries);
+      console.log('?? Using fallback countries due to API error');
+    } finally {
+      setLoadingCountries(false);
+    }
+  };
 
   const loadColleges = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`Loading colleges for country: ${formData.selectedCountry}`);
+      console.log(`?? Loading colleges for country: ${formData.selectedCountry}`);
       
       // Call the API with country parameter
       const response = await nexhireAPI.getColleges(formData.selectedCountry);
@@ -127,12 +169,12 @@ export default function EducationDetailsScreen({ navigation, route }) {
         }));
         
         setColleges(transformedColleges);
-        console.log(`Loaded ${transformedColleges.length} colleges`);
+        console.log(`? Loaded ${transformedColleges.length} colleges`);
       } else {
         throw new Error(response.error || 'Failed to load educational institutions');
       }
     } catch (error) {
-      console.error('Error loading colleges:', error);
+      console.error('? Error loading colleges:', error);
       setError(error.message);
       
       // Fallback to basic list if API fails
@@ -180,7 +222,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
     // Don't call API during registration - user is not authenticated yet
     // Just store the data locally and pass to next screen
-    console.log('Education data prepared for registration:', finalFormData);
+    console.log('?? Education data prepared for registration:', finalFormData);
     
     // Continue to next screen with education data
     navigation.navigate('JobPreferencesScreen', { 
@@ -222,6 +264,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
               />
             </TouchableOpacity>
           )}
+          {isCountryModal && (
+            <TouchableOpacity onPress={loadCountries} disabled={loadingCountries}>
+              <Ionicons 
+                name="refresh" 
+                size={24} 
+                color={loadingCountries ? colors.gray400 : colors.primary} 
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {searchable && (
@@ -229,17 +280,19 @@ export default function EducationDetailsScreen({ navigation, route }) {
             <Ionicons name="search" size={20} color={colors.gray500} />
             <TextInput
               style={styles.searchInput}
-              placeholder={isCollegeModal ? "Search universities..." : "Search..."}
+              placeholder={isCollegeModal ? "Search universities..." : isCountryModal ? "Search countries..." : "Search..."}
               value={searchTerm}
               onChangeText={setSearchTerm}
             />
           </View>
         )}
 
-        {loading && isCollegeModal && (
+        {((loading && isCollegeModal) || (loadingCountries && isCountryModal)) && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading universities from {formData.selectedCountry}...</Text>
+            <Text style={styles.loadingText}>
+              {isCountryModal ? 'Loading countries with flag emojis...' : `Loading universities from ${formData.selectedCountry}...`}
+            </Text>
           </View>
         )}
 
@@ -253,7 +306,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
           </View>
         )}
 
-        {!loading && !error && (
+        {!((loading && isCollegeModal) || (loadingCountries && isCountryModal)) && !error && (
           <FlatList
             data={data}
             keyExtractor={(item, index) => item.id?.toString() || item.code || index.toString()}
@@ -289,6 +342,11 @@ export default function EducationDetailsScreen({ navigation, route }) {
                       Global Ranking: #{item.globalRanking}
                     </Text>
                   )}
+                  {typeof item === 'object' && item.region && isCountryModal && (
+                    <Text style={styles.modalItemRegion}>
+                      {item.region}
+                    </Text>
+                  )}
                 </View>
                 {typeof item === 'object' && item.id === 999999 && (
                   <Ionicons name="add-circle" size={20} color={colors.primary} />
@@ -297,9 +355,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
             )}
             ListEmptyComponent={() => (
               <View style={styles.emptyContainer}>
-                <Ionicons name="school" size={48} color={colors.gray400} />
+                <Ionicons name={isCountryModal ? "earth" : "school"} size={48} color={colors.gray400} />
                 <Text style={styles.emptyText}>
-                  {searchTerm ? 'No institutions found' : 'No institutions available'}
+                  {searchTerm ? `No ${isCountryModal ? 'countries' : 'institutions'} found` : `No ${isCountryModal ? 'countries' : 'institutions'} available`}
                 </Text>
                 {searchTerm && (
                   <Text style={styles.emptySubtext}>
@@ -343,9 +401,16 @@ export default function EducationDetailsScreen({ navigation, route }) {
   };
 
   const getSelectedCountryDisplay = () => {
-    const country = COUNTRIES.find(c => c.code === formData.selectedCountry);
+    const country = countries.find(c => c.code === formData.selectedCountry);
     return country ? `${country.flag} ${country.name}` : formData.selectedCountry;
   };
+
+  // Filter countries for search
+  const filteredCountries = countries.filter(country => {
+    const searchLower = searchTerm.toLowerCase();
+    return country.name.toLowerCase().includes(searchLower) ||
+           (country.region && country.region.toLowerCase().includes(searchLower));
+  });
 
   return (
     <KeyboardAvoidingView 
@@ -436,9 +501,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
         visible={showCountryModal}
         onClose={() => setShowCountryModal(false)}
         title="Select Country/Region"
-        data={COUNTRIES}
+        data={filteredCountries}
         onSelect={handleCountryChange}
-        searchable={false}
+        searchable={true}
         isCountryModal={true}
       />
 
@@ -691,6 +756,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.medium,
+  },
+  modalItemRegion: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    fontStyle: 'italic',
   },
   emptyContainer: {
     flex: 1,
