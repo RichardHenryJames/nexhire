@@ -542,18 +542,36 @@ class NexHireAPI {
     }
   }
 
-  // NEW: Update applicant profile (FIXED: Use existing endpoint that's already deployed)
+  // NEW: Update applicant profile (FIXED: Add comprehensive debugging)
   async updateApplicantProfile(userId, profileData) {
     try {
-      console.log('🔄 Updating applicant profile via EXISTING endpoint:', `/applicants/${userId}/profile`);
-      console.log('📝 Profile data:', Object.keys(profileData));
+      console.log('🔄 =========================');
+      console.log('🔄 UPDATEAPPLICANTPROFILE DEBUG');
+      console.log('🔄 =========================');
+      console.log('🆔 User ID:', userId);
+      console.log('📝 Profile Data Keys:', Object.keys(profileData));
+      console.log('📝 Full Profile Data:', JSON.stringify(profileData, null, 2));
+      console.log('🌐 API URL:', `${API_BASE_URL}/applicants/${userId}/profile`);
+      console.log('🔑 Token present:', !!this.token);
       
-      return await this.apiCall(`/applicants/${userId}/profile`, {
+      const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData),
       });
+      
+      console.log('✅ API Response:', JSON.stringify(result, null, 2));
+      console.log('🔄 =========================');
+      return result;
     } catch (error) {
-      console.error('❌ Failed to update applicant profile:', error.message);
+      console.error('❌ =========================');
+      console.error('❌ UPDATEAPPLICANTPROFILE ERROR');
+      console.error('❌ =========================');
+      console.error('❌ User ID:', userId);
+      console.error('❌ Profile Data:', JSON.stringify(profileData, null, 2));
+      console.error('❌ Error Type:', error.constructor.name);
+      console.error('❌ Error Message:', error.message);
+      console.error('❌ Full Error:', error);
+      console.error('❌ =========================');
       throw error;
     }
   }

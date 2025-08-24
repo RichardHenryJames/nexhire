@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
+import EducationSection from '../../components/profile/EducationSection';
 
 export default function ProfileScreen() {
   const { 
@@ -69,6 +70,8 @@ export default function ProfileScreen() {
     highestEducation: '',
     fieldOfStudy: '',
     institution: '',
+    graduationYear: '',
+    gpa: '',
     
     // Professional Information
     headline: '',
@@ -189,6 +192,8 @@ export default function ProfileScreen() {
             highestEducation: response.data.HighestEducation || '',
             fieldOfStudy: response.data.FieldOfStudy || '',
             institution: response.data.Institution || '',
+            graduationYear: response.data.GraduationYear || '',
+            gpa: response.data.GPA || '',
             
             // Professional Information
             headline: response.data.Headline || '',
@@ -644,11 +649,30 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Education</Text>
-        
-        {renderField('institution', 'Institution', 'University/College name', { profileType: 'jobSeeker' })}
-        {renderField('highestEducation', 'Highest Education', 'e.g., Bachelor\'s Degree, Master\'s Degree', { profileType: 'jobSeeker' })}
-        {renderField('fieldOfStudy', 'Field of Study', 'e.g., Computer Science, Business', { profileType: 'jobSeeker' })}
+        <EducationSection
+          profile={{
+            institution: jobSeekerProfile.institution || '',
+            highestEducation: jobSeekerProfile.highestEducation || '',
+            fieldOfStudy: jobSeekerProfile.fieldOfStudy || '',
+            graduationYear: jobSeekerProfile.graduationYear || '',
+            gpa: jobSeekerProfile.gpa || ''
+          }}
+          setProfile={(updatedEducation) => {
+            setJobSeekerProfile(prev => ({
+              ...prev,
+              institution: updatedEducation.institution || '',
+              highestEducation: updatedEducation.highestEducation || '',
+              fieldOfStudy: updatedEducation.fieldOfStudy || '',
+              graduationYear: updatedEducation.graduationYear || '',
+              gpa: updatedEducation.gpa || ''
+            }));
+          }}
+          editing={editing}
+          onUpdate={(updatedEducation) => {
+            // Optional: Handle real-time updates for education changes
+            console.log('?? Education updated:', updatedEducation);
+          }}
+        />
       </View>
 
       <View style={styles.section}>
@@ -875,7 +899,7 @@ export default function ProfileScreen() {
                 <Ionicons name="create" size={20} color={colors.white} />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
-            )}
+            }
 
             <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
               <Ionicons name="log-out" size={20} color={colors.danger} />

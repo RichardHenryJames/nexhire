@@ -237,138 +237,140 @@ app.http('employers-initialize', {
 });
 
 // ========================================================================
-// APPLICANT/EMPLOYER PROFILE ENDPOINTS (UPDATED WITH REAL IMPLEMENTATION)
+// APPLICANT/EMPLOYER PROFILE ENDPOINTS (FIXED: Single function per route)
 // ========================================================================
 
-// Applicant Profile Management - FIXED: Simplified function names for Azure deployment
-app.http('applicants-get', {
-    methods: ['GET', 'OPTIONS'],
+// FIXED: Combined Applicant Profile Management (GET + PUT in single function)
+app.http('applicants-profile', {
+    methods: ['GET', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applicants/{userId}/profile',
     handler: withErrorHandling(async (req, context) => {
         const userId = req.params.userId;
         
         try {
-            const profile = await ApplicantService.getApplicantProfile(userId);
-            return {
-                status: 200,
-                jsonBody: {
-                    success: true,
-                    data: profile
-                }
-            };
-        } catch (error) {
-            console.error('Error getting applicant profile:', error);
-            return {
-                status: 500,
-                jsonBody: {
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to get applicant profile'
-                }
-            };
-        }
-    })
-});
-
-app.http('applicants-update', {
-    methods: ['PUT', 'OPTIONS'],
-    authLevel: 'anonymous',
-    route: 'applicants/{userId}/profile',
-    handler: withErrorHandling(async (req, context) => {
-        try {
-            // Skip auth for OPTIONS requests
+            // Handle OPTIONS for CORS
             if (req.method === 'OPTIONS') {
                 return { status: 200 };
             }
             
-            const userId = req.params.userId;
-            console.log('Updating applicant profile for user:', userId);
+            // Handle GET - Get applicant profile
+            if (req.method === 'GET') {
+                console.log('Getting applicant profile for user:', userId);
+                const profile = await ApplicantService.getApplicantProfile(userId);
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: profile
+                    }
+                };
+            }
             
-            const profileData = await req.json() as any;
-            console.log('Profile data received fields:', Object.keys(profileData));
-            console.log('hideCurrentCompany:', profileData.hideCurrentCompany);
-            console.log('hideSalaryDetails:', profileData.hideSalaryDetails);
+            // Handle PUT - Update applicant profile
+            if (req.method === 'PUT') {
+                console.log('Updating applicant profile for user:', userId);
+                
+                const profileData = await req.json() as any;
+                console.log('Profile data received fields:', Object.keys(profileData));
+                console.log('hideCurrentCompany:', profileData.hideCurrentCompany);
+                console.log('hideSalaryDetails:', profileData.hideSalaryDetails);
+                
+                const updatedProfile = await ApplicantService.updateApplicantProfile(userId, profileData);
+                
+                console.log('Profile updated successfully');
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: updatedProfile,
+                        message: 'Applicant profile updated successfully'
+                    }
+                };
+            }
             
-            const updatedProfile = await ApplicantService.updateApplicantProfile(userId, profileData);
-            
-            console.log('Profile updated successfully');
+            // Unsupported method
             return {
-                status: 200,
+                status: 405,
                 jsonBody: {
-                    success: true,
-                    data: updatedProfile,
-                    message: 'Applicant profile updated successfully'
+                    success: false,
+                    error: 'Method not allowed'
                 }
             };
+            
         } catch (error) {
-            console.error('Error updating applicant profile:', error);
+            console.error(`Error handling applicant profile ${req.method}:`, error);
             return {
                 status: 500,
                 jsonBody: {
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to update applicant profile'
+                    error: error instanceof Error ? error.message : `Failed to ${req.method === 'GET' ? 'get' : 'update'} applicant profile`
                 }
             };
         }
     })
 });
 
-// Employer Profile Management - FIXED: Simplified function names
-app.http('employers-get', {
-    methods: ['GET', 'OPTIONS'],
+// FIXED: Combined Employer Profile Management (GET + PUT in single function)  
+app.http('employers-profile', {
+    methods: ['GET', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'employers/{userId}/profile',
     handler: withErrorHandling(async (req, context) => {
         const userId = req.params.userId;
         
         try {
-            const profile = await EmployerService.getEmployerProfile(userId);
-            return {
-                status: 200,
-                jsonBody: {
-                    success: true,
-                    data: profile
-                }
-            };
-        } catch (error) {
-            console.error('Error getting employer profile:', error);
-            return {
-                status: 500,
-                jsonBody: {
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to get employer profile'
-                }
-            };
-        }
-    })
-});
-
-app.http('employers-update', {
-    methods: ['PUT', 'OPTIONS'],
-    authLevel: 'anonymous',
-    route: 'employers/{userId}/profile',
-    handler: withErrorHandling(async (req, context) => {
-        const userId = req.params.userId;
-        
-        try {
-            const profileData = await req.json() as any;
-            const updatedProfile = await EmployerService.updateEmployerProfile(userId, profileData);
+            // Handle OPTIONS for CORS
+            if (req.method === 'OPTIONS') {
+                return { status: 200 };
+            }
             
+            // Handle GET - Get employer profile
+            if (req.method === 'GET') {
+                console.log('Getting employer profile for user:', userId);
+                const profile = await EmployerService.getEmployerProfile(userId);
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: profile
+                    }
+                };
+            }
+            
+            // Handle PUT - Update employer profile
+            if (req.method === 'PUT') {
+                console.log('Updating employer profile for user:', userId);
+                
+                const profileData = await req.json() as any;
+                const updatedProfile = await EmployerService.updateEmployerProfile(userId, profileData);
+                
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: updatedProfile,
+                        message: 'Employer profile updated successfully'
+                    }
+                };
+            }
+            
+            // Unsupported method
             return {
-                status: 200,
+                status: 405,
                 jsonBody: {
-                    success: true,
-                    data: updatedProfile,
-                    message: 'Employer profile updated successfully'
+                    success: false,
+                    error: 'Method not allowed'
                 }
             };
+            
         } catch (error) {
-            console.error('Error updating employer profile:', error);
+            console.error(`Error handling employer profile ${req.method}:`, error);
             return {
                 status: 500,
                 jsonBody: {
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to update employer profile'
+                    error: error instanceof Error ? error.message : `Failed to ${req.method === 'GET' ? 'get' : 'update'} employer profile`
                 }
             };
         }
@@ -561,7 +563,7 @@ app.http('health', {
 // ========================================================================
 
 console.log('NexHire Backend API - All functions registered');
-console.log('Total endpoints: 31');  // Updated count (30 + 1 work experience + 1 job preferences endpoint)
+console.log('Total endpoints: 31');  // FIXED: Now includes the 2 profile endpoints we just added
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 console.log('Ready for deployment to Azure Functions v4');
 console.log('CORS middleware enabled for all endpoints');
@@ -570,7 +572,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (31 total):
+ * COMPLETE API ENDPOINT LIST (29 total):
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):
