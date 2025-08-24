@@ -66,17 +66,17 @@ const testSuites: TestSuite[] = [
 ];
 
 const runTestSuite = (testSuite: TestSuite): boolean => {
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`?? Running: ${testSuite.name}`);
-    console.log(`?? Description: ${testSuite.description}`);
-    console.log(`${'='.repeat(80)}`);
+    process.stdout.write(`\n${'='.repeat(80)}\n`);
+    process.stdout.write(`🔬 Running: ${testSuite.name}\n`);
+    process.stdout.write(`📝 Description: ${testSuite.description}\n`);
+    process.stdout.write(`${'='.repeat(80)}\n`);
     
-    console.log('\n?? Acceptance Criteria:');
+    process.stdout.write('\n📋 Acceptance Criteria:\n');
     testSuite.acceptanceCriteria.forEach((criteria, index) => {
-        console.log(`   ${index + 1}. ${criteria}`);
+        process.stdout.write(`   ${index + 1}. ${criteria}\n`);
     });
     
-    console.log('\n?? Executing tests...\n');
+    process.stdout.write('\n🚀 Executing tests...\n\n');
     
     try {
         const result = execSync(`npx jest ${testSuite.file} --verbose --coverage`, {
@@ -84,11 +84,11 @@ const runTestSuite = (testSuite: TestSuite): boolean => {
             stdio: 'inherit'
         });
         
-        console.log(`\n? ${testSuite.name} - PASSED`);
+        process.stdout.write(`\n✅ ${testSuite.name} - PASSED\n`);
         return true;
     } catch (error) {
-        console.log(`\n? ${testSuite.name} - FAILED`);
-        console.error(error);
+        process.stdout.write(`\n❌ ${testSuite.name} - FAILED\n`);
+        process.stderr.write(`${error}\n`);
         return false;
     }
 };
@@ -191,14 +191,14 @@ const generateTestReport = (results: { name: string; passed: boolean }[]) => {
     
     const reportPath = join(process.cwd(), 'test-results.json');
     writeFileSync(reportPath, JSON.stringify(report, null, 2));
-    console.log(`\n?? Test report saved to: ${reportPath}`);
+    process.stdout.write(`\n📊 Test report saved to: ${reportPath}\n`);
     
     return report;
 };
 
 const main = async () => {
-    console.log('NexHire Registration Flow Test Suite');
-    console.log('Testing all registration and profile update scenarios\n');
+    process.stdout.write('NexHire Registration Flow Test Suite\n');
+    process.stdout.write('Testing all registration and profile update scenarios\n\n');
     
     const results: { name: string; passed: boolean }[] = [];
     
@@ -209,45 +209,45 @@ const main = async () => {
     }
     
     // Generate summary
-    console.log('\n' + '='.repeat(80));
-    console.log('TEST SUMMARY');
-    console.log('='.repeat(80));
+    process.stdout.write('\n' + '='.repeat(80) + '\n');
+    process.stdout.write('TEST SUMMARY\n');
+    process.stdout.write('='.repeat(80) + '\n');
     
     const totalTests = results.length;
     const passedTests = results.filter(r => r.passed).length;
     const failedTests = totalTests - passedTests;
     
-    console.log(`\n?? Overall Results:`);
-    console.log(`   Total Test Suites: ${totalTests}`);
-    console.log(`   ? Passed: ${passedTests}`);
-    console.log(`   ? Failed: ${failedTests}`);
-    console.log(`   ?? Success Rate: ${Math.round((passedTests / totalTests) * 100)}%`);
+    process.stdout.write(`\n📊 Overall Results:\n`);
+    process.stdout.write(`   Total Test Suites: ${totalTests}\n`);
+    process.stdout.write(`   ✅ Passed: ${passedTests}\n`);
+    process.stdout.write(`   ❌ Failed: ${failedTests}\n`);
+    process.stdout.write(`   🎯 Success Rate: ${Math.round((passedTests / totalTests) * 100)}%\n`);
     
-    console.log('\n?? Detailed Results:');
+    process.stdout.write('\n📋 Detailed Results:\n');
     results.forEach((result, index) => {
         const status = result.passed ? 'PASS' : 'FAIL';
-        console.log(`   ${index + 1}. ${result.name}: ${status}`);
+        process.stdout.write(`   ${index + 1}. ${result.name}: ${status}\n`);
     });
     
     // Generate and save report
     const report = generateTestReport(results);
     
     if (failedTests === 0) {
-        console.log('\n?? All tests passed! Registration flows are working correctly.');
-        console.log('\n? Acceptance Criteria Met:');
-        console.log('   � Student registration populates Users + Applicants tables correctly');
-        console.log('   � Professional registration includes all work experience data');
-        console.log('   � Profile updates work for individual and bulk field changes');
-        console.log('   � Privacy settings (hideCurrentCompany, hideSalaryDetails) update properly');
-        console.log('   � API endpoints match frontend call patterns exactly');
+        process.stdout.write('\n🎉 All tests passed! Registration flows are working correctly.\n');
+        process.stdout.write('\n✅ Acceptance Criteria Met:\n');
+        process.stdout.write('   • Student registration populates Users + Applicants tables correctly\n');
+        process.stdout.write('   • Professional registration includes all work experience data\n');
+        process.stdout.write('   • Profile updates work for individual and bulk field changes\n');
+        process.stdout.write('   • Privacy settings (hideCurrentCompany, hideSalaryDetails) update properly\n');
+        process.stdout.write('   • API endpoints match frontend call patterns exactly\n');
         process.exit(0);
     } else {
-        console.log('\n??  Some tests failed. Please review the errors above.');
-        console.log('\n?? Next Steps:');
-        console.log('   1. Check database connection and schema');
-        console.log('   2. Verify service method implementations');
-        console.log('   3. Validate API endpoint configurations');
-        console.log('   4. Review field mapping between frontend and backend');
+        process.stdout.write('\n⚠️  Some tests failed. Please review the errors above.\n');
+        process.stdout.write('\n🔧 Next Steps:\n');
+        process.stdout.write('   1. Check database connection and schema\n');
+        process.stdout.write('   2. Verify service method implementations\n');
+        process.stdout.write('   3. Validate API endpoint configurations\n');
+        process.stdout.write('   4. Review field mapping between frontend and backend\n');
         process.exit(1);
     }
 };
@@ -255,7 +255,7 @@ const main = async () => {
 // Run the test suite
 if (require.main === module) {
     main().catch(error => {
-        console.error('Test runner failed:', error);
+        process.stderr.write(`Test runner failed: ${error}\n`);
         process.exit(1);
     });
 }
