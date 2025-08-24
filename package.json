@@ -20,7 +20,7 @@
     "test:profile-update": "jest tests/profile-update-flow.test.ts --verbose",
     "test:api-integration": "jest tests/frontend-api-integration.test.ts --verbose",
     "test:all-flows": "npm run test:registration-only && npm run test:profile-update && npm run test:api-integration",
-    "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --build local --force",
+    "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --force",
     "deploy": "npm run deploy:backend",
     "postinstall": "echo 'NexHire Backend API installed successfully'"
   },

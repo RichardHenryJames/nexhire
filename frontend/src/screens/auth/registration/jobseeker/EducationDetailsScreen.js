@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
+
+// Add debounce hook for smooth search
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const DEGREE_TYPES = [
   'Bachelor\'s Degree',
@@ -67,26 +84,35 @@ export default function EducationDetailsScreen({ navigation, route }) {
     degreeType: '',
     fieldOfStudy: '',
     yearInCollege: '',
-    selectedCountry: 'India', // Default to India
+    selectedCountry: 'India',
   });
   
-  const [colleges, setColleges] = useState([]);
-  const [countries, setCountries] = useState([]); // Add countries state
+  const [allColleges, setAllColleges] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCountries, setLoadingCountries] = useState(false); // Add countries loading
+  const [loadingCountries, setLoadingCountries] = useState(false);
   const [error, setError] = useState(null);
   
-  const [showCollegeModal, setShowCollegeModal] = useState(false);
-  const [showCountryModal, setShowCountryModal] = useState(false);
-  const [showDegreeModal, setShowDegreeModal] = useState(false);
-  const [showFieldModal, setShowFieldModal] = useState(false);
-  const [showYearModal, setShowYearModal] = useState(false);
+  // ?? CRITICAL FIX: Single search term with modal type tracking
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeModal, setActiveModal] = useState(null); // 'college', 'country', 'degree', 'field', 'year'
+  
+  // ?? CRITICAL FIX: Debounce search term
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  // ?? CRITICAL FIX: Prevent modal state conflicts
+  const modalRefs = useRef({
+    college: false,
+    country: false,
+    degree: false,
+    field: false,
+    year: false
+  });
+  
   const { userType, experienceType, workExperienceData } = route.params;
 
   useEffect(() => {
-    loadCountries(); // Load countries from API
+    loadCountries();
     loadColleges();
   }, []);
 
@@ -96,7 +122,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
     }
   }, [formData.selectedCountry]);
 
-  // ?? NEW: Load countries from your API with proper flag emojis
   const loadCountries = async () => {
     try {
       setLoadingCountries(true);
@@ -105,9 +130,8 @@ export default function EducationDetailsScreen({ navigation, route }) {
       const response = await nexhireAPI.getCountries();
       
       if (response.success && response.data.countries) {
-        // Transform API response to match expected format
         const transformedCountries = response.data.countries.map(country => ({
-          code: country.name, // Use name as code for compatibility
+          code: country.name,
           name: country.name,
           flag: country.flag,
           region: country.region,
@@ -122,7 +146,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
     } catch (error) {
       console.error('? Error loading countries:', error);
       
-      // Fallback to default countries if API fails
       const fallbackCountries = [
         { code: 'India', name: 'India', flag: '????', region: 'Asia' },
         { code: 'United States', name: 'United States', flag: '????', region: 'Americas' },
@@ -148,11 +171,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
       
       console.log(`?? Loading colleges for country: ${formData.selectedCountry}`);
       
-      // Call the API with country parameter
       const response = await nexhireAPI.getColleges(formData.selectedCountry);
       
       if (response.success) {
-        // Transform API response to match expected format
         const transformedColleges = response.data.map(institution => ({
           id: institution.id,
           name: institution.name,
@@ -168,7 +189,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
           alpha_two_code: institution.alpha_two_code
         }));
         
-        setColleges(transformedColleges);
+        setAllColleges(transformedColleges);
         console.log(`? Loaded ${transformedColleges.length} colleges`);
       } else {
         throw new Error(response.error || 'Failed to load educational institutions');
@@ -177,25 +198,50 @@ export default function EducationDetailsScreen({ navigation, route }) {
       console.error('? Error loading colleges:', error);
       setError(error.message);
       
-      // Fallback to basic list if API fails
-      setColleges([
+      const fallbackColleges = [
         { id: 999999, name: 'Other', type: 'Other', country: 'Various' }
-      ]);
+      ];
+      setAllColleges(fallbackColleges);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredColleges = colleges.filter(college => {
-    const searchLower = searchTerm.toLowerCase();
-    return college.name.toLowerCase().includes(searchLower) ||
-           (college.country && college.country.toLowerCase().includes(searchLower)) ||
-           (college.state && college.state.toLowerCase().includes(searchLower)) ||
-           (college.type && college.type.toLowerCase().includes(searchLower));
-  });
+  // ?? CRITICAL FIX: Memoized filtering with proper dependencies
+  const filteredData = React.useMemo(() => {
+    if (activeModal === 'college') {
+      if (!debouncedSearchTerm.trim()) return allColleges;
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return allColleges.filter(college => 
+        college.name.toLowerCase().includes(searchLower) ||
+        (college.country && college.country.toLowerCase().includes(searchLower)) ||
+        (college.state && college.state.toLowerCase().includes(searchLower)) ||
+        (college.type && college.type.toLowerCase().includes(searchLower))
+      );
+    } else if (activeModal === 'country') {
+      if (!debouncedSearchTerm.trim()) return countries;
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return countries.filter(country =>
+        country.name.toLowerCase().includes(searchLower) ||
+        (country.region && country.region.toLowerCase().includes(searchLower))
+      );
+    } else if (activeModal === 'degree') {
+      if (!debouncedSearchTerm.trim()) return DEGREE_TYPES;
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return DEGREE_TYPES.filter(degree => degree.toLowerCase().includes(searchLower));
+    } else if (activeModal === 'field') {
+      if (!debouncedSearchTerm.trim()) return FIELDS_OF_STUDY;
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return FIELDS_OF_STUDY.filter(field => field.toLowerCase().includes(searchLower));
+    } else if (activeModal === 'year') {
+      if (!debouncedSearchTerm.trim()) return YEARS_IN_COLLEGE;
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return YEARS_IN_COLLEGE.filter(year => year.toLowerCase().includes(searchLower));
+    }
+    return [];
+  }, [activeModal, debouncedSearchTerm, allColleges, countries]);
 
   const handleContinue = async () => {
-    // Validate required fields
     if (!formData.college && !formData.customCollege) {
       Alert.alert('Required Field', 'Please select your college/school');
       return;
@@ -208,169 +254,110 @@ export default function EducationDetailsScreen({ navigation, route }) {
       Alert.alert('Required Field', 'Please select your field of study');
       return;
     }
-    // Only validate yearInCollege for students
     if (experienceType === 'Student' && !formData.yearInCollege) {
       Alert.alert('Required Field', 'Please select your current year');
       return;
     }
 
-    // For experienced professionals, set a default year value if not set
     const finalFormData = {
       ...formData,
       yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)'
     };
 
-    // Don't call API during registration - user is not authenticated yet
-    // Just store the data locally and pass to next screen
     console.log('?? Education data prepared for registration:', finalFormData);
     
-    // Continue to next screen with education data
     navigation.navigate('JobPreferencesScreen', { 
       userType, 
       experienceType,
-      workExperienceData, // Pass along work experience data if it exists
+      workExperienceData,
       educationData: finalFormData
     });
   };
 
-  const handleCountryChange = (country) => {
-    setFormData({ 
-      ...formData, 
-      selectedCountry: country.code,
-      college: null, // Reset college selection when country changes
-      customCollege: ''
-    });
-    setShowCountryModal(false);
+  // ?? CRITICAL FIX: Unified modal control functions
+  const openModal = (modalType) => {
+    setActiveModal(modalType);
+    setSearchTerm('');
+    modalRefs.current[modalType] = true;
   };
 
-  const SelectionModal = ({ visible, onClose, title, data, onSelect, searchable = false, isCollegeModal = false, isCountryModal = false }) => (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>{title}</Text>
-          {isCollegeModal && (
-            <TouchableOpacity onPress={loadColleges} disabled={loading}>
-              <Ionicons 
-                name="refresh" 
-                size={24} 
-                color={loading ? colors.gray400 : colors.primary} 
-              />
-            </TouchableOpacity>
+  const closeModal = () => {
+    const currentModal = activeModal;
+    setActiveModal(null);
+    setSearchTerm('');
+    if (currentModal) {
+      modalRefs.current[currentModal] = false;
+    }
+  };
+
+  // ?? CRITICAL FIX: Safe selection handlers
+  const handleSelection = (item, type) => {
+    switch (type) {
+      case 'country':
+        setFormData({ 
+          ...formData, 
+          selectedCountry: item.code,
+          college: null,
+          customCollege: ''
+        });
+        break;
+      case 'college':
+        setFormData({ ...formData, college: item, customCollege: '' });
+        break;
+      case 'degree':
+        setFormData({ ...formData, degreeType: item });
+        break;
+      case 'field':
+        setFormData({ ...formData, fieldOfStudy: item });
+        break;
+      case 'year':
+        setFormData({ ...formData, yearInCollege: item });
+        break;
+    }
+    closeModal();
+  };
+
+  // ?? CRITICAL FIX: Render item function with proper keys
+  const renderModalItem = ({ item, index }) => {
+    const isCountry = activeModal === 'country';
+    const isCollege = activeModal === 'college';
+    const isString = typeof item === 'string';
+
+    return (
+      <TouchableOpacity
+        key={`${activeModal}-${isString ? item : item.id || item.code}-${index}`}
+        style={styles.modalItem}
+        onPress={() => handleSelection(item, activeModal)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.modalItemContent}>
+          <Text style={styles.modalItemText}>
+            {isCountry ? `${item.flag} ${item.name}` : 
+             isString ? item : item.name}
+          </Text>
+          {isCollege && item.type && (
+            <Text style={styles.modalItemType}>{item.type}</Text>
           )}
-          {isCountryModal && (
-            <TouchableOpacity onPress={loadCountries} disabled={loadingCountries}>
-              <Ionicons 
-                name="refresh" 
-                size={24} 
-                color={loadingCountries ? colors.gray400 : colors.primary} 
-              />
-            </TouchableOpacity>
+          {isCollege && item.state && item.country && (
+            <Text style={styles.modalItemLocation}>
+              {item.state}, {item.country}
+            </Text>
+          )}
+          {isCollege && item.website && (
+            <Text style={styles.modalItemWebsite} numberOfLines={1}>
+              {item.website}
+            </Text>
+          )}
+          {isCountry && item.region && (
+            <Text style={styles.modalItemRegion}>{item.region}</Text>
           )}
         </View>
-
-        {searchable && (
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={colors.gray500} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={isCollegeModal ? "Search universities..." : isCountryModal ? "Search countries..." : "Search..."}
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-            />
-          </View>
+        {isCollege && item.id === 999999 && (
+          <Ionicons name="add-circle" size={20} color={colors.primary} />
         )}
-
-        {((loading && isCollegeModal) || (loadingCountries && isCountryModal)) && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>
-              {isCountryModal ? 'Loading countries with flag emojis...' : `Loading universities from ${formData.selectedCountry}...`}
-            </Text>
-          </View>
-        )}
-
-        {error && isCollegeModal && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="warning" size={24} color={colors.danger} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={loadColleges}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!((loading && isCollegeModal) || (loadingCountries && isCountryModal)) && !error && (
-          <FlatList
-            data={data}
-            keyExtractor={(item, index) => item.id?.toString() || item.code || index.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={() => {
-                  onSelect(item);
-                  onClose();
-                  setSearchTerm('');
-                }}
-              >
-                <View style={styles.modalItemContent}>
-                  <Text style={styles.modalItemText}>
-                    {isCountryModal ? `${item.flag} ${item.name}` : 
-                     typeof item === 'string' ? item : item.name}
-                  </Text>
-                  {typeof item === 'object' && item.type && !isCountryModal && (
-                    <Text style={styles.modalItemType}>{item.type}</Text>
-                  )}
-                  {typeof item === 'object' && item.state && item.country && !isCountryModal && (
-                    <Text style={styles.modalItemLocation}>
-                      {item.state}, {item.country}
-                    </Text>
-                  )}
-                  {typeof item === 'object' && item.website && !isCountryModal && (
-                    <Text style={styles.modalItemWebsite}>
-                      {item.website}
-                    </Text>
-                  )}
-                  {typeof item === 'object' && item.globalRanking && !isCountryModal && (
-                    <Text style={styles.modalItemRanking}>
-                      Global Ranking: #{item.globalRanking}
-                    </Text>
-                  )}
-                  {typeof item === 'object' && item.region && isCountryModal && (
-                    <Text style={styles.modalItemRegion}>
-                      {item.region}
-                    </Text>
-                  )}
-                </View>
-                {typeof item === 'object' && item.id === 999999 && (
-                  <Ionicons name="add-circle" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Ionicons name={isCountryModal ? "earth" : "school"} size={48} color={colors.gray400} />
-                <Text style={styles.emptyText}>
-                  {searchTerm ? `No ${isCountryModal ? 'countries' : 'institutions'} found` : `No ${isCountryModal ? 'countries' : 'institutions'} available`}
-                </Text>
-                {searchTerm && (
-                  <Text style={styles.emptySubtext}>
-                    Try searching with different keywords
-                  </Text>
-                )}
-              </View>
-            )}
-          />
-        )}
-      </View>
-    </Modal>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const SelectionButton = ({ label, value, onPress, placeholder }) => (
     <TouchableOpacity style={styles.selectionButton} onPress={onPress}>
@@ -405,12 +392,31 @@ export default function EducationDetailsScreen({ navigation, route }) {
     return country ? `${country.flag} ${country.name}` : formData.selectedCountry;
   };
 
-  // Filter countries for search
-  const filteredCountries = countries.filter(country => {
-    const searchLower = searchTerm.toLowerCase();
-    return country.name.toLowerCase().includes(searchLower) ||
-           (country.region && country.region.toLowerCase().includes(searchLower));
-  });
+  const getModalTitle = () => {
+    switch (activeModal) {
+      case 'country': return 'Select Country/Region';
+      case 'college': return `Universities in ${formData.selectedCountry}`;
+      case 'degree': return 'Select Degree Type';
+      case 'field': return 'Select Field of Study';
+      case 'year': return 'Select Current Year';
+      default: return '';
+    }
+  };
+
+  const getSearchPlaceholder = () => {
+    switch (activeModal) {
+      case 'country': return 'Search countries...';
+      case 'college': return 'Search universities...';
+      case 'degree': return 'Search degree types...';
+      case 'field': return 'Search fields...';
+      case 'year': return 'Search years...';
+      default: return 'Search...';
+    }
+  };
+
+  const shouldShowSearch = () => {
+    return activeModal === 'country' || activeModal === 'college' || activeModal === 'degree' || activeModal === 'field' || activeModal === 'year';
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -438,37 +444,36 @@ export default function EducationDetailsScreen({ navigation, route }) {
               label="Country/Region"
               value={getSelectedCountryDisplay()}
               placeholder="Select country"
-              onPress={() => setShowCountryModal(true)}
+              onPress={() => openModal('country')}
             />
 
             <SelectionButton
               label="College/University *"
               value={getCollegeDisplayText()}
               placeholder="Search and select your institution"
-              onPress={() => setShowCollegeModal(true)}
+              onPress={() => openModal('college')}
             />
 
             <SelectionButton
               label="Degree Type *"
               value={formData.degreeType}
               placeholder="Select degree type"
-              onPress={() => setShowDegreeModal(true)}
+              onPress={() => openModal('degree')}
             />
 
             <SelectionButton
               label="Field of Study *"
               value={formData.fieldOfStudy}
               placeholder="Select your major/field"
-              onPress={() => setShowFieldModal(true)}
+              onPress={() => openModal('field')}
             />
 
-            {/* Only show Current Year for students, not experienced professionals */}
             {experienceType === 'Student' && (
               <SelectionButton
                 label="Current Year *"
                 value={formData.yearInCollege}
                 placeholder="Select your current year"
-                onPress={() => setShowYearModal(true)}
+                onPress={() => openModal('year')}
               />
             )}
 
@@ -483,7 +488,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 />
               </View>
             )}
-
           </View>
 
           <TouchableOpacity
@@ -496,50 +500,121 @@ export default function EducationDetailsScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Modals */}
-      <SelectionModal
-        visible={showCountryModal}
-        onClose={() => setShowCountryModal(false)}
-        title="Select Country/Region"
-        data={filteredCountries}
-        onSelect={handleCountryChange}
-        searchable={true}
-        isCountryModal={true}
-      />
+      {/* ?? CRITICAL FIX: Single Universal Modal */}
+      <Modal
+        visible={activeModal !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={closeModal}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>{getModalTitle()}</Text>
+            {activeModal === 'college' && (
+              <TouchableOpacity onPress={loadColleges} disabled={loading}>
+                <Ionicons 
+                  name="refresh" 
+                  size={24} 
+                  color={loading ? colors.gray400 : colors.primary} 
+                />
+              </TouchableOpacity>
+            )}
+            {activeModal === 'country' && (
+              <TouchableOpacity onPress={loadCountries} disabled={loadingCountries}>
+                <Ionicons 
+                  name="refresh" 
+                  size={24} 
+                  color={loadingCountries ? colors.gray400 : colors.primary} 
+                />
+              </TouchableOpacity>
+            )}
+            {activeModal !== 'college' && activeModal !== 'country' && (
+              <View style={{ width: 24 }} />
+            )}
+          </View>
 
-      <SelectionModal
-        visible={showCollegeModal}
-        onClose={() => setShowCollegeModal(false)}
-        title={`Universities in ${formData.selectedCountry}`}
-        data={filteredColleges}
-        onSelect={(college) => setFormData({ ...formData, college, customCollege: '' })}
-        searchable={true}
-        isCollegeModal={true}
-      />
+          {shouldShowSearch() && (
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.gray500} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={getSearchPlaceholder()}
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                autoCorrect={false}
+                autoCapitalize="none"
+                autoFocus={false}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setSearchTerm('')}
+                  style={styles.clearButton}
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
-      <SelectionModal
-        visible={showDegreeModal}
-        onClose={() => setShowDegreeModal(false)}
-        title="Select Degree Type"
-        data={DEGREE_TYPES}
-        onSelect={(degree) => setFormData({ ...formData, degreeType: degree })}
-      />
+          {((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country')) && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>
+                {activeModal === 'country' ? 'Loading countries with flag emojis...' : `Loading universities from ${formData.selectedCountry}...`}
+              </Text>
+            </View>
+          )}
 
-      <SelectionModal
-        visible={showFieldModal}
-        onClose={() => setShowFieldModal(false)}
-        title="Select Field of Study"
-        data={FIELDS_OF_STUDY}
-        onSelect={(field) => setFormData({ ...formData, fieldOfStudy: field })}
-      />
+          {error && activeModal === 'college' && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="warning" size={24} color={colors.danger} />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadColleges}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-      <SelectionModal
-        visible={showYearModal}
-        onClose={() => setShowYearModal(false)}
-        title="Select Current Year"
-        data={YEARS_IN_COLLEGE}
-        onSelect={(year) => setFormData({ ...formData, yearInCollege: year })}
-      />
+          {!((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country')) && !error && (
+            <FlatList
+              data={filteredData}
+              keyExtractor={(item, index) => `${activeModal}-${typeof item === 'string' ? item : item.id || item.code}-${index}`}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              renderItem={renderModalItem}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyContainer}>
+                  <Ionicons 
+                    name={activeModal === 'country' ? "earth" : "school"} 
+                    size={48} 
+                    color={colors.gray400} 
+                  />
+                  <Text style={styles.emptyText}>
+                    {debouncedSearchTerm ? `No items found for "${debouncedSearchTerm}"` : 'No items available'}
+                  </Text>
+                  {debouncedSearchTerm && (
+                    <Text style={styles.emptySubtext}>
+                      Try searching with different keywords
+                    </Text>
+                  )}
+                </View>
+              )}
+              initialNumToRender={20}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
+              getItemLayout={(data, index) => ({
+                length: 80,
+                offset: 80 * index,
+                index,
+              })}
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -622,19 +697,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.text,
   },
-  apiInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray50,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  apiInfoText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    flex: 1,
-  },
   continueButton: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
@@ -667,6 +729,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
+    flex: 1,
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -684,6 +748,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.text,
     marginLeft: 8,
+  },
+  clearButton: {
+    padding: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -727,6 +794,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    minHeight: 80,
   },
   modalItemContent: {
     flex: 1,
@@ -751,11 +819,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.primary,
     marginBottom: 2,
-  },
-  modalItemRanking: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
   },
   modalItemRegion: {
     fontSize: typography.sizes.sm,
