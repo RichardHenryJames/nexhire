@@ -107,56 +107,98 @@ END
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Applicants')
 BEGIN
     CREATE TABLE Applicants (
-        ApplicantID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        UserID uniqueidentifier NOT NULL,
-        Nationality nvarchar(100),
-        CurrentLocation nvarchar(200),
-        PreferredLocations nvarchar(500),
-        LinkedInProfile nvarchar(500),
-        PortfolioURL nvarchar(500),
-        GithubProfile nvarchar(500),
-        Headline nvarchar(200),
-        Summary ntext,
-        CurrentJobTitle nvarchar(200),
-        CurrentCompany nvarchar(200),
-        YearsOfExperience int,
-        PreferredJobTypes nvarchar(500),
-        PreferredWorkTypes nvarchar(500),
-        ExpectedSalaryMin decimal(15,2),
-        ExpectedSalaryMax decimal(15,2),
-        PreferredCurrency int,
-        NoticePeriod int,
-        ImmediatelyAvailable bit DEFAULT 0,
-        WillingToRelocate bit DEFAULT 0,
-        PreferredRoles ntext,
-        PrimarySkills ntext,
-        SecondarySkills ntext,
-        Languages nvarchar(500),
-        Certifications ntext,
-        Institution ntext,
-        HighestEducation nvarchar(100),
-        FieldOfStudy nvarchar(200),
-        WorkExperience ntext,
-        PrimaryResumeURL nvarchar(1000),
-        AdditionalDocuments ntext,
-        AllowRecruitersToContact bit DEFAULT 1,
-        HideCurrentCompany bit DEFAULT 0,
-        HideSalaryDetails bit DEFAULT 0,
-        ProfileCompleteness int DEFAULT 0,
-        IsOpenToWork bit DEFAULT 1,
-        IsFeatured bit DEFAULT 0,
-        FeaturedUntil datetime2,
-        JobSearchStatus nvarchar(100),
-        PreferredIndustries nvarchar(500),
-        MinimumSalary decimal(15,2),
-        PreferredCompanySize nvarchar(50),
-        LastJobAppliedAt datetime2,
-        SearchScore decimal(10,2),
-        Tags nvarchar(500),
-        CreatedAt datetime2 DEFAULT GETUTCDATE(),
-        UpdatedAt datetime2 DEFAULT GETUTCDATE(),
-        FOREIGN KEY (UserID) REFERENCES Users(UserID),
-        FOREIGN KEY (PreferredCurrency) REFERENCES Currencies(CurrencyID)
+        ApplicantID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        Nationality NVARCHAR(100),
+        CurrentLocation NVARCHAR(200),
+        PreferredLocations NVARCHAR(500),
+        LinkedInProfile NVARCHAR(500),
+        PortfolioURL NVARCHAR(500),
+        GithubProfile NVARCHAR(500),
+        Headline NVARCHAR(200),
+        Summary NTEXT,
+        CurrentJobTitle NVARCHAR(200),
+        CurrentCompany NVARCHAR(200),
+        YearsOfExperience INT,
+        PreferredJobTypes NVARCHAR(500),
+        PreferredWorkTypes NVARCHAR(500),
+        NoticePeriod INT,
+        ImmediatelyAvailable BIT DEFAULT 0,
+        WillingToRelocate BIT DEFAULT 0,
+        PreferredRoles NTEXT,
+        PrimarySkills NTEXT,
+        SecondarySkills NTEXT,
+        Languages NVARCHAR(500),
+        Certifications NTEXT,
+        Institution NTEXT,
+        HighestEducation NVARCHAR(100),
+        FieldOfStudy NVARCHAR(200),
+        GraduationYear NVARCHAR(4) NULL,
+        GPA NVARCHAR(50) NULL,
+        WorkExperience NTEXT,
+        PrimaryResumeURL NVARCHAR(1000),
+        AdditionalDocuments NTEXT,
+        AllowRecruitersToContact BIT DEFAULT 1,
+        HideCurrentCompany BIT DEFAULT 0,
+        HideSalaryDetails BIT DEFAULT 0,
+        ProfileCompleteness INT DEFAULT 0,
+        IsOpenToWork BIT DEFAULT 1,
+        IsFeatured BIT DEFAULT 0,
+        FeaturedUntil DATETIME2,
+        JobSearchStatus NVARCHAR(100),
+        PreferredIndustries NVARCHAR(500),
+        MinimumSalary DECIMAL(15,2),
+        PreferredCompanySize NVARCHAR(50),
+        LastJobAppliedAt DATETIME2,
+        SearchScore DECIMAL(10,2),
+        Tags NVARCHAR(500),
+        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        FOREIGN KEY (UserID) REFERENCES Users(UserID)
+    );
+END
+
+-- ========================
+-- SalaryComponents Table
+-- (Static lookup table)
+-- ========================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SalaryComponents')
+BEGIN
+    CREATE TABLE SalaryComponents (
+        ComponentID INT PRIMARY KEY IDENTITY(1,1),
+        ComponentName NVARCHAR(100) NOT NULL,  -- e.g. Fixed, Variable, Bonus, Stock
+        ComponentType NVARCHAR(50) NOT NULL,   -- e.g. Recurring, OneTime, Equity
+        IsActive BIT DEFAULT 1
+    );
+
+    -- Insert static salary component types
+    INSERT INTO SalaryComponents (ComponentName, ComponentType) VALUES
+    ('Fixed', 'Recurring'),
+    ('Variable', 'Recurring'),
+    ('Bonus', 'OneTime'),
+    ('Stock', 'Equity');
+END
+
+-- ========================
+-- ApplicantSalaries Table
+-- (Normalized salary breakup)
+-- ========================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
+BEGIN
+    CREATE TABLE ApplicantSalaries (
+        ApplicantSalaryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ComponentID INT NOT NULL,
+        Amount DECIMAL(15,2) NOT NULL,
+        CurrencyID INT NOT NULL,
+        Frequency NVARCHAR(50) NULL,           -- e.g. Monthly, Yearly
+        SalaryContext NVARCHAR(50) NOT NULL,   -- 'Current' or 'Expected'
+        Notes NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (ComponentID) REFERENCES SalaryComponents(ComponentID),
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
     );
 END
 

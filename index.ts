@@ -1,48 +1,3 @@
-/*
-nn
- * ========================================================================
- * NexHire Backend API - Azure Functions v4 Single Entry Point
- * ========================================================================
- * 
- *   IMPORTANT: CLEANUP LEGACY FOLDERS
- * 
- * This project uses Azure Functions v4 Programming Model where ALL functions
- * are registered in this single file. The individual function folders are
- * legacy from v3 and should be DELETED:
- * 
- * TO DELETE LEGACY FOLDERS, run this PowerShell command:
- * 
- * Remove-Item -Path @(
- *   "applications-my", "applications", "auth-login", "job-applications", 
- *   "jobs-by-id", "jobs-close", "jobs-publish", "jobs-search", 
- *   "reference-currencies", "users-profile"
- * ) -Recurse -Force -ErrorAction SilentlyContinue
- * 
- * Or manually delete these folders:
- * ? applications-my/        (DELETE - not needed)
- * ? applications/           (DELETE - not needed) 
- * ? auth-login/             (DELETE - not needed)
- * ? job-applications/       (DELETE - not needed)
- * ? jobs-by-id/             (DELETE - not needed)
- * ? jobs-close/             (DELETE - not needed)
- * ? jobs-publish/           (DELETE - not needed)
- * ? jobs-search/            (DELETE - not needed)
- * ? reference-currencies/   (DELETE - not needed)
- * ? users-profile/          (DELETE - not needed)
- * 
- * After cleanup, only these files should remain:
- * ? index.ts               (THIS FILE - main entry point)
- * ? src/                   (controllers, services, etc.)
- * ? package.json           
- * ? tsconfig.json
- * ? host.json
- * 
- * ========================================================================
- */
-
-// Azure Functions v4 Main Entry Point
-// This file registers all functions with the Azure Functions runtime
-
 import { app } from '@azure/functions';
 
 // FIXED: Import CORS middleware
@@ -535,6 +490,40 @@ app.http('reference-countries', {
     authLevel: 'anonymous',
     route: 'reference/countries',
     handler: withErrorHandling(getCountries)
+});
+
+// ? NEW: Salary components endpoint for new salary structure
+app.http('reference-salary-components', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/salary-components',
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            if (req.method === 'OPTIONS') {
+                return { status: 200 };
+            }
+            
+            const { ApplicantService } = await import('./src/services/profile.service');
+            const components = await ApplicantService.getSalaryComponents();
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: components
+                }
+            };
+        } catch (error) {
+            console.error('Error getting salary components:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to get salary components'
+                }
+            };
+        }
+    })
 });
 
 // ========================================================================

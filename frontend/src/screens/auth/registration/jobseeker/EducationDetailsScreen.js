@@ -505,6 +505,8 @@ export default function EducationDetailsScreen({ navigation, route }) {
     fieldOfStudy: '',
     yearInCollege: '',
     selectedCountry: 'India',
+    graduationYear: '',  // NEW: Add graduation year
+    gpa: '',            // NEW: Add GPA
   });
   
   const [allColleges, setAllColleges] = useState([]);
@@ -704,12 +706,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
       return;
     }
 
+    // Enhanced: Include graduation year and GPA in the final data
     const finalFormData = {
       ...formData,
-      yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)'
+      yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)',
+      graduationYear: formData.graduationYear || '', // Always include, even if empty
+      gpa: formData.gpa || '' // Always include, even if empty
     };
 
-    console.log('?? Education data prepared for registration:', finalFormData);
+    console.log('?? Enhanced Education data prepared for registration:', finalFormData);
     
     navigation.navigate('JobPreferencesScreen', { 
       userType, 
@@ -968,6 +973,33 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 onPress={() => openModal('year')}
               />
             )}
+
+            {/* Enhanced: Graduation Year and GPA fields for BOTH Students and Experienced */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Graduation Year {experienceType === 'Student' ? '(Expected)' : '(Optional)'}
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder={experienceType === 'Student' ? "e.g., 2025 (expected)" : "e.g., 2022"}
+                value={formData.graduationYear}
+                onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
+                keyboardType="numeric"
+                maxLength={4}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                GPA/Grade {experienceType === 'Student' ? '(Current)' : '(Optional)'}
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g., 3.8/4.0, 85%, First Class"
+                value={formData.gpa}
+                onChangeText={(text) => setFormData({ ...formData, gpa: text })}
+              />
+            </View>
 
             {formData.college?.name === 'Other' && (
               <View style={styles.inputContainer}>

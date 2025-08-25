@@ -197,6 +197,20 @@ export default function EducationSection({
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  // Enhanced: Check if core education fields are already filled
+  const hasEducationData = profile.institution && profile.highestEducation && profile.fieldOfStudy;
+  const isEducationFieldEditable = (fieldName) => {
+    if (!editing) return false;
+    
+    // Core education fields become non-editable once filled
+    const coreFields = ['institution', 'highestEducation', 'fieldOfStudy'];
+    if (coreFields.includes(fieldName) && hasEducationData) {
+      return false;
+    }
+    
+    return true;
+  };
+
   useEffect(() => {
     loadCountries();
     loadColleges();
@@ -402,36 +416,60 @@ export default function EducationSection({
     onPress, 
     placeholder, 
     disabled = false,
-    icon = 'chevron-down'
-  }) => (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TouchableOpacity 
-        style={[
-          styles.selectionButton,
-          disabled && styles.selectionButtonDisabled,
-          !editing && styles.selectionButtonReadonly
-        ]} 
-        onPress={disabled || !editing ? null : onPress}
-        disabled={disabled || !editing}
-      >
-        <Text style={[
-          styles.selectionValue,
-          !value && styles.selectionPlaceholder,
-          disabled && styles.selectionValueDisabled
-        ]}>
-          {value || placeholder}
+    icon = 'chevron-down',
+    fieldName = ''
+  }) => {
+    const isFieldEditable = isEducationFieldEditable(fieldName);
+    const isDisabled = disabled || !isFieldEditable;
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>
+          {label}
+          {!isFieldEditable && hasEducationData && (
+            <Text style={styles.lockedFieldIndicator}> (Locked)</Text>
+          )}
         </Text>
-        {editing && (
-          <Ionicons 
-            name={icon} 
-            size={20} 
-            color={disabled ? colors.gray300 : colors.gray500} 
-          />
+        <TouchableOpacity 
+          style={[
+            styles.selectionButton,
+            isDisabled && styles.selectionButtonDisabled,
+            !editing && styles.selectionButtonReadonly,
+            !isFieldEditable && hasEducationData && styles.selectionButtonLocked
+          ]} 
+          onPress={isDisabled ? null : onPress}
+          disabled={isDisabled}
+        >
+          <Text style={[
+            styles.selectionValue,
+            !value && styles.selectionPlaceholder,
+            isDisabled && styles.selectionValueDisabled
+          ]}>
+            {value || placeholder}
+          </Text>
+          {editing && isFieldEditable && (
+            <Ionicons 
+              name={icon} 
+              size={20} 
+              color={isDisabled ? colors.gray300 : colors.gray500} 
+            />
+          )}
+          {!isFieldEditable && hasEducationData && (
+            <Ionicons 
+              name="lock-closed" 
+              size={20} 
+              color={colors.gray400} 
+            />
+          )}
+        </TouchableOpacity>
+        {!isFieldEditable && hasEducationData && (
+          <Text style={styles.lockedFieldNote}>
+            Core education details cannot be changed once set. Contact support if needed.
+          </Text>
         )}
-      </TouchableOpacity>
-    </View>
-  );
+      </View>
+    );
+  };
 
   const getModalTitle = () => {
     switch (activeModal) {
@@ -471,7 +509,21 @@ export default function EducationSection({
       </View>
 
       {/* Info Card for Enhanced Features */}
-      {editing && (
+      {editing && hasEducationData && (
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardIcon}>
+            <Ionicons name="lock-closed" size={20} color={colors.warning} />
+          </View>
+          <View style={styles.infoCardContent}>
+            <Text style={styles.infoCardTitle}>Core Education Fields Locked</Text>
+            <Text style={styles.infoCardText}>
+              Your institution, degree, and field of study are locked to maintain data integrity. You can still update graduation year and GPA.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {editing && !hasEducationData && (
         <View style={styles.infoCard}>
           <View style={styles.infoCardIcon}>
             <Ionicons name="information-circle" size={20} color={colors.primary} />
@@ -479,7 +531,7 @@ export default function EducationSection({
           <View style={styles.infoCardContent}>
             <Text style={styles.infoCardTitle}>Enhanced Education Search</Text>
             <Text style={styles.infoCardText}>
-              Search from thousands of universities worldwide and select from categorized degree types and fields of study.
+              Search from thousands of universities worldwide and select from categorized degree types.
             </Text>
           </View>
         </View>
@@ -503,6 +555,7 @@ export default function EducationSection({
         placeholder="Search and select your institution"
         onPress={() => openModal('institution')}
         icon="school"
+        fieldName="institution"
       />
 
       <SelectionButton
@@ -511,6 +564,7 @@ export default function EducationSection({
         placeholder="Select degree type"
         onPress={() => openModal('degree')}
         icon="school"
+        fieldName="highestEducation"
       />
 
       <SelectionButton
@@ -530,9 +584,10 @@ export default function EducationSection({
         }}
         disabled={!profile.highestEducation}
         icon="library"
+        fieldName="fieldOfStudy"
       />
 
-      {/* Additional Education Details */}
+      {/* Enhanced Education Details with Database Support */}
       {editing && (
         <>
           <View style={styles.fieldContainer}>
@@ -584,6 +639,8 @@ export default function EducationSection({
           )}
         </View>
       )}
+
+      {/* NOTE: GraduationYear and GPA removed as they don't exist in database schema */}
 
       {/* Enhanced Modal */}
       <Modal
@@ -717,6 +774,11 @@ const styles = StyleSheet.create({
   selectionButtonReadonly: {
     backgroundColor: colors.gray50,
   },
+  selectionButtonLocked: {
+    backgroundColor: colors.gray100,
+    borderColor: colors.gray300,
+    borderStyle: 'dashed',
+  },
   selectionValue: {
     fontSize: typography.sizes.base,
     color: colors.textPrimary,
@@ -727,6 +789,17 @@ const styles = StyleSheet.create({
   },
   selectionPlaceholder: {
     color: colors.gray400,
+  },
+  lockedFieldIndicator: {
+    fontSize: typography.sizes.xs,
+    color: colors.warning,
+    fontWeight: typography.weights.medium,
+  },
+  lockedFieldNote: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   
   // Modal styles

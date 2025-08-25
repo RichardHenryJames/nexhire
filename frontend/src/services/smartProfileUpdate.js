@@ -25,22 +25,19 @@ const FIELD_ROUTING = {
   
   // Applicants table fields - handled by /applicants/{userId}/profile endpoint
   APPLICANTS_TABLE: [
-    // Privacy settings (THE FIX FOR YOUR ISSUE!)
-    'hideCurrentCompany',      // ?? This will now work!
-    'hideSalaryDetails',       // ?? This will now work!
+    // Privacy settings
+    'hideCurrentCompany',
+    'hideSalaryDetails',
     'allowRecruitersToContact',
     'isOpenToWork',
     
-    // Professional information
+    // Professional information (? REMOVED old salary fields)
     'headline',
     'summary',
     'currentJobTitle',
     'currentCompany',
     'yearsOfExperience',
     'noticePeriod',
-    'currentSalary',
-    'currentSalaryUnit',
-    'currentCurrencyID',
     
     // Skills and experience
     'primarySkills',
@@ -49,19 +46,22 @@ const FIELD_ROUTING = {
     'certifications',
     'workExperience',
     
-    // Education (can also be updated via applicants endpoint)
+    // Education (? Enhanced with GraduationYear and GPA)
     'institution',
     'highestEducation',
     'fieldOfStudy',
+    'graduationYear',
+    'gpa',
     
-    // Job preferences
+    // Job preferences (? REMOVED old salary fields)
     'preferredJobTypes',
     'preferredWorkTypes',
     'preferredLocations',
-    'expectedSalaryMin',
-    'expectedSalaryMax',
     'preferredRoles',
     'preferredIndustries',
+    // ? NEW: Keep MinimumSalary as simple field for quick filtering
+    'minimumSalary',
+    'preferredCompanySize',
     
     // Location and availability
     'nationality',
@@ -81,8 +81,10 @@ const FIELD_ROUTING = {
     // Status fields
     'isFeatured',
     'featuredUntil',
-    'tags'
-    // REMOVED: lastJobAppliedAt, searchScore (system-managed fields)
+    'tags',
+    
+    // ? NEW: Salary breakdown handled separately via dedicated endpoints
+    'salaryBreakdown' // This will be handled specially, not as a direct column
   ]
 };
 

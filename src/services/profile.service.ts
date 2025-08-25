@@ -19,6 +19,22 @@ interface ProfileData {
     [key: string]: any;
 }
 
+// ? NEW: Salary-related interfaces for the enhanced schema
+interface SalaryComponent {
+    ComponentID: number;
+    ComponentName: string;
+    ComponentType: string;
+    Amount: number;
+    CurrencyID: number;
+    Frequency?: string;
+    Notes?: string;
+}
+
+interface SalaryBreakdown {
+    current: SalaryComponent[];
+    expected: SalaryComponent[];
+}
+
 export class ApplicantService {
     // Get applicant profile by user ID
     static async getApplicantProfile(userId: string): Promise<any> {
@@ -31,7 +47,7 @@ export class ApplicantService {
                 throw new NotFoundError('User not found');
             }
             
-            // Get or create applicant profile - FIXED: Use exact database field names
+            // Get or create applicant profile with salary data
             let applicantQuery = `
                 SELECT 
                     a.*,
@@ -58,15 +74,123 @@ export class ApplicantService {
             if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
                 throw new Error('Failed to create or retrieve applicant profile');
             }
+
+            const profile = applicantResult.recordset[0];
+
+            // ? NEW: Get salary breakdown for this applicant
+            try {
+                const salaryData = await this.getApplicantSalaryBreakdown(profile.ApplicantID);
+                profile.salaryBreakdown = salaryData;
+            } catch (error) {
+                console.warn('Could not load salary data:', error);
+                profile.salaryBreakdown = { current: [], expected: [] };
+            }
             
-            return applicantResult.recordset[0];
+            return profile;
         } catch (error) {
             console.error('Error getting applicant profile:', error);
             throw error;
         }
     }
 
-    // Update applicant profile - COMPLETELY REWRITTEN to be dynamic and match exact schema
+    // ? NEW: Get salary breakdown for an applicant
+    static async getApplicantSalaryBreakdown(applicantId: string): Promise<SalaryBreakdown> {
+        try {
+            const query = `
+                SELECT 
+                    aps.*,
+                    sc.ComponentName,
+                    sc.ComponentType,
+                    c.Code as CurrencyCode,
+                    c.Symbol as CurrencySymbol
+                FROM ApplicantSalaries aps
+                INNER JOIN SalaryComponents sc ON aps.ComponentID = sc.ComponentID
+                INNER JOIN Currencies c ON aps.CurrencyID = c.CurrencyID
+                WHERE aps.ApplicantID = @param0
+                ORDER BY aps.SalaryContext, sc.ComponentID
+            `;
+            
+            const result = await dbService.executeQuery(query, [applicantId]);
+            
+            const current: SalaryComponent[] = [];
+            const expected: SalaryComponent[] = [];
+            
+            if (result.recordset) {
+                result.recordset.forEach((row: any) => {
+                    const component: SalaryComponent = {
+                        ComponentID: row.ComponentID,
+                        ComponentName: row.ComponentName,
+                        ComponentType: row.ComponentType,
+                        Amount: row.Amount,
+                        CurrencyID: row.CurrencyID,
+                        Frequency: row.Frequency,
+                        Notes: row.Notes
+                    };
+                    
+                    if (row.SalaryContext === 'Current') {
+                        current.push(component);
+                    } else if (row.SalaryContext === 'Expected') {
+                        expected.push(component);
+                    }
+                });
+            }
+            
+            return { current, expected };
+        } catch (error) {
+            console.error('Error getting salary breakdown:', error);
+            throw error;
+        }
+    }
+
+    // ? NEW: Update salary breakdown for an applicant
+    static async updateApplicantSalaryBreakdown(applicantId: string, salaryData: SalaryBreakdown): Promise<void> {
+        try {
+            // Delete existing salary records for this applicant
+            await dbService.executeQuery(
+                'DELETE FROM ApplicantSalaries WHERE ApplicantID = @param0',
+                [applicantId]
+            );
+            
+            // Insert current salary components
+            for (const component of salaryData.current) {
+                const salaryId = AuthService.generateUniqueId();
+                await dbService.executeQuery(`
+                    INSERT INTO ApplicantSalaries (
+                        ApplicantSalaryID, ApplicantID, ComponentID, Amount, 
+                        CurrencyID, Frequency, SalaryContext, Notes,
+                        CreatedAt, UpdatedAt
+                    ) VALUES (
+                        @param0, @param1, @param2, @param3, @param4, @param5, 
+                        'Current', @param6, GETUTCDATE(), GETUTCDATE()
+                    )
+                `, [salaryId, applicantId, component.ComponentID, component.Amount, 
+                    component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
+            }
+            
+            // Insert expected salary components
+            for (const component of salaryData.expected) {
+                const salaryId = AuthService.generateUniqueId();
+                await dbService.executeQuery(`
+                    INSERT INTO ApplicantSalaries (
+                        ApplicantSalaryID, ApplicantID, ComponentID, Amount, 
+                        CurrencyID, Frequency, SalaryContext, Notes,
+                        CreatedAt, UpdatedAt
+                    ) VALUES (
+                        @param0, @param1, @param2, @param3, @param4, @param5, 
+                        'Expected', @param6, GETUTCDATE(), GETUTCDATE()
+                    )
+                `, [salaryId, applicantId, component.ComponentID, component.Amount, 
+                    component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
+            }
+            
+            console.log(`? Updated salary breakdown for applicant ${applicantId}`);
+        } catch (error) {
+            console.error('Error updating salary breakdown:', error);
+            throw error;
+        }
+    }
+
+    // Update applicant profile - ENHANCED: Removed old salary fields, added salary breakdown handling
     static async updateApplicantProfile(userId: string, profileData: ProfileData): Promise<any> {
         try {
             // First, get existing profile to merge with new data
@@ -77,7 +201,7 @@ export class ApplicantService {
                 throw new Error('Could not determine applicant ID');
             }
 
-            // FIXED: Complete field mapping - REMOVED system-managed fields
+            // ? UPDATED: Removed old salary fields, added new schema support
             const fieldMapping: ApplicantFieldMapping = {
                 // Personal Information
                 'nationality': 'Nationality',
@@ -92,32 +216,29 @@ export class ApplicantService {
                 'primaryResumeURL': 'PrimaryResumeURL',
                 'additionalDocuments': 'AdditionalDocuments',
                 
-                // Education (can be updated via this endpoint too)
+                // Education (? Enhanced with GraduationYear and GPA)
                 'highestEducation': 'HighestEducation',
                 'fieldOfStudy': 'FieldOfStudy',
                 'institution': 'Institution',
+                'graduationYear': 'GraduationYear',
+                'gpa': 'GPA',
                 
-                // Professional Information
+                // Professional Information (? REMOVED salary fields)
                 'headline': 'Headline',
                 'summary': 'Summary',
                 'currentJobTitle': 'CurrentJobTitle',
                 'currentCompany': 'CurrentCompany',
-                'currentSalary': 'CurrentSalary',
-                'currentSalaryUnit': 'CurrentSalaryUnit',
-                'currentCurrencyID': 'CurrentCurrencyID',
                 'yearsOfExperience': 'YearsOfExperience',
                 'noticePeriod': 'NoticePeriod',
-                'totalWorkExperience': 'TotalWorkExperience',
                 
-                // Job Preferences
+                // Job Preferences (? REMOVED old salary fields)
                 'preferredJobTypes': 'PreferredJobTypes',
                 'preferredWorkTypes': 'PreferredWorkTypes',
-                'expectedSalaryMin': 'ExpectedSalaryMin',
-                'expectedSalaryMax': 'ExpectedSalaryMax',
-                'expectedSalaryUnit': 'ExpectedSalaryUnit',
                 'preferredRoles': 'PreferredRoles',
                 'preferredIndustries': 'PreferredIndustries',
-                'preferredMinimumSalary': 'PreferredMinimumSalary',
+                // ? NEW: Keep MinimumSalary as a simple field for quick filtering
+                'minimumSalary': 'MinimumSalary',
+                'preferredCompanySize': 'PreferredCompanySize',
                 
                 // Skills and Experience
                 'primarySkills': 'PrimarySkills',
@@ -143,9 +264,13 @@ export class ApplicantService {
                 
                 // Additional Fields
                 'tags': 'Tags'
-                
-                // REMOVED: lastJobAppliedAt, searchScore (system-managed, not user input)
             };
+
+            // ? NEW: Handle salary breakdown separately if provided
+            if (profileData.salaryBreakdown) {
+                await this.updateApplicantSalaryBreakdown(applicantId, profileData.salaryBreakdown);
+                delete profileData.salaryBreakdown; // Remove from regular profile update
+            }
 
             // Build dynamic update query
             const updateFields: string[] = [];
@@ -162,17 +287,16 @@ export class ApplicantService {
                     let value = profileData[key];
                     
                     // Integer fields
-                    if (['yearsOfExperience', 'noticePeriod', 'currentCurrencyID'].includes(key)) {
+                    if (['yearsOfExperience', 'noticePeriod'].includes(key)) {
                         value = value ? parseInt(value.toString()) : null;
                     }
-                    // Decimal fields
-                    else if (['currentSalary', 'expectedSalaryMin', 'expectedSalaryMax', 'expectedSalaryUnit', 'preferredMinimumSalary'].includes(key)) {
+                    // Decimal fields (? UPDATED: Only MinimumSalary remains)
+                    else if (['minimumSalary'].includes(key)) {
                         value = value ? parseFloat(value.toString()) : null;
                     }
                     // Boolean fields (convert to bit: 1/0)
                     else if (['immediatelyAvailable', 'willingToRelocate', 'allowRecruitersToContact', 
                              'hideCurrentCompany', 'hideSalaryDetails', 'isOpenToWork', 'isFeatured'].includes(key)) {
-                        // FIXED: Use frontend value, don't hardcode
                         value = (value === true || value === 1 || value === '1' || value === 'true') ? 1 : 0;
                     }
                     // String fields - keep as is, but handle empty strings
@@ -185,77 +309,55 @@ export class ApplicantService {
                 }
             });
 
-            // If no valid fields to update, throw error
-            if (updateFields.length === 0) {
+            // If no valid fields to update, check if only salary was updated
+            if (updateFields.length === 0 && !profileData.salaryBreakdown) {
                 throw new ValidationError('No valid fields provided for update');
             }
 
-            // Calculate profile completeness dynamically
-            const completenessFields = [
-                'Headline', 'CurrentJobTitle', 'YearsOfExperience', 'PrimarySkills', 
-                'Summary', 'CurrentLocation', 'PreferredJobTypes', 'HighestEducation'
-            ];
-            
-            // Count how many key fields are filled
-            const completenessLogic = completenessFields.map(field => 
-                `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
-            ).join(' + ');
-            
-            updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
-            // FIXED: Always update UpdatedAt timestamp
-            updateFields.push(`UpdatedAt = GETUTCDATE()`);
-
-            // Build and execute update query
-            const updateQuery = `
-                UPDATE Applicants 
-                SET ${updateFields.join(', ')}
-                WHERE ApplicantID = @param0;
+            // If there are fields to update, update the main profile
+            if (updateFields.length > 0) {
+                // Calculate profile completeness dynamically
+                const completenessFields = [
+                    'Headline', 'CurrentJobTitle', 'YearsOfExperience', 'PrimarySkills', 
+                    'Summary', 'CurrentLocation', 'PreferredJobTypes', 'HighestEducation'
+                ];
                 
-                -- Return updated profile with user data
-                SELECT 
-                    a.*,
-                    u.FirstName,
-                    u.LastName,
-                    u.Email,
-                    u.Phone
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                WHERE a.ApplicantID = @param0;
-            `;
+                const completenessLogic = completenessFields.map(field => 
+                    `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
+                ).join(' + ');
+                
+                updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+                updateFields.push(`UpdatedAt = GETUTCDATE()`);
 
-            const result = await dbService.executeQuery(updateQuery, parameters);
-            
-            if (!result.recordset || result.recordset.length === 0) {
-                throw new Error('Failed to update applicant profile');
+                // Build and execute update query
+                const updateQuery = `
+                    UPDATE Applicants 
+                    SET ${updateFields.join(', ')}
+                    WHERE ApplicantID = @param0
+                `;
+
+                await dbService.executeQuery(updateQuery, parameters);
             }
 
             console.log(`? Updated applicant profile for user ${userId}:`, {
-                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
+                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping || key === 'salaryBreakdown'),
                 applicantId: applicantId,
-                updateCount: updateFields.length - 1 // Exclude ProfileCompleteness
-                // FIXED: Always show updated fields in log
+                updateCount: updateFields.length > 0 ? updateFields.length - 2 : 0, // Exclude ProfileCompleteness and UpdatedAt
+                salaryUpdated: !!profileData.salaryBreakdown
             });
 
-            // Automatically update search score when profile changes (system-managed)
-            try {
-                await this.calculateAndUpdateSearchScore(userId);
-            } catch (error) {
-                console.warn('Failed to update search score after profile update:', error);
-                // Non-critical, don't fail the profile update
-            }
-
-            return result.recordset[0];
+            // Return updated profile with salary breakdown
+            return await this.getApplicantProfile(userId);
         } catch (error) {
             console.error('Error updating applicant profile:', error);
             throw error;
         }
     }
 
-    // Create new applicant profile - FIXED: Include CreatedAt and UpdatedAt
+    // Create new applicant profile
     private static async createApplicantProfile(userId: string): Promise<string> {
         const applicantId = AuthService.generateUniqueId();
         
-        // FIXED: Include CreatedAt and UpdatedAt timestamps
         const query = `
             INSERT INTO Applicants (
                 ApplicantID, 
@@ -277,9 +379,21 @@ export class ApplicantService {
         `;
         
         await dbService.executeQuery(query, [applicantId, userId]);
-        console.log(`? Created applicant profile ${applicantId} for user ${userId} with timestamps`);
+        console.log(`? Created applicant profile ${applicantId} for user ${userId}`);
         
         return applicantId;
+    }
+
+    // ? NEW: Get available salary components for frontend
+    static async getSalaryComponents(): Promise<any[]> {
+        try {
+            const query = 'SELECT * FROM SalaryComponents WHERE IsActive = 1 ORDER BY ComponentID';
+            const result = await dbService.executeQuery(query, []);
+            return result.recordset || [];
+        } catch (error) {
+            console.error('Error getting salary components:', error);
+            throw error;
+        }
     }
 
     // SYSTEM-MANAGED FIELD UPDATES (not exposed to frontend)
@@ -297,7 +411,7 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId]);
-            console.log(`?? Updated LastJobAppliedAt for user ${userId} with timestamp`);
+            console.log(`?? Updated LastJobAppliedAt for user ${userId}`);
         } catch (error) {
             console.error('Error updating LastJobAppliedAt:', error);
             // Don't throw - this is non-critical
@@ -345,7 +459,7 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId, searchScore]);
-            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)} with timestamp`);
+            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
         } catch (error) {
             console.error('Error calculating search score:', error);
             // Don't throw - this is non-critical

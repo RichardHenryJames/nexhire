@@ -174,7 +174,3 @@ jobs:
         echo "Storage: ${{ env.STORAGE_ACCOUNT_NAME }}/${{ env.CONTAINER_NAME }}"
         echo "Blob URL: $BLOB_URL"
         echo "Health: https://nexhire-api-func.azurewebsites.net/api/health"
-        echo "Countries: https://nexhire-api-func.azurewebsites.net/api/reference/countries"
-        echo ""
-        echo "GitHub Actions ZIP deployment completed in ~5-8 minutes!"
-        echo "Your countries API with proper flag emojis is now live!

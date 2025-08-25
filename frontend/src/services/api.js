@@ -646,6 +646,25 @@ class NexHireAPI {
     }
   }
 
+  // ✨ NEW: Salary Components API for new salary structure
+  async getSalaryComponents() {
+    try {
+      return await this.apiCall('/reference/salary-components');
+    } catch (error) {
+      console.warn('Failed to load salary components:', error.message);
+      // Return fallback data
+      return {
+        success: true,
+        data: [
+          { ComponentID: 1, ComponentName: 'Fixed', ComponentType: 'Recurring', IsActive: 1 },
+          { ComponentID: 2, ComponentName: 'Variable', ComponentType: 'Recurring', IsActive: 1 },
+          { ComponentID: 3, ComponentName: 'Bonus', ComponentType: 'OneTime', IsActive: 1 },
+          { ComponentID: 4, ComponentName: 'Stock', ComponentType: 'Equity', IsActive: 1 }
+        ]
+      };
+    }
+  }
+
   // Health check
   async healthCheck() {
     try {

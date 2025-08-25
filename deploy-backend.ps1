@@ -13,6 +13,9 @@
 # Usage: .\deploy-backend.ps1
 # ================================================================
 
+# Start time logging
+$scriptStartTime = Get-Date
+
 Write-Host "🚀 NexHire Backend Deployment (VERIFIED WORKING)" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
@@ -107,5 +110,9 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
+# End time logging
+$scriptEndTime = Get-Date
+$elapsedTime = $scriptEndTime - $scriptStartTime
+
 Write-Host "`n🎊 Deployment completed successfully!" -ForegroundColor Green
-Write-Host "Your countries API with proper flag emojis (🇮🇳 🇺🇸 🇬🇧) is now deployed!" -ForegroundColor Green
+Write-Host "⏱️ Total Time Taken: $($elapsedTime.ToString("hh\:mm\:ss"))" -ForegroundColor Cyan

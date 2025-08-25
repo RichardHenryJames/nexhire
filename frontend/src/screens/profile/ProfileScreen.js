@@ -80,7 +80,6 @@ export default function ProfileScreen() {
     currentCompany: '',
     currentSalary: 0,
     currentSalaryUnit: '',
-    currentCurrencyID: 0,
     yearsOfExperience: 0,
     noticePeriod: 30,
     totalWorkExperience: '',
@@ -202,7 +201,6 @@ export default function ProfileScreen() {
             currentCompany: response.data.CurrentCompany || '',
             currentSalary: response.data.CurrentSalary || 0,
             currentSalaryUnit: response.data.CurrentSalaryUnit || '',
-            currentCurrencyID: response.data.CurrentCurrencyID || 0,
             yearsOfExperience: response.data.YearsOfExperience || 0,
             noticePeriod: response.data.NoticePeriod || 30,
             totalWorkExperience: response.data.TotalWorkExperience || '',
@@ -557,15 +555,12 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // ?? ENHANCED: Privacy Settings with Smart Updates
+  // ?? ENHANCED: Privacy Settings (Simplified)
   const renderPrivacySection = () => (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Privacy Settings (Smart Update)</Text>
-        <View style={styles.smartBadge}>
-          <Ionicons name="flash" size={14} color={colors.primary} />
-          <Text style={styles.smartBadgeText}>INSTANT</Text>
-        </View>
+      <View style={styles.sectionHeaderWithIcon}>
+        <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+        <Text style={styles.sectionTitle}>Privacy Settings</Text>
       </View>
 
       <View style={styles.privacyContainer}>
@@ -634,20 +629,9 @@ export default function ProfileScreen() {
 
   const renderJobSeekerProfile = () => (
     <>
-      {/* ?? NEW: Privacy Settings First (Most Important) */}
-      {renderPrivacySection()}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Professional Information</Text>
-        
-        {renderField('headline', 'Professional Headline', 'e.g., Senior Software Engineer', { profileType: 'jobSeeker' })}
-        {renderField('currentJobTitle', 'Current Job Title', 'Your current position', { profileType: 'jobSeeker' })}
-        {renderField('currentCompany', 'Current Company', 'Where you work now', { profileType: 'jobSeeker' })}
-        {renderField('yearsOfExperience', 'Years of Experience', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
-        {renderField('currentLocation', 'Current Location', 'City, Country', { profileType: 'jobSeeker' })}
-        {renderField('summary', 'Professional Summary', 'Tell us about yourself...', { multiline: true, profileType: 'jobSeeker' })}
-      </View>
-
+      {/* ? ENHANCED: Reordered for better UX - Important sections first */}
+      
+      {/* 1. EDUCATION (Most Important) */}
       <View style={styles.section}>
         <EducationSection
           profile={{
@@ -669,22 +653,44 @@ export default function ProfileScreen() {
           }}
           editing={editing}
           onUpdate={(updatedEducation) => {
-            // Optional: Handle real-time updates for education changes
             console.log('?? Education updated:', updatedEducation);
           }}
         />
       </View>
 
+      {/* 2. PROFESSIONAL INFORMATION (Second Priority) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Skills & Expertise</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="briefcase" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Professional Information</Text>
+        </View>
+        
+        {renderField('headline', 'Professional Headline', 'e.g., Senior Software Engineer', { profileType: 'jobSeeker' })}
+        {renderField('currentJobTitle', 'Current Job Title', 'Your current position', { profileType: 'jobSeeker' })}
+        {renderField('currentCompany', 'Current Company', 'Where you work now', { profileType: 'jobSeeker' })}
+        {renderField('yearsOfExperience', 'Years of Experience', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
+        {renderField('currentLocation', 'Current Location', 'City, Country', { profileType: 'jobSeeker' })}
+        {renderField('summary', 'Professional Summary', 'Tell us about yourself...', { multiline: true, profileType: 'jobSeeker' })}
+      </View>
+
+      {/* 3. SKILLS & EXPERTISE (Third Priority) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="bulb" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Skills & Expertise</Text>
+        </View>
         {renderSkillsSection()}
         {renderField('secondarySkills', 'Secondary Skills', 'Additional skills (comma-separated)', { profileType: 'jobSeeker' })}
         {renderField('languages', 'Languages', 'e.g., English (Fluent), Spanish (Basic)', { profileType: 'jobSeeker' })}
         {renderField('certifications', 'Certifications', 'Professional certifications', { multiline: true, profileType: 'jobSeeker' })}
       </View>
 
+      {/* 4. WORK PREFERENCES (Fourth Priority) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Work Preferences</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="settings" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Work Preferences</Text>
+        </View>
         
         {renderField('expectedSalaryMin', 'Expected Salary (Min)', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
         {renderField('expectedSalaryMax', 'Expected Salary (Max)', '0', { keyboardType: 'numeric', profileType: 'jobSeeker' })}
@@ -696,20 +702,59 @@ export default function ProfileScreen() {
         {renderField('preferredLocations', 'Preferred Locations', 'Cities/countries you\'d like to work in', { profileType: 'jobSeeker' })}
       </View>
 
+      {/* 5. ONLINE PRESENCE (Fifth Priority) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Online Presence</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="link" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Online Presence</Text>
+        </View>
         
         {renderField('primaryResumeURL', 'Resume URL', 'Link to your resume', { profileType: 'jobSeeker' })}
         {renderField('linkedInProfile', 'LinkedIn Profile', 'linkedin.com/in/yourprofile', { profileType: 'jobSeeker' })}
         {renderField('githubProfile', 'GitHub Profile', 'github.com/yourusername', { profileType: 'jobSeeker' })}
       </View>
+
+      {/* 6. PERSONAL INFORMATION (Basic Info) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="person" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+        </View>
+        
+        {renderField('firstName', 'First Name *', 'Enter your first name')}
+        {renderField('lastName', 'Last Name *', 'Enter your last name')}
+        {renderField('email', 'Email Address *', 'Enter your email', { keyboardType: 'email-address', editable: false })}
+        {renderField('phone', 'Phone Number', 'Enter your phone number', { keyboardType: 'phone-pad' })}
+        {renderField('dateOfBirth', 'Date of Birth', 'YYYY-MM-DD', { keyboardType: 'numeric' })}
+        {renderField('gender', 'Gender', '', { choices: genderOptions })}
+      </View>
+
+      {/* 7. ACCOUNT SETTINGS */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="cog" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Account Settings</Text>
+        </View>
+        
+        {renderField('userType', 'Account Type', '', { editable: false })}
+        {renderField('profileVisibility', 'Profile Visibility', '', { choices: visibilityOptions })}
+      </View>
+
+      {/* 8. PRIVACY SETTINGS (Moved to Bottom) */}
+      {renderPrivacySection()}
     </>
   );
 
   const renderEmployerProfile = () => (
     <>
+      {/* ? ENHANCED: Employer sections with better organization */}
+      
+      {/* 1. ORGANIZATION INFORMATION (Most Important) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Organization Information</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="business" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Organization Information</Text>
+        </View>
         
         {renderField('jobTitle', 'Job Title', 'Your position', { profileType: 'employer' })}
         {renderField('department', 'Department', 'HR, Engineering, etc.', { profileType: 'employer' })}
@@ -729,16 +774,55 @@ export default function ProfileScreen() {
         {renderField('bio', 'About Me', 'Tell us about yourself...', { multiline: true, profileType: 'employer' })}
       </View>
 
+      {/* 2. ONLINE PRESENCE */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Online Presence</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="link" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Online Presence</Text>
+        </View>
         {renderField('linkedInProfile', 'LinkedIn Profile', 'linkedin.com/in/yourprofile', { profileType: 'employer' })}
       </View>
 
+      {/* 3. PERSONAL INFORMATION */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Permissions</Text>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="person" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+        </View>
+        
+        {renderField('firstName', 'First Name *', 'Enter your first name')}
+        {renderField('lastName', 'Last Name *', 'Enter your last name')}
+        {renderField('email', 'Email Address *', 'Enter your email', { keyboardType: 'email-address', editable: false })}
+        {renderField('phone', 'Phone Number', 'Enter your phone number', { keyboardType: 'phone-pad' })}
+        {renderField('dateOfBirth', 'Date of Birth', 'YYYY-MM-DD', { keyboardType: 'numeric' })}
+        {renderField('gender', 'Gender', '', { choices: genderOptions })}
+      </View>
+
+      {/* 4. ACCOUNT SETTINGS */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="cog" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Account Settings</Text>
+        </View>
+        
+        {renderField('userType', 'Account Type', '', { editable: false })}
+        {renderField('profileVisibility', 'Profile Visibility', '', { choices: visibilityOptions })}
+      </View>
+
+      {/* 5. PERMISSIONS (Moved to Bottom) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderWithIcon}>
+          <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Permissions</Text>
+        </View>
         
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Can Post Jobs</Text>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Can Post Jobs</Text>
+            <Text style={styles.switchDescription}>
+              You can create and publish job postings
+            </Text>
+          </View>
           <TouchableOpacity
             style={[styles.switch, employerProfile.canPostJobs && styles.switchActive]}
             onPress={() => editing && setEmployerProfile({...employerProfile, canPostJobs: !employerProfile.canPostJobs})}
@@ -748,7 +832,12 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Can Manage Applications</Text>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Can Manage Applications</Text>
+            <Text style={styles.switchDescription}>
+              You can review and manage job applications
+            </Text>
+          </View>
           <TouchableOpacity
             style={[styles.switch, employerProfile.canManageApplications && styles.switchActive]}
             onPress={() => editing && setEmployerProfile({...employerProfile, canManageApplications: !employerProfile.canManageApplications})}
@@ -758,7 +847,12 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Can View Analytics</Text>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Can View Analytics</Text>
+            <Text style={styles.switchDescription}>
+              You can access job posting analytics and insights
+            </Text>
+          </View>
           <TouchableOpacity
             style={[styles.switch, employerProfile.canViewAnalytics && styles.switchActive]}
             onPress={() => editing && setEmployerProfile({...employerProfile, canViewAnalytics: !employerProfile.canViewAnalytics})}
@@ -828,44 +922,11 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* ?? Smart Update Info Banner */}
-          <View style={styles.infoBanner}>
-            <View style={styles.infoBannerIcon}>
-              <Ionicons name="flash" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.infoBannerContent}>
-              <Text style={styles.infoBannerTitle}>Smart Profile Updates</Text>
-              <Text style={styles.infoBannerText}>
-                Privacy settings now save instantly! Toggle them anytime - no form submission needed.
-              </Text>
-            </View>
-          </View>
-
-          {/* Basic Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            
-            {renderField('firstName', 'First Name *', 'Enter your first name')}
-            {renderField('lastName', 'Last Name *', 'Enter your last name')}
-            {renderField('email', 'Email Address *', 'Enter your email', { keyboardType: 'email-address', editable: false })}
-            {renderField('phone', 'Phone Number', 'Enter your phone number', { keyboardType: 'phone-pad' })}
-            {renderField('dateOfBirth', 'Date of Birth', 'YYYY-MM-DD', { keyboardType: 'numeric' })}
-            {renderField('gender', 'Gender', '', { choices: genderOptions })}
-          </View>
-
           {/* User Type Specific Sections */}
           {userType === 'JobSeeker' && renderJobSeekerProfile()}
           {userType === 'Employer' && renderEmployerProfile()}
 
-          {/* Account Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Settings</Text>
-            
-            {renderField('userType', 'Account Type', '', { editable: false })}
-            {renderField('profileVisibility', 'Profile Visibility', '', { choices: visibilityOptions })}
-          </View>
-
-          {/* Action Buttons */}
+          {/* ? RESTORED: Edit Profile and Logout Buttons */}
           <View style={styles.actionSection}>
             {editing ? (
               <View style={styles.editActions}>
@@ -885,9 +946,8 @@ export default function ProfileScreen() {
                   onPress={handleSmartSave}
                   disabled={loading}
                 >
-                  <Ionicons name="flash" size={16} color={colors.white} style={{ marginRight: 8 }} />
                   <Text style={styles.saveButtonText}>
-                    {loading ? 'Saving...' : 'Smart Save'}
+                    {loading ? 'Saving...' : 'Save Profile'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -899,8 +959,8 @@ export default function ProfileScreen() {
                 <Ionicons name="create" size={20} color={colors.white} />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
-            }
-
+            )}
+            
             <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
               <Ionicons name="log-out" size={20} color={colors.danger} />
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -1096,20 +1156,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  smartBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  smartBadgeText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-    marginLeft: 4,
-  },
   privacyContainer: {
     gap: 16,
   },
@@ -1123,8 +1169,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 2,
   },
-  
-  // ... rest of existing styles ...
   section: {
     backgroundColor: colors.surface,
     margin: 16,
@@ -1132,11 +1176,17 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
   },
+  sectionHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 20,
+    marginLeft: 12,
+    flex: 1,
   },
   fieldContainer: {
     marginBottom: 20,
@@ -1344,6 +1394,19 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     backgroundColor: colors.gray400,
+  },
+  // ? NEW: Enhanced section header with icons
+  sectionHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginLeft: 12,
+    flex: 1,
   },
   
   // Modal styles

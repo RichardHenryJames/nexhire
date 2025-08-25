@@ -485,13 +485,17 @@ export class UserService {
         const institutionName = educationData.college?.name || '';
         const degreeType = educationData.degreeType || '';
         const fieldOfStudy = educationData.fieldOfStudy || '';
+        const graduationYear = educationData.graduationYear || '';
+        const gpa = educationData.gpa || '';
 
-        // FIXED: Only update education-related fields in Applicants table with timestamp
+        // FIXED: Include GraduationYear and GPA in education update
         const query = `
             UPDATE Applicants 
             SET Institution = @param1,
                 HighestEducation = @param2,
                 FieldOfStudy = @param3,
+                GraduationYear = @param4,
+                GPA = @param5,
                 ProfileCompleteness = CASE 
                     WHEN Institution IS NOT NULL AND HighestEducation IS NOT NULL AND FieldOfStudy IS NOT NULL 
                     THEN 60 
@@ -505,10 +509,12 @@ export class UserService {
             applicantId,
             institutionName,
             degreeType,
-            fieldOfStudy
+            fieldOfStudy,
+            graduationYear,
+            gpa
         });
 
-        await dbService.executeQuery(query, [applicantId, institutionName, degreeType, fieldOfStudy]);
+        await dbService.executeQuery(query, [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa]);
         
         return { success: true, message: 'Education updated successfully' };
     }

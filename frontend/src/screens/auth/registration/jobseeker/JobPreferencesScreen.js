@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,57 @@ import {
   Platform,
   ScrollView,
   Modal,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
 
+// CRITICAL FIX: Move JobTypeItem outside main component to prevent re-renders
+const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => {
+  // Use a stable handler that doesn't change
+  const handlePress = useCallback(() => {
+    onToggle(jobType);
+  }, [jobType, onToggle]);
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.jobTypeItem,
+        isSelected && styles.jobTypeItemSelected
+      ]}
+      onPress={handlePress}
+      activeOpacity={0.6}
+      // CRITICAL: Prevent any event interference
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => false}
+    >
+      <View style={styles.jobTypeContent}>
+        <Text style={[
+          styles.jobTypeText,
+          isSelected && styles.jobTypeTextSelected
+        ]}>
+          {jobType.Type}
+        </Text>
+        {/* <Text style={styles.jobTypeDescription}>
+          {getJobTypeDescription(jobType.Type)}
+        </Text> */}
+      </View>
+      
+      <View style={[
+        styles.checkbox,
+        isSelected && styles.checkboxSelected
+      ]}>
+        {isSelected && (
+          <Ionicons name="checkmark" size={16} color={colors.white} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 export default function JobPreferencesScreen({ navigation, route }) {
+  // CRITICAL FIX: Use useRef to prevent unnecessary re-renders
   const [formData, setFormData] = useState({
     preferredJobTypes: [],
     workplaceType: '',
@@ -25,7 +68,6 @@ export default function JobPreferencesScreen({ navigation, route }) {
   
   const [jobTypes, setJobTypes] = useState([]);
   const [showJobTypesModal, setShowJobTypesModal] = useState(false);
-  const [showWorkplaceModal, setShowWorkplaceModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const { userType, experienceType, workExperienceData, educationData } = route.params;
@@ -64,44 +106,58 @@ export default function JobPreferencesScreen({ navigation, route }) {
     }
   };
 
-  // Memoize the job type toggle handler to prevent re-renders
-  const handleJobTypeToggle = React.useCallback((jobType) => {
+  // CRITICAL FIX: Ultra-stable handlers with useCallback and dependency control
+  const handleJobTypeToggle = useCallback((jobType) => {
+    console.log('?? Toggling job type:', jobType.Type);
     setFormData(prevData => {
       const isSelected = prevData.preferredJobTypes.some(jt => jt.JobTypeID === jobType.JobTypeID);
       
-      if (isSelected) {
-        return {
-          ...prevData,
-          preferredJobTypes: prevData.preferredJobTypes.filter(jt => jt.JobTypeID !== jobType.JobTypeID)
-        };
-      } else {
-        return {
-          ...prevData,
-          preferredJobTypes: [...prevData.preferredJobTypes, jobType]
-        };
-      }
+      const newPreferredJobTypes = isSelected
+        ? prevData.preferredJobTypes.filter(jt => jt.JobTypeID !== jobType.JobTypeID)
+        : [...prevData.preferredJobTypes, jobType];
+      
+      console.log('? Updated selection count:', newPreferredJobTypes.length);
+      
+      return {
+        ...prevData,
+        preferredJobTypes: newPreferredJobTypes
+      };
     });
+    // CRITICAL: Modal should NOT close here
   }, []);
 
-  // Memoize modal close handler with stable reference
-  const closeJobTypeModal = React.useCallback(() => {
+  const handleJobTypesDone = useCallback(() => {
+    console.log('? Job types selection completed');
     setShowJobTypesModal(false);
   }, []);
 
-  // Memoize modal opening handler with stable reference
-  const openJobTypeModal = React.useCallback(() => {
+  const handleModalClose = useCallback(() => {
+    console.log('? Modal closed via X button');
+    setShowJobTypesModal(false);
+  }, []);
+
+  const openJobTypeModal = useCallback(() => {
+    console.log('?? Opening job types modal');
     setShowJobTypesModal(true);
   }, []);
 
-  // Memoize clear all handler with stable reference
-  const clearAllJobTypes = React.useCallback(() => {
+  const clearAllJobTypes = useCallback(() => {
+    console.log('??? Clearing all job types');
     setFormData(prevData => ({
       ...prevData,
       preferredJobTypes: []
     }));
   }, []);
 
-  // Memoize the modal visibility state to prevent flicker
+  // CRITICAL: Memoize selected IDs to prevent unnecessary re-renders
+  const selectedJobTypeIds = useMemo(() => {
+    return formData.preferredJobTypes.map(jt => jt.JobTypeID);
+  }, [formData.preferredJobTypes]);
+
+  // CRITICAL: Memoize job types to prevent re-renders
+  const memoizedJobTypes = useMemo(() => jobTypes, [jobTypes]);
+  
+  // Memoize modal visibility state to prevent flicker
   const modalVisible = React.useMemo(() => showJobTypesModal, [showJobTypesModal]);
 
   const handleContinue = () => {
@@ -155,129 +211,6 @@ export default function JobPreferencesScreen({ navigation, route }) {
       )}
     </TouchableOpacity>
   );
-
-  // Create a stable job type list to prevent re-renders
-  const stableJobTypes = React.useMemo(() => jobTypes, [jobTypes]);
-  
-  // Create a stable selected job types list for comparison
-  const selectedJobTypeIds = React.useMemo(() => 
-    formData.preferredJobTypes.map(jt => jt.JobTypeID), 
-    [formData.preferredJobTypes]
-  );
-
-  const JobTypeModal = React.memo(() => (
-    <Modal
-      visible={modalVisible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={closeJobTypeModal}
-      supportedOrientations={['portrait']}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <View style={styles.modalHeaderLeft}>
-            <TouchableOpacity onPress={closeJobTypeModal}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.modalTitle}>Select Job Types</Text>
-          
-          <View style={styles.modalHeaderRight}>
-            <TouchableOpacity 
-              onPress={closeJobTypeModal}
-              style={styles.doneButtonContainer}
-            >
-              <Text style={styles.doneButton}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <ScrollView 
-          style={styles.modalContent} 
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.modalSubtitleContainer}>
-            <Text style={styles.modalSubtitle}>Choose all that interest you</Text>
-            {selectedJobTypeIds.length > 0 && (
-              <Text style={styles.selectedCount}>
-                {selectedJobTypeIds.length} selected
-              </Text>
-            )}
-          </View>
-          
-          {stableJobTypes.map((jobType) => {
-            const isSelected = selectedJobTypeIds.includes(jobType.JobTypeID);
-            return (
-              <JobTypeItem
-                key={`jobtype-${jobType.JobTypeID}`}
-                jobType={jobType}
-                isSelected={isSelected}
-                onToggle={handleJobTypeToggle}
-              />
-            );
-          })}
-          
-          {/* Add clear all button if items are selected */}
-          {selectedJobTypeIds.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearAllButton}
-              onPress={clearAllJobTypes}
-            >
-              <Ionicons name="refresh" size={16} color={colors.danger} />
-              <Text style={styles.clearAllText}>Clear All</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
-  ));
-
-  // Create a memoized job type item component to prevent individual re-renders
-  const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => (
-    <TouchableOpacity
-      style={[
-        styles.jobTypeItem,
-        isSelected && styles.jobTypeItemSelected
-      ]}
-      onPress={() => onToggle(jobType)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.jobTypeContent}>
-        <Text style={[
-          styles.jobTypeText,
-          isSelected && styles.jobTypeTextSelected
-        ]}>
-          {jobType.Type}
-        </Text>
-        <Text style={styles.jobTypeDescription}>
-          {getJobTypeDescription(jobType.Type)}
-        </Text>
-      </View>
-      
-      <View style={[
-        styles.checkbox,
-        isSelected && styles.checkboxSelected
-      ]}>
-        {isSelected && (
-          <Ionicons name="checkmark" size={16} color={colors.white} />
-        )}
-      </View>
-    </TouchableOpacity>
-  ));
-
-  // Helper function to get job type descriptions
-  const getJobTypeDescription = (type) => {
-    const descriptions = {
-      'Full-Time': 'Regular 40+ hours per week',
-      'Contract': 'Fixed-term project work',
-      'Part-Time': 'Less than 40 hours per week',
-      'Internship': 'Learning and training opportunity',
-      'Freelance': 'Independent contractor work',
-    };
-    return descriptions[type] || 'Employment opportunity';
-  };
 
   if (loading) {
     return (
@@ -394,7 +327,95 @@ export default function JobPreferencesScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      <JobTypeModal />
+      {/* ? RESTORED: Job Type Selection Modal */}
+      <Modal
+        visible={showJobTypesModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleModalClose}
+        supportedOrientations={['portrait']}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderLeft}>
+              <TouchableOpacity onPress={handleModalClose}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalTitle}>Select Job Types</Text>
+            
+            <View style={styles.modalHeaderRight}>
+              <TouchableOpacity 
+                onPress={handleJobTypesDone}
+                style={styles.doneButtonContainer}
+              >
+                <Text style={styles.doneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <ScrollView 
+            style={styles.modalContent} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+          >
+            <View style={styles.modalSubtitleContainer}>
+              <Text style={styles.modalSubtitle}>Choose all that interest you</Text>
+              {selectedJobTypeIds.length > 0 && (
+                <Text style={styles.selectedCount}>
+                  {selectedJobTypeIds.length} selected
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.instructionContainer}>
+              <Ionicons name="information-circle" size={16} color={colors.primary} />
+              <Text style={styles.instructionText}>
+                Tap multiple options, then press "Done" when finished
+              </Text>
+            </View>
+            
+            {memoizedJobTypes.map((jobType) => {
+              const isSelected = selectedJobTypeIds.includes(jobType.JobTypeID);
+              return (
+                <JobTypeItem
+                  key={`jobtype-${jobType.JobTypeID}`}
+                  jobType={jobType}
+                  isSelected={isSelected}
+                  onToggle={handleJobTypeToggle}
+                />
+              );
+            })}
+            
+            {selectedJobTypeIds.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearAllButton}
+                onPress={clearAllJobTypes}
+              >
+                <Ionicons name="refresh" size={16} color={colors.danger} />
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedJobTypeIds.length > 0 && (
+              <View style={styles.selectionSummary}>
+                <Text style={styles.selectionSummaryText}>
+                  {selectedJobTypeIds.length} job type{selectedJobTypeIds.length > 1 ? 's' : ''} selected
+                </Text>
+                <TouchableOpacity 
+                  style={styles.doneButtonBottom}
+                  onPress={handleJobTypesDone}
+                >
+                  <Text style={styles.doneButtonBottomText}>Done</Text>
+                  <Ionicons name="checkmark" size={16} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -621,6 +642,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: typography.weights.bold,
   },
+  // CRITICAL: Add styles for optimized components
   jobTypeItem: {
     backgroundColor: colors.surface,
     padding: 16,
@@ -678,5 +700,49 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.base,
     color: colors.danger,
     fontWeight: typography.weights.medium,
+  },
+  // Enhanced: New styles for better multi-selection UX
+  instructionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '10',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  instructionText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    flex: 1,
+  },
+  selectionSummary: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    gap: 12,
+  },
+  selectionSummaryText: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
+  },
+  doneButtonBottom: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  doneButtonBottomText: {
+    color: colors.white,
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
   },
 });
