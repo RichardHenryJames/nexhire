@@ -35,6 +35,9 @@ export default function SalaryBreakdownSection({
   // ? FIX: Add local editing state for Salary Breakdown
   const [localEditing, setLocalEditing] = useState(false);
   
+  // ? NEW: State for managing dropdown visibility
+  const [showDropdowns, setShowDropdowns] = useState({});
+  
   // ? FIX: Optimize local state for better text input performance
   const [localSalaryBreakdown, setLocalSalaryBreakdown] = useState({
     current: [],
@@ -74,6 +77,13 @@ export default function SalaryBreakdownSection({
     }
   }, [displayCurrency, localSalaryBreakdown, currencies]);
 
+  // ? NEW: Close all dropdowns when modal state changes
+  useEffect(() => {
+    if (!showSalaryModal) {
+      setShowDropdowns({});
+    }
+  }, [showSalaryModal]);
+
   const loadReferenceData = async () => {
     try {
       const [componentsRes, currenciesRes] = await Promise.all([
@@ -101,8 +111,8 @@ export default function SalaryBreakdownSection({
     }
   };
 
-  // ? FIX: Optimize exchange rate fetching with fallback rates to avoid CORS issues
-  const getExchangeRate = async (fromCurrency, toCurrency) => {
+  // ? FIX: Use database exchange rates instead of public API
+  const getExchangeRate = (fromCurrency, toCurrency) => {
     if (fromCurrency === toCurrency) return 1.0;
     
     const cacheKey = `${fromCurrency}-${toCurrency}`;
@@ -123,7 +133,34 @@ export default function SalaryBreakdownSection({
       return reverseRate;
     }
     
-    // ? FIX: Use fallback rates first to avoid CORS issues
+    // ? FIX: Use database exchange rates from currencies data
+    const fromCurrencyData = currencies.find(c => c.Code === fromCurrency);
+    const toCurrencyData = currencies.find(c => c.Code === toCurrency);
+    
+    if (fromCurrencyData && toCurrencyData) {
+      // Convert through USD using database ExchangeRate
+      // ExchangeRate column represents: 1 USD = X units of currency
+      const fromRate = fromCurrencyData.ExchangeRate || 1.0;
+      const toRate = toCurrencyData.ExchangeRate || 1.0;
+      
+      // Convert: amount in fromCurrency ? USD ? toCurrency
+      const rate = fromRate / toRate;
+      
+      console.log(`?? Using database rate: ${fromCurrency} ? ${toCurrency} = ${rate} (via USD: ${fromRate}/${toRate})`);
+      
+      // Cache the calculated rate
+      setExchangeRatesCache(prev => ({
+        ...prev,
+        [cacheKey]: rate,
+        [reverseCacheKey]: 1 / rate
+      }));
+      
+      return rate;
+    }
+    
+    console.warn(`?? No database rate available for ${fromCurrency} ? ${toCurrency}, using fallback`);
+    
+    // ? Keep fallback rates as backup only
     const fallbackRates = {
       'USD-EUR': 0.92, 'EUR-USD': 1.09,
       'USD-GBP': 0.79, 'GBP-USD': 1.27,
@@ -139,35 +176,13 @@ export default function SalaryBreakdownSection({
     
     const fallbackRate = fallbackRates[cacheKey];
     if (fallbackRate) {
-      console.log(`? Using fallback rate: ${fromCurrency} ? ${toCurrency} = ${fallbackRate}`);
+      console.log(`?? Using fallback rate: ${fromCurrency} ? ${toCurrency} = ${fallbackRate}`);
       setExchangeRatesCache(prev => ({
         ...prev,
         [cacheKey]: fallbackRate,
         [reverseCacheKey]: 1 / fallbackRate
       }));
       return fallbackRate;
-    }
-    
-    // ? Try API as fallback (won't work in web due to CORS, but will work in mobile)
-    try {
-      const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const rate = data.rates[toCurrency];
-        
-        if (rate) {
-          console.log(`? Live rate fetched: ${fromCurrency} ? ${toCurrency} = ${rate}`);
-          setExchangeRatesCache(prev => ({
-            ...prev,
-            [cacheKey]: rate,
-            [reverseCacheKey]: 1 / rate
-          }));
-          return rate;
-        }
-      }
-    } catch (error) {
-      console.warn(`?? API fetch failed (expected in web): ${error.message}`);
     }
     
     // Return 1:1 as last resort
@@ -209,23 +224,6 @@ export default function SalaryBreakdownSection({
     return total;
   };
 
-  const calculateTotals = async () => {
-    try {
-      const [currentTotal, expectedTotal] = await Promise.all([
-        getTotalSalary('current'),
-        getTotalSalary('expected')
-      ]);
-      
-      setSalaryTotals({
-        current: currentTotal,
-        expected: expectedTotal
-      });
-    } catch (error) {
-      console.error('Error calculating salary totals:', error);
-      setSalaryTotals({ current: 0, expected: 0 });
-    }
-  };
-
   // ? FIX: Optimize text input updates with useCallback to prevent re-renders
   const updateSalaryComponent = React.useCallback((index, field, value) => {
     setLocalSalaryBreakdown(prev => ({
@@ -237,9 +235,27 @@ export default function SalaryBreakdownSection({
   }, [editingContext]);
 
   const addSalaryComponent = () => {
-    const defaultCurrency = currencies.find(c => c.Code === 'USD') || currencies[0];
+    const existingComponents = localSalaryBreakdown[editingContext] || [];
+    
+    // ? PREVENT DUPLICATES: Find first available component type
+    const availableComponent = salaryComponents.find(comp => {
+      const usedComponentIDs = existingComponents.map(c => c.ComponentID);
+      return !usedComponentIDs.includes(comp.ComponentID);
+    });
+    
+    // If no available component types, don't add (all types already used)
+    if (!availableComponent) {
+      Alert.alert(
+        'Component Limit Reached', 
+        'You have already added all available component types (Fixed, Variable, Bonus, Stock).'
+      );
+      return;
+    }
+    
+    // ? FIX: Set INR as default currency instead of USD
+    const defaultCurrency = currencies.find(c => c.Code === 'INR') || currencies.find(c => c.Code === 'USD') || currencies[0];
     const newComponent = {
-      ComponentID: salaryComponents[0]?.ComponentID || 1,
+      ComponentID: availableComponent.ComponentID,
       Amount: 0,
       CurrencyID: defaultCurrency?.CurrencyID || 1,
       Frequency: 'Yearly',
@@ -553,19 +569,29 @@ export default function SalaryBreakdownSection({
                 {/* Component Type Dropdown */}
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Component Type *</Text>
-                  <View style={styles.dropdownContainer}>
-                    {salaryComponents.map((comp) => (
+                  {/* ? COMPACT: Horizontal pills instead of vertical list */}
+                  <View style={styles.componentTypeContainer}>
+                    {salaryComponents
+                      .filter(comp => {
+                        // ? PREVENT DUPLICATES: Filter out already used component types
+                        const existingComponents = localSalaryBreakdown[editingContext] || [];
+                        const usedComponentIDs = existingComponents
+                          .filter((_, i) => i !== index) // Exclude current component
+                          .map(c => c.ComponentID);
+                        return !usedComponentIDs.includes(comp.ComponentID);
+                      })
+                      .map((comp) => (
                       <TouchableOpacity
                         key={comp.ComponentID}
                         style={[
-                          styles.dropdownOption,
-                          component.ComponentID === comp.ComponentID && styles.dropdownOptionActive
+                          styles.componentTypePill,
+                          component.ComponentID === comp.ComponentID && styles.componentTypePillActive
                         ]}
                         onPress={() => updateSalaryComponent(index, 'ComponentID', comp.ComponentID)}
                       >
                         <Text style={[
-                          styles.dropdownOptionText,
-                          component.ComponentID === comp.ComponentID && styles.dropdownOptionTextActive
+                          styles.componentTypePillText,
+                          component.ComponentID === comp.ComponentID && styles.componentTypePillTextActive
                         ]}>
                           {comp.ComponentName}
                         </Text>
@@ -574,94 +600,126 @@ export default function SalaryBreakdownSection({
                   </View>
                 </View>
 
-                {/* Currency and Amount Row */}
+                {/* ? NEW: Improved Amount with inline Currency and Frequency */}
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Amount *</Text>
-                  <View style={styles.amountRow}>
-                    {/* Currency Dropdown */}
-                    <View style={styles.currencyContainer}>
-                      <Text style={styles.currencyLabel}>Currency</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyScroll}>
-                        <View style={styles.currencyDropdown}>
-                          {currencies.map((currency) => (
+                  <View style={styles.amountRowContainer}>
+                    {/* Currency Prefix Dropdown */}
+                    <View style={styles.currencyPrefixContainer}>
+                      <TouchableOpacity
+                        style={styles.currencyPrefixButton}
+                        onPress={() => {
+                          const dropdownKey = `currency_${index}`;
+                          setShowDropdowns(prev => ({
+                            ...prev,
+                            [dropdownKey]: !prev[dropdownKey]
+                          }));
+                        }}
+                      >
+                        <Text style={styles.currencyPrefixText}>
+                          {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Symbol || '?'}
+                          {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Code || 'INR'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={12} color={colors.gray600} />
+                      </TouchableOpacity>
+                      
+                      {/* Currency Dropdown - positioned right where user clicks */}
+                      {showDropdowns[`currency_${index}`] && (
+                        <View style={styles.inlineDropdownMenu}>
+                          <ScrollView style={styles.currencyDropdownScroll} nestedScrollEnabled>
+                            {currencies.map((currency) => (
+                              <TouchableOpacity
+                                key={currency.CurrencyID}
+                                style={[
+                                  styles.currencyDropdownItem,
+                                  component.CurrencyID === currency.CurrencyID && styles.currencyDropdownItemActive
+                                ]}
+                                onPress={() => {
+                                  updateSalaryComponent(index, 'CurrencyID', currency.CurrencyID);
+                                  setShowDropdowns(prev => ({
+                                    ...prev,
+                                    [`currency_${index}`]: false
+                                  }));
+                                }}
+                              >
+                                <Text style={[
+                                  styles.currencyDropdownItemText,
+                                  component.CurrencyID === currency.CurrencyID && styles.currencyDropdownItemTextActive
+                                ]}>
+                                  {currency.Symbol} {currency.Code}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Amount Input */}
+                    <View style={styles.amountInputWrapper}>
+                      <OptimizedTextInput
+                        style={[
+                          styles.inlineAmountInput,
+                          (!component.Amount || component.Amount <= 0) && styles.amountInputError
+                        ]}
+                        value={component.Amount}
+                        onChangeText={(value) => updateSalaryComponent(index, 'Amount', value)}
+                        placeholder="0"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    {/* Frequency Dropdown - inline with amount */}
+                    <View style={styles.frequencyPrefixContainer}>
+                      <TouchableOpacity
+                        style={styles.frequencyPrefixButton}
+                        onPress={() => {
+                          const dropdownKey = `frequency_${index}`;
+                          setShowDropdowns(prev => ({
+                            ...prev,
+                            [dropdownKey]: !prev[dropdownKey]
+                          }));
+                        }}
+                      >
+                        <Text style={styles.frequencyPrefixText}>
+                          /{(component.Frequency || 'Yearly') === 'Monthly' ? 'month' : 'year'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={12} color={colors.gray600} />
+                      </TouchableOpacity>
+                      
+                      {/* Frequency Dropdown */}
+                      {showDropdowns[`frequency_${index}`] && (
+                        <View style={styles.inlineDropdownMenu}>
+                          {['Monthly', 'Yearly'].map((freq) => (
                             <TouchableOpacity
-                              key={currency.CurrencyID}
+                              key={freq}
                               style={[
-                                styles.currencyOption,
-                                component.CurrencyID === currency.CurrencyID && styles.currencyOptionActive
+                                styles.frequencyDropdownItem,
+                                (component.Frequency || 'Yearly') === freq && styles.frequencyDropdownItemActive
                               ]}
-                              onPress={() => updateSalaryComponent(index, 'CurrencyID', currency.CurrencyID)}
+                              onPress={() => {
+                                updateSalaryComponent(index, 'Frequency', freq);
+                                setShowDropdowns(prev => ({
+                                  ...prev,
+                                  [`frequency_${index}`]: false
+                                }));
+                              }}
                             >
                               <Text style={[
-                                styles.currencyOptionText,
-                                component.CurrencyID === currency.CurrencyID && styles.currencyOptionTextActive
+                                styles.frequencyDropdownItemText,
+                                (component.Frequency || 'Yearly') === freq && styles.frequencyDropdownItemTextActive
                               ]}>
-                                {currency.Symbol} {currency.Code}
+                                /{freq === 'Monthly' ? 'month' : 'year'}
                               </Text>
                             </TouchableOpacity>
                           ))}
                         </View>
-                      </ScrollView>
-                    </View>
-
-                    {/* Amount Input with Currency Symbol */}
-                    <View style={styles.amountContainer}>
-                      <Text style={styles.amountLabel}>Amount</Text>
-                      <View style={[
-                        styles.amountInputContainer,
-                        (!component.Amount || component.Amount <= 0) && styles.amountInputError
-                      ]}>
-                        <Text style={styles.currencySymbol}>
-                          {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Symbol || '$'}
-                        </Text>
-                        <OptimizedTextInput
-                          style={styles.amountInput}
-                          value={component.Amount}
-                          onChangeText={(value) => updateSalaryComponent(index, 'Amount', value)}
-                          placeholder="0"
-                          keyboardType="numeric"
-                        />
-                      </View>
-                      {(!component.Amount || component.Amount <= 0) && (
-                        <Text style={styles.validationError}>Amount must be greater than 0</Text>
                       )}
                     </View>
                   </View>
-                </View>
-
-                {/* Frequency Selection */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Frequency *</Text>
-                  <View style={styles.frequencyContainer}>
-                    {['Monthly', 'Yearly'].map((freq) => (
-                      <TouchableOpacity
-                        key={freq}
-                        style={[
-                          styles.frequencyOption,
-                          (component.Frequency || 'Yearly') === freq && styles.frequencyOptionActive
-                        ]}
-                        onPress={() => updateSalaryComponent(index, 'Frequency', freq)}
-                      >
-                        <Text style={[
-                          styles.frequencyOptionText,
-                          (component.Frequency || 'Yearly') === freq && styles.frequencyOptionTextActive
-                        ]}>
-                          {freq}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Notes */}
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Notes (Optional)</Text>
-                  <OptimizedTextInput
-                    style={styles.textInput}
-                    value={component.Notes}
-                    onChangeText={(value) => updateSalaryComponent(index, 'Notes', value)}
-                    placeholder="Add notes about this component"
-                  />
+                  {(!component.Amount || component.Amount <= 0) && (
+                    <Text style={styles.validationError}>Amount must be greater than 0</Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -970,6 +1028,7 @@ const styles = StyleSheet.create({
   },
   componentsEditor: {
     flex: 1,
+    zIndex: 1, // ? FIX: Lower z-index for scroll container so dropdowns appear above
   },
   componentEditor: {
     backgroundColor: colors.surface || '#F5F5F5',
@@ -978,6 +1037,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.border || '#E0E0E0',
+    position: 'relative', // ? FIX: Ensure proper stacking context
+    zIndex: 1,
   },
   componentHeader: {
     flexDirection: 'row',
@@ -1004,6 +1065,150 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights?.medium || '500',
     color: colors.text || '#000000',
   },
+  
+  // ? NEW: Compact Component Type Styles
+  componentTypeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  componentTypePill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    backgroundColor: colors.background || '#FFFFFF',
+  },
+  componentTypePillActive: {
+    backgroundColor: colors.primary || '#007AFF',
+    borderColor: colors.primary || '#007AFF',
+  },
+  componentTypePillText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  componentTypePillTextActive: {
+    color: colors.white || '#FFFFFF',
+  },
+  
+  // ? NEW: Inline Amount Layout Styles  
+  amountRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  currencyPrefixContainer: {
+    position: 'relative',
+    zIndex: 10000,
+  },
+  currencyPrefixButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 6,
+    backgroundColor: colors.surface || '#F5F5F5',
+    minWidth: 75,
+  },
+  currencyPrefixText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  inlineDropdownMenu: {
+    position: 'absolute',
+    top: 36,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 8,
+    maxHeight: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 20,
+    zIndex: 10001,
+  },
+  amountInputWrapper: {
+    flex: 1,
+  },
+  inlineAmountInput: {
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text || '#000000',
+    backgroundColor: colors.white || '#FFFFFF',
+    textAlign: 'center',
+  },
+  frequencyPrefixContainer: {
+    position: 'relative',
+    zIndex: 10000,
+  },
+  frequencyPrefixButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 6,
+    backgroundColor: colors.surface || '#F5F5F5',
+    minWidth: 70,
+  },
+  frequencyPrefixText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  frequencyDropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#E0E0E0',
+  },
+  frequencyDropdownItemActive: {
+    backgroundColor: colors.primary || '#007AFF',
+  },
+  frequencyDropdownItemText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+  },
+  frequencyDropdownItemTextActive: {
+    color: colors.white || '#FFFFFF',
+  },
+  
+  // Keep existing styles but remove unused overlay styles
+  compactAmountContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  compactAmountInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text || '#000000',
+    backgroundColor: colors.white || '#FFFFFF',
+  },
+  currencyDropdownScroll: {
+    maxHeight: 150,
+  },
   dropdownContainer: {
     borderWidth: 1,
     borderColor: colors.border || '#E0E0E0',
@@ -1027,125 +1232,6 @@ const styles = StyleSheet.create({
   dropdownOptionTextActive: {
     color: colors.primary || '#007AFF',
     fontWeight: typography.weights?.medium || '500',
-  },
-  amountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  currencyContainer: {
-    flex: 1,
-  },
-  currencyLabel: {
-    fontSize: typography.sizes?.sm || 14,
-    fontWeight: typography.weights?.medium || '500',
-    color: colors.text || '#000000',
-    marginBottom: 4,
-  },
-  currencyScroll: {
-    maxHeight: 40,
-  },
-  currencyDropdown: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  currencyOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border || '#E0E0E0',
-    backgroundColor: colors.background || '#FFFFFF',
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  currencyOptionActive: {
-    backgroundColor: colors.primary || '#007AFF',
-    borderColor: colors.primary || '#007AFF',
-  },
-  currencyOptionText: {
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#000000',
-    fontWeight: typography.weights?.medium || '500',
-  },
-  currencyOptionTextActive: {
-    color: colors.white || '#FFFFFF',
-  },
-  amountContainer: {
-    flex: 1,
-  },
-  amountLabel: {
-    fontSize: typography.sizes?.sm || 14,
-    fontWeight: typography.weights?.medium || '500',
-    color: colors.text || '#000000',
-    marginBottom: 4,
-  },
-  amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border || '#E0E0E0',
-    borderRadius: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: colors.white || '#FFFFFF',
-  },
-  amountInputError: {
-    borderColor: colors.danger || '#FF3B30',
-  },
-  currencySymbol: {
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#000000',
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#000000',
-    padding: 0,
-  },
-  validationError: {
-    fontSize: typography.sizes?.xs || 12,
-    color: colors.danger || '#FF3B30',
-    marginTop: 4,
-  },
-  frequencyContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  frequencyOption: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border || '#E0E0E0',
-    backgroundColor: colors.background || '#FFFFFF',
-    alignItems: 'center',
-  },
-  frequencyOptionActive: {
-    backgroundColor: colors.primary || '#007AFF',
-    borderColor: colors.primary || '#007AFF',
-  },
-  frequencyOptionText: {
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#000000',
-    fontWeight: typography.weights?.medium || '500',
-  },
-  frequencyOptionTextActive: {
-    color: colors.white || '#FFFFFF',
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: colors.border || '#E0E0E0',
-    borderRadius: 4,
-    padding: 12,
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#000000',
-    backgroundColor: colors.white || '#FFFFFF',
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   addComponentButton: {
     flexDirection: 'row',
@@ -1201,5 +1287,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
     color: colors.white || '#FFFFFF',
     fontWeight: typography.weights?.bold || 'bold',
+  },
+  validationError: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.danger || '#FF3B30',
+    marginTop: 4,
+  },
+  amountInputError: {
+    borderColor: colors.danger || '#FF3B30',
   },
 });

@@ -512,12 +512,7 @@ export default function EducationSection({
             <Text style={styles.editButtonText}>{localEditing ? 'Done' : 'Edit'}</Text>
           </TouchableOpacity>
         )}
-        {(editing || localEditing) && (
-          <View style={styles.smartBadge}>
-            <Ionicons name="school" size={14} color={colors.primary} />
-            <Text style={styles.smartBadgeText}>ENHANCED</Text>
-          </View>
-        )}
+
       </View>
 
       {/* Info Card for Enhanced Features */}
@@ -535,19 +530,7 @@ export default function EducationSection({
         </View>
       )}
 
-      {(editing || localEditing) && !hasEducationData && (
-        <View style={styles.infoCard}>
-          <View style={styles.infoCardIcon}>
-            <Ionicons name="information-circle" size={20} color={colors.primary} />
-          </View>
-          <View style={styles.infoCardContent}>
-            <Text style={styles.infoCardTitle}>Enhanced Education Search</Text>
-            <Text style={styles.infoCardText}>
-              Search from thousands of universities worldwide and select from categorized degree types.
-            </Text>
-          </View>
-        </View>
-      )}
+
 
       {(editing || localEditing) && (
         <View style={styles.countrySelector}>
