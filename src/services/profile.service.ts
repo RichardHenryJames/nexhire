@@ -267,8 +267,10 @@ export class ApplicantService {
             };
 
             // ? NEW: Handle salary breakdown separately if provided
+            let salaryUpdated = false;
             if (profileData.salaryBreakdown) {
                 await this.updateApplicantSalaryBreakdown(applicantId, profileData.salaryBreakdown);
+                salaryUpdated = true;
                 delete profileData.salaryBreakdown; // Remove from regular profile update
             }
 
@@ -309,8 +311,8 @@ export class ApplicantService {
                 }
             });
 
-            // If no valid fields to update, check if only salary was updated
-            if (updateFields.length === 0 && !profileData.salaryBreakdown) {
+            // ? FIXED: Allow salary-only updates
+            if (updateFields.length === 0 && !salaryUpdated) {
                 throw new ValidationError('No valid fields provided for update');
             }
 
@@ -340,10 +342,10 @@ export class ApplicantService {
             }
 
             console.log(`? Updated applicant profile for user ${userId}:`, {
-                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping || key === 'salaryBreakdown'),
+                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
                 applicantId: applicantId,
-                updateCount: updateFields.length > 0 ? updateFields.length - 2 : 0, // Exclude ProfileCompleteness and UpdatedAt
-                salaryUpdated: !!profileData.salaryBreakdown
+                profileFieldsCount: updateFields.length > 0 ? updateFields.length - 2 : 0, // Exclude ProfileCompleteness and UpdatedAt
+                salaryUpdated: salaryUpdated
             });
 
             // Return updated profile with salary breakdown

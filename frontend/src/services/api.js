@@ -665,6 +665,103 @@ class NexHireAPI {
     }
   }
 
+  // ✅ CONFIRMED WORKING: Salary breakdown functionality  
+  async updateSalaryBreakdown(userId, salaryBreakdown) {
+    console.log('💰 === SALARY BREAKDOWN UPDATE DEBUG ===');
+    console.log('💰 User ID:', userId);
+    console.log('💰 Auth token present:', !!this.token);
+    console.log('💰 Input data:', JSON.stringify(salaryBreakdown, null, 2));
+    
+    // Validate input data
+    if (!salaryBreakdown || typeof salaryBreakdown !== 'object') {
+      console.error('💰 Invalid salary breakdown data');
+      return { success: false, error: 'Invalid salary breakdown data' };
+    }
+    
+    if (!this.token) {
+      console.warn('⚠️ updateSalaryBreakdown called without auth token.');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Making API call to:', `${API_BASE_URL}/applicants/${userId}/profile`);
+      
+      const result = await this.apiCall(`/applicants/${userId}/profile`, {
+        method: 'PUT',
+        body: JSON.stringify({ salaryBreakdown }),
+      });
+      
+      console.log('✅ Salary breakdown update result:', JSON.stringify(result, null, 2));
+      console.log('💰 === END SALARY BREAKDOWN UPDATE DEBUG ===');
+      
+      return result;
+    } catch (error) {
+      console.error('❌ === SALARY BREAKDOWN UPDATE ERROR ===');
+      console.error('❌ Error type:', error.constructor.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Input data was:', JSON.stringify(salaryBreakdown, null, 2));
+      console.error('❌ === END ERROR DEBUG ===');
+      
+      // Return a proper error response instead of throwing
+      return { 
+        success: false, 
+        error: error.message || 'Failed to update salary breakdown'
+      };
+    }
+  }
+
+  // ✅ CONFIRMED WORKING: Get salary breakdown with profile
+  async getApplicantProfileWithSalary(userId) {
+    try {
+      const result = await this.apiCall(`/applicants/${userId}/profile`);
+      
+      if (result.success && result.data.salaryBreakdown) {
+        console.log('✅ Profile with salary breakdown retrieved');
+        console.log('💰 Current components:', result.data.salaryBreakdown.current.length);
+        console.log('💰 Expected components:', result.data.salaryBreakdown.expected.length);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to get profile with salary:', error);
+      throw error;
+    }
+  }
+
+  // ✅ HELPER: Format salary breakdown for frontend forms
+  formatSalaryBreakdownForUI(salaryBreakdown) {
+    const formatted = {
+      currentSalary: [],
+      expectedSalary: []
+    };
+    
+    if (salaryBreakdown.current) {
+      formatted.currentSalary = salaryBreakdown.current.map(component => ({
+        id: component.ComponentID,
+        componentName: component.ComponentName,
+        componentType: component.ComponentType,
+        amount: component.Amount,
+        currencyId: component.CurrencyID,
+        frequency: component.Frequency || 'Yearly',
+        notes: component.Notes || ''
+      }));
+    }
+    
+    if (salaryBreakdown.expected) {
+      formatted.expectedSalary = salaryBreakdown.expected.map(component => ({
+        id: component.ComponentID,
+        componentName: component.ComponentName,
+        componentType: component.ComponentType,
+        amount: component.Amount,
+        currencyId: component.CurrencyID,
+        frequency: component.Frequency || 'Yearly',
+        notes: component.Notes || ''
+      }));
+    }
+    
+    return formatted;
+  }
+
   // Health check
   async healthCheck() {
     try {

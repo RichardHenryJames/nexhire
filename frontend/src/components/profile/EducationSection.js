@@ -194,13 +194,15 @@ export default function EducationSection({
   const [activeModal, setActiveModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('India');
+  const [localEditing, setLocalEditing] = useState(false); // ? NEW: Local editing state
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Enhanced: Check if core education fields are already filled
   const hasEducationData = profile.institution && profile.highestEducation && profile.fieldOfStudy;
   const isEducationFieldEditable = (fieldName) => {
-    if (!editing) return false;
+    const currentEditMode = editing || localEditing; // ? Use either global or local editing state
+    if (!currentEditMode) return false;
     
     // Core education fields become non-editable once filled
     const coreFields = ['institution', 'highestEducation', 'fieldOfStudy'];
@@ -419,6 +421,7 @@ export default function EducationSection({
     icon = 'chevron-down',
     fieldName = ''
   }) => {
+    const currentEditMode = editing || localEditing; // ? Use either global or local editing state
     const isFieldEditable = isEducationFieldEditable(fieldName);
     const isDisabled = disabled || !isFieldEditable;
     
@@ -426,15 +429,12 @@ export default function EducationSection({
       <View style={styles.fieldContainer}>
         <Text style={styles.fieldLabel}>
           {label}
-          {!isFieldEditable && hasEducationData && (
-            <Text style={styles.lockedFieldIndicator}> (Locked)</Text>
-          )}
         </Text>
         <TouchableOpacity 
           style={[
             styles.selectionButton,
             isDisabled && styles.selectionButtonDisabled,
-            !editing && styles.selectionButtonReadonly,
+            !currentEditMode && styles.selectionButtonReadonly,
             !isFieldEditable && hasEducationData && styles.selectionButtonLocked
           ]} 
           onPress={isDisabled ? null : onPress}
@@ -447,7 +447,7 @@ export default function EducationSection({
           ]}>
             {value || placeholder}
           </Text>
-          {editing && isFieldEditable && (
+          {currentEditMode && isFieldEditable && (
             <Ionicons 
               name={icon} 
               size={20} 
@@ -499,8 +499,20 @@ export default function EducationSection({
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Education</Text>
-        {editing && (
+        <View style={styles.headerLeft}>
+          <Ionicons name="school" size={20} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Education</Text>
+        </View>
+        {!editing && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setLocalEditing(!localEditing)}
+          >
+            <Ionicons name="create" size={16} color={colors.primary} />
+            <Text style={styles.editButtonText}>{localEditing ? 'Done' : 'Edit'}</Text>
+          </TouchableOpacity>
+        )}
+        {(editing || localEditing) && (
           <View style={styles.smartBadge}>
             <Ionicons name="school" size={14} color={colors.primary} />
             <Text style={styles.smartBadgeText}>ENHANCED</Text>
@@ -509,7 +521,7 @@ export default function EducationSection({
       </View>
 
       {/* Info Card for Enhanced Features */}
-      {editing && hasEducationData && (
+      {(editing || localEditing) && hasEducationData && (
         <View style={styles.infoCard}>
           <View style={styles.infoCardIcon}>
             <Ionicons name="lock-closed" size={20} color={colors.warning} />
@@ -523,7 +535,7 @@ export default function EducationSection({
         </View>
       )}
 
-      {editing && !hasEducationData && (
+      {(editing || localEditing) && !hasEducationData && (
         <View style={styles.infoCard}>
           <View style={styles.infoCardIcon}>
             <Ionicons name="information-circle" size={20} color={colors.primary} />
@@ -537,7 +549,7 @@ export default function EducationSection({
         </View>
       )}
 
-      {editing && (
+      {(editing || localEditing) && (
         <View style={styles.countrySelector}>
           <SelectionButton
             label="Country/Region"
@@ -588,7 +600,7 @@ export default function EducationSection({
       />
 
       {/* Enhanced Education Details with Database Support */}
-      {editing && (
+      {(editing || localEditing) && (
         <>
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Graduation Year (Optional)</Text>
@@ -623,7 +635,7 @@ export default function EducationSection({
       )}
 
       {/* Read-only display for graduation year and GPA */}
-      {!editing && (profile.graduationYear || profile.gpa) && (
+      {!(editing || localEditing) && (profile.graduationYear || profile.gpa) && (
         <View style={styles.additionalDetailsContainer}>
           {profile.graduationYear && (
             <View style={styles.detailRow}>
@@ -715,7 +727,19 @@ export default function EducationSection({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    backgroundColor: colors.surface || '#FFFFFF',
+    margin: 16,
+    marginBottom: 8,
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -723,10 +747,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 8,
+  },
+  editButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   smartBadge: {
     flexDirection: 'row',

@@ -83,8 +83,11 @@ const FIELD_ROUTING = {
     'featuredUntil',
     'tags',
     
-    // ? NEW: Salary breakdown handled separately via dedicated endpoints
-    'salaryBreakdown' // This will be handled specially, not as a direct column
+    // ? REMOVED old salary fields (currentSalary, expectedSalaryMin, expectedSalaryMax, etc.)
+    // ? REMOVED: lastJobAppliedAt, searchScore (system-managed, not user input)
+    
+    // ? NEW: Salary breakdown handled separately via dedicated API endpoints
+    'salaryBreakdown' // This will be handled specially in backend, not as a direct column update
   ]
 };
 

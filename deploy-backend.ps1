@@ -18,6 +18,7 @@ $scriptStartTime = Get-Date
 
 Write-Host "🚀 NexHire Backend Deployment (VERIFIED WORKING)" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "📅 Script started at: $($scriptStartTime.ToString("yyyy-MM-dd HH:mm:ss"))" -ForegroundColor Gray
 
 # Check if func CLI is available
 Write-Host "📋 Checking prerequisites..." -ForegroundColor Yellow

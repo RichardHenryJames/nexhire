@@ -344,59 +344,134 @@ END
 
 # Reference Data SQL
 $referenceDataSQL = @"
--- Insert Job Types
-IF NOT EXISTS (SELECT * FROM JobTypes WHERE Type = 'Full-time')
-BEGIN
-    INSERT INTO JobTypes (Type, Description) VALUES
-    ('Full-time', 'Full-time permanent position'),
-    ('Part-time', 'Part-time position'),
-    ('Contract', 'Contract-based position'),
-    ('Freelance', 'Freelance work'),
-    ('Internship', 'Internship position'),
-    ('Temporary', 'Temporary position'),
-    ('Remote', 'Remote work position'),
-    ('Hybrid', 'Hybrid work arrangement');
-END
 
 -- Insert Currencies
-IF NOT EXISTS (SELECT * FROM Currencies WHERE Code = 'USD')
+-- USD
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'USD')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol) VALUES
-    ('USD', 'US Dollar', '$'),
-    ('EUR', 'Euro', '�'),
-    ('GBP', 'British Pound', '�'),
-    ('INR', 'Indian Rupee', '?'),
-    ('CAD', 'Canadian Dollar', 'C$'),
-    ('AUD', 'Australian Dollar', 'A$'),
-    ('JPY', 'Japanese Yen', '�'),
-    ('CNY', 'Chinese Yuan', '�'),
-    ('SGD', 'Singapore Dollar', 'S$'),
-    ('AED', 'UAE Dirham', '?.?');
-END
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('USD', 'US Dollar', N'$', 1, 1.0000, GETDATE(), GETDATE());
+END;
 
--- Insert Application Statuses
-IF NOT EXISTS (SELECT * FROM ApplicationStatuses WHERE Status = 'Submitted')
+-- EUR
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'EUR')
 BEGIN
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES
-    ('Submitted', 'Application has been submitted'),
-    ('Under Review', 'Application is being reviewed'),
-    ('Shortlisted', 'Candidate has been shortlisted'),
-    ('Interview Scheduled', 'Interview has been scheduled'),
-    ('Interview Completed', 'Interview has been completed'),
-    ('Rejected', 'Application has been rejected'),
-    ('Offer Extended', 'Job offer has been extended'),
-    ('Offer Accepted', 'Job offer has been accepted'),
-    ('Offer Declined', 'Job offer has been declined'),
-    ('Withdrawn', 'Application has been withdrawn');
-END
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('EUR', 'Euro', N'€', 1, 0.8500, GETDATE(), GETDATE());
+END;
 
--- Create a sample organization for testing
-IF NOT EXISTS (SELECT * FROM Organizations WHERE Name = 'NexHire Demo Company')
+-- GBP
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'GBP')
 BEGIN
-    INSERT INTO Organizations (Name, Type, Industry, Size, Description, VerificationStatus, IsActive)
-    VALUES 
-    ('NexHire Demo Company', 'Technology', 'Software Development', '51-200', 'A demo company for testing NexHire platform', 'Verified', 1);
-END
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('GBP', 'British Pound', N'£', 1, 0.7300, GETDATE(), GETDATE());
+END;
+
+-- INR
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'INR')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('INR', 'Indian Rupee', N'₹', 1, 82.0000, GETDATE(), GETDATE());
+END;
+
+-- CAD
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'CAD')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('CAD', 'Canadian Dollar', N'C$', 1, 1.2500, GETDATE(), GETDATE());
+END;
+
+-- AUD
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'AUD')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('AUD', 'Australian Dollar', N'A$', 1, 1.3500, GETDATE(), GETDATE());
+END;
+
+-- JPY
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'JPY')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('JPY', 'Japanese Yen', N'¥', 1, 110.0000, GETDATE(), GETDATE());
+END;
+
+-- CNY
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'CNY')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('CNY', 'Chinese Yuan', N'¥', 1, 6.5000, GETDATE(), GETDATE());
+END;
+
+-- SGD
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'SGD')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('SGD', 'Singapore Dollar', N'S$', 1, 1.3500, GETDATE(), GETDATE());
+END;
+
+-- AED
+IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'AED')
+BEGIN
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
+    VALUES ('AED', 'UAE Dirham', N'د.إ', 1, 3.6700, GETDATE(), GETDATE());
+END;
+
+-- Insert Job Types safely
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Full-time')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Full-time', 'Full-time permanent position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Part-time')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Part-time', 'Part-time position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Contract')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Contract', 'Contract-based position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Freelance')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Freelance', 'Freelance work');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Internship')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Internship', 'Internship position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Temporary')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Temporary', 'Temporary position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Remote')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Remote', 'Remote work position');
+
+IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Hybrid')
+    INSERT INTO JobTypes (Type, Description) VALUES ('Hybrid', 'Hybrid work arrangement');
+
+-- Insert Application Statuses safely
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Submitted')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Submitted', 'Application has been submitted');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Under Review')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Under Review', 'Application is being reviewed');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Shortlisted')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Shortlisted', 'Candidate has been shortlisted');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Scheduled')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Scheduled', 'Interview has been scheduled');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Completed')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Completed', 'Interview has been completed');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Rejected')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Rejected', 'Application has been rejected');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Extended')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Extended', 'Job offer has been extended');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Accepted')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Accepted', 'Job offer has been accepted');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Declined')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Declined', 'Job offer has been declined');
+
+IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Withdrawn')
+    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Withdrawn', 'Application has been withdrawn');
+
 "@
 
 try {
