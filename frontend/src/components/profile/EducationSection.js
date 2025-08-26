@@ -462,11 +462,6 @@ export default function EducationSection({
             />
           )}
         </TouchableOpacity>
-        {!isFieldEditable && hasEducationData && (
-          <Text style={styles.lockedFieldNote}>
-            Core education details cannot be changed once set. Contact support if needed.
-          </Text>
-        )}
       </View>
     );
   };
@@ -506,29 +501,40 @@ export default function EducationSection({
         {!editing && (
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => setLocalEditing(!localEditing)}
+            onPress={async () => {
+              if (localEditing) {
+                // ? FIX: Save education data when Done is clicked
+                try {
+                  console.log('?? Saving education data...');
+                  const educationData = {
+                    institution: profile.institution,
+                    highestEducation: profile.highestEducation,
+                    fieldOfStudy: profile.fieldOfStudy,
+                    graduationYear: profile.graduationYear,
+                    gpa: profile.gpa
+                  };
+                  
+                  console.log('?? Education data to save:', educationData);
+                  const result = await nexhireAPI.updateEducation(educationData);
+                  
+                  if (result.success) {
+                    console.log('? Education data saved successfully');
+                  } else {
+                    console.warn('?? Education save failed:', result.error);
+                  }
+                } catch (error) {
+                  console.error('? Error saving education data:', error);
+                  Alert.alert('Error', 'Failed to save education data. Please try again.');
+                }
+              }
+              setLocalEditing(!localEditing);
+            }}
           >
             <Ionicons name="create" size={16} color={colors.primary} />
             <Text style={styles.editButtonText}>{localEditing ? 'Done' : 'Edit'}</Text>
           </TouchableOpacity>
         )}
-
       </View>
-
-      {/* Info Card for Enhanced Features */}
-      {(editing || localEditing) && hasEducationData && (
-        <View style={styles.infoCard}>
-          <View style={styles.infoCardIcon}>
-            <Ionicons name="lock-closed" size={20} color={colors.warning} />
-          </View>
-          <View style={styles.infoCardContent}>
-            <Text style={styles.infoCardTitle}>Core Education Fields Locked</Text>
-            <Text style={styles.infoCardText}>
-              Your institution, degree, and field of study are locked to maintain data integrity. You can still update graduation year and GPA.
-            </Text>
-          </View>
-        </View>
-      )}
 
 
 

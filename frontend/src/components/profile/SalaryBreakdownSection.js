@@ -111,8 +111,8 @@ export default function SalaryBreakdownSection({
     }
   };
 
-  // ? FIX: Use database exchange rates instead of public API
-  const getExchangeRate = (fromCurrency, toCurrency) => {
+  // ? FIX: Use frankfurter.dev API for live exchange rates
+  const getExchangeRate = async (fromCurrency, toCurrency) => {
     if (fromCurrency === toCurrency) return 1.0;
     
     const cacheKey = `${fromCurrency}-${toCurrency}`;
@@ -133,34 +133,29 @@ export default function SalaryBreakdownSection({
       return reverseRate;
     }
     
-    // ? FIX: Use database exchange rates from currencies data
-    const fromCurrencyData = currencies.find(c => c.Code === fromCurrency);
-    const toCurrencyData = currencies.find(c => c.Code === toCurrency);
-    
-    if (fromCurrencyData && toCurrencyData) {
-      // Convert through USD using database ExchangeRate
-      // ExchangeRate column represents: 1 USD = X units of currency
-      const fromRate = fromCurrencyData.ExchangeRate || 1.0;
-      const toRate = toCurrencyData.ExchangeRate || 1.0;
+    // ? FIX: Use frankfurter.dev API as requested
+    try {
+      const response = await fetch(`https://api.frankfurter.dev/v1/latest?amount=1&from=${fromCurrency}&to=${toCurrency}`);
       
-      // Convert: amount in fromCurrency ? USD ? toCurrency
-      const rate = fromRate / toRate;
-      
-      console.log(`?? Using database rate: ${fromCurrency} ? ${toCurrency} = ${rate} (via USD: ${fromRate}/${toRate})`);
-      
-      // Cache the calculated rate
-      setExchangeRatesCache(prev => ({
-        ...prev,
-        [cacheKey]: rate,
-        [reverseCacheKey]: 1 / rate
-      }));
-      
-      return rate;
+      if (response.ok) {
+        const data = await response.json();
+        const rate = data.rates[toCurrency];
+        
+        if (rate) {
+          console.log(`?? Live rate fetched: ${fromCurrency} ? ${toCurrency} = ${rate}`);
+          setExchangeRatesCache(prev => ({
+            ...prev,
+            [cacheKey]: rate,
+            [reverseCacheKey]: 1 / rate
+          }));
+          return rate;
+        }
+      }
+    } catch (error) {
+      console.warn(`?? frankfurter.dev API failed: ${error.message}`);
     }
     
-    console.warn(`?? No database rate available for ${fromCurrency} ? ${toCurrency}, using fallback`);
-    
-    // ? Keep fallback rates as backup only
+    // ? Keep fallback rates as backup
     const fallbackRates = {
       'USD-EUR': 0.92, 'EUR-USD': 1.09,
       'USD-GBP': 0.79, 'GBP-USD': 1.27,
@@ -200,6 +195,8 @@ export default function SalaryBreakdownSection({
     const components = localSalaryBreakdown[context] || [];
     let total = 0;
     
+    console.log(`?? Calculating total for ${context}:`, components);
+    
     for (const component of components) {
       const amount = component.Amount || 0;
       if (amount <= 0) continue;
@@ -208,6 +205,7 @@ export default function SalaryBreakdownSection({
       let yearlyAmount = amount;
       if (component.Frequency === 'Monthly') {
         yearlyAmount = amount * 12;
+        console.log(`?? Monthly ${amount} ? Yearly ${yearlyAmount}`);
       }
       
       // Convert currency to display currency
@@ -215,13 +213,34 @@ export default function SalaryBreakdownSection({
       let convertedAmount = yearlyAmount;
       
       if (componentCurrency && componentCurrency.Code !== displayCurrency) {
-        convertedAmount = await convertCurrency(yearlyAmount, componentCurrency.Code, displayCurrency);
+        const rate = await getExchangeRate(componentCurrency.Code, displayCurrency);
+        convertedAmount = yearlyAmount * rate;
+        console.log(`?? ${yearlyAmount} ${componentCurrency.Code} ? ${convertedAmount} ${displayCurrency} (rate: ${rate})`);
       }
       
       total += convertedAmount;
+      console.log(`? Adding ${convertedAmount}, running total: ${total}`);
     }
     
+    console.log(`?? Final total for ${context}: ${total} ${displayCurrency}`);
     return total;
+  };
+
+  const calculateTotals = async () => {
+    try {
+      const [currentTotal, expectedTotal] = await Promise.all([
+        getTotalSalary('current'),
+        getTotalSalary('expected')
+      ]);
+      
+      setSalaryTotals({
+        current: currentTotal,
+        expected: expectedTotal
+      });
+    } catch (error) {
+      console.error('Error calculating salary totals:', error);
+      setSalaryTotals({ current: 0, expected: 0 });
+    }
   };
 
   // ? FIX: Optimize text input updates with useCallback to prevent re-renders
@@ -521,6 +540,15 @@ export default function SalaryBreakdownSection({
 
     return (
       <View style={styles.editorContainer}>
+        {/* ? FIX: Backdrop to close dropdowns when clicking outside */}
+        {Object.keys(showDropdowns).some(key => showDropdowns[key]) && (
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowDropdowns({})}
+          />
+        )}
+        
         <View style={styles.contextSwitcher}>
           <TouchableOpacity
             style={[
@@ -610,10 +638,12 @@ export default function SalaryBreakdownSection({
                         style={styles.currencyPrefixButton}
                         onPress={() => {
                           const dropdownKey = `currency_${index}`;
-                          setShowDropdowns(prev => ({
-                            ...prev,
-                            [dropdownKey]: !prev[dropdownKey]
-                          }));
+                          // ? FIX: Close all other dropdowns first
+                          setShowDropdowns(prev => {
+                            const newState = {};
+                            newState[dropdownKey] = !prev[dropdownKey];
+                            return newState;
+                          });
                         }}
                       >
                         <Text style={styles.currencyPrefixText}>
@@ -636,10 +666,7 @@ export default function SalaryBreakdownSection({
                                 ]}
                                 onPress={() => {
                                   updateSalaryComponent(index, 'CurrencyID', currency.CurrencyID);
-                                  setShowDropdowns(prev => ({
-                                    ...prev,
-                                    [`currency_${index}`]: false
-                                  }));
+                                  setShowDropdowns({}); // ? FIX: Close all dropdowns
                                 }}
                               >
                                 <Text style={[
@@ -675,10 +702,12 @@ export default function SalaryBreakdownSection({
                         style={styles.frequencyPrefixButton}
                         onPress={() => {
                           const dropdownKey = `frequency_${index}`;
-                          setShowDropdowns(prev => ({
-                            ...prev,
-                            [dropdownKey]: !prev[dropdownKey]
-                          }));
+                          // ? FIX: Close all other dropdowns first
+                          setShowDropdowns(prev => {
+                            const newState = {};
+                            newState[dropdownKey] = !prev[dropdownKey];
+                            return newState;
+                          });
                         }}
                       >
                         <Text style={styles.frequencyPrefixText}>
@@ -699,10 +728,7 @@ export default function SalaryBreakdownSection({
                               ]}
                               onPress={() => {
                                 updateSalaryComponent(index, 'Frequency', freq);
-                                setShowDropdowns(prev => ({
-                                  ...prev,
-                                  [`frequency_${index}`]: false
-                                }));
+                                setShowDropdowns({}); // ? FIX: Close all dropdowns
                               }}
                             >
                               <Text style={[
@@ -1000,6 +1026,8 @@ const styles = StyleSheet.create({
   editorContainer: {
     flex: 1,
     padding: 20,
+    position: 'relative', // ? FIX: Ensure proper stacking context for dropdowns
+    zIndex: 1, // ? FIX: Lower z-index so dropdowns appear above
   },
   contextSwitcher: {
     flexDirection: 'row',
@@ -1039,6 +1067,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border || '#E0E0E0',
     position: 'relative', // ? FIX: Ensure proper stacking context
     zIndex: 1,
+    overflow: 'visible', // ? FIX: Allow dropdowns to overflow the component container
   },
   componentHeader: {
     flexDirection: 'row',
@@ -1101,7 +1130,7 @@ const styles = StyleSheet.create({
   },
   currencyPrefixContainer: {
     position: 'relative',
-    zIndex: 10000,
+    zIndex: 20000, // ? FIX: Much higher z-index to appear above everything
   },
   currencyPrefixButton: {
     flexDirection: 'row',
@@ -1134,8 +1163,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 20,
-    zIndex: 10001,
+    elevation: 30, // ? FIX: Much higher elevation for Android
+    zIndex: 20001, // ? FIX: Highest z-index to appear above everything
   },
   amountInputWrapper: {
     flex: 1,
@@ -1153,7 +1182,7 @@ const styles = StyleSheet.create({
   },
   frequencyPrefixContainer: {
     position: 'relative',
-    zIndex: 10000,
+    zIndex: 20000,
   },
   frequencyPrefixButton: {
     flexDirection: 'row',
@@ -1189,7 +1218,7 @@ const styles = StyleSheet.create({
     color: colors.white || '#FFFFFF',
   },
   
-  // Keep existing styles but remove unused overlay styles
+  // Keep existing compact styles
   compactAmountContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -1208,6 +1237,22 @@ const styles = StyleSheet.create({
   },
   currencyDropdownScroll: {
     maxHeight: 150,
+  },
+  currencyDropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#E0E0E0',
+  },
+  currencyDropdownItemActive: {
+    backgroundColor: colors.primary || '#007AFF',
+  },
+  currencyDropdownItemText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+  },
+  currencyDropdownItemTextActive: {
+    color: colors.white || '#FFFFFF',
   },
   dropdownContainer: {
     borderWidth: 1,
@@ -1232,6 +1277,43 @@ const styles = StyleSheet.create({
   dropdownOptionTextActive: {
     color: colors.primary || '#007AFF',
     fontWeight: typography.weights?.medium || '500',
+  },
+  frequencyContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  frequencyOption: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    backgroundColor: colors.background || '#FFFFFF',
+    alignItems: 'center',
+  },
+  frequencyOptionActive: {
+    backgroundColor: colors.primary || '#007AFF',
+    borderColor: colors.primary || '#007AFF',
+  },
+  frequencyOptionText: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  frequencyOptionTextActive: {
+    color: colors.white || '#FFFFFF',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 4,
+    padding: 12,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    backgroundColor: colors.white || '#FFFFFF',
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   addComponentButton: {
     flexDirection: 'row',
@@ -1295,5 +1377,16 @@ const styles = StyleSheet.create({
   },
   amountInputError: {
     borderColor: colors.danger || '#FF3B30',
+  },
+  
+  // ? NEW: Dropdown backdrop for better UX
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 19999, // ? Below dropdowns but above everything else
+    backgroundColor: 'transparent',
   },
 });
