@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
+// Removed ProfileSection import as we're not using it
+import { useEditing } from './ProfileSection';
 
 export default function SalaryBreakdownSection({ 
   profile, 
@@ -20,21 +22,39 @@ export default function SalaryBreakdownSection({
   editing, 
   onUpdate 
 }) {
+  const isEditing = useEditing(); // ? Use the same editing context as other sections
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingContext, setEditingContext] = useState('current'); // 'current' or 'expected'
-  const [displayCurrency, setDisplayCurrency] = useState('INR'); // ? NEW: User's preferred display currency (default INR)
+  const [displayCurrency, setDisplayCurrency] = useState('INR'); // ? User's preferred display currency
   const [exchangeRatesCache, setExchangeRatesCache] = useState({}); // ? Cache for exchange rates
   const [salaryTotals, setSalaryTotals] = useState({ current: 0, expected: 0 }); // ? Cache for calculated totals
-  const [localEditing, setLocalEditing] = useState(false); // ? NEW: Local editing state
   
-  // Local state for salary breakdown
+  // ? FIX: Add local editing state for Salary Breakdown
+  const [localEditing, setLocalEditing] = useState(false);
+  
+  // ? FIX: Optimize local state for better text input performance
   const [localSalaryBreakdown, setLocalSalaryBreakdown] = useState({
     current: [],
     expected: []
   });
+
+  // ? FIX: Memoize component amounts to prevent unnecessary recalculations
+  const componentAmounts = useMemo(() => {
+    const amounts = {};
+    const components = [...(localSalaryBreakdown.current || []), ...(localSalaryBreakdown.expected || [])];
+    
+    components.forEach((component, index) => {
+      const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
+      const originalAmount = component.Amount || 0;
+      const yearlyAmount = component.Frequency === 'Monthly' ? originalAmount * 12 : originalAmount;
+      amounts[index] = yearlyAmount;
+    });
+    
+    return amounts;
+  }, [localSalaryBreakdown, currencies]);
 
   useEffect(() => {
     if (profile?.salaryBreakdown) {
@@ -43,10 +63,14 @@ export default function SalaryBreakdownSection({
     loadReferenceData();
   }, [profile?.salaryBreakdown]);
 
-  // ? NEW: Recalculate totals when currency changes or salary data changes
+  // ? FIX: Debounced calculation of totals to improve performance
   useEffect(() => {
     if (currencies.length > 0 && (localSalaryBreakdown.current.length > 0 || localSalaryBreakdown.expected.length > 0)) {
-      calculateTotals();
+      const timeoutId = setTimeout(() => {
+        calculateTotals();
+      }, 300); // Debounce for 300ms
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [displayCurrency, localSalaryBreakdown, currencies]);
 
@@ -63,7 +87,6 @@ export default function SalaryBreakdownSection({
       
       if (currenciesRes.success) {
         setCurrencies(currenciesRes.data);
-        console.log('?? Loaded currencies from database:', currenciesRes.data);
         
         // Set default display currency to INR if available
         const inrCurrency = currenciesRes.data.find(c => c.Code === 'INR');
@@ -78,7 +101,7 @@ export default function SalaryBreakdownSection({
     }
   };
 
-  // ? SMART: Get exchange rate for specific currency pair using Frankfurter API
+  // ? FIX: Optimize exchange rate fetching with fallback rates to avoid CORS issues
   const getExchangeRate = async (fromCurrency, toCurrency) => {
     if (fromCurrency === toCurrency) return 1.0;
     
@@ -87,28 +110,46 @@ export default function SalaryBreakdownSection({
     
     // Check if we have cached rate
     if (exchangeRatesCache[cacheKey]) {
-      console.log(`?? Using cached rate: ${fromCurrency} ? ${toCurrency} = ${exchangeRatesCache[cacheKey]}`);
       return exchangeRatesCache[cacheKey];
     }
     
     // Check if we have reverse rate (and can calculate)
     if (exchangeRatesCache[reverseCacheKey]) {
       const reverseRate = 1 / exchangeRatesCache[reverseCacheKey];
-      console.log(`?? Using reverse cached rate: ${fromCurrency} ? ${toCurrency} = ${reverseRate}`);
-      
-      // Cache the calculated rate
       setExchangeRatesCache(prev => ({
         ...prev,
         [cacheKey]: reverseRate
       }));
-      
       return reverseRate;
     }
     
+    // ? FIX: Use fallback rates first to avoid CORS issues
+    const fallbackRates = {
+      'USD-EUR': 0.92, 'EUR-USD': 1.09,
+      'USD-GBP': 0.79, 'GBP-USD': 1.27,
+      'USD-INR': 83.12, 'INR-USD': 0.012,
+      'USD-CAD': 1.36, 'CAD-USD': 0.74,
+      'USD-AUD': 1.52, 'AUD-USD': 0.66,
+      'EUR-INR': 90.13, 'INR-EUR': 0.011,
+      'GBP-INR': 105.21, 'INR-GBP': 0.0095,
+      'EUR-GBP': 0.86, 'GBP-EUR': 1.16,
+      'CAD-INR': 61.25, 'INR-CAD': 0.016,
+      'AUD-INR': 54.68, 'INR-AUD': 0.018,
+    };
+    
+    const fallbackRate = fallbackRates[cacheKey];
+    if (fallbackRate) {
+      console.log(`? Using fallback rate: ${fromCurrency} ? ${toCurrency} = ${fallbackRate}`);
+      setExchangeRatesCache(prev => ({
+        ...prev,
+        [cacheKey]: fallbackRate,
+        [reverseCacheKey]: 1 / fallbackRate
+      }));
+      return fallbackRate;
+    }
+    
+    // ? Try API as fallback (won't work in web due to CORS, but will work in mobile)
     try {
-      console.log(`?? Fetching live rate: ${fromCurrency} ? ${toCurrency}`);
-      
-      // Use Frankfurter API with smart from/to params
       const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`);
       
       if (response.ok) {
@@ -116,71 +157,32 @@ export default function SalaryBreakdownSection({
         const rate = data.rates[toCurrency];
         
         if (rate) {
-          console.log(`?? Live rate fetched: ${fromCurrency} ? ${toCurrency} = ${rate}`);
-          
-          // Cache both directions
+          console.log(`? Live rate fetched: ${fromCurrency} ? ${toCurrency} = ${rate}`);
           setExchangeRatesCache(prev => ({
             ...prev,
             [cacheKey]: rate,
             [reverseCacheKey]: 1 / rate
           }));
-          
           return rate;
-        } else {
-          throw new Error(`Rate not found in response for ${toCurrency}`);
         }
-      } else {
-        throw new Error(`Frankfurter API responded with ${response.status}`);
       }
     } catch (error) {
-      console.warn(`?? Failed to fetch rate ${fromCurrency} ? ${toCurrency}:`, error.message);
-      
-      // Fallback rates for common conversions
-      const fallbackRates = {
-        'USD-EUR': 0.92, 'EUR-USD': 1.09,
-        'USD-GBP': 0.79, 'GBP-USD': 1.27,
-        'USD-INR': 83.12, 'INR-USD': 0.012,
-        'USD-CAD': 1.36, 'CAD-USD': 0.74,
-        'USD-AUD': 1.52, 'AUD-USD': 0.66,
-        'EUR-INR': 90.13, 'INR-EUR': 0.011,
-        'GBP-INR': 105.21, 'INR-GBP': 0.0095,
-      };
-      
-      const fallbackRate = fallbackRates[cacheKey];
-      if (fallbackRate) {
-        console.log(`?? Using fallback rate: ${fromCurrency} ? ${toCurrency} = ${fallbackRate}`);
-        
-        // Cache the fallback rate
-        setExchangeRatesCache(prev => ({
-          ...prev,
-          [cacheKey]: fallbackRate
-        }));
-        
-        return fallbackRate;
-      }
-      
-      // Return 1:1 as last resort
-      console.warn(`?? No fallback rate available, using 1:1 for ${fromCurrency} ? ${toCurrency}`);
-      return 1.0;
+      console.warn(`?? API fetch failed (expected in web): ${error.message}`);
     }
+    
+    // Return 1:1 as last resort
+    console.warn(`?? No rate available for ${fromCurrency} ? ${toCurrency}, using 1:1`);
+    return 1.0;
   };
 
-  // ? SMART: Currency conversion using on-demand exchange rates
   const convertCurrency = async (amount, fromCurrency, toCurrency) => {
     if (fromCurrency === toCurrency) return amount;
-    
     const rate = await getExchangeRate(fromCurrency, toCurrency);
-    const convertedAmount = amount * rate;
-    
-    console.log(`?? Converted ${amount} ${fromCurrency} ? ${convertedAmount.toFixed(2)} ${toCurrency} (rate: ${rate})`);
-    
-    return convertedAmount;
+    return amount * rate;
   };
 
-  // ? ENHANCED: Get total salary with smart async currency conversion
   const getTotalSalary = async (context) => {
     const components = localSalaryBreakdown[context] || [];
-    
     let total = 0;
     
     for (const component of components) {
@@ -193,7 +195,7 @@ export default function SalaryBreakdownSection({
         yearlyAmount = amount * 12;
       }
       
-      // Convert currency to display currency using smart API
+      // Convert currency to display currency
       const componentCurrency = currencies.find(c => c.CurrencyID === component.CurrencyID);
       let convertedAmount = yearlyAmount;
       
@@ -207,7 +209,6 @@ export default function SalaryBreakdownSection({
     return total;
   };
 
-  // ? NEW: Calculate totals for both current and expected salary
   const calculateTotals = async () => {
     try {
       const [currentTotal, expectedTotal] = await Promise.all([
@@ -225,6 +226,16 @@ export default function SalaryBreakdownSection({
     }
   };
 
+  // ? FIX: Optimize text input updates with useCallback to prevent re-renders
+  const updateSalaryComponent = React.useCallback((index, field, value) => {
+    setLocalSalaryBreakdown(prev => ({
+      ...prev,
+      [editingContext]: prev[editingContext].map((component, i) => 
+        i === index ? { ...component, [field]: value } : component
+      )
+    }));
+  }, [editingContext]);
+
   const addSalaryComponent = () => {
     const defaultCurrency = currencies.find(c => c.Code === 'USD') || currencies[0];
     const newComponent = {
@@ -241,15 +252,6 @@ export default function SalaryBreakdownSection({
     }));
   };
 
-  const updateSalaryComponent = (index, field, value) => {
-    setLocalSalaryBreakdown(prev => ({
-      ...prev,
-      [editingContext]: prev[editingContext].map((component, i) => 
-        i === index ? { ...component, [field]: value } : component
-      )
-    }));
-  };
-
   const removeSalaryComponent = (index) => {
     setLocalSalaryBreakdown(prev => ({
       ...prev,
@@ -263,91 +265,31 @@ export default function SalaryBreakdownSection({
       return;
     }
 
-    // Enhanced validation with better user feedback
-    const validateComponents = (components, context) => {
-      for (let i = 0; i < components.length; i++) {
-        const comp = components[i];
-        
-        // Check ComponentID
-        if (!comp.ComponentID) {
-          Alert.alert(
-            'Validation Error', 
-            `${context} salary component ${i + 1}: Please select a component type (Fixed, Variable, Bonus, or Stock).`
-          );
-          return false;
-        }
-        
-        // Check Amount - must be greater than 0
-        if (!comp.Amount || comp.Amount <= 0) {
-          Alert.alert(
-            'Validation Error', 
-            `${context} salary component ${i + 1}: Amount must be greater than 0. Please enter a valid amount.`
-          );
-          return false;
-        }
-        
-        // Check CurrencyID
-        if (!comp.CurrencyID) {
-          Alert.alert(
-            'Validation Error', 
-            `${context} salary component ${i + 1}: Please select a currency.`
-          );
-          return false;
-        }
-      }
-      return true;
-    };
-
-    // Skip validation if no components (allow empty salary breakdown)
-    const hasCurrentComponents = localSalaryBreakdown.current && localSalaryBreakdown.current.length > 0;
-    const hasExpectedComponents = localSalaryBreakdown.expected && localSalaryBreakdown.expected.length > 0;
-
-    // Validate only if components exist
-    if (hasCurrentComponents && !validateComponents(localSalaryBreakdown.current, 'Current')) return;
-    if (hasExpectedComponents && !validateComponents(localSalaryBreakdown.expected, 'Expected')) return;
-
-    // Enhanced data sanitization with better type handling
     const sanitizedBreakdown = {
-      current: (localSalaryBreakdown.current || []).map(comp => {
-        const sanitized = {
-          ComponentID: parseInt(comp.ComponentID) || 1,
-          Amount: parseFloat(comp.Amount) || 0,
-          CurrencyID: parseInt(comp.CurrencyID) || 1,
-          Frequency: comp.Frequency || 'Yearly',
-          Notes: comp.Notes || ''
-        };
-        
-        console.log('?? Sanitizing current component:', comp, '?', sanitized);
-        return sanitized;
-      }).filter(comp => comp.Amount > 0), // Filter out zero amounts
+      current: (localSalaryBreakdown.current || []).map(comp => ({
+        ComponentID: parseInt(comp.ComponentID) || 1,
+        Amount: parseFloat(comp.Amount) || 0,
+        CurrencyID: parseInt(comp.CurrencyID) || 1,
+        Frequency: comp.Frequency || 'Yearly',
+        Notes: comp.Notes || ''
+      })).filter(comp => comp.Amount > 0),
       
-      expected: (localSalaryBreakdown.expected || []).map(comp => {
-        const sanitized = {
-          ComponentID: parseInt(comp.ComponentID) || 1,
-          Amount: parseFloat(comp.Amount) || 0,
-          CurrencyID: parseInt(comp.CurrencyID) || 1,
-          Frequency: comp.Frequency || 'Yearly',
-          Notes: comp.Notes || ''
-        };
-        
-        console.log('?? Sanitizing expected component:', comp, '?', sanitized);
-        return sanitized;
-      }).filter(comp => comp.Amount > 0) // Filter out zero amounts
+      expected: (localSalaryBreakdown.expected || []).map(comp => ({
+        ComponentID: parseInt(comp.ComponentID) || 1,
+        Amount: parseFloat(comp.Amount) || 0,
+        CurrencyID: parseInt(comp.CurrencyID) || 1,
+        Frequency: comp.Frequency || 'Yearly',
+        Notes: comp.Notes || ''
+      })).filter(comp => comp.Amount > 0)
     };
 
     setLoading(true);
     try {
-      console.log('?? Saving salary breakdown:', JSON.stringify(sanitizedBreakdown, null, 2));
-      
       const result = await nexhireAPI.updateSalaryBreakdown(profile.UserID, sanitizedBreakdown);
       
-      console.log('?? Save result:', result);
-      
       if (result.success) {
-        // Update local state with sanitized data
         setLocalSalaryBreakdown(sanitizedBreakdown);
         
-        // Update parent profile state
         if (setProfile) {
           setProfile(prev => ({
             ...prev,
@@ -360,29 +302,23 @@ export default function SalaryBreakdownSection({
         }
         
         setShowSalaryModal(false);
-        
-        // Recalculate totals after save
         calculateTotals();
         
-        // Show success message with details
         const totalComponents = sanitizedBreakdown.current.length + sanitizedBreakdown.expected.length;
         Alert.alert(
           'Success', 
           `Salary breakdown updated successfully! ${totalComponents} component${totalComponents !== 1 ? 's' : ''} saved.`
         );
       } else {
-        console.error('?? Save failed:', result.error);
         Alert.alert('Error', result.error || 'Failed to update salary breakdown. Please try again.');
       }
     } catch (error) {
-      console.error('?? Save exception:', error);
       Alert.alert('Error', `Failed to update salary breakdown: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ? NEW: Format amount with proper currency symbol
   const formatAmountWithCurrency = (amount, currencyCode = 'INR') => {
     const currency = currencies.find(c => c.Code === currencyCode);
     
@@ -390,33 +326,16 @@ export default function SalaryBreakdownSection({
       return `${amount.toLocaleString()} ${currencyCode}`;
     }
     
-    const currencyConfig = {
-      'USD': { locale: 'en-US' },
-      'EUR': { locale: 'de-DE' },
-      'GBP': { locale: 'en-GB' },
-      'INR': { locale: 'en-IN' },
-      'CAD': { locale: 'en-CA' },
-      'AUD': { locale: 'en-AU' },
-    };
-    
-    const config = currencyConfig[currencyCode] || { locale: 'en-US' };
-    
     try {
-      return new Intl.NumberFormat(config.locale, {
+      return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: currencyCode,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(amount || 0);
     } catch (error) {
-      // Fallback if currency formatting fails
       return `${currency.Symbol || ''}${(amount || 0).toLocaleString()} ${currencyCode}`;
     }
-  };
-
-  const formatAmount = (amount) => {
-    // Use the user's preferred display currency
-    return formatAmountWithCurrency(amount, displayCurrency);
   };
 
   const getComponentName = (componentId) => {
@@ -424,26 +343,51 @@ export default function SalaryBreakdownSection({
     return component?.ComponentName || 'Unknown';
   };
 
-  // ? NEW: Validation helper to check for errors
-  const hasValidationErrors = () => {
-    const allComponents = [
-      ...(localSalaryBreakdown.current || []),
-      ...(localSalaryBreakdown.expected || [])
-    ];
-    
-    return allComponents.some(comp => 
-      !comp.ComponentID || 
-      !comp.Amount || 
-      comp.Amount <= 0 || 
-      !comp.CurrencyID
+  // ? FIX: Simple text input component for salary modal - no complex debouncing
+  const OptimizedTextInput = React.memo(({ value, onChangeText, placeholder, keyboardType, style }) => {
+    const [localValue, setLocalValue] = useState(value?.toString() || '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Sync with parent value when not focused
+    useEffect(() => {
+      if (!isFocused) {
+        setLocalValue(value?.toString() || '');
+      }
+    }, [value, isFocused]);
+
+    // Update parent only on blur (like ProfileField)
+    const handleBlur = () => {
+      setIsFocused(false);
+      if (keyboardType === 'numeric') {
+        const numericValue = localValue.replace(/[^0-9.]/g, '');
+        onChangeText(parseFloat(numericValue) || 0);
+      } else {
+        onChangeText(localValue);
+      }
+    };
+
+    const handleFocus = () => {
+      setIsFocused(true);
+    };
+
+    return (
+      <TextInput
+        style={style}
+        value={localValue}
+        onChangeText={setLocalValue}  // ? Only updates local state
+        onFocus={handleFocus}
+        onBlur={handleBlur}          // ? Updates parent on blur
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+      />
     );
-  };
+  });
 
   const renderSalaryDisplay = () => {
     const hasCurrentSalary = localSalaryBreakdown.current?.length > 0;
     const hasExpectedSalary = localSalaryBreakdown.expected?.length > 0;
 
-    if (!editing && !hasCurrentSalary && !hasExpectedSalary) {
+    if (!hasCurrentSalary && !hasExpectedSalary) {
       return (
         <Text style={styles.noDataText}>
           No salary information provided
@@ -453,7 +397,7 @@ export default function SalaryBreakdownSection({
 
     return (
       <View style={styles.salaryDisplayContainer}>
-        {/* ? NEW: Currency Display Toggle */}
+        {/* Currency Display Toggle */}
         <View style={styles.currencyToggleContainer}>
           <Text style={styles.currencyToggleLabel}>View totals in:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyToggleScroll}>
@@ -485,16 +429,34 @@ export default function SalaryBreakdownSection({
             <Text style={styles.totalAmount}>
               {formatAmountWithCurrency(salaryTotals.current, displayCurrency)}/year
             </Text>
-            <Text style={styles.totalNote}>
-              (All amounts converted to {displayCurrency} annually using live exchange rates)
-            </Text>
-            <SalaryComponentsList 
-              components={localSalaryBreakdown.current}
-              displayCurrency={displayCurrency}
-              currencies={currencies}
-              getComponentName={getComponentName}
-              convertCurrency={convertCurrency}
-            />
+            
+            <View style={styles.componentsContainer}>
+              {localSalaryBreakdown.current.map((component, index) => {
+                const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
+                const originalAmount = component.Amount || 0;
+                
+                return (
+                  <View key={index} style={styles.componentItem}>
+                    <View style={styles.componentInfo}>
+                      <Text style={styles.componentName}>
+                        {getComponentName(component.ComponentID)}
+                      </Text>
+                      <Text style={styles.componentFrequency}>
+                        {component.Frequency || 'Yearly'}
+                      </Text>
+                    </View>
+                    <View style={styles.componentAmountContainer}>
+                      <Text style={styles.componentAmount}>
+                        {currency?.Symbol || '$'}{originalAmount.toLocaleString()}
+                      </Text>
+                      <Text style={styles.componentCurrency}>
+                        {currency?.Code || 'USD'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -504,85 +466,36 @@ export default function SalaryBreakdownSection({
             <Text style={styles.totalAmount}>
               {formatAmountWithCurrency(salaryTotals.expected, displayCurrency)}/year
             </Text>
-            <Text style={styles.totalNote}>
-              (All amounts converted to {displayCurrency} annually using live exchange rates)
-            </Text>
-            <SalaryComponentsList 
-              components={localSalaryBreakdown.expected}
-              displayCurrency={displayCurrency}
-              currencies={currencies}
-              getComponentName={getComponentName}
-              convertCurrency={convertCurrency}
-            />
+            
+            <View style={styles.componentsContainer}>
+              {localSalaryBreakdown.expected.map((component, index) => {
+                const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
+                const originalAmount = component.Amount || 0;
+                
+                return (
+                  <View key={index} style={styles.componentItem}>
+                    <View style={styles.componentInfo}>
+                      <Text style={styles.componentName}>
+                        {getComponentName(component.ComponentID)}
+                      </Text>
+                      <Text style={styles.componentFrequency}>
+                        {component.Frequency || 'Yearly'}
+                      </Text>
+                    </View>
+                    <View style={styles.componentAmountContainer}>
+                      <Text style={styles.componentAmount}>
+                        {currency?.Symbol || '$'}{originalAmount.toLocaleString()}
+                      </Text>
+                      <Text style={styles.componentCurrency}>
+                        {currency?.Code || 'USD'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
-      </View>
-    );
-  };
-
-  // ? NEW: Separate component for rendering salary components list
-  const SalaryComponentsList = ({ components, displayCurrency, currencies, getComponentName, convertCurrency }) => {
-    const [componentAmounts, setComponentAmounts] = useState({});
-
-    useEffect(() => {
-      const convertComponentAmounts = async () => {
-        const convertedAmounts = {};
-        
-        for (let i = 0; i < components.length; i++) {
-          const component = components[i];
-          const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
-          const originalAmount = component.Amount || 0;
-          const yearlyAmount = component.Frequency === 'Monthly' ? originalAmount * 12 : originalAmount;
-          
-          if (currency && currency.Code !== displayCurrency) {
-            const convertedAmount = await convertCurrency(yearlyAmount, currency.Code, displayCurrency);
-            convertedAmounts[i] = convertedAmount;
-          } else {
-            convertedAmounts[i] = yearlyAmount;
-          }
-        }
-        
-        setComponentAmounts(convertedAmounts);
-      };
-
-      if (components.length > 0) {
-        convertComponentAmounts();
-      }
-    }, [components, displayCurrency, currencies]);
-
-    return (
-      <View style={styles.componentsContainer}>
-        {components.map((component, index) => {
-          const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
-          const originalAmount = component.Amount || 0;
-          const convertedAmount = componentAmounts[index] || 0;
-          
-          return (
-            <View key={index} style={styles.componentItem}>
-              <View style={styles.componentInfo}>
-                <Text style={styles.componentName}>
-                  {getComponentName(component.ComponentID)}
-                </Text>
-                <Text style={styles.componentFrequency}>
-                  {component.Frequency || 'Yearly'}
-                </Text>
-              </View>
-              <View style={styles.componentAmountContainer}>
-                <Text style={styles.componentAmount}>
-                  {currency?.Symbol || '$'}{originalAmount.toLocaleString()}
-                </Text>
-                <Text style={styles.componentCurrency}>
-                  {currency?.Code || 'USD'}
-                </Text>
-                {currency?.Code !== displayCurrency && (
-                  <Text style={styles.componentConverted}>
-                    ? {formatAmountWithCurrency(convertedAmount, displayCurrency)}/yr
-                  </Text>
-                )}
-              </View>
-            </View>
-          );
-        })}
       </View>
     );
   };
@@ -691,7 +604,7 @@ export default function SalaryBreakdownSection({
                       </ScrollView>
                     </View>
 
-                    {/* Amount Input with Currency Symbol and Validation */}
+                    {/* Amount Input with Currency Symbol */}
                     <View style={styles.amountContainer}>
                       <Text style={styles.amountLabel}>Amount</Text>
                       <View style={[
@@ -701,13 +614,10 @@ export default function SalaryBreakdownSection({
                         <Text style={styles.currencySymbol}>
                           {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Symbol || '$'}
                         </Text>
-                        <TextInput
+                        <OptimizedTextInput
                           style={styles.amountInput}
-                          value={component.Amount?.toString() || ''}
-                          onChangeText={(text) => {
-                            const numericValue = text.replace(/[^0-9.]/g, '');
-                            updateSalaryComponent(index, 'Amount', parseFloat(numericValue) || 0);
-                          }}
+                          value={component.Amount}
+                          onChangeText={(value) => updateSalaryComponent(index, 'Amount', value)}
                           placeholder="0"
                           keyboardType="numeric"
                         />
@@ -746,12 +656,11 @@ export default function SalaryBreakdownSection({
                 {/* Notes */}
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Notes (Optional)</Text>
-                  <TextInput
+                  <OptimizedTextInput
                     style={styles.textInput}
-                    value={component.Notes || ''}
-                    onChangeText={(text) => updateSalaryComponent(index, 'Notes', text)}
+                    value={component.Notes}
+                    onChangeText={(value) => updateSalaryComponent(index, 'Notes', value)}
                     placeholder="Add notes about this component"
-                    multiline
                   />
                 </View>
               </View>
@@ -775,20 +684,13 @@ export default function SalaryBreakdownSection({
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
           
-          {/* Enhanced save button with validation state */}
           <TouchableOpacity
-            style={[
-              styles.saveButton, 
-              (loading || hasValidationErrors()) && styles.saveButtonDisabled
-            ]}
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             onPress={saveSalaryBreakdown}
-            disabled={loading || hasValidationErrors()}
+            disabled={loading}
           >
-            <Text style={[
-              styles.saveButtonText,
-              hasValidationErrors() && styles.saveButtonTextDisabled
-            ]}>
-              {loading ? 'Saving...' : hasValidationErrors() ? 'Fix Errors to Save' : 'Save Breakdown'}
+            <Text style={styles.saveButtonText}>
+              {loading ? 'Saving...' : 'Save Breakdown'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -796,31 +698,24 @@ export default function SalaryBreakdownSection({
     );
   };
 
+  // ? FIX: Use custom header with direct modal control instead of ProfileSection
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.sectionHeader}>
         <View style={styles.headerLeft}>
           <Ionicons name="cash" size={20} color={colors.primary || '#007AFF'} />
-          <Text style={styles.title}>Salary Breakdown</Text>
+          <Text style={styles.sectionTitle}>Salary Breakdown</Text>
         </View>
-        {!editing && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setLocalEditing(!localEditing)}
-          >
-            <Ionicons name="create" size={16} color={colors.primary || '#007AFF'} />
-            <Text style={styles.editButtonText}>{localEditing ? 'Done' : 'Edit'}</Text>
-          </TouchableOpacity>
-        )}
-        {(editing || localEditing) && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setShowSalaryModal(true)}
-          >
-            <Ionicons name="create" size={16} color={colors.primary || '#007AFF'} />
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => {
+            console.log('?? Salary Breakdown Edit clicked - opening modal');
+            setShowSalaryModal(true);
+          }}
+        >
+          <Ionicons name="create" size={16} color={colors.primary || '#007AFF'} />
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
       </View>
 
       {renderSalaryDisplay()}
@@ -847,6 +742,7 @@ export default function SalaryBreakdownSection({
 }
 
 const styles = StyleSheet.create({
+  // ? FIX: Add container and header styles for custom header
   container: {
     backgroundColor: colors.surface || '#FFFFFF',
     margin: 16,
@@ -862,10 +758,10 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  header: {
+  sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   headerLeft: {
@@ -873,7 +769,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  title: {
+  sectionTitle: {
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
     color: colors.text || '#000000',
@@ -889,6 +785,23 @@ const styles = StyleSheet.create({
     color: colors.primary || '#007AFF',
     fontWeight: typography.weights?.medium || '500',
   },
+  // ? FIX: Remove custom container styles since we're using ProfileSection
+  editModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: colors.surface || '#F5F5F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    marginBottom: 16,
+  },
+  editModalButtonText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.primary || '#007AFF',
+    fontWeight: typography.weights?.medium || '500',
+  },
   noDataText: {
     fontSize: typography.sizes?.sm || 14,
     color: colors.gray600 || colors.gray || '#666666',
@@ -900,7 +813,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   
-  // ? NEW: Currency Toggle Styles
+  // Currency Toggle Styles
   currencyToggleContainer: {
     backgroundColor: colors.surface || '#F5F5F5',
     borderRadius: 8,
@@ -1004,12 +917,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.xs || 12,
     color: colors.gray600 || colors.gray || '#666666',
     marginTop: 2,
-  },
-  componentConverted: {
-    fontSize: typography.sizes?.xs || 11,
-    color: colors.primary || '#007AFF',
-    marginTop: 2,
-    fontWeight: typography.weights?.medium || '500',
   },
   modalContainer: {
     flex: 1,
@@ -1124,7 +1031,8 @@ const styles = StyleSheet.create({
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 16,
   },
   currencyContainer: {
     flex: 1,
@@ -1165,7 +1073,7 @@ const styles = StyleSheet.create({
     color: colors.white || '#FFFFFF',
   },
   amountContainer: {
-    flex: 2,
+    flex: 1,
   },
   amountLabel: {
     fontSize: typography.sizes?.sm || 14,
@@ -1190,5 +1098,108 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
     color: colors.text || '#000000',
     marginRight: 8,
-  }
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    padding: 0,
+  },
+  validationError: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.danger || '#FF3B30',
+    marginTop: 4,
+  },
+  frequencyContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  frequencyOption: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    backgroundColor: colors.background || '#FFFFFF',
+    alignItems: 'center',
+  },
+  frequencyOptionActive: {
+    backgroundColor: colors.primary || '#007AFF',
+    borderColor: colors.primary || '#007AFF',
+  },
+  frequencyOptionText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  frequencyOptionTextActive: {
+    color: colors.white || '#FFFFFF',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    borderRadius: 4,
+    padding: 12,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    backgroundColor: colors.white || '#FFFFFF',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  addComponentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary || '#007AFF',
+    backgroundColor: (colors.primary || '#007AFF') + '10',
+    marginTop: 16,
+  },
+  addComponentText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.primary || '#007AFF',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  editorActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border || '#E0E0E0',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+    backgroundColor: colors.background || '#FFFFFF',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#000000',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary || '#007AFF',
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: colors.gray300 || '#CCCCCC',
+  },
+  saveButtonText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.bold || 'bold',
+  },
 });

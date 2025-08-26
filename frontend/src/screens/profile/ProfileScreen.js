@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -148,8 +148,9 @@ export default function ProfileScreen() {
     bio: '',
   });
 
-  // ? NEW: ProfileField component definition (moved to after state definitions)
-  const ProfileField = ({ fieldKey, label, placeholder, options = {} }) => {
+  // ? FIX: Optimized ProfileField component with proper debounce cleanup
+  // ? FIX: Local state ProfileField - no parent updates until blur (like normal forms)
+  const ProfileField = React.memo(({ fieldKey, label, placeholder, options = {} }) => {
     const isEditing = useEditing();
     
     const { 
@@ -167,6 +168,31 @@ export default function ProfileScreen() {
     const setCurrentProfile = profileType === 'jobSeeker' ? setJobSeekerProfile : 
                              profileType === 'employer' ? setEmployerProfile : setProfile;
 
+    // ? FIX: Local state for editing - no parent updates during typing
+    const [localValue, setLocalValue] = useState(currentProfile[fieldKey]?.toString() || '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    // ? FIX: Sync with parent value when not focused
+    useEffect(() => {
+      if (!isFocused) {
+        setLocalValue(currentProfile[fieldKey]?.toString() || '');
+      }
+    }, [currentProfile[fieldKey], isFocused]);
+
+    // ? FIX: Only update parent when field loses focus
+    const handleBlur = () => {
+      setIsFocused(false);
+      setCurrentProfile(prev => ({ ...prev, [fieldKey]: localValue }));
+    };
+
+    const handleFocus = () => {
+      setIsFocused(true);
+    };
+
+    const handleChoiceSelect = (choice) => {
+      setCurrentProfile(prev => ({ ...prev, [fieldKey]: choice }));
+    };
+
     return (
       <View style={styles.fieldContainer}>
         <Text style={styles.fieldLabel}>{label}</Text>
@@ -180,9 +206,7 @@ export default function ProfileScreen() {
                     styles.choiceButton,
                     currentProfile[fieldKey] === choice && styles.choiceButtonActive
                   ]}
-                  onPress={() => {
-                    setCurrentProfile({ ...currentProfile, [fieldKey]: choice });
-                  }}
+                  onPress={() => handleChoiceSelect(choice)}
                 >
                   <Text style={[
                     styles.choiceButtonText,
@@ -196,10 +220,10 @@ export default function ProfileScreen() {
           ) : (
             <TextInput
               style={[styles.fieldInput, multiline && styles.multilineInput]}
-              value={currentProfile[fieldKey]?.toString() || ''}
-              onChangeText={(text) => {
-                setCurrentProfile({ ...currentProfile, [fieldKey]: text });
-              }}
+              value={localValue}
+              onChangeText={setLocalValue}  // ? Only updates local state
+              onFocus={handleFocus}
+              onBlur={handleBlur}          // ? Updates parent on blur
               placeholder={placeholder}
               multiline={multiline}
               numberOfLines={multiline ? 4 : 1}
@@ -217,7 +241,7 @@ export default function ProfileScreen() {
         {errors[fieldKey] && <Text style={styles.errorText}>{errors[fieldKey]}</Text>}
       </View>
     );
-  };
+  });
 
   // Validation functions and other helper functions
   const validateEmail = (email) => {
@@ -583,7 +607,7 @@ export default function ProfileScreen() {
             salaryBreakdown: response.data.salaryBreakdown || { current: [], expected: [] },
             
             // Legacy fields (for backward compatibility)
-            expectedSalary: response.data.MinimumSalary?.toString() || '',
+            expectedSalary: response.data.minimumSalary?.toString() || '',
             currencyPreference: 'USD',
             location: response.data.CurrentLocation || '',
             relocatable: response.data.WillingToRelocate || false,
@@ -1083,6 +1107,20 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* ? FIX: Add missing logout button at bottom when not editing */}
+        {!editing && (
+          <View style={styles.logoutSection}>
+            <TouchableOpacity 
+              onPress={() => setShowLogoutModal(true)} 
+              style={styles.logoutMainButton}
+              disabled={loading}
+            >
+              <Ionicons name="log-out-outline" size={20} color={colors.danger || '#FF3B30'} />
+              <Text style={styles.logoutMainButtonText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {/* LOADING INDICATOR */}
         {loading && (
@@ -1350,36 +1388,67 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   
+  // ? FIX: Add missing logout section styles
+  logoutSection: {
+    marginTop: 32,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border || '#E0E0E0',
+    alignItems: 'center',
+  },
+  logoutMainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.danger || '#FF3B30',
+    backgroundColor: (colors.danger || '#FF3B30') + '10',
+    minWidth: 150,
+  },
+  logoutMainButtonText: {
+    fontSize: typography.sizes?.md || 16,
+    color: colors.danger || '#FF3B30',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
   },
-  actionButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 8,
+  
+  // Logout button styles
+  logoutSection: {
+    marginTop: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 4,
   },
-  cancelButton: {
-    backgroundColor: colors.gray,
-  },
-  actionButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  logoutMainButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoutMainButtonText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.medium || '500',
+    color: colors.danger || '#FF3B30',
+    marginLeft: 8,
   },
   
   // Modal styles

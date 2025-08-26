@@ -28,8 +28,8 @@ export default function ProfileSection({
       setSaving(true);
       try {
         const success = await onSave();
-        if (success) {
-          setLocalEditing(false); // Exit edit mode on successful save
+        if (success !== false) { // ? FIX: Only exit edit mode if onSave doesn't return false
+          setLocalEditing(false);
         }
       } catch (error) {
         console.error('Error saving section:', error);
