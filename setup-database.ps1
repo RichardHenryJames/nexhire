@@ -57,8 +57,8 @@ END
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Organizations')
 BEGIN
     CREATE TABLE Organizations (
-        OrganizationID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        Name nvarchar(200) NOT NULL,
+        OrganizationID INT IDENTITY(1,1) PRIMARY KEY,
+        Name NVARCHAR(200) NOT NULL UNIQUE,
         Type nvarchar(50), -- Pvt Ltd, Govt, NGO, Startup
         Industry nvarchar(100),
         Size nvarchar(20),
@@ -217,7 +217,7 @@ BEGIN
     CREATE TABLE Employers (
         EmployerID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
         UserID uniqueidentifier NOT NULL,
-        OrganizationID uniqueidentifier NOT NULL,
+        OrganizationID int NOT NULL,
         Role nvarchar(50) DEFAULT 'Recruiter', -- Added, instead of multiple flags
         IsVerified bit DEFAULT 0,
         JoinedAt datetime2 DEFAULT GETUTCDATE(),
@@ -234,7 +234,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Jobs')
 BEGIN
     CREATE TABLE Jobs (
         JobID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        OrganizationID uniqueidentifier NOT NULL,
+        OrganizationID int NOT NULL,
         PostedByUserID uniqueidentifier NOT NULL,
         Title nvarchar(200) NOT NULL,
         JobTypeID int NOT NULL,

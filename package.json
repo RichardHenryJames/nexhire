@@ -22,7 +22,11 @@
     "test:all-flows": "npm run test:registration-only && npm run test:profile-update && npm run test:api-integration",
     "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --force",
     "deploy": "npm run deploy:backend",
-    "postinstall": "echo 'NexHire Backend API installed successfully'"
+    "postinstall": "echo 'NexHire Backend API installed successfully'",
+    "populate:orgs": "ts-node scripts/populate-organizations.ts",
+    "populate:india": "ts-node scripts/populate-india-and-fortune.ts",
+    "populate:fortune": "cross-env MODE=fortune ts-node scripts/populate-india-and-fortune.ts",
+    "populate:all": "cross-env MODE=all ts-node scripts/populate-india-and-fortune.ts"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",
@@ -55,6 +59,7 @@
     "@types/nodemailer": "^6.4.14",
     "@types/uuid": "^9.0.8",
     "azure-functions-core-tools": "^4.0.5455",
+    "cross-env": "^7.0.3",
     "eslint": "^9.33.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
