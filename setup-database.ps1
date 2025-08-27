@@ -54,26 +54,35 @@ BEGIN
     );
 END
 
--- Create Organizations table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Organizations')
 BEGIN
     CREATE TABLE Organizations (
         OrganizationID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
         Name nvarchar(200) NOT NULL,
-        Type nvarchar(50),
+        Type nvarchar(50), -- Pvt Ltd, Govt, NGO, Startup
         Industry nvarchar(100),
         Size nvarchar(20),
         Website nvarchar(500),
         LinkedInProfile nvarchar(500),
-        Description ntext,
+        Description nvarchar(max),
         LogoURL nvarchar(1000),
-        VerificationStatus nvarchar(50) DEFAULT 'Pending',
+        VerificationStatus tinyint DEFAULT 0,  -- Changed from nvarchar(50)
+                                               -- 0=Pending, 1=Verified, 2=Rejected
+        VerifiedAt datetime2 NULL,             -- Added
+        VerifiedBy uniqueidentifier NULL,      -- Added (FK to Users.UserID)
         EstablishedDate date,
+        Headquarters nvarchar(255),            -- Added
+        ContactEmail nvarchar(320),            -- Added
+        ContactPhone nvarchar(20),             -- Added
+        Rating decimal(3,2),                   -- Added (for reviews later)
         CreatedAt datetime2 DEFAULT GETUTCDATE(),
         UpdatedAt datetime2 DEFAULT GETUTCDATE(),
+        CreatedBy uniqueidentifier NULL,       -- Added
+        UpdatedBy uniqueidentifier NULL,       -- Added
         IsActive bit DEFAULT 1
     );
 END
+
 
 -- Create Users table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
@@ -209,17 +218,16 @@ BEGIN
         EmployerID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
         UserID uniqueidentifier NOT NULL,
         OrganizationID uniqueidentifier NOT NULL,
-        JobTitle nvarchar(200),
-        Department nvarchar(100),
-        CanPostJobs bit DEFAULT 0,
-        CanManageApplications bit DEFAULT 0,
-        CanManageTeam bit DEFAULT 0,
+        Role nvarchar(50) DEFAULT 'Recruiter', -- Added, instead of multiple flags
         IsVerified bit DEFAULT 0,
         JoinedAt datetime2 DEFAULT GETUTCDATE(),
+        CreatedBy uniqueidentifier NULL,       -- Added
+        UpdatedBy uniqueidentifier NULL,       -- Added
         FOREIGN KEY (UserID) REFERENCES Users(UserID),
         FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID)
     );
 END
+
 
 -- Create Jobs table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Jobs')
