@@ -763,7 +763,7 @@ class NexHireAPI {
     return formatted;
   }
 
-  // ✨ CROSS-PLATFORM: Upload profile image to Azure Storage
+  // ✨ CROSS-PLATFORM: Upload profile image to Azure Storage  
   async uploadProfileImage(imageData) {
     try {
       console.log('📸 === CROSS-PLATFORM IMAGE UPLOAD START ===');
@@ -780,21 +780,82 @@ class NexHireAPI {
         throw new Error('Missing required image upload data');
       }
 
-      // Use the generic apiCall method for consistency
-      return await this.apiCall('/users/profile-image', {
-        method: 'POST',
-        body: JSON.stringify({
-          fileName: imageData.fileName,
-          fileData: imageData.fileData,
-          mimeType: imageData.mimeType,
-          userId: imageData.userId
-        }),
+      // IMPORTANT: Build the URL correctly without any query parameters
+      const url = `${API_BASE_URL}/users/profile-image`;
+      
+      // Prepare headers
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      };
+
+      // Add auth token if available
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+
+      // Prepare the request body as a clean JSON string
+      const requestBody = JSON.stringify({
+        fileName: imageData.fileName,
+        fileData: imageData.fileData,
+        mimeType: imageData.mimeType,
+        userId: imageData.userId
       });
+
+      console.log('🌐 Making upload request...');
+      console.log('📡 URL:', url);
+      console.log('📡 Content-Length:', requestBody.length);
+      console.log('📡 Headers:', Object.keys(headers));
+
+      // Make the request with explicit configuration
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        redirect: 'follow'
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Read response
+      let result;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+      
+      if (!response.ok) {
+        console.error('❌ Backend upload failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result
+        });
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Backend upload successful:', {
+        imageUrl: result.data?.imageUrl,
+        fileName: result.data?.fileName,
+        uploadDate: result.data?.uploadDate
+      });
+      console.log('📸 === CROSS-PLATFORM IMAGE UPLOAD END ===');
+
+      return result;
     } catch (error) {
       console.error('❌ === CROSS-PLATFORM IMAGE UPLOAD ERROR ===');
       console.error('❌ Platform:', Platform.OS);
       console.error('❌ Error type:', error.constructor.name);
       console.error('❌ Error message:', error.message);
+      console.error('❌ Full error:', error);
       console.error('❌ === END ERROR LOG ===');
       throw error;
     }

@@ -481,12 +481,22 @@ export class UserService {
         }
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // FIXED: Extract Institution name from college data
-        const institutionName = educationData.college?.name || '';
-        const degreeType = educationData.degreeType || '';
+        // FIXED: Handle both college object and direct institution field formats
+        const institutionName = educationData.college?.name || educationData.institution || '';
+        const degreeType = educationData.degreeType || educationData.highestEducation || '';
         const fieldOfStudy = educationData.fieldOfStudy || '';
         const graduationYear = educationData.graduationYear || '';
         const gpa = educationData.gpa || '';
+
+        console.log('?? Backend Education Update Debug:', {
+            applicantId,
+            raw_educationData: educationData,
+            extracted_institutionName: institutionName,
+            extracted_degreeType: degreeType,
+            extracted_fieldOfStudy: fieldOfStudy,
+            extracted_graduationYear: graduationYear,
+            extracted_gpa: gpa
+        });
 
         // FIXED: Include GraduationYear and GPA in education update
         const query = `
@@ -505,14 +515,7 @@ export class UserService {
             WHERE ApplicantID = @param0
         `;
 
-        console.log('Updating applicant education data:', {
-            applicantId,
-            institutionName,
-            degreeType,
-            fieldOfStudy,
-            graduationYear,
-            gpa
-        });
+        console.log('?? SQL Parameters:', [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa]);
 
         await dbService.executeQuery(query, [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa]);
         

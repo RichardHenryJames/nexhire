@@ -210,6 +210,11 @@ export default function EducationSection({
       return false;
     }
     
+    // ? NEW: Country also becomes non-editable when education data is filled
+    if (fieldName === 'country' && hasEducationData) {
+      return false;
+    }
+    
     return true;
   };
 
@@ -505,7 +510,7 @@ export default function EducationSection({
               if (localEditing) {
                 // ? FIX: Save education data when Done is clicked
                 try {
-                  console.log('?? Saving education data...');
+                  console.log('Saving education data...');
                   const educationData = {
                     institution: profile.institution,
                     highestEducation: profile.highestEducation,
@@ -514,16 +519,16 @@ export default function EducationSection({
                     gpa: profile.gpa
                   };
                   
-                  console.log('?? Education data to save:', educationData);
+                  console.log('Education data to save:', educationData);
                   const result = await nexhireAPI.updateEducation(educationData);
                   
                   if (result.success) {
-                    console.log('? Education data saved successfully');
+                    console.log('Education data saved successfully');
                   } else {
-                    console.warn('?? Education save failed:', result.error);
+                    console.warn('Education save failed:', result.error);
                   }
                 } catch (error) {
-                  console.error('? Error saving education data:', error);
+                  console.error('Error saving education data:', error);
                   Alert.alert('Error', 'Failed to save education data. Please try again.');
                 }
               }
@@ -546,6 +551,7 @@ export default function EducationSection({
             placeholder="Select country"
             onPress={() => openModal('country')}
             icon="earth"
+            fieldName="country"
           />
         </View>
       )}

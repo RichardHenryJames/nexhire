@@ -92,7 +92,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
         console.log(`? Loaded ${response.data.length} job types`);
       }
     } catch (error) {
-      console.error('? Error loading job types:', error);
+      console.error('Error loading job types:', error);
       // Use fallback data
       setJobTypes([
         { JobTypeID: 1, Type: 'Full-Time' },
@@ -108,7 +108,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
 
   // CRITICAL FIX: Ultra-stable handlers with useCallback and dependency control
   const handleJobTypeToggle = useCallback((jobType) => {
-    console.log('?? Toggling job type:', jobType.Type);
+    console.log('Toggling job type:', jobType.Type);
     setFormData(prevData => {
       const isSelected = prevData.preferredJobTypes.some(jt => jt.JobTypeID === jobType.JobTypeID);
       
@@ -116,7 +116,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
         ? prevData.preferredJobTypes.filter(jt => jt.JobTypeID !== jobType.JobTypeID)
         : [...prevData.preferredJobTypes, jobType];
       
-      console.log('? Updated selection count:', newPreferredJobTypes.length);
+      console.log('Updated selection count:', newPreferredJobTypes.length);
       
       return {
         ...prevData,
@@ -127,17 +127,17 @@ export default function JobPreferencesScreen({ navigation, route }) {
   }, []);
 
   const handleJobTypesDone = useCallback(() => {
-    console.log('? Job types selection completed');
+    console.log('Job types selection completed');
     setShowJobTypesModal(false);
   }, []);
 
   const handleModalClose = useCallback(() => {
-    console.log('? Modal closed via X button');
+    console.log('Modal closed via X button');
     setShowJobTypesModal(false);
   }, []);
 
   const openJobTypeModal = useCallback(() => {
-    console.log('?? Opening job types modal');
+    console.log('Opening job types modal');
     setShowJobTypesModal(true);
   }, []);
 

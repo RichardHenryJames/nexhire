@@ -547,7 +547,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const loadCountries = async () => {
     try {
       setLoadingCountries(true);
-      console.log('?? Loading countries from API...');
+      console.log('Loading countries from API...');
       
       const response = await nexhireAPI.getCountries();
       
@@ -566,7 +566,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         throw new Error(response.error || 'Failed to load countries');
       }
     } catch (error) {
-      console.error('? Error loading countries:', error);
+      console.error('Error loading countries:', error);
       
       const fallbackCountries = [
         { code: 'India', name: 'India', flag: '????', region: 'Asia' },
@@ -580,7 +580,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       ];
       
       setCountries(fallbackCountries);
-      console.log('?? Using fallback countries due to API error');
+      console.log('Using fallback countries due to API error');
     } finally {
       setLoadingCountries(false);
     }
@@ -617,7 +617,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         throw new Error(response.error || 'Failed to load educational institutions');
       }
     } catch (error) {
-      console.error('? Error loading colleges:', error);
+      console.error('Error loading colleges:', error);
       setError(error.message);
       
       const fallbackColleges = [
@@ -714,7 +714,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       gpa: formData.gpa || '' // Always include, even if empty
     };
 
-    console.log('?? Enhanced Education data prepared for registration:', finalFormData);
+    console.log('Enhanced Education data prepared for registration:', finalFormData);
     
     navigation.navigate('JobPreferencesScreen', { 
       userType, 

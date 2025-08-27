@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
 // Removed ProfileSection import as we're not using it
@@ -638,7 +638,6 @@ export default function SalaryBreakdownSection({
                         style={styles.currencyPrefixButton}
                         onPress={() => {
                           const dropdownKey = `currency_${index}`;
-                          // ? FIX: Close all other dropdowns first
                           setShowDropdowns(prev => {
                             const newState = {};
                             newState[dropdownKey] = !prev[dropdownKey];
@@ -647,39 +646,11 @@ export default function SalaryBreakdownSection({
                         }}
                       >
                         <Text style={styles.currencyPrefixText}>
-                          {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Symbol || '?'}
+                          {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Symbol || '₹'}
                           {currencies.find(c => c.CurrencyID === component.CurrencyID)?.Code || 'INR'}
                         </Text>
                         <Ionicons name="chevron-down" size={12} color={colors.gray600} />
                       </TouchableOpacity>
-                      
-                      {/* Currency Dropdown - positioned right where user clicks */}
-                      {showDropdowns[`currency_${index}`] && (
-                        <View style={styles.inlineDropdownMenu}>
-                          <ScrollView style={styles.currencyDropdownScroll} nestedScrollEnabled>
-                            {currencies.map((currency) => (
-                              <TouchableOpacity
-                                key={currency.CurrencyID}
-                                style={[
-                                  styles.currencyDropdownItem,
-                                  component.CurrencyID === currency.CurrencyID && styles.currencyDropdownItemActive
-                                ]}
-                                onPress={() => {
-                                  updateSalaryComponent(index, 'CurrencyID', currency.CurrencyID);
-                                  setShowDropdowns({}); // ? FIX: Close all dropdowns
-                                }}
-                              >
-                                <Text style={[
-                                  styles.currencyDropdownItemText,
-                                  component.CurrencyID === currency.CurrencyID && styles.currencyDropdownItemTextActive
-                                ]}>
-                                  {currency.Symbol} {currency.Code}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
                     </View>
 
                     {/* Amount Input */}
@@ -702,7 +673,6 @@ export default function SalaryBreakdownSection({
                         style={styles.frequencyPrefixButton}
                         onPress={() => {
                           const dropdownKey = `frequency_${index}`;
-                          // ? FIX: Close all other dropdowns first
                           setShowDropdowns(prev => {
                             const newState = {};
                             newState[dropdownKey] = !prev[dropdownKey];
@@ -715,32 +685,6 @@ export default function SalaryBreakdownSection({
                         </Text>
                         <Ionicons name="chevron-down" size={12} color={colors.gray600} />
                       </TouchableOpacity>
-                      
-                      {/* Frequency Dropdown */}
-                      {showDropdowns[`frequency_${index}`] && (
-                        <View style={styles.inlineDropdownMenu}>
-                          {['Monthly', 'Yearly'].map((freq) => (
-                            <TouchableOpacity
-                              key={freq}
-                              style={[
-                                styles.frequencyDropdownItem,
-                                (component.Frequency || 'Yearly') === freq && styles.frequencyDropdownItemActive
-                              ]}
-                              onPress={() => {
-                                updateSalaryComponent(index, 'Frequency', freq);
-                                setShowDropdowns({}); // ? FIX: Close all dropdowns
-                              }}
-                            >
-                              <Text style={[
-                                styles.frequencyDropdownItemText,
-                                (component.Frequency || 'Yearly') === freq && styles.frequencyDropdownItemTextActive
-                              ]}>
-                                /{freq === 'Monthly' ? 'month' : 'year'}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
                     </View>
                   </View>
                   {(!component.Amount || component.Amount <= 0) && (
@@ -793,7 +737,7 @@ export default function SalaryBreakdownSection({
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => {
-            console.log('?? Salary Breakdown Edit clicked - opening modal');
+            console.log('Salary Breakdown Edit clicked - opening modal');
             setShowSalaryModal(true);
           }}
         >
@@ -820,6 +764,98 @@ export default function SalaryBreakdownSection({
           </View>
           {renderSalaryEditor()}
         </View>
+      </Modal>
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={Object.keys(showDropdowns).some(key => key.startsWith('currency_'))}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDropdowns({})}
+      >
+        <TouchableOpacity 
+          style={styles.dropdownModalOverlay}
+          onPress={() => setShowDropdowns({})}
+          activeOpacity={1}
+        >
+          <View style={styles.dropdownModalContainer}>
+            <Text style={styles.dropdownModalTitle}>Select Currency</Text>
+            <ScrollView style={styles.dropdownModalScroll}>
+              {currencies.map((currency) => {
+                const currentComponentIndex = parseInt(Object.keys(showDropdowns).find(key => key.startsWith('currency_'))?.split('_')[1] || '0');
+                const currentComponent = (localSalaryBreakdown[editingContext] || [])[currentComponentIndex];
+                const isSelected = currentComponent?.CurrencyID === currency.CurrencyID;
+                
+                return (
+                  <TouchableOpacity
+                    key={currency.CurrencyID}
+                    style={[
+                      styles.dropdownModalItem,
+                      isSelected && styles.dropdownModalItemActive
+                    ]}
+                    onPress={() => {
+                      updateSalaryComponent(currentComponentIndex, 'CurrencyID', currency.CurrencyID);
+                      setShowDropdowns({});
+                    }}
+                  >
+                    <Text style={[
+                      styles.dropdownModalItemText,
+                      isSelected && styles.dropdownModalItemTextActive
+                    ]}>
+                      {currency.Symbol} {currency.Code}
+                    </Text>
+                    {isSelected && <MaterialIcons name="check" size={20} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Frequency Selection Modal */}
+      <Modal
+        visible={Object.keys(showDropdowns).some(key => key.startsWith('frequency_'))}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDropdowns({})}
+      >
+        <TouchableOpacity 
+          style={styles.dropdownModalOverlay}
+          onPress={() => setShowDropdowns({})}
+          activeOpacity={1}
+        >
+          <View style={styles.dropdownModalContainer}>
+            <Text style={styles.dropdownModalTitle}>Select Frequency</Text>
+            {['Monthly', 'Yearly'].map((freq) => {
+              const currentComponentIndex = parseInt(Object.keys(showDropdowns).find(key => key.startsWith('frequency_'))?.split('_')[1] || '0');
+              const currentComponent = (localSalaryBreakdown[editingContext] || [])[currentComponentIndex];
+              const isSelected = (currentComponent?.Frequency || 'Yearly') === freq;
+              
+              return (
+                <TouchableOpacity
+                  key={freq}
+                  style={[
+                    styles.dropdownModalItem,
+                    isSelected && styles.dropdownModalItemActive
+                  ]}
+                  onPress={() => {
+                    updateSalaryComponent(currentComponentIndex, 'Frequency', freq);
+                    setShowDropdowns({});
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownModalItemText,
+                    isSelected && styles.dropdownModalItemTextActive
+                  ]}>
+                    {freq} (/{freq === 'Monthly' ? 'month' : 'year'})
+                  </Text>
+                  {isSelected && <MaterialIcons name="check" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -1005,6 +1041,8 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background || '#FFFFFF',
+    position: 'relative',
+    zIndex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1014,6 +1052,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: colors.border || '#E0E0E0',
+    zIndex: 1,
   },
   modalTitle: {
     fontSize: typography.sizes?.lg || 18,
@@ -1130,7 +1169,7 @@ const styles = StyleSheet.create({
   },
   currencyPrefixContainer: {
     position: 'relative',
-    zIndex: 20000, // ? FIX: Much higher z-index to appear above everything
+    zIndex: 50000, // ? FIX: Much higher z-index to appear above everything
   },
   currencyPrefixButton: {
     flexDirection: 'row',
@@ -1163,8 +1202,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 30, // ? FIX: Much higher elevation for Android
-    zIndex: 20001, // ? FIX: Highest z-index to appear above everything
+    elevation: 50, // ? FIX: Much higher elevation for Android
+    zIndex: 50001, // ? FIX: Highest z-index to appear above everything
+  },
+  
+  // ? FIX: Add ultra-high z-index for specific dropdowns
+  currencyDropdown: {
+    zIndex: 99999,
+    elevation: 100,
+    position: 'fixed', // For web, use fixed positioning
+  },
+  frequencyDropdown: {
+    zIndex: 99999,
+    elevation: 100,
+    position: 'fixed', // For web, use fixed positioning
   },
   amountInputWrapper: {
     flex: 1,
@@ -1182,7 +1233,7 @@ const styles = StyleSheet.create({
   },
   frequencyPrefixContainer: {
     position: 'relative',
-    zIndex: 20000,
+    zIndex: 50000, // ? FIX: Much higher z-index
   },
   frequencyPrefixButton: {
     flexDirection: 'row',
@@ -1386,7 +1437,63 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 19999, // ? Below dropdowns but above everything else
+    zIndex: 49999, // ? Below dropdowns but above everything else
     backgroundColor: 'transparent',
+  },
+  
+  // Modal-based dropdown styles
+  dropdownModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dropdownModalContainer: {
+    backgroundColor: colors.white || '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    maxWidth: 300,
+    width: '100%',
+    maxHeight: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  dropdownModalTitle: {
+    fontSize: typography.sizes?.lg || 18,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.text || '#000000',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  dropdownModalScroll: {
+    maxHeight: 300,
+  },
+  dropdownModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  dropdownModalItemActive: {
+    backgroundColor: (colors.primary || '#007AFF') + '15',
+  },
+  dropdownModalItemText: {
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text || '#000000',
+    flex: 1,
+  },
+  dropdownModalItemTextActive: {
+    color: colors.primary || '#007AFF',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  dropdownModalCheckIcon: {
+    marginLeft: 8,
   },
 });

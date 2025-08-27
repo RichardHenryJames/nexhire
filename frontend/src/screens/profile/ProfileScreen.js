@@ -40,6 +40,7 @@ export default function ProfileScreen() {
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [newSkill, setNewSkill] = useState('');
+  const [skillType, setSkillType] = useState('primary'); // ? NEW: Track which skill type we're adding
 
   // Initialize basic profile with correct backend field names
   const [profile, setProfile] = useState({
@@ -74,7 +75,7 @@ export default function ProfileScreen() {
     highestEducation: '',
     fieldOfStudy: '',
     institution: '',
-    graduationYear: '',
+    graduationYear: '>',
     gpa: '',
     
     // Professional Information
@@ -89,16 +90,14 @@ export default function ProfileScreen() {
     // Job Preferences
     preferredJobTypes: '',
     preferredWorkTypes: '',
-    expectedSalaryMin: 0,
-    expectedSalaryMax: 0,
-    expectedSalaryUnit: 0,
     preferredRoles: '',
     preferredIndustries: '',
-    preferredMinimumSalary: 0,
+    minimumSalary: 0, // ? ENSURE CORRECT FIELD NAME
+    preferredCompanySize: '',
     
-    // Skills and Experience
+    // Skills and Experience - ? UPDATED: secondarySkills as array
     primarySkills: [],
-    secondarySkills: '',
+    secondarySkills: [], // ? CHANGED: Now an array like primarySkills
     languages: '',
     certifications: '',
     workExperience: '',
@@ -194,6 +193,23 @@ export default function ProfileScreen() {
       setCurrentProfile(prev => ({ ...prev, [fieldKey]: choice }));
     };
 
+    // ? NEW: Format minimum salary with INR currency
+    const formatMinimumSalary = (value) => {
+      if (fieldKey === 'minimumSalary') {
+        const amount = parseFloat(value);
+        if (!isNaN(amount) && amount >= 0) {
+          return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(amount);
+        }
+        return '₹0 INR'; // Show currency symbol even when amount is 0
+      }
+      return value?.toString() || 'Not specified';
+    };
+
     return (
       <View style={styles.fieldContainer}>
         <Text style={styles.fieldLabel}>{label}</Text>
@@ -219,24 +235,42 @@ export default function ProfileScreen() {
               ))}
             </View>
           ) : (
-            <TextInput
-              style={[styles.fieldInput, multiline && styles.multilineInput]}
-              value={localValue}
-              onChangeText={setLocalValue}  // ? Only updates local state
-              onFocus={handleFocus}
-              onBlur={handleBlur}          // ? Updates parent on blur
-              placeholder={placeholder}
-              multiline={multiline}
-              numberOfLines={multiline ? 4 : 1}
-              keyboardType={keyboardType}
-              secureTextEntry={secure}
-              autoCapitalize={fieldKey === 'email' ? 'none' : 'words'}
-              autoCorrect={false}
-            />
+            fieldKey === 'minimumSalary' ? (
+              <View style={styles.salaryInputContainer}>
+                <Text style={styles.currencyPrefix}>₹</Text>
+                <TextInput
+                  style={[styles.fieldInput, styles.salaryInput]}
+                  value={localValue}
+                  onChangeText={setLocalValue}  // ? Only updates local state
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}          // ? Updates parent on blur
+                  placeholder="Enter salary in INR"
+                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Text style={styles.currencySuffix}>INR</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={[styles.fieldInput, multiline && styles.multilineInput]}
+                value={localValue}
+                onChangeText={setLocalValue}  // ? Only updates local state
+                onFocus={handleFocus}
+                onBlur={handleBlur}          // ? Updates parent on blur
+                placeholder={placeholder}
+                multiline={multiline}
+                numberOfLines={multiline ? 4 : 1}
+                keyboardType={keyboardType}
+                secureTextEntry={secure}
+                autoCapitalize={fieldKey === 'email' ? 'none' : 'words'}
+                autoCorrect={false}
+              />
+            )
           )
         ) : (
           <Text style={styles.fieldValue}>
-            {currentProfile[fieldKey]?.toString() || 'Not specified'}
+            {fieldKey === 'minimumSalary' ? formatMinimumSalary(currentProfile[fieldKey]) : (currentProfile[fieldKey]?.toString() || 'Not specified')}
           </Text>
         )}
         {errors[fieldKey] && <Text style={styles.errorText}>{errors[fieldKey]}</Text>}
@@ -257,11 +291,20 @@ export default function ProfileScreen() {
   };
 
   const addSkill = () => {
-    if (newSkill.trim() && !jobSeekerProfile.primarySkills.includes(newSkill.trim())) {
-      setJobSeekerProfile({
-        ...jobSeekerProfile,
-        primarySkills: [...jobSeekerProfile.primarySkills, newSkill.trim()]
-      });
+    const currentSkills = skillType === 'primary' ? jobSeekerProfile.primarySkills : jobSeekerProfile.secondarySkills;
+    
+    if (newSkill.trim() && !currentSkills.includes(newSkill.trim())) {
+      if (skillType === 'primary') {
+        setJobSeekerProfile({
+          ...jobSeekerProfile,
+          primarySkills: [...jobSeekerProfile.primarySkills, newSkill.trim()]
+        });
+      } else {
+        setJobSeekerProfile({
+          ...jobSeekerProfile,
+          secondarySkills: [...jobSeekerProfile.secondarySkills, newSkill.trim()]
+        });
+      }
       setNewSkill('');
       setShowSkillsModal(false);
     }
@@ -281,39 +324,90 @@ export default function ProfileScreen() {
     }
   };
 
-  // ? NEW: SkillsSection component (moved to after helper functions)
+  // ? NEW: Enhanced SkillsSection component with primary and secondary skills
   const SkillsSection = () => {
     const isEditing = useEditing();
     
     return (
       <View style={styles.skillsSection}>
-        <View style={styles.skillsHeader}>
-          <Text style={styles.fieldLabel}>Skills</Text>
-          {isEditing && (
-            <TouchableOpacity
-              style={styles.addSkillButton}
-              onPress={() => setShowSkillsModal(true)}
-            >
-              <Ionicons name="add" size={16} color={colors.primary} />
-              <Text style={styles.addSkillText}>Add Skill</Text>
-            </TouchableOpacity>
-          )}
+        {/* Primary Skills */}
+        <View style={styles.skillsSubsection}>
+          <View style={styles.skillsHeader}>
+            <Text style={styles.fieldLabel}>Primary Skills</Text>
+            {isEditing && (
+              <TouchableOpacity
+                style={styles.addSkillButton}
+                onPress={() => {
+                  setSkillType('primary');
+                  setShowSkillsModal(true);
+                }}
+              >
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={styles.addSkillText}>Add Primary</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.skillsContainer}>
+            {jobSeekerProfile.primarySkills.map((skill, index) => (
+              <View key={index} style={styles.skillTag}>
+                <Text style={styles.skillText}>{skill}</Text>
+                {isEditing && (
+                  <TouchableOpacity
+                    style={styles.removeSkillButton}
+                    onPress={() => removeSkill(skill, 'primary')}
+                  >
+                    <Ionicons name="close" size={14} color={colors.white} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            {jobSeekerProfile.primarySkills.length === 0 && (
+              <Text style={styles.noSkillsText}>
+                {isEditing ? 'Tap "Add Primary" to add your core skills' : 'No primary skills added'}
+              </Text>
+            )}
+          </View>
         </View>
-        
-        <View style={styles.skillsContainer}>
-          {jobSeekerProfile.primarySkills.map((skill, index) => (
-            <View key={index} style={styles.skillTag}>
-              <Text style={styles.skillText}>{skill}</Text>
-              {isEditing && (
-                <TouchableOpacity
-                  style={styles.removeSkillButton}
-                  onPress={() => removeSkill(skill)}
-                >
-                  <Ionicons name="close" size={14} color={colors.white} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+
+        {/* Secondary Skills */}
+        <View style={styles.skillsSubsection}>
+          <View style={styles.skillsHeader}>
+            <Text style={styles.fieldLabel}>Secondary Skills</Text>
+            {isEditing && (
+              <TouchableOpacity
+                style={styles.addSkillButton}
+                onPress={() => {
+                  setSkillType('secondary');
+                  setShowSkillsModal(true);
+                }}
+              >
+                <Ionicons name="add" size={16} color={colors.secondary || colors.primary} />
+                <Text style={styles.addSkillText}>Add Secondary</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.skillsContainer}>
+            {jobSeekerProfile.secondarySkills.map((skill, index) => (
+              <View key={index} style={styles.secondarySkillTag}>
+                <Text style={styles.secondarySkillText}>{skill}</Text>
+                {isEditing && (
+                  <TouchableOpacity
+                    style={styles.removeSecondarySkillButton}
+                    onPress={() => removeSkill(skill, 'secondary')}
+                  >
+                    <Ionicons name="close" size={14} color={colors.text} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            {jobSeekerProfile.secondarySkills.length === 0 && (
+              <Text style={styles.noSkillsText}>
+                {isEditing ? 'Tap "Add Secondary" to add additional skills' : 'No secondary skills added'}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -399,7 +493,7 @@ export default function ProfileScreen() {
   const saveEmployerData = async (updatedData) => {
     try {
       setLoading(true);
-      console.log('?? Saving employer data...');
+      console.log('Saving employer data...');
       const result = await nexhireAPI.updateEmployerProfile(user.UserID, updatedData);
       if (result.success) {
         Alert.alert('Success', 'Employer information updated successfully!');
@@ -578,12 +672,12 @@ export default function ProfileScreen() {
             preferredWorkTypes: response.data.PreferredWorkTypes || '',
             preferredRoles: response.data.PreferredRoles || '',
             preferredIndustries: response.data.PreferredIndustries || '',
-            minimumSalary: response.data.MinimumSalary || 0,
+            minimumSalary: response.data.MinimumSalary || 0, // ? ENSURE CORRECT FIELD NAME
             preferredCompanySize: response.data.PreferredCompanySize || '',
             
             // Skills and Experience
             primarySkills: response.data.PrimarySkills ? response.data.PrimarySkills.split(',').map(s => s.trim()).filter(s => s) : [],
-            secondarySkills: response.data.SecondarySkills || '',
+            secondarySkills: response.data.SecondarySkills ? response.data.SecondarySkills.split(',').map(s => s.trim()).filter(s => s) : [], // ? UPDATED: Parse as array
             languages: response.data.Languages || '',
             certifications: response.data.Certifications || '',
             workExperience: response.data.WorkExperience || '',
@@ -669,6 +763,9 @@ export default function ProfileScreen() {
         primarySkills: Array.isArray(jobSeekerProfile.primarySkills) 
           ? jobSeekerProfile.primarySkills.join(', ') 
           : jobSeekerProfile.primarySkills,
+        secondarySkills: Array.isArray(jobSeekerProfile.secondarySkills) 
+          ? jobSeekerProfile.secondarySkills.join(', ') 
+          : jobSeekerProfile.secondarySkills, // ? UPDATED: Handle secondary skills array
       };
       
       console.log('Complete profile data:', Object.keys(completeProfileData));
@@ -795,14 +892,6 @@ export default function ProfileScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
-          
-          <TouchableOpacity 
-            onPress={() => setEditing(edit => !edit)} 
-            style={styles.editButton}
-            disabled={loading}
-          >
-            <Ionicons name={editing ? "checkmark-outline" : "pencil-outline"} size={24} color={editing ? colors.success : colors.primary} />
-          </TouchableOpacity>
         </View>
 
         {/* ? BEAUTIFUL USER PROFILE HEADER CARD */}
@@ -843,7 +932,7 @@ export default function ProfileScreen() {
               }}
               editing={editing}
               onUpdate={(updatedEducation) => {
-                console.log('?? Education updated:', updatedEducation);
+                console.log('Education updated:', updatedEducation);
               }}
             />
 
@@ -852,7 +941,7 @@ export default function ProfileScreen() {
               title="Professional Information" 
               icon="briefcase"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Professional info updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Professional info updated:', updatedData)}
               onSave={() => saveProfessionalInfo(jobSeekerProfile)}
             >
               <ProfileField fieldKey="headline" label="Professional Headline" placeholder="e.g., Senior Software Engineer" options={{ profileType: 'jobSeeker' }} />
@@ -868,11 +957,10 @@ export default function ProfileScreen() {
               title="Skills & Expertise" 
               icon="bulb"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Skills updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Skills updated:', updatedData)}
               onSave={() => saveSkillsExpertise(jobSeekerProfile)}
             >
               <SkillsSection />
-              <ProfileField fieldKey="secondarySkills" label="Secondary Skills" placeholder="Additional skills (comma-separated)" options={{ profileType: 'jobSeeker' }} />
               <ProfileField fieldKey="languages" label="Languages" placeholder="e.g., English (Fluent), Spanish (Basic)" options={{ profileType: 'jobSeeker' }} />
               <ProfileField fieldKey="certifications" label="Certifications" placeholder="Professional certifications" options={{ multiline: true, profileType: 'jobSeeker' }} />
             </ProfileSection>
@@ -882,7 +970,7 @@ export default function ProfileScreen() {
               title="Work Preferences" 
               icon="settings"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Preferences updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Preferences updated:', updatedData)}
               onSave={() => saveWorkPreferences(jobSeekerProfile)}
             >
               <ProfileField fieldKey="minimumSalary" label="Minimum Salary" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
@@ -911,7 +999,7 @@ export default function ProfileScreen() {
               }}
               editing={editing}
               onUpdate={(updatedData) => {
-                console.log('?? Salary breakdown updated:', updatedData);
+                console.log('Salary breakdown updated:', updatedData);
                 if (updatedData.salaryBreakdown) {
                   setJobSeekerProfile(prev => ({
                     ...prev,
@@ -926,7 +1014,7 @@ export default function ProfileScreen() {
               title="Online Presence" 
               icon="link"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Online presence updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
               onSave={() => saveOnlinePresence(jobSeekerProfile)}
             >
               <ProfileField fieldKey="primaryResumeURL" label="Resume URL" placeholder="Link to your resume" options={{ profileType: 'jobSeeker' }} />
@@ -939,7 +1027,7 @@ export default function ProfileScreen() {
               title="Personal Information" 
               icon="person"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Personal info updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
               onSave={() => savePersonalInfo({ ...profile, ...jobSeekerProfile })}
             >
               <ProfileField fieldKey="firstName" label="First Name *" placeholder="Enter your first name" />
@@ -955,7 +1043,7 @@ export default function ProfileScreen() {
               title="Account Settings" 
               icon="cog"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Account settings updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
               onSave={() => saveAccountSettings(profile)}
             >
               <ProfileField fieldKey="userType" label="Account Type" placeholder="" options={{ editable: false }} />
@@ -982,7 +1070,7 @@ export default function ProfileScreen() {
               title="Organization Information" 
               icon="business"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Organization info updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Organization info updated:', updatedData)}
               onSave={() => saveEmployerData(employerProfile)}
             >
               <ProfileField fieldKey="jobTitle" label="Job Title" placeholder="Your position" options={{ profileType: 'employer' }} />
@@ -1008,7 +1096,7 @@ export default function ProfileScreen() {
               title="Online Presence" 
               icon="link"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Online presence updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
               onSave={() => saveEmployerData(employerProfile)}
             >
               <ProfileField fieldKey="linkedInProfile" label="LinkedIn Profile" placeholder="linkedin.com/in/yourprofile" options={{ profileType: 'employer' }} />
@@ -1019,7 +1107,7 @@ export default function ProfileScreen() {
               title="Personal Information" 
               icon="person"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Personal info updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
               onSave={() => savePersonalInfo({ ...profile, ...employerProfile })}
             >
               <ProfileField fieldKey="firstName" label="First Name *" placeholder="Enter your first name" />
@@ -1035,7 +1123,7 @@ export default function ProfileScreen() {
               title="Account Settings" 
               icon="cog"
               editing={editing}
-              onUpdate={(updatedData) => console.log('?? Account settings updated:', updatedData)}
+              onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
               onSave={() => saveAccountSettings(profile)}
             >
               <ProfileField fieldKey="userType" label="Account Type" placeholder="" options={{ editable: false }} />
@@ -1152,18 +1240,26 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={() => setShowSkillsModal(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add Skill</Text>
+            <Text style={styles.modalTitle}>
+              Add {skillType === 'primary' ? 'Primary' : 'Secondary'} Skill
+            </Text>
             <TouchableOpacity onPress={addSkill}>
               <Text style={styles.addButton}>Add</Text>
             </TouchableOpacity>
           </View>
           
           <View style={styles.modalContent}>
+            <Text style={styles.skillTypeDescription}>
+              {skillType === 'primary' 
+                ? 'Primary skills are your core competencies and main areas of expertise.'
+                : 'Secondary skills are additional abilities that complement your primary skills.'
+              }
+            </Text>
             <TextInput
               style={styles.skillInput}
               value={newSkill}
               onChangeText={setNewSkill}
-              placeholder="Enter a skill..."
+              placeholder={`Enter a ${skillType} skill...`}
               autoFocus
             />
           </View>
@@ -1237,9 +1333,6 @@ const styles = StyleSheet.create({
     fontWeight: '600', // Reduced from bold
     color: colors.text,
   },
-  editButton: {
-    padding: 8,
-  },
   
   // Field styles
   fieldContainer: {
@@ -1265,6 +1358,34 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.md || 16,
     color: colors.text || '#000000',
   },
+  
+  // ? NEW: Salary input styles
+  salaryInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background || '#FFFFFF',
+  },
+  currencyPrefix: {
+    paddingLeft: 12,
+    paddingRight: 8,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.primary || '#007AFF',
+    fontWeight: typography.weights?.bold || 'bold',
+  },
+  salaryInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingLeft: 0,
+    paddingRight: 8,
+  },
+  currencySuffix: {
+    paddingLeft: 8,
+    paddingRight: 12,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#666666',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  
   multilineInput: {
     height: 80,
     textAlignVertical: 'top',
@@ -1303,6 +1424,9 @@ const styles = StyleSheet.create({
   skillsSection: {
     marginBottom: 20,
   },
+  skillsSubsection: {
+    marginBottom: 16,
+  },
   skillsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1323,6 +1447,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    minHeight: 32, // Ensure space for empty state text
   },
   skillTag: {
     flexDirection: 'row',
@@ -1339,6 +1464,32 @@ const styles = StyleSheet.create({
   removeSkillButton: {
     marginLeft: 8,
     padding: 2,
+  },
+  
+  // ? NEW: Secondary skill styles
+  secondarySkillTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray200 || '#E5E7EB',
+    borderWidth: 1,
+    borderColor: colors.gray300 || '#D1D5DB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  secondarySkillText: {
+    color: colors.gray700 || '#374151',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  removeSecondarySkillButton: {
+    marginLeft: 8,
+    padding: 2,
+  },
+  noSkillsText: {
+    color: colors.gray500 || '#6B7280',
+    fontSize: typography.sizes?.sm || 14,
+    fontStyle: 'italic',
+    paddingVertical: 8,
   },
   
   // Privacy and switch styles
@@ -1486,6 +1637,12 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
+  },
+  skillTypeDescription: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#6B7280',
+    marginBottom: 16,
+    lineHeight: 18,
   },
   skillInput: {
     backgroundColor: colors.surface,
