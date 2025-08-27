@@ -20,6 +20,7 @@ import nexhireAPI from '../../services/api';
 import EducationSection from '../../components/profile/EducationSection';
 import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSection';
 import ProfileSection, { useEditing } from '../../components/profile/ProfileSection';
+import UserProfileHeader from '../../components/profile/UserProfileHeader';
 
 export default function ProfileScreen() {
   const { 
@@ -793,11 +794,7 @@ export default function ProfileScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => logout()} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-          
-          <Text style={styles.title}>{userType === 'JobSeeker' ? 'Profile' : 'Employer Profile'}</Text>
+          <Text style={styles.title}>Profile</Text>
           
           <TouchableOpacity 
             onPress={() => setEditing(edit => !edit)} 
@@ -807,6 +804,20 @@ export default function ProfileScreen() {
             <Ionicons name={editing ? "checkmark-outline" : "pencil-outline"} size={24} color={editing ? colors.success : colors.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* ? BEAUTIFUL USER PROFILE HEADER CARD */}
+        <UserProfileHeader
+          user={user}
+          profile={profile}
+          jobSeekerProfile={jobSeekerProfile}
+          employerProfile={employerProfile}
+          userType={userType}
+          onProfileUpdate={(updatedProfile) => {
+            setProfile(prev => ({ ...prev, ...updatedProfile }));
+            // Refresh the extended profile to get updated completeness
+            loadExtendedProfile();
+          }}
+        />
         
         {/* PROFILE SECTIONS */}
         {userType === 'JobSeeker' ? (
@@ -1216,16 +1227,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  logoutButton: {
-    padding: 8,
+    marginBottom: 12, // Reduced from 24 since we have the profile header
+    paddingHorizontal: 4,
   },
   title: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20, // Reduced from 24
+    fontWeight: '600', // Reduced from bold
     color: colors.text,
   },
   editButton: {

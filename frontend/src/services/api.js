@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // FIXED: Use environment variable or fallback to production API
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nexhire-api-func.azurewebsites.net/api';
@@ -760,6 +761,43 @@ class NexHireAPI {
     }
     
     return formatted;
+  }
+
+  // ✨ CROSS-PLATFORM: Upload profile image to Azure Storage
+  async uploadProfileImage(imageData) {
+    try {
+      console.log('📸 === CROSS-PLATFORM IMAGE UPLOAD START ===');
+      console.log('📸 Platform:', Platform.OS);
+      console.log('📸 Image data:', {
+        fileName: imageData.fileName,
+        mimeType: imageData.mimeType,
+        userId: imageData.userId,
+        fileDataLength: imageData.fileData?.length || 0
+      });
+
+      // Validate required fields
+      if (!imageData.fileName || !imageData.fileData || !imageData.mimeType || !imageData.userId) {
+        throw new Error('Missing required image upload data');
+      }
+
+      // Use the generic apiCall method for consistency
+      return await this.apiCall('/users/profile-image', {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName: imageData.fileName,
+          fileData: imageData.fileData,
+          mimeType: imageData.mimeType,
+          userId: imageData.userId
+        }),
+      });
+    } catch (error) {
+      console.error('❌ === CROSS-PLATFORM IMAGE UPLOAD ERROR ===');
+      console.error('❌ Platform:', Platform.OS);
+      console.error('❌ Error type:', error.constructor.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ === END ERROR LOG ===');
+      throw error;
+    }
   }
 
   // Health check

@@ -527,6 +527,21 @@ app.http('reference-salary-components', {
 });
 
 // ========================================================================
+// PROFILE IMAGE UPLOAD ENDPOINT
+// ========================================================================
+
+// ? NEW: Profile Image Upload to Azure Storage
+app.http('users-profile-image', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/profile-image',
+    handler: withErrorHandling(async (req, context) => {
+        const { uploadProfileImage } = await import('./src/services/profile-image.service');
+        return await uploadProfileImage(req, context);
+    })
+});
+
+// ========================================================================
 // HEALTH CHECK ENDPOINT
 // ========================================================================
 
