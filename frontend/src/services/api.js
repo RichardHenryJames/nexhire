@@ -647,6 +647,80 @@ class NexHireAPI {
     }
   }
 
+  // NEW: Get organizations for employer registration - FIXED to use real database
+  async getOrganizations(searchTerm = '') {
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await this.apiCall(endpoint);
+      
+      console.log('🏢 Organizations API Response:', JSON.stringify(response, null, 2));
+      
+      if (response.success && response.data) {
+        // Handle the specific backend response format
+        let organizationsArray = [];
+        
+        if (response.data.organizations && Array.isArray(response.data.organizations)) {
+          // Backend returns: { success: true, data: { organizations: [...] } }
+          organizationsArray = response.data.organizations;
+        } else if (Array.isArray(response.data)) {
+          // Alternative format: { success: true, data: [...] }
+          organizationsArray = response.data;
+        } else {
+          console.warn('🏢 Unexpected response format:', response.data);
+          organizationsArray = [];
+        }
+        
+        console.log('🏢 Processing organizations array:', organizationsArray.length, 'items');
+        
+        // The backend already transforms the data correctly, so we can use it directly
+        // Just ensure we have the "My company is not listed" option
+        const hasNotListedOption = organizationsArray.some(org => org.id === 999999);
+        if (!hasNotListedOption) {
+          organizationsArray.push({
+            id: 999999,
+            name: 'My company is not listed',
+            industry: 'Other',
+            size: 'Unknown',
+            type: 'Other',
+            logoURL: null,
+            website: null
+          });
+        }
+        
+        console.log('🏢 Final organizations count:', organizationsArray.length);
+        
+        return {
+          success: true,
+          data: organizationsArray
+        };
+      } else {
+        throw new Error(response.error || 'No organizations data received');
+      }
+    } catch (error) {
+      console.warn('🏢 Failed to load organizations from database:', error.message);
+      
+      // Only use fallback if backend is completely unavailable
+      console.log('🏢 Using fallback organizations due to backend error');
+      return {
+        success: true,
+        data: [
+          {
+            id: 999999,
+            name: 'My company is not listed',
+            industry: 'Other',
+            size: 'Unknown',
+            type: 'Other',
+            logoURL: null,
+            website: null
+          }
+        ]
+      };
+    }
+  }
+
   // ✨ NEW: Salary Components API for new salary structure
   async getSalaryComponents() {
     try {
