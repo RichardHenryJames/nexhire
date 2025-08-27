@@ -92,16 +92,26 @@ export default function UserProfileHeader({
   // ? NEW: Force re-render when key profile fields change
   useEffect(() => {
     // Track when critical fields change for debugging
-    if (jobSeekerProfile?.minimumSalary) {
-      console.log('🔍 Profile data - Salary updated:', {
-        minimumSalary: jobSeekerProfile.minimumSalary,
-        minimumSalaryType: typeof jobSeekerProfile.minimumSalary
-      });
-    }
+    console.log('🔍 Profile Header Data Debug:', {
+      hasWorkExperience: !!(jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany),
+      currentJobTitle: jobSeekerProfile?.currentJobTitle,
+      currentCompany: jobSeekerProfile?.currentCompany,
+      hasEducation: !!(jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution),
+      highestEducation: jobSeekerProfile?.highestEducation,
+      fieldOfStudy: jobSeekerProfile?.fieldOfStudy,
+      institution: jobSeekerProfile?.institution,
+      headline: jobSeekerProfile?.headline,
+      summary: jobSeekerProfile?.summary
+    });
   }, [
-    jobSeekerProfile?.minimumSalary,
+    jobSeekerProfile?.currentJobTitle,
+    jobSeekerProfile?.currentCompany,
+    jobSeekerProfile?.highestEducation,
+    jobSeekerProfile?.fieldOfStudy,
     jobSeekerProfile?.institution,
-    jobSeekerProfile?.graduationYear,
+    jobSeekerProfile?.headline,
+    jobSeekerProfile?.summary,
+    jobSeekerProfile?.minimumSalary,
     jobSeekerProfile?.yearsOfExperience,
     jobSeekerProfile?.primarySkills,
     jobSeekerProfile?.preferredWorkTypes
@@ -621,14 +631,13 @@ export default function UserProfileHeader({
           {/* Current Job Title or Education for students */}
           {userType === 'JobSeeker' && (
             <>
-              {/* Show job title if available */}
-              {jobSeekerProfile?.currentJobTitle ? (
+              {/* Prioritize work experience if available */}
+              {jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany ? (
                 <Text style={styles.jobTitle}>
-                  {jobSeekerProfile.currentJobTitle}
-                  {jobSeekerProfile?.currentCompany && ` at ${jobSeekerProfile.currentCompany}`}
+                  {jobSeekerProfile.currentJobTitle} at {jobSeekerProfile.currentCompany}
                 </Text>
               ) : (
-                /* Show education if no job title */
+                /* Show education if no work experience */
                 jobSeekerProfile?.highestEducation && (
                   <Text style={styles.jobTitle}>
                     {jobSeekerProfile.highestEducation}
@@ -704,21 +713,56 @@ export default function UserProfileHeader({
       <View style={styles.highlights}>
         {userType === 'JobSeeker' && (
           <>
-            {/* Professional Headline or Educational Background */}
-            {jobSeekerProfile?.headline ? (
-              <View style={styles.highlight}>
-                <MaterialIcons name="work" size={16} color="#3B82F6" />
-                <Text style={styles.highlightText}>{jobSeekerProfile.headline}</Text>
-              </View>
-            ) : (
-              /* Only show education highlights if there's additional info not already in header */
-              jobSeekerProfile?.summary && (
-                <View style={styles.highlight}>
-                  <MaterialIcons name="person" size={16} color="#3B82F6" />
-                  <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
-                </View>
-              )
-            )}
+            {/* Professional Headline, Education (when work exp is in main), or Summary */}
+            {(() => {
+              console.log('🔧 Highlights Logic Check:', {
+                hasHeadline: !!jobSeekerProfile?.headline,
+                hasWork: !!(jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany),
+                hasEducation: !!(jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution),
+                hasSummary: !!jobSeekerProfile?.summary
+              });
+              
+              if (jobSeekerProfile?.headline) {
+                return (
+                  <View style={styles.highlight}>
+                    <MaterialIcons name="work" size={16} color="#3B82F6" />
+                    <Text style={styles.highlightText}>{jobSeekerProfile.headline}</Text>
+                  </View>
+                );
+              } else if (jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany) {
+                // User has work experience, so show education in highlights if any education data exists
+                if (jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution) {
+                  return (
+                    <View style={styles.highlight}>
+                      <MaterialIcons name="school" size={16} color="#3B82F6" />
+                      <Text style={styles.highlightText}>
+                        {jobSeekerProfile.highestEducation || 'Graduate'}
+                        {jobSeekerProfile?.fieldOfStudy && ` in ${jobSeekerProfile.fieldOfStudy}`}
+                        {jobSeekerProfile?.institution && ` • ${jobSeekerProfile.institution}`}
+                      </Text>
+                    </View>
+                  );
+                } else if (jobSeekerProfile?.summary) {
+                  // No education data available, show summary if available
+                  return (
+                    <View style={styles.highlight}>
+                      <MaterialIcons name="person" size={16} color="#3B82F6" />
+                      <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
+                    </View>
+                  );
+                }
+              } else if (jobSeekerProfile?.summary) {
+                // No work experience, show summary if available
+                return (
+                  <View style={styles.highlight}>
+                    <MaterialIcons name="person" size={16} color="#3B82F6" />
+                    <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
+                  </View>
+                );
+              }
+              
+              return null;
+            })()}
 
             {/* Skills with stars icon */}
             {Array.isArray(jobSeekerProfile?.primarySkills) && jobSeekerProfile.primarySkills.length > 0 && (
