@@ -496,6 +496,19 @@ export default function EducationSection({
     return country ? `${country.flag} ${country.name}` : selectedCountry;
   };
 
+  const isEditing = editing || localEditing;
+
+  // Helper for compact read-only row
+  const ReadOnlyRow = ({ label, value, icon }) => (
+    <View style={styles.roKVRow}>
+      <View style={styles.roKVLeft}>
+        {icon ? <Ionicons name={icon} size={14} color={colors.gray600} style={{ marginRight: 6 }} /> : null}
+        <Text style={styles.roKVLabel}>{label}</Text>
+      </View>
+      <Text style={[styles.roKVValue, !value && styles.roKVEmpty]} numberOfLines={1} ellipsizeMode="tail">{value || 'Not specified'}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
@@ -508,9 +521,8 @@ export default function EducationSection({
             style={styles.editButton}
             onPress={async () => {
               if (localEditing) {
-                // ? FIX: Save education data when Done is clicked
+                // Save only when toggling off
                 try {
-                  console.log('Saving education data...');
                   const educationData = {
                     institution: profile.institution,
                     highestEducation: profile.highestEducation,
@@ -518,13 +530,8 @@ export default function EducationSection({
                     graduationYear: profile.graduationYear,
                     gpa: profile.gpa
                   };
-                  
-                  console.log('Education data to save:', educationData);
                   const result = await nexhireAPI.updateEducation(educationData);
-                  
-                  if (result.success) {
-                    console.log('Education data saved successfully');
-                  } else {
+                  if (!result.success) {
                     console.warn('Education save failed:', result.error);
                   }
                 } catch (error) {
@@ -541,62 +548,84 @@ export default function EducationSection({
         )}
       </View>
 
-
-
-      {(editing || localEditing) && (
-        <View style={styles.countrySelector}>
-          <SelectionButton
-            label="Country/Region"
-            value={getSelectedCountryDisplay()}
-            placeholder="Select country"
-            onPress={() => openModal('country')}
-            icon="earth"
-            fieldName="country"
-          />
+      {/* Read-only compact view */}
+      {!isEditing && (
+        <View style={styles.roContainer}>
+          <ReadOnlyRow label="Institution" value={profile.institution} icon="school" />
+          <ReadOnlyRow label="Highest Education" value={profile.highestEducation} icon="ribbon" />
+          <ReadOnlyRow label="Field of Study" value={profile.fieldOfStudy} icon="library" />
+          {(profile.graduationYear || profile.gpa) && (
+            <View style={styles.roExtraRow}>
+              {profile.graduationYear ? (
+                <View style={styles.roExtraItem}>
+                  <Ionicons name="calendar" size={14} color={colors.gray600} />
+                  <Text style={styles.roExtraText}>Class of {profile.graduationYear}</Text>
+                </View>
+              ) : null}
+              {profile.gpa ? (
+                <View style={styles.roExtraItem}>
+                  <Ionicons name="school" size={14} color={colors.gray600} />
+                  <Text style={styles.roExtraText}>{profile.gpa}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
         </View>
       )}
 
-      <SelectionButton
-        label="Institution"
-        value={profile.institution}
-        placeholder="Search and select your institution"
-        onPress={() => openModal('institution')}
-        icon="school"
-        fieldName="institution"
-      />
-
-      <SelectionButton
-        label="Highest Education"
-        value={profile.highestEducation}
-        placeholder="Select degree type"
-        onPress={() => openModal('degree')}
-        icon="school"
-        fieldName="highestEducation"
-      />
-
-      <SelectionButton
-        label="Field of Study"
-        value={profile.fieldOfStudy}
-        placeholder={
-          profile.highestEducation 
-            ? `Select field for ${profile.highestEducation}` 
-            : "Select degree type first"
-        }
-        onPress={() => {
-          if (!profile.highestEducation) {
-            Alert.alert('Select Degree First', 'Please select your degree type before choosing field of study');
-            return;
-          }
-          openModal('field');
-        }}
-        disabled={!profile.highestEducation}
-        icon="library"
-        fieldName="fieldOfStudy"
-      />
-
-      {/* Enhanced Education Details with Database Support */}
-      {(editing || localEditing) && (
+      {/* Editing UI (pickers) */
+      isEditing && (
         <>
+          <View style={styles.countrySelector}>
+            <SelectionButton
+              label="Country/Region"
+              value={getSelectedCountryDisplay()}
+              placeholder="Select country"
+              onPress={() => openModal('country')}
+              icon="earth"
+              fieldName="country"
+            />
+          </View>
+
+          <SelectionButton
+            label="Institution"
+            value={profile.institution}
+            placeholder="Search and select your institution"
+            onPress={() => openModal('institution')}
+            icon="school"
+            fieldName="institution"
+          />
+
+          <SelectionButton
+            label="Highest Education"
+            value={profile.highestEducation}
+            placeholder="Select degree type"
+            onPress={() => openModal('degree')}
+            icon="school"
+            fieldName="highestEducation"
+          />
+
+          <SelectionButton
+            label="Field of Study"
+            value={profile.fieldOfStudy}
+            placeholder={
+              profile.highestEducation 
+                ? `Select field for ${profile.highestEducation}` 
+                : "Select degree type first"
+            }
+            onPress={() => {
+              if (!profile.highestEducation) {
+                Alert.alert('Select Degree First', 'Please select your degree type before choosing field of study');
+                return;
+              }
+              openModal('field');
+            }}
+            disabled={!profile.highestEducation}
+            icon="library"
+            fieldName="fieldOfStudy"
+          />
+
+          {/* Enhanced Education Details with Database Support */}
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Graduation Year (Optional)</Text>
             <TextInput
@@ -628,26 +657,6 @@ export default function EducationSection({
           </View>
         </>
       )}
-
-      {/* Read-only display for graduation year and GPA */}
-      {!(editing || localEditing) && (profile.graduationYear || profile.gpa) && (
-        <View style={styles.additionalDetailsContainer}>
-          {profile.graduationYear && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Graduation Year:</Text>
-              <Text style={styles.detailValue}>{profile.graduationYear}</Text>
-            </View>
-          )}
-          {profile.gpa && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>GPA/Grade:</Text>
-              <Text style={styles.detailValue}>{profile.gpa}</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* NOTE: GraduationYear and GPA removed as they don't exist in database schema */}
 
       {/* Enhanced Modal */}
       <Modal
@@ -1000,5 +1009,82 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.gray600,
     lineHeight: 16,
+  },
+  roContainer: {
+    gap: 10,
+  },
+  roRow: {
+    marginBottom: 8,
+  },
+  roLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  roLabel: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray600 || '#6B7280',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  roValuePill: {
+    backgroundColor: colors.gray50 || '#F9FAFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  roValueText: {
+    color: colors.text || '#111827',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  roExtraRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  roExtraItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: (colors.gray100 || '#F3F4F6'),
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  roExtraText: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray700 || '#374151',
+  },
+  roKVRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: (colors.border || '#E5E7EB') + '70',
+  },
+  roKVLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 160,
+    paddingRight: 8,
+  },
+  roKVLabel: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray600 || '#6B7280',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  roKVValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#111827',
+    paddingLeft: 12,
+  },
+  roKVEmpty: {
+    color: colors.gray400 || '#9CA3AF',
+    fontStyle: 'italic',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
@@ -14,21 +14,28 @@ export default function ProfileSection({
   children, 
   editing: globalEditing = false,
   onUpdate,
-  onSave, // ? NEW: Save callback for when user finishes editing
-  style = {}
+  onSave,
+  onEdit, // NEW: when provided, clicking Edit will call this instead of toggling local edit state
+  style = {},
+  defaultCollapsed = false
 }) {
   const [localEditing, setLocalEditing] = useState(false);
-  const [saving, setSaving] = useState(false); // ? NEW: Saving state
+  const [saving, setSaving] = useState(false);
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
+  
+  // Auto-expand when global edit mode becomes true
+  useEffect(() => {
+    if (globalEditing && collapsed) setCollapsed(false);
+  }, [globalEditing, collapsed]);
   
   const currentEditMode = globalEditing || localEditing;
   
-  // ? NEW: Handle save and exit edit mode
   const handleSaveAndExit = async () => {
     if (onSave) {
       setSaving(true);
       try {
         const success = await onSave();
-        if (success !== false) { // ? FIX: Only exit edit mode if onSave doesn't return false
+        if (success !== false) {
           setLocalEditing(false);
         }
       } catch (error) {
@@ -37,7 +44,22 @@ export default function ProfileSection({
         setSaving(false);
       }
     } else {
-      setLocalEditing(false); // Just exit edit mode if no save function
+      setLocalEditing(false);
+    }
+  };
+
+  const handleEditPress = () => {
+    if (onEdit) {
+      // Let parent manage edit; ensure section is expanded first for UX
+      if (collapsed) setCollapsed(false);
+      onEdit();
+      return;
+    }
+    if (localEditing) {
+      handleSaveAndExit();
+    } else {
+      if (collapsed) setCollapsed(false);
+      setLocalEditing(true);
     }
   };
   
@@ -45,18 +67,33 @@ export default function ProfileSection({
     <EditingContext.Provider value={currentEditMode}>
       <View style={[styles.container, style]}>
         <View style={styles.sectionHeader}>
-          <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.headerLeft}
+            onPress={() => setCollapsed(v => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title} section`}
+            activeOpacity={0.7}
+          >
             <Ionicons name={icon} size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>{title}</Text>
-          </View>
-          {!globalEditing && (
+            <Ionicons
+              name={collapsed ? 'chevron-down' : 'chevron-up'}
+              size={18}
+              color={colors.gray500 || '#6B7280'}
+              style={{ marginLeft: 6 }}
+            />
+          </TouchableOpacity>
+          {/* Show Edit only when expanded and not in global edit mode */}
+          {!globalEditing && !collapsed && (
             <TouchableOpacity
               style={styles.editButton}
-              onPress={localEditing ? handleSaveAndExit : () => setLocalEditing(true)}
+              onPress={handleEditPress}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={localEditing ? (saving ? 'Saving' : `Save ${title}`) : `Edit ${title}`}
             >
               <Ionicons 
-                name={localEditing ? (saving ? "hourglass" : "checkmark") : "create"} 
+                name={localEditing && !onEdit ? (saving ? 'hourglass' : 'create') : 'create'} 
                 size={16} 
                 color={saving ? colors.gray400 : colors.primary} 
               />
@@ -64,14 +101,16 @@ export default function ProfileSection({
                 styles.editButtonText,
                 saving && styles.editButtonTextDisabled
               ]}>
-                {saving ? 'Saving...' : (localEditing ? 'Save' : 'Edit')}
+                {onEdit ? 'Edit' : (saving ? 'Saving...' : (localEditing ? 'Save' : 'Edit'))}
               </Text>
             </TouchableOpacity>
           )}
         </View>
-        
-        {/* Children now have access to editing state via context */}
-        {children}
+        {!collapsed && (
+          <View accessibilityRole="region" accessibilityLabel={`${title} content`}>
+            {children}
+          </View>
+        )}
       </View>
     </EditingContext.Provider>
   );
@@ -85,10 +124,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -108,6 +144,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
     color: colors.text || '#000000',
+    marginRight: 4,
   },
   editButton: {
     flexDirection: 'row',

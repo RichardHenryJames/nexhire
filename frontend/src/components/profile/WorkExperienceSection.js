@@ -343,9 +343,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     </View>
   );
 
+  // derive a safe, valid list and flag
+  const validExperiences = Array.isArray(experiences) ? experiences.filter((e) => !!getId(e)) : [];
+  const hasExperiences = validExperiences.length > 0;
+
   return (
     <View style={[styles.sectionContainer, showHeader && { marginBottom: 24 }]}>
-      {isEditing && (
+      {isEditing && hasExperiences && (
         <View style={styles.inlineHeader}>
           <TouchableOpacity style={styles.inlineAddButton} onPress={openAdd}>
             <Ionicons name="add" size={16} color={colors.primary} />
@@ -355,8 +359,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       )}
 
       <FlatList
-        data={experiences}
-        keyExtractor={(item) => String(getId(item))}
+        data={validExperiences}
+        keyExtractor={(item, index) => String(getId(item) ?? `idx-${index}`)}
         renderItem={({ item }) => (
           <ExperienceItem
             item={item}
@@ -366,7 +370,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
           />
         )}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={experiences.length === 0 ? { flexGrow: 1 } : null}
+        contentContainerStyle={!hasExperiences ? { flexGrow: 1 } : null}
       />
 
       {/* Add/Edit Modal */}

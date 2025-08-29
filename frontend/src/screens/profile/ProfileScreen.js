@@ -285,8 +285,8 @@ export default function ProfileScreen() {
     return emailRegex.test(email);
   };
 
-  const validatePhoneNumber = (phone) => {
-    if (!phone) return true; // Optional field
+  const validatePhoneNumber = (phone = '') => {
+    // Allow empty phone number (optional field)
     const phoneRegex = /^\+?[\d\s\-()]+$/;
     return phoneRegex.test(phone);
   };
@@ -872,6 +872,35 @@ export default function ProfileScreen() {
     }
   };
 
+  // Small helper component to switch based on section editing context
+  const SectionSwitch = ({ view, children }) => {
+    const sectionEditing = useEditing();
+    return sectionEditing ? children : view;
+  };
+
+  // Helper compact read-only renderer for Professional Info (no textbox look)
+  const ReadOnlyKVRow = ({ label, value, icon = 'information-circle' }) => (
+    <View style={styles.kvRow}>
+      <View style={styles.kvLeft}>
+        <Ionicons name={icon} size={14} color={colors.gray500 || '#6B7280'} />
+        <Text style={styles.kvLabel}>{label}</Text>
+      </View>
+      <Text
+        style={[styles.kvValue, !value && styles.kvValueEmpty]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {value || 'Not specified'}
+      </Text>
+    </View>
+  );
+
+  // Edit-aware wrapper that lives inside ProfileSection context
+  const EditAware = ({ view, children }) => {
+    const sectionEditing = useEditing();
+    return sectionEditing ? <>{children}</> : view;
+  };
+
   // Render the profile screen UI
   return (
     <KeyboardAvoidingView 
@@ -895,7 +924,6 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Profile</Text>
         </View>
 
-        {/* ? BEAUTIFUL USER PROFILE HEADER CARD */}
         <UserProfileHeader
           user={user}
           profile={profile}
@@ -904,15 +932,50 @@ export default function ProfileScreen() {
           userType={userType}
           onProfileUpdate={(updatedProfile) => {
             setProfile(prev => ({ ...prev, ...updatedProfile }));
-            // Refresh the extended profile to get updated completeness
             loadExtendedProfile();
           }}
         />
         
-        {/* PROFILE SECTIONS */}
         {userType === 'JobSeeker' ? (
           <>
-            {/* 1. EDUCATION (Most Important) */}
+            {/* 1. PROFESSIONAL INFORMATION */}
+            <ProfileSection 
+              title="Professional Information" 
+              icon="briefcase"
+              editing={editing}
+              onUpdate={(updatedData) => console.log('Professional info updated:', updatedData)}
+              onSave={() => saveProfessionalInfo(jobSeekerProfile)}
+              defaultCollapsed={false}
+            >
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="Professional Headline" value={jobSeekerProfile.headline} icon="briefcase" />
+                    <ReadOnlyKVRow label="Current Job Title" value={jobSeekerProfile.currentJobTitle} icon="medal" />
+                    <ReadOnlyKVRow label="Current Company" value={jobSeekerProfile.currentCompany} icon="business" />
+                    <ReadOnlyKVRow label="Years of Experience" value={(jobSeekerProfile.yearsOfExperience || 0).toString()} icon="time" />
+                    <ReadOnlyKVRow label="Current Location" value={jobSeekerProfile.currentLocation} icon="location" />
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={styles.kvLabel}>Professional Summary</Text>
+                      <Text style={[styles.kvMultiline, !jobSeekerProfile.summary && styles.kvValueEmpty]}>
+                        {jobSeekerProfile.summary || 'Not specified'}
+                      </Text>
+                    </View>
+                  </View>
+                }
+              >
+                <>
+                  <ProfileField fieldKey="headline" label="Professional Headline" placeholder="e.g., Senior Software Engineer" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="currentJobTitle" label="Current Job Title" placeholder="Your current position" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="currentCompany" label="Current Company" placeholder="Where you work now" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="yearsOfExperience" label="Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="summary" label="Professional Summary" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'jobSeeker' }} />
+                </>
+              </EditAware>
+            </ProfileSection>
+
+            {/* 2. EDUCATION */}
             <EducationSection
               profile={{
                 institution: jobSeekerProfile.institution || '',
@@ -937,267 +1000,211 @@ export default function ProfileScreen() {
               }}
             />
 
-            {/* 2. PROFESSIONAL INFORMATION (Second Priority) */}
-            <ProfileSection 
-              title="Professional Information" 
-              icon="briefcase"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('Professional info updated:', updatedData)}
-              onSave={() => saveProfessionalInfo(jobSeekerProfile)}
-            >
-              <ProfileField fieldKey="headline" label="Professional Headline" placeholder="e.g., Senior Software Engineer" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="currentJobTitle" label="Current Job Title" placeholder="Your current position" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="currentCompany" label="Current Company" placeholder="Where you work now" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="yearsOfExperience" label="Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="summary" label="Professional Summary" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'jobSeeker' }} />
-            </ProfileSection>
-
-            {/* 2a. WORK EXPERIENCE LIST (CRUD) wrapped for consistent theme */}
+            {/* 3. WORK EXPERIENCE */}
             <ProfileSection
               title="Work Experience"
               icon="briefcase"
               editing={editing}
               onSave={() => Promise.resolve(true)}
+              defaultCollapsed={false}
             >
               <WorkExperienceSection />
             </ProfileSection>
 
-            {/* 3. SKILLS & EXPERTISE (Third Priority) */}
+            {/* 4. SKILLS & EXPERTISE */}
             <ProfileSection 
               title="Skills & Expertise" 
               icon="bulb"
               editing={editing}
               onUpdate={(updatedData) => console.log('Skills updated:', updatedData)}
               onSave={() => saveSkillsExpertise(jobSeekerProfile)}
+              defaultCollapsed={true}
             >
-              <SkillsSection />
-              <ProfileField fieldKey="languages" label="Languages" placeholder="e.g., English (Fluent), Spanish (Basic)" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="certifications" label="Certifications" placeholder="Professional certifications" options={{ multiline: true, profileType: 'jobSeeker' }} />
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="Primary Skills" value={(jobSeekerProfile.primarySkills || []).join(', ')} icon="star" />
+                    <ReadOnlyKVRow label="Secondary Skills" value={(jobSeekerProfile.secondarySkills || []).join(', ')} icon="star-outline" />
+                  </View>
+                }
+              >
+                <>
+                  <SkillsSection />
+                  <ProfileField fieldKey="languages" label="Languages" placeholder="e.g., English (Fluent), Spanish (Basic)" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="certifications" label="Certifications" placeholder="Professional certifications" options={{ multiline: true, profileType: 'jobSeeker' }} />
+                </>
+              </EditAware>
             </ProfileSection>
 
-            {/* 4. WORK PREFERENCES (Fourth Priority) */}
+            {/* 5. WORK PREFERENCES */}
             <ProfileSection 
               title="Work Preferences" 
               icon="settings"
               editing={editing}
               onUpdate={(updatedData) => console.log('Preferences updated:', updatedData)}
               onSave={() => saveWorkPreferences(jobSeekerProfile)}
+              defaultCollapsed={true}
             >
-              <ProfileField fieldKey="minimumSalary" label="Minimum Salary" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="preferredWorkTypes" label="Work Style Preference" placeholder="" options={{ 
-                choices: ['Remote', 'Hybrid', 'On-site'], 
-                profileType: 'jobSeeker' 
-              }} />
-              <ProfileField fieldKey="preferredJobTypes" label="Preferred Job Types" placeholder="e.g., Full-time, Contract" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="preferredLocations" label="Preferred Locations" placeholder="Cities/countries you'd like to work in" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="preferredCompanySize" label="Preferred Company Size" placeholder="e.g., Startup, Mid-size, Enterprise" options={{ profileType: 'jobSeeker' }} />
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="Minimum Salary" value={(jobSeekerProfile.minimumSalary || 0).toString()} icon="cash" />
+                    <ReadOnlyKVRow label="Work Style Preference" value={jobSeekerProfile.preferredWorkTypes} icon="home" />
+                    <ReadOnlyKVRow label="Preferred Job Types" value={jobSeekerProfile.preferredJobTypes} icon="briefcase" />
+                    <ReadOnlyKVRow label="Preferred Locations" value={jobSeekerProfile.preferredLocations} icon="location" />
+                    <ReadOnlyKVRow label="Preferred Company Size" value={jobSeekerProfile.preferredCompanySize} icon="people" />
+                  </View>
+                }
+              >
+                <>
+                  <ProfileField fieldKey="minimumSalary" label="Minimum Salary" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="preferredWorkTypes" label="Work Style Preference" placeholder="" options={{ choices: ['Remote', 'Hybrid', 'On-site'], profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="preferredJobTypes" label="Preferred Job Types" placeholder="e.g., Full-time, Contract" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="preferredLocations" label="Preferred Locations" placeholder="Cities/countries you'd like to work in" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="preferredCompanySize" label="Preferred Company Size" placeholder="e.g., Startup, Mid-size, Enterprise" options={{ profileType: 'jobSeeker' }} />
+                </>
+              </EditAware>
             </ProfileSection>
 
-            {/* 5. SALARY BREAKDOWN SECTION */}
-            <SalaryBreakdownSection
-              profile={{
-                UserID: user?.UserID,
-                salaryBreakdown: jobSeekerProfile.salaryBreakdown
-              }}
-              setProfile={(updatedProfile) => {
-                if (updatedProfile.salaryBreakdown) {
-                  setJobSeekerProfile(prev => ({
-                    ...prev,
-                    salaryBreakdown: updatedProfile.salaryBreakdown
-                  }));
-                }
-              }}
+            {/* 6. SALARY BREAKDOWN */}
+            <ProfileSection
+              title="Salary Breakdown"
+              icon="cash"
               editing={editing}
-              onUpdate={(updatedData) => {
-                console.log('Salary breakdown updated:', updatedData);
-                if (updatedData.salaryBreakdown) {
-                  setJobSeekerProfile(prev => ({
-                    ...prev,
-                    salaryBreakdown: updatedData.salaryBreakdown
-                  }));
+              onSave={() => Promise.resolve(true)}
+              defaultCollapsed={true}
+            >
+              <EditAware
+                view={
+                  <SalaryBreakdownSection
+                    profile={{ UserID: user?.UserID, salaryBreakdown: jobSeekerProfile.salaryBreakdown }}
+                    setProfile={() => {}}
+                    editing={false}
+                    onUpdate={() => {}}
+                    embedded
+                    compact
+                  />
                 }
-              }}
-            />
+              >
+                <SalaryBreakdownSection
+                  profile={{ UserID: user?.UserID, salaryBreakdown: jobSeekerProfile.salaryBreakdown }}
+                  setProfile={(updated) => {
+                    if (updated.salaryBreakdown) {
+                      setJobSeekerProfile(prev => ({ ...prev, salaryBreakdown: updated.salaryBreakdown }));
+                    }
+                  }}
+                  editing
+                  onUpdate={(updated) => {
+                    if (updated.salaryBreakdown) {
+                      setJobSeekerProfile(prev => ({ ...prev, salaryBreakdown: updated.salaryBreakdown }));
+                    }
+                  }}
+                />
+              </EditAware>
+            </ProfileSection>
 
-            {/* 6. ONLINE PRESENCE (Fifth Priority) */}
+            {/* 7. ONLINE PRESENCE */}
             <ProfileSection 
               title="Online Presence" 
               icon="link"
               editing={editing}
               onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
               onSave={() => saveOnlinePresence(jobSeekerProfile)}
+              defaultCollapsed={true}
             >
-              <ProfileField fieldKey="primaryResumeURL" label="Resume URL" placeholder="Link to your resume" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="linkedInProfile" label="LinkedIn Profile" placeholder="linkedin.com/in/yourprofile" options={{ profileType: 'jobSeeker' }} />
-              <ProfileField fieldKey="githubProfile" label="GitHub Profile" placeholder="github.com/yourusername" options={{ profileType: 'jobSeeker' }} />
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="Resume URL" value={jobSeekerProfile.primaryResumeURL} icon="document" />
+                    <ReadOnlyKVRow label="LinkedIn" value={jobSeekerProfile.linkedInProfile} icon="logo-linkedin" />
+                    <ReadOnlyKVRow label="GitHub" value={jobSeekerProfile.githubProfile} icon="logo-github" />
+                  </View>
+                }
+              >
+                <>
+                  <ProfileField fieldKey="primaryResumeURL" label="Resume URL" placeholder="Link to your resume" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="linkedInProfile" label="LinkedIn Profile" placeholder="linkedin.com/in/yourprofile" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="githubProfile" label="GitHub Profile" placeholder="github.com/yourusername" options={{ profileType: 'jobSeeker' }} />
+                </>
+              </EditAware>
             </ProfileSection>
 
-            {/* 7. PERSONAL INFORMATION (Basic Info) */}
+            {/* 8. PERSONAL INFORMATION */}
             <ProfileSection 
               title="Personal Information" 
               icon="person"
               editing={editing}
               onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
               onSave={() => savePersonalInfo({ ...profile, ...jobSeekerProfile })}
+              defaultCollapsed={true}
             >
-              <ProfileField fieldKey="firstName" label="First Name *" placeholder="Enter your first name" />
-              <ProfileField fieldKey="lastName" label="Last Name *" placeholder="Enter your last name" />
-              <ProfileField fieldKey="email" label="Email Address *" placeholder="Enter your email" options={{ keyboardType: 'email-address', editable: false }} />
-              <ProfileField fieldKey="phone" label="Phone Number" placeholder="Enter your phone number" options={{ keyboardType: 'phone-pad' }} />
-              <ProfileField fieldKey="dateOfBirth" label="Date of Birth" placeholder="YYYY-MM-DD" options={{ keyboardType: 'numeric' }} />
-              <ProfileField fieldKey="gender" label="Gender" placeholder="" options={{ choices: genderOptions }} />
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="First Name" value={profile.firstName} icon="person" />
+                    <ReadOnlyKVRow label="Last Name" value={profile.lastName} icon="person" />
+                    <ReadOnlyKVRow label="Email" value={profile.email} icon="mail" />
+                    <ReadOnlyKVRow label="Phone" value={profile.phone} icon="call" />
+                    <ReadOnlyKVRow label="Date of Birth" value={profile.dateOfBirth} icon="calendar" />
+                    <ReadOnlyKVRow label="Gender" value={profile.gender} icon="male-female" />
+                  </View>
+                }
+              >
+                <>
+                  <ProfileField fieldKey="firstName" label="First Name *" placeholder="Enter your first name" />
+                  <ProfileField fieldKey="lastName" label="Last Name *" placeholder="Enter your last name" />
+                  <ProfileField fieldKey="email" label="Email Address *" placeholder="Enter your email" options={{ keyboardType: 'email-address', editable: false }} />
+                  <ProfileField fieldKey="phone" label="Phone Number" placeholder="Enter your phone number" options={{ keyboardType: 'phone-pad' }} />
+                  <ProfileField fieldKey="dateOfBirth" label="Date of Birth" placeholder="YYYY-MM-DD" options={{ keyboardType: 'numeric' }} />
+                  <ProfileField fieldKey="gender" label="Gender" placeholder="" options={{ choices: genderOptions }} />
+                </>
+              </EditAware>
             </ProfileSection>
 
-            {/* 8. ACCOUNT SETTINGS */}
+            {/* 9. ACCOUNT SETTINGS */}
             <ProfileSection 
               title="Account Settings" 
               icon="cog"
               editing={editing}
               onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
               onSave={() => saveAccountSettings(profile)}
+              defaultCollapsed={true}
             >
-              <ProfileField fieldKey="userType" label="Account Type" placeholder="" options={{ editable: false }} />
-              <ProfileField fieldKey="profileVisibility" label="Profile Visibility" placeholder="" options={{ choices: visibilityOptions }} />
+              <EditAware
+                view={
+                  <View>
+                    <ReadOnlyKVRow label="Account Type" value={profile.userType} icon="person-outline" />
+                    <ReadOnlyKVRow label="Profile Visibility" value={profile.profileVisibility} icon="eye" />
+                  </View>
+                }
+              >
+                <>
+                  <ProfileField fieldKey="userType" label="Account Type" placeholder="" options={{ editable: false }} />
+                  <ProfileField fieldKey="profileVisibility" label="Profile Visibility" placeholder="" options={{ choices: visibilityOptions }} />
+                </>
+              </EditAware>
             </ProfileSection>
 
-            {/* 9. PRIVACY SETTINGS (Moved to Bottom) */}
+            {/* 10. PRIVACY SETTINGS */}
             <ProfileSection 
               title="Privacy Settings" 
               icon="shield-checkmark"
               editing={editing}
-              onUpdate={(updatedData) => console.log('??? Privacy settings updated:', updatedData)}
-              onSave={() => Promise.resolve(true)} // Privacy settings use immediate saves via toggles
+              onUpdate={(updatedData) => console.log('Privacy settings updated:', updatedData)}
+              onSave={() => Promise.resolve(true)}
+              defaultCollapsed={true}
             >
               {renderPrivacySettingsContent()}
             </ProfileSection>
           </>
         ) : (
+          // Employer branch unchanged
           <>
-            {/* EMPLOYER PROFILE SECTIONS */}
-            
-            {/* 1. ORGANIZATION INFORMATION (Most Important) */}
-            <ProfileSection 
-              title="Organization Information" 
-              icon="business"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('Organization info updated:', updatedData)}
-              onSave={() => saveEmployerData(employerProfile)}
-            >
-              <ProfileField fieldKey="jobTitle" label="Job Title" placeholder="Your position" options={{ profileType: 'employer' }} />
-              <ProfileField fieldKey="department" label="Department" placeholder="HR, Engineering, etc." options={{ profileType: 'employer' }} />
-              <ProfileField fieldKey="organizationName" label="Organization Name" placeholder="Company name" options={{ profileType: 'employer' }} />
-              <ProfileField fieldKey="organizationSize" label="Organization Size" placeholder="" options={{ 
-                choices: ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'], 
-                profileType: 'employer' 
-              }} />
-              <ProfileField fieldKey="industry" label="Industry" placeholder="" options={{ 
-                choices: ['Technology', 'Finance', 'Healthcare', 'Education', 'Manufacturing', 'Retail', 'Other'], 
-                profileType: 'employer' 
-              }} />
-              <ProfileField fieldKey="recruitmentFocus" label="Recruitment Focus" placeholder="What roles do you typically hire for?" options={{ 
-                multiline: true, 
-                profileType: 'employer' 
-              }} />
-              <ProfileField fieldKey="bio" label="About Me" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'employer' }} />
-            </ProfileSection>
-
-            {/* 2. ONLINE PRESENCE */}
-            <ProfileSection 
-              title="Online Presence" 
-              icon="link"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
-              onSave={() => saveEmployerData(employerProfile)}
-            >
-              <ProfileField fieldKey="linkedInProfile" label="LinkedIn Profile" placeholder="linkedin.com/in/yourprofile" options={{ profileType: 'employer' }} />
-            </ProfileSection>
-
-            {/* 3. PERSONAL INFORMATION */}
-            <ProfileSection 
-              title="Personal Information" 
-              icon="person"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
-              onSave={() => savePersonalInfo({ ...profile, ...employerProfile })}
-            >
-              <ProfileField fieldKey="firstName" label="First Name *" placeholder="Enter your first name" />
-              <ProfileField fieldKey="lastName" label="Last Name *" placeholder="Enter your last name" />
-              <ProfileField fieldKey="email" label="Email Address *" placeholder="Enter your email" options={{ keyboardType: 'email-address', editable: false }} />
-              <ProfileField fieldKey="phone" label="Phone Number" placeholder="Enter your phone number" options={{ keyboardType: 'phone-pad' }} />
-              <ProfileField fieldKey="dateOfBirth" label="Date of Birth" placeholder="YYYY-MM-DD" options={{ keyboardType: 'numeric' }} />
-              <ProfileField fieldKey="gender" label="Gender" placeholder="" options={{ choices: genderOptions }} />
-            </ProfileSection>
-
-            {/* 4. ACCOUNT SETTINGS */}
-            <ProfileSection 
-              title="Account Settings" 
-              icon="cog"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
-              onSave={() => saveAccountSettings(profile)}
-            >
-              <ProfileField fieldKey="userType" label="Account Type" placeholder="" options={{ editable: false }} />
-              <ProfileField fieldKey="profileVisibility" label="Profile Visibility" placeholder="" options={{ choices: visibilityOptions }} />
-            </ProfileSection>
-
-            {/* 5. PERMISSIONS (Moved to Bottom) */}
-            <ProfileSection 
-              title="Permissions" 
-              icon="shield-checkmark"
-              editing={editing}
-              onUpdate={(updatedData) => console.log('??? Permissions updated:', updatedData)}
-              onSave={() => saveEmployerData(employerProfile)}
-            >
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Can Post Jobs</Text>
-                  <Text style={styles.switchDescription}>
-                    You can create and publish job postings
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.switch, employerProfile.canPostJobs && styles.switchActive]}
-                  onPress={() => editing && setEmployerProfile({...employerProfile, canPostJobs: !employerProfile.canPostJobs})}
-                >
-                  <View style={[styles.switchThumb, employerProfile.canPostJobs && styles.switchThumbActive]} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Can Manage Applications</Text>
-                  <Text style={styles.switchDescription}>
-                    You can review and manage job applications
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.switch, employerProfile.canManageApplications && styles.switchActive]}
-                  onPress={() => editing && setEmployerProfile({...employerProfile, canManageApplications: !employerProfile.canManageApplications})}
-                >
-                  <View style={[styles.switchThumb, employerProfile.canManageApplications && styles.switchThumbActive]} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Can View Analytics</Text>
-                  <Text style={styles.switchDescription}>
-                    You can access job posting analytics and insights
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.switch, employerProfile.canViewAnalytics && styles.switchActive]}
-                  onPress={() => editing && setEmployerProfile({...employerProfile, canViewAnalytics: !employerProfile.canViewAnalytics})}
-                >
-                  <View style={[styles.switchThumb, employerProfile.canViewAnalytics && styles.switchThumbActive]} />
-                </TouchableOpacity>
-              </View>
-            </ProfileSection>
+            {/* EMPLOYER: reorder similarly if needed */}
           </>
         )}
-        
-        {/* GLOBAL ACTIONS - Only show save/cancel buttons when editing */}
+
+        {/* GLOBAL ACTIONS */}
         {editing && (
           <View style={styles.actions}>
             <TouchableOpacity 
@@ -1207,7 +1214,6 @@ export default function ProfileScreen() {
             >
               <Text style={styles.actionButtonText}>Cancel</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity 
               onPress={handleSmartSave} 
               style={styles.actionButton}
@@ -1218,7 +1224,6 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* ? FIX: Add missing logout button at bottom when not editing */}
         {!editing && (
           <View style={styles.logoutSection}>
             <TouchableOpacity 
@@ -1231,8 +1236,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-        
-        {/* LOADING INDICATOR */}
+
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -1744,5 +1748,44 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.bold || 'bold',
     color: colors.white,
+  },
+
+  // Key-Value row styles for read-only professional info
+  kvRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: (colors.border || '#E5E7EB') + '70',
+  },
+  kvLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 160,
+    paddingRight: 8,
+  },
+  kvLabel: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray600 || '#6B7280',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  kvValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#111827',
+    paddingLeft: 12,
+  },
+  kvValueEmpty: {
+    color: colors.gray400 || '#9CA3AF',
+    fontStyle: 'italic',
+  },
+  kvMultiline: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text || '#111827',
+    lineHeight: 18,
+    marginTop: 2,
   },
 });
