@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
@@ -108,6 +108,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [orgResults, setOrgResults] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
   const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const [manualOrgMode, setManualOrgMode] = useState(false);
 
   // Currencies
   const [currencies, setCurrencies] = useState([]);
@@ -153,6 +154,18 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Set INR as default currency when currencies load and none selected
+  useEffect(() => {
+    if ((currencies || []).length > 0 && (form.currencyId === null || form.currencyId === undefined)) {
+      const inr = currencies.find(c => c.Code === 'INR');
+      if (inr) {
+        setForm(prev => ({ ...prev, currencyId: inr.CurrencyID }));
+      } else {
+        setForm(prev => ({ ...prev, currencyId: currencies[0].CurrencyID }));
+      }
+    }
+  }, [currencies]);
+
   // Debounced org search effect with local filtering fallback
   useEffect(() => {
     const search = async () => {
@@ -179,6 +192,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     resetForm();
     setOrgQuery('');
     setOrgResults([]);
+    setManualOrgMode(false);
     setShowOrgPicker(false);
     setShowModal(true);
   };
@@ -209,6 +223,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     });
     setOrgQuery('');
     setOrgResults([]);
+    setManualOrgMode(false);
     setShowOrgPicker(false);
     setShowModal(true);
   };
@@ -367,42 +382,78 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.formContainer}>
+          <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Job Title *</Text>
             <TextInput style={styles.input} value={form.jobTitle} onChangeText={(t) => setForm({ ...form, jobTitle: t })} placeholder="e.g., Software Engineer" autoCapitalize="words" />
 
+            {/* Company picker with inline manual entry */}
             <Text style={styles.label}>Company</Text>
-            <TouchableOpacity style={styles.orgPicker} onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}>
-              <Text style={styles.orgPickerText}>{form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}</Text>
+            <TouchableOpacity
+              style={styles.orgPicker}
+              onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}
+            >
+              <Text style={styles.orgPickerText}>
+                {form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}
+              </Text>
               <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray600} />
             </TouchableOpacity>
-            {showOrgPicker && (
+
+            {showOrgPicker ? (
               <View style={styles.orgPickerModal}>
                 <View style={styles.orgSearchRow}>
                   <Ionicons name="search" size={16} color={colors.gray600} />
-                  <TextInput style={styles.orgSearchInput} value={orgQuery} onChangeText={setOrgQuery} placeholder="Search organizations..." autoCapitalize="words" />
-                  {orgLoading ? <ActivityIndicator size="small" color={colors.primary} /> : (
-                    <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
-                      <Ionicons name="refresh" size={18} color={colors.primary} />
+                  <TextInput
+                    style={styles.orgSearchInput}
+                    value={orgQuery}
+                    onChangeText={setOrgQuery}
+                    placeholder={manualOrgMode ? 'Enter company name' : 'Search organizations...'}
+                    autoCapitalize="words"
+                  />
+                  {manualOrgMode ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const name = (orgQuery || '').trim();
+                        if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                        setForm((prev) => ({ ...prev, organizationId: null, companyName: name }));
+                        setShowOrgPicker(false);
+                      }}
+                    >
+                      <Ionicons name="checkmark" size={18} color={colors.primary} />
                     </TouchableOpacity>
+                  ) : (
+                    orgLoading ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
+                        <Ionicons name="refresh" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    )
                   )}
                 </View>
-                <FlatList data={orgResults} keyExtractor={(o) => String(o.id)} style={styles.orgList} keyboardShouldPersistTaps="handled" renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
-                    <Text style={styles.orgName}>{item.name}</Text>
-                    {item.website ? <Text style={styles.orgMeta}>{item.website}</Text> : null}
-                  </TouchableOpacity>
-                )} ListFooterComponent={() => (
-                  <TouchableOpacity style={styles.manualEntry} onPress={() => { setForm((prev) => ({ ...prev, organizationId: null })); setShowOrgPicker(false); }}>
-                    <Ionicons name="create-outline" size={16} color={colors.primary} />
-                    <Text style={styles.manualEntryText}>Enter company name manually</Text>
-                  </TouchableOpacity>
-                )} />
-              </View>
-            )}
-            <TextInput style={styles.input} value={typeof form.companyName === 'string' ? form.companyName : normalizeString(form.companyName) || ''} onChangeText={(t) => setForm({ ...form, companyName: t })} placeholder="Company name (if not listed)" autoCapitalize="words" />
 
-            {/* Extended fields */}
+                <TouchableOpacity style={styles.manualToggleRow} onPress={() => setManualOrgMode(v => !v)}>
+                  <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
+                  <Text style={styles.manualEntryText}> My company is not listed</Text>
+                </TouchableOpacity>
+
+                {!manualOrgMode && (
+                  <FlatList
+                    data={orgResults}
+                    keyExtractor={(o) => String(o.id)}
+                    style={styles.orgList}
+                    keyboardShouldPersistTaps="handled"
+                    renderItem={({ item }) => (
+                      <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
+                        <Text style={styles.orgName}>{item.name}</Text>
+                        {item.website ? <Text style={styles.orgMeta}>{item.website}</Text> : null}
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
+              </View>
+            ) : null}
+
+            {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
             <TextInput style={styles.input} value={form.department} onChangeText={(t) => setForm({ ...form, department: t })} placeholder="e.g., Engineering" />
 
@@ -440,13 +491,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             <TextInput style={styles.input} value={form.salary} onChangeText={(t) => setForm({ ...form, salary: t })} placeholder="e.g., 120000" keyboardType="numeric" />
 
             <Text style={styles.label}>Currency</Text>
-            <View style={styles.inlineChoices}>
-              {(currencies || []).slice(0, 6).map((c) => (
-                <TouchableOpacity key={c.CurrencyID} style={[styles.choicePill, form.currencyId === c.CurrencyID && styles.choicePillActive]} onPress={() => setForm({ ...form, currencyId: c.CurrencyID })}>
-                  <Text style={[styles.choicePillText, form.currencyId === c.CurrencyID && styles.choicePillTextActive]}>{c.Code}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              <View style={styles.inlineChoices}>
+                {(currencies || []).map((c) => (
+                  <TouchableOpacity key={c.CurrencyID} style={[styles.choicePill, form.currencyId === c.CurrencyID && styles.choicePillActive]} onPress={() => setForm({ ...form, currencyId: c.CurrencyID })}>
+                    <Text style={[styles.choicePillText, form.currencyId === c.CurrencyID && styles.choicePillTextActive]}>
+                      {c.Code}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
 
             {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
 
@@ -459,7 +514,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               <Text style={styles.label}>Recruiter can contact manager</Text>
               <Switch value={!!form.canContact} onValueChange={(v) => setForm({ ...form, canContact: v })} />
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -504,7 +559,8 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   saveButton: { fontSize: typography.sizes?.md || 16, color: colors.primary, fontWeight: typography.weights?.medium || '500' },
-  formContainer: { padding: 20 },
+  formContainer: { padding: 20, paddingBottom: 40 },
+  formScroll: { flex: 1 },
   label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12 },
   inputDisabled: { opacity: 0.6 },
@@ -537,4 +593,5 @@ const styles = StyleSheet.create({
   confirmDeleteText: { color: colors.white, fontSize: typography.sizes?.md || 16, fontWeight: typography.weights?.bold || 'bold' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   multiline: { height: 100, textAlignVertical: 'top' },
+  manualToggleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border },
 });

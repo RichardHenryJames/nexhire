@@ -80,6 +80,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const debouncedOrgQuery = useDebounce(orgQuery, 300);
   const [orgResults, setOrgResults] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
+  const [manualOrgMode, setManualOrgMode] = useState(false);
 
   const { userType, experienceType } = route.params;
 
@@ -172,30 +173,24 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const orgFirstLoad = useRef(false);
   useEffect(() => {
     const search = async () => {
-      if (!showOrgModal) return;
+      if (!showOrgModal || manualOrgMode) return; // skip fetching when manual mode
       try {
         setOrgLoading(true);
         const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
-        setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
+        setOrgResults(raw);
       } catch (e) {
         setOrgResults([]);
       } finally {
         setOrgLoading(false);
       }
     };
-    // prevent immediate duplicate fetch on first open in StrictMode
-    if (showOrgModal && !orgFirstLoad.current) {
-      orgFirstLoad.current = true;
-      // still do one fetch now
-      search();
-      return;
-    }
     search();
-  }, [debouncedOrgQuery, showOrgModal]);
+  }, [debouncedOrgQuery, showOrgModal, manualOrgMode]);
 
   const openOrgModal = () => {
     setShowOrgModal(true);
+    setManualOrgMode(false);
     if (orgResults.length === 0) setOrgQuery('');
   };
   const closeOrgModal = () => setShowOrgModal(false);
@@ -247,14 +242,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
         </Text>
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
-      {/* Manual entry fallback */}
-      <TextInput
-        style={[styles.textInput, { marginTop: 8 }]}
-        placeholder="Company name (if not listed)"
-        value={formData.currentCompany}
-        onChangeText={(t) => updateField('currentCompany', t)}
-        autoCapitalize="words"
-      />
     </View>
   );
 
@@ -396,7 +383,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* COMPANY PICKER MODAL (global) */}
+      {/* COMPANY PICKER MODAL (global) with inline manual entry */}
       <Modal
         visible={showOrgModal}
         animationType="slide"
@@ -416,36 +403,59 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <Ionicons name="search" size={18} color={colors.gray600} />
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
-              placeholder="Search companies..."
+              placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
             />
-            {orgLoading && <ActivityIndicator size="small" color={colors.primary} />}
+            {manualOrgMode ? (
+              <TouchableOpacity
+                onPress={() => {
+                  const name = (orgQuery || '').trim();
+                  if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                  updateField('organizationId', null);
+                  updateField('currentCompany', name);
+                  setShowOrgModal(false);
+                }}
+              >
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            ) : (orgLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
+                <Ionicons name="refresh" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <FlatList
-            data={orgResults}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                <View>
-                  <Text style={styles.modalItemText}>{item.name}</Text>
-                  {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
-              </TouchableOpacity>
-            )}
-            ListFooterComponent={(
-              <TouchableOpacity style={[styles.modalItem, { justifyContent: 'center' }]} onPress={() => handleSelectOrganization({ id: 999999, name: '' })}>
-                <Ionicons name="create-outline" size={18} color={colors.primary} />
-                <Text style={[styles.modalItemText, { marginLeft: 8 }]}>My company is not listed</Text>
-              </TouchableOpacity>
-            )}
-            keyboardShouldPersistTaps="handled"
-            removeClippedSubviews
-            windowSize={8}
-          />
+          {/* Manual toggle */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}
+            onPress={() => setManualOrgMode(v => !v)}
+          >
+            <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
+            <Text style={{ color: colors.text, marginLeft: 8 }}>My company is not listed</Text>
+          </TouchableOpacity>
+
+          {!manualOrgMode && (
+            <FlatList
+              data={orgResults}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
+                  <View>
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
+                </TouchableOpacity>
+              )}
+              keyboardShouldPersistTaps="handled"
+              removeClippedSubviews
+              windowSize={8}
+            />
+          )}
         </View>
       </Modal>
 

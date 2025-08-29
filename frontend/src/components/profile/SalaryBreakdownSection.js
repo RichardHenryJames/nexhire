@@ -44,20 +44,45 @@ export default function SalaryBreakdownSection({
     expected: []
   });
 
-  // ? FIX: Memoize component amounts to prevent unnecessary recalculations
+  // Helper: convert an amount at a given frequency to yearly amount
+  const toYearly = (amount, freq) => {
+    if (!amount) return 0;
+    switch ((freq || 'Yearly')) {
+      case 'Monthly': return amount * 12;
+      case 'Weekly': return amount * 52;
+      case 'Daily': return amount * 365; // adjust to 260 for business days if needed
+      case 'Hourly': return amount * 2080; // 40h * 52w
+      case 'Annual':
+      case 'Yearly':
+      default: return amount;
+    }
+  };
+
+  // Map storage value to display label and unit
+  const frequencyLabel = (freq) => (freq === 'Yearly' || freq === 'Annual') ? 'Annual' : (freq || 'Annual');
+  const frequencyUnit = (freq) => {
+    switch (freq) {
+      case 'Monthly': return 'month';
+      case 'Weekly': return 'week';
+      case 'Daily': return 'day';
+      case 'Hourly': return 'hour';
+      case 'Annual':
+      case 'Yearly':
+      default: return 'year';
+    }
+  };
+
+  // Memoize amounts in yearly terms for performance
   const componentAmounts = useMemo(() => {
     const amounts = {};
     const components = [...(localSalaryBreakdown.current || []), ...(localSalaryBreakdown.expected || [])];
-    
     components.forEach((component, index) => {
-      const currency = currencies.find(c => c.CurrencyID === component.CurrencyID);
       const originalAmount = component.Amount || 0;
-      const yearlyAmount = component.Frequency === 'Monthly' ? originalAmount * 12 : originalAmount;
+      const yearlyAmount = toYearly(originalAmount, component.Frequency);
       amounts[index] = yearlyAmount;
     });
-    
     return amounts;
-  }, [localSalaryBreakdown, currencies]);
+  }, [localSalaryBreakdown]);
 
   useEffect(() => {
     if (profile?.salaryBreakdown) {
@@ -201,13 +226,8 @@ export default function SalaryBreakdownSection({
       const amount = component.Amount || 0;
       if (amount <= 0) continue;
       
-      // Convert frequency to yearly
-      let yearlyAmount = amount;
-      if (component.Frequency === 'Monthly') {
-        yearlyAmount = amount * 12;
-        console.log(`?? Monthly ${amount} ? Yearly ${yearlyAmount}`);
-      }
-      
+      const yearlyAmount = toYearly(amount, component.Frequency);
+
       // Convert currency to display currency
       const componentCurrency = currencies.find(c => c.CurrencyID === component.CurrencyID);
       let convertedAmount = yearlyAmount;
@@ -477,7 +497,7 @@ export default function SalaryBreakdownSection({
                         {getComponentName(component.ComponentID)}
                       </Text>
                       <Text style={styles.componentFrequency}>
-                        {component.Frequency || 'Yearly'}
+                        {frequencyLabel(component.Frequency || 'Yearly')}
                       </Text>
                     </View>
                     <View style={styles.componentAmountContainer}>
@@ -485,7 +505,7 @@ export default function SalaryBreakdownSection({
                         {currency?.Symbol || '$'}{originalAmount.toLocaleString()}
                       </Text>
                       <Text style={styles.componentCurrency}>
-                        {currency?.Code || 'USD'}
+                        {currency?.Code || 'USD'} /{frequencyUnit(component.Frequency || 'Yearly')}
                       </Text>
                     </View>
                   </View>
@@ -514,7 +534,7 @@ export default function SalaryBreakdownSection({
                         {getComponentName(component.ComponentID)}
                       </Text>
                       <Text style={styles.componentFrequency}>
-                        {component.Frequency || 'Yearly'}
+                        {frequencyLabel(component.Frequency || 'Yearly')}
                       </Text>
                     </View>
                     <View style={styles.componentAmountContainer}>
@@ -522,7 +542,7 @@ export default function SalaryBreakdownSection({
                         {currency?.Symbol || '$'}{originalAmount.toLocaleString()}
                       </Text>
                       <Text style={styles.componentCurrency}>
-                        {currency?.Code || 'USD'}
+                        {currency?.Code || 'USD'} /{frequencyUnit(component.Frequency || 'Yearly')}
                       </Text>
                     </View>
                   </View>
@@ -827,11 +847,11 @@ export default function SalaryBreakdownSection({
         >
           <View style={styles.dropdownModalContainer}>
             <Text style={styles.dropdownModalTitle}>Select Frequency</Text>
-            {['Monthly', 'Yearly'].map((freq) => {
+            {['Yearly', 'Monthly', 'Weekly', 'Daily', 'Hourly'].map((freq) => {
               const currentComponentIndex = parseInt(Object.keys(showDropdowns).find(key => key.startsWith('frequency_'))?.split('_')[1] || '0');
               const currentComponent = (localSalaryBreakdown[editingContext] || [])[currentComponentIndex];
               const isSelected = (currentComponent?.Frequency || 'Yearly') === freq;
-              
+              const unit = freq === 'Yearly' ? 'year' : freq === 'Monthly' ? 'month' : freq.toLowerCase();
               return (
                 <TouchableOpacity
                   key={freq}
@@ -848,7 +868,7 @@ export default function SalaryBreakdownSection({
                     styles.dropdownModalItemText,
                     isSelected && styles.dropdownModalItemTextActive
                   ]}>
-                    {freq} (/{freq === 'Monthly' ? 'month' : 'year'})
+                    {freq} (/{unit})
                   </Text>
                   {isSelected && <MaterialIcons name="check" size={20} color={colors.primary} />}
                 </TouchableOpacity>

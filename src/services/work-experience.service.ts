@@ -5,7 +5,7 @@ import { ValidationError, NotFoundError } from '../utils/validation';
 export interface WorkExperienceInput {
   jobTitle: string;
   organizationId?: number | null;
-  companyName?: string | null;
+  companyName?: string | null | string[];
   department?: string | null;
   employmentType?: string | null;
   startDate: string | Date;
@@ -201,11 +201,24 @@ export class WorkExperienceService {
     await this.updateApplicantDerivedFields(existing.ApplicantID);
   }
 
-  static async resolveOrganizationId(explicitId: number | null, companyName?: string | null): Promise<number | null> {
+  static async resolveOrganizationId(explicitId: number | null, companyName?: string | null | string[]): Promise<number | null> {
     if (explicitId && Number.isInteger(explicitId)) return explicitId;
-    if (!companyName || !companyName.trim()) return null;
+
+    // Normalize companyName to a plain string (handle arrays or non-strings)
+    let name: string | null = null;
+    if (Array.isArray(companyName)) {
+      const found = [...companyName].reverse().find(v => typeof v === 'string' && v.trim().length > 0);
+      name = found ? found.trim() : null;
+    } else if (typeof companyName === 'string') {
+      name = companyName.trim();
+    } else {
+      name = null;
+    }
+
+    if (!name) return null;
+
     // Try to find by name
-    let result = await dbService.executeQuery('SELECT OrganizationID FROM Organizations WHERE Name = @param0', [companyName.trim()]);
+    let result = await dbService.executeQuery('SELECT OrganizationID FROM Organizations WHERE Name = @param0', [name]);
     if (result.recordset && result.recordset.length > 0) {
       return result.recordset[0].OrganizationID;
     }
@@ -215,7 +228,7 @@ export class WorkExperienceService {
             VALUES (@param0, GETUTCDATE(), GETUTCDATE(), 1);
             SELECT SCOPE_IDENTITY() AS OrganizationID;
         `;
-    result = await dbService.executeQuery(insertQuery, [companyName.trim()]);
+    result = await dbService.executeQuery(insertQuery, [name]);
     const orgId = result.recordset && result.recordset.length > 0 ? parseInt(result.recordset[0].OrganizationID) : null;
     return orgId;
   }
