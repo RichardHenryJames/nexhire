@@ -17,6 +17,28 @@ interface University {
     alpha_two_code?: string;
 }
 
+// NEW: Get workplace types
+export const getWorkplaceTypes = async (req: any): Promise<any> => {
+    try {
+        const query = 'SELECT WorkplaceTypeID, Type FROM WorkplaceTypes WHERE IsActive = 1 ORDER BY Type';
+        const result = await dbService.executeQuery(query);
+        return {
+            status: 200,
+            jsonBody: successResponse(result.recordset || [], 'Workplace types retrieved successfully')
+        };
+    } catch (error) {
+        console.error('Error getting workplace types:', error);
+        return {
+            status: 500,
+            jsonBody: { 
+                success: false, 
+                error: 'Failed to retrieve workplace types',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            }
+        };
+    }
+};
+
 // Get all organizations for registration dropdown
 export const getOrganizations = async (req: any): Promise<any> => {
     try {

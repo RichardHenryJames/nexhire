@@ -44,7 +44,8 @@ import {
     getColleges,
     getUniversitiesByCountry,
     getIndustries,
-    getCountries  // NEW: Add countries import
+    getCountries,  // NEW: Add countries import
+    getWorkplaceTypes // NEW: Workplace types
 } from './src/controllers/reference.controller';
 import { initializeEmployer } from './src/controllers/employer.controller';
 
@@ -331,6 +332,14 @@ app.http('employers-profile', {
 // JOB MANAGEMENT ENDPOINTS
 // ========================================================================
 
+// Specific search route must be registered BEFORE jobs/{id} to avoid matching "search" as an ID
+app.http('jobs-search', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'jobs/search',
+    handler: withErrorHandling(searchJobs)
+});
+
 app.http('jobs', {
     methods: ['GET', 'POST', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -371,13 +380,6 @@ app.http('jobs-close', {
     authLevel: 'anonymous',
     route: 'jobs/{id}/close',
     handler: withErrorHandling(closeJob)
-});
-
-app.http('jobs-search', {
-    methods: ['GET', 'OPTIONS'],
-    authLevel: 'anonymous',
-    route: 'jobs/search',
-    handler: withErrorHandling(searchJobs)
 });
 
 // ========================================================================
@@ -442,6 +444,14 @@ app.http('reference-job-types', {
     authLevel: 'anonymous',
     route: 'reference/job-types',
     handler: withErrorHandling(getJobTypes)
+});
+
+// NEW: Workplace types endpoint
+app.http('reference-workplace-types', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'reference/workplace-types',
+    handler: withErrorHandling(getWorkplaceTypes)
 });
 
 app.http('reference-currencies', {

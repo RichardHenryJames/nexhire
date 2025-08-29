@@ -398,25 +398,25 @@ class NexHireAPI {
   }
 
   // Jobs APIs
-  async getJobs(page = 1, pageSize = 20, filters = {}) {
+  async getJobs(page = 1, pageSize = 20, filters = {}, fetchOptions = {}) {
     const params = new URLSearchParams({
       page: page.toString(),
       pageSize: pageSize.toString(),
       ...filters
     });
-    return this.apiCall(`/jobs?${params}`);
+    return this.apiCall(`/jobs?${params}`, fetchOptions);
   }
 
   async getJobById(jobId) {
     return this.apiCall(`/jobs/${jobId}`);
   }
 
-  async searchJobs(query, filters = {}) {
+  async searchJobs(query, filters = {}, fetchOptions = {}) {
     const params = new URLSearchParams({
       q: query || '',
       ...filters,
     });
-    return this.apiCall(`/jobs/search?${params}`);
+    return this.apiCall(`/jobs/search?${params}`, fetchOptions);
   }
 
   async createJob(jobData) {
@@ -460,11 +460,29 @@ class NexHireAPI {
       return {
         success: true,
         data: [
-          { JobTypeID: 1, Type: 'Full-Time' },
+          { JobTypeID: 1, Type: 'Full-time' },
           { JobTypeID: 2, Type: 'Contract' },
-          { JobTypeID: 3, Type: 'Part-Time' },
+          { JobTypeID: 3, Type: 'Part-time' },
           { JobTypeID: 4, Type: 'Internship' },
-          { JobTypeID: 5, Type: 'Freelance' }
+          { JobTypeID: 5, Type: 'Freelance' },
+          { JobTypeID: 6, Type: 'Temporary' }
+        ]
+      };
+    }
+  }
+
+  // UPDATED: Workplace types reference -> call backend, fallback on error
+  async getWorkplaceTypes() {
+    try {
+      return await this.apiCall('/reference/workplace-types');
+    } catch (error) {
+      console.warn('Failed to load workplace types from backend, using fallback:', error.message);
+      return {
+        success: true,
+        data: [
+          { WorkplaceTypeID: 1, Type: 'Onsite' },
+          { WorkplaceTypeID: 2, Type: 'Remote' },
+          { WorkplaceTypeID: 3, Type: 'Hybrid' }
         ]
       };
     }
