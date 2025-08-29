@@ -638,6 +638,8 @@ export default function ProfileScreen() {
       if (userType === 'JobSeeker') {
         const response = await nexhireAPI.getApplicantProfile(user.UserID);
         if (response.success) {
+          const months = response.data.TotalExperienceMonths != null ? Number(response.data.TotalExperienceMonths) : null;
+          const derivedYears = months != null && !isNaN(months) ? Math.round(months / 12) : (response.data.YearsOfExperience || 0);
           setJobSeekerProfile({
             // Personal Information
             nationality: response.data.Nationality || '',
@@ -663,22 +665,22 @@ export default function ProfileScreen() {
             headline: response.data.Headline || '',
             summary: response.data.Summary || '',
             currentJobTitle: response.data.CurrentJobTitle || '',
-            currentCompany: response.data.CurrentCompany || '',
-            yearsOfExperience: response.data.YearsOfExperience || 0,
+            currentCompany: response.data.CurrentCompanyName || response.data.CurrentCompany || '',
+            yearsOfExperience: derivedYears || 0,
             noticePeriod: response.data.NoticePeriod || 30,
-            totalWorkExperience: response.data.TotalWorkExperience || '',
+            totalWorkExperience: '',
             
             // Job Preferences
             preferredJobTypes: response.data.PreferredJobTypes || '',
             preferredWorkTypes: response.data.PreferredWorkTypes || '',
             preferredRoles: response.data.PreferredRoles || '',
             preferredIndustries: response.data.PreferredIndustries || '',
-            minimumSalary: response.data.MinimumSalary || 0, // ? ENSURE CORRECT FIELD NAME
+            minimumSalary: response.data.MinimumSalary || 0, // keep numeric
             preferredCompanySize: response.data.PreferredCompanySize || '',
             
             // Skills and Experience
             primarySkills: response.data.PrimarySkills ? response.data.PrimarySkills.split(',').map(s => s.trim()).filter(s => s) : [],
-            secondarySkills: response.data.SecondarySkills ? response.data.SecondarySkills.split(',').map(s => s.trim()).filter(s => s) : [], // ? UPDATED: Parse as array
+            secondarySkills: response.data.SecondarySkills ? response.data.SecondarySkills.split(',').map(s => s.trim()).filter(s => s) : [],
             languages: response.data.Languages || '',
             certifications: response.data.Certifications || '',
             workExperience: response.data.WorkExperience || '',
@@ -702,7 +704,7 @@ export default function ProfileScreen() {
             tags: response.data.Tags || '',
             salaryBreakdown: response.data.salaryBreakdown || { current: [], expected: [] },
             
-            // Legacy fields (for backward compatibility)
+            // Legacy fields
             expectedSalary: response.data.minimumSalary?.toString() || '',
             currencyPreference: 'USD',
             location: response.data.CurrentLocation || '',
@@ -986,7 +988,7 @@ export default function ProfileScreen() {
                     <ReadOnlyKVRow label="Professional Headline" value={jobSeekerProfile.headline} icon="briefcase" />
                     <ReadOnlyKVRow label="Current Job Title" value={jobSeekerProfile.currentJobTitle} icon="medal" />
                     <ReadOnlyKVRow label="Current Company" value={jobSeekerProfile.currentCompany} icon="business" />
-                    <ReadOnlyKVRow label="Years of Experience" value={(jobSeekerProfile.yearsOfExperience || 0).toString()} icon="time" />
+                    <ReadOnlyKVRow label="Total Years of Experience" value={(jobSeekerProfile.yearsOfExperience || 0).toString()} icon="time" />
                     <ReadOnlyKVRow label="Current Location" value={jobSeekerProfile.currentLocation} icon="location" />
                     <View style={{ marginTop: 8 }}>
                       <Text style={styles.kvLabel}>Professional Summary</Text>
@@ -1001,7 +1003,7 @@ export default function ProfileScreen() {
                   <ProfileField fieldKey="headline" label="Professional Headline" placeholder="e.g., Senior Software Engineer" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="currentJobTitle" label="Current Job Title" placeholder="Your current position" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="currentCompany" label="Current Company" placeholder="Where you work now" options={{ profileType: 'jobSeeker' }} />
-                  <ProfileField fieldKey="yearsOfExperience" label="Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="yearsOfExperience" label="Total Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="summary" label="Professional Summary" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'jobSeeker' }} />
                 </>
