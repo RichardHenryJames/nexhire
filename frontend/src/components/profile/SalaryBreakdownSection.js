@@ -19,34 +19,33 @@ import { useEditing } from './ProfileSection';
 // Helpers to normalize backend data to a consistent shape
 const normalizeSalaryComponents = (data) => {
   if (!Array.isArray(data)) return [];
-  return data.map((obj) => {
-    const id = obj.ComponentID ?? obj.SalaryComponentID ?? obj.Id ?? obj.ID ?? obj.componentId;
-    const name = obj.Name ?? obj.ComponentName ?? obj.DisplayName ?? obj.Title ?? obj.name;
-    return id != null && name ? { ComponentID: Number(id), Name: String(name) } : null;
-  }).filter(Boolean);
+  return data
+    .map((obj) => {
+      const id = obj.ComponentID ?? obj.SalaryComponentID ?? obj.Id ?? obj.ID ?? obj.componentId;
+      const name = obj.Name ?? obj.ComponentName ?? obj.DisplayName ?? obj.Title ?? obj.name;
+      return id != null && name ? { ComponentID: Number(id), Name: String(name) } : null;
+    })
+    .filter(Boolean);
 };
 
 const normalizeCurrencies = (data) => {
   if (!Array.isArray(data)) return [];
-  return data.map((obj) => {
-    const id = obj.CurrencyID ?? obj.CurrencyId ?? obj.Id ?? obj.ID;
-    const code = obj.Code ?? obj.CurrencyCode ?? obj.ISOCode ?? obj.code;
-    const name = obj.Name ?? obj.CurrencyName ?? obj.name;
-    return id != null ? { CurrencyID: Number(id), Code: String(code || ''), Name: String(name || '') } : null;
-  }).filter(Boolean);
+  return data
+    .map((obj) => {
+      const id = obj.CurrencyID ?? obj.CurrencyId ?? obj.Id ?? obj.ID;
+      const code = obj.Code ?? obj.CurrencyCode ?? obj.ISOCode ?? obj.code;
+      const name = obj.Name ?? obj.CurrencyName ?? obj.name;
+      return id != null ? { CurrencyID: Number(id), Code: String(code || ''), Name: String(name || '') } : null;
+    })
+    .filter(Boolean);
 };
 
 const FREQUENCIES = ['Yearly', 'Monthly', 'Weekly', 'Daily', 'Hourly'];
 
-const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({ 
-  profile, 
-  setProfile, 
-  editing, 
-  onUpdate,
-  embedded = false,
-  compact = true
-}, ref) {
-  // const sectionEditing = useEditing(); // No auto-open on section edit
+const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
+  { profile, setProfile, editing, onUpdate, embedded = false, compact = true },
+  ref
+) {
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [currencies, setCurrencies] = useState([]);
@@ -55,7 +54,10 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
   const [displayCurrency, setDisplayCurrency] = useState('INR');
   const [exchangeRatesCache, setExchangeRatesCache] = useState({});
   const [salaryTotals, setSalaryTotals] = useState({ current: 0, expected: 0 });
-  const [groupTotals, setGroupTotals] = useState({ current: { fixed: 0, variable: 0, stock: 0, other: 0 }, expected: { fixed: 0, variable: 0, stock: 0, other: 0 } });
+  const [groupTotals, setGroupTotals] = useState({
+    current: { fixed: 0, variable: 0, stock: 0, other: 0 },
+    expected: { fixed: 0, variable: 0, stock: 0, other: 0 },
+  });
   const [localSalaryBreakdown, setLocalSalaryBreakdown] = useState({ current: [], expected: [] });
 
   const [pickerState, setPickerState] = useState({ visible: false, type: 'component', context: 'current', index: 0 });
@@ -65,12 +67,25 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
     save: async () => await saveSalaryBreakdown(true),
   }));
 
+  const getDefaultCurrency = (list) => list.find((c) => (c.Code || '').toUpperCase() === 'INR') || list[0];
+  const getDefaultCurrencyId = (list) => (getDefaultCurrency(list)?.CurrencyID) || 1;
+
   useEffect(() => {
     if (profile?.salaryBreakdown) {
       setLocalSalaryBreakdown(profile.salaryBreakdown);
     }
     loadReferenceData();
   }, [profile?.salaryBreakdown]);
+
+  // Sanitize any rows without CurrencyID to default INR once currencies load
+  useEffect(() => {
+    if (!currencies || currencies.length === 0) return;
+    setLocalSalaryBreakdown((prev) => {
+      const defId = getDefaultCurrencyId(currencies);
+      const sanitizeList = (arr = []) => arr.map((row) => ({ ...row, CurrencyID: row.CurrencyID || defId, Frequency: row.Frequency || 'Yearly' }));
+      return { current: sanitizeList(prev.current), expected: sanitizeList(prev.expected) };
+    });
+  }, [currencies]);
 
   useEffect(() => {
     if (currencies.length > 0 && (localSalaryBreakdown.current.length > 0 || localSalaryBreakdown.expected.length > 0)) {
@@ -89,8 +104,8 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
       if (currenciesRes?.success) {
         const normalized = normalizeCurrencies(currenciesRes.data);
         setCurrencies(normalized);
-        const inrCurrency = normalized.find((c) => (c.Code || '').toUpperCase() === 'INR');
-        setDisplayCurrency(inrCurrency ? 'INR' : (normalized[0]?.Code || 'USD'));
+        const def = getDefaultCurrency(normalized);
+        setDisplayCurrency((def?.Code) || 'INR');
       }
     } catch (error) {
       console.error('Error loading reference data:', error);
@@ -109,30 +124,48 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
       setExchangeRatesCache((prev) => ({ ...prev, [cacheKey]: reverseRate }));
       return reverseRate;
     }
+    // Primary provider: frankfurter.app
     try {
-      const response = await fetch(`https://api.frankfurter.dev/v1/latest?amount=1&from=${fromCurrency}&to=${toCurrency}`);
+      const url = `https://api.frankfurter.app/latest?amount=1&from=${fromCurrency}&to=${toCurrency}`;
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        const rate = data.rates[toCurrency];
+        const rate = data?.rates?.[toCurrency];
         if (rate) {
           setExchangeRatesCache((prev) => ({ ...prev, [cacheKey]: rate, [reverseCacheKey]: 1 / rate }));
           return rate;
         }
       }
-    } catch (error) {
-      console.warn('frankfurter.dev API failed:', error?.message || error);
-    }
+    } catch (_) {}
+    // Fallback provider: exchangerate.host
+    try {
+      const url2 = `https://api.exchangerate.host/convert?amount=1&from=${fromCurrency}&to=${toCurrency}`;
+      const res2 = await fetch(url2);
+      if (res2.ok) {
+        const data2 = await res2.json();
+        const rate2 = data2?.result;
+        if (rate2) {
+          setExchangeRatesCache((prev) => ({ ...prev, [cacheKey]: rate2, [reverseCacheKey]: 1 / rate2 }));
+          return rate2;
+        }
+      }
+    } catch (_) {}
     return 1.0;
   };
 
   const toYearly = (amount, freq) => {
     const a = parseFloat(amount || 0) || 0;
     switch (freq || 'Yearly') {
-      case 'Monthly': return a * 12;
-      case 'Weekly': return a * 52;
-      case 'Daily': return a * 365;
-      case 'Hourly': return a * 2080;
-      default: return a;
+      case 'Monthly':
+        return a * 12;
+      case 'Weekly':
+        return a * 52;
+      case 'Daily':
+        return a * 365;
+      case 'Hourly':
+        return a * 2080;
+      default:
+        return a;
     }
   };
 
@@ -172,20 +205,29 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
     } catch (e) {
       console.error('Salary total calc failed', e);
       setSalaryTotals({ current: 0, expected: 0 });
-      setGroupTotals({ current: { fixed: 0, variable: 0, stock: 0, other: 0 }, expected: { fixed: 0, variable: 0, stock: 0, other: 0 } });
+      setGroupTotals({
+        current: { fixed: 0, variable: 0, stock: 0, other: 0 },
+        expected: { fixed: 0, variable: 0, stock: 0, other: 0 },
+      });
     }
   };
 
   const saveSalaryBreakdown = async (silent = false) => {
-    if (!profile?.UserID) { Alert.alert('Error', 'User ID not found'); return false; }
+    if (!profile?.UserID) {
+      Alert.alert('Error', 'User ID not found');
+      return false;
+    }
 
-    const sanitize = (list) => (list || []).map((comp) => ({
-      ComponentID: parseInt(comp.ComponentID) || 1,
-      Amount: parseFloat(comp.Amount) || 0,
-      CurrencyID: parseInt(comp.CurrencyID) || 1,
-      Frequency: comp.Frequency || 'Yearly',
-      Notes: comp.Notes || '',
-    })).filter((comp) => comp.Amount > 0);
+    const sanitize = (list) =>
+      (list || [])
+        .map((comp) => ({
+          ComponentID: parseInt(comp.ComponentID) || 1,
+          Amount: parseFloat(comp.Amount) || 0,
+          CurrencyID: parseInt(comp.CurrencyID) || getDefaultCurrencyId(currencies),
+          Frequency: comp.Frequency || 'Yearly',
+          Notes: comp.Notes || '',
+        }))
+        .filter((comp) => comp.Amount > 0);
 
     const payload = {
       current: sanitize(localSalaryBreakdown.current),
@@ -199,7 +241,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
         setLocalSalaryBreakdown(payload);
         setProfile && setProfile((prev) => ({ ...prev, salaryBreakdown: payload }));
         onUpdate && onUpdate({ salaryBreakdown: payload });
-        if (!silent) setShowSalaryModal(false); // close and DO NOT auto reopen
+        if (!silent) setShowSalaryModal(false);
         await calculateTotals();
         if (!silent) Alert.alert('Success', 'Salary breakdown updated');
         return true;
@@ -217,7 +259,12 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
 
   const formatCurrency = (amount, code = 'INR') => {
     try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: code, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount || 0);
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount || 0);
     } catch (_) {
       return `${amount?.toLocaleString?.() || 0} ${code}`;
     }
@@ -229,10 +276,22 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
 
     const block = (label, totals) => (
       <View style={styles.compactBlock}>
-        <View style={styles.kvRow}><Text style={styles.kvLabel}>{label} Total</Text><Text style={styles.kvValue}>{formatCurrency(totals.total, displayCurrency)}/year</Text></View>
-        <View style={styles.kvRow}><Text style={styles.kvLabel}>Fixed</Text><Text style={styles.kvValue}>{formatCurrency(totals.fixed, displayCurrency)}</Text></View>
-        <View style={styles.kvRow}><Text style={styles.kvLabel}>Variable</Text><Text style={styles.kvValue}>{formatCurrency(totals.variable, displayCurrency)}</Text></View>
-        <View style={styles.kvRow}><Text style={styles.kvLabel}>Stock</Text><Text style={styles.kvValue}>{formatCurrency(totals.stock, displayCurrency)}</Text></View>
+        <View style={styles.kvRow}>
+          <Text style={styles.kvLabel}>{label} Total</Text>
+          <Text style={styles.kvValue}>{formatCurrency(totals.total, displayCurrency)}/year</Text>
+        </View>
+        <View style={styles.kvRow}>
+          <Text style={styles.kvLabel}>Fixed</Text>
+          <Text style={styles.kvValue}>{formatCurrency(totals.fixed, displayCurrency)}</Text>
+        </View>
+        <View style={styles.kvRow}>
+          <Text style={styles.kvLabel}>Variable</Text>
+          <Text style={styles.kvValue}>{formatCurrency(totals.variable, displayCurrency)}</Text>
+        </View>
+        <View style={styles.kvRow}>
+          <Text style={styles.kvLabel}>Stock</Text>
+          <Text style={styles.kvValue}>{formatCurrency(totals.stock, displayCurrency)}</Text>
+        </View>
       </View>
     );
 
@@ -270,7 +329,13 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
       ...prev,
       [context]: [
         ...(prev[context] || []),
-        { ComponentID: salaryComponents?.[0]?.ComponentID || 1, Amount: 0, CurrencyID: currencies?.[0]?.CurrencyID || 1, Frequency: 'Yearly', Notes: '' },
+        {
+          ComponentID: salaryComponents?.[0]?.ComponentID || 1,
+          Amount: 0,
+          CurrencyID: getDefaultCurrencyId(currencies),
+          Frequency: 'Yearly',
+          Notes: '',
+        },
       ],
     }));
   };
@@ -368,7 +433,9 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
           <View style={styles.pickerCard}>
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>{pickerState.type === 'component' ? 'Select Component' : 'Select Currency'}</Text>
-              <TouchableOpacity onPress={closePicker}><Ionicons name="close" size={20} color={colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={closePicker}>
+                <Ionicons name="close" size={20} color={colors.text} />
+              </TouchableOpacity>
             </View>
             <FlatList
               data={pickerState.type === 'component' ? salaryComponents : currencies}
@@ -411,7 +478,9 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection({
         </TouchableOpacity>
       </View>
       {loading ? (
-        <View style={{ padding: 20 }}><ActivityIndicator size="large" color={colors.primary} /></View>
+        <View style={{ padding: 20 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       ) : (
         renderInlineEditorBody()
       )}

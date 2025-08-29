@@ -741,6 +741,38 @@ export default function ProfileScreen() {
     }
   };
 
+  // After loadExtendedProfile, derive currentCompany from work experiences if missing
+  const deriveCurrentCompanyFromWork = async () => {
+    try {
+      const res = await nexhireAPI.getMyWorkExperiences();
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        // Pick the latest current job (IsCurrent true or EndDate null) or the newest by StartDate
+        const sorted = [...res.data].sort((a, b) => {
+          const aStart = a.StartDate ? new Date(a.StartDate).getTime() : 0;
+          const bStart = b.StartDate ? new Date(b.StartDate).getTime() : 0;
+          return bStart - aStart;
+        });
+        const current = sorted.find(x => x.IsCurrent === 1 || x.IsCurrent === true || !x.EndDate) || sorted[0];
+        const company = current?.CompanyName || current?.OrganizationName || '';
+        const title = current?.JobTitle || '';
+        setJobSeekerProfile(prev => ({
+          ...prev,
+          currentCompany: prev.currentCompany || company || '',
+          currentJobTitle: prev.currentJobTitle || title || prev.currentJobTitle || '',
+        }));
+      }
+    } catch (e) {
+      // silent
+    }
+  };
+
+  useEffect(() => {
+    // When jobSeekerProfile loaded and currentCompany missing, try to derive
+    if (userType === 'JobSeeker' && jobSeekerProfile && (!jobSeekerProfile.currentCompany || jobSeekerProfile.currentCompany.trim() === '')) {
+      deriveCurrentCompanyFromWork();
+    }
+  }, [userType, jobSeekerProfile?.currentCompany, jobSeekerProfile?.currentJobTitle]);
+
   // ? Smart profile save using field routing
   const handleSmartSave = async () => {
     try {
@@ -934,6 +966,7 @@ export default function ProfileScreen() {
             setProfile(prev => ({ ...prev, ...updatedProfile }));
             loadExtendedProfile();
           }}
+          showStats={false}
         />
         
         {userType === 'JobSeeker' ? (

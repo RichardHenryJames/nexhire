@@ -77,7 +77,8 @@ export default function UserProfileHeader({
   jobSeekerProfile,
   employerProfile,
   userType,
-  onProfileUpdate 
+  onProfileUpdate,
+  showStats = false // NEW: hide right-side Education/Skills/% Complete by default
 }) {
   const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
@@ -668,8 +669,8 @@ export default function UserProfileHeader({
           {renderStatusBadge()}
         </View>
 
-        {/* Right Stats */}
-        {userType === 'JobSeeker' && (
+        {/* Right Stats - now optional via prop */}
+        {showStats && userType === 'JobSeeker' && (
           <View style={styles.statsColumn}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>
