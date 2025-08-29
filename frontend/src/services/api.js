@@ -416,7 +416,8 @@ class NexHireAPI {
       q: query || '',
       ...filters,
     });
-    return this.apiCall(`/jobs/search?${params}`, fetchOptions);
+    // CHANGED: new endpoint /search/jobs
+    return this.apiCall(`/search/jobs?${params}`, fetchOptions);
   }
 
   async createJob(jobData) {
@@ -439,7 +440,7 @@ class NexHireAPI {
       page: page.toString(),
       pageSize: pageSize.toString(),
     });
-    return this.apiCall(`/applications/my?${params}`);
+    return this.apiCall(`/my/applications?${params}`);
   }
 
   async getJobApplications(jobId, page = 1, pageSize = 20) {

@@ -332,11 +332,11 @@ app.http('employers-profile', {
 // JOB MANAGEMENT ENDPOINTS
 // ========================================================================
 
-// Specific search route must be registered BEFORE jobs/{id} to avoid matching "search" as an ID
+// Specific search route moved to /search/jobs to avoid any collision with /jobs/{id}
 app.http('jobs-search', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'jobs/search',
+    route: 'search/jobs',
     handler: withErrorHandling(searchJobs)
 });
 
@@ -393,10 +393,11 @@ app.http('applications', {
     handler: withErrorHandling(applyForJob)
 });
 
-app.http('applications-my', {
+// REPLACED: use a distinct base path to avoid collisions with applications/{applicationId}
+app.http('my-applications', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'applications/my',
+    route: 'my/applications',
     handler: withErrorHandling(getMyApplications)
 });
 
@@ -446,7 +447,6 @@ app.http('reference-job-types', {
     handler: withErrorHandling(getJobTypes)
 });
 
-// NEW: Workplace types endpoint
 app.http('reference-workplace-types', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -489,7 +489,6 @@ app.http('reference-industries', {
     handler: withErrorHandling(getIndustries)
 });
 
-// NEW: Countries endpoint for education screen
 app.http('reference-countries', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -497,7 +496,6 @@ app.http('reference-countries', {
     handler: withErrorHandling(getCountries)
 });
 
-// ? NEW: Salary components endpoint for new salary structure
 app.http('reference-salary-components', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -507,35 +505,16 @@ app.http('reference-salary-components', {
             if (req.method === 'OPTIONS') {
                 return { status: 200 };
             }
-            
             const { ApplicantService } = await import('./src/services/profile.service');
             const components = await ApplicantService.getSalaryComponents();
-            
-            return {
-                status: 200,
-                jsonBody: {
-                    success: true,
-                    data: components
-                }
-            };
+            return { status: 200, jsonBody: { success: true, data: components } };
         } catch (error) {
             console.error('Error getting salary components:', error);
-            return {
-                status: 500,
-                jsonBody: {
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to get salary components'
-                }
-            };
+            return { status: 500, jsonBody: { success: false, error: error instanceof Error ? error.message : 'Failed to get salary components' } };
         }
     })
 });
 
-// ========================================================================
-// PROFILE IMAGE UPLOAD ENDPOINT
-// ========================================================================
-
-// ? NEW: Profile Image Upload to Azure Storage
 app.http('users-profile-image', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -546,24 +525,12 @@ app.http('users-profile-image', {
     })
 });
 
-// ========================================================================
-// HEALTH CHECK ENDPOINT
-// ========================================================================
-
 app.http('health', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'health',
     handler: withErrorHandling(async (req, context) => {
-        return {
-            status: 200,
-            jsonBody: {
-                success: true,
-                message: 'NexHire Backend API is running',
-                timestamp: new Date().toISOString(),
-                version: '1.0.0'
-            }
-        };
+        return { status: 200, jsonBody: { success: true, message: 'NexHire Backend API is running', timestamp: new Date().toISOString(), version: '1.0.0' } };
     })
 });
 
@@ -572,11 +539,7 @@ app.http('health', {
 // ========================================================================
 
 console.log('NexHire Backend API - All functions registered');
-console.log('Total endpoints: 31');  // FIXED: Now includes the 2 profile endpoints we just added
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
-console.log('Ready for deployment to Azure Functions v4');
-console.log('CORS middleware enabled for all endpoints');
-
 export {};
 
 /*
@@ -614,11 +577,11 @@ export {};
  * DELETE /jobs/{id}                   - Delete job
  * POST   /jobs/{id}/publish           - Publish job
  * POST   /jobs/{id}/close             - Close job
- * GET    /jobs/search                 - Search jobs
+ * GET    /search/jobs                 - Search jobs
  * 
  * JOB APPLICATIONS (6 endpoints):
  * POST   /applications                - Apply for job
- * GET    /applications/my             - Get my applications
+ * GET    /my/applications             - Get my applications
  * GET    /applications/stats          - Get application stats
  * GET    /jobs/{jobId}/applications   - Get job applications
  * PUT    /applications/{id}/status    - Update application status
