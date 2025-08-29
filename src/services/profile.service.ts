@@ -77,6 +77,47 @@ export class ApplicantService {
 
             const profile = applicantResult.recordset[0];
 
+            // ? NEW: Compute derived current job fields and total experience from WorkExperiences
+            try {
+                const experiences = await dbService.executeQuery(
+                    `SELECT TOP 1 * FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)
+                     ORDER BY CASE WHEN EndDate IS NULL THEN 1 ELSE 0 END DESC, EndDate DESC, StartDate DESC`,
+                    [profile.ApplicantID]
+                );
+
+                const allExp = await dbService.executeQuery(
+                    `SELECT StartDate, EndDate FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)`,
+                    [profile.ApplicantID]
+                );
+
+                const now = new Date();
+                let totalMonths = 0;
+                if (allExp.recordset) {
+                    for (const row of allExp.recordset) {
+                        const start = new Date(row.StartDate);
+                        const end = row.EndDate ? new Date(row.EndDate) : now;
+                        const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                        totalMonths += Math.max(0, months);
+                    }
+                }
+
+                // Attach derived fields for display
+                (profile as any).TotalExperienceMonths = profile.TotalExperienceMonths ?? totalMonths;
+                if (experiences.recordset && experiences.recordset.length > 0) {
+                    const latest = experiences.recordset[0];
+                    (profile as any).CurrentJobTitle = latest.JobTitle;
+                    (profile as any).CurrentOrganizationID = latest.OrganizationID;
+                    if (latest.OrganizationID) {
+                        const org = await dbService.executeQuery('SELECT Name FROM Organizations WHERE OrganizationID = @param0', [latest.OrganizationID]);
+                        (profile as any).CurrentCompanyName = org.recordset && org.recordset[0] ? org.recordset[0].Name : null;
+                    } else {
+                        (profile as any).CurrentCompanyName = null;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not compute derived work experience fields:', e);
+            }
+
             // ? NEW: Get salary breakdown for this applicant
             try {
                 const salaryData = await this.getApplicantSalaryBreakdown(profile.ApplicantID);
@@ -201,7 +242,7 @@ export class ApplicantService {
                 throw new Error('Could not determine applicant ID');
             }
 
-            // ? UPDATED: Removed old salary fields, added new schema support
+            // ? UPDATED: mapping does not include removed columns like CurrentCompany, CurrentJobTitle, YearsOfExperience, WorkExperience
             const fieldMapping: ApplicantFieldMapping = {
                 // Personal Information
                 'nationality': 'Nationality',
@@ -223,15 +264,12 @@ export class ApplicantService {
                 'graduationYear': 'GraduationYear',
                 'gpa': 'GPA',
                 
-                // Professional Information (? REMOVED salary fields)
+                // Professional Information
                 'headline': 'Headline',
                 'summary': 'Summary',
-                'currentJobTitle': 'CurrentJobTitle',
-                'currentCompany': 'CurrentCompany',
-                'yearsOfExperience': 'YearsOfExperience',
                 'noticePeriod': 'NoticePeriod',
                 
-                // Job Preferences (? REMOVED old salary fields)
+                // Job Preferences
                 'preferredJobTypes': 'PreferredJobTypes',
                 'preferredWorkTypes': 'PreferredWorkTypes',
                 'preferredRoles': 'PreferredRoles',
@@ -245,7 +283,6 @@ export class ApplicantService {
                 'secondarySkills': 'SecondarySkills',
                 'languages': 'Languages',
                 'certifications': 'Certifications',
-                'workExperience': 'WorkExperience',
                 
                 // Availability and Preferences
                 'immediatelyAvailable': 'ImmediatelyAvailable',
@@ -289,7 +326,7 @@ export class ApplicantService {
                     let value = profileData[key];
                     
                     // Integer fields
-                    if (['yearsOfExperience', 'noticePeriod'].includes(key)) {
+                    if (['noticePeriod'].includes(key)) {
                         value = value ? parseInt(value.toString()) : null;
                     }
                     // Decimal fields (? UPDATED: Only MinimumSalary remains)
@@ -318,9 +355,9 @@ export class ApplicantService {
 
             // If there are fields to update, update the main profile
             if (updateFields.length > 0) {
-                // Calculate profile completeness dynamically
+                // Calculate profile completeness dynamically (exclude removed columns)
                 const completenessFields = [
-                    'Headline', 'CurrentJobTitle', 'YearsOfExperience', 'PrimarySkills', 
+                    'Headline', 'PrimarySkills', 
                     'Summary', 'CurrentLocation', 'PreferredJobTypes', 'HighestEducation'
                 ];
                 
@@ -439,9 +476,10 @@ export class ApplicantService {
             if (profile.PrimarySkills) searchScore += 20;
             if (profile.SecondarySkills) searchScore += 10;
             
-            // Experience level (20% weight)
-            const experience = profile.YearsOfExperience || 0;
-            if (experience > 0) searchScore += Math.min(experience * 2, 20);
+            // Experience level (20% weight) - use TotalExperienceMonths if present
+            const totalMonths = (profile.TotalExperienceMonths || 0);
+            const years = Math.floor(totalMonths / 12);
+            if (years > 0) searchScore += Math.min(years * 2, 20);
             
             // Professional info (10% weight)
             if (profile.CurrentJobTitle) searchScore += 5;

@@ -522,7 +522,7 @@ export class UserService {
         return { success: true, message: 'Education updated successfully' };
     }
 
-    // NEW: Update applicant work experience data - Dedicated endpoint
+    // NEW: Update applicant work experience data - now integrates with WorkExperiences table
     static async updateWorkExperience(userId: string, workExperienceData: any) {
         const user = await this.findById(userId);
         if (!user) {
@@ -540,96 +540,79 @@ export class UserService {
         }
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // Build update fields dynamically
+        // Optionally create a work experience record if provided fields exist
+        const hasExperienceDetails = workExperienceData.companyName || workExperienceData.organizationId || workExperienceData.jobTitle || workExperienceData.startDate;
+        if (hasExperienceDetails) {
+            const { WorkExperienceService } = await import('./work-experience.service');
+            const payload: any = {
+                organizationId: workExperienceData.organizationId ?? null,
+                companyName: workExperienceData.companyName,
+                jobTitle: workExperienceData.currentJobTitle || workExperienceData.jobTitle,
+                startDate: workExperienceData.startDate || workExperienceData.start_date,
+                endDate: workExperienceData.endDate || workExperienceData.end_date || null,
+                salaryFrequency: workExperienceData.salaryFrequency || null,
+                managerName: workExperienceData.managerName || null,
+                managerContact: workExperienceData.managerContact || null,
+                canContact: workExperienceData.canContact ?? null
+            };
+            if (!payload.jobTitle || !payload.startDate) {
+                throw new ValidationError('jobTitle and startDate are required for work experience');
+            }
+            await WorkExperienceService.createWorkExperience(applicantId, payload);
+        }
+
+        // Update Applicants table for skills/summary/preferences only
         const updateFields: string[] = [];
         const parameters: any[] = [applicantId];
         let paramIndex = 1;
 
-        // Map work experience fields to database columns
-        if (workExperienceData.currentJobTitle) {
-            updateFields.push(`CurrentJobTitle = @param${paramIndex}`);
-            parameters.push(workExperienceData.currentJobTitle);
-            paramIndex++;
-        }
-        
-        if (workExperienceData.currentCompany) {
-            updateFields.push(`CurrentCompany = @param${paramIndex}`);
-            parameters.push(workExperienceData.currentCompany);
-            paramIndex++;
-        }
-        
-        if (workExperienceData.yearsOfExperience) {
-            // Parse years of experience string to number (e.g., "3-5 years" -> 3)
-            const yearsMatch = workExperienceData.yearsOfExperience.match(/^(\d+)/);
-            const years = yearsMatch ? parseInt(yearsMatch[1]) : 0;
-            updateFields.push(`YearsOfExperience = @param${paramIndex}`);
-            parameters.push(years);
-            paramIndex++;
-        }
-        
         if (workExperienceData.primarySkills) {
             updateFields.push(`PrimarySkills = @param${paramIndex}`);
             parameters.push(workExperienceData.primarySkills);
             paramIndex++;
         }
-        
         if (workExperienceData.secondarySkills) {
             updateFields.push(`SecondarySkills = @param${paramIndex}`);
             parameters.push(workExperienceData.secondarySkills);
             paramIndex++;
         }
-        
         if (workExperienceData.summary) {
             updateFields.push(`Summary = @param${paramIndex}`);
             parameters.push(workExperienceData.summary);
             paramIndex++;
         }
-        
         if (workExperienceData.workArrangement) {
             updateFields.push(`PreferredWorkTypes = @param${paramIndex}`);
             parameters.push(workExperienceData.workArrangement);
             paramIndex++;
         }
-        
         if (workExperienceData.jobType) {
             updateFields.push(`PreferredJobTypes = @param${paramIndex}`);
             parameters.push(workExperienceData.jobType);
             paramIndex++;
         }
 
-        if (updateFields.length === 0) {
-            throw new ValidationError('No work experience data provided');
+        if (updateFields.length > 0) {
+            // completeness based on remaining fields
+            const completenessFields = [
+                'Institution', 'HighestEducation', 'FieldOfStudy', 
+                'PrimarySkills', 'Summary', 'PreferredJobTypes', 'PreferredWorkTypes'
+            ];
+            const completenessLogic = completenessFields.map(field => 
+                `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
+            ).join(' + ');
+            updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
+            updateFields.push('UpdatedAt = GETUTCDATE()');
+
+            const query = `
+                UPDATE Applicants 
+                SET ${updateFields.join(', ')}
+                WHERE ApplicantID = @param0
+            `;
+            await dbService.executeQuery(query, parameters);
         }
-
-        // Calculate profile completeness including work experience fields
-        const completenessFields = [
-            'Institution', 'HighestEducation', 'FieldOfStudy', 
-            'CurrentJobTitle', 'CurrentCompany', 'YearsOfExperience', 'PrimarySkills', 'Summary'
-        ];
         
-        const completenessLogic = completenessFields.map(field => 
-            `CASE WHEN ${field} IS NOT NULL AND LEN(TRIM(CAST(${field} AS NVARCHAR(MAX)))) > 0 THEN 1 ELSE 0 END`
-        ).join(' + ');
-        
-        updateFields.push(`ProfileCompleteness = (${completenessLogic}) * 100 / ${completenessFields.length}`);
-        // FIXED: Always update UpdatedAt timestamp
-        updateFields.push(`UpdatedAt = GETUTCDATE()`);
-
-        const query = `
-            UPDATE Applicants 
-            SET ${updateFields.join(', ')}
-            WHERE ApplicantID = @param0
-        `;
-
-        console.log('Updating applicant work experience data:', {
-            applicantId,
-            fieldsToUpdate: updateFields.length - 1, // Exclude ProfileCompleteness
-            workExperienceData: Object.keys(workExperienceData)
-        });
-
-        const result = await dbService.executeQuery(query, parameters);
-        
-        return { success: true, message: 'Work experience updated successfully' };
+        return { success: true, message: 'Work experience data processed successfully' };
     }
 
     // NEW: Update job preferences data - Dedicated endpoint
@@ -688,7 +671,7 @@ export class UserService {
         // Calculate profile completeness including job preferences
         const completenessFields = [
             'Institution', 'HighestEducation', 'FieldOfStudy', 
-            'CurrentJobTitle', 'CurrentCompany', 'YearsOfExperience', 'PrimarySkills', 
+            'PrimarySkills', 
             'Summary', 'PreferredJobTypes', 'PreferredWorkTypes'
         ];
         
@@ -712,7 +695,7 @@ export class UserService {
             jobPreferencesData: Object.keys(jobPreferencesData)
         });
 
-        const result = await dbService.executeQuery(query, parameters);
+        await dbService.executeQuery(query, parameters);
         
         return { success: true, message: 'Job preferences updated successfully' };
     }

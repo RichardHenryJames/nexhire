@@ -21,6 +21,7 @@ import EducationSection from '../../components/profile/EducationSection';
 import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSection';
 import ProfileSection, { useEditing } from '../../components/profile/ProfileSection';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
+import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 
 export default function ProfileScreen() {
   const { 
@@ -950,6 +951,16 @@ export default function ProfileScreen() {
               <ProfileField fieldKey="yearsOfExperience" label="Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
               <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
               <ProfileField fieldKey="summary" label="Professional Summary" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'jobSeeker' }} />
+            </ProfileSection>
+
+            {/* 2a. WORK EXPERIENCE LIST (CRUD) wrapped for consistent theme */}
+            <ProfileSection
+              title="Work Experience"
+              icon="briefcase"
+              editing={editing}
+              onSave={() => Promise.resolve(true)}
+            >
+              <WorkExperienceSection />
             </ProfileSection>
 
             {/* 3. SKILLS & EXPERTISE (Third Priority) */}

@@ -245,24 +245,56 @@ class NexHireAPI {
     return result;
   }
 
-  // NEW: Update work experience data
-  async updateWorkExperience(workExperienceData) {
-    console.log('🔍 === API UPDATE WORK EXPERIENCE DEBUG ===');
-    console.log('💼 Input work experience data:', JSON.stringify(workExperienceData, null, 2));
-    
+  // WORK EXPERIENCES: New CRUD endpoints
+  async createWorkExperience(workExp) {
     if (!this.token) {
-      console.warn('⚠️ updateWorkExperience called without auth token. Deferring until after login.');
-      return { success: true, data: null, message: 'Deferred until login' };
+      return { success: false, error: 'Authentication required' };
     }
-    
-    console.log('🚀 Calling /users/work-experience endpoint with:', JSON.stringify(workExperienceData, null, 2));
-    const result = await this.apiCall('/users/work-experience', {
-      method: 'PUT',
-      body: JSON.stringify(workExperienceData),
+    // Require minimum fields as backend: jobTitle + startDate
+    if (!workExp || !workExp.jobTitle || !workExp.startDate) {
+      return { success: false, error: 'jobTitle and startDate are required' };
+    }
+    const payload = {
+      jobTitle: workExp.jobTitle,
+      startDate: workExp.startDate,
+      endDate: workExp.endDate || null,
+      companyName: workExp.companyName || null,
+      organizationId: workExp.organizationId || null,
+      salaryFrequency: workExp.salaryFrequency || null,
+      managerName: workExp.managerName || null,
+      managerContact: workExp.managerContact || null,
+      canContact: workExp.canContact ?? null
+    };
+    return this.apiCall('/work-experiences', {
+      method: 'POST',
+      body: JSON.stringify(payload)
     });
-    console.log('📋 Work experience API result:', result);
-    console.log('🔍 === END API UPDATE WORK EXPERIENCE DEBUG ===');
-    return result;
+  }
+
+  async getMyWorkExperiences() {
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+    return this.apiCall('/work-experiences/my');
+  }
+
+  async updateWorkExperienceById(id, data) {
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+    return this.apiCall(`/work-experiences/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteWorkExperience(id) {
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+    return this.apiCall(`/work-experiences/${id}`, {
+      method: 'DELETE'
+    });
   }
 
   // NEW: Update job preferences data
@@ -274,15 +306,56 @@ class NexHireAPI {
       console.warn('⚠️ updateJobPreferences called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
     }
-    
-    console.log('🚀 Calling /users/job-preferences endpoint with:', JSON.stringify(jobPreferencesData, null, 2));
-    const result = await this.apiCall('/users/job-preferences', {
-      method: 'PUT',
-      body: JSON.stringify(jobPreferencesData),
-    });
-    console.log('📋 Job preferences API result:', result);
-    console.log('🔍 === END API UPDATE JOB PREFERENCES DEBUG ===');
-    return result;
+
+    // Route to Applicants profile endpoint (no /users/job-preferences exists)
+    const userId = this.getUserIdFromToken();
+    if (!userId) {
+      console.error('❌ Cannot determine userId from token for job preferences update');
+      return { success: false, error: 'Unable to identify user' };
+    }
+
+    // Map incoming fields to backend ApplicantService.updateApplicantProfile mapping
+    const payload = {};
+
+    // preferredJobTypes can be array or string
+    const pjt = jobPreferencesData.preferredJobTypes || jobPreferencesData.jobTypes;
+    if (pjt) {
+      payload.preferredJobTypes = Array.isArray(pjt)
+        ? pjt.map(v => (typeof v === 'string' ? v : v?.Type || v)).join(', ')
+        : pjt;
+    }
+
+    // preferredWorkTypes/workplaceType
+    if (jobPreferencesData.preferredWorkTypes) {
+      payload.preferredWorkTypes = jobPreferencesData.preferredWorkTypes;
+    } else if (jobPreferencesData.workplaceType) {
+      payload.preferredWorkTypes = jobPreferencesData.workplaceType;
+    }
+
+    // preferredLocations can be array or string
+    if (jobPreferencesData.preferredLocations) {
+      payload.preferredLocations = Array.isArray(jobPreferencesData.preferredLocations)
+        ? jobPreferencesData.preferredLocations.join(', ')
+        : jobPreferencesData.preferredLocations;
+    }
+
+    if (jobPreferencesData.minimumSalary != null) {
+      payload.minimumSalary = jobPreferencesData.minimumSalary;
+    }
+
+    try {
+      console.log('🚀 Calling /applicants/{userId}/profile with:', JSON.stringify(payload));
+      const result = await this.apiCall(`/applicants/${userId}/profile`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      console.log('📋 Job preferences API result:', result);
+      console.log('🔍 === END API UPDATE JOB PREFERENCES DEBUG ===');
+      return result;
+    } catch (error) {
+      console.error('❌ Job preferences update failed:', error.message);
+      return { success: false, error: error.message || 'Failed to update job preferences' };
+    }
   }
 
   // Helper method to parse years of experience from string to number
@@ -467,7 +540,7 @@ class NexHireAPI {
         { id: 73, name: 'Imperial College London', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.imperial.ac.uk' },
         { id: 74, name: 'London School of Economics (LSE)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.lse.ac.uk' },
         { id: 75, name: 'University College London (UCL)', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.ucl.ac.uk' },
-        { id: 76, name: 'King\'s College London', type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.kcl.ac.uk' },
+        { id: 76, name: "King's College London", type: 'University', country: 'United Kingdom', state: 'England', website: 'https://www.kcl.ac.uk' },
         { id: 77, name: 'University of Edinburgh', type: 'University', country: 'United Kingdom', state: 'Scotland', website: 'https://www.ed.ac.uk' }
       ],
       'Canada': [

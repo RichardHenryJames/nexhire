@@ -112,7 +112,7 @@ BEGIN
     );
 END
 
--- Create Applicants table
+-- Create Applicants table (enhanced schema)
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Applicants')
 BEGIN
     CREATE TABLE Applicants (
@@ -126,9 +126,9 @@ BEGIN
         GithubProfile NVARCHAR(500),
         Headline NVARCHAR(200),
         Summary NTEXT,
-        CurrentJobTitle NVARCHAR(200),
-        CurrentCompany NVARCHAR(200),
-        YearsOfExperience INT,
+        -- Removed CurrentCompany, YearsOfExperience, WorkExperience
+        -- CurrentJobTitle remains as derived/display but stored
+        CurrentJobTitle NVARCHAR(200) NULL,
         PreferredJobTypes NVARCHAR(500),
         PreferredWorkTypes NVARCHAR(500),
         NoticePeriod INT,
@@ -144,7 +144,6 @@ BEGIN
         FieldOfStudy NVARCHAR(200),
         GraduationYear NVARCHAR(4) NULL,
         GPA NVARCHAR(50) NULL,
-        WorkExperience NTEXT,
         PrimaryResumeURL NVARCHAR(1000),
         AdditionalDocuments NTEXT,
         AllowRecruitersToContact BIT DEFAULT 1,
@@ -161,9 +160,14 @@ BEGIN
         LastJobAppliedAt DATETIME2,
         SearchScore DECIMAL(10,2),
         Tags NVARCHAR(500),
+        -- New derived/relational fields
+        TotalExperienceMonths INT NULL,
+        CurrentOrganizationID INT NULL,
+        CurrentCompanyName NVARCHAR(200) NULL,
         CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
         UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
-        FOREIGN KEY (UserID) REFERENCES Users(UserID)
+        FOREIGN KEY (UserID) REFERENCES Users(UserID),
+        FOREIGN KEY (CurrentOrganizationID) REFERENCES Organizations(OrganizationID)
     );
 END
 
@@ -208,6 +212,31 @@ BEGIN
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (ComponentID) REFERENCES SalaryComponents(ComponentID),
         FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+    );
+END
+
+-- New: WorkExperiences table to track detailed job history
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkExperiences')
+BEGIN
+    CREATE TABLE WorkExperiences (
+        WorkExperienceID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        OrganizationID INT NULL,
+        JobTitle NVARCHAR(200) NOT NULL,
+        StartDate DATE NOT NULL,
+        EndDate DATE NULL,
+        SalaryFrequency NVARCHAR(50) NULL,
+        ManagerName NVARCHAR(200) NULL,
+        ManagerContact NVARCHAR(200) NULL,
+        CanContact BIT DEFAULT 0,
+        VerificationStatus TINYINT DEFAULT 0,
+        VerifiedAt DATETIME2 NULL,
+        VerifiedBy UNIQUEIDENTIFIER NULL,
+        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        IsActive BIT DEFAULT 1,
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID)
     );
 END
 

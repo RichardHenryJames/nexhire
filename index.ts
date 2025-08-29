@@ -11,7 +11,6 @@ import {
     getProfile, 
     updateProfile,
     updateEducation,  // NEW: Add education update import
-    updateWorkExperience,  // NEW: Add work experience update import
     changePassword, 
     verifyEmail, 
     getDashboardStats, 
@@ -48,6 +47,16 @@ import {
     getCountries  // NEW: Add countries import
 } from './src/controllers/reference.controller';
 import { initializeEmployer } from './src/controllers/employer.controller';
+
+// NEW: Work experience controllers
+import {
+    getMyWorkExperiences,
+    getWorkExperiences,
+    getWorkExperienceById,
+    createWorkExperience,
+    updateWorkExperience,
+    deleteWorkExperience
+} from './src/controllers/work-experience.controller';
 
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
@@ -126,54 +135,40 @@ app.http('users-update-education', {
     handler: withErrorHandling(updateEducation)
 });
 
-// NEW: Work experience endpoint
-app.http('users-update-work-experience', {
-    methods: ['PUT', 'OPTIONS'],
+// ========================================================================
+// WORK EXPERIENCES CRUD endpoints
+// ========================================================================
+app.http('my-work-experiences', {
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'users/work-experience',
-    handler: withErrorHandling(updateWorkExperience)
+    route: 'work-experiences/my',
+    handler: withErrorHandling(getMyWorkExperiences)
 });
 
-// NEW: Job preferences endpoint
-app.http('users-update-job-preferences', {
-    methods: ['PUT', 'OPTIONS'],
+app.http('applicant-work-experiences', {
+    methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'users/job-preferences',
+    route: 'work-experiences/applicant/{applicantId}',
+    handler: withErrorHandling(getWorkExperiences)
+});
+
+app.http('work-experience-by-id', {
+    methods: ['GET', 'PUT', 'DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'work-experiences/{workExperienceId}',
     handler: withErrorHandling(async (req, context) => {
-        try {
-            const { UserService } = await import('./src/services/user.service');
-            const { authenticate } = await import('./src/middleware');
-            
-            // Skip auth for OPTIONS requests
-            if (req.method === 'OPTIONS') {
-                return { status: 200 };
-            }
-            
-            // Authenticate user and get payload
-            const userPayload = authenticate(req);
-            
-            const jobPreferencesData = await req.json() as any;
-            const result = await UserService.updateJobPreferences(userPayload.userId, jobPreferencesData);
-            
-            return {
-                status: 200,
-                jsonBody: {
-                    success: true,
-                    data: result,
-                    message: 'Job preferences updated successfully'
-                }
-            };
-        } catch (error) {
-            console.error('Error updating job preferences:', error);
-            return {
-                status: 500,
-                jsonBody: {
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to update job preferences'
-                }
-            };
-        }
+        if (req.method === 'GET') return await getWorkExperienceById(req, context);
+        if (req.method === 'PUT') return await updateWorkExperience(req, context);
+        if (req.method === 'DELETE') return await deleteWorkExperience(req, context);
+        return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
     })
+});
+
+app.http('create-work-experience', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'work-experiences',
+    handler: withErrorHandling(createWorkExperience)
 });
 
 app.http('users-deactivate', {

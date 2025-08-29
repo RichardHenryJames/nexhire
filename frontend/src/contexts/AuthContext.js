@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ?? NEW: Initialize smart auth methods (THE FIX!)
+  // ? Initialize smart auth methods
   const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
 
   // Initialize auth state on app start
@@ -121,26 +121,36 @@ export const AuthProvider = ({ children }) => {
                 console.log('Education data saved successfully');
               } else {
                 console.warn('Education data save failed:', educationResult.error);
-                // Don't fail the entire registration for this
               }
             } catch (educationError) {
               console.warn('Error saving education data:', educationError);
             }
           }
           
-          // Save work experience data if provided (for experienced professionals)
+          // Save work experience data (new API) if provided and has required fields
           if (workExperienceData) {
-            console.log('Saving work experience data:', JSON.stringify(workExperienceData, null, 2));
-            try {
-              const workExperienceResult = await nexhireAPI.updateWorkExperience(workExperienceData);
-              console.log('Work experience save result:', workExperienceResult);
-              if (workExperienceResult.success) {
-                console.log('Work experience data saved successfully');
-              } else {
-                console.warn('Work experience data save failed:', workExperienceResult.error);
+            const jobTitle = workExperienceData.currentJobTitle || workExperienceData.jobTitle;
+            const companyName = workExperienceData.currentCompany || workExperienceData.companyName;
+            const organizationId = workExperienceData.organizationId || null;
+            const startDate = workExperienceData.startDate || workExperienceData.start_date;
+            const endDate = workExperienceData.endDate || workExperienceData.end_date;
+            
+            if (jobTitle && startDate) {
+              console.log('Creating initial work experience with new API');
+              try {
+                const createResult = await nexhireAPI.createWorkExperience({
+                  jobTitle,
+                  companyName,
+                  organizationId,
+                  startDate,
+                  endDate: endDate || null,
+                });
+                console.log('Create work experience result:', createResult);
+              } catch (workError) {
+                console.warn('Error creating initial work experience:', workError);
               }
-            } catch (workExperienceError) {
-              console.warn('Error saving work experience data:', workExperienceError);
+            } else {
+              console.log('Skipping work experience creation (missing jobTitle or startDate)');
             }
           }
           
@@ -186,7 +196,7 @@ export const AuthProvider = ({ children }) => {
       console.log('Starting logout process for user:', user?.Email);
       setLoading(true);
       
-      // FIXED: Call API logout which now makes backend call
+      // Call API logout
       console.log('Calling API logout...');
       const result = await nexhireAPI.logout();
       
@@ -197,13 +207,11 @@ export const AuthProvider = ({ children }) => {
         console.log('User state cleared, should redirect to auth screens');
       } else {
         console.warn('Logout had issues but continuing:', result.message);
-        // Still clear user state for security
         setUser(null);
         setError(null);
       }
     } catch (error) {
       console.error('Logout error:', error);
-      // Always clear user state even if logout call fails
       setUser(null);
       setError(null);
     } finally {
@@ -212,7 +220,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ?? EXISTING: Legacy updateProfile for compatibility
+  // Legacy profile update (kept)
   const updateProfile = async (profileData) => {
     try {
       setError(null);
@@ -237,7 +245,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ?? NEW: Smart profile update methods (THE FIX!)
+  // Smart profile updates
   const updateProfileSmart = async (profileData) => {
     return await smartMethods.updateProfileSmart(profileData);
   };
@@ -255,25 +263,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    // State
     user,
     loading,
     error,
-    
-    // Actions - EXISTING (keep all your current functionality)
     login,
     register,
     logout,
-    updateProfile,           // Legacy method for compatibility
+    updateProfile,           
     clearError,
     checkAuthState,
-    
-    // ?? NEW: Smart profile update methods (THE FIX!)
-    updateProfileSmart,      // Smart routing method
-    togglePrivacySetting,    // Quick privacy toggles
-    updateCompleteProfile,   // Bulk updates with smart routing
-    
-    // Computed values
+    updateProfileSmart,
+    togglePrivacySetting,
+    updateCompleteProfile,
     isAuthenticated: !!user,
     isEmployer: user?.UserType === 'Employer',
     isJobSeeker: user?.UserType === 'JobSeeker',

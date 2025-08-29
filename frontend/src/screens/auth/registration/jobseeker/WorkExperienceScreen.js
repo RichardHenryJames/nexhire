@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,21 @@ import {
   TextInput,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
+import nexhireAPI from '../../../../services/api';
+
+// Debounce like college picker
+const useDebounce = (value, delay = 300) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const h = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(h);
+  }, [value, delay]);
+  return debounced;
+};
 
 const EXPERIENCE_LEVELS = [
   '0-1 years',
@@ -40,26 +52,37 @@ const WORK_ARRANGEMENTS = [
 
 export default function WorkExperienceScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
+    isCurrentlyWorking: true,
     currentJobTitle: '',
+    organizationId: null,
     currentCompany: '',
+    startDate: '',
+    endDate: '',
+
     yearsOfExperience: '',
-    previousJobTitle: '',
-    previousCompany: '',
     workArrangement: '',
     jobType: '',
     primarySkills: '',
     secondarySkills: '',
-    isCurrentlyWorking: true,
+    previousJobTitle: '',
+    previousCompany: '',
     summary: '',
   });
 
+  // Modals
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showJobTypeModal, setShowJobTypeModal] = useState(false);
   const [showWorkArrangementModal, setShowWorkArrangementModal] = useState(false);
 
+  // Company picker state (GLOBAL MODAL like education screen)
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [orgQuery, setOrgQuery] = useState('');
+  const debouncedOrgQuery = useDebounce(orgQuery, 300);
+  const [orgResults, setOrgResults] = useState([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+
   const { userType, experienceType } = route.params;
 
-  // ?? PERFORMANCE FIX: Optimize text input handlers with useCallback
   const updateField = useCallback((field, value) => {
     setFormData(prevData => ({
       ...prevData,
@@ -67,8 +90,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
     }));
   }, []);
 
-  // ?? PERFORMANCE FIX: Memoize input field components
-  const InputField = useMemo(() => React.memo(({ label, value, onChangeText, placeholder, multiline = false, required = false }) => (
+  const InputField = useMemo(() => React.memo(({ label, value, onChangeText, placeholder, multiline = false, required = false, keyboardType = 'default' }) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
         {label} {required && <Text style={styles.required}>*</Text>}
@@ -81,8 +103,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         multiline={multiline}
         numberOfLines={multiline ? 4 : 1}
         textAlignVertical={multiline ? 'top' : 'center'}
-        // ?? PERFORMANCE FIX: Add these props to improve performance
-        keyboardType="default"
+        keyboardType={keyboardType}
         returnKeyType={multiline ? 'default' : 'next'}
         blurOnSubmit={!multiline}
         autoCorrect={false}
@@ -92,38 +113,12 @@ export default function WorkExperienceScreen({ navigation, route }) {
     </View>
   )), []);
 
-  const handleContinue = () => {
-    // Validate required fields
-    if (!formData.currentJobTitle.trim()) {
-      Alert.alert('Required Field', 'Please enter your current or most recent job title');
-      return;
-    }
-    if (!formData.currentCompany.trim()) {
-      Alert.alert('Required Field', 'Please enter your current or most recent company');
-      return;
-    }
-    if (!formData.yearsOfExperience) {
-      Alert.alert('Required Field', 'Please select your years of experience');
-      return;
-    }
-    if (!formData.primarySkills.trim()) {
-      Alert.alert('Required Field', 'Please enter your primary skills');
-      return;
-    }
-
-    // Continue to education details (even experienced professionals need education info)
-    navigation.navigate('EducationDetailsScreen', { 
-      userType, 
-      experienceType,
-      workExperienceData: formData
-    });
-  };
-
   const SelectionModal = ({ visible, onClose, title, data, onSelect, currentValue }) => (
     <Modal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
@@ -161,56 +156,105 @@ export default function WorkExperienceScreen({ navigation, route }) {
     </Modal>
   );
 
-  const SelectionButton = ({ label, value, onPress, placeholder, required = false }) => (
+  // Organization helpers
+  const applyOrgFilter = (list, q) => {
+    if (!Array.isArray(list)) return [];
+    if (!q || !q.trim()) return list;
+    const s = q.toLowerCase();
+    return list.filter(o =>
+      (o.name && o.name.toLowerCase().includes(s)) ||
+      (o.website && o.website.toLowerCase().includes(s)) ||
+      (o.industry && o.industry.toLowerCase().includes(s))
+    );
+  };
+
+  // Debounced organization search using a single modal at root
+  const orgFirstLoad = useRef(false);
+  useEffect(() => {
+    const search = async () => {
+      if (!showOrgModal) return;
+      try {
+        setOrgLoading(true);
+        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
+      } catch (e) {
+        setOrgResults([]);
+      } finally {
+        setOrgLoading(false);
+      }
+    };
+    // prevent immediate duplicate fetch on first open in StrictMode
+    if (showOrgModal && !orgFirstLoad.current) {
+      orgFirstLoad.current = true;
+      // still do one fetch now
+      search();
+      return;
+    }
+    search();
+  }, [debouncedOrgQuery, showOrgModal]);
+
+  const openOrgModal = () => {
+    setShowOrgModal(true);
+    if (orgResults.length === 0) setOrgQuery('');
+  };
+  const closeOrgModal = () => setShowOrgModal(false);
+
+  const handleSelectOrganization = (org) => {
+    if (org.id === 999999) {
+      updateField('organizationId', null);
+    } else {
+      updateField('organizationId', org.id);
+      updateField('currentCompany', org.name);
+    }
+    closeOrgModal();
+  };
+
+  const handleContinue = () => {
+    if (!formData.currentJobTitle.trim()) {
+      Alert.alert('Required Field', 'Please enter your current or most recent job title');
+      return;
+    }
+    if (!formData.startDate.trim()) {
+      Alert.alert('Required Field', 'Please enter your start date (YYYY-MM-DD)');
+      return;
+    }
+
+    navigation.navigate('EducationDetailsScreen', { 
+      userType, 
+      experienceType,
+      workExperienceData: {
+        jobTitle: formData.currentJobTitle?.trim(),
+        companyName: formData.currentCompany?.trim() || null,
+        organizationId: formData.organizationId || null,
+        startDate: formData.startDate?.trim(),
+        endDate: formData.endDate?.trim() || null,
+        workArrangement: formData.workArrangement,
+        jobType: formData.jobType,
+        primarySkills: formData.primarySkills,
+        secondarySkills: formData.secondarySkills,
+        summary: formData.summary,
+      }
+    });
+  };
+
+  const OrgPickerButton = () => (
     <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>
-        {label} {required && <Text style={styles.required}>*</Text>}
-      </Text>
-      <TouchableOpacity style={styles.selectionButton} onPress={onPress}>
-        <Text style={[
-          styles.selectionValue,
-          !value && styles.selectionPlaceholder
-        ]}>
-          {value || placeholder}
+      <Text style={styles.inputLabel}>Company</Text>
+      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
+        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
+          {formData.currentCompany || 'Select or search company'}
         </Text>
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
-    </View>
-  );
-
-  const ToggleButton = ({ label, value, onToggle }) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[
-            styles.toggleOption,
-            value === true && styles.toggleOptionSelected
-          ]}
-          onPress={() => onToggle(true)}
-        >
-          <Text style={[
-            styles.toggleText,
-            value === true && styles.toggleTextSelected
-          ]}>
-            Currently Working
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.toggleOption,
-            value === false && styles.toggleOptionSelected
-          ]}
-          onPress={() => onToggle(false)}
-        >
-          <Text style={[
-            styles.toggleText,
-            value === false && styles.toggleTextSelected
-          ]}>
-            Previously Worked
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Manual entry fallback */}
+      <TextInput
+        style={[styles.textInput, { marginTop: 8 }]}
+        placeholder="Company name (if not listed)"
+        value={formData.currentCompany}
+        onChangeText={(t) => updateField('currentCompany', t)}
+        autoCapitalize="words"
+      />
     </View>
   );
 
@@ -240,12 +284,30 @@ export default function WorkExperienceScreen({ navigation, route }) {
           </View>
 
           <View style={styles.form}>
-            <ToggleButton
-              label="Employment Status"
-              value={formData.isCurrentlyWorking}
-              onToggle={(value) => updateField('isCurrentlyWorking', value)}
-            />
+            {/* Employment Status */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Employment Status</Text>
+              <View style={styles.toggleContainer}>
+                <TouchableOpacity
+                  style={[styles.toggleOption, formData.isCurrentlyWorking === true && styles.toggleOptionSelected]}
+                  onPress={() => updateField('isCurrentlyWorking', true)}
+                >
+                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === true && styles.toggleTextSelected]}>
+                    Currently Working
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleOption, formData.isCurrentlyWorking === false && styles.toggleOptionSelected]}
+                  onPress={() => updateField('isCurrentlyWorking', false)}
+                >
+                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === false && styles.toggleTextSelected]}>
+                    Previously Worked
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
+            {/* Job Title (required) */}
             <InputField
               label={formData.isCurrentlyWorking ? "Current Job Title" : "Most Recent Job Title"}
               value={formData.currentJobTitle}
@@ -254,53 +316,50 @@ export default function WorkExperienceScreen({ navigation, route }) {
               required
             />
 
+            {/* Company (Org Picker + manual) */}
+            <OrgPickerButton />
+
+            {/* Start/End Dates */}
             <InputField
-              label={formData.isCurrentlyWorking ? "Current Company" : "Most Recent Company"}
-              value={formData.currentCompany}
-              onChangeText={(text) => updateField('currentCompany', text)}
-              placeholder="e.g. Google, Microsoft, Startup Inc."
+              label="Start Date"
+              value={formData.startDate}
+              onChangeText={(text) => updateField('startDate', text)}
+              placeholder="YYYY-MM-DD"
               required
+              keyboardType="numbers-and-punctuation"
+            />
+            <InputField
+              label="End Date"
+              value={formData.endDate}
+              onChangeText={(text) => updateField('endDate', text)}
+              placeholder={formData.isCurrentlyWorking ? 'Leave empty if current' : 'YYYY-MM-DD'}
+              keyboardType="numbers-and-punctuation"
             />
 
-            <SelectionButton
-              label="Total Years of Experience"
-              value={formData.yearsOfExperience}
-              placeholder="Select experience level"
-              onPress={() => setShowExperienceModal(true)}
-              required
-            />
+            {/* Optional older fields */}
+            <View style={{ height: 8 }} />
+            <Text style={styles.sectionHint}>Optional details</Text>
 
-            <SelectionButton
-              label="Work Arrangement"
-              value={formData.workArrangement}
-              placeholder="Select work arrangement"
-              onPress={() => setShowWorkArrangementModal(true)}
-            />
+            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowExperienceModal(true)}>
+              <Text style={[styles.selectionValue, !formData.yearsOfExperience && styles.selectionPlaceholder]}>
+                {formData.yearsOfExperience || 'Select experience level'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+            </TouchableOpacity>
 
-            <SelectionButton
-              label="Job Type"
-              value={formData.jobType}
-              placeholder="Select job type"
-              onPress={() => setShowJobTypeModal(true)}
-            />
+            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowWorkArrangementModal(true)}>
+              <Text style={[styles.selectionValue, !formData.workArrangement && styles.selectionPlaceholder]}>
+                {formData.workArrangement || 'Select work arrangement'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+            </TouchableOpacity>
 
-            {!formData.isCurrentlyWorking && (
-              <>
-                <InputField
-                  label="Previous Job Title"
-                  value={formData.previousJobTitle}
-                  onChangeText={(text) => updateField('previousJobTitle', text)}
-                  placeholder="Your previous role"
-                />
-
-                <InputField
-                  label="Previous Company"
-                  value={formData.previousCompany}
-                  onChangeText={(text) => updateField('previousCompany', text)}
-                  placeholder="Your previous company"
-                />
-              </>
-            )}
+            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowJobTypeModal(true)}>
+              <Text style={[styles.selectionValue, !formData.jobType && styles.selectionPlaceholder]}>
+                {formData.jobType || 'Select job type'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+            </TouchableOpacity>
 
             <InputField
               label="Primary Skills"
@@ -308,7 +367,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
               onChangeText={(text) => updateField('primarySkills', text)}
               placeholder="e.g. JavaScript, React, Node.js, Project Management"
               multiline
-              required
             />
 
             <InputField
@@ -338,7 +396,60 @@ export default function WorkExperienceScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Modals - using useCallback for performance and auto-close */}
+      {/* COMPANY PICKER MODAL (global) */}
+      <Modal
+        visible={showOrgModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowOrgModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowOrgModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Company</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.textInput, { flex: 1 }]}
+              placeholder="Search companies..."
+              value={orgQuery}
+              onChangeText={setOrgQuery}
+              autoCapitalize="words"
+            />
+            {orgLoading && <ActivityIndicator size="small" color={colors.primary} />}
+          </View>
+
+          <FlatList
+            data={orgResults}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
+                <View>
+                  <Text style={styles.modalItemText}>{item.name}</Text>
+                  {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
+              </TouchableOpacity>
+            )}
+            ListFooterComponent={(
+              <TouchableOpacity style={[styles.modalItem, { justifyContent: 'center' }]} onPress={() => handleSelectOrganization({ id: 999999, name: '' })}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+                <Text style={[styles.modalItemText, { marginLeft: 8 }]}>My company is not listed</Text>
+              </TouchableOpacity>
+            )}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews
+            windowSize={8}
+          />
+        </View>
+      </Modal>
+
+      {/* OTHER PICKERS */}
       <SelectionModal
         visible={showExperienceModal}
         onClose={() => setShowExperienceModal(false)}
@@ -410,7 +521,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: {
-    gap: 20,
+    gap: 16,
     marginBottom: 32,
   },
   inputContainer: {
@@ -530,5 +641,10 @@ const styles = StyleSheet.create({
   modalItemTextSelected: {
     color: colors.primary,
     fontWeight: typography.weights.medium,
+  },
+  sectionHint: {
+    color: colors.gray600,
+    marginLeft: 4,
+    marginTop: 8,
   },
 });
