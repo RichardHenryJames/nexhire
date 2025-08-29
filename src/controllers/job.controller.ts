@@ -113,7 +113,16 @@ export const getJobs = withErrorHandling(async (req: HttpRequest, context: Invoc
             };
         }
         
-        const result = await JobService.getJobs({ ...validatedParams, ...params });
+        // FIXED: Do not reintroduce raw query pagination/sort; override with validated values
+        const combinedParams = {
+            ...params,
+            page: validatedParams.page,
+            pageSize: validatedParams.pageSize,
+            sortBy: validatedParams.sortBy,
+            sortOrder: validatedParams.sortOrder
+        };
+        
+        const result = await JobService.getJobs(combinedParams);
         
         return {
             status: 200,

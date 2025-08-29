@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
+import ProfileSection from './ProfileSection';
 
 // Import the same data structures from EducationDetailsScreen
 const DEGREE_TYPES = [
@@ -509,45 +510,45 @@ export default function EducationSection({
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.headerLeft}>
-          <Ionicons name="school" size={20} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Education</Text>
-        </View>
-        {!editing && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={async () => {
-              if (localEditing) {
-                // Save only when toggling off
-                try {
-                  const educationData = {
-                    institution: profile.institution,
-                    highestEducation: profile.highestEducation,
-                    fieldOfStudy: profile.fieldOfStudy,
-                    graduationYear: profile.graduationYear,
-                    gpa: profile.gpa
-                  };
-                  const result = await nexhireAPI.updateEducation(educationData);
-                  if (!result.success) {
-                    console.warn('Education save failed:', result.error);
-                  }
-                } catch (error) {
-                  console.error('Error saving education data:', error);
-                  Alert.alert('Error', 'Failed to save education data. Please try again.');
-                }
-              }
-              setLocalEditing(!localEditing);
-            }}
-          >
-            <Ionicons name="create" size={16} color={colors.primary} />
-            <Text style={styles.editButtonText}>{localEditing ? 'Done' : 'Edit'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+  // Save handler for section header
+  const saveEducation = async () => {
+    try {
+      const educationData = {
+        institution: profile.institution,
+        highestEducation: profile.highestEducation,
+        fieldOfStudy: profile.fieldOfStudy,
+        graduationYear: profile.graduationYear,
+        gpa: profile.gpa,
+      };
+      const result = await nexhireAPI.updateEducation(educationData);
+      if (!result.success) {
+        console.warn('Education save failed:', result.error);
+        Alert.alert('Failed', result.error || 'Failed to update education');
+        return false;
+      }
+      setLocalEditing(false);
+      return true;
+    } catch (error) {
+      console.error('Error saving education data:', error);
+      Alert.alert('Error', 'Failed to save education data. Please try again.');
+      return false;
+    }
+  };
 
+  const cancelEducation = () => {
+    // Reload data for safety (optional). For now just exit edit mode.
+    setLocalEditing(false);
+  };
+
+  return (
+    <ProfileSection
+      title="Education"
+      icon="school"
+      editing={isEditing}
+      onSave={saveEducation}
+      onCancel={cancelEducation}
+      defaultCollapsed={false}
+    >
       {/* Read-only compact view */}
       {!isEditing && (
         <View style={styles.roContainer}>
@@ -725,7 +726,7 @@ export default function EducationSection({
           )}
         </View>
       </Modal>
-    </View>
+    </ProfileSection>
   );
 }
 

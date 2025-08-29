@@ -276,41 +276,53 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
     const block = (label, totals) => (
       <View style={styles.compactBlock}>
+        {/* Total row */}
         <View style={styles.kvRow}>
           <Text style={styles.kvLabel}>{label} Total</Text>
           <Text style={styles.kvValue}>{formatCurrency(totals.total, displayCurrency)}/year</Text>
         </View>
-        <View style={styles.kvRow}>
-          <Text style={styles.kvLabel}>Fixed</Text>
-          <Text style={styles.kvValue}>{formatCurrency(totals.fixed, displayCurrency)}</Text>
-        </View>
-        <View style={styles.kvRow}>
-          <Text style={styles.kvLabel}>Variable</Text>
-          <Text style={styles.kvValue}>{formatCurrency(totals.variable, displayCurrency)}</Text>
-        </View>
-        <View style={styles.kvRow}>
-          <Text style={styles.kvLabel}>Stock</Text>
-          <Text style={styles.kvValue}>{formatCurrency(totals.stock, displayCurrency)}</Text>
-        </View>
+        {/* Only render non-zero group rows */}
+        {totals.fixed > 0 && (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Fixed</Text>
+            <Text style={styles.kvValue}>{formatCurrency(totals.fixed, displayCurrency)}</Text>
+          </View>
+        )}
+        {totals.variable > 0 && (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Variable</Text>
+            <Text style={styles.kvValue}>{formatCurrency(totals.variable, displayCurrency)}</Text>
+          </View>
+        )}
+        {totals.stock > 0 && (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Stock</Text>
+            <Text style={styles.kvValue}>{formatCurrency(totals.stock, displayCurrency)}</Text>
+          </View>
+        )}
       </View>
     );
 
     const curTotals = { total: salaryTotals.current, ...cur };
     const expTotals = { total: salaryTotals.expected, ...exp };
 
-    const hasCur = (localSalaryBreakdown.current || []).length > 0;
-    const hasExp = (localSalaryBreakdown.expected || []).length > 0;
+    // Use non-zero components to decide visibility and footer count
+    const countNonZero = (list = []) => list.filter((x) => parseFloat(x.Amount || 0) > 0).length;
+    const hasCur = countNonZero(localSalaryBreakdown.current) > 0 && curTotals.total > 0;
+    const hasExp = countNonZero(localSalaryBreakdown.expected) > 0 && expTotals.total > 0;
 
     if (!hasCur && !hasExp) {
       return <Text style={styles.noDataText}>No salary information provided</Text>;
     }
+
+    const nonZeroCount = countNonZero(localSalaryBreakdown.current) + countNonZero(localSalaryBreakdown.expected);
 
     return (
       <View style={styles.compactContainer}>
         {hasCur && block('Current', curTotals)}
         {hasExp && block('Expected', expTotals)}
         <View style={styles.kvRowMuted}>
-          <Text style={styles.kvMutedText}>{`${(localSalaryBreakdown.current || []).length + (localSalaryBreakdown.expected || []).length} component(s) • ${displayCurrency}`}</Text>
+          <Text style={styles.kvMutedText}>{`${nonZeroCount} component(s) • ${displayCurrency}`}</Text>
         </View>
       </View>
     );

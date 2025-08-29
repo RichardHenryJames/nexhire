@@ -986,26 +986,22 @@ export default function ProfileScreen() {
                 view={
                   <View>
                     <ReadOnlyKVRow label="Professional Headline" value={jobSeekerProfile.headline} icon="briefcase" />
+                    {/* Professional Summary is now shown in the header, so omit it here in view mode */}
+                    <ReadOnlyKVRow label="Current Location" value={jobSeekerProfile.currentLocation} icon="location" />
                     <ReadOnlyKVRow label="Current Job Title" value={jobSeekerProfile.currentJobTitle} icon="medal" />
                     <ReadOnlyKVRow label="Current Company" value={jobSeekerProfile.currentCompany} icon="business" />
                     <ReadOnlyKVRow label="Total Years of Experience" value={(jobSeekerProfile.yearsOfExperience || 0).toString()} icon="time" />
-                    <ReadOnlyKVRow label="Current Location" value={jobSeekerProfile.currentLocation} icon="location" />
-                    <View style={{ marginTop: 8 }}>
-                      <Text style={styles.kvLabel}>Professional Summary</Text>
-                      <Text style={[styles.kvMultiline, !jobSeekerProfile.summary && styles.kvValueEmpty]}>
-                        {jobSeekerProfile.summary || 'Not specified'}
-                      </Text>
-                    </View>
                   </View>
                 }
               >
                 <>
+                  {/* Order: Headline -> Summary -> Current Location -> Job Title (derived) -> Current Company (derived) -> Total YOE (derived) */}
                   <ProfileField fieldKey="headline" label="Professional Headline" placeholder="e.g., Senior Software Engineer" options={{ profileType: 'jobSeeker' }} />
-                  <ProfileField fieldKey="currentJobTitle" label="Current Job Title" placeholder="Your current position" options={{ profileType: 'jobSeeker' }} />
-                  <ProfileField fieldKey="currentCompany" label="Current Company" placeholder="Where you work now" options={{ profileType: 'jobSeeker' }} />
-                  <ProfileField fieldKey="yearsOfExperience" label="Total Years of Experience" placeholder="0" options={{ keyboardType: 'numeric', profileType: 'jobSeeker' }} />
-                  <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="summary" label="Professional Summary" placeholder="Tell us about yourself..." options={{ multiline: true, profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="currentLocation" label="Current Location" placeholder="City, Country" options={{ profileType: 'jobSeeker' }} />
+                  <ProfileField fieldKey="currentJobTitle" label="Current Job Title" placeholder="Auto-derived from latest work experience" options={{ profileType: 'jobSeeker', editable: false }} />
+                  <ProfileField fieldKey="currentCompany" label="Current Company" placeholder="Auto-derived from latest work experience" options={{ profileType: 'jobSeeker', editable: false }} />
+                  <ProfileField fieldKey="yearsOfExperience" label="Total Years of Experience" placeholder="Auto-calculated" options={{ keyboardType: 'numeric', profileType: 'jobSeeker', editable: false }} />
                 </>
               </EditAware>
             </ProfileSection>
@@ -1228,6 +1224,7 @@ export default function ProfileScreen() {
               onUpdate={(updatedData) => console.log('Privacy settings updated:', updatedData)}
               onSave={() => Promise.resolve(true)}
               defaultCollapsed={true}
+              hideHeaderActions
             >
               {renderPrivacySettingsContent()}
             </ProfileSection>

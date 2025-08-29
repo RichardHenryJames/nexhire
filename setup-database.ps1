@@ -17,18 +17,6 @@ Import-Module SqlServer -Force
 
 # Database Schema SQL
 $schemaSQL = @"
--- Create JobTypes table (Reference Data)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobTypes')
-BEGIN
-    CREATE TABLE JobTypes (
-        JobTypeID int IDENTITY(1,1) PRIMARY KEY,
-        Type nvarchar(100) NOT NULL,
-        Description nvarchar(500),
-        IsActive bit DEFAULT 1,
-        CreatedAt datetime2 DEFAULT GETUTCDATE()
-    );
-END
-
 -- Create Currencies table (Reference Data)
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Currencies')
 BEGIN
@@ -37,18 +25,6 @@ BEGIN
         Code nvarchar(3) NOT NULL,
         Name nvarchar(100) NOT NULL,
         Symbol nvarchar(10),
-        IsActive bit DEFAULT 1,
-        CreatedAt datetime2 DEFAULT GETUTCDATE()
-    );
-END
-
--- Create ApplicationStatuses table (Reference Data)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicationStatuses')
-BEGIN
-    CREATE TABLE ApplicationStatuses (
-        StatusID int IDENTITY(1,1) PRIMARY KEY,
-        Status nvarchar(100) NOT NULL,
-        Description nvarchar(500),
         IsActive bit DEFAULT 1,
         CreatedAt datetime2 DEFAULT GETUTCDATE()
     );
@@ -222,123 +198,216 @@ BEGIN
 END
 
 -- Create Jobs table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobTypes')
+BEGIN
+CREATE TABLE JobTypes (
+    JobTypeID INT IDENTITY(1,1) PRIMARY KEY,
+    Type NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(500),
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+CREATE INDEX IDX_JobTypes_Type ON JobTypes (Type);
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkplaceTypes')
+BEGIN
+-- Create WorkplaceTypes table (New: Separates work arrangements)
+CREATE TABLE WorkplaceTypes (
+    WorkplaceTypeID INT IDENTITY(1,1) PRIMARY KEY,
+    Type NVARCHAR(50) NOT NULL,
+    Description NVARCHAR(200),
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+CREATE INDEX IDX_WorkplaceTypes_Type ON WorkplaceTypes (Type);
+END
+
+-- Create ApplicationStatuses table (Reference Data)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicationStatuses')
+BEGIN
+CREATE TABLE ApplicationStatuses (
+    StatusID INT IDENTITY(1,1) PRIMARY KEY,
+    Status NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(500),
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+CREATE INDEX IDX_ApplicationStatuses_Status ON ApplicationStatuses (Status);
+END
+
+-- Create Skills table (New: Normalized skills for jobs)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Skills')
+BEGIN
+CREATE TABLE Skills (
+    SkillID INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) UNIQUE NOT NULL,
+    Category NVARCHAR(100),
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+CREATE INDEX IDX_Skills_Name ON Skills (Name);
+END
+
+-- Create Jobs table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Jobs')
 BEGIN
-    CREATE TABLE Jobs (
-        JobID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        OrganizationID int NOT NULL,
-        PostedByUserID uniqueidentifier NOT NULL,
-        Title nvarchar(200) NOT NULL,
-        JobTypeID int NOT NULL,
-        Level nvarchar(50),
-        Department nvarchar(100),
-        Description ntext,
-        Responsibilities ntext,
-        Requirements ntext,
-        PreferredQualifications ntext,
-        BenefitsOffered ntext,
-        Location nvarchar(200),
-        Country nvarchar(100),
-        State nvarchar(100),
-        City nvarchar(100),
-        PostalCode nvarchar(20),
-        IsRemote bit DEFAULT 0,
-        WorkplaceType nvarchar(50),
-        RemoteRestrictions nvarchar(500),
-        SalaryRangeMin decimal(15,2),
-        SalaryRangeMax decimal(15,2),
-        CurrencyID int,
-        SalaryPeriod nvarchar(50),
-        CompensationType nvarchar(50),
-        BonusDetails nvarchar(500),
-        EquityOffered nvarchar(100),
-        ProjectDuration nvarchar(100),
-        ProjectStartDate date,
-        ProjectEndDate date,
-        ProjectBudget decimal(15,2),
-        ContractExtensionPossible bit,
-        ContractConversionPossible bit,
-        ExperienceMin int,
-        ExperienceMax int,
-        ExperienceLevel nvarchar(50),
-        RequiredCertifications nvarchar(500),
-        RequiredEducation nvarchar(200),
-        Status nvarchar(50) DEFAULT 'Draft',
-        Priority nvarchar(50) DEFAULT 'Normal',
-        Visibility nvarchar(50) DEFAULT 'Public',
-        ApplicationDeadline datetime2,
-        TargetHiringDate datetime2,
-        MaxApplications int,
-        CurrentApplications int DEFAULT 0,
-        InterviewStages nvarchar(500),
-        InterviewProcess nvarchar(500),
-        AssessmentRequired bit DEFAULT 0,
-        AssessmentDetails ntext,
-        PublishedAt datetime2,
-        ExpiresAt datetime2,
-        CreatedAt datetime2 DEFAULT GETUTCDATE(),
-        UpdatedAt datetime2 DEFAULT GETUTCDATE(),
-        LastBumpedAt datetime2,
-        TimeZone nvarchar(100),
-        Language nvarchar(50) DEFAULT 'English',
-        Tags nvarchar(500),
-        InternalNotes ntext,
-        ExternalJobID nvarchar(100),
-        SearchScore decimal(10,2),
-        FeaturedUntil datetime2,
-        FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID),
-        FOREIGN KEY (PostedByUserID) REFERENCES Users(UserID),
-        FOREIGN KEY (JobTypeID) REFERENCES JobTypes(JobTypeID),
-        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
-    );
+CREATE TABLE Jobs (
+    JobID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    OrganizationID INT NOT NULL,
+    PostedByUserID UNIQUEIDENTIFIER NOT NULL,
+    Title NVARCHAR(200) NOT NULL,
+    JobTypeID INT NOT NULL,
+    WorkplaceTypeID INT NOT NULL,
+    Department NVARCHAR(100),
+    Description NVARCHAR(MAX),
+    Responsibilities NVARCHAR(MAX),
+    BenefitsOffered NVARCHAR(MAX),
+    Location NVARCHAR(200),
+    Country NVARCHAR(100),
+    State NVARCHAR(100),
+    City NVARCHAR(100),
+    PostalCode NVARCHAR(20),
+    IsRemote BIT DEFAULT 0,
+    RemoteRestrictions NVARCHAR(500),
+    SalaryRangeMin DECIMAL(15,2),
+    SalaryRangeMax DECIMAL(15,2),
+    CurrencyID INT,
+    SalaryPeriod NVARCHAR(50),
+    CompensationType NVARCHAR(50),
+    BonusDetails NVARCHAR(500),
+    EquityOffered NVARCHAR(100),
+    ProjectDuration NVARCHAR(100),
+    ProjectStartDate DATE,
+    ProjectEndDate DATE,
+    ProjectBudget DECIMAL(15,2),
+    ContractExtensionPossible BIT,
+    ContractConversionPossible BIT,
+    ExperienceMin INT,
+    ExperienceMax INT,
+    RequiredEducation NVARCHAR(200),
+    RequiredLanguages NVARCHAR(500),
+    RequiredCertifications NVARCHAR(500),
+    Status NVARCHAR(50) DEFAULT 'Draft',
+    Priority NVARCHAR(50) DEFAULT 'Normal',
+    Visibility NVARCHAR(50) DEFAULT 'Public',
+    ApplicationDeadline DATETIMEOFFSET,
+    TargetHiringDate DATETIMEOFFSET,
+    MaxApplications INT,
+    CurrentApplications INT DEFAULT 0,
+    InterviewStages NVARCHAR(500),
+    InterviewProcess NVARCHAR(500),
+    AssessmentRequired BIT DEFAULT 0,
+    AssessmentDetails NVARCHAR(MAX),
+    PublishedAt DATETIMEOFFSET,
+    ExpiresAt DATETIMEOFFSET,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UpdatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    LastBumpedAt DATETIMEOFFSET,
+    TimeZone NVARCHAR(100),
+    Tags NVARCHAR(1000),
+    InternalNotes NVARCHAR(MAX),
+    ExternalJobID NVARCHAR(100),
+    SearchScore DECIMAL(10,2),
+    FeaturedUntil DATETIMEOFFSET,
+    IsArchived BIT DEFAULT 0,
+    ViewsCount INT DEFAULT 0,
+    CONSTRAINT CHK_SalaryRange CHECK (SalaryRangeMin <= SalaryRangeMax AND SalaryRangeMin >= 0),
+    CONSTRAINT CHK_Experience CHECK (ExperienceMin <= ExperienceMax AND ExperienceMin >= 0),
+    CONSTRAINT CHK_ApplicationDeadline CHECK (ApplicationDeadline >= CreatedAt),
+    FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID),
+    FOREIGN KEY (PostedByUserID) REFERENCES Users(UserID),
+    FOREIGN KEY (JobTypeID) REFERENCES JobTypes(JobTypeID),
+    FOREIGN KEY (WorkplaceTypeID) REFERENCES WorkplaceTypes(WorkplaceTypeID),
+    FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+);
+CREATE INDEX IDX_Jobs_Search ON Jobs (Title, Location, Status, JobTypeID, WorkplaceTypeID);
 END
+
+-- Create JobSkills table (New: Links jobs to required/preferred skills)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobSkills')
+BEGIN
+CREATE TABLE JobSkills (
+    JobSkillID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    JobID UNIQUEIDENTIFIER NOT NULL,
+    SkillID INT NOT NULL,
+    IsRequired BIT DEFAULT 1,
+    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
+    FOREIGN KEY (SkillID) REFERENCES Skills(SkillID)
+);
+CREATE INDEX IDX_JobSkills_JobID ON JobSkills (JobID);
+END
+
 
 -- Create JobApplications table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobApplications')
 BEGIN
-    CREATE TABLE JobApplications (
-        ApplicationID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        JobID uniqueidentifier NOT NULL,
-        ApplicantID uniqueidentifier NOT NULL,
-        ResumeURL nvarchar(1000),
-        CoverLetter ntext,
-        ExpectedSalary decimal(15,2),
-        ExpectedCurrencyID int,
-        AvailableFromDate date,
-        StatusID int NOT NULL DEFAULT 1,
-        SubmittedAt datetime2 DEFAULT GETUTCDATE(),
-        LastUpdatedAt datetime2 DEFAULT GETUTCDATE(),
-        FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
-        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
-        FOREIGN KEY (ExpectedCurrencyID) REFERENCES Currencies(CurrencyID),
-        FOREIGN KEY (StatusID) REFERENCES ApplicationStatuses(StatusID),
-        UNIQUE(JobID, ApplicantID)
-    );
+CREATE TABLE JobApplications (
+    ApplicationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    JobID UNIQUEIDENTIFIER NOT NULL,
+    ApplicantID UNIQUEIDENTIFIER NOT NULL,
+    ResumeURL NVARCHAR(1000),
+    CoverLetter NVARCHAR(MAX),
+    ExpectedSalary DECIMAL(15,2),
+    ExpectedCurrencyID INT,
+    AvailableFromDate DATE,
+    StatusID INT NOT NULL DEFAULT 1,
+    SubmittedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    LastUpdatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    IsArchived BIT DEFAULT 0,
+    CONSTRAINT CHK_ExpectedSalary CHECK (ExpectedSalary >= 0),
+    FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
+    FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+    FOREIGN KEY (ExpectedCurrencyID) REFERENCES Currencies(CurrencyID),
+    FOREIGN KEY (StatusID) REFERENCES ApplicationStatuses(StatusID),
+    UNIQUE(JobID, ApplicantID)
+);
+CREATE INDEX IDX_JobApplications_JobStatus ON JobApplications (JobID, StatusID);
+CREATE INDEX IDX_JobApplications_Applicant ON JobApplications (ApplicantID);
+END
+
+-- Create ApplicationAttachments table (New: Supports multiple attachments)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicationAttachments')
+BEGIN
+CREATE TABLE ApplicationAttachments (
+    AttachmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    ApplicationID UNIQUEIDENTIFIER NOT NULL,
+    FileURL NVARCHAR(1000) NOT NULL,
+    FileType NVARCHAR(50),
+    FileDescription NVARCHAR(200),
+    UploadedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    FOREIGN KEY (ApplicationID) REFERENCES JobApplications(ApplicationID)
+);
+CREATE INDEX IDX_ApplicationAttachments_ApplicationID ON ApplicationAttachments (ApplicationID);
 END
 
 -- Create ApplicationTracking table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicationTracking')
 BEGIN
-    CREATE TABLE ApplicationTracking (
-        TrackingID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
-        ApplicationID uniqueidentifier NOT NULL,
-        StatusTypeID int,
-        ScreeningScore decimal(5,2),
-        ScreeningNotes ntext,
-        InterviewStage int,
-        NextInterviewDate datetime2,
-        InterviewFeedback ntext,
-        OfferStatus nvarchar(100),
-        OfferedSalary decimal(15,2),
-        OfferedCurrencyID int,
-        OfferLetterURL nvarchar(1000),
-        OfferExpiryDate datetime2,
-        Notes ntext,
-        LastUpdatedBy nvarchar(100),
-        LastUpdatedAt datetime2 DEFAULT GETUTCDATE(),
-        FOREIGN KEY (ApplicationID) REFERENCES JobApplications(ApplicationID),
-        FOREIGN KEY (OfferedCurrencyID) REFERENCES Currencies(CurrencyID)
-    );
+CREATE TABLE ApplicationTracking (
+    TrackingID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    ApplicationID UNIQUEIDENTIFIER NOT NULL,
+    StatusID INT NOT NULL,
+    ScreeningScore DECIMAL(5,2),
+    ScreeningNotes NVARCHAR(MAX),
+    InterviewStage INT,
+    NextInterviewDate DATETIMEOFFSET,
+    InterviewFeedback NVARCHAR(MAX),
+    OfferStatus NVARCHAR(100),
+    OfferedSalary DECIMAL(15,2),
+    OfferedCurrencyID INT,
+    OfferLetterURL NVARCHAR(1000),
+    OfferExpiryDate DATETIMEOFFSET,
+    RejectionReason NVARCHAR(500),
+    Notes NVARCHAR(MAX),
+    LastUpdatedBy NVARCHAR(100),
+    LastUpdatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    FOREIGN KEY (ApplicationID) REFERENCES JobApplications(ApplicationID),
+    FOREIGN KEY (OfferedCurrencyID) REFERENCES Currencies(CurrencyID),
+    FOREIGN KEY (StatusID) REFERENCES ApplicationStatuses(StatusID)
+);
+CREATE INDEX IDX_ApplicationTracking_ApplicationID ON ApplicationTracking (ApplicationID);
 END
 "@
 
@@ -397,45 +466,42 @@ BEGIN
     VALUES ('AED', 'UAE Dirham', N'د.إ', 1);
 END;
 
--- Insert Job Types safely
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Full-time')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Full-time', 'Full-time permanent position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Part-time')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Part-time', 'Part-time position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Contract')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Contract', 'Contract-based position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Freelance')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Freelance', 'Freelance work');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Internship')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Internship', 'Internship position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Temporary')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Temporary', 'Temporary position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Remote')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Remote', 'Remote work position');
-IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Hybrid')
-    INSERT INTO JobTypes (Type, Description) VALUES ('Hybrid', 'Hybrid work arrangement');
+-- JobTypes (No Remote/Hybrid, moved to WorkplaceTypes)
+INSERT INTO JobTypes (Type, Description)
+SELECT 'Full-time', 'Full-time permanent position' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Full-time')
+UNION SELECT 'Part-time', 'Part-time position' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Part-time')
+UNION SELECT 'Contract', 'Contract-based position' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Contract')
+UNION SELECT 'Freelance', 'Freelance work' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Freelance')
+UNION SELECT 'Internship', 'Internship position' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Internship')
+UNION SELECT 'Temporary', 'Temporary position' WHERE NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Temporary');
 
--- Insert Application Statuses safely
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Submitted')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Submitted', 'Application has been submitted');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Under Review')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Under Review', 'Application is being reviewed');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Shortlisted')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Shortlisted', 'Candidate has been shortlisted');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Scheduled')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Scheduled', 'Interview has been scheduled');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Completed')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Completed', 'Interview has been completed');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Rejected')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Rejected', 'Application has been rejected');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Extended')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Extended', 'Job offer has been extended');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Accepted')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Accepted', 'Job offer has been accepted');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Declined')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Declined', 'Job offer has been declined');
-IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Withdrawn')
-    INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Withdrawn', 'Application has been withdrawn');
+-- WorkplaceTypes
+INSERT INTO WorkplaceTypes (Type, Description)
+SELECT 'Onsite', 'In-office work' WHERE NOT EXISTS (SELECT 1 FROM WorkplaceTypes WHERE Type = 'Onsite')
+UNION SELECT 'Remote', 'Fully remote' WHERE NOT EXISTS (SELECT 1 FROM WorkplaceTypes WHERE Type = 'Remote')
+UNION SELECT 'Hybrid', 'Mix of onsite and remote' WHERE NOT EXISTS (SELECT 1 FROM WorkplaceTypes WHERE Type = 'Hybrid');
+
+-- ApplicationStatuses
+INSERT INTO ApplicationStatuses (Status, Description)
+SELECT 'Submitted', 'Application has been submitted' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Submitted')
+UNION SELECT 'Under Review', 'Application is being reviewed' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Under Review')
+UNION SELECT 'Shortlisted', 'Candidate has been shortlisted' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Shortlisted')
+UNION SELECT 'Interview Scheduled', 'Interview has been scheduled' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Scheduled')
+UNION SELECT 'Interview Completed', 'Interview has been completed' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Completed')
+UNION SELECT 'Rejected', 'Application has been rejected' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Rejected')
+UNION SELECT 'Offer Extended', 'Job offer has been extended' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Extended')
+UNION SELECT 'Offer Accepted', 'Job offer has been accepted' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Accepted')
+UNION SELECT 'Offer Declined', 'Job offer has been declined' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Declined')
+UNION SELECT 'Withdrawn', 'Application has been withdrawn' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Withdrawn');
+
+-- Sample Skills
+INSERT INTO Skills (Name, Category, IsActive)
+SELECT 'Python', 'Programming', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Python')
+UNION SELECT 'JavaScript', 'Programming', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'JavaScript')
+UNION SELECT 'SQL', 'Database', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'SQL')
+UNION SELECT 'Project Management', 'Management', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Project Management')
+UNION SELECT 'Communication', 'Soft Skills', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Communication');
+
 "@
 
 try {

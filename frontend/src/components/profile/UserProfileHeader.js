@@ -710,60 +710,25 @@ export default function UserProfileHeader({
         )}
       </View>
 
-      {/* Simple Highlights */}
+      {/* Highlights */}
       <View style={styles.highlights}>
         {userType === 'JobSeeker' && (
           <>
-            {/* Professional Headline, Education (when work exp is in main), or Summary */}
-            {(() => {
-              console.log('🔧 Highlights Logic Check:', {
-                hasHeadline: !!jobSeekerProfile?.headline,
-                hasWork: !!(jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany),
-                hasEducation: !!(jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution),
-                hasSummary: !!jobSeekerProfile?.summary
-              });
-              
-              if (jobSeekerProfile?.headline) {
-                return (
-                  <View style={styles.highlight}>
-                    <MaterialIcons name="work" size={16} color="#3B82F6" />
-                    <Text style={styles.highlightText}>{jobSeekerProfile.headline}</Text>
-                  </View>
-                );
-              } else if (jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany) {
-                // User has work experience, so show education in highlights if any education data exists
-                if (jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution) {
-                  return (
-                    <View style={styles.highlight}>
-                      <MaterialIcons name="school" size={16} color="#3B82F6" />
-                      <Text style={styles.highlightText}>
-                        {jobSeekerProfile.highestEducation || 'Graduate'}
-                        {jobSeekerProfile?.fieldOfStudy && ` in ${jobSeekerProfile.fieldOfStudy}`}
-                        {jobSeekerProfile?.institution && ` • ${jobSeekerProfile.institution}`}
-                      </Text>
-                    </View>
-                  );
-                } else if (jobSeekerProfile?.summary) {
-                  // No education data available, show summary if available
-                  return (
-                    <View style={styles.highlight}>
-                      <MaterialIcons name="person" size={16} color="#3B82F6" />
-                      <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
-                    </View>
-                  );
-                }
-              } else if (jobSeekerProfile?.summary) {
-                // No work experience, show summary if available
-                return (
-                  <View style={styles.highlight}>
-                    <MaterialIcons name="person" size={16} color="#3B82F6" />
-                    <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
-                  </View>
-                );
-              }
-              
-              return null;
-            })()}
+            {/* Professional Headline */}
+            {jobSeekerProfile?.headline && (
+              <View style={styles.highlight}>
+                <MaterialIcons name="work" size={16} color="#3B82F6" />
+                <Text style={styles.highlightText}>{jobSeekerProfile.headline}</Text>
+              </View>
+            )}
+
+            {/* Professional Summary styled like other highlights */}
+            {jobSeekerProfile?.summary && (
+              <View style={styles.highlight}>
+                <MaterialIcons name="person" size={16} color="#3B82F6" />
+                <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
+              </View>
+            )}
 
             {/* Skills with stars icon */}
             {Array.isArray(jobSeekerProfile?.primarySkills) && jobSeekerProfile.primarySkills.length > 0 && (
@@ -776,29 +741,33 @@ export default function UserProfileHeader({
               </View>
             )}
 
-            {/* Work Style & Salary OR Academic Year - 🔧 FIXED: Always render container to prevent layout shift */}
+            {/* Current Location also as a highlight */}
+            {jobSeekerProfile?.currentLocation && (
+              <View style={styles.highlight}>
+                <MaterialIcons name="location-on" size={16} color="#6B7280" />
+                <Text style={styles.highlightText}>{jobSeekerProfile.currentLocation}</Text>
+              </View>
+            )}
+
+            {/* Work Style & Salary */}
             <View style={styles.bottomRow}>
-              {/* Work Type or Graduation Year */}
               {jobSeekerProfile?.preferredWorkTypes && (
                 <View style={styles.smallHighlight}>
                   <MaterialIcons name="home" size={14} color="#8B5CF6" />
                   <Text style={styles.smallText}>{jobSeekerProfile.preferredWorkTypes.toLowerCase()}</Text>
                 </View>
               )}
-              
-              {/* Show graduation year for students if no work type */}
+
               {!jobSeekerProfile?.preferredWorkTypes && jobSeekerProfile?.graduationYear && jobSeekerProfile.graduationYear.trim() && (
                 <View style={styles.smallHighlight}>
                   <MaterialIcons name="calendar-today" size={14} color="#8B5CF6" />
                   <Text style={styles.smallText}>Class of {jobSeekerProfile.graduationYear}</Text>
                 </View>
               )}
-              
-              {/* 🔧 FIXED: Clean salary display logic */}
+
               {(() => {
                 const salary = jobSeekerProfile?.minimumSalary;
                 const numericSalary = typeof salary === 'string' ? parseFloat(salary) : salary;
-                
                 if (numericSalary && !isNaN(numericSalary) && numericSalary > 1000) {
                   return (
                     <View style={styles.smallHighlight}>
@@ -907,9 +876,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progressBackgroundCircle: {
-    position: 'absolute',
-  },
-  progressArc: {
     position: 'absolute',
   },
   profileImageWrapper: {

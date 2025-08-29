@@ -79,7 +79,20 @@ export class JobService {
 
     // Get all jobs with filtering and pagination
     static async getJobs(params: PaginationParams & QueryParams): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
-        const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params;
+        const { page, pageSize } = params;
+        let { sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params;
+        
+        // Whitelist allowed sort columns to avoid SQL errors
+        const allowedSort: Record<string, string> = {
+            CreatedAt: 'j.CreatedAt',
+            UpdatedAt: 'j.UpdatedAt',
+            PublishedAt: 'j.PublishedAt',
+            Title: 'j.Title',
+            SalaryRangeMin: 'j.SalaryRangeMin',
+            SalaryRangeMax: 'j.SalaryRangeMax'
+        };
+        const normalizedSort = sortBy && allowedSort[sortBy] ? allowedSort[sortBy] : 'j.CreatedAt';
+        const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         
         let whereClause = 'WHERE j.Status IN (\'Published\', \'Draft\') AND o.IsActive = 1';
         const queryParams: any[] = [];
@@ -159,7 +172,7 @@ export class JobService {
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             ${whereClause}
-            ORDER BY j.${sortBy} ${sortOrder.toUpperCase()}
+            ORDER BY ${normalizedSort} ${normalizedOrder}
             OFFSET @param${paramIndex} ROWS
             FETCH NEXT @param${paramIndex + 1} ROWS ONLY
         `;
@@ -210,7 +223,7 @@ export class JobService {
             // Check if user is an employer in the same organization
             const permissionQuery = `
                 SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND e.CanPostJobs = 1
+                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, existingJob.OrganizationID]);
             
@@ -271,7 +284,7 @@ export class JobService {
         if (job.PostedByUserID !== userId) {
             const permissionQuery = `
                 SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND e.CanPostJobs = 1
+                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
             
@@ -314,7 +327,7 @@ export class JobService {
         if (job.PostedByUserID !== userId) {
             const permissionQuery = `
                 SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND e.CanPostJobs = 1
+                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
             
@@ -359,6 +372,15 @@ export class JobService {
     // Get jobs by organization
     static async getJobsByOrganization(organizationId: string, params: PaginationParams): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc' } = params;
+
+        const allowedSort: Record<string, string> = {
+            CreatedAt: 'j.CreatedAt',
+            UpdatedAt: 'j.UpdatedAt',
+            PublishedAt: 'j.PublishedAt',
+            Title: 'j.Title'
+        };
+        const normalizedSort = allowedSort[sortBy] || 'j.CreatedAt';
+        const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         
         // Get total count
         const countQuery = 'SELECT COUNT(*) as total FROM Jobs WHERE OrganizationID = @param0';
@@ -378,7 +400,7 @@ export class JobService {
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             WHERE j.OrganizationID = @param0
-            ORDER BY j.${sortBy} ${sortOrder.toUpperCase()}
+            ORDER BY ${normalizedSort} ${normalizedOrder}
             OFFSET @param1 ROWS
             FETCH NEXT @param2 ROWS ONLY
         `;

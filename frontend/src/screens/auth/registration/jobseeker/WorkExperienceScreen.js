@@ -178,7 +178,9 @@ export default function WorkExperienceScreen({ navigation, route }) {
         setOrgLoading(true);
         const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
-        setOrgResults(raw);
+        // Apply client-side filter for better UX and to support partial matches
+        const filtered = applyOrgFilter(raw, debouncedOrgQuery);
+        setOrgResults(filtered);
       } catch (e) {
         setOrgResults([]);
       } finally {
