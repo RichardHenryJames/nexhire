@@ -66,23 +66,21 @@ BEGIN
         LinkedInProfile nvarchar(500),
         Description nvarchar(max),
         LogoURL nvarchar(1000),
-        VerificationStatus tinyint DEFAULT 0,  -- Changed from nvarchar(50)
-                                               -- 0=Pending, 1=Verified, 2=Rejected
-        VerifiedAt datetime2 NULL,             -- Added
-        VerifiedBy uniqueidentifier NULL,      -- Added (FK to Users.UserID)
+        VerificationStatus tinyint DEFAULT 0,  -- 0=Pending, 1=Verified, 2=Rejected
+        VerifiedAt datetime2 NULL,
+        VerifiedBy uniqueidentifier NULL,
         EstablishedDate date,
-        Headquarters nvarchar(255),            -- Added
-        ContactEmail nvarchar(320),            -- Added
-        ContactPhone nvarchar(20),             -- Added
-        Rating decimal(3,2),                   -- Added (for reviews later)
+        Headquarters nvarchar(255),
+        ContactEmail nvarchar(320),
+        ContactPhone nvarchar(20),
+        Rating decimal(3,2),
         CreatedAt datetime2 DEFAULT GETUTCDATE(),
         UpdatedAt datetime2 DEFAULT GETUTCDATE(),
-        CreatedBy uniqueidentifier NULL,       -- Added
-        UpdatedBy uniqueidentifier NULL,       -- Added
+        CreatedBy uniqueidentifier NULL,
+        UpdatedBy uniqueidentifier NULL,
         IsActive bit DEFAULT 1
     );
 END
-
 
 -- Create Users table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
@@ -126,8 +124,6 @@ BEGIN
         GithubProfile NVARCHAR(500),
         Headline NVARCHAR(200),
         Summary NTEXT,
-        -- Removed CurrentCompany, YearsOfExperience, WorkExperience
-        -- CurrentJobTitle remains as derived/display but stored
         CurrentJobTitle NVARCHAR(200) NULL,
         PreferredJobTypes NVARCHAR(500),
         PreferredWorkTypes NVARCHAR(500),
@@ -160,7 +156,6 @@ BEGIN
         LastJobAppliedAt DATETIME2,
         SearchScore DECIMAL(10,2),
         Tags NVARCHAR(500),
-        -- New derived/relational fields
         TotalExperienceMonths INT NULL,
         CurrentOrganizationID INT NULL,
         CurrentCompanyName NVARCHAR(200) NULL,
@@ -171,60 +166,28 @@ BEGIN
     );
 END
 
--- ========================
--- SalaryComponents Table
--- (Static lookup table)
--- ========================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SalaryComponents')
-BEGIN
-    CREATE TABLE SalaryComponents (
-        ComponentID INT PRIMARY KEY IDENTITY(1,1),
-        ComponentName NVARCHAR(100) NOT NULL,  -- e.g. Fixed, Variable, Bonus, Stock
-        ComponentType NVARCHAR(50) NOT NULL,   -- e.g. Recurring, OneTime, Equity
-        IsActive BIT DEFAULT 1
-    );
-
-    -- Insert static salary component types
-    INSERT INTO SalaryComponents (ComponentName, ComponentType) VALUES
-    ('Fixed', 'Recurring'),
-    ('Variable', 'Recurring'),
-    ('Bonus', 'OneTime'),
-    ('Stock', 'Equity');
-END
-
--- ========================
--- ApplicantSalaries Table
--- (Normalized salary breakup)
--- ========================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
-BEGIN
-    CREATE TABLE ApplicantSalaries (
-        ApplicantSalaryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-        ApplicantID UNIQUEIDENTIFIER NOT NULL,
-        ComponentID INT NOT NULL,
-        Amount DECIMAL(15,2) NOT NULL,
-        CurrencyID INT NOT NULL,
-        Frequency NVARCHAR(50) NULL,           -- e.g. Monthly, Yearly
-        SalaryContext NVARCHAR(50) NOT NULL,   -- 'Current' or 'Expected'
-        Notes NVARCHAR(500) NULL,
-        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
-        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
-        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
-        FOREIGN KEY (ComponentID) REFERENCES SalaryComponents(ComponentID),
-        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
-    );
-END
-
--- New: WorkExperiences table to track detailed job history
+-- WorkExperiences table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkExperiences')
 BEGIN
     CREATE TABLE WorkExperiences (
         WorkExperienceID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
         ApplicantID UNIQUEIDENTIFIER NOT NULL,
         OrganizationID INT NULL,
+        CompanyName NVARCHAR(200) NULL,
         JobTitle NVARCHAR(200) NOT NULL,
+        Department NVARCHAR(100) NULL,
+        EmploymentType NVARCHAR(50) NULL,
         StartDate DATE NOT NULL,
         EndDate DATE NULL,
+        IsCurrent BIT NULL,
+        Location NVARCHAR(200) NULL,
+        Country NVARCHAR(100) NULL,
+        Description NTEXT NULL,
+        Skills NVARCHAR(MAX) NULL,
+        Achievements NTEXT NULL,
+        ReasonForLeaving NVARCHAR(500) NULL,
+        Salary DECIMAL(15,2) NULL,
+        CurrencyID INT NULL,
         SalaryFrequency NVARCHAR(50) NULL,
         ManagerName NVARCHAR(200) NULL,
         ManagerContact NVARCHAR(200) NULL,
@@ -236,7 +199,8 @@ BEGIN
         UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
         IsActive BIT DEFAULT 1,
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
-        FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID)
+        FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID),
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
     );
 END
 
@@ -247,16 +211,15 @@ BEGIN
         EmployerID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
         UserID uniqueidentifier NOT NULL,
         OrganizationID int NOT NULL,
-        Role nvarchar(50) DEFAULT 'Recruiter', -- Added, instead of multiple flags
+        Role nvarchar(50) DEFAULT 'Recruiter',
         IsVerified bit DEFAULT 0,
         JoinedAt datetime2 DEFAULT GETUTCDATE(),
-        CreatedBy uniqueidentifier NULL,       -- Added
-        UpdatedBy uniqueidentifier NULL,       -- Added
+        CreatedBy uniqueidentifier NULL,
+        UpdatedBy uniqueidentifier NULL,
         FOREIGN KEY (UserID) REFERENCES Users(UserID),
         FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID)
     );
 END
-
 
 -- Create Jobs table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Jobs')
@@ -383,132 +346,96 @@ END
 $referenceDataSQL = @"
 
 -- Insert Currencies
--- USD
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'USD')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('USD', 'US Dollar', N'$', 1, 1.0000, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('USD', 'US Dollar', N'$', 1);
 END;
-
--- EUR
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'EUR')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('EUR', 'Euro', N'€', 1, 0.8500, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('EUR', 'Euro', N'€', 1);
 END;
-
--- GBP
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'GBP')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('GBP', 'British Pound', N'£', 1, 0.7300, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('GBP', 'British Pound', N'£', 1);
 END;
-
--- INR
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'INR')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('INR', 'Indian Rupee', N'₹', 1, 82.0000, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('INR', 'Indian Rupee', N'₹', 1);
 END;
-
--- CAD
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'CAD')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('CAD', 'Canadian Dollar', N'C$', 1, 1.2500, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('CAD', 'Canadian Dollar', N'C$', 1);
 END;
-
--- AUD
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'AUD')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('AUD', 'Australian Dollar', N'A$', 1, 1.3500, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('AUD', 'Australian Dollar', N'A$', 1);
 END;
-
--- JPY
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'JPY')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('JPY', 'Japanese Yen', N'¥', 1, 110.0000, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('JPY', 'Japanese Yen', N'¥', 1);
 END;
-
--- CNY
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'CNY')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('CNY', 'Chinese Yuan', N'¥', 1, 6.5000, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('CNY', 'Chinese Yuan', N'¥', 1);
 END;
-
--- SGD
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'SGD')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('SGD', 'Singapore Dollar', N'S$', 1, 1.3500, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('SGD', 'Singapore Dollar', N'S$', 1);
 END;
-
--- AED
 IF NOT EXISTS (SELECT 1 FROM Currencies WHERE Code = 'AED')
 BEGIN
-    INSERT INTO Currencies (Code, Name, Symbol, IsActive, ExchangeRate, LastRateUpdate, CreatedAt)
-    VALUES ('AED', 'UAE Dirham', N'د.إ', 1, 3.6700, GETDATE(), GETDATE());
+    INSERT INTO Currencies (Code, Name, Symbol, IsActive)
+    VALUES ('AED', 'UAE Dirham', N'د.إ', 1);
 END;
 
 -- Insert Job Types safely
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Full-time')
     INSERT INTO JobTypes (Type, Description) VALUES ('Full-time', 'Full-time permanent position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Part-time')
     INSERT INTO JobTypes (Type, Description) VALUES ('Part-time', 'Part-time position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Contract')
     INSERT INTO JobTypes (Type, Description) VALUES ('Contract', 'Contract-based position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Freelance')
     INSERT INTO JobTypes (Type, Description) VALUES ('Freelance', 'Freelance work');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Internship')
     INSERT INTO JobTypes (Type, Description) VALUES ('Internship', 'Internship position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Temporary')
     INSERT INTO JobTypes (Type, Description) VALUES ('Temporary', 'Temporary position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Remote')
     INSERT INTO JobTypes (Type, Description) VALUES ('Remote', 'Remote work position');
-
 IF NOT EXISTS (SELECT 1 FROM JobTypes WHERE Type = 'Hybrid')
     INSERT INTO JobTypes (Type, Description) VALUES ('Hybrid', 'Hybrid work arrangement');
 
 -- Insert Application Statuses safely
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Submitted')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Submitted', 'Application has been submitted');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Under Review')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Under Review', 'Application is being reviewed');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Shortlisted')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Shortlisted', 'Candidate has been shortlisted');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Scheduled')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Scheduled', 'Interview has been scheduled');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Interview Completed')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Interview Completed', 'Interview has been completed');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Rejected')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Rejected', 'Application has been rejected');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Extended')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Extended', 'Job offer has been extended');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Accepted')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Accepted', 'Job offer has been accepted');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Declined')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Offer Declined', 'Job offer has been declined');
-
 IF NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Withdrawn')
     INSERT INTO ApplicationStatuses (Status, Description) VALUES ('Withdrawn', 'Application has been withdrawn');
-
 "@
 
 try {
