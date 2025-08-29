@@ -374,15 +374,37 @@ export default function JobsScreen({ navigation }) {
   // Smart filter toggle
   const [smartEnabled, setSmartEnabled] = useState(true);
   const [personalizationApplied, setPersonalizationApplied] = useState(false);
+  const [smartBoosts, setSmartBoosts] = useState({});
 
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
       const profRes = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
       if (profRes?.success) {
-        const rec = computeRecommendedFilters(profRes.data, jobTypes, workplaceTypes);
-        setFilters({ ...rec });
-        setFilterDraft({ ...rec });
+        const profile = profRes.data;
+        const years = monthsToYears(profile.TotalExperienceMonths);
+        // Heuristic location (avoid junk)
+        const rawLoc = (profile.PreferredLocations || profile.CurrentLocation || '').split(',')[0]?.trim();
+        const loc = rawLoc && /[a-zA-Z]/.test(rawLoc) && rawLoc.length >= 3 ? rawLoc : null;
+
+        // Map preferred types to IDs for boosts
+        const pjt = (profile.PreferredJobTypes || '').split(',').map(s => s.trim()).filter(Boolean);
+        const boostJobTypeIds = pjt.length ? mapTypesToIds(pjt, jobTypes, 'JobTypeID', 'Type') : [];
+        const pwt = (profile.PreferredWorkTypes || '').split(',').map(s => s.trim()).filter(Boolean);
+        const boostWorkplaceTypeIds = pwt.length ? mapTypesToIds(pwt, workplaceTypes, 'WorkplaceTypeID', 'Type') : [];
+
+        // Set boosts (soft preferences); do NOT set hard filters here
+        setSmartBoosts({
+          candidateYears: years || undefined,
+          boostLocation: loc || undefined,
+          boostJobTypeIds: boostJobTypeIds.join(',') || undefined,
+          boostWorkplaceTypeIds: boostWorkplaceTypeIds.join(',') || undefined,
+        });
+
+        // Clear hard filters to avoid over-constraining, keep only a gentle postedWithinDays
+        setFilters(prev => ({ ...EMPTY_FILTERS, postedWithinDays: 30 }));
+        setFilterDraft(prev => ({ ...EMPTY_FILTERS, postedWithinDays: 30 }));
+
         setPersonalizationApplied(true);
         triggerReload();
       } else {
@@ -465,10 +487,14 @@ export default function JobsScreen({ navigation }) {
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
         if (filters.department) apiFilters.department = filters.department;
 
+        // Prefer searchJobs when smart boosts are active or when user typed a query
+        const shouldUseSearch = debouncedQuery.trim().length > 0 || (smartEnabled && personalizationApplied && Object.keys(smartBoosts).length > 0);
+
         const currentPage = 1;
         let result;
-        if (debouncedQuery.trim()) {
-          result = await nexhireAPI.searchJobs(debouncedQuery, { page: currentPage, pageSize: pagination.pageSize, ...apiFilters }, { signal: controller.signal });
+        if (shouldUseSearch) {
+          const params = { page: currentPage, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
+          result = await nexhireAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
         } else {
           result = await nexhireAPI.getJobs(currentPage, pagination.pageSize, apiFilters, { signal: controller.signal });
         }
@@ -476,7 +502,7 @@ export default function JobsScreen({ navigation }) {
 
         if (result.success) {
           let list = Array.isArray(result.data) ? result.data : [];
-          // client-side safety filters
+          // Safety client-side filters remain
           list = list.filter(j => {
             if (filters.jobTypeIds?.length && !filters.jobTypeIds.map(String).includes(String(j.JobTypeID))) return false;
             if (filters.workplaceTypeIds?.length && !filters.workplaceTypeIds.map(String).includes(String(j.WorkplaceTypeID))) return false;
@@ -535,7 +561,7 @@ export default function JobsScreen({ navigation }) {
 
     run();
     return () => { try { controller.abort(); } catch {} };
-  }, [debouncedQuery, filters, reloadKey]);
+  }, [debouncedQuery, filters, reloadKey, smartEnabled, personalizationApplied, smartBoosts]);
 
   // ===== LOAD MORE (page > 1) =====
   const loadMoreJobs = useCallback(async () => {
@@ -767,14 +793,26 @@ export default function JobsScreen({ navigation }) {
       .filter(Boolean)
   ), [filters.workplaceTypeIds, workplaceTypes]);
 
+  // Update summary to reflect boosts when present
   const summaryText = useMemo(() => {
     const parts = [];
-    if (filters.experienceMin) parts.push(`${filters.experienceMin}+ yrs`);
-    if (jobTypeNames.length) parts.push(jobTypeNames.slice(0, 3).join('/'));
-    if (workplaceNames.length) parts.push(workplaceNames.join('/'));
-    if (filters.location) parts.push(filters.location);
-    return parts.join(' � ');
-  }, [filters.experienceMin, filters.location, jobTypeNames, workplaceNames]);
+    if (smartBoosts.candidateYears) parts.push(`${smartBoosts.candidateYears}+ yrs`);
+    const jt = (smartBoosts.boostJobTypeIds || '').split(',').filter(Boolean).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
+    const wt = (smartBoosts.boostWorkplaceTypeIds || '').split(',').filter(Boolean).map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
+    if (jt.length) parts.push(jt.slice(0, 3).join('/'));
+    if (wt.length) parts.push(wt.join('/'));
+    if (smartBoosts.boostLocation) parts.push(smartBoosts.boostLocation);
+    // Fallback to filter-based summary if no boosts
+    if (parts.length === 0) {
+      if (filters.experienceMin) parts.push(`${filters.experienceMin}+ yrs`);
+      const jobTypeNames = (filters.jobTypeIds || []).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
+      const workplaceNames = (filters.workplaceTypeIds || []).map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
+      if (jobTypeNames.length) parts.push(jobTypeNames.slice(0, 3).join('/'));
+      if (workplaceNames.length) parts.push(workplaceNames.join('/'));
+      if (filters.location) parts.push(filters.location);
+    }
+    return parts.join(' • ');
+  }, [smartBoosts, filters, jobTypes, workplaceTypes]);
 
   return (
     <View style={styles.container}>

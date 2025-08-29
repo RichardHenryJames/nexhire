@@ -95,26 +95,21 @@ class NexHireAPI {
       ...options.headers,
     };
 
-    // Add auth token if available
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
     try {
       console.log(`API Call: ${options.method || 'GET'} ${url}`);
-      
       const response = await fetch(url, {
         ...options,
         headers,
-        // FIXED: Add mode and credentials for CORS
         mode: 'cors',
         credentials: 'omit',
       });
 
-      // FIXED: Better error handling for different response types
       let data;
       const contentType = response.headers.get('content-type');
-      
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
@@ -124,28 +119,28 @@ class NexHireAPI {
       }
 
       if (!response.ok) {
-        console.error(`❌ API Error [${endpoint}]:`, response.status, data);
-        
-        // Handle specific error cases
         if (response.status === 401) {
-          // Token expired, clear tokens
           await this.clearTokens();
           throw new Error('Authentication expired. Please login again.');
         }
-        
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
       console.log(`✅ API Success [${endpoint}]:`, response.status);
       return data;
     } catch (error) {
+      // Normalize AbortError and avoid noisy logs
+      const msg = (error?.message || '').toLowerCase();
+      if (error?.name === 'AbortError' || msg.includes('aborted') || msg.includes('user aborted a request')) {
+        if (error && !error.name) error.name = 'AbortError';
+        console.debug(`Request aborted [${endpoint}]`);
+        throw error; // callers already ignore AbortError
+      }
+
       console.error(`? API Error [${endpoint}]:`, error.message);
-      
-      // FIXED: Handle network errors gracefully
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         throw new Error('Network error. Please check your connection.');
       }
-      
       throw error;
     }
   }
