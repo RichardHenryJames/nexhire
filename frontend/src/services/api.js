@@ -394,11 +394,16 @@ class NexHireAPI {
 
   // Jobs APIs
   async getJobs(page = 1, pageSize = 20, filters = {}, fetchOptions = {}) {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      pageSize: pageSize.toString(),
-      ...filters
-    });
+    // Clean filters: drop undefined/null/empty strings and join arrays
+    const cleaned = {};
+    const input = { page: page.toString(), pageSize: pageSize.toString(), ...filters };
+
+    for (const [k, v] of Object.entries(input)) {
+      if (v === undefined || v === null) continue;
+      if (typeof v === 'string' && v.trim() === '') continue;
+      cleaned[k] = Array.isArray(v) ? v.join(',') : v;
+    }
+    const params = new URLSearchParams(cleaned);
     return this.apiCall(`/jobs?${params}`, fetchOptions);
   }
 
@@ -407,11 +412,23 @@ class NexHireAPI {
   }
 
   async searchJobs(query, filters = {}, fetchOptions = {}) {
-    const params = new URLSearchParams({
-      q: query || '',
-      ...filters,
-    });
-    // CHANGED: new endpoint /search/jobs
+    // Clean filters and include q only when non-empty; no implicit all=true
+    const cleaned = {};
+    const input = { q: (query || '').toString(), ...filters };
+
+    for (const [k, v] of Object.entries(input)) {
+      if (k === 'q') {
+        const val = (v || '').toString().trim();
+        if (val.length === 0) continue;
+        cleaned[k] = val;
+        continue;
+      }
+      if (v === undefined || v === null) continue;
+      if (typeof v === 'string' && v.trim() === '') continue;
+      cleaned[k] = Array.isArray(v) ? v.join(',') : v;
+    }
+    const params = new URLSearchParams(cleaned);
+    // Use /search/jobs endpoint
     return this.apiCall(`/search/jobs?${params}`, fetchOptions);
   }
 
@@ -423,10 +440,10 @@ class NexHireAPI {
   }
 
   // Job Applications APIs
-  async applyForJob(applicationData) {
+  async applyToJob(jobId) {
     return this.apiCall('/applications', {
       method: 'POST',
-      body: JSON.stringify(applicationData),
+      body: JSON.stringify({ jobID: jobId }),
     });
   }
 
@@ -444,6 +461,23 @@ class NexHireAPI {
       pageSize: pageSize.toString(),
     });
     return this.apiCall(`/jobs/${jobId}/applications?${params}`);
+  }
+
+  // Saved jobs APIs
+  async saveJob(jobId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/saved-jobs', { method: 'POST', body: JSON.stringify({ jobID: jobId }) });
+  }
+
+  async unsaveJob(jobId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall(`/saved-jobs/${jobId}`, { method: 'DELETE' });
+  }
+
+  async getMySavedJobs(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    return this.apiCall(`/my/saved-jobs?${params}`);
   }
 
   // Reference Data APIs with error handling

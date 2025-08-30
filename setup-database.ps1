@@ -409,6 +409,21 @@ CREATE TABLE ApplicationTracking (
 );
 CREATE INDEX IDX_ApplicationTracking_ApplicationID ON ApplicationTracking (ApplicationID);
 END
+
+-- Create SavedJobs table for bookmarks
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SavedJobs')
+BEGIN
+    CREATE TABLE SavedJobs (
+        SavedJobID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        JobID UNIQUEIDENTIFIER NOT NULL,
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        SavedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+        FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        CONSTRAINT UQ_SavedJobs UNIQUE (JobID, ApplicantID)
+    );
+    CREATE INDEX IDX_SavedJobs_Applicant ON SavedJobs (ApplicantID, SavedAt DESC);
+END
 "@
 
 # Reference Data SQL

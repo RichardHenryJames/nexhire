@@ -1,20 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  RefreshControl,
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Animated, LayoutAnimation, UIManager, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import JobCard from '../../components/jobs/JobCard';
+import FilterModal from '../../components/jobs/FilterModal';
+import { styles } from './JobsScreen.styles';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -40,223 +35,6 @@ const score = (text, query) => {
 
 // Chips helper
 const isSelected = (arr, id) => arr?.some(x => String(x) === String(id));
-const toggleInArray = (arr, id) => isSelected(arr, id) ? arr.filter(x => String(x) !== String(id)) : [...(arr || []), id];
-
-// HOISTED, STABLE MODAL COMPONENT
-const FilterSheet = React.memo(function FilterSheet({
-  visible,
-  draft,
-  jobTypes,
-  workplaceTypes,
-  currencies,
-  onChangeDraft,
-  onToggleJobType,
-  onToggleWorkplaceType,
-  onSelectCurrency,
-  onApply,
-  onReset,
-  onClose,
-}) {
-  const postedWithinOptions = [
-    { label: '24h', value: 1 },
-    { label: '7d', value: 7 },
-    { label: '30d', value: 30 },
-  ];
-
-  const phColor = colors.gray400;
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Filters</Text>
-          <TouchableOpacity onPress={onReset}>
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>Reset</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }} keyboardShouldPersistTaps="handled">
-          {/* Location */}
-          <View>
-            <Text style={styles.filterLabel}>Location</Text>
-            <TextInput
-              style={styles.filterInput}
-              placeholder="City, State or Country"
-              placeholderTextColor={phColor}
-              value={draft.location}
-              onChangeText={(t) => onChangeDraft({ location: t })}
-            />
-          </View>
-
-          {/* Job Type (multi) */}
-          <View>
-            <Text style={styles.filterLabel}>Job Type</Text>
-            <View style={styles.pillRow}>
-              {jobTypes.map(jt => (
-                <TouchableOpacity
-                  key={jt.JobTypeID}
-                  style={[styles.pill, isSelected(draft.jobTypeIds, jt.JobTypeID) && styles.pillActive]}
-                  onPress={() => onToggleJobType(jt.JobTypeID)}
-                >
-                  <Text style={[styles.pillText, isSelected(draft.jobTypeIds, jt.JobTypeID) && styles.pillTextActive]}>
-                    {jt.Type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Workplace (multi) */}
-          <View>
-            <Text style={styles.filterLabel}>Workplace</Text>
-            <View style={styles.pillRow}>
-              {/* Any chip */}
-              <TouchableOpacity
-                style={[styles.pill, (!draft.workplaceTypeIds || draft.workplaceTypeIds.length === 0) && styles.pillActive]}
-                onPress={() => onChangeDraft({ workplaceTypeIds: [] })}
-              >
-                <Text style={[styles.pillText, (!draft.workplaceTypeIds || draft.workplaceTypeIds.length === 0) && styles.pillTextActive]}>Any</Text>
-              </TouchableOpacity>
-
-              {/* Actual workplace types */}
-              {workplaceTypes.map(wt => (
-                <TouchableOpacity
-                  key={wt.WorkplaceTypeID}
-                  style={[styles.pill, isSelected(draft.workplaceTypeIds, wt.WorkplaceTypeID) && styles.pillActive]}
-                  onPress={() => onToggleWorkplaceType(wt.WorkplaceTypeID)}
-                >
-                  <Text style={[styles.pillText, isSelected(draft.workplaceTypeIds, wt.WorkplaceTypeID) && styles.pillTextActive]}>
-                    {wt.Type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Experience range */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.filterLabel}>Min Experience (yrs)</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="e.g., 2"
-                placeholderTextColor={phColor}
-                keyboardType="numeric"
-                value={draft.experienceMin?.toString() || ''}
-                onChangeText={(t) => onChangeDraft({ experienceMin: t.replace(/[^0-9]/g, '') })}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.filterLabel}>Max Experience (yrs)</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="e.g., 6"
-                placeholderTextColor={phColor}
-                keyboardType="numeric"
-                value={draft.experienceMax?.toString() || ''}
-                onChangeText={(t) => onChangeDraft({ experienceMax: t.replace(/[^0-9]/g, '') })}
-              />
-            </View>
-          </View>
-
-          {/* Salary Range */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.filterLabel}>Min Salary</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="e.g., 1000000"
-                placeholderTextColor={phColor}
-                keyboardType="numeric"
-                value={draft.salaryMin}
-                onChangeText={(t) => onChangeDraft({ salaryMin: t.replace(/[^0-9]/g, '') })}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.filterLabel}>Max Salary</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="e.g., 3000000"
-                placeholderTextColor={phColor}
-                keyboardType="numeric"
-                value={draft.salaryMax}
-                onChangeText={(t) => onChangeDraft({ salaryMax: t.replace(/[^0-9]/g, '') })}
-              />
-            </View>
-          </View>
-
-          {/* Currency (single) */}
-          <View>
-            <Text style={styles.filterLabel}>Currency</Text>
-            <View style={styles.pillRow}>
-              <TouchableOpacity
-                style={[styles.pill, !draft.currencyId && styles.pillActive]}
-                onPress={() => onSelectCurrency(null)}
-              >
-                <Text style={[styles.pillText, !draft.currencyId && styles.pillTextActive]}>Any</Text>
-              </TouchableOpacity>
-              {(currencies || []).slice(0, 8).map(c => (
-                <TouchableOpacity
-                  key={c.CurrencyID}
-                  style={[styles.pill, String(draft.currencyId) === String(c.CurrencyID) && styles.pillActive]}
-                  onPress={() => onSelectCurrency(c.CurrencyID)}
-                >
-                  <Text style={[styles.pillText, String(draft.currencyId) === String(c.CurrencyID) && styles.pillTextActive]}>
-                    {c.Code}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Posted within */}
-          <View>
-            <Text style={styles.filterLabel}>Posted Within</Text>
-            <View style={styles.pillRow}>
-              <TouchableOpacity
-                style={[styles.pill, !draft.postedWithinDays && styles.pillActive]}
-                onPress={() => onChangeDraft({ postedWithinDays: null })}
-              >
-                <Text style={[styles.pillText, !draft.postedWithinDays && styles.pillTextActive]}>Any time</Text>
-              </TouchableOpacity>
-              {postedWithinOptions.map(opt => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.pill, Number(draft.postedWithinDays) === opt.value && styles.pillActive]}
-                  onPress={() => onChangeDraft({ postedWithinDays: opt.value })}
-                >
-                  <Text style={[styles.pillText, Number(draft.postedWithinDays) === opt.value && styles.pillTextActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Department */}
-          <View>
-            <Text style={styles.filterLabel}>Department</Text>
-            <TextInput
-              style={styles.filterInput}
-              placeholder="e.g., Engineering, Product"
-              placeholderTextColor={phColor}
-              value={draft.department || ''}
-              onChangeText={(t) => onChangeDraft({ department: t })}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.applyBtn} onPress={onApply}>
-            <Ionicons name="checkmark" size={18} color={colors.white} />
-            <Text style={styles.applyBtnText}>Apply Filters</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-});
 
 // Helper to get years from months
 const monthsToYears = (m) => {
@@ -268,57 +46,6 @@ const monthsToYears = (m) => {
 const mapTypesToIds = (names = [], ref = [], idKey = 'JobTypeID', nameKey = 'Type') => {
   const set = new Set(names.map((s) => (s || '').toString().trim().toLowerCase()));
   return ref.filter((r) => set.has((r[nameKey] || '').toString().trim().toLowerCase())).map((r) => r[idKey]);
-};
-
-// Compute recommended filters from applicant profile
-const computeRecommendedFilters = (profile, jobTypes, workplaceTypes) => {
-  const rec = { ...EMPTY_FILTERS };
-  if (!profile) return rec;
-
-  const years = monthsToYears(profile.TotalExperienceMonths);
-  if (years > 0) {
-    rec.experienceMin = String(years); // show jobs at or above candidate's years
-    rec.postedWithinDays = 30; // fresher jobs not prioritized; recent postings
-  } else {
-    // Likely student/fresher
-    rec.postedWithinDays = 30;
-  }
-
-  // Job types preference
-  const pjt = (profile.PreferredJobTypes || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (pjt.length) {
-    rec.jobTypeIds = mapTypesToIds(pjt, jobTypes, 'JobTypeID', 'Type');
-  } else if (years === 0) {
-    // default for students
-    rec.jobTypeIds = mapTypesToIds(['Internship', 'Temporary', 'Part-time'], jobTypes, 'JobTypeID', 'Type');
-  }
-
-  // Workplace
-  const pwt = (profile.PreferredWorkTypes || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (pwt.length) {
-    rec.workplaceTypeIds = mapTypesToIds(pwt, workplaceTypes, 'WorkplaceTypeID', 'Type');
-  }
-
-  // Location preference
-  const loc = (profile.PreferredLocations || profile.CurrentLocation || '').split(',')[0]?.trim();
-  if (loc) rec.location = loc;
-
-  // Salary
-  if (profile.MinimumSalary != null) rec.salaryMin = String(profile.MinimumSalary);
-
-  // Department/industry keywords
-  if (profile.PreferredIndustries) {
-    rec.department = profile.PreferredIndustries.split(',')[0].trim();
-  } else if (profile.CurrentJobTitle) {
-    // rough extraction for engineering/product/design
-    const title = profile.CurrentJobTitle.toLowerCase();
-    if (title.includes('engineer') || title.includes('developer')) rec.department = 'Engineering';
-    else if (title.includes('data')) rec.department = 'Data';
-    else if (title.includes('product')) rec.department = 'Product';
-    else if (title.includes('design')) rec.department = 'Design';
-  }
-
-  return rec;
 };
 
 // Constants
@@ -372,10 +99,120 @@ export default function JobsScreen({ navigation }) {
   const [currencies, setCurrencies] = useState([]);
 
   // Smart filter toggle
-  const [smartEnabled, setSmartEnabled] = useState(true);
+  const [smartEnabled] = useState(true);
   const [personalizationApplied, setPersonalizationApplied] = useState(false);
   const [smartBoosts, setSmartBoosts] = useState({});
+  // Compute if any smart boost is actually set (avoid undefined keys)
+  const hasBoosts = useMemo(() => {
+    if (!smartBoosts) return false;
+    return Object.values(smartBoosts).some(v => v !== undefined && v !== null && String(v).trim() !== '');
+  }, [smartBoosts]);
 
+  // Quick filter states
+  const [quickJobType, setQuickJobType] = useState('');
+  const [quickWorkplaceType, setQuickWorkplaceType] = useState('');
+  const [quickPostedWithin, setQuickPostedWithin] = useState('');
+
+  // State to manage which quick filter slider is expanded: 'jobType' | 'workplace' | 'posted' | null
+  const [expandedQuick, setExpandedQuick] = useState(null);
+
+  // Compute quick labels based on selections
+  const quickJobTypeLabel = useMemo(() => {
+    const ids = filters.jobTypeIds || [];
+    if (!ids.length) return 'Any';
+    const names = ids.map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
+    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Any';
+  }, [filters.jobTypeIds, jobTypes]);
+  const quickWorkplaceLabel = useMemo(() => {
+    const ids = filters.workplaceTypeIds || [];
+    if (!ids.length) return 'Any';
+    const names = ids.map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
+    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Any';
+  }, [filters.workplaceTypeIds, workplaceTypes]);
+
+  // Toggle selection helper
+  const toggleId = (arr, id) => (arr || []).some(x => String(x) === String(id))
+    ? (arr || []).filter(x => String(x) !== String(id))
+    : [ ...(arr || []), id ];
+
+  // Inline quick slider toggle handlers (immediate update)
+  const onQuickToggleJobType = useCallback((id) => {
+    setFilters(prev => ({ ...prev, jobTypeIds: toggleId(prev.jobTypeIds, id) }));
+    setPagination(p => ({ ...p, page: 1 }));
+    triggerReload();
+  }, [triggerReload]);
+
+  const onQuickToggleWorkplace = useCallback((id) => {
+    setFilters(prev => ({ ...prev, workplaceTypeIds: toggleId(prev.workplaceTypeIds, id) }));
+    setPagination(p => ({ ...p, page: 1 }));
+    triggerReload();
+  }, [triggerReload]);
+
+  // Simple slide-in animation for the inline sliders
+  const sliderAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(sliderAnim, {
+      toValue: expandedQuick ? 1 : 0,
+      duration: 180,
+      useNativeDriver: false,
+    }).start();
+  }, [expandedQuick]);
+  const sliderAnimatedStyle = useMemo(() => ({
+    transform: [{ translateX: sliderAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+    opacity: sliderAnim,
+  }), [sliderAnim]);
+
+  // Tabs state and counts
+  const [activeTab, setActiveTab] = useState('openings'); // openings | applied | saved
+  const [appliedJobs, setAppliedJobs] = useState([]);
+  const [savedJobs, setSavedJobs] = useState([]);
+  const [appliedCount, setAppliedCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
+
+  // Counts from backend
+  const refreshCounts = useCallback(async () => {
+    try {
+      const [appliedRes, savedRes] = await Promise.all([
+        nexhireAPI.getMyApplications(1, 1),
+        nexhireAPI.getMySavedJobs(1, 1)
+      ]);
+      if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
+      if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
+    } catch {}
+  }, []);
+  useEffect(() => { refreshCounts(); }, [refreshCounts]);
+
+  // Quick layout animation helper
+  const quickSlide = useCallback(() => {
+    try {
+      LayoutAnimation.configureNext({
+        duration: 180,
+        update: { type: LayoutAnimation.Types.easeInEaseOut },
+        delete: { duration: 200, type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+        create: { duration: 120, type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity }
+      });
+    } catch {}
+  }, []);
+
+  // Row animation store and helpers (slide right + fade)
+  const rowAnimRef = useRef(new Map());
+  const getRowAnim = useCallback((id) => {
+    const key = String(id);
+    if (!rowAnimRef.current.has(key)) {
+      rowAnimRef.current.set(key, new Animated.Value(0)); // 0 visible, 1 dismissed
+    }
+    return rowAnimRef.current.get(key);
+  }, []);
+  const animateOutRight = useCallback((id, done) => {
+    const av = getRowAnim(id);
+    Animated.timing(av, { toValue: 1, duration: 160, useNativeDriver: true }).start(() => {
+      if (typeof done === 'function') done();
+      // reset for future reuse
+      av.setValue(0);
+    });
+  }, [getRowAnim]);
+
+  // Apply smart filters based on user profile
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
@@ -383,27 +220,23 @@ export default function JobsScreen({ navigation }) {
       if (profRes?.success) {
         const profile = profRes.data;
         const years = monthsToYears(profile.TotalExperienceMonths);
-        // Heuristic location (avoid junk)
         const rawLoc = (profile.PreferredLocations || profile.CurrentLocation || '').split(',')[0]?.trim();
         const loc = rawLoc && /[a-zA-Z]/.test(rawLoc) && rawLoc.length >= 3 ? rawLoc : null;
 
-        // Map preferred types to IDs for boosts
         const pjt = (profile.PreferredJobTypes || '').split(',').map(s => s.trim()).filter(Boolean);
         const boostJobTypeIds = pjt.length ? mapTypesToIds(pjt, jobTypes, 'JobTypeID', 'Type') : [];
         const pwt = (profile.PreferredWorkTypes || '').split(',').map(s => s.trim()).filter(Boolean);
         const boostWorkplaceTypeIds = pwt.length ? mapTypesToIds(pwt, workplaceTypes, 'WorkplaceTypeID', 'Type') : [];
 
-        // Set boosts (soft preferences); do NOT set hard filters here
-        setSmartBoosts({
-          candidateYears: years || undefined,
-          boostLocation: loc || undefined,
-          boostJobTypeIds: boostJobTypeIds.join(',') || undefined,
-          boostWorkplaceTypeIds: boostWorkplaceTypeIds.join(',') || undefined,
-        });
+        const nextBoosts = {};
+        if (years) nextBoosts.candidateYears = years;
+        if (loc) nextBoosts.boostLocation = loc;
+        if (boostJobTypeIds.length) nextBoosts.boostJobTypeIds = boostJobTypeIds.join(',');
+        if (boostWorkplaceTypeIds.length) nextBoosts.boostWorkplaceTypeIds = boostWorkplaceTypeIds.join(',');
+        setSmartBoosts(nextBoosts);
 
-        // Clear hard filters to avoid over-constraining, keep only a gentle postedWithinDays
-        setFilters(prev => ({ ...EMPTY_FILTERS, postedWithinDays: 30 }));
-        setFilterDraft(prev => ({ ...EMPTY_FILTERS, postedWithinDays: 30 }));
+        setFilters({ ...EMPTY_FILTERS, postedWithinDays: 30 });
+        setFilterDraft({ ...EMPTY_FILTERS, postedWithinDays: 30 });
 
         setPersonalizationApplied(true);
         triggerReload();
@@ -464,11 +297,7 @@ export default function JobsScreen({ navigation }) {
   useEffect(() => {
     if (showFiltersRef.current) return; // don't fetch while editing filters
 
-    // Abort previous base request
-    if (listAbortRef.current) {
-      try { listAbortRef.current.abort(); } catch {}
-    }
-
+    if (listAbortRef.current) { try { listAbortRef.current.abort(); } catch {} }
     const controller = new AbortController();
     listAbortRef.current = controller;
 
@@ -487,70 +316,33 @@ export default function JobsScreen({ navigation }) {
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
         if (filters.department) apiFilters.department = filters.department;
 
-        // Prefer searchJobs when smart boosts are active or when user typed a query
-        const shouldUseSearch = debouncedQuery.trim().length > 0 || (smartEnabled && personalizationApplied && Object.keys(smartBoosts).length > 0);
+        const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
 
-        const currentPage = 1;
         let result;
         if (shouldUseSearch) {
-          const params = { page: currentPage, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
+          const params = { page: 1, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
           result = await nexhireAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
         } else {
-          result = await nexhireAPI.getJobs(currentPage, pagination.pageSize, apiFilters, { signal: controller.signal });
+          result = await nexhireAPI.getJobs(1, pagination.pageSize, apiFilters, { signal: controller.signal });
         }
         if (controller.signal.aborted) return;
 
         if (result.success) {
-          let list = Array.isArray(result.data) ? result.data : [];
-          // Safety client-side filters remain
-          list = list.filter(j => {
-            if (filters.jobTypeIds?.length && !filters.jobTypeIds.map(String).includes(String(j.JobTypeID))) return false;
-            if (filters.workplaceTypeIds?.length && !filters.workplaceTypeIds.map(String).includes(String(j.WorkplaceTypeID))) return false;
-            if (filters.currencyId && String(j.CurrencyID) !== String(filters.currencyId)) return false;
-            if (filters.location) {
-              const loc = [j.City, j.State, j.Country, j.Location].filter(Boolean).join(', ').toLowerCase();
-              if (!loc.includes(filters.location.toLowerCase())) return false;
-            }
-            if (filters.salaryMin && !(j.SalaryRangeMax == null || parseFloat(j.SalaryRangeMax) >= parseFloat(filters.salaryMin))) return false;
-            if (filters.salaryMax && !(j.SalaryRangeMin == null || parseFloat(j.SalaryRangeMin) <= parseFloat(filters.salaryMax))) return false;
-            if (filters.experienceMin && !(j.ExperienceMax == null || parseInt(j.ExperienceMax) >= parseInt(filters.experienceMin))) return false;
-            if (filters.experienceMax && !(j.ExperienceMin == null || parseInt(j.ExperienceMin) <= parseInt(filters.experienceMax))) return false;
-            if (filters.postedWithinDays) {
-              const dt = new Date(j.PublishedAt || j.CreatedAt || j.UpdatedAt);
-              if (isNaN(dt)) return false;
-              const diffDays = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
-              if (diffDays > Number(filters.postedWithinDays)) return false;
-            }
-            if (filters.department && !(j.Department || '').toLowerCase().includes(filters.department.toLowerCase())) return false;
-            return true;
-          });
-
-          if (debouncedQuery.trim()) {
-            list = list
-              .map(j => ({
-                ...j,
-                __s: Math.max(
-                  score(j.Title, debouncedQuery),
-                  score(j.OrganizationName, debouncedQuery),
-                  score([j.City, j.State, j.Country, j.Location].filter(Boolean).join(' '), debouncedQuery)
-                )
-              }))
-              .filter(j => j.__s > 0)
-              .sort((a, b) => b.__s - a.__s)
-              .map(({ __s, ...rest }) => rest);
-          }
+          const list = Array.isArray(result.data) ? result.data : [];
           if (!mountedRef.current) return;
           setJobs(list);
-          if (result.meta) {
-            setPagination(prev => ({ ...prev, page: result.meta.page || 1, total: result.meta.total || list.length, totalPages: result.meta.totalPages || Math.ceil((result.meta.total || list.length) / (result.meta.pageSize || prev.pageSize)) }));
-          } else {
-            setPagination(prev => ({ ...prev, page: 1, total: list.length, totalPages: Math.ceil(list.length / prev.pageSize) }));
-          }
+          const meta = result.meta || {};
+          setPagination(prev => ({
+            ...prev,
+            page: meta.page || 1,
+            total: meta.total || list.length,
+            totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
+            nextCursor: meta.nextCursor || null,
+            hasMore: meta.hasMore ?? (meta.page ? (meta.page < (meta.totalPages || 1)) : false)
+          }));
         }
       } catch (e) {
-        if (e?.name !== 'AbortError') {
-          console.error('Error fetching jobs:', e);
-        }
+        if (e?.name !== 'AbortError') console.error('Error fetching jobs:', e);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -561,20 +353,15 @@ export default function JobsScreen({ navigation }) {
 
     run();
     return () => { try { controller.abort(); } catch {} };
-  }, [debouncedQuery, filters, reloadKey, smartEnabled, personalizationApplied, smartBoosts]);
+  }, [debouncedQuery, filters, reloadKey, personalizationApplied, smartBoosts, pagination.pageSize]);
 
-  // ===== LOAD MORE (page > 1) =====
+  // ===== LOAD MORE (cursor or page) =====
   const loadMoreJobs = useCallback(async () => {
     if (showFiltersRef.current) return;
     if (loading || loadingMore) return;
-    if (!pagination.totalPages || pagination.page >= pagination.totalPages) return;
+    if (!(pagination.hasMore ?? (pagination.page < (pagination.totalPages || 1)))) return;
 
-    // Abort any previous load-more request
-    if (loadMoreAbortRef.current) {
-      try { loadMoreAbortRef.current.abort(); } catch {}
-    }
-
-    const nextPage = (pagination.page || 1) + 1;
+    if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
     const controller = new AbortController();
     loadMoreAbortRef.current = controller;
 
@@ -592,67 +379,51 @@ export default function JobsScreen({ navigation }) {
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
 
+      const useCursor = pagination.nextCursor && pagination.nextCursor.publishedAt && pagination.nextCursor.id;
+      const baseParams = useCursor
+        ? { ...apiFilters, cursorPublishedAt: pagination.nextCursor.publishedAt, cursorId: pagination.nextCursor.id, pageSize: pagination.pageSize }
+        : { ...apiFilters, page: (pagination.page || 1) + 1, pageSize: pagination.pageSize };
+
       let result;
-      if (debouncedQuery.trim()) {
-        result = await nexhireAPI.searchJobs(debouncedQuery, { page: nextPage, pageSize: pagination.pageSize, ...apiFilters }, { signal: controller.signal });
+      if (debouncedQuery.trim().length > 0 || hasBoosts) {
+        result = await nexhireAPI.searchJobs(debouncedQuery.trim(), baseParams, { signal: controller.signal });
       } else {
-        result = await nexhireAPI.getJobs(nextPage, pagination.pageSize, apiFilters, { signal: controller.signal });
+        result = await nexhireAPI.getJobs(baseParams.page || ((pagination.page || 1) + 1), pagination.pageSize, baseParams, { signal: controller.signal });
       }
       if (controller.signal.aborted) return;
 
       if (result.success) {
-        let list = Array.isArray(result.data) ? result.data : [];
-        if (list.length === 0) {
-          // no more data
-          setPagination(prev => ({ ...prev, page: nextPage, totalPages: prev.page }));
-          return;
-        }
-        // optional client-side filters (same as above)
-        if (filters.jobTypeIds?.length || filters.workplaceTypeIds?.length || filters.location || filters.currencyId || filters.salaryMin || filters.salaryMax || filters.experienceMin || filters.experienceMax || filters.postedWithinDays || filters.department) {
-          list = list.filter(j => {
-            if (filters.jobTypeIds?.length && !filters.jobTypeIds.map(String).includes(String(j.JobTypeID))) return false;
-            if (filters.workplaceTypeIds?.length && !filters.workplaceTypeIds.map(String).includes(String(j.WorkplaceTypeID))) return false;
-            if (filters.currencyId && String(j.CurrencyID) !== String(filters.currencyId)) return false;
-            if (filters.location) {
-              const loc = [j.City, j.State, j.Country, j.Location].filter(Boolean).join(', ').toLowerCase();
-              if (!loc.includes(filters.location.toLowerCase())) return false;
-            }
-            if (filters.salaryMin && !(j.SalaryRangeMax == null || parseFloat(j.SalaryRangeMax) >= parseFloat(filters.salaryMin))) return false;
-            if (filters.salaryMax && !(j.SalaryRangeMin == null || parseFloat(j.SalaryRangeMin) <= parseFloat(filters.salaryMax))) return false;
-            if (filters.experienceMin && !(j.ExperienceMax == null || parseInt(j.ExperienceMax) >= parseInt(filters.experienceMin))) return false;
-            if (filters.experienceMax && !(j.ExperienceMin == null || parseInt(j.ExperienceMin) <= parseInt(filters.experienceMax))) return false;
-            if (filters.postedWithinDays) {
-              const dt = new Date(j.PublishedAt || j.CreatedAt || j.UpdatedAt);
-              if (isNaN(dt)) return false;
-              const diffDays = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
-              if (diffDays > Number(filters.postedWithinDays)) return false;
-            }
-            if (filters.department && !(j.Department || '').toLowerCase().includes(filters.department.toLowerCase())) return false;
-            return true;
-          });
-        }
-
-        // append
+        const list = Array.isArray(result.data) ? result.data : [];
         setJobs(prev => [...prev, ...list]);
-        if (result.meta) {
-          setPagination(prev => ({
-            ...prev,
-            page: result.meta.page || nextPage,
-            total: result.meta.total || (prev.total + list.length),
-            totalPages: result.meta.totalPages || prev.totalPages
-          }));
-        } else {
-          // Fallback: if we got less than a full page, we reached the end
-          const reachedEnd = list.length < (pagination.pageSize || 20);
-          setPagination(prev => ({ ...prev, page: nextPage, total: prev.total + list.length, totalPages: reachedEnd ? nextPage : nextPage + 1 }));
-        }
+        const meta = result.meta || {};
+        setPagination(prev => ({
+          ...prev,
+          page: meta.page || ((prev.page || 1) + (useCursor ? 0 : 1)),
+          total: meta.total || (prev.total + list.length),
+          totalPages: meta.totalPages || prev.totalPages,
+          nextCursor: meta.nextCursor || null,
+          hasMore: meta.hasMore ?? ((meta.page || prev.page) < (meta.totalPages || prev.totalPages))
+        }));
       }
     } catch (e) {
       if (e?.name !== 'AbortError') console.error('Error loading more jobs:', e);
     } finally {
       if (!controller.signal.aborted) setLoadingMore(false);
     }
-  }, [loading, loadingMore, pagination.page, pagination.pageSize, pagination.totalPages, debouncedQuery, filters]);
+  }, [loading, loadingMore, pagination.page, pagination.pageSize, pagination.totalPages, pagination.hasMore, pagination.nextCursor, debouncedQuery, filters, personalizationApplied, smartBoosts, hasBoosts]);
+
+  // ===== Reliable infinite scroll: trigger when near bottom
+  const onScrollNearEnd = useCallback((e) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent || {};
+    if (!contentOffset || !contentSize || !layoutMeasurement) return;
+    if (loading || loadingMore) return;
+    if (!pagination.totalPages || pagination.page >= pagination.totalPages) return;
+    const threshold = 160; // px before bottom
+    const isNearEnd = contentOffset.y + layoutMeasurement.height >= contentSize.height - threshold;
+    if (isNearEnd) {
+      loadMoreJobs();
+    }
+  }, [loading, loadingMore, pagination.totalPages, pagination.page, loadMoreJobs]);
 
   // ===== Handlers for filters, search, refresh =====
   const openFilters = useCallback(() => { setFilterDraft({ ...filters }); setShowFilters(true); }, [filters]);
@@ -693,107 +464,49 @@ export default function JobsScreen({ navigation }) {
     setPagination(p => ({ ...p, page: 1 }));
     triggerReload();
   }, [triggerReload]);
-  const clearAllFilters = useCallback(() => { clearSearch(); }, [clearSearch]);
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery('');
+    setFilters(EMPTY_FILTERS);
+    setFilterDraft(EMPTY_FILTERS);
+    setQuickJobType('');
+    setQuickWorkplaceType('');
+    setQuickPostedWithin('');
+    setExpandedQuick(null); // collapse second row
+    triggerReload();
+  }, [triggerReload]);
 
-  const toggleSmartFilter = useCallback(() => {
-    setSmartEnabled(prev => {
-      const next = !prev;
-      if (next) applySmart();
-      return next;
-    });
-  }, [applySmart]);
-
-  // ===== Utilities for card rendering =====
-  const formatSalary = (job) => {
-    if (job?.SalaryRangeMin != null && job?.SalaryRangeMax != null) {
-      const fmt = (n) => (typeof n === 'number' ? n : parseFloat(n || 0)).toLocaleString('en-US');
-      const currency = job.CurrencyCode || job.CurrencySymbol || 'USD';
-      const period = job.SalaryPeriod || 'Annual';
-      return `$${fmt(job.SalaryRangeMin)} - $${fmt(job.SalaryRangeMax)} ${currency} ${period}`;
+  // Quick filter handlers
+  const handleQuickJobTypeChange = useCallback((jobTypeId) => {
+    setQuickJobType(jobTypeId);
+    if (jobTypeId) {
+      setFilters(prev => ({ ...prev, jobTypeIds: [jobTypeId] }));
+    } else {
+      setFilters(prev => ({ ...prev, jobTypeIds: [] }));
     }
-    return 'Salary not specified';
-  };
+    triggerReload();
+  }, [triggerReload]);
 
-  const formatLocation = (job) => {
-    const parts = [];
-    if (job?.City) parts.push(job.City);
-    if (job?.State) parts.push(job.State);
-    if (job?.Country) parts.push(job.Country);
-    let loc = parts.join(', ') || job?.Location || 'Location not specified';
-    if (job?.IsRemote) loc += ' (Remote)';
-    else if (job?.WorkplaceType) loc += ` (${job.WorkplaceType})`;
-    return loc;
-  };
+  const handleQuickWorkplaceTypeChange = useCallback((workplaceTypeId) => {
+    setQuickWorkplaceType(workplaceTypeId);
+    if (workplaceTypeId) {
+      setFilters(prev => ({ ...prev, workplaceTypeIds: [workplaceTypeId] }));
+    } else {
+      setFilters(prev => ({ ...prev, workplaceTypeIds: [] }));
+    }
+    triggerReload();
+  }, [triggerReload]);
 
-  const formatPostedDate = (ds) => {
-    if (!ds) return 'Recently posted';
-    const d = new Date(ds); const now = new Date();
-    const h = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60));
-    if (h < 1) return 'Just posted';
-    if (h < 24) return `${h} hours ago`;
-    const days = Math.floor(h / 24); if (days < 7) return `${days} days ago`;
-    const w = Math.floor(days / 7); if (w < 4) return `${w} weeks ago`;
-    return d.toLocaleDateString();
-  };
-
-  const JobCard = React.memo(({ job }) => (
-    <TouchableOpacity style={styles.jobCard} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}>
-      <View style={styles.jobHeader}>
-        <Text style={styles.jobTitle} numberOfLines={2}>{job.Title}</Text>
-        <Text style={styles.jobSalary}>{formatSalary(job)}</Text>
-      </View>
-      <Text style={styles.jobCompany}>{job.OrganizationName || 'Company Name'}</Text>
-      <Text style={styles.jobLocation}>{formatLocation(job)}</Text>
-      {!!job.Description && <Text style={styles.jobDescription} numberOfLines={2}>{job.Description}</Text>}
-      <View style={styles.jobFooter}>
-        <View style={styles.jobTags}>
-          <Text style={styles.jobType}>{job.JobTypeName || job.JobType || 'Full-time'}</Text>
-          {job.ExperienceLevel && (<Text style={styles.experienceLevel}>{job.ExperienceLevel}</Text>)}
-          {job.IsRemote && (<Text style={styles.remoteTag}>Remote</Text>)}
-        </View>
-        <Text style={styles.jobPosted}>{formatPostedDate(job.CreatedAt || job.PublishedAt)}</Text>
-      </View>
-    </TouchableOpacity>
-  ));
-
-  const EmptyState = React.memo(() => (
-    <View style={styles.emptyState}>
-      <Ionicons name="briefcase-outline" size={64} color={colors.gray400} />
-      <Text style={styles.emptyStateTitle}>{debouncedQuery ? 'No Jobs Found' : 'No Jobs Available'}</Text>
-      <Text style={styles.emptyStateText}>{debouncedQuery ? 'Try adjusting your search or filters.' : 'New opportunities will appear here.'}</Text>
-      {(debouncedQuery || isFiltersDirty(filters)) && (
-        <TouchableOpacity style={styles.clearSearchButton} onPress={clearAllFilters}>
-          <Text style={styles.clearSearchText}>Clear All</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  ));
-
-  const LoadingFooter = React.memo(() => (
-    loadingMore ? (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading more jobs...</Text>
-      </View>
-    ) : null
-  ));
-
-  // ===== end added handlers/components =====
+  const handleQuickPostedWithinChange = useCallback((days) => {
+    setQuickPostedWithin(days);
+    if (days) {
+      setFilters(prev => ({ ...prev, postedWithinDays: parseInt(days) }));
+    } else {
+      setFilters(prev => ({ ...prev, postedWithinDays: null }));
+    }
+    triggerReload();
+  }, [triggerReload]);
 
   // Build a small personalized summary string (memoized)
-  const jobTypeNames = useMemo(() => (
-    (filters.jobTypeIds || [])
-      .map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type)
-      .filter(Boolean)
-  ), [filters.jobTypeIds, jobTypes]);
-
-  const workplaceNames = useMemo(() => (
-    (filters.workplaceTypeIds || [])
-      .map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type)
-      .filter(Boolean)
-  ), [filters.workplaceTypeIds, workplaceTypes]);
-
-  // Update summary to reflect boosts when present
   const summaryText = useMemo(() => {
     const parts = [];
     if (smartBoosts.candidateYears) parts.push(`${smartBoosts.candidateYears}+ yrs`);
@@ -814,136 +527,357 @@ export default function JobsScreen({ navigation }) {
     return parts.join(' • ');
   }, [smartBoosts, filters, jobTypes, workplaceTypes]);
 
+  // Tabs header
+  const TabsLegacy = () => (
+    <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e9ecef' }}>
+      {['openings','applied','saved'].map(key => {
+        const labels = { openings: 'Openings', applied: 'Applied', saved: 'Saved' };
+        const count = key === 'openings' ? jobs.length : key === 'applied' ? appliedJobs.length : savedJobs.length;
+        const active = activeTab === key;
+        return (
+          <TouchableOpacity key={key} onPress={() => setActiveTab(key)} style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: active ? '#0066cc' : 'transparent' }}>
+            <Text style={{ color: active ? '#0066cc' : '#555', fontWeight: active ? '700' : '600' }}>{`${labels[key]}(${count})`}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // Render list depending on tab
+  const renderList = () => {
+    const data = activeTab === 'openings' ? jobs : activeTab === 'applied' ? appliedJobs : savedJobs;
+    if (loading && data.length === 0 && activeTab === 'openings') {
+      return (
+        <View style={styles.loadingContainer}><Text style={styles.loadingText}>Loading jobs...</Text></View>
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No {activeTab} jobs</Text>
+          <Text style={styles.emptyMessage}>New opportunities will appear here.</Text>
+        </View>
+      );
+    }
+    return data.map((job, index) => {
+      const id = job.JobID || index;
+      const av = getRowAnim(id);
+      const translateX = av.interpolate({ inputRange: [0, 1], outputRange: [0, 80] });
+      const opacity = av.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+      return (
+        <Animated.View key={id} style={{ transform: [{ translateX }], opacity }}>
+          <JobCard
+            job={job}
+            jobTypes={jobTypes}
+            workplaceTypes={workplaceTypes}
+            onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+            onApply={() => handleApply(job)}
+            onSave={() => handleSave(job)}
+          />
+        </Animated.View>
+      );
+    });
+  };
+
+  const openingsCount = Math.max(pagination.total || jobs.length, 0);
+
+  // Tabs header uses exact backend counts for applied/saved
+  const Tabs = () => (
+    <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e9ecef' }}>
+      {['openings','applied','saved'].map(key => {
+        const labels = { openings: 'Openings', applied: 'Applied', saved: 'Saved' };
+        const count = key === 'openings' ? openingsCount : key === 'applied' ? appliedCount : savedCount;
+        const active = activeTab === key;
+        return (
+          <TouchableOpacity key={key} onPress={() => setActiveTab(key)} style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: active ? '#0066cc' : 'transparent' }}>
+            <Text style={{ color: active ? '#0066cc' : '#555', fontWeight: active ? '700' : '600' }}>{`${labels[key]}(${count})`}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // In handleApply, do not revert UI on error; refresh counts/lists instead
+  const handleApply = useCallback(async (job) => {
+    if (!job) return;
+    const id = job.JobID || job.id;
+    try {
+      if (activeTab === 'openings') {
+        animateOutRight(id, () => {
+          setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
+        });
+      } else if (activeTab === 'saved') {
+        quickSlide();
+        setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+        setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
+        setSavedCount(c => Math.max((c || 0) - 1, 0));
+      }
+      const res = await nexhireAPI.applyToJob(id);
+      if (res?.success) {
+        setAppliedCount(c => (Number(c) || 0) + 1);
+      }
+    } catch (e) {
+      console.error('Apply error', e);
+    } finally {
+      refreshCounts();
+      if (activeTab === 'saved') {
+        try { 
+          const r = await nexhireAPI.getMySavedJobs(1, 50); 
+          if (r?.success) setSavedJobs(r.data || []); 
+        } catch {}
+      } else if (activeTab === 'applied') {
+        try { 
+          const r = await nexhireAPI.getMyApplications(1, 50); 
+          if (r?.success) {
+            const items = (r.data || []).map(a => ({ 
+              JobID: a.JobID, 
+              Title: a.JobTitle || a.Title, 
+              OrganizationName: a.CompanyName || a.OrganizationName, 
+              Location: a.JobLocation || a.Location, 
+              SalaryRangeMin: a.SalaryRangeMin, 
+              SalaryRangeMax: a.SalaryRangeMax, 
+              PublishedAt: a.SubmittedAt 
+            }));
+            setAppliedJobs(items);
+          }
+        } catch {}
+      }
+    }
+  }, [activeTab, refreshCounts, animateOutRight, quickSlide]);
+
+  const handleSave = useCallback(async (job) => {
+    if (!job) return;
+    const id = job.JobID || job.id;
+    try {
+      if (activeTab === 'openings') {
+        animateOutRight(id, () => {
+          setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+          setSavedJobs(prev => [{ ...job, __savedAt: Date.now() }, ...prev]);
+        });
+      }
+      const res = await nexhireAPI.saveJob(id);
+      if (res?.success) setSavedCount(c => (Number(c) || 0) + 1);
+    } catch (e) {
+      console.error('Save error', e);
+    } finally {
+      refreshCounts();
+      if (activeTab === 'saved') {
+        try { 
+          const r = await nexhireAPI.getMySavedJobs(1, 50); 
+          if (r?.success) setSavedJobs(r.data || []); 
+        } catch {}
+      }
+    }
+  }, [activeTab, refreshCounts, animateOutRight]);
+
+  // Tab data loading effect
+  useEffect(() => {
+    (async () => {
+      if (activeTab === 'saved') {
+        try {
+          const r = await nexhireAPI.getMySavedJobs(1, 50);
+          if (r?.success) setSavedJobs(r.data || []);
+        } catch {}
+      } else if (activeTab === 'applied') {
+        try {
+          const r = await nexhireAPI.getMyApplications(1, 50);
+          if (r?.success) {
+            const items = (r.data || []).map(a => ({
+              JobID: a.JobID,
+              Title: a.JobTitle || a.Title,
+              OrganizationName: a.CompanyName || a.OrganizationName,
+              Location: a.JobLocation || a.Location,
+              SalaryRangeMin: a.SalaryRangeMin,
+              SalaryRangeMax: a.SalaryRangeMax,
+              PublishedAt: a.SubmittedAt,
+            }));
+            setAppliedJobs(items);
+          }
+        } catch {}
+      }
+    })();
+  }, [activeTab]);
+
+  // ===== Render =====
   return (
     <View style={styles.container}>
       {/* Search Header */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color={colors.gray400} />
+      <View style={styles.searchHeader}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search jobs..."
-            placeholderTextColor={colors.gray400}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearchSubmit}
-            returnKeyType="search"
+            placeholderTextColor="#999"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch}>
-              <Ionicons name="close-circle" size={20} color={colors.gray400} />
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#666" />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-          <Ionicons name="options" size={20} color={colors.primary} />
+          <Ionicons name="options-outline" size={24} color="#0066cc" />
         </TouchableOpacity>
       </View>
 
-      {/* Results Summary with Clear All + Smart toggle */}
-      <View style={styles.summaryContainer}>
-        <View style={{ flexDirection: 'column', gap: 2, flex: 1 }}>
-          <Text style={styles.summaryText}>
-            {debouncedQuery ? `${jobs.length} jobs found for "${debouncedQuery}"` : `${jobs.length} jobs available`}
-          </Text>
-          {smartEnabled && personalizationApplied && summaryText && (
-            <Text style={styles.smartSummaryText}>Personalized: {summaryText}</Text>
-          )}
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity
-            style={[styles.smartBtn, smartEnabled ? styles.smartOn : null]}
-            onPress={toggleSmartFilter}
-          >
-            <Ionicons name="sparkles" size={16} color={smartEnabled ? colors.white : colors.primary} />
-            <Text style={[styles.smartText, smartEnabled ? { color: colors.white } : null]}>Smart</Text>
-          </TouchableOpacity>
-          {(searchQuery.length > 0 || isFiltersDirty(filters)) && (
-            <TouchableOpacity style={styles.clearAllBtn} onPress={clearAllFilters}>
-              <Ionicons name="refresh" size={16} color={colors.primary} />
-              <Text style={styles.clearAllText}>Clear all</Text>
+      {/* Tabs */}
+      <Tabs />
+
+      {/* Quick Filters Row (only for openings) */}
+      {activeTab === 'openings' && (
+        <View style={[styles.quickFiltersContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.quickFiltersScroll, { flex: 1 }]} contentContainerStyle={{ paddingRight: 12 }}>
+            <View style={styles.quickFilterItem}>
+              <Text style={styles.quickFilterLabel}>JOB TYPE</Text>
+              <TouchableOpacity 
+                style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
+                onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
+              >
+                <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                  {quickJobTypeLabel}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.quickFilterItem}>
+              <Text style={styles.quickFilterLabel}>WORKPLACE</Text>
+              <TouchableOpacity 
+                style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
+                onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
+              >
+                <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                  {quickWorkplaceLabel}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.quickFilterItem}>
+              <Text style={styles.quickFilterLabel}>POSTED</Text>
+              <TouchableOpacity 
+                style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
+                onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
+              >
+                <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
+                  {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Any'}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          {isFiltersDirty(filters) && (
+            <TouchableOpacity style={[styles.clearAllButton, { alignSelf: 'center', marginLeft: 'auto' }]} onPress={clearAllFilters}>
+              <Text style={styles.clearAllText}>Clear All</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      )}
 
-      <FlatList
-        data={jobs}
-        renderItem={({ item }) => <JobCard job={item} />}
-        keyExtractor={(item) => item.JobID}
-        contentContainerStyle={jobs.length === 0 ? styles.emptyContainer : styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onEndReached={loadMoreJobs}
-        onEndReachedThreshold={0.1}
-        ListEmptyComponent={<EmptyState />}
-        ListFooterComponent={<LoadingFooter />}
+      {/* Expanded Quick Filter Slider */}
+      {activeTab === 'openings' && expandedQuick && (
+        <View style={styles.sliderBar}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>
+              {expandedQuick === 'jobType' ? 'JOB TYPES' : expandedQuick === 'workplace' ? 'WORKPLACE TYPES' : 'POSTED WITHIN'}
+            </Text>
+          </View>
+          <Animated.View style={[styles.sliderRow, sliderAnimatedStyle]}>
+            {expandedQuick === 'jobType' && jobTypes.map(jt => (
+              <TouchableOpacity
+                key={jt.JobTypeID}
+                style={[styles.chip, isSelected(filters.jobTypeIds, jt.JobTypeID) && styles.chipActive]}
+                onPress={() => onQuickToggleJobType(jt.JobTypeID)}
+              >
+                <Text style={[styles.chipText, isSelected(filters.jobTypeIds, jt.JobTypeID) && styles.chipTextActive]}>
+                  {jt.Type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {expandedQuick === 'workplace' && workplaceTypes.map(wt => (
+              <TouchableOpacity
+                key={wt.WorkplaceTypeID}
+                style={[styles.chip, isSelected(filters.workplaceTypeIds, wt.WorkplaceTypeID) && styles.chipActive]}
+                onPress={() => onQuickToggleWorkplace(wt.WorkplaceTypeID)}
+              >
+                <Text style={[styles.chipText, isSelected(filters.workplaceTypeIds, wt.WorkplaceTypeID) && styles.chipTextActive]}>
+                  {wt.Type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {expandedQuick === 'posted' && (
+              <>
+                <TouchableOpacity
+                  style={[styles.chip, quickPostedWithin === 1 && styles.chipActive]}
+                  onPress={() => { setQuickPostedWithin(1); handleQuickPostedWithinChange(1); }}
+                >
+                  <Text style={[styles.chipText, quickPostedWithin === 1 && styles.chipTextActive]}>Last 24h</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.chip, quickPostedWithin === 7 && styles.chipActive]}
+                  onPress={() => { setQuickPostedWithin(7); handleQuickPostedWithinChange(7); }}
+                >
+                  <Text style={[styles.chipText, quickPostedWithin === 7 && styles.chipTextActive]}>Last 7 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.chip, quickPostedWithin === 30 && styles.chipActive]}
+                  onPress={() => { setQuickPostedWithin(30); handleQuickPostedWithinChange(30); }}
+                >
+                  <Text style={[styles.chipText, quickPostedWithin === 30 && styles.chipTextActive]}>Last 30 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.chip, (!quickPostedWithin && !filters.postedWithinDays) && styles.chipActive]}
+                  onPress={() => { setQuickPostedWithin(null); handleQuickPostedWithinChange(null); }}
+                >
+                  <Text style={[styles.chipText, (!quickPostedWithin && !filters.postedWithinDays) && styles.chipTextActive]}>Any</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Animated.View>
+        </View>
+      )}
+
+      {/* Summary (only for openings) */}
+      {activeTab === 'openings' && (
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryText}>
+            {openingsCount} jobs found{summaryText ? ` for "${summaryText}"` : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Job List */}
+      <ScrollView
+        style={styles.jobList}
         showsVerticalScrollIndicator={false}
-      />
+        refreshControl={activeTab === 'openings' ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+        onScroll={activeTab === 'openings' ? onScrollNearEnd : undefined}
+        scrollEventThrottle={16}
+      >
+        {renderList()}
+      </ScrollView>
 
-      <FilterSheet
+      {/* Filter Modal */}
+      <FilterModal
         visible={showFilters}
-        draft={filterDraft}
+        onClose={closeFilters}
+        filters={filterDraft}
+        onFiltersChange={onChangeDraft}
+        onApply={applyDraft}
+        onClear={resetDraft}
         jobTypes={jobTypes}
         workplaceTypes={workplaceTypes}
         currencies={currencies}
-        onChangeDraft={onChangeDraft}
         onToggleJobType={onToggleJobType}
         onToggleWorkplaceType={onToggleWorkplaceType}
         onSelectCurrency={onSelectCurrency}
-        onApply={applyDraft}
-        onReset={resetDraft}
-        onClose={closeFilters}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
-  loadingText: { marginTop: 12, fontSize: typography.sizes.md, color: colors.gray600 },
-  searchContainer: { flexDirection: 'row', padding: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
-  searchInputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 12, marginRight: 12 },
-  searchInput: { flex: 1, paddingVertical: 10, paddingLeft: 8, fontSize: typography.sizes.md, color: colors.text },
-  filterButton: { width: 44, height: 44, borderRadius: 8, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  summaryContainer: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  summaryText: { fontSize: typography.sizes.sm, color: colors.gray600 },
-  clearAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
-  clearAllText: { color: colors.primary, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium },
-  listContainer: { padding: 16 },
-  emptyContainer: { flex: 1 },
-  jobCard: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 12, shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
-  jobHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  jobTitle: { flex: 1, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text, marginRight: 12 },
-  jobSalary: { fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, color: colors.primary },
-  jobCompany: { fontSize: typography.sizes.md, fontWeight: typography.weights.medium, color: colors.gray700, marginBottom: 4 },
-  jobLocation: { fontSize: typography.sizes.sm, color: colors.gray600, marginBottom: 8 },
-  jobDescription: { fontSize: typography.sizes.sm, color: colors.gray600, lineHeight: 20, marginBottom: 12 },
-  jobFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  jobTags: { flexDirection: 'row', gap: 8 },
-  jobType: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color: colors.primary, backgroundColor: colors.primary + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  experienceLevel: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color: colors.success, backgroundColor: colors.success + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  remoteTag: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color: colors.warning, backgroundColor: colors.warning + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  jobPosted: { fontSize: typography.sizes.xs, color: colors.gray500 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyStateTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text, marginTop: 16, marginBottom: 8 },
-  emptyStateText: { fontSize: typography.sizes.md, color: colors.gray600, textAlign: 'center', lineHeight: 22, marginBottom: 20 },
-  clearSearchButton: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  clearSearchText: { color: colors.white, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium },
-  loadingFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-  filterLabel: { fontSize: typography.sizes.sm, color: colors.gray600, marginBottom: 6 },
-  filterInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes.md, color: colors.text },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface },
-  pillActive: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
-  pillText: { color: colors.text },
-  pillTextActive: { color: colors.primary, fontWeight: '600' },
-  applyBtn: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 10 },
-  applyBtnText: { color: colors.white, fontWeight: '600' },
-  smartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
-  smartOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  smartText: { color: colors.primary, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium },
-  smartSummaryText: { fontSize: typography.sizes.xs, color: colors.gray600 },
-});

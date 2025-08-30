@@ -58,6 +58,7 @@ import {
     updateWorkExperience,
     deleteWorkExperience
 } from './src/controllers/work-experience.controller';
+import { saveJob as saveJobCtrl, unsaveJob as unsaveJobCtrl, getMySavedJobs as getMySavedJobsCtrl } from './src/controllers/saved-jobs.controller';
 
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
@@ -535,6 +536,31 @@ app.http('health', {
 });
 
 // ========================================================================
+// SAVED JOBS ENDPOINTS
+// ========================================================================
+
+app.http('saved-jobs-save', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'saved-jobs',
+    handler: withErrorHandling(saveJobCtrl)
+});
+
+app.http('saved-jobs-unsave', {
+    methods: ['DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'saved-jobs/{jobId}',
+    handler: withErrorHandling(unsaveJobCtrl)
+});
+
+app.http('saved-jobs-my', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'my/saved-jobs',
+    handler: withErrorHandling(getMySavedJobsCtrl)
+});
+
+// ========================================================================
 // STARTUP LOG
 // ========================================================================
 
@@ -557,10 +583,10 @@ export {};
  * USER MANAGEMENT (6 endpoints):
  * GET    /users/profile               - Get user profile
  * PUT    /users/profile               - Update user profile
- * POST   /users/change-password       - Change password
- * POST   /users/verify-email          - Verify email
- * GET    /users/dashboard-stats       - Get dashboard stats
- * POST   /users/deactivate            - Deactivate account
+ * POST   /users/change-password       - User password update
+ * POST   /users/verify-email          - User email verification
+ * GET    /users/dashboard-stats       - User dashboard statistics
+ * POST   /users/deactivate            - User account deactivation
  * POST   /employers/initialize        - Initialize employer profile (NEW)
  * 
  * APPLICANT/EMPLOYER PROFILE (4 endpoints):
@@ -596,5 +622,10 @@ export {};
  * GET    /reference/industries        - Get industries
  * GET    /reference/universities-by-country - Get universities by country and state
  * GET    /reference/countries         - Get countries (NEW)
+ * 
+ * SAVED JOBS (3 endpoints):
+ * POST   /saved-jobs                 - Save a job
+ * DELETE /saved-jobs/{jobId}        - Unsave a job
+ * GET    /my/saved-jobs              - Get my saved jobs
  * ========================================================================
  */

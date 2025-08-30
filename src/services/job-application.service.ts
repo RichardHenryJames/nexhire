@@ -75,6 +75,8 @@ export class JobApplicationService {
         const existingResult = await dbService.executeQuery(existingApplicationQuery, [validatedData.jobID, applicantId]);
         
         if (existingResult.recordset && existingResult.recordset.length > 0) {
+            // Ensure saved entry is removed if exists when attempting to apply from Saved
+            try { await dbService.executeQuery('DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1', [validatedData.jobID, applicantId]); } catch {}
             throw new ConflictError('You have already applied for this job');
         }
         
@@ -97,6 +99,9 @@ export class JobApplicationService {
             UPDATE Jobs 
             SET CurrentApplications = ISNULL(CurrentApplications, 0) + 1, UpdatedAt = GETUTCDATE()
             WHERE JobID = @param1;
+            
+            -- Remove from SavedJobs if present (auto-unsave on apply)
+            DELETE FROM SavedJobs WHERE JobID = @param1 AND ApplicantID = @param2;
             
             -- Get the created application with details
             SELECT 

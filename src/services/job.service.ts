@@ -10,6 +10,10 @@ import {
 } from '../utils/validation';
 import { appConstants } from '../config';
 
+// Pagination caps
+const MAX_PAGE_SIZE = 100;
+const MAX_UNPAGED_TOTAL = 500; // only allow all=true when total <= this
+
 export class JobService {
     // Create new job
     static async createJob(jobData: any, postedByUserID: string, organizationID: string): Promise<Job> {
@@ -77,11 +81,16 @@ export class JobService {
         return result.recordset[0];
     }
 
-    // Get all jobs with filtering and pagination (advanced)
-    static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
+    // Get all jobs with filtering and pagination (supports unpaged mode with caps)
+    static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number; hasMore: boolean; nextCursor: any | null }> {
         const { page, pageSize } = params;
         let { sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
+        const cursorPublishedAt = f.cursorPublishedAt ? new Date(f.cursorPublishedAt) : null;
+        const cursorId = f.cursorId || f.cursor;
+
+        // DEBUG: log incoming params minimal (avoid PII)
+        try { console.log('getJobs() raw params:', JSON.stringify({ page, pageSize, sortBy, sortOrder, q: f.q, jobTypeIds: f.jobTypeIds, postedWithinDays: f.postedWithinDays })); } catch {}
 
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
@@ -123,15 +132,15 @@ export class JobService {
             paramIndex += 3;
         }
 
-        const jobTypeIds: number[] = normalizeIdList(f.jobTypeIds, f.jobTypeId, f.jobType);
+        const jobTypeIds: number[] = pickIdList(f, ['jobTypeIds','jobTypeId','jobType']);
         if (jobTypeIds.length) {
             const placeholders = jobTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
-            whereClause += ` AND j.JobTypeID IN (${placeholders})`;
+            whereClause += ` AND jt.JobTypeID IN (${placeholders})`;
             queryParams.push(...jobTypeIds);
             paramIndex += jobTypeIds.length;
         }
 
-        const workplaceTypeIds: number[] = normalizeIdList(f.workplaceTypeIds, f.workplaceTypeId);
+        const workplaceTypeIds: number[] = pickIdList(f, ['workplaceTypeIds','workplaceTypeId']);
         if (workplaceTypeIds.length) {
             const placeholders = workplaceTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
             whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
@@ -193,33 +202,61 @@ export class JobService {
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             ${whereClause}
         `;
+        try { console.log('getJobs() countQuery:', countQuery); console.log('getJobs() params:', queryParams); } catch {}
 
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset?.[0]?.total || 0;
-        const totalPages = Math.ceil(total / pageSize);
 
-        const offset = (page - 1) * pageSize;
-        const dataQuery = `
-            SELECT 
-                j.*,
-                jt.Type as JobTypeName,
-                o.Name as OrganizationName,
-                o.LogoURL as OrganizationLogo,
-                c.Symbol as CurrencySymbol
-            FROM Jobs j
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-            LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-            ${whereClause}
-            ORDER BY ${normalizedSort} ${normalizedOrder}
-            OFFSET @param${paramIndex} ROWS
-            FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+        // Caps and unpaged decision
+        const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
+        const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
+        const noPaging = !!allowUnpaged;
+        const pageNum = Math.max(Number(page) || 1, 1);
+        const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+        const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
+
+        // Compute sort key for seek
+        const sortExpr = 'COALESCE(j.PublishedAt, j.CreatedAt)';
+
+        let dataQuery = `
+          SELECT 
+              j.*,
+              jt.Type as JobTypeName,
+              o.Name as OrganizationName,
+              o.LogoURL as OrganizationLogo,
+              c.Symbol as CurrencySymbol
+          FROM Jobs j
+          INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+          INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+          LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
+          ${whereClause}
         `;
 
-        const dataParams = [...queryParams, offset, pageSize];
-        const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
+        const dataParams: any[] = [...queryParams];
 
-        return { jobs: dataResult.recordset || [], total, totalPages };
+        if (!noPaging && cursorPublishedAt && cursorId) {
+          // Seek pagination: fetch next page after cursor
+          dataQuery += ` AND ( ${sortExpr} < @param${paramIndex} OR ( ${sortExpr} = @param${paramIndex} AND j.JobID < @param${paramIndex + 1} ) )`;
+          dataParams.push(cursorPublishedAt, cursorId);
+          paramIndex += 2;
+          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET 0 ROWS FETCH NEXT @param${paramIndex} ROWS ONLY`;
+          dataParams.push(pageSizeNum);
+        } else if (!noPaging) {
+          const offset = (pageNum - 1) * pageSizeNum;
+          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+          dataParams.push(offset, pageSizeNum);
+          paramIndex += 2;
+        } else {
+          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC`;
+        }
+
+        const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
+        const rows = dataResult.recordset || [];
+        const last = rows.length ? rows[rows.length - 1] : null;
+        const hasMore = !noPaging && ((cursorPublishedAt && cursorId) || pageNum < totalPages) && rows.length === pageSizeNum;
+        const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
+
+        return { jobs: rows, total, totalPages, hasMore, nextCursor };
     }
 
     // Get job by ID
@@ -463,8 +500,8 @@ export class JobService {
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (tokenized + same filter set)
-    static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number }> {
+    // Search jobs with advanced filters (supports unpaged mode with caps)
+    static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number; totalPages?: number; hasMore?: boolean; nextCursor?: any | null }> {
         try {
             const {
                 page = 1,
@@ -473,7 +510,8 @@ export class JobService {
             } = searchParams || {};
 
             const f = { ...rest } as any;
-
+            const cursorPublishedAt = f.cursorPublishedAt ? new Date(f.cursorPublishedAt) : null;
+            const cursorId = f.cursorId || f.cursor;
             let whereClause = "WHERE o.IsActive = 1 AND j.Status IN ('Published', 'Draft')";
             const queryParams: any[] = [];
             let paramIndex = 0;
@@ -485,15 +523,14 @@ export class JobService {
                 tokens.forEach(tok => {
                     tokenClauses.push(`j.Title LIKE @param${paramIndex}`);
                     tokenClauses.push(`ISNULL(j.Description, '') LIKE @param${paramIndex + 1}`);
-                    tokenClauses.push(`ISNULL(j.Requirements, '') LIKE @param${paramIndex + 2}`);
-                    tokenClauses.push(`ISNULL(j.Tags, '') LIKE @param${paramIndex + 3}`);
-                    tokenClauses.push(`o.Name LIKE @param${paramIndex + 4}`);
-                    tokenClauses.push(`ISNULL(j.Location, '') LIKE @param${paramIndex + 5}`);
-                    tokenClauses.push(`ISNULL(j.City, '') LIKE @param${paramIndex + 6}`);
-                    tokenClauses.push(`ISNULL(j.Country, '') LIKE @param${paramIndex + 7}`);
+                    tokenClauses.push(`ISNULL(j.Tags, '') LIKE @param${paramIndex + 2}`);
+                    tokenClauses.push(`o.Name LIKE @param${paramIndex + 3}`);
+                    tokenClauses.push(`ISNULL(j.Location, '') LIKE @param${paramIndex + 4}`);
+                    tokenClauses.push(`ISNULL(j.City, '') LIKE @param${paramIndex + 5}`);
+                    tokenClauses.push(`ISNULL(j.Country, '') LIKE @param${paramIndex + 6}`);
                     const like = `%${tok}%`;
-                    queryParams.push(like, like, like, like, like, like, like, like);
-                    paramIndex += 8;
+                    queryParams.push(like, like, like, like, like, like, like);
+                    paramIndex += 7;
                 });
                 whereClause += ` AND (${tokenClauses.join(' OR ')})`;
             }
@@ -504,7 +541,7 @@ export class JobService {
                 paramIndex += 3;
             }
 
-            const jobTypeIds: number[] = normalizeIdList(f.jobTypeIds, f.jobTypeId, f.jobType);
+            const jobTypeIds: number[] = pickIdList(f, ['jobTypeIds','jobTypeId','jobType']);
             if (jobTypeIds.length) {
                 const placeholders = jobTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
                 whereClause += ` AND j.JobTypeID IN (${placeholders})`;
@@ -512,7 +549,7 @@ export class JobService {
                 paramIndex += jobTypeIds.length;
             }
 
-            const workplaceTypeIds: number[] = normalizeIdList(f.workplaceTypeIds, f.workplaceTypeId);
+            const workplaceTypeIds: number[] = pickIdList(f, ['workplaceTypeIds','workplaceTypeId']);
             if (workplaceTypeIds.length) {
                 const placeholders = workplaceTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
                 whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
@@ -576,10 +613,17 @@ export class JobService {
 
             const countResult = await dbService.executeQuery(countQuery, queryParams);
             const total = countResult.recordset?.[0]?.total || 0;
-            if (total === 0) return { jobs: [], total: 0 };
+            if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
 
-            const offset = (page - 1) * pageSize;
-            const dataQuery = `
+            // Caps and unpaged decision
+            const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
+            const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
+            const noPaging = !!allowUnpaged;
+            const pageNum = Math.max(Number(page) || 1, 1);
+            const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+
+            const sortExpr = 'COALESCE(j.PublishedAt, j.CreatedAt)';
+            let dataQuery = `
                 SELECT 
                   j.*,
                   jt.Type as JobTypeName,
@@ -591,17 +635,35 @@ export class JobService {
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
                 ${whereClause}
-                ORDER BY CASE WHEN j.PublishedAt IS NOT NULL THEN j.PublishedAt ELSE j.CreatedAt END DESC
-                OFFSET @param${paramIndex} ROWS
-                FETCH NEXT @param${paramIndex + 1} ROWS ONLY
             `;
 
-            const dataParams = [...queryParams, offset, pageSize];
+            const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
+            const dataParams: any[] = [...queryParams];
+
+            if (!noPaging && cursorPublishedAt && cursorId) {
+                dataQuery += ` AND ( ${sortExpr} < @param${paramIndex} OR ( ${sortExpr} = @param${paramIndex} AND j.JobID < @param${paramIndex + 1} ) )`;
+                dataParams.push(cursorPublishedAt, cursorId);
+                paramIndex += 2;
+                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET 0 ROWS FETCH NEXT @param${paramIndex} ROWS ONLY`;
+                dataParams.push(pageSizeNum);
+            } else if (!noPaging) {
+                const offset = (pageNum - 1) * pageSizeNum;
+                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+                dataParams.push(offset, pageSizeNum);
+                paramIndex += 2;
+            } else {
+                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC`;
+            }
+
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-            return { jobs: dataResult.recordset || [], total };
+            const rows = dataResult.recordset || [];
+            const last = rows.length ? rows[rows.length - 1] : null;
+            const hasMore = !noPaging && ((cursorPublishedAt && cursorId) || pageNum < totalPages) && rows.length === pageSizeNum;
+            const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
+            return { jobs: rows, total, totalPages, hasMore, nextCursor };
         } catch (error) {
             console.error('Error in JobService.searchJobs (advanced):', error);
-            return { jobs: [], total: 0 };
+            return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
         }
     }
 }
@@ -621,4 +683,16 @@ function normalizeIdList(...candidates: any[]): number[] {
     }
   }
   return [];
+}
+
+function pickIdList(obj: any, names: string[]): number[] {
+  if (!obj) return [];
+  // try exact names first
+  let ids = normalizeIdList(...names.map(n => obj[n]));
+  if (ids.length) return ids;
+  // case-insensitive fallback
+  const lowerMap: Record<string, any> = {};
+  Object.keys(obj).forEach(k => (lowerMap[k.toLowerCase()] = obj[k]));
+  ids = normalizeIdList(...names.map(n => lowerMap[n.toLowerCase()]));
+  return ids;
 }
