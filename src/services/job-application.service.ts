@@ -80,41 +80,8 @@ export class JobApplicationService {
             throw new ConflictError('You have already applied for this job');
         }
         
-        // Generate application ID
+        // Create application - FIXED: Use multiple separate queries without transactions
         const applicationId = AuthService.generateUniqueId();
-        
-        // Create application - FIXED: Handle optional fields better
-        const insertQuery = `
-            INSERT INTO JobApplications (
-                ApplicationID, JobID, ApplicantID, ResumeURL, CoverLetter,
-                ExpectedSalary, ExpectedCurrencyID, AvailableFromDate, StatusID,
-                SubmittedAt, LastUpdatedAt
-            ) VALUES (
-                @param0, @param1, @param2, @param3, @param4,
-                @param5, @param6, @param7, 1,
-                GETUTCDATE(), GETUTCDATE()
-            );
-            
-            -- Update job application count
-            UPDATE Jobs 
-            SET CurrentApplications = ISNULL(CurrentApplications, 0) + 1, UpdatedAt = GETUTCDATE()
-            WHERE JobID = @param1;
-            
-            -- Remove from SavedJobs if present (auto-unsave on apply)
-            DELETE FROM SavedJobs WHERE JobID = @param1 AND ApplicantID = @param2;
-            
-            -- Get the created application with details
-            SELECT 
-                ja.*,
-                j.Title as JobTitle,
-                o.Name as CompanyName,
-                aps.Status as StatusName
-            FROM JobApplications ja
-            INNER JOIN Jobs j ON ja.JobID = j.JobID
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-            WHERE ja.ApplicationID = @param0;
-        `;
         
         const parameters = [
             applicationId,
@@ -128,28 +95,70 @@ export class JobApplicationService {
         ];
         
         try {
-            const result = await dbService.executeQuery<JobApplication>(insertQuery, parameters);
+            // Insert application
+            const insertQuery = `
+                INSERT INTO JobApplications (
+                    ApplicationID, JobID, ApplicantID, ResumeURL, CoverLetter,
+                    ExpectedSalary, ExpectedCurrencyID, AvailableFromDate, StatusID,
+                    SubmittedAt, LastUpdatedAt
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4,
+                    @param5, @param6, @param7, 1,
+                    GETUTCDATE(), GETUTCDATE()
+                )
+            `;
+            
+            await dbService.executeQuery(insertQuery, parameters);
+            
+            // Update job application count
+            const updateJobQuery = `
+                UPDATE Jobs 
+                SET CurrentApplications = ISNULL(CurrentApplications, 0) + 1, UpdatedAt = GETUTCDATE()
+                WHERE JobID = @param0
+            `;
+            await dbService.executeQuery(updateJobQuery, [validatedData.jobID]);
+            
+            // Remove from SavedJobs if present
+            try {
+                const removeSavedQuery = `DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1`;
+                await dbService.executeQuery(removeSavedQuery, [validatedData.jobID, applicantId]);
+            } catch (e) {
+                console.warn('Failed to remove from saved jobs:', e);
+            }
+            
+            // Get the created application with details
+            const selectQuery = `
+                SELECT 
+                    ja.*,
+                    j.Title as JobTitle,
+                    o.Name as CompanyName,
+                    aps.Status as StatusName
+                FROM JobApplications ja
+                INNER JOIN Jobs j ON ja.JobID = j.JobID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                WHERE ja.ApplicationID = @param0
+            `;
+            
+            const result = await dbService.executeQuery<JobApplication>(selectQuery, [applicationId]);
             
             if (!result.recordset || result.recordset.length === 0) {
-                throw new Error('Failed to create job application');
+                throw new Error('Failed to retrieve created job application');
             }
             
             // Create initial application tracking record (optional)
             try {
-                await this.createApplicationTracking(applicationId, 1); // InitialScreening
+                await this.createApplicationTracking(applicationId, 1);
             } catch (trackingError) {
                 console.warn('Failed to create application tracking:', trackingError);
-                // Don't fail the whole operation for tracking
             }
             
-            // Update applicant's last applied date and search score (system-managed)
+            // Update applicant metadata (optional)
             try {
                 await this.updateApplicantLastApplication(applicantId);
-                // Also update search score to reflect application activity
                 await this.updateApplicantSearchScore(applicantUserId);
             } catch (updateError) {
                 console.warn('Failed to update applicant metadata:', updateError);
-                // Don't fail the whole operation for this update
             }
             
             return result.recordset[0];

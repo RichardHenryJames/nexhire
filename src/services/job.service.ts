@@ -59,11 +59,11 @@ export class JobService {
             validatedData.tags, validatedData.internalNotes, null, null, 0
         ];
 
-        const placeholders = fields.map((_, index) => `@param${index}`).join(', ');
+        const placeholders = fields.map((_, index) => `@param${index}`);
 
         const query = `
             INSERT INTO Jobs (${fields.join(', ')})
-            VALUES (${placeholders});
+            VALUES (${placeholders.join(', ')});
             
             SELECT j.*, jt.Type as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
@@ -132,20 +132,36 @@ export class JobService {
             paramIndex += 3;
         }
 
-        const jobTypeIds: number[] = pickIdList(f, ['jobTypeIds','jobTypeId','jobType']);
-        if (jobTypeIds.length) {
-            const placeholders = jobTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
-            whereClause += ` AND jt.JobTypeID IN (${placeholders})`;
-            queryParams.push(...jobTypeIds);
-            paramIndex += jobTypeIds.length;
+        // SIMPLIFIED: Direct jobTypeIds filter (comma-separated or single)
+        if (f.jobTypeIds) {
+            const jobTypeStr = String(f.jobTypeIds).trim();
+            if (jobTypeStr) {
+                const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                console.log('DEBUG: jobTypeIds parsed:', ids, 'from input:', f.jobTypeIds);
+                if (ids.length > 0) {
+                    const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                    whereClause += ` AND j.JobTypeID IN (${placeholders})`;
+                    console.log('DEBUG: jobTypeIds WHERE clause:', `AND j.JobTypeID IN (${placeholders})`);
+                    queryParams.push(...ids);
+                    paramIndex += ids.length;
+                }
+            }
         }
 
-        const workplaceTypeIds: number[] = pickIdList(f, ['workplaceTypeIds','workplaceTypeId']);
-        if (workplaceTypeIds.length) {
-            const placeholders = workplaceTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
-            whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
-            queryParams.push(...workplaceTypeIds);
-            paramIndex += workplaceTypeIds.length;
+        // SIMPLIFIED: Direct workplaceTypeIds filter (comma-separated or single)  
+        if (f.workplaceTypeIds) {
+            const workplaceTypeStr = String(f.workplaceTypeIds).trim();
+            if (workplaceTypeStr) {
+                const ids = workplaceTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                console.log('DEBUG: workplaceTypeIds parsed:', ids, 'from input:', f.workplaceTypeIds);
+                if (ids.length > 0) {
+                    const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                    whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
+                    console.log('DEBUG: workplaceTypeIds WHERE clause:', `AND j.WorkplaceTypeID IN (${placeholders})`);
+                    queryParams.push(...ids);
+                    paramIndex += ids.length;
+                }
+            }
         }
 
         if (f.isRemote !== undefined) {
@@ -189,7 +205,7 @@ export class JobService {
         }
 
         if (f.postedWithinDays) {
-            whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), SYSUTCDATETIME()) <= @param${paramIndex}`;
+            whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
             queryParams.push(Number(f.postedWithinDays));
             paramIndex++;
         }
@@ -541,20 +557,36 @@ export class JobService {
                 paramIndex += 3;
             }
 
-            const jobTypeIds: number[] = pickIdList(f, ['jobTypeIds','jobTypeId','jobType']);
-            if (jobTypeIds.length) {
-                const placeholders = jobTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
-                whereClause += ` AND j.JobTypeID IN (${placeholders})`;
-                queryParams.push(...jobTypeIds);
-                paramIndex += jobTypeIds.length;
+            // SIMPLIFIED: Direct jobTypeIds filter (comma-separated or single)
+            if (f.jobTypeIds) {
+                const jobTypeStr = String(f.jobTypeIds).trim();
+                if (jobTypeStr) {
+                    const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    console.log('SEARCH DEBUG: jobTypeIds parsed:', ids, 'from input:', f.jobTypeIds);
+                    if (ids.length > 0) {
+                        const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                        whereClause += ` AND j.JobTypeID IN (${placeholders})`;
+                        console.log('SEARCH DEBUG: jobTypeIds WHERE clause added');
+                        queryParams.push(...ids);
+                        paramIndex += ids.length;
+                    }
+                }
             }
 
-            const workplaceTypeIds: number[] = pickIdList(f, ['workplaceTypeIds','workplaceTypeId']);
-            if (workplaceTypeIds.length) {
-                const placeholders = workplaceTypeIds.map((_, i) => `@param${paramIndex + i}`).join(',');
-                whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
-                queryParams.push(...workplaceTypeIds);
-                paramIndex += workplaceTypeIds.length;
+            // SIMPLIFIED: Direct workplaceTypeIds filter (comma-separated or single)  
+            if (f.workplaceTypeIds) {
+                const workplaceTypeStr = String(f.workplaceTypeIds).trim();
+                if (workplaceTypeStr) {
+                    const ids = workplaceTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    console.log('SEARCH DEBUG: workplaceTypeIds parsed:', ids, 'from input:', f.workplaceTypeIds);
+                    if (ids.length > 0) {
+                        const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                        whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
+                        console.log('SEARCH DEBUG: workplaceTypeIds WHERE clause added');
+                        queryParams.push(...ids);
+                        paramIndex += ids.length;
+                    }
+                }
             }
 
             if (f.isRemote !== undefined) {
@@ -598,7 +630,7 @@ export class JobService {
             }
 
             if (f.postedWithinDays) {
-                whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), SYSUTCDATETIME()) <= @param${paramIndex}`;
+                whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
                 queryParams.push(Number(f.postedWithinDays));
                 paramIndex++;
             }
@@ -666,33 +698,4 @@ export class JobService {
             return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
         }
     }
-}
-
-// Helpers
-function normalizeIdList(...candidates: any[]): number[] {
-  for (const c of candidates) {
-    if (Array.isArray(c)) {
-      return c.map(x => Number(x)).filter(n => !isNaN(n));
-    }
-    if (typeof c === 'string') {
-      const parts = c.split(',').map(s => s.trim()).filter(Boolean);
-      if (parts.length) return parts.map(p => Number(p)).filter(n => !isNaN(n));
-    }
-    if (typeof c === 'number') {
-      return [c];
-    }
-  }
-  return [];
-}
-
-function pickIdList(obj: any, names: string[]): number[] {
-  if (!obj) return [];
-  // try exact names first
-  let ids = normalizeIdList(...names.map(n => obj[n]));
-  if (ids.length) return ids;
-  // case-insensitive fallback
-  const lowerMap: Record<string, any> = {};
-  Object.keys(obj).forEach(k => (lowerMap[k.toLowerCase()] = obj[k]));
-  ids = normalizeIdList(...names.map(n => lowerMap[n.toLowerCase()]));
-  return ids;
 }

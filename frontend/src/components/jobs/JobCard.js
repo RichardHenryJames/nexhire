@@ -8,7 +8,7 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave }) => {
+const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, savedContext = false }) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -33,6 +33,11 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
   const jobTypeName = job.JobTypeName || resolveNameById(jobTypes, job.JobTypeID, 'JobTypeID', 'Type');
   const workplaceName = job.WorkplaceTypeName || resolveNameById(workplaceTypes, job.WorkplaceTypeID, 'WorkplaceTypeID', 'Type') || (job.WorkplaceType || (job.IsRemote ? 'Remote' : ''));
 
+  const hasSalary = job.SalaryRangeMin != null && job.SalaryRangeMax != null;
+  const salaryText = hasSalary
+    ? `$${Number(job.SalaryRangeMin).toLocaleString()} - $${Number(job.SalaryRangeMax).toLocaleString()} ${job.SalaryPeriod || 'Annual'}`
+    : '';
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
       <View style={styles.header}>
@@ -52,21 +57,28 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
         </View>
       )}
 
-      {job.SalaryRangeMin != null && job.SalaryRangeMax != null && (
-        <Text style={styles.salary}>
-          ${Number(job.SalaryRangeMin).toLocaleString()} - ${Number(job.SalaryRangeMax).toLocaleString()} {job.SalaryPeriod || 'Annual'}
-        </Text>
-      )}
-
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-          <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
-          <Text style={styles.saveText}>Save</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-          <Ionicons name="paper-plane-outline" size={18} color="#fff" />
-          <Text style={styles.applyText}>Apply</Text>
-        </TouchableOpacity>
+      {/* Footer row: salary on left, actions on right */}
+      <View style={styles.footerRow}>
+        <View style={{ flexShrink: 1 }}>
+          {hasSalary ? (<Text style={styles.salary} numberOfLines={1}>{salaryText}</Text>) : null}
+        </View>
+        <View style={styles.actionsInline}>
+          {savedContext ? (
+            <View style={styles.savedPill} accessibilityRole="text">
+              <Ionicons name="bookmark" size={18} color="#0d47a1" />
+              <Text style={styles.saveText}>Saved</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
+              <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+            <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+            <Text style={styles.applyText}>Apply</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -125,18 +137,30 @@ const styles = StyleSheet.create({
   },
   dot: { color: '#bbb' },
   salary: {
-    marginTop: 8,
     fontSize: 13,
     color: '#0b6',
     fontWeight: '600',
   },
-  actionsRow: {
-    marginTop: 12,
+  footerRow: {
+    marginTop: 10,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  actionsInline: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#e3f2fd',
+    marginRight: 10,
+  },
+  savedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,

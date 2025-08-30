@@ -99,7 +99,8 @@ export default function JobsScreen({ navigation }) {
   const [currencies, setCurrencies] = useState([]);
 
   // Smart filter toggle
-  const [smartEnabled] = useState(true);
+  // Default: do not auto-apply any personalization filters on first load
+  const [smartEnabled] = useState(false);
   const [personalizationApplied, setPersonalizationApplied] = useState(false);
   const [smartBoosts, setSmartBoosts] = useState({});
   // Compute if any smart boost is actually set (avoid undefined keys)
@@ -168,8 +169,58 @@ export default function JobsScreen({ navigation }) {
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedCount, setAppliedCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [appliedIds, setAppliedIds] = useState(new Set());
+  const [savedIds, setSavedIds] = useState(new Set());
 
-  // Counts from backend
+  // Preload applied IDs and list
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await nexhireAPI.getMyApplications(1, 500);
+        if (r?.success) {
+          const ids = new Set((r.data || []).map(a => a.JobID));
+          setAppliedIds(ids);
+          const items = (r.data || []).map(a => ({
+            JobID: a.JobID,
+            Title: a.JobTitle || a.Title,
+            OrganizationName: a.CompanyName || a.OrganizationName,
+            Location: a.JobLocation || a.Location,
+            SalaryRangeMin: a.SalaryRangeMin,
+            SalaryRangeMax: a.SalaryRangeMax,
+            PublishedAt: a.SubmittedAt,
+          }));
+          setAppliedJobs(items);
+          setAppliedCount(Number(r.meta?.total || items.length || 0));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Preload saved IDs
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await nexhireAPI.getMySavedJobs(1, 500);
+        if (r?.success) {
+          const ids = new Set((r.data || []).map(s => s.JobID));
+          setSavedIds(ids);
+          setSavedJobs(r.data || []);
+          setSavedCount(Number(r.meta?.total || (r.data || []).length || 0));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // After fetching openings or when id sets change, filter out applied/saved
+  useEffect(() => {
+    if ((!appliedIds || appliedIds.size === 0) && (!savedIds || savedIds.size === 0)) return;
+    setJobs(prev => prev.filter(j => {
+      const id = j.JobID || j.id;
+      return !appliedIds.has(id) && !savedIds.has(id);
+    }));
+  }, [appliedIds, savedIds]);
+
+  // Counts from backend (applied/saved); openings count is computed from visible list
   const refreshCounts = useCallback(async () => {
     try {
       const [appliedRes, savedRes] = await Promise.all([
@@ -235,11 +286,9 @@ export default function JobsScreen({ navigation }) {
         if (boostWorkplaceTypeIds.length) nextBoosts.boostWorkplaceTypeIds = boostWorkplaceTypeIds.join(',');
         setSmartBoosts(nextBoosts);
 
-        setFilters({ ...EMPTY_FILTERS, postedWithinDays: 30 });
-        setFilterDraft({ ...EMPTY_FILTERS, postedWithinDays: 30 });
-
+        // Do NOT apply any default filters. Keep initial list unfiltered.
         setPersonalizationApplied(true);
-        triggerReload();
+         
       } else {
         setPersonalizationApplied(true);
       }
@@ -249,14 +298,14 @@ export default function JobsScreen({ navigation }) {
     }
   }, [user, jobTypes, workplaceTypes, triggerReload]);
 
-  // Personalize once on first load if smartEnabled and no user input yet
-  useEffect(() => {
-    const ready = !!user && !personalizationApplied && smartEnabled;
-    const pristine = searchQuery.length === 0 && !isFiltersDirty(filters);
-    if (ready && pristine) {
-      applySmart();
-    }
-  }, [user, personalizationApplied, smartEnabled, searchQuery, filters, applySmart]);
+  // Personalize only if explicitly enabled
+   useEffect(() => {
+     const ready = !!user && !personalizationApplied && smartEnabled;
+     const pristine = searchQuery.length === 0 && !isFiltersDirty(filters);
+     if (ready && pristine) {
+       applySmart();
+     }
+   }, [user, personalizationApplied, smartEnabled, searchQuery, filters, applySmart]);
 
   // Load reference data once
   useEffect(() => {
@@ -306,7 +355,9 @@ export default function JobsScreen({ navigation }) {
         setLoading(true);
         const apiFilters = {};
         if (filters.location) apiFilters.location = filters.location;
+        // Send jobTypeIds as comma-separated string
         if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
+        // Send workplaceTypeIds as comma-separated string  
         if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
         if (filters.salaryMin) apiFilters.salaryMin = filters.salaryMin;
         if (filters.salaryMax) apiFilters.salaryMax = filters.salaryMax;
@@ -329,14 +380,18 @@ export default function JobsScreen({ navigation }) {
 
         if (result.success) {
           const list = Array.isArray(result.data) ? result.data : [];
-          if (!mountedRef.current) return;
-          setJobs(list);
+          // Filter out applied jobs from openings
+          const filtered = list.filter(j => {
+            const id = j.JobID || j.id;
+            return !appliedIds.has(id) && !savedIds.has(id);
+          });
+          setJobs(filtered);
           const meta = result.meta || {};
           setPagination(prev => ({
             ...prev,
             page: meta.page || 1,
-            total: meta.total || list.length,
-            totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
+            total: filtered.length,
+            totalPages: meta.totalPages || Math.ceil((filtered.length) / (meta.pageSize || prev.pageSize)),
             nextCursor: meta.nextCursor || null,
             hasMore: meta.hasMore ?? (meta.page ? (meta.page < (meta.totalPages || 1)) : false)
           }));
@@ -394,12 +449,13 @@ export default function JobsScreen({ navigation }) {
 
       if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        setJobs(prev => [...prev, ...list]);
+        const filtered = list.filter(j => !appliedIds.has(j.JobID || j.id) && !savedIds.has(j.JobID || j.id));
+        setJobs(prev => [...prev, ...filtered]);
         const meta = result.meta || {};
         setPagination(prev => ({
           ...prev,
           page: meta.page || ((prev.page || 1) + (useCursor ? 0 : 1)),
-          total: meta.total || (prev.total + list.length),
+          total: (prev.total + filtered.length),
           totalPages: meta.totalPages || prev.totalPages,
           nextCursor: meta.nextCursor || null,
           hasMore: meta.hasMore ?? ((meta.page || prev.page) < (meta.totalPages || prev.totalPages))
@@ -573,13 +629,14 @@ export default function JobsScreen({ navigation }) {
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
             onSave={() => handleSave(job)}
+            savedContext={activeTab === 'saved'}
           />
         </Animated.View>
       );
     });
   };
 
-  const openingsCount = Math.max(pagination.total || jobs.length, 0);
+  const openingsCount = jobs.length;
 
   // Tabs header uses exact backend counts for applied/saved
   const Tabs = () => (
@@ -733,7 +790,7 @@ export default function JobsScreen({ navigation }) {
         <View style={[styles.quickFiltersContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.quickFiltersScroll, { flex: 1 }]} contentContainerStyle={{ paddingRight: 12 }}>
             <View style={styles.quickFilterItem}>
-              <Text style={styles.quickFilterLabel}>JOB TYPE</Text>
+              {/* Removed heading label for compact UI */}
               <TouchableOpacity 
                 style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
                 onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
@@ -746,7 +803,7 @@ export default function JobsScreen({ navigation }) {
             </View>
 
             <View style={styles.quickFilterItem}>
-              <Text style={styles.quickFilterLabel}>WORKPLACE</Text>
+              {/* Removed heading label for compact UI */}
               <TouchableOpacity 
                 style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
                 onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
@@ -759,7 +816,7 @@ export default function JobsScreen({ navigation }) {
             </View>
 
             <View style={styles.quickFilterItem}>
-              <Text style={styles.quickFilterLabel}>POSTED</Text>
+              {/* Removed heading label for compact UI */}
               <TouchableOpacity 
                 style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
                 onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
@@ -783,11 +840,7 @@ export default function JobsScreen({ navigation }) {
       {/* Expanded Quick Filter Slider */}
       {activeTab === 'openings' && expandedQuick && (
         <View style={styles.sliderBar}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionHeaderText}>
-              {expandedQuick === 'jobType' ? 'JOB TYPES' : expandedQuick === 'workplace' ? 'WORKPLACE TYPES' : 'POSTED WITHIN'}
-            </Text>
-          </View>
+          {/* Removed section header to keep compact */}
           <Animated.View style={[styles.sliderRow, sliderAnimatedStyle]}>
             {expandedQuick === 'jobType' && jobTypes.map(jt => (
               <TouchableOpacity

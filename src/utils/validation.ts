@@ -341,8 +341,14 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         })(),
         // Add other common search parameters with safe parsing
         location: query.get('location') || undefined,
-        jobType: query.get('jobType') || undefined,
-        experienceLevel: query.get('experienceLevel') || undefined,
+        // FIXED: include all filtering keys used by JobService
+        jobTypeIds: (query.get('jobTypeIds') || undefined) as any,
+        workplaceTypeIds: (query.get('workplaceTypeIds') || undefined) as any,
+        department: query.get('department') || undefined,
+        currencyId: (parseNumber(query.get('currencyId'), 0) || undefined) as any,
+        experienceMin: (parseNumber(query.get('experienceMin'), 0) || undefined) as any,
+        experienceMax: (parseNumber(query.get('experienceMax'), 0) || undefined) as any,
+        postedWithinDays: (parseNumber(query.get('postedWithinDays'), 0) || undefined) as any,
         isRemote: parseBoolean(query.get('isRemote')),
         salaryMin: parseNumber(query.get('salaryMin'), 0) || undefined,
         salaryMax: parseNumber(query.get('salaryMax'), 0) || undefined,
@@ -351,7 +357,7 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         company: query.get('company') || undefined,
         datePosted: query.get('datePosted') || undefined,
         workType: query.get('workType') || undefined
-    };
+    } as any;
 };
 
 // FIXED: Extract request body with better error handling
