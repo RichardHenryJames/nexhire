@@ -169,91 +169,53 @@ export class JobApplicationService {
         }
     }
     
-    // Get applications for a user (job seeker) - FIXED: Handle missing applicant profile
+    // Get applications for a user (job seeker) - SIMPLIFIED APPROACH
     static async getApplicationsByUser(userId: string, params: PaginationParams): Promise<{ applications: JobApplication[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'SubmittedAt', sortOrder = 'desc' } = params;
-        
+
         try {
-            // Get applicant ID - FIXED: Create profile if doesn't exist
-            let applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-            let applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
-            
-            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-                // Create applicant profile if it doesn't exist
-                console.log('Creating applicant profile for user in getApplicationsByUser:', userId);
-                const applicantId = AuthService.generateUniqueId();
-                
-                const createApplicantQuery = `
-                    INSERT INTO Applicants (
-                        ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-                        AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                        ImmediatelyAvailable, WillingToRelocate, IsFeatured,
-                        CreatedAt, UpdatedAt
-                    ) VALUES (
-                        @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
-                        GETUTCDATE(), GETUTCDATE()
-                    )
-                `;
-                
-                try {
-                    await dbService.executeQuery(createApplicantQuery, [applicantId, userId]);
-                    // Return empty applications for newly created profile
-                    return { applications: [], total: 0, totalPages: 0 };
-                } catch (error) {
-                    console.error('Failed to create applicant profile:', error);
-                    return { applications: [], total: 0, totalPages: 0 };
-                }
-            }
-            
-            const applicantId = applicantResult.recordset[0].ApplicantID;
-            
-            // Get total count
-            const countQuery = 'SELECT COUNT(*) as total FROM JobApplications WHERE ApplicantID = @param0';
-            const countResult = await dbService.executeQuery(countQuery, [applicantId]);
-            const total = countResult.recordset[0]?.total || 0;
-            const totalPages = Math.ceil(total / pageSize);
+            // Simple direct query without complex JOINs first
+            const directQuery = `
+                SELECT 
+                    ja.ApplicationID,
+                    ja.JobID,
+                    ja.ApplicantID,
+                    ja.StatusID,
+                    ja.SubmittedAt,
+                    ja.LastUpdatedAt,
+                    j.Title as JobTitle,
+                    o.Name as CompanyName,
+                    aps.Status as StatusName
+                FROM JobApplications ja
+                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                INNER JOIN Jobs j ON ja.JobID = j.JobID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                WHERE a.UserID = '${userId}'
+                ORDER BY ja.SubmittedAt DESC
+            `;
+
+            const result = await dbService.executeQuery<JobApplication>(directQuery, []);
+            const applications = result.recordset || [];
+            const total = applications.length;
             
             if (total === 0) {
                 return { applications: [], total: 0, totalPages: 0 };
             }
-            
-            // Get paginated applications
-            const offset = (page - 1) * pageSize;
-            const dataQuery = `
-                SELECT 
-                    ja.*,
-                    j.Title as JobTitle,
-                    ISNULL(j.Location, '') as JobLocation,
-                    j.SalaryRangeMin,
-                    j.SalaryRangeMax,
-                    ISNULL(c.Symbol, '$') as CurrencySymbol,
-                    o.Name as CompanyName,
-                    ISNULL(o.LogoURL, '') as CompanyLogo,
-                    aps.Status as StatusName,
-                    ISNULL(at.ScreeningScore, 0) as ScreeningScore,
-                    ISNULL(at.InterviewStage, 0) as InterviewStage,
-                    at.NextInterviewDate
-                FROM JobApplications ja
-                INNER JOIN Jobs j ON ja.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-                LEFT JOIN Currencies c ON ja.ExpectedCurrencyID = c.CurrencyID
-                LEFT JOIN ApplicationTracking at ON ja.ApplicationID = at.ApplicationID
-                WHERE ja.ApplicantID = @param0
-                ORDER BY ja.${sortBy} ${sortOrder.toUpperCase()}
-                OFFSET @param1 ROWS
-                FETCH NEXT @param2 ROWS ONLY
-            `;
-            
-            const dataResult = await dbService.executeQuery<JobApplication>(dataQuery, [applicantId, offset.toString(), pageSize.toString()]);
-            
+
+            // Manual pagination
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedApplications = applications.slice(startIndex, endIndex);
+            const totalPages = Math.ceil(total / pageSize);
+
             return {
-                applications: dataResult.recordset || [],
+                applications: paginatedApplications,
                 total,
                 totalPages
             };
         } catch (error) {
-            console.error('Error getting applications by user:', error);
+            console.error('Error in getApplicationsByUser (simplified):', error);
             return { applications: [], total: 0, totalPages: 0 };
         }
     }

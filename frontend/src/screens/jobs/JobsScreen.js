@@ -672,6 +672,12 @@ export default function JobsScreen({ navigation }) {
       }
       const res = await nexhireAPI.applyToJob(id);
       if (res?.success) {
+        // Immediately reflect in appliedIds so future fetches filter it out
+        setAppliedIds(prev => {
+          const next = new Set(prev ?? new Set());
+          next.add(id);
+          return next;
+        });
         setAppliedCount(c => (Number(c) || 0) + 1);
       }
     } catch (e) {
@@ -681,7 +687,12 @@ export default function JobsScreen({ navigation }) {
       if (activeTab === 'saved') {
         try { 
           const r = await nexhireAPI.getMySavedJobs(1, 50); 
-          if (r?.success) setSavedJobs(r.data || []); 
+          if (r?.success) {
+            setSavedJobs(r.data || []);
+            // keep savedIds in sync as well
+            const ids = new Set((r.data || []).map(s => s.JobID));
+            setSavedIds(ids);
+          }
         } catch {}
       } else if (activeTab === 'applied') {
         try { 
@@ -697,6 +708,8 @@ export default function JobsScreen({ navigation }) {
               PublishedAt: a.SubmittedAt 
             }));
             setAppliedJobs(items);
+            const ids = new Set((r.data || []).map(a => a.JobID));
+            setAppliedIds(ids);
           }
         } catch {}
       }
@@ -714,7 +727,15 @@ export default function JobsScreen({ navigation }) {
         });
       }
       const res = await nexhireAPI.saveJob(id);
-      if (res?.success) setSavedCount(c => (Number(c) || 0) + 1);
+      if (res?.success) {
+        setSavedCount(c => (Number(c) || 0) + 1);
+        // Keep savedIds in sync immediately
+        setSavedIds(prev => {
+          const next = new Set(prev ?? new Set());
+          next.add(id);
+          return next;
+        });
+      }
     } catch (e) {
       console.error('Save error', e);
     } finally {
