@@ -81,16 +81,16 @@ export class JobService {
         return result.recordset[0];
     }
 
-    // Get all jobs with filtering and pagination (supports unpaged mode with caps)
+    // Get all jobs with filtering and pagination (supports unpaged mode with caps) - FIXED: User filtering
     static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number; hasMore: boolean; nextCursor: any | null }> {
-        const { page, pageSize } = params;
+        const { page, pageSize, excludeUserApplications } = params;
         let { sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
         const cursorPublishedAt = f.cursorPublishedAt ? new Date(f.cursorPublishedAt) : null;
         const cursorId = f.cursorId || f.cursor;
 
         // DEBUG: log incoming params minimal (avoid PII)
-        try { console.log('getJobs() raw params:', JSON.stringify({ page, pageSize, sortBy, sortOrder, q: f.q, jobTypeIds: f.jobTypeIds, postedWithinDays: f.postedWithinDays })); } catch {}
+        try { console.log('getJobs() raw params:', JSON.stringify({ page, pageSize, sortBy, sortOrder, q: f.q, jobTypeIds: f.jobTypeIds, postedWithinDays: f.postedWithinDays, excludeUser: !!excludeUserApplications })); } catch {}
 
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
@@ -106,6 +106,21 @@ export class JobService {
         let whereClause = "WHERE j.Status IN ('Published', 'Draft') AND o.IsActive = 1";
         const queryParams: any[] = [];
         let paramIndex = 0;
+
+        // FIXED: Add user-specific filtering to exclude applied/saved jobs
+        if (excludeUserApplications) {
+            whereClause += ` AND j.JobID NOT IN (
+                SELECT DISTINCT ja.JobID FROM JobApplications ja 
+                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                WHERE a.UserID = @param${paramIndex}
+                UNION
+                SELECT DISTINCT sj.JobID FROM SavedJobs sj
+                INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
+                WHERE a.UserID = @param${paramIndex + 1}
+            )`;
+            queryParams.push(excludeUserApplications, excludeUserApplications);
+            paramIndex += 2;
+        }
 
         const searchTerm = (search || f.search || f.q || '').toString().trim();
         if (searchTerm) {
@@ -516,12 +531,13 @@ export class JobService {
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (supports unpaged mode with caps)
+    // Search jobs with advanced filters (supports unpaged mode with caps) - FIXED: User filtering
     static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number; totalPages?: number; hasMore?: boolean; nextCursor?: any | null }> {
         try {
             const {
                 page = 1,
                 pageSize = 20,
+                excludeUserApplications,
                 ...rest
             } = searchParams || {};
 
@@ -531,6 +547,21 @@ export class JobService {
             let whereClause = "WHERE o.IsActive = 1 AND j.Status IN ('Published', 'Draft')";
             const queryParams: any[] = [];
             let paramIndex = 0;
+
+            // FIXED: Add user-specific filtering to exclude applied/saved jobs
+            if (excludeUserApplications) {
+                whereClause += ` AND j.JobID NOT IN (
+                    SELECT DISTINCT ja.JobID FROM JobApplications ja 
+                    INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                    WHERE a.UserID = @param${paramIndex}
+                    UNION
+                    SELECT DISTINCT sj.JobID FROM SavedJobs sj
+                    INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
+                    WHERE a.UserID = @param${paramIndex + 1}
+                )`;
+                queryParams.push(excludeUserApplications, excludeUserApplications);
+                paramIndex += 2;
+            }
 
             const searchTerm = (f.search || f.q || '').toString().trim();
             if (searchTerm) {

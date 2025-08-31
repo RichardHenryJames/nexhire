@@ -47,8 +47,8 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['write:jobs']);
 
-// Get all jobs (paged, supports cursor)
-export const getJobs = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+// Get all jobs (paged, supports cursor) - FIXED: User-aware filtering
+export const getJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const params = extractQueryParams(req);
         let validated: PaginationParams;
@@ -57,7 +57,16 @@ export const getJobs = withErrorHandling(async (req: HttpRequest, context: Invoc
         } catch {
             validated = { page: 1, pageSize: 20, sortBy: undefined, sortOrder: 'desc' };
         }
-        const combined = { ...params, page: validated.page, pageSize: validated.pageSize, sortBy: validated.sortBy, sortOrder: validated.sortOrder } as any;
+        const combined = { 
+            ...params, 
+            page: validated.page, 
+            pageSize: validated.pageSize, 
+            sortBy: validated.sortBy, 
+            sortOrder: validated.sortOrder,
+            // Add user filtering for applied/saved exclusion
+            excludeUserApplications: user.userId
+        } as any;
+        
         const result = await JobService.getJobs(combined);
         return {
             status: 200,
@@ -74,7 +83,7 @@ export const getJobs = withErrorHandling(async (req: HttpRequest, context: Invoc
         console.error('Error in getJobs:', error);
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve jobs' } };
     }
-});
+}, ['read:jobs']);
 
 // Get job by ID
 export const getJobById = withErrorHandling(async (req: HttpRequest): Promise<HttpResponseInit> => {
@@ -148,11 +157,18 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['delete:jobs']);
 
-// Search jobs (paged, supports cursor)
-export const searchJobs = withErrorHandling(async (req: HttpRequest): Promise<HttpResponseInit> => {
+// Search jobs (paged, supports cursor) - FIXED: User-aware filtering
+export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const searchParams = extractQueryParams(req);
-        const safeParams = { ...searchParams, page: searchParams.page || 1, pageSize: searchParams.pageSize || 20 } as any;
+        const safeParams = { 
+            ...searchParams, 
+            page: searchParams.page || 1, 
+            pageSize: searchParams.pageSize || 20,
+            // Add user filtering for applied/saved exclusion
+            excludeUserApplications: user.userId
+        } as any;
+        
         const result = await JobService.searchJobs(safeParams);
         const totalPages = Math.max(Math.ceil((result.total || 0) / (Number(safeParams.pageSize) || 20)), 1);
         const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
@@ -172,7 +188,7 @@ export const searchJobs = withErrorHandling(async (req: HttpRequest): Promise<Ht
         console.error('Error in searchJobs:', error);
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to search jobs' } };
     }
-});
+}, ['read:jobs']);
 
 // Get jobs by organization
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {

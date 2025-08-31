@@ -211,15 +211,6 @@ export default function JobsScreen({ navigation }) {
     })();
   }, []);
 
-  // After fetching openings or when id sets change, filter out applied/saved
-  useEffect(() => {
-    if ((!appliedIds || appliedIds.size === 0) && (!savedIds || savedIds.size === 0)) return;
-    setJobs(prev => prev.filter(j => {
-      const id = j.JobID || j.id;
-      return !appliedIds.has(id) && !savedIds.has(id);
-    }));
-  }, [appliedIds, savedIds]);
-
   // Counts from backend (applied/saved); openings count is computed from visible list
   const refreshCounts = useCallback(async () => {
     try {
@@ -380,18 +371,14 @@ export default function JobsScreen({ navigation }) {
 
         if (result.success) {
           const list = Array.isArray(result.data) ? result.data : [];
-          // Filter out applied jobs from openings
-          const filtered = list.filter(j => {
-            const id = j.JobID || j.id;
-            return !appliedIds.has(id) && !savedIds.has(id);
-          });
-          setJobs(filtered);
+          // Backend now filters applied/saved jobs automatically - no frontend filtering needed
+          setJobs(list);
           const meta = result.meta || {};
           setPagination(prev => ({
             ...prev,
             page: meta.page || 1,
-            total: filtered.length,
-            totalPages: meta.totalPages || Math.ceil((filtered.length) / (meta.pageSize || prev.pageSize)),
+            total: list.length,
+            totalPages: meta.totalPages || Math.ceil((list.length) / (meta.pageSize || prev.pageSize)),
             nextCursor: meta.nextCursor || null,
             hasMore: meta.hasMore ?? (meta.page ? (meta.page < (meta.totalPages || 1)) : false)
           }));
@@ -449,13 +436,13 @@ export default function JobsScreen({ navigation }) {
 
       if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        const filtered = list.filter(j => !appliedIds.has(j.JobID || j.id) && !savedIds.has(j.JobID || j.id));
-        setJobs(prev => [...prev, ...filtered]);
+        // Backend now filters applied/saved jobs automatically - no frontend filtering needed
+        setJobs(prev => [...prev, ...list]);
         const meta = result.meta || {};
         setPagination(prev => ({
           ...prev,
           page: meta.page || ((prev.page || 1) + (useCursor ? 0 : 1)),
-          total: (prev.total + filtered.length),
+          total: (prev.total + list.length),
           totalPages: meta.totalPages || prev.totalPages,
           nextCursor: meta.nextCursor || null,
           hasMore: meta.hasMore ?? ((meta.page || prev.page) < (meta.totalPages || prev.totalPages))

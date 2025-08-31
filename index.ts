@@ -338,20 +338,20 @@ app.http('jobs-search', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'search/jobs',
-    handler: withErrorHandling(searchJobs)
+    handler: searchJobs
 });
 
 app.http('jobs', {
     methods: ['GET', 'POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'jobs',
-    handler: withErrorHandling(async (req, context) => {
+    handler: async (req, context) => {
         if (req.method === 'GET') {
             return await getJobs(req, context);
         } else {
             return await createJob(req, context);
         }
-    })
+    }
 });
 
 app.http('jobs-by-id', {
