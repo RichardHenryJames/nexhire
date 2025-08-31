@@ -394,15 +394,26 @@ class NexHireAPI {
 
   // Jobs APIs
   async getJobs(page = 1, pageSize = 20, filters = {}, fetchOptions = {}) {
+    // If cursor-based pagination is requested, DO NOT send page
+    const usingCursor = !!(filters && (filters.cursorPublishedAt || filters.cursorId));
+
     // Clean filters: drop undefined/null/empty strings and join arrays
     const cleaned = {};
-    const input = { page: page.toString(), pageSize: pageSize.toString(), ...filters };
+    const base = usingCursor
+      ? { pageSize: pageSize.toString(), ...filters }
+      : { page: page.toString(), pageSize: pageSize.toString(), ...filters };
 
-    for (const [k, v] of Object.entries(input)) {
+    for (const [k, v] of Object.entries(base)) {
       if (v === undefined || v === null) continue;
       if (typeof v === 'string' && v.trim() === '') continue;
       cleaned[k] = Array.isArray(v) ? v.join(',') : v;
     }
+
+    // Explicitly remove page if using cursor (double safety)
+    if (usingCursor) {
+      delete cleaned.page;
+    }
+
     const params = new URLSearchParams(cleaned);
     return this.apiCall(`/jobs?${params}`, fetchOptions);
   }

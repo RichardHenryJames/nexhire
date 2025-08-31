@@ -159,12 +159,13 @@ export const styles = StyleSheet.create({
   jobList: {
     flex: 1,
     paddingTop: 8,
+    paddingBottom: 16,
   },
   loadingContainer: {
-    flex: 1,
+    minHeight: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 24,
   },
   loadingText: {
     fontSize: 16,
@@ -172,11 +173,11 @@ export const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyContainer: {
-    flex: 1,
+    minHeight: 260,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 32,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
   },
   emptyTitle: {
     fontSize: 18,

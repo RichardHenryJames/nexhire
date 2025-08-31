@@ -284,8 +284,20 @@ export class JobService {
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
         const rows = dataResult.recordset || [];
         const last = rows.length ? rows[rows.length - 1] : null;
-        const hasMore = !noPaging && ((cursorPublishedAt && cursorId) || pageNum < totalPages) && rows.length === pageSizeNum;
+        
+        // FIXED: Better hasMore calculation - don't require exact page size match
+        const hasMore = !noPaging && pageNum < totalPages;
         const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
+
+        console.log('?? BACKEND getJobs pagination debug:', {
+            total,
+            pageNum,
+            totalPages,
+            pageSizeNum,
+            rowsReturned: rows.length,
+            hasMore,
+            noPaging
+        });
 
         return { jobs: rows, total, totalPages, hasMore, nextCursor };
     }
@@ -721,8 +733,21 @@ export class JobService {
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
             const rows = dataResult.recordset || [];
             const last = rows.length ? rows[rows.length - 1] : null;
-            const hasMore = !noPaging && ((cursorPublishedAt && cursorId) || pageNum < totalPages) && rows.length === pageSizeNum;
+            
+            // FIXED: Better hasMore calculation - don't require exact page size match
+            const hasMore = !noPaging && pageNum < totalPages;
             const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
+            
+            console.log('?? BACKEND searchJobs pagination debug:', {
+                total,
+                pageNum,
+                totalPages,
+                pageSizeNum,
+                rowsReturned: rows.length,
+                hasMore,
+                noPaging
+            });
+            
             return { jobs: rows, total, totalPages, hasMore, nextCursor };
         } catch (error) {
             console.error('Error in JobService.searchJobs (advanced):', error);
