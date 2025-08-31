@@ -394,24 +394,22 @@ class NexHireAPI {
 
   // Jobs APIs
   async getJobs(page = 1, pageSize = 20, filters = {}, fetchOptions = {}) {
-    // If cursor-based pagination is requested, DO NOT send page
-    const usingCursor = !!(filters && (filters.cursorPublishedAt || filters.cursorId));
+    // Page-based only
+    const userId = this.getUserIdFromToken();
 
-    // Clean filters: drop undefined/null/empty strings and join arrays
+    const base = { page: page.toString(), pageSize: pageSize.toString(), ...filters };
+
+    // Always add user exclusion if user is logged in
+    if (userId && this.token) {
+      base.excludeUserApplications = userId;
+    }
+
+    // Clean filters
     const cleaned = {};
-    const base = usingCursor
-      ? { pageSize: pageSize.toString(), ...filters }
-      : { page: page.toString(), pageSize: pageSize.toString(), ...filters };
-
     for (const [k, v] of Object.entries(base)) {
       if (v === undefined || v === null) continue;
       if (typeof v === 'string' && v.trim() === '') continue;
       cleaned[k] = Array.isArray(v) ? v.join(',') : v;
-    }
-
-    // Explicitly remove page if using cursor (double safety)
-    if (usingCursor) {
-      delete cleaned.page;
     }
 
     const params = new URLSearchParams(cleaned);
@@ -731,7 +729,7 @@ class NexHireAPI {
           CanViewAnalytics: false,
           RecruitmentFocus: '',
           LinkedInProfile: '',
-          Bio: '',
+          Bio: ''
         }
       };
     }

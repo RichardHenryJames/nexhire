@@ -65,7 +65,7 @@ export default function JobsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -259,6 +259,9 @@ export default function JobsScreen({ navigation }) {
   const listAbortRef = useRef(null);
   const loadMoreAbortRef = useRef(null);
   const mountedRef = useRef(true);
+  // NEW: guards to prevent duplicate load-more triggers
+  const isLoadingMoreRef = useRef(false);
+  const lastAutoLoadPageRef = useRef(0);
   
   useEffect(() => () => {
     mountedRef.current = false;
@@ -304,13 +307,13 @@ export default function JobsScreen({ navigation }) {
           const list = Array.isArray(result.data) ? result.data : [];
           setJobs(list);
           const meta = result.meta || {};
+          const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (meta.page ? (meta.page < (meta.totalPages || 1)) : false);
           setPagination(prev => ({
             ...prev,
             page: meta.page || 1,
             total: meta.total || list.length,
             totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
-            nextCursor: meta.nextCursor || null,
-            hasMore: meta.hasMore ?? (meta.page ? (meta.page < (meta.totalPages || 1)) : false)
+            hasMore
           }));
         }
       } catch (e) {
@@ -331,13 +334,30 @@ export default function JobsScreen({ navigation }) {
   const loadMoreJobs = useCallback(async () => {
     if (showFiltersRef.current) return;
     if (loading || loadingMore) return;
-    if (!pagination.hasMore) return;
+    if (isLoadingMoreRef.current) return;
+    if (!pagination.hasMore) {
+      console.log('🛑 Load more skipped - no more jobs available');
+      return;
+    }
+
+    const nextPage = (pagination.page || 1) + 1;
+    if (pagination.totalPages && nextPage > pagination.totalPages) {
+      console.log(`🛑 Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
+      setPagination(prev => ({ ...prev, hasMore: false }));
+      return;
+    }
+
+    if (lastAutoLoadPageRef.current === nextPage) {
+      console.log(`🛑 Skipping duplicate auto-load for page ${nextPage}`);
+      return;
+    }
 
     if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
     const controller = new AbortController();
     loadMoreAbortRef.current = controller;
 
     try {
+      isLoadingMoreRef.current = true;
       setLoadingMore(true);
       const apiFilters = {};
       if (filters.location) apiFilters.location = filters.location;
@@ -351,47 +371,44 @@ export default function JobsScreen({ navigation }) {
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
 
-      const useCursor = pagination.nextCursor && pagination.nextCursor.publishedAt && pagination.nextCursor.id;
-      const baseParams = useCursor
-        ? { ...apiFilters, cursorPublishedAt: pagination.nextCursor.publishedAt, cursorId: pagination.nextCursor.id, pageSize: pagination.pageSize }
-        : { ...apiFilters, page: (pagination.page || 1) + 1, pageSize: pagination.pageSize };
-
       let result;
       if (debouncedQuery.trim().length > 0 || hasBoosts) {
-        result = await nexhireAPI.searchJobs(debouncedQuery.trim(), baseParams, { signal: controller.signal });
+        result = await nexhireAPI.searchJobs(debouncedQuery.trim(), { ...apiFilters, page: nextPage, pageSize: pagination.pageSize }, { signal: controller.signal });
       } else {
-        const pageArg = baseParams.page || ((pagination.page || 1) + 1);
-        result = await nexhireAPI.getJobs(pageArg, pagination.pageSize, baseParams, { signal: controller.signal });
+        result = await nexhireAPI.getJobs(nextPage, pagination.pageSize, apiFilters, { signal: controller.signal });
       }
       if (controller.signal.aborted) return;
 
       if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        const shouldReplace = jobs.length === 0;
-        
-        if (shouldReplace) {
-          console.log('?? Smart pagination: Replacing empty job list with new page');
-          setJobs(list);
-        } else {
-          setJobs(prev => [...prev, ...list]);
-        }
+        console.log(`📄 Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
+        setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
         setPagination(prev => ({
           ...prev,
-          page: meta.page || (useCursor ? prev.page : ((prev.page || 1) + 1)),
+          page: meta.page || nextPage,
           total: meta.total ?? prev.total,
           totalPages: meta.totalPages ?? prev.totalPages,
-          nextCursor: meta.nextCursor || null,
           hasMore: Boolean(meta.hasMore)
         }));
+
+        if (list.length === 0) {
+          console.log('🛑 No more jobs returned - setting hasMore to false');
+          setPagination(prev => ({ ...prev, hasMore: false }));
+        } else {
+          lastAutoLoadPageRef.current = meta.page || nextPage;
+        }
       }
     } catch (e) {
       if (e?.name !== 'AbortError') console.error('Error loading more jobs:', e);
     } finally {
-      if (!controller.signal.aborted) setLoadingMore(false);
+      if (!controller.signal.aborted) {
+        setLoadingMore(false);
+        isLoadingMoreRef.current = false;
+      }
     }
-  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, pagination.totalPages, pagination.nextCursor, debouncedQuery, filters, hasBoosts, jobs.length]);
+  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, pagination.totalPages, debouncedQuery, filters, hasBoosts]);
 
   // ===== Infinite scroll =====
   const onScrollNearEnd = useCallback((e) => {
@@ -405,6 +422,39 @@ export default function JobsScreen({ navigation }) {
       loadMoreJobs();
     }
   }, [loading, loadingMore, pagination.hasMore, loadMoreJobs]);
+
+  // Smart pagination monitoring with improved UX
+  useEffect(() => {
+    if (activeTab !== 'openings' || loading || loadingMore) return;
+    const backendHasMore = pagination.hasMore;
+    const lowThreshold = 5;
+
+    console.log(`🔍 Smart Pagination Check:`, {
+      jobsLength: jobs.length,
+      lowThreshold,
+      backendHasMore,
+      currentPage: pagination.page,
+      totalPages: pagination.totalPages,
+      total: pagination.total
+    });
+    
+    if (!backendHasMore) {
+      console.log('🛑 Smart pagination skipped - backend says no more jobs available');
+      return;
+    }
+    
+    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
+      console.log(`🛑 Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      setPagination(prev => ({ ...prev, hasMore: false }));
+      return;
+    }
+
+    // Trigger proactive load only once per page and only if not already loading
+    if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
+      console.log(`🔄 Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      loadMoreJobs();
+    }
+  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, pagination.page, pagination.totalPages, loadMoreJobs]);
 
   // ===== Handlers =====
   const openFilters = useCallback(() => { setFilterDraft({ ...filters }); setShowFilters(true); }, [filters]);
@@ -537,8 +587,8 @@ export default function JobsScreen({ navigation }) {
           <Text style={styles.emptyMessage}>
             {activeTab === 'openings' 
               ? hasMoreToLoad 
-                ? 'Applied to all jobs on this page. More opportunities may be available.'
-                : 'Great job! You\'ve applied to all available opportunities. New jobs will appear here as they\'re posted.'
+                ? 'Checking for more opportunities...'
+                : `You've seen all ${pagination.total || 65} available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
               : 'New opportunities will appear here.'
             }
           </Text>
@@ -547,7 +597,7 @@ export default function JobsScreen({ navigation }) {
             <TouchableOpacity 
               style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
               onPress={() => {
-                console.log('?? Manual Load More triggered');
+                console.log('📱 Manual Load More triggered');
                 setSmartPaginating(true);
                 loadMoreJobs();
                 setTimeout(() => setSmartPaginating(false), 2000);
@@ -608,18 +658,31 @@ export default function JobsScreen({ navigation }) {
         setJobs(prev => {
           const updated = prev.filter(j => (j.JobID || j.id) !== id);
           
-          // Smart pagination
-          if (updated.length === 0 && pagination.hasMore) {
-            console.log('🔄 Smart pagination: Current page empty, fetching next page...');
-            setSmartPaginating(true);
+          // FIXED: Trigger reload when jobs become empty to refresh pagination metadata
+          if (updated.length === 0) {
+            console.log('🔄 Jobs array empty after apply - triggering fresh reload to check for more data');
+            // RESET pagination to page 1 to avoid currentPage > totalPages mismatch
+            setPagination(p => ({ ...p, page: 1 }));
             setTimeout(() => {
-              loadMoreJobs();
-              setTimeout(() => setSmartPaginating(false), 1500);
+              triggerReload();
             }, 100);
           }
           
           return updated;
         });
+        
+        // FIXED: Update pagination metadata immediately when removing jobs
+        setPagination(prev => {
+          const newTotal = Math.max((prev.total || 0) - 1, 0);
+          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+          return {
+            ...prev,
+            total: newTotal,
+            totalPages: newTotalPages,
+            hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
+          };
+        });
+        
         setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
       } else if (activeTab === 'saved') {
         setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
@@ -670,7 +733,7 @@ export default function JobsScreen({ navigation }) {
         } catch {}
       }
     }
-  }, [activeTab, refreshCounts, pagination.hasMore, loadMoreJobs]);
+  }, [activeTab, refreshCounts, triggerReload]);
 
   const handleSave = useCallback(async (job) => {
     if (!job) return;
@@ -679,7 +742,34 @@ export default function JobsScreen({ navigation }) {
     try {
       if (activeTab === 'openings') {
         // Immediate update without animation
-        setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+        setJobs(prev => {
+          const updated = prev.filter(j => (j.JobID || j.id) !== id);
+          
+          // FIXED: Trigger reload when jobs become empty to refresh pagination metadata
+          if (updated.length === 0) {
+            console.log('🔄 Jobs array empty after save - triggering fresh reload to check for more data');
+            // RESET pagination to page 1 to avoid currentPage > totalPages mismatch
+            setPagination(p => ({ ...p, page: 1 }));
+            setTimeout(() => {
+              triggerReload();
+            }, 100);
+          }
+          
+          return updated;
+        });
+        
+        // FIXED: Update pagination metadata immediately when removing jobs
+        setPagination(prev => {
+          const newTotal = Math.max((prev.total || 0) - 1, 0);
+          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+          return {
+            ...prev,
+            total: newTotal,
+            totalPages: newTotalPages,
+            hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
+          };
+        });
+        
         setSavedJobs(prev => [{ ...job, __savedAt: Date.now() }, ...prev]);
       }
       
@@ -703,7 +793,7 @@ export default function JobsScreen({ navigation }) {
         } catch {}
       }
     }
-  }, [activeTab, refreshCounts]);
+  }, [activeTab, refreshCounts, triggerReload]);
 
   // Tab data loading effect
   useEffect(() => {
@@ -733,38 +823,51 @@ export default function JobsScreen({ navigation }) {
     })();
   }, [activeTab]);
 
-  // Smart pagination monitoring
+  // Smart pagination monitoring with improved UX
   useEffect(() => {
     if (activeTab !== 'openings' || loading || loadingMore) return;
     
-    const lowThreshold = Math.min(3, Math.floor(pagination.pageSize / 4));
-    const hasMorePages = pagination.hasMore;
+    const backendHasMore = pagination.hasMore;
+    const lowThreshold = 5; // Trigger when only 5 jobs left
     
-    console.log(`?? Smart Pagination Check:`, {
+    console.log(`🔍 Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
-      hasMorePages,
+      backendHasMore,
       currentPage: pagination.page,
       totalPages: pagination.totalPages,
-      total: pagination.total,
-      hasMore: pagination.hasMore
+      total: pagination.total
     });
     
-    // Proactive loading
-    if (jobs.length <= lowThreshold && hasMorePages && jobs.length > 0) {
-      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left, loading more...`);
+    // Don't trigger if backend says no more
+    if (!backendHasMore) {
+      console.log('🛑 Smart pagination skipped - backend says no more jobs available');
+      return;
+    }
+    
+    // FIXED: Additional guard - don't trigger if current page >= totalPages
+    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
+      console.log(`🛑 Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      setPagination(prev => ({ ...prev, hasMore: false }));
+      return;
+    }
+
+    // Trigger proactive load only once per page and only if not already loading
+    if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
+      console.log(`🔄 Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
     
-    // Emergency loading
-    if (jobs.length === 0 && hasMorePages && !loading) {
-      console.log('?? Emergency pagination: No jobs visible, force loading next page...');
+    // Emergency loading - when user has no jobs visible but backend has more
+    if (jobs.length === 0 && backendHasMore && !loading) {
+      console.log('🔄 Emergency pagination: No jobs visible but backend says more available, loading immediately...');
       setSmartPaginating(true);
-      setPagination(prev => ({ ...prev, page: prev.page + 1 }));
-      triggerReload();
-      setTimeout(() => setSmartPaginating(false), 2000);
+      setTimeout(() => {
+        loadMoreJobs();
+        setTimeout(() => setSmartPaginating(false), 1000);
+      }, 100);
     }
-  }, [jobs.length, activeTab, loading, loadingMore, pagination.page, pagination.totalPages, pagination.total, pagination.hasMore, loadMoreJobs, triggerReload]);
+  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Render =====
   return (
@@ -913,7 +1016,7 @@ export default function JobsScreen({ navigation }) {
       {activeTab === 'openings' && (
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryText}>
-            {openingsCount} jobs found{summaryText ? ` for "${summaryText}"` : ''}
+            {(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
           </Text>
         </View>
       )}

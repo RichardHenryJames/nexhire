@@ -81,16 +81,11 @@ export class JobService {
         return result.recordset[0];
     }
 
-    // Get all jobs with filtering and pagination (supports unpaged mode with caps) - FIXED: User filtering
+    // Get all jobs with filtering and pagination (page-based only)
     static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number; hasMore: boolean; nextCursor: any | null }> {
         const { page, pageSize, excludeUserApplications } = params;
         let { sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
-        const cursorPublishedAt = f.cursorPublishedAt ? new Date(f.cursorPublishedAt) : null;
-        const cursorId = f.cursorId || f.cursor;
-
-        // DEBUG: log incoming params minimal (avoid PII)
-        try { console.log('getJobs() raw params:', JSON.stringify({ page, pageSize, sortBy, sortOrder, q: f.q, jobTypeIds: f.jobTypeIds, postedWithinDays: f.postedWithinDays, excludeUser: !!excludeUserApplications })); } catch {}
 
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
@@ -107,7 +102,7 @@ export class JobService {
         const queryParams: any[] = [];
         let paramIndex = 0;
 
-        // FIXED: Add user-specific filtering to exclude applied/saved jobs
+        // User-specific filtering to exclude applied/saved jobs
         if (excludeUserApplications) {
             whereClause += ` AND j.JobID NOT IN (
                 SELECT DISTINCT ja.JobID FROM JobApplications ja 
@@ -147,32 +142,26 @@ export class JobService {
             paramIndex += 3;
         }
 
-        // SIMPLIFIED: Direct jobTypeIds filter (comma-separated or single)
         if (f.jobTypeIds) {
             const jobTypeStr = String(f.jobTypeIds).trim();
             if (jobTypeStr) {
                 const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                console.log('DEBUG: jobTypeIds parsed:', ids, 'from input:', f.jobTypeIds);
                 if (ids.length > 0) {
                     const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
                     whereClause += ` AND j.JobTypeID IN (${placeholders})`;
-                    console.log('DEBUG: jobTypeIds WHERE clause:', `AND j.JobTypeID IN (${placeholders})`);
                     queryParams.push(...ids);
                     paramIndex += ids.length;
                 }
             }
         }
 
-        // SIMPLIFIED: Direct workplaceTypeIds filter (comma-separated or single)  
         if (f.workplaceTypeIds) {
             const workplaceTypeStr = String(f.workplaceTypeIds).trim();
             if (workplaceTypeStr) {
                 const ids = workplaceTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                console.log('DEBUG: workplaceTypeIds parsed:', ids, 'from input:', f.workplaceTypeIds);
                 if (ids.length > 0) {
                     const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
                     whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
-                    console.log('DEBUG: workplaceTypeIds WHERE clause:', `AND j.WorkplaceTypeID IN (${placeholders})`);
                     queryParams.push(...ids);
                     paramIndex += ids.length;
                 }
@@ -233,29 +222,25 @@ export class JobService {
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             ${whereClause}
         `;
-        try { console.log('getJobs() countQuery:', countQuery); console.log('getJobs() params:', queryParams); } catch {}
 
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset?.[0]?.total || 0;
+        if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
 
-        // Caps and unpaged decision
         const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
         const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
         const noPaging = !!allowUnpaged;
         const pageNum = Math.max(Number(page) || 1, 1);
         const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
-        const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
 
-        // Compute sort key for seek
         const sortExpr = 'COALESCE(j.PublishedAt, j.CreatedAt)';
-
         let dataQuery = `
           SELECT 
               j.*,
               jt.Type as JobTypeName,
               o.Name as OrganizationName,
-              o.LogoURL as OrganizationLogo,
-              c.Symbol as CurrencySymbol
+              ISNULL(o.LogoURL, '') as OrganizationLogo,
+              ISNULL(c.Symbol, '$') as CurrencySymbol
           FROM Jobs j
           INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
           INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
@@ -263,16 +248,10 @@ export class JobService {
           ${whereClause}
         `;
 
+        const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
         const dataParams: any[] = [...queryParams];
 
-        if (!noPaging && cursorPublishedAt && cursorId) {
-          // Seek pagination: fetch next page after cursor
-          dataQuery += ` AND ( ${sortExpr} < @param${paramIndex} OR ( ${sortExpr} = @param${paramIndex} AND j.JobID < @param${paramIndex + 1} ) )`;
-          dataParams.push(cursorPublishedAt, cursorId);
-          paramIndex += 2;
-          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET 0 ROWS FETCH NEXT @param${paramIndex} ROWS ONLY`;
-          dataParams.push(pageSizeNum);
-        } else if (!noPaging) {
+        if (!noPaging) {
           const offset = (pageNum - 1) * pageSizeNum;
           dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
           dataParams.push(offset, pageSizeNum);
@@ -283,23 +262,11 @@ export class JobService {
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
         const rows = dataResult.recordset || [];
-        const last = rows.length ? rows[rows.length - 1] : null;
-        
-        // FIXED: Better hasMore calculation - don't require exact page size match
-        const hasMore = !noPaging && pageNum < totalPages;
-        const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
 
-        console.log('?? BACKEND getJobs pagination debug:', {
-            total,
-            pageNum,
-            totalPages,
-            pageSizeNum,
-            rowsReturned: rows.length,
-            hasMore,
-            noPaging
-        });
+        // Page-based hasMore logic
+        const hasMore = !noPaging && rows.length === pageSizeNum && pageNum < totalPages;
 
-        return { jobs: rows, total, totalPages, hasMore, nextCursor };
+        return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
     }
 
     // Get job by ID
@@ -543,7 +510,7 @@ export class JobService {
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (supports unpaged mode with caps) - FIXED: User filtering
+    // Search jobs with advanced filters (page-based only)
     static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number; totalPages?: number; hasMore?: boolean; nextCursor?: any | null }> {
         try {
             const {
@@ -554,13 +521,10 @@ export class JobService {
             } = searchParams || {};
 
             const f = { ...rest } as any;
-            const cursorPublishedAt = f.cursorPublishedAt ? new Date(f.cursorPublishedAt) : null;
-            const cursorId = f.cursorId || f.cursor;
             let whereClause = "WHERE o.IsActive = 1 AND j.Status IN ('Published', 'Draft')";
             const queryParams: any[] = [];
             let paramIndex = 0;
 
-            // FIXED: Add user-specific filtering to exclude applied/saved jobs
             if (excludeUserApplications) {
                 whereClause += ` AND j.JobID NOT IN (
                     SELECT DISTINCT ja.JobID FROM JobApplications ja 
@@ -600,32 +564,26 @@ export class JobService {
                 paramIndex += 3;
             }
 
-            // SIMPLIFIED: Direct jobTypeIds filter (comma-separated or single)
             if (f.jobTypeIds) {
                 const jobTypeStr = String(f.jobTypeIds).trim();
                 if (jobTypeStr) {
                     const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                    console.log('SEARCH DEBUG: jobTypeIds parsed:', ids, 'from input:', f.jobTypeIds);
                     if (ids.length > 0) {
                         const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
                         whereClause += ` AND j.JobTypeID IN (${placeholders})`;
-                        console.log('SEARCH DEBUG: jobTypeIds WHERE clause added');
                         queryParams.push(...ids);
                         paramIndex += ids.length;
                     }
                 }
             }
 
-            // SIMPLIFIED: Direct workplaceTypeIds filter (comma-separated or single)  
             if (f.workplaceTypeIds) {
                 const workplaceTypeStr = String(f.workplaceTypeIds).trim();
                 if (workplaceTypeStr) {
                     const ids = workplaceTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                    console.log('SEARCH DEBUG: workplaceTypeIds parsed:', ids, 'from input:', f.workplaceTypeIds);
                     if (ids.length > 0) {
                         const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
                         whereClause += ` AND j.WorkplaceTypeID IN (${placeholders})`;
-                        console.log('SEARCH DEBUG: workplaceTypeIds WHERE clause added');
                         queryParams.push(...ids);
                         paramIndex += ids.length;
                     }
@@ -690,7 +648,6 @@ export class JobService {
             const total = countResult.recordset?.[0]?.total || 0;
             if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
 
-            // Caps and unpaged decision
             const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
             const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
             const noPaging = !!allowUnpaged;
@@ -715,13 +672,7 @@ export class JobService {
             const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
             const dataParams: any[] = [...queryParams];
 
-            if (!noPaging && cursorPublishedAt && cursorId) {
-                dataQuery += ` AND ( ${sortExpr} < @param${paramIndex} OR ( ${sortExpr} = @param${paramIndex} AND j.JobID < @param${paramIndex + 1} ) )`;
-                dataParams.push(cursorPublishedAt, cursorId);
-                paramIndex += 2;
-                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET 0 ROWS FETCH NEXT @param${paramIndex} ROWS ONLY`;
-                dataParams.push(pageSizeNum);
-            } else if (!noPaging) {
+            if (!noPaging) {
                 const offset = (pageNum - 1) * pageSizeNum;
                 dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
                 dataParams.push(offset, pageSizeNum);
@@ -732,23 +683,10 @@ export class JobService {
 
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
             const rows = dataResult.recordset || [];
-            const last = rows.length ? rows[rows.length - 1] : null;
+
+            const hasMore = !noPaging && rows.length === pageSizeNum && pageNum < totalPages;
             
-            // FIXED: Better hasMore calculation - don't require exact page size match
-            const hasMore = !noPaging && pageNum < totalPages;
-            const nextCursor = last ? { publishedAt: last.PublishedAt || last.CreatedAt || last.UpdatedAt, id: last.JobID } : null;
-            
-            console.log('?? BACKEND searchJobs pagination debug:', {
-                total,
-                pageNum,
-                totalPages,
-                pageSizeNum,
-                rowsReturned: rows.length,
-                hasMore,
-                noPaging
-            });
-            
-            return { jobs: rows, total, totalPages, hasMore, nextCursor };
+            return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
         } catch (error) {
             console.error('Error in JobService.searchJobs (advanced):', error);
             return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
