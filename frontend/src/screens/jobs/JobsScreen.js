@@ -808,61 +808,64 @@ export default function JobsScreen({ navigation }) {
 
       {/* Quick Filters Row (only for openings) */}
       {activeTab === 'openings' && (
-        <View style={[styles.quickFiltersContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.quickFiltersScroll, { flex: 1 }]} contentContainerStyle={{ paddingRight: 12 }}>
-            <View style={styles.quickFilterItem}>
-              {/* Removed heading label for compact UI */}
-              <TouchableOpacity 
-                style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
-                onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
-              >
-                <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                  {quickJobTypeLabel}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-              </TouchableOpacity>
-            </View>
+        <View style={styles.quickFiltersContainer}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+              <View style={styles.quickFilterItem}>
+                <TouchableOpacity 
+                  style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
+                  onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
+                >
+                  <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                    {quickJobTypeLabel}
+                  </Text>
+                  <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.quickFilterItem}>
-              {/* Removed heading label for compact UI */}
-              <TouchableOpacity 
-                style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
-                onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
-              >
-                <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                  {quickWorkplaceLabel}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-              </TouchableOpacity>
-            </View>
+              <View style={styles.quickFilterItem}>
+                <TouchableOpacity 
+                  style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
+                  onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
+                >
+                  <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                    {quickWorkplaceLabel}
+                  </Text>
+                  <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.quickFilterItem}>
-              {/* Removed heading label for compact UI */}
-              <TouchableOpacity 
-                style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
-                onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
-              >
-                <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
-                  {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Any'}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+              <View style={styles.quickFilterItem}>
+                <TouchableOpacity 
+                  style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
+                  onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
+                >
+                  <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
+                    {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Any'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
 
-          {isFiltersDirty(filters) && (
-            <TouchableOpacity style={[styles.clearAllButton, { alignSelf: 'center', marginLeft: 'auto' }]} onPress={clearAllFilters}>
-              <Text style={styles.clearAllText}>Clear All</Text>
-            </TouchableOpacity>
-          )}
+            {isFiltersDirty(filters) && (
+              <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
       {/* Expanded Quick Filter Slider */}
       {activeTab === 'openings' && expandedQuick && (
         <View style={styles.sliderBar}>
-          {/* Removed section header to keep compact */}
-          <Animated.View style={[styles.sliderRow, sliderAnimatedStyle]}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 32 }}
+            style={{ flexDirection: 'row' }}
+          >
             {expandedQuick === 'jobType' && jobTypes.map(jt => (
               <TouchableOpacity
                 key={jt.JobTypeID}
@@ -913,7 +916,7 @@ export default function JobsScreen({ navigation }) {
                 </TouchableOpacity>
               </>
             )}
-          </Animated.View>
+          </ScrollView>
         </View>
       )}
 

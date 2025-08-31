@@ -96,7 +96,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffc107',
     alignSelf: 'center',
-    marginTop: 16,
+    marginHorizontal: 8,
   },
   clearAllText: {
     fontSize: 13,
@@ -218,6 +218,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 10,
+    minWidth: 60,
   },
   chipActive: {
     borderColor: '#0066cc',
@@ -227,6 +228,7 @@ export const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 13,
     fontWeight: '600',
+    textAlign: 'center',
   },
   chipTextActive: {
     color: '#0066cc',
