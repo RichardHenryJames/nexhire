@@ -11,6 +11,7 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -37,6 +38,13 @@ const ResumeSection = ({
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [resumeLabel, setResumeLabel] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  
+  // ? NEW: Beautiful delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteResumeData, setDeleteResumeData] = useState({ id: '', label: '' });
+  const [deleting, setDeleting] = useState(false);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const scaleAnim = useState(new Animated.Value(0.8))[0];
 
   // Load resumes on component mount and when profile changes
   useEffect(() => {
@@ -46,6 +54,38 @@ const ResumeSection = ({
       loadResumes();
     }
   }, [profile?.UserID]);
+
+  // ? NEW: Animate modal appearance
+  useEffect(() => {
+    if (showDeleteModal) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showDeleteModal]);
 
   const loadResumes = async () => {
     try {
@@ -207,6 +247,7 @@ const ResumeSection = ({
     }
   };
 
+  // ? NEW: Beautiful custom delete confirmation
   const deleteResume = async (resumeId, resumeLabel) => {
     console.log('??? Delete resume called:', { resumeId, resumeLabel, resumesCount: resumes.length });
     
@@ -215,52 +256,107 @@ const ResumeSection = ({
       return;
     }
 
-    Alert.alert(
-      'Delete Resume',
-      `Are you sure you want to delete "${resumeLabel}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => performDeleteResume(resumeId, resumeLabel)
-        }
-      ]
-    );
+    // ? NEW: Check if trying to delete primary resume
+    const resumeToDelete = resumes.find(r => r.ResumeID === resumeId);
+    if (resumeToDelete && resumeToDelete.IsPrimary) {
+      Alert.alert(
+        'Cannot Delete Primary Resume', 
+        'This is your primary resume and cannot be deleted. Please set another resume as primary first, then try deleting this one.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+
+    console.log('??? Showing beautiful confirmation dialog...');
+    setDeleteResumeData({ id: resumeId, label: resumeLabel });
+    setShowDeleteModal(true);
+  };
+
+  // ? NEW: Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    console.log('??? User confirmed delete - calling performDeleteResume...');
+    setShowDeleteModal(false);
+    await performDeleteResume(deleteResumeData.id, deleteResumeData.label);
+  };
+
+  // ? NEW: Handle delete cancel
+  const handleDeleteCancel = () => {
+    console.log('??? User cancelled delete');
+    setShowDeleteModal(false);
+    setDeleteResumeData({ id: '', label: '' });
   };
 
   const performDeleteResume = async (resumeId, resumeLabel) => {
+    console.log('??? === PERFORM DELETE RESUME START ===');
+    console.log('??? Resume ID:', resumeId);
+    console.log('??? Resume Label:', resumeLabel);
+    console.log('??? Current resumes count:', resumes.length);
+    
     try {
-      console.log('??? Proceeding with delete:', resumeId);
-      setLoading(true);
+      console.log('??? Setting loading state...');
+      setDeleting(true);
       
       // ? FIXED: Ensure we have proper authentication
       if (!nexhireAPI.token) {
+        console.error('??? No auth token available');
         Alert.alert('Authentication Error', 'Please login again to delete resumes');
         return;
       }
       
-      console.log('??? Making API call to delete resume...');
+      console.log('??? Auth token verified, making API call...');
       const response = await nexhireAPI.deleteResume(resumeId);
-      console.log('??? Delete response:', response);
+      console.log('??? API response received:', response);
       
       if (response && response.success) {
-        console.log('? Resume deleted successfully');
-        Alert.alert('Success', 'Resume deleted successfully');
+        console.log('? Resume deleted successfully from server');
         
-        // ? FIXED: Force reload resumes from server
-        console.log('?? Reloading resumes...');
-        await loadResumes();
+        // ? FIXED: Immediately update local state to remove deleted resume
+        console.log('?? Updating local resumes state...');
+        setResumes(prevResumes => {
+          const updatedResumes = prevResumes.filter(r => r.ResumeID !== resumeId);
+          console.log('?? Updated local resumes count:', updatedResumes.length);
+          return updatedResumes;
+        });
+        
+        // ? FIXED: Update parent profile state as well
+        if (setProfile) {
+          console.log('?? Updating parent profile state...');
+          setProfile(prev => {
+            const updatedResumes = (prev.resumes || []).filter(r => r.ResumeID !== resumeId);
+            const newPrimaryURL = updatedResumes.find(r => r.IsPrimary)?.ResumeURL || updatedResumes[0]?.ResumeURL || '';
+            
+            console.log('?? Updated profile resumes count:', updatedResumes.length);
+            console.log('?? New primary resume URL:', newPrimaryURL);
+            
+            return {
+              ...prev,
+              resumes: updatedResumes,
+              primaryResumeURL: newPrimaryURL
+            };
+          });
+        }
+        
+        // ? NEW: Show beautiful success message
+        Alert.alert('? Success', 'Resume deleted successfully');
+        
+        // ? OPTIONAL: Reload from server as backup verification
+        console.log('?? Reloading resumes from server for verification...');
+        setTimeout(() => {
+          loadResumes();
+        }, 500);
         
         if (onUpdate) {
           onUpdate({ resumeDeleted: true });
         }
       } else {
-        console.error('? Delete failed:', response);
+        console.error('? Delete failed - server response:', response);
         Alert.alert('Error', response?.error || 'Failed to delete resume');
       }
     } catch (error) {
-      console.error('??? Error deleting resume:', error);
+      console.error('??? === ERROR DELETING RESUME ===');
+      console.error('??? Error type:', error.constructor.name);
+      console.error('??? Error message:', error.message);
+      console.error('??? Full error:', error);
       
       // ? IMPROVED: Better error messages based on error type
       let errorMessage = 'Failed to delete resume';
@@ -274,7 +370,9 @@ const ResumeSection = ({
       
       Alert.alert('Error', errorMessage);
     } finally {
-      setLoading(false);
+      console.log('??? Clearing loading state...');
+      setDeleting(false);
+      console.log('??? === PERFORM DELETE RESUME END ===');
     }
   };
 
@@ -386,7 +484,7 @@ const ResumeSection = ({
             <TouchableOpacity 
               style={[styles.actionButton, styles.deleteButton]}
               onPress={() => deleteResume(resume.ResumeID, resume.ResumeLabel)}
-              disabled={loading || resumes.length <= 1}
+              disabled={loading || resumes.length <= 1 || deleting}
             >
               <Ionicons name="trash" size={16} color={colors.danger} />
               <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
@@ -467,7 +565,9 @@ const ResumeSection = ({
           contentContainerStyle={styles.resumeSlider}
           decelerationRate="fast"
           snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
-          snapToAlignment="start"
+          snapToAlignment="center"
+          contentInset={{ left: 0, right: 0 }}
+          contentOffset={{ x: -CARD_MARGIN, y: 0 }}
         >
           {resumes.map((resume, index) => renderResumeCard(resume, index))}
         </ScrollView>
@@ -482,6 +582,68 @@ const ResumeSection = ({
           <Text style={styles.uploadingText}>Uploading resume...</Text>
         </View>
       )}
+
+      {/* ? NEW: Beautiful Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={handleDeleteCancel}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <Animated.View 
+            style={[
+              styles.deleteModalContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }]
+              }
+            ]}
+          >
+            {/* Icon */}
+            <View style={styles.deleteModalIcon}>
+              <Ionicons name="trash" size={32} color={colors.danger} />
+            </View>
+
+            {/* Title */}
+            <Text style={styles.deleteModalTitle}>Delete Resume</Text>
+            
+            {/* Message */}
+            <Text style={styles.deleteModalMessage}>
+              Are you sure you want to delete "{deleteResumeData.label}"? This action cannot be undone.
+            </Text>
+
+            {/* Buttons */}
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={styles.deleteModalCancelButton}
+                onPress={handleDeleteCancel}
+                disabled={deleting}
+              >
+                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.deleteModalDeleteButton, deleting && styles.deleteModalDeleteButtonDisabled]}
+                onPress={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <ActivityIndicator size="small" color={colors.white} style={{ marginRight: 8 }} />
+                    <Text style={styles.deleteModalDeleteText}>Deleting...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="trash" size={16} color={colors.white} style={{ marginRight: 8 }} />
+                    <Text style={styles.deleteModalDeleteText}>Delete</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* Resume Label Modal */}
       <Modal
@@ -601,7 +763,8 @@ const styles = StyleSheet.create({
 
   // Resume Slider Styles
   resumeSlider: {
-    paddingHorizontal: CARD_MARGIN,
+    paddingHorizontal: (screenWidth - CARD_WIDTH) / 2, // ? FIXED: Center first card
+    alignItems: 'center',
   },
   resumeCard: {
     width: CARD_WIDTH,
@@ -692,6 +855,91 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: colors.danger || '#EF4444',
+  },
+
+  // ? NEW: Beautiful Delete Modal Styles
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: colors.surface || colors.background || '#FFFFFF',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 350,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  deleteModalIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.danger + '15' || '#EF444415',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  deleteModalTitle: {
+    fontSize: typography.sizes?.xl || 24,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.text || '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalMessage: {
+    fontSize: typography.sizes?.md || 16,
+    color: colors.gray600 || '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteModalCancelButton: {
+    flex: 1,
+    backgroundColor: colors.gray100 || '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteModalCancelText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.gray700 || '#374151',
+  },
+  deleteModalDeleteButton: {
+    flex: 1,
+    backgroundColor: colors.danger || '#EF4444',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  deleteModalDeleteButtonDisabled: {
+    opacity: 0.7,
+  },
+  deleteModalDeleteText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.white || '#FFFFFF',
   },
 
   // Empty State Styles
