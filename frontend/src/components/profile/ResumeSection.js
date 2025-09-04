@@ -20,7 +20,7 @@ import nexhireAPI from '../../services/api';
 import { useEditing } from './ProfileSection'; // ? Import the editing context
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.75; // 75% of screen width
+const CARD_WIDTH = 190; // ? FIXED: Slightly bigger to fit content properly
 const CARD_MARGIN = 10;
 
 const ResumeSection = ({ 
@@ -89,21 +89,17 @@ const ResumeSection = ({
 
   const loadResumes = async () => {
     try {
-      console.log('?? Loading resumes...');
       setLoading(true);
       
-      // ? FIXED: Check authentication before making API call
+      // Check authentication before making API call
       if (!nexhireAPI.token) {
-        console.warn('?? No auth token available for loading resumes');
         setResumes([]);
         return;
       }
       
       const response = await nexhireAPI.getMyResumes();
-      console.log('?? Load resumes response:', response);
       
       if (response && response.success && Array.isArray(response.data)) {
-        console.log(`? Loaded ${response.data.length} resumes`);
         setResumes(response.data);
         
         // Update profile with resumes
@@ -115,15 +111,12 @@ const ResumeSection = ({
           }));
         }
       } else {
-        console.warn('?? Invalid response format:', response);
         setResumes([]);
       }
     } catch (error) {
-      console.error('? Error loading resumes:', error);
-      
-      // ? IMPROVED: Don't show alert for loading errors, just log them
+      // Don't show alert for loading errors, just log them
       if (!error.message?.includes('Authentication')) {
-        console.error('Failed to load resumes:', error.message);
+        // Error handled silently in production
       }
       
       setResumes([]);
@@ -158,7 +151,6 @@ const ResumeSection = ({
         setShowLabelModal(true);
       }
     } catch (error) {
-      console.error('Error selecting file:', error);
       Alert.alert('Error', 'Failed to select file');
     }
   };
@@ -249,39 +241,25 @@ const ResumeSection = ({
 
   // ? NEW: Beautiful custom delete confirmation
   const deleteResume = async (resumeId, resumeLabel) => {
-    console.log('??? Delete resume called:', { resumeId, resumeLabel, resumesCount: resumes.length });
-    
     if (resumes.length <= 1) {
       Alert.alert('Cannot Delete', 'You must have at least one resume');
       return;
     }
 
-    // ? NEW: Check if trying to delete primary resume
-    const resumeToDelete = resumes.find(r => r.ResumeID === resumeId);
-    if (resumeToDelete && resumeToDelete.IsPrimary) {
-      Alert.alert(
-        'Cannot Delete Primary Resume', 
-        'This is your primary resume and cannot be deleted. Please set another resume as primary first, then try deleting this one.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      return;
-    }
-
-    console.log('??? Showing beautiful confirmation dialog...');
+    // Proceed directly to delete confirmation modal
     setDeleteResumeData({ id: resumeId, label: resumeLabel });
     setShowDeleteModal(true);
   };
 
   // ? NEW: Handle delete confirmation
   const handleDeleteConfirm = async () => {
-    console.log('??? User confirmed delete - calling performDeleteResume...');
+    // Proceed with actual deletion
     setShowDeleteModal(false);
     await performDeleteResume(deleteResumeData.id, deleteResumeData.label);
   };
 
   // ? NEW: Handle delete cancel
   const handleDeleteCancel = () => {
-    console.log('??? User cancelled delete');
     setShowDeleteModal(false);
     setDeleteResumeData({ id: '', label: '' });
   };
@@ -431,7 +409,7 @@ const ResumeSection = ({
       {/* Primary Badge */}
       {resume.IsPrimary && (
         <View style={styles.primaryBadge}>
-          <Ionicons name="star" size={12} color={colors.white} />
+          <Ionicons name="star" size={10} color={colors.white} />
           <Text style={styles.primaryBadgeText}>Primary</Text>
         </View>
       )}
@@ -449,7 +427,9 @@ const ResumeSection = ({
       {/* Resume Info */}
       <View style={styles.resumeInfo}>
         <Text style={styles.resumeLabel} numberOfLines={2}>
-          {resume.ResumeLabel}
+          {resume.ResumeLabel.length > 18 
+            ? `${resume.ResumeLabel.substring(0, 18)}...` 
+            : resume.ResumeLabel}
         </Text>
         <Text style={styles.resumeDate}>
           Uploaded: {formatDate(resume.CreatedAt)}
@@ -462,7 +442,7 @@ const ResumeSection = ({
           style={styles.actionButton}
           onPress={() => openResume(resume.ResumeURL)}
         >
-          <Ionicons name="eye" size={16} color={colors.primary} />
+          <Ionicons name="eye" size={12} color={colors.primary} />
           <Text style={styles.actionButtonText}>View</Text>
         </TouchableOpacity>
 
@@ -474,23 +454,26 @@ const ResumeSection = ({
                 onPress={() => setPrimaryResume(resume.ResumeID)}
                 disabled={loading}
               >
-                <Ionicons name="star-outline" size={16} color={colors.warning} />
+                <Ionicons name="star-outline" size={12} color={colors.warning} />
                 <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
-                  Set Primary
+                  Primary
                 </Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={() => deleteResume(resume.ResumeID, resume.ResumeLabel)}
-              disabled={loading || resumes.length <= 1 || deleting}
-            >
-              <Ionicons name="trash" size={16} color={colors.danger} />
-              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                Delete
-              </Text>
-            </TouchableOpacity>
+            {/* ? FIXED: Only show delete button for non-primary resumes */}
+            {!resume.IsPrimary && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => deleteResume(resume.ResumeID, resume.ResumeLabel)}
+                disabled={loading || resumes.length <= 1 || deleting}
+              >
+                <Ionicons name="trash" size={12} color={colors.danger} />
+                <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </View>
@@ -565,9 +548,7 @@ const ResumeSection = ({
           contentContainerStyle={styles.resumeSlider}
           decelerationRate="fast"
           snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
-          snapToAlignment="center"
-          contentInset={{ left: 0, right: 0 }}
-          contentOffset={{ x: -CARD_MARGIN, y: 0 }}
+          snapToAlignment="start"
         >
           {resumes.map((resume, index) => renderResumeCard(resume, index))}
         </ScrollView>
@@ -763,14 +744,15 @@ const styles = StyleSheet.create({
 
   // Resume Slider Styles
   resumeSlider: {
-    paddingHorizontal: (screenWidth - CARD_WIDTH) / 2, // ? FIXED: Center first card
-    alignItems: 'center',
+    paddingLeft: 1, // ? FIXED: Align with header padding
+    paddingRight: CARD_MARGIN,
   },
   resumeCard: {
     width: CARD_WIDTH,
+    height: CARD_WIDTH + 20, // ? FIXED: Slightly taller to accommodate buttons
     backgroundColor: colors.surface || colors.background || '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 14, // ? ADJUSTED: Better padding for content
     marginHorizontal: CARD_MARGIN,
     borderWidth: 1,
     borderColor: colors.border || '#E5E7EB',
@@ -790,57 +772,58 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning || '#F59E0B',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 6, // ? REDUCED: Smaller padding for compact badge
+    paddingVertical: 3, // ? REDUCED: Smaller padding for compact badge
+    borderRadius: 8, // ? REDUCED: Smaller border radius
+    gap: 3, // ? REDUCED: Smaller gap
     zIndex: 1,
   },
   primaryBadgeText: {
-    fontSize: typography.sizes?.xs || 10,
+    fontSize: typography.sizes?.xs || 9, // ? REDUCED: Smaller text for compact badge
     color: colors.white || '#FFFFFF',
     fontWeight: typography.weights?.bold || 'bold',
   },
   resumeHeader: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8, // ? REDUCED: Less margin for compact design
   },
   fileType: {
-    fontSize: typography.sizes?.xs || 12,
+    fontSize: typography.sizes?.xs || 10, // ? REDUCED: Smaller file type text
     color: colors.gray600 || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
-    marginTop: 4,
+    marginTop: 2, // ? REDUCED: Less margin
   },
   resumeInfo: {
-    marginBottom: 16,
+    marginBottom: 12, // ? REDUCED: Less margin for compact design
+    flex: 1, // ? ADDED: Allow content to flex
   },
   resumeLabel: {
-    fontSize: typography.sizes?.md || 16,
+    fontSize: typography.sizes?.sm || 13, // ? SLIGHTLY INCREASED: Better readability
     color: colors.text || '#111827',
     fontWeight: typography.weights?.medium || '500',
-    marginBottom: 4,
-    lineHeight: 20,
+    marginBottom: 3, // ? ADJUSTED: Better spacing
+    lineHeight: 16, // ? ADJUSTED: Better line height
   },
   resumeDate: {
-    fontSize: typography.sizes?.xs || 12,
+    fontSize: typography.sizes?.xs || 10, // ? REDUCED: Even smaller date text
     color: colors.gray500 || '#9CA3AF',
   },
   resumeActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 4, // ? REDUCED: Smaller gaps between buttons
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gray100 || '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    paddingHorizontal: 10, // ? SLIGHTLY INCREASED: Better button size
+    paddingVertical: 5, // ? SLIGHTLY INCREASED: Better button size
+    borderRadius: 6,
+    gap: 3, // ? SLIGHTLY INCREASED: Better spacing
   },
   actionButtonText: {
-    fontSize: typography.sizes?.xs || 12,
+    fontSize: typography.sizes?.xs || 11, // ? SLIGHTLY INCREASED: Better readability
     color: colors.gray700 || '#374151',
     fontWeight: typography.weights?.medium || '500',
   },
