@@ -851,4 +851,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ResumeSection;export default ResumeSection;
+export default ResumeSection;
