@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
@@ -90,12 +91,122 @@ export default function JobDetailsScreen({ route, navigation }) {
       'Are you sure you want to apply for this position?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Apply', onPress: submitApplication }
+        { text: 'Apply', onPress: uploadResumeAndApply }
       ]
     );
   };
 
-  const submitApplication = async () => {
+  const uploadResumeAndApply = async () => {
+    try {
+      // First, get user's existing resumes
+      const existingResumes = await nexhireAPI.getMyResumes();
+      
+      if (existingResumes.success && existingResumes.data.length >= 3) {
+        // User has max resumes, ask if they want to replace one
+        Alert.alert(
+          'Maximum Resumes Reached',
+          'You have reached the maximum of 3 resumes. Would you like to upload a new resume (this will replace your oldest resume) or use an existing one?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Use Existing', onPress: () => showResumeSelection(existingResumes.data) },
+            { text: 'Upload New', onPress: () => uploadNewResume() }
+          ]
+        );
+        return;
+      }
+
+      // User can upload a new resume
+      await uploadNewResume();
+    } catch (error) {
+      console.error('Error checking existing resumes:', error);
+      // Fallback to upload new resume
+      await uploadNewResume();
+    }
+  };
+
+  const uploadNewResume = async () => {
+    try {
+      // Use document picker for resume - following expo document picker pattern
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+        multiple: false
+      });
+
+      console.log('?? Document picker result:', result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setApplying(true);
+        
+        const file = result.assets[0];
+        console.log('?? Selected file:', {
+          name: file.name,
+          size: file.size,
+          uri: file.uri,
+          mimeType: file.mimeType
+        });
+
+        // Ask for resume label
+        const resumeLabel = await promptForResumeLabel();
+        
+        // Upload resume with label
+        const uploadResult = await nexhireAPI.uploadResume({
+          name: file.name,
+          size: file.size,
+          uri: file.uri,
+          type: file.mimeType
+        }, user.userId, resumeLabel);
+        
+        if (uploadResult.success) {
+          console.log('?? Resume uploaded successfully:', uploadResult.data.resumeURL);
+          // Then submit application with resume URL
+          await submitApplication(uploadResult.data.resumeURL);
+        }
+      } else {
+        console.log('?? Document picker was canceled');
+      }
+    } catch (error) {
+      console.error('Resume upload error:', error);
+      Alert.alert('Upload Failed', 'Failed to upload resume. You can still apply without it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Apply Without Resume', onPress: () => submitApplication() }
+      ]);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const promptForResumeLabel = () => {
+    return new Promise((resolve) => {
+      Alert.prompt(
+        'Resume Label',
+        'Give this resume a name (e.g., "Tech Resume", "Manager Resume"):',
+        [
+          { text: 'Cancel', onPress: () => resolve('Default Resume'), style: 'cancel' },
+          { text: 'OK', onPress: (text) => resolve(text || 'Default Resume') }
+        ],
+        'plain-text',
+        'Default Resume'
+      );
+    });
+  };
+
+  const showResumeSelection = (resumes) => {
+    const resumeOptions = resumes.map(resume => ({
+      text: `${resume.ResumeLabel} ${resume.IsPrimary ? '(Primary)' : ''}`,
+      onPress: () => submitApplication(resume.ResumeURL)
+    }));
+
+    resumeOptions.push({ text: 'Cancel', style: 'cancel' });
+
+    Alert.alert(
+      'Select Resume',
+      'Choose which resume to use for this application:',
+      resumeOptions
+    );
+  };
+
+  const submitApplication = async (resumeURL) => {
     setApplying(true);
     try {
       // Prepare application data according to backend JobApplicationRequest interface
@@ -107,6 +218,11 @@ export default function JobDetailsScreen({ route, navigation }) {
         availableFromDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         availabilityDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Both fields for compatibility
       };
+
+      // Include resume URL if provided
+      if (resumeURL) {
+        applicationData.resumeURL = resumeURL;
+      }
 
       const result = await nexhireAPI.applyForJob(applicationData);
       

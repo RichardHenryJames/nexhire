@@ -22,6 +22,7 @@ import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSect
 import ProfileSection, { useEditing } from '../../components/profile/ProfileSection';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
+import ResumeSection from '../../components/profile/ResumeSection';
 
 export default function ProfileScreen() {
   const { 
@@ -62,77 +63,78 @@ export default function ProfileScreen() {
     // Personal Information
     nationality: '',
     currentLocation: '',
-    preferredLocations: '',
+    preferredLocations: ''
     
     // Social Profiles
-    linkedInProfile: '',
-    githubProfile: '',
+    ,linkedInProfile: ''
+    ,githubProfile: ''
     
     // Documents
-    primaryResumeURL: '',
-    additionalDocuments: '',
+    ,primaryResumeURL: ''
+    ,resumes: [] // ? NEW: Array to store multiple resumes
+    ,additionalDocuments: ''
     
     // Education (? Enhanced with GraduationYear and GPA)
-    highestEducation: '',
-    fieldOfStudy: '',
-    institution: '',
-    graduationYear: '>',
-    gpa: '',
+    ,highestEducation: ''
+    ,fieldOfStudy: ''
+    ,institution: ''
+    ,graduationYear: '>'
+    ,gpa: ''
     
     // Professional Information
-    headline: '',
-    summary: '',
-    currentJobTitle: '',
-    currentCompany: '',
-    yearsOfExperience: 0,
-    noticePeriod: 30,
-    totalWorkExperience: '',
+    ,headline: ''
+    ,summary: ''
+    ,currentJobTitle: ''
+    ,currentCompany: ''
+    ,yearsOfExperience: 0
+    ,noticePeriod: 30
+    ,totalWorkExperience: ''
     
     // Job Preferences
-    preferredJobTypes: '',
-    preferredWorkTypes: '',
-    preferredRoles: '',
-    preferredIndustries: '',
-    minimumSalary: 0, // ? ENSURE CORRECT FIELD NAME
-    preferredCompanySize: '',
+    ,preferredJobTypes: ''
+    ,preferredWorkTypes: ''
+    ,preferredRoles: ''
+    ,preferredIndustries: ''
+    ,minimumSalary: 0 // ? ENSURE CORRECT FIELD NAME
+    ,preferredCompanySize: ''
     
     // Skills and Experience - ? UPDATED: secondarySkills as array
-    primarySkills: [],
-    secondarySkills: [], // ? CHANGED: Now an array like primarySkills
-    languages: '',
-    certifications: '',
-    workExperience: '',
+    ,primarySkills: []
+    ,secondarySkills: [] // ? CHANGED: Now an array like primarySkills
+    ,languages: ''
+    ,certifications: ''
+    ,workExperience: ''
     
     // Availability and Preferences
-    immediatelyAvailable: false,
-    willingToRelocate: false,
-    jobSearchStatus: '',
+    ,immediatelyAvailable: false
+    ,willingToRelocate: false
+    ,jobSearchStatus: ''
     
     // ? Privacy Settings (THE MAIN FIX!)
-    allowRecruitersToContact: true,
-    hideCurrentCompany: false,      // This will now work!
-    hideSalaryDetails: false,       // This will now work!
+    ,allowRecruitersToContact: true
+    ,hideCurrentCompany: false      // This will now work!
+    ,hideSalaryDetails: false       // This will now work!
     
     // Status Fields
-    isOpenToWork: true,
-    isFeatured: false,
-    featuredUntil: null,
+    ,isOpenToWork: true
+    ,isFeatured: false
+    ,featuredUntil: null
     
     // Additional
-    tags: '',
+    ,tags: ''
     
     // Legacy fields (kept for backward compatibility)
-    expectedSalary: '',
-    currencyPreference: 'USD',
-    location: '',
-    relocatable: false,
-    remotePreference: 'Hybrid',
-    workAuthorization: '',
-    resumeURL: '',
-    portfolioURL: '',
-    personalWebsite: '',
-    bio: '',
-    industries: [],
+    ,expectedSalary: ''
+    ,currencyPreference: 'USD'
+    ,location: ''
+    ,relocatable: false
+    ,remotePreference: 'Hybrid'
+    ,workAuthorization: ''
+    ,resumeURL: ''
+    ,portfolioURL: ''
+    ,personalWebsite: ''
+    ,bio: ''
+    ,industries: []
   });
 
   const [employerProfile, setEmployerProfile] = useState({
@@ -650,8 +652,9 @@ export default function ProfileScreen() {
             linkedInProfile: response.data.LinkedInProfile || '',
             githubProfile: response.data.GithubProfile || '',
             
-            // Documents
-            primaryResumeURL: response.data.PrimaryResumeURL || '',
+            // Documents - NEW: Include resumes from new schema
+            primaryResumeURL: response.data.primaryResumeURL || '',
+            resumes: response.data.resumes || [],
             additionalDocuments: response.data.AdditionalDocuments || '',
             
             // Education
@@ -711,7 +714,7 @@ export default function ProfileScreen() {
             relocatable: response.data.WillingToRelocate || false,
             remotePreference: response.data.PreferredWorkTypes || 'Hybrid',
             workAuthorization: '',
-            resumeURL: response.data.PrimaryResumeURL || '',
+            resumeURL: response.data.primaryResumeURL || '',
             portfolioURL: '',
             personalWebsite: '',
             bio: response.data.Summary || '',
@@ -935,6 +938,54 @@ export default function ProfileScreen() {
     return sectionEditing ? <>{children}</> : view;
   };
 
+  // Helper function to check if a section has meaningful data
+  const hasData = (sectionType, data = {}) => {
+    switch (sectionType) {
+      case 'skills':
+        return (data.primarySkills && data.primarySkills.length > 0) ||
+               (data.secondarySkills && data.secondarySkills.length > 0) ||
+               (data.languages && data.languages.trim()) ||
+               (data.certifications && data.certifications.trim());
+      
+      case 'workPreferences':
+        return (data.minimumSalary && data.minimumSalary > 0) ||
+               (data.preferredWorkTypes && data.preferredWorkTypes.trim()) ||
+               (data.preferredJobTypes && data.preferredJobTypes.trim()) ||
+               (data.preferredLocations && data.preferredLocations.trim()) ||
+               (data.preferredCompanySize && data.preferredCompanySize.trim());
+      
+      case 'salaryBreakdown':
+        return data.salaryBreakdown && 
+               ((data.salaryBreakdown.current && data.salaryBreakdown.current.length > 0) ||
+                (data.salaryBreakdown.expected && data.salaryBreakdown.expected.length > 0));
+      
+      case 'resumes':
+        return data.resumes && data.resumes.length > 0;
+      
+      case 'onlinePresence':
+        return (data.linkedInProfile && data.linkedInProfile.trim()) ||
+               (data.githubProfile && data.githubProfile.trim());
+      
+      case 'personalInfo':
+        return (data.firstName && data.firstName.trim()) ||
+               (data.lastName && data.lastName.trim()) ||
+               (data.phone && data.phone.trim()) ||
+               (data.dateOfBirth && data.dateOfBirth.trim()) ||
+               (data.gender && data.gender.trim());
+      
+      case 'accountSettings':
+        // Always show account settings since userType is always present
+        return true;
+      
+      case 'privacySettings':
+        // Always show privacy settings as they're important
+        return true;
+      
+      default:
+        return false;
+    }
+  };
+
   // Render the profile screen UI
   return (
     <KeyboardAvoidingView 
@@ -1025,7 +1076,6 @@ export default function ProfileScreen() {
                   gpa: updatedEducation.gpa || ''
                 }));
               }}
-              editing={editing}
               onUpdate={(updatedEducation) => {
                 console.log('Education updated:', updatedEducation);
               }}
@@ -1049,7 +1099,7 @@ export default function ProfileScreen() {
               editing={editing}
               onUpdate={(updatedData) => console.log('Skills updated:', updatedData)}
               onSave={() => saveSkillsExpertise(jobSeekerProfile)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('skills', jobSeekerProfile)}
             >
               <EditAware
                 view={
@@ -1074,7 +1124,7 @@ export default function ProfileScreen() {
               editing={editing}
               onUpdate={(updatedData) => console.log('Preferences updated:', updatedData)}
               onSave={() => saveWorkPreferences(jobSeekerProfile)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('workPreferences', jobSeekerProfile)}
             >
               <EditAware
                 view={
@@ -1103,7 +1153,7 @@ export default function ProfileScreen() {
               icon="cash"
               editing={editing}
               onSave={() => Promise.resolve(true)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('salaryBreakdown', jobSeekerProfile)}
             >
               <EditAware
                 view={
@@ -1134,40 +1184,63 @@ export default function ProfileScreen() {
               </EditAware>
             </ProfileSection>
 
-            {/* 7. ONLINE PRESENCE */}
+            {/* 7. RESUMES & DOCUMENTS */}
+            <ProfileSection 
+              title="Resumes & Documents" 
+              icon="document-text"
+              editing={editing}
+              onUpdate={(updatedData) => console.log('Resumes updated:', updatedData)}
+              onSave={() => Promise.resolve(true)}
+              defaultCollapsed={!hasData('resumes', jobSeekerProfile)}
+            >
+              <ResumeSection
+                profile={{ ...jobSeekerProfile, UserID: user?.UserID }}
+                setProfile={(updatedProfile) => {
+                  setJobSeekerProfile(prev => ({
+                    ...prev,
+                    ...updatedProfile
+                  }));
+                }}
+                onUpdate={(updatedData) => {
+                  console.log('Resume section updated:', updatedData);
+                  // ✅ REMOVED: if (onUpdate) call since onUpdate doesn't exist in ProfileScreen scope
+                  // The resume upload success is already handled by the ResumeSection internally
+                }}
+              />
+            </ProfileSection>
+
+            {/* 8. ONLINE PRESENCE */}
             <ProfileSection 
               title="Online Presence" 
               icon="link"
               editing={editing}
               onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
               onSave={() => saveOnlinePresence(jobSeekerProfile)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('onlinePresence', jobSeekerProfile)}
             >
               <EditAware
                 view={
                   <View>
-                    <ReadOnlyKVRow label="Resume URL" value={jobSeekerProfile.primaryResumeURL} icon="document" />
                     <ReadOnlyKVRow label="LinkedIn" value={jobSeekerProfile.linkedInProfile} icon="logo-linkedin" />
                     <ReadOnlyKVRow label="GitHub" value={jobSeekerProfile.githubProfile} icon="logo-github" />
                   </View>
                 }
               >
                 <>
-                  <ProfileField fieldKey="primaryResumeURL" label="Resume URL" placeholder="Link to your resume" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="linkedInProfile" label="LinkedIn Profile" placeholder="linkedin.com/in/yourprofile" options={{ profileType: 'jobSeeker' }} />
                   <ProfileField fieldKey="githubProfile" label="GitHub Profile" placeholder="github.com/yourusername" options={{ profileType: 'jobSeeker' }} />
                 </>
               </EditAware>
             </ProfileSection>
 
-            {/* 8. PERSONAL INFORMATION */}
+            {/* 9. PERSONAL INFORMATION */}
             <ProfileSection 
               title="Personal Information" 
               icon="person"
               editing={editing}
               onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
               onSave={() => savePersonalInfo({ ...profile, ...jobSeekerProfile })}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('personalInfo', profile)}
             >
               <EditAware
                 view={
@@ -1192,14 +1265,14 @@ export default function ProfileScreen() {
               </EditAware>
             </ProfileSection>
 
-            {/* 9. ACCOUNT SETTINGS */}
+            {/* 10. ACCOUNT SETTINGS */}
             <ProfileSection 
               title="Account Settings" 
               icon="cog"
               editing={editing}
               onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
               onSave={() => saveAccountSettings(profile)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('accountSettings', profile)}
             >
               <EditAware
                 view={
@@ -1216,14 +1289,14 @@ export default function ProfileScreen() {
               </EditAware>
             </ProfileSection>
 
-            {/* 10. PRIVACY SETTINGS */}
+            {/* 11. PRIVACY SETTINGS */}
             <ProfileSection 
               title="Privacy Settings" 
               icon="shield-checkmark"
               editing={editing}
               onUpdate={(updatedData) => console.log('Privacy settings updated:', updatedData)}
               onSave={() => Promise.resolve(true)}
-              defaultCollapsed={true}
+              defaultCollapsed={!hasData('privacySettings', jobSeekerProfile)}
               hideHeaderActions
             >
               {renderPrivacySettingsContent()}

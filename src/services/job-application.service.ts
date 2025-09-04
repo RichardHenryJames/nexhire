@@ -83,11 +83,41 @@ export class JobApplicationService {
         // Create application - FIXED: Use multiple separate queries without transactions
         const applicationId = AuthService.generateUniqueId();
         
+        // ? UPDATED: Determine which resume to use
+        let resumeId = null;
+        if (validatedData.resumeURL) {
+            // If resumeURL is provided, find the matching resume
+            const resumeQuery = `
+                SELECT ResumeID FROM ApplicantResumes 
+                WHERE ApplicantID = @param0 AND ResumeURL = @param1
+            `;
+            const resumeResult = await dbService.executeQuery(resumeQuery, [applicantId, validatedData.resumeURL]);
+            
+            if (resumeResult.recordset && resumeResult.recordset.length > 0) {
+                resumeId = resumeResult.recordset[0].ResumeID;
+            }
+        } else {
+            // Use primary resume if no specific resume URL provided
+            const primaryResumeQuery = `
+                SELECT ResumeID FROM ApplicantResumes 
+                WHERE ApplicantID = @param0 AND IsPrimary = 1
+            `;
+            const primaryResult = await dbService.executeQuery(primaryResumeQuery, [applicantId]);
+            
+            if (primaryResult.recordset && primaryResult.recordset.length > 0) {
+                resumeId = primaryResult.recordset[0].ResumeID;
+            }
+        }
+
+        if (!resumeId) {
+            throw new ValidationError('No resume found. Please upload a resume before applying.');
+        }
+        
         const parameters = [
             applicationId,
             validatedData.jobID,
             applicantId,
-            validatedData.resumeURL || null,
+            resumeId, // ? UPDATED: Use ResumeID instead of ResumeURL
             validatedData.coverLetter || null,
             validatedData.expectedSalary || null,
             validatedData.expectedCurrencyID || null,
@@ -95,10 +125,10 @@ export class JobApplicationService {
         ];
         
         try {
-            // Insert application
+            // Insert application - ? UPDATED: Use ResumeID instead of ResumeURL
             const insertQuery = `
                 INSERT INTO JobApplications (
-                    ApplicationID, JobID, ApplicantID, ResumeURL, CoverLetter,
+                    ApplicationID, JobID, ApplicantID, ResumeID, CoverLetter,
                     ExpectedSalary, ExpectedCurrencyID, AvailableFromDate, StatusID,
                     SubmittedAt, LastUpdatedAt
                 ) VALUES (

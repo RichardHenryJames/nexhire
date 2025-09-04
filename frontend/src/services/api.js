@@ -86,6 +86,20 @@ class NexHireAPI {
     console.log('Tokens cleared');
   }
 
+  // ✅ ADDED: Missing getAuthHeaders method
+  async getAuthHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    return headers;
+  }
+
   // Generic API call with better error handling and CORS support
   async apiCall(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -1065,24 +1079,53 @@ class NexHireAPI {
     }
   }
 
-  // Resume upload method - following the same pattern as uploadImage
-  async uploadResume(file, userId) {
+  // Resume upload method - FIXED: Better file handling
+  async uploadResume(file, userId, resumeLabel = 'Default Resume') {
     try {
       console.log('📄 === RESUME UPLOAD START ===');
       console.log('📄 Platform:', Platform.OS);
-      console.log('📄 File name:', file.name);
-      console.log('📄 File size:', file.size);
-      console.log('📄 File type:', file.type);
+      console.log('📄 File object:', file);
 
       let fileData;
       let mimeType;
       let fileName;
 
       if (Platform.OS === 'web') {
-        // Web: Convert File to base64
-        fileData = await this.fileToBase64(file);
-        mimeType = file.type;
-        fileName = file.name;
+        // Web: Handle different file types
+        if (file instanceof File) {
+          // Direct File object from input
+          fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              const base64 = result.split(',')[1]; // Remove data:type;base64, prefix
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          mimeType = file.type;
+          fileName = file.name;
+        } else if (file.uri) {
+          // Expo DocumentPicker result on web
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          
+          fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              const base64 = result.split(',')[1]; // Remove data:type;base64, prefix
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          mimeType = file.mimeType || file.type || 'application/pdf';
+          fileName = file.name;
+        } else {
+          throw new Error('Invalid file object structure');
+        }
       } else {
         // React Native: Read file and convert to base64
         const { FileSystem } = require('expo-file-system');
@@ -1090,9 +1133,15 @@ class NexHireAPI {
           encoding: FileSystem.EncodingType.Base64,
         });
         fileData = base64Data;
-        mimeType = file.type || this.getMimeTypeFromExtension(file.name);
+        mimeType = file.type || file.mimeType || this.getMimeTypeFromExtension(file.name);
         fileName = file.name;
       }
+
+      console.log('📄 Processed file:', {
+        fileName,
+        mimeType,
+        fileDataLength: fileData?.length || 0
+      });
 
       // Validate file size before upload
       const fileSizeBytes = (fileData.length * 3) / 4; // Approximate base64 to bytes
@@ -1101,23 +1150,28 @@ class NexHireAPI {
         throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
       }
 
-      const url = `${this.baseURL}/users/resume`;
-      const headers = await this.getAuthHeaders();
+      // ✅ CORRECTED: Use the exact same endpoint as our working PowerShell test
+      const url = `${API_BASE_URL}/users/resume`;
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(await this.getAuthHeaders())
+      };
 
       // Create request body following the same pattern as profile image
       const requestBody = JSON.stringify({
         fileName: fileName,
         fileData: fileData,
         mimeType: mimeType,
-        userId: userId
+        userId: userId,
+        resumeLabel: resumeLabel
       });
 
       console.log('📄 Making upload request...');
       console.log('📄 URL:', url);
-      console.log('📄 Content-Length:', requestBody.length);
-      console.log('📄 Headers:', Object.keys(headers));
+      console.log('📄 Request size:', requestBody.length);
 
-      // Make the request with explicit configuration (same as profile image)
+      // Make the request
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
@@ -1128,7 +1182,6 @@ class NexHireAPI {
       });
 
       console.log('📄 Response status:', response.status);
-      console.log('📄 Response headers:', Object.fromEntries(response.headers.entries()));
 
       // Read response
       let result;
@@ -1151,35 +1204,170 @@ class NexHireAPI {
         throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('✅ Backend upload successful:', {
+      console.log('✅ Upload successful:', {
         resumeURL: result.data?.resumeURL,
-        fileName: result.data?.fileName,
-        uploadDate: result.data?.uploadDate
+        fileName: result.data?.fileName
       });
       console.log('📄 === RESUME UPLOAD END ===');
 
       return result;
     } catch (error) {
       console.error('❌ === RESUME UPLOAD ERROR ===');
-      console.error('❌ Platform:', Platform.OS);
-      console.error('❌ Error type:', error.constructor.name);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Full error:', error);
+      console.error('❌ Error:', error);
       console.error('❌ === END ERROR LOG ===');
       throw error;
     }
   }
 
-  // Helper method to get MIME type from file extension
-  getMimeTypeFromExtension(fileName) {
-    const extension = fileName.toLowerCase().split('.').pop();
-    const mimeTypes = {
-      'pdf': 'application/pdf',
-      'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    };
-    return mimeTypes[extension] || 'application/octet-stream';
+  // NEW: Get all resumes for current user
+  async getMyResumes() {
+    try {
+      console.log('📄 API: Getting user resumes...');
+      
+      // ✅ FIXED: Check authentication first
+      if (!this.token) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      
+      const url = `${API_BASE_URL}/users/resumes`;
+      const headers = await this.getAuthHeaders();
+      
+      console.log('📄 API: Making GET request to:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      console.log('📄 API: Response status:', response.status);
+      
+      // ✅ FIXED: Handle non-JSON responses
+      let result;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+      
+      console.log('📄 API: Response data:', result);
+      
+      if (!response.ok) {
+        console.error('❌ Get resumes request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result
+        });
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('✅ Get resumes request successful');
+      return result;
+    } catch (error) {
+      console.error('❌ Get resumes API error:', error);
+      
+      // ✅ IMPROVED: Handle different error types
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+      
+      throw error;
+    }
   }
 
-  // Health check
-  async healthCheck() {
+  // NEW: Set a resume as primary
+  async setPrimaryResume(resumeId) {
+    try {
+      const url = `${API_BASE_URL}/users/resume/${resumeId}/primary`;
+      const headers = await this.getAuthHeaders();
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: headers,
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error setting primary resume:', error);
+      throw error;
+    }
+  }
+
+  // NEW: Delete a resume
+  async deleteResume(resumeId) {
+    try {
+      console.log('🗑️ API: Deleting resume:', resumeId);
+      
+      // ✅ FIXED: Check authentication first
+      if (!this.token) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      
+      const url = `${API_BASE_URL}/users/resume/${resumeId}`;
+      const headers = await this.getAuthHeaders();
+      
+      console.log('🗑️ API: Making DELETE request to:', url);
+      console.log('🗑️ API: Headers:', Object.keys(headers));
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: headers,
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      console.log('🗑️ API: Response status:', response.status);
+      console.log('🗑️ API: Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // ✅ FIXED: Handle non-JSON responses
+      let result;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+      
+      console.log('🗑️ API: Response data:', result);
+      
+      if (!response.ok) {
+        console.error('❌ Delete request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result
+        });
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('✅ Delete request successful');
+      return result;
+    } catch (error) {
+      console.error('❌ Delete resume API error:', error);
+      
+      // ✅ IMPROVED: Handle different error types
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+      
+      throw error;
+    }
+  }
+}
+
+export default new NexHireAPI();

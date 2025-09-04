@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
-import ProfileSection from './ProfileSection';
+import ProfileSection, { useEditing } from './ProfileSection';
 
 // Import the same data structures from EducationDetailsScreen
 const DEGREE_TYPES = [
@@ -186,7 +186,6 @@ const useDebounce = (value, delay) => {
 export default function EducationSection({ 
   profile, 
   setProfile, 
-  editing = false, 
   onUpdate 
 }) {
   const [loading, setLoading] = useState(false);
@@ -195,15 +194,13 @@ export default function EducationSection({
   const [activeModal, setActiveModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('India');
-  const [localEditing, setLocalEditing] = useState(false); // ? NEW: Local editing state
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Enhanced: Check if core education fields are already filled
   const hasEducationData = profile.institution && profile.highestEducation && profile.fieldOfStudy;
   const isEducationFieldEditable = (fieldName) => {
-    const currentEditMode = editing || localEditing; // ? Use either global or local editing state
-    if (!currentEditMode) return false;
+    // The editing context will be provided by ProfileSection's useEditing() hook where needed
     
     // Core education fields become non-editable once filled
     const coreFields = ['institution', 'highestEducation', 'fieldOfStudy'];
@@ -211,11 +208,7 @@ export default function EducationSection({
       return false;
     }
     
-    // ? NEW: Country also becomes non-editable when education data is filled
-    if (fieldName === 'country' && hasEducationData) {
-      return false;
-    }
-    
+    // ? REMOVED: Country check - simplified for now
     return true;
   };
 
@@ -418,87 +411,6 @@ export default function EducationSection({
     );
   };
 
-  const SelectionButton = ({ 
-    label, 
-    value, 
-    onPress, 
-    placeholder, 
-    disabled = false,
-    icon = 'chevron-down',
-    fieldName = ''
-  }) => {
-    const currentEditMode = editing || localEditing; // ? Use either global or local editing state
-    const isFieldEditable = isEducationFieldEditable(fieldName);
-    const isDisabled = disabled || !isFieldEditable;
-    
-    return (
-      <View style={styles.fieldContainer}>
-        <Text style={styles.fieldLabel}>
-          {label}
-        </Text>
-        <TouchableOpacity 
-          style={[
-            styles.selectionButton,
-            isDisabled && styles.selectionButtonDisabled,
-            !currentEditMode && styles.selectionButtonReadonly,
-            !isFieldEditable && hasEducationData && styles.selectionButtonLocked
-          ]} 
-          onPress={isDisabled ? null : onPress}
-          disabled={isDisabled}
-        >
-          <Text style={[
-            styles.selectionValue,
-            !value && styles.selectionPlaceholder,
-            isDisabled && styles.selectionValueDisabled
-          ]}>
-            {value || placeholder}
-          </Text>
-          {currentEditMode && isFieldEditable && (
-            <Ionicons 
-              name={icon} 
-              size={20} 
-              color={isDisabled ? colors.gray300 : colors.gray500} 
-            />
-          )}
-          {!isFieldEditable && hasEducationData && (
-            <Ionicons 
-              name="lock-closed" 
-              size={20} 
-              color={colors.gray400} 
-            />
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const getModalTitle = () => {
-    switch (activeModal) {
-      case 'country': return 'Select Country/Region';
-      case 'institution': return `Universities in ${selectedCountry}`;
-      case 'degree': return 'Select Degree Type';
-      case 'field': return 'Select Field of Study';
-      default: return '';
-    }
-  };
-
-  const getSearchPlaceholder = () => {
-    switch (activeModal) {
-      case 'country': return 'Search countries...';
-      case 'institution': return 'Search universities...';
-      case 'degree': return 'Search degree types...';
-      case 'field': return 'Search fields...';
-      default: return 'Search...';
-    }
-  };
-
-  const getSelectedCountryDisplay = () => {
-    const country = countries.find(c => c.code === selectedCountry);
-    return country ? `${country.flag} ${country.name}` : selectedCountry;
-  };
-
-  const isEditing = editing || localEditing;
-
   // Helper for compact read-only row
   const ReadOnlyRow = ({ label, value, icon }) => (
     <View style={styles.roKVRow}>
@@ -526,7 +438,7 @@ export default function EducationSection({
         Alert.alert('Failed', result.error || 'Failed to update education');
         return false;
       }
-      setLocalEditing(false);
+      // ? REMOVED: setLocalEditing(false) - ProfileSection will handle this
       return true;
     } catch (error) {
       console.error('Error saving education data:', error);
@@ -536,19 +448,166 @@ export default function EducationSection({
   };
 
   const cancelEducation = () => {
-    // Reload data for safety (optional). For now just exit edit mode.
-    setLocalEditing(false);
+    // ? REMOVED: setLocalEditing(false) - ProfileSection will handle this
+    // Reload data for safety (optional)
+    console.log('Education editing cancelled');
+  };
+
+  // ? MOVED: Define helper functions before using them
+  const getSelectedCountryDisplay = () => {
+    const country = countries.find(c => c.code === selectedCountry);
+    return country ? `${country.flag} ${country.name}` : selectedCountry;
+  };
+
+  const getModalTitle = () => {
+    switch (activeModal) {
+      case 'country': return 'Select Country/Region';
+      case 'institution': return `Universities in ${selectedCountry}`;
+      case 'degree': return 'Select Degree Type';
+      case 'field': return 'Select Field of Study';
+      default: return '';
+    }
+  };
+
+  const getSearchPlaceholder = () => {
+    switch (activeModal) {
+      case 'country': return 'Search countries...';
+      case 'institution': return 'Search universities...';
+      case 'degree': return 'Search degree types...';
+      case 'field': return 'Search fields...';
+      default: return 'Search...';
+    }
   };
 
   return (
     <ProfileSection
       title="Education"
       icon="school"
-      editing={isEditing}
       onSave={saveEducation}
       onCancel={cancelEducation}
       defaultCollapsed={false}
     >
+      <EducationContent 
+        profile={profile}
+        setProfile={setProfile}
+        onUpdate={onUpdate}
+        hasEducationData={hasEducationData}
+        isEducationFieldEditable={isEducationFieldEditable}
+        // Modal functions
+        openModal={openModal}
+        closeModal={closeModal}
+        handleSelection={handleSelection}
+        getSelectedCountryDisplay={getSelectedCountryDisplay}
+        getModalTitle={getModalTitle}
+        getSearchPlaceholder={getSearchPlaceholder}
+        // Modal state
+        activeModal={activeModal}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        loading={loading}
+        filteredData={filteredData}
+        renderModalItem={renderModalItem}
+        // Additional state needed
+        selectedCountry={selectedCountry}
+        countries={countries}
+        allColleges={allColleges}
+      />
+    </ProfileSection>
+  );
+}
+
+// ? UPDATED: EducationContent component with all required props
+const EducationContent = ({ 
+  profile, 
+  setProfile, 
+  onUpdate, 
+  hasEducationData, 
+  isEducationFieldEditable,
+  openModal,
+  closeModal,
+  handleSelection,
+  getSelectedCountryDisplay,
+  getModalTitle,
+  getSearchPlaceholder,
+  activeModal,
+  searchTerm,
+  setSearchTerm,
+  loading,
+  filteredData,
+  renderModalItem,
+  selectedCountry,
+  countries,
+  allColleges
+}) => {
+  // ? Now we properly use the ProfileSection's editing context
+  const isEditing = useEditing();
+
+  // Helper for compact read-only row
+  const ReadOnlyRow = ({ label, value, icon }) => (
+    <View style={styles.roKVRow}>
+      <View style={styles.roKVLeft}>
+        {icon ? <Ionicons name={icon} size={14} color={colors.gray600} style={{ marginRight: 6 }} /> : null}
+        <Text style={styles.roKVLabel}>{label}</Text>
+      </View>
+      <Text style={[styles.roKVValue, !value && styles.roKVEmpty]} numberOfLines={1} ellipsizeMode="tail">{value || 'Not specified'}</Text>
+    </View>
+  );
+
+  const SelectionButton = ({ 
+    label, 
+    value, 
+    onPress, 
+    placeholder, 
+    disabled = false,
+    icon = 'chevron-down',
+    fieldName = ''
+  }) => {
+    const isFieldEditable = isEducationFieldEditable(fieldName);
+    const isDisabled = disabled || !isFieldEditable || !isEditing; // ? Add editing check
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>
+          {label}
+        </Text>
+        <TouchableOpacity 
+          style={[
+            styles.selectionButton,
+            isDisabled && styles.selectionButtonDisabled,
+            !isEditing && styles.selectionButtonReadonly, // ? Add readonly state
+            !isFieldEditable && hasEducationData && styles.selectionButtonLocked
+          ]} 
+          onPress={isDisabled ? null : onPress}
+          disabled={isDisabled}
+        >
+          <Text style={[
+            styles.selectionValue,
+            !value && styles.selectionPlaceholder,
+            isDisabled && styles.selectionValueDisabled
+          ]}>
+            {value || placeholder}
+          </Text>
+          {isEditing && isFieldEditable && (
+            <Ionicons 
+              name={icon} 
+              size={20} 
+              color={isDisabled ? colors.gray300 : colors.gray500} 
+            />
+          )}
+          {!isFieldEditable && hasEducationData && (
+            <Ionicons 
+              name="lock-closed" 
+              size={20} 
+              color={colors.gray400} 
+            />
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  return (
+    <>
       {/* Read-only compact view */}
       {!isEditing && (
         <View style={styles.roContainer}>
@@ -574,8 +633,8 @@ export default function EducationSection({
         </View>
       )}
 
-      {/* Editing UI (pickers) */
-      isEditing && (
+      {/* Editing UI (pickers) */}
+      {isEditing && (
         <>
           <View style={styles.countrySelector}>
             <SelectionButton
@@ -718,7 +777,7 @@ export default function EducationSection({
                     color={colors.gray400} 
                   />
                   <Text style={styles.emptyText}>
-                    {debouncedSearchTerm ? `No items found for "${debouncedSearchTerm}"` : 'No items available'}
+                    {searchTerm ? `No items found for "${searchTerm}"` : 'No items available'}
                   </Text>
                 </View>
               )}
@@ -726,9 +785,10 @@ export default function EducationSection({
           )}
         </View>
       </Modal>
-    </ProfileSection>
+    </>
   );
-}
+};
+
 
 const styles = StyleSheet.create({
   container: {

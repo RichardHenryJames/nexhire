@@ -86,7 +86,7 @@ BEGIN
     );
 END
 
--- Create Applicants table (enhanced schema)
+-- Create Applicants table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Applicants')
 BEGIN
     CREATE TABLE Applicants (
@@ -116,7 +116,6 @@ BEGIN
         FieldOfStudy NVARCHAR(200),
         GraduationYear NVARCHAR(4) NULL,
         GPA NVARCHAR(50) NULL,
-        PrimaryResumeURL NVARCHAR(1000),
         AdditionalDocuments NTEXT,
         AllowRecruitersToContact BIT DEFAULT 1,
         HideCurrentCompany BIT DEFAULT 0,
@@ -339,32 +338,49 @@ CREATE TABLE JobSkills (
 CREATE INDEX IDX_JobSkills_JobID ON JobSkills (JobID);
 END
 
+-- New: ApplicantResumes table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantResumes')
+BEGIN
+    CREATE TABLE ApplicantResumes (
+        ResumeID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ResumeLabel NVARCHAR(200) NOT NULL, -- e.g. "Tech Resume", "Managerial Resume"
+        ResumeURL NVARCHAR(1000) NOT NULL,
+        IsPrimary BIT DEFAULT 0, -- optional: mark default resume
+        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID)
+    );
+    CREATE INDEX IDX_ApplicantResumes_ApplicantID ON ApplicantResumes(ApplicantID);
+END
+
 
 -- Create JobApplications table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobApplications')
 BEGIN
-CREATE TABLE JobApplications (
-    ApplicationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    JobID UNIQUEIDENTIFIER NOT NULL,
-    ApplicantID UNIQUEIDENTIFIER NOT NULL,
-    ResumeURL NVARCHAR(1000),
-    CoverLetter NVARCHAR(MAX),
-    ExpectedSalary DECIMAL(15,2),
-    ExpectedCurrencyID INT,
-    AvailableFromDate DATE,
-    StatusID INT NOT NULL DEFAULT 1,
-    SubmittedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
-    LastUpdatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
-    IsArchived BIT DEFAULT 0,
-    CONSTRAINT CHK_ExpectedSalary CHECK (ExpectedSalary >= 0),
-    FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
-    FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
-    FOREIGN KEY (ExpectedCurrencyID) REFERENCES Currencies(CurrencyID),
-    FOREIGN KEY (StatusID) REFERENCES ApplicationStatuses(StatusID),
-    UNIQUE(JobID, ApplicantID)
-);
-CREATE INDEX IDX_JobApplications_JobStatus ON JobApplications (JobID, StatusID);
-CREATE INDEX IDX_JobApplications_Applicant ON JobApplications (ApplicantID);
+    CREATE TABLE JobApplications (
+        ApplicationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        JobID UNIQUEIDENTIFIER NOT NULL,
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ResumeID UNIQUEIDENTIFIER NOT NULL, -- New: FK to ApplicantResumes
+        CoverLetter NVARCHAR(MAX),
+        ExpectedSalary DECIMAL(15,2),
+        ExpectedCurrencyID INT,
+        AvailableFromDate DATE,
+        StatusID INT NOT NULL DEFAULT 1,
+        SubmittedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+        LastUpdatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+        IsArchived BIT DEFAULT 0,
+        CONSTRAINT CHK_ExpectedSalary CHECK (ExpectedSalary >= 0),
+        FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (ResumeID) REFERENCES ApplicantResumes(ResumeID),
+        FOREIGN KEY (ExpectedCurrencyID) REFERENCES Currencies(CurrencyID),
+        FOREIGN KEY (StatusID) REFERENCES ApplicationStatuses(StatusID),
+        UNIQUE(JobID, ApplicantID)
+    );
+    CREATE INDEX IDX_JobApplications_JobStatus ON JobApplications (JobID, StatusID);
+    CREATE INDEX IDX_JobApplications_Applicant ON JobApplications (ApplicantID);
 END
 
 -- Create ApplicationAttachments table (New: Supports multiple attachments)

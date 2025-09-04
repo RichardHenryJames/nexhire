@@ -537,6 +537,163 @@ app.http('users-resume-upload', {
     })
 });
 
+// NEW: Resume management endpoints
+app.http('users-resumes', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/resumes',
+    handler: withErrorHandling(async (req, context) => {
+        // Get resumes for authenticated user
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader) {
+            return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+        }
+
+        try {
+            // Extract user ID from JWT (simplified - you should use proper JWT verification)
+            const token = authHeader.replace('Bearer ', '');
+            const { AuthService } = await import('./src/services/auth.service');
+            const decoded = AuthService.verifyToken(token);
+            
+            const { ApplicantService } = await import('./src/services/profile.service');
+            const profile = await ApplicantService.getApplicantProfile(decoded.userId);
+            const resumes = await ApplicantService.getApplicantResumes(profile.ApplicantID);
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: resumes,
+                    message: 'Resumes retrieved successfully'
+                }
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to get resumes'
+                }
+            };
+        }
+    })
+});
+
+app.http('users-resume-primary', {
+    methods: ['PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/resume/{resumeId}/primary',
+    handler: withErrorHandling(async (req, context) => {
+        const resumeId = req.params.resumeId;
+        const authHeader = req.headers.get('authorization');
+        
+        if (!authHeader) {
+            return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+        }
+
+        try {
+            const token = authHeader.replace('Bearer ', '');
+            const { AuthService } = await import('./src/services/auth.service');
+            const decoded = AuthService.verifyToken(token);
+            
+            const { ApplicantService } = await import('./src/services/profile.service');
+            const profile = await ApplicantService.getApplicantProfile(decoded.userId);
+            await ApplicantService.setPrimaryResume(profile.ApplicantID, resumeId);
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    message: 'Primary resume updated successfully'
+                }
+            };
+        } catch (error) {
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update primary resume'
+                }
+            };
+        }
+    })
+});
+
+app.http('users-resume-delete', {
+    methods: ['DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/resume/{resumeId}',
+    handler: withErrorHandling(async (req, context) => {
+        const resumeId = req.params.resumeId;
+        const authHeader = req.headers.get('authorization');
+        
+        if (!authHeader) {
+            return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+        }
+
+        try {
+            const token = authHeader.replace('Bearer ', '');
+            const { AuthService } = await import('./src/services/auth.service');
+            const decoded = AuthService.verifyToken(token);
+            
+            const { ApplicantService } = await import('./src/services/profile.service');
+            const profile = await ApplicantService.getApplicantProfile(decoded.userId);
+            
+            // ? FIXED: Get resume details BEFORE deleting from database
+            const resumes = await ApplicantService.getApplicantResumes(profile.ApplicantID);
+            const resumeToDelete = resumes.find(r => r.ResumeID === resumeId);
+            
+            if (!resumeToDelete) {
+                return {
+                    status: 404,
+                    jsonBody: {
+                        success: false,
+                        error: 'Resume not found'
+                    }
+                };
+            }
+            
+            console.log('??? Deleting resume:', {
+                resumeId,
+                resumeURL: resumeToDelete.ResumeURL,
+                userId: decoded.userId
+            });
+            
+            // ? FIXED: Delete from database first
+            await ApplicantService.deleteApplicantResume(profile.ApplicantID, resumeId);
+            console.log('? Resume deleted from database');
+            
+            // ? FIXED: Delete file from Azure Storage
+            try {
+                const { ResumeStorageService } = await import('./src/services/resume-upload.service');
+                const storageService = new ResumeStorageService();
+                await storageService.deleteOldResume(decoded.userId, resumeToDelete.ResumeURL);
+                console.log('? Resume file deleted from storage');
+            } catch (storageError) {
+                console.error('?? Warning: Failed to delete file from storage:', storageError);
+                // Don't fail the entire operation if storage deletion fails
+            }
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    message: 'Resume deleted successfully from both database and storage'
+                }
+            };
+        } catch (error) {
+            console.error('? Error deleting resume:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to delete resume'
+                }
+            };
+        }
+    })
+});
+
 app.http('health', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -600,6 +757,9 @@ export {};
  * POST   /users/deactivate            - User account deactivation
  * POST   /users/profile-image         - Upload profile image
  * POST   /users/resume                - Upload resume document
+ * GET    /users/resumes               - Get user's resumes
+ * PUT    /users/resume/{id}/primary   - Set resume as primary
+ * DELETE /users/resume/{id}           - Delete a resume
  * POST   /employers/initialize        - Initialize employer profile (NEW)
  * 
  * APPLICANT/EMPLOYER PROFILE (4 endpoints):

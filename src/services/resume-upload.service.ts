@@ -10,6 +10,7 @@ interface ResumeUploadRequest {
   fileData: string; // base64 encoded (same as profile image)
   mimeType: string;
   userId: string;
+  resumeLabel?: string; // New: optional label for the resume
 }
 
 /**
@@ -195,6 +196,7 @@ function validateResumeUpload(data: any): ResumeUploadRequest {
     fileData: data.fileData,
     mimeType: data.mimeType,
     userId: data.userId,
+    resumeLabel: data.resumeLabel || 'Default Resume', // Default label if not provided
   };
 }
 
@@ -240,45 +242,63 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
       fileName: uploadData.fileName,
       userId: uploadData.userId,
       mimeType: uploadData.mimeType,
+      resumeLabel: uploadData.resumeLabel,
       fileDataLength: uploadData.fileData.length
     });
 
     // Initialize storage service
     const storageService = new ResumeStorageService();
 
-    // Get current resume URL for cleanup (check applicant profile instead of user profile)
+    // Get current resume for cleanup (check ApplicantResumes table)
     let oldResumeUrl = '';
     try {
-      // Try to get applicant profile to check for existing resume
+      // Get current primary resume from ApplicantResumes table
       const { ApplicantService } = await import('./profile.service');
       const applicantProfile = await ApplicantService.getApplicantProfile(uploadData.userId);
-      oldResumeUrl = applicantProfile?.PrimaryResumeURL || '';
+      const primaryResume = await ApplicantService.getPrimaryResume(applicantProfile.ApplicantID);
+      oldResumeUrl = primaryResume?.ResumeURL || '';
     } catch (error: unknown) {
-      console.warn('Could not get current resume for cleanup:', (error as Error)?.message || 'Unknown error');
+      console.warn('Could not get current primary resume for cleanup:', (error as Error)?.message || 'Unknown error');
     }
 
     // Upload new resume
     const resumeUrl = await storageService.uploadResume(uploadData);
 
-    // Update applicant profile with new resume URL (not user profile)
+    // Save resume to ApplicantResumes table instead of updating user profile
     try {
+      // First get or create applicant profile
       const { ApplicantService } = await import('./profile.service');
-      await ApplicantService.updateApplicantProfile(uploadData.userId, {
-        primaryResumeURL: resumeUrl
+      const applicantProfile = await ApplicantService.getApplicantProfile(uploadData.userId);
+      const applicantId = applicantProfile.ApplicantID;
+
+      if (!applicantId) {
+        throw new Error('Could not find applicant profile');
+      }
+
+      // ? FIXED: Don't automatically make new resume primary, let user manage multiple resumes
+      // Check if user has existing resumes
+      const existingResumes = await ApplicantService.getApplicantResumes(applicantId);
+      const isPrimaryResume = existingResumes.length === 0; // Only make primary if it's the first resume
+
+      // Save resume to ApplicantResumes table
+      await ApplicantService.saveApplicantResume(applicantId, {
+        resumeLabel: uploadData.resumeLabel || 'Default Resume',
+        resumeURL: resumeUrl,
+        isPrimary: isPrimaryResume // Only set as primary if it's the first resume
       });
-      console.log('?? Applicant profile updated with new resume URL');
+
+      console.log('?? Resume saved to ApplicantResumes table', {
+        isPrimary: isPrimaryResume,
+        totalResumes: existingResumes.length + 1
+      });
     } catch (error: unknown) {
-      console.error('?? Failed to update applicant profile with new resume URL:', error);
-      // Continue anyway - resume is uploaded successfully
+      console.error('?? Failed to save resume to database:', error);
+      // Continue anyway - resume is uploaded successfully to storage
     }
 
-    // Clean up old resume (async, don't wait)
-    if (oldResumeUrl) {
-      storageService.deleteOldResume(uploadData.userId, oldResumeUrl)
-        .catch(error => console.warn('Failed to delete old resume:', error));
-    }
-
-    console.log('?? Resume upload completed successfully');
+    // ? FIXED: Don't delete old resume files - let users manage multiple resumes
+    // The user can delete specific resumes they don't want through the UI
+    console.log('?? Resume upload completed successfully - keeping existing resumes');
     console.log('?? === END RESUME UPLOAD HANDLER ===');
 
     return {
