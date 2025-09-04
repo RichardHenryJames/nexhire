@@ -526,6 +526,17 @@ app.http('users-profile-image', {
     })
 });
 
+// NEW: Resume upload endpoint
+app.http('users-resume-upload', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/resume',
+    handler: withErrorHandling(async (req, context) => {
+        const { uploadResume } = await import('./src/services/resume-upload.service');
+        return await uploadResume(req, context);
+    })
+});
+
 app.http('health', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -587,6 +598,8 @@ export {};
  * POST   /users/verify-email          - User email verification
  * GET    /users/dashboard-stats       - User dashboard statistics
  * POST   /users/deactivate            - User account deactivation
+ * POST   /users/profile-image         - Upload profile image
+ * POST   /users/resume                - Upload resume document
  * POST   /employers/initialize        - Initialize employer profile (NEW)
  * 
  * APPLICANT/EMPLOYER PROFILE (4 endpoints):

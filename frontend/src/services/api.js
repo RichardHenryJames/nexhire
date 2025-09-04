@@ -1065,18 +1065,121 @@ class NexHireAPI {
     }
   }
 
-  // Health check
-  async healthCheck() {
+  // Resume upload method - following the same pattern as uploadImage
+  async uploadResume(file, userId) {
     try {
-      return await this.apiCall('/health');
+      console.log('📄 === RESUME UPLOAD START ===');
+      console.log('📄 Platform:', Platform.OS);
+      console.log('📄 File name:', file.name);
+      console.log('📄 File size:', file.size);
+      console.log('📄 File type:', file.type);
+
+      let fileData;
+      let mimeType;
+      let fileName;
+
+      if (Platform.OS === 'web') {
+        // Web: Convert File to base64
+        fileData = await this.fileToBase64(file);
+        mimeType = file.type;
+        fileName = file.name;
+      } else {
+        // React Native: Read file and convert to base64
+        const { FileSystem } = require('expo-file-system');
+        const base64Data = await FileSystem.readAsStringAsync(file.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        fileData = base64Data;
+        mimeType = file.type || this.getMimeTypeFromExtension(file.name);
+        fileName = file.name;
+      }
+
+      // Validate file size before upload
+      const fileSizeBytes = (fileData.length * 3) / 4; // Approximate base64 to bytes
+      const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+      if (fileSizeBytes > maxSizeBytes) {
+        throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
+      }
+
+      const url = `${this.baseURL}/users/resume`;
+      const headers = await this.getAuthHeaders();
+
+      // Create request body following the same pattern as profile image
+      const requestBody = JSON.stringify({
+        fileName: fileName,
+        fileData: fileData,
+        mimeType: mimeType,
+        userId: userId
+      });
+
+      console.log('📄 Making upload request...');
+      console.log('📄 URL:', url);
+      console.log('📄 Content-Length:', requestBody.length);
+      console.log('📄 Headers:', Object.keys(headers));
+
+      // Make the request with explicit configuration (same as profile image)
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        redirect: 'follow'
+      });
+
+      console.log('📄 Response status:', response.status);
+      console.log('📄 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Read response
+      let result;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+      
+      if (!response.ok) {
+        console.error('❌ Backend upload failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result
+        });
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Backend upload successful:', {
+        resumeURL: result.data?.resumeURL,
+        fileName: result.data?.fileName,
+        uploadDate: result.data?.uploadDate
+      });
+      console.log('📄 === RESUME UPLOAD END ===');
+
+      return result;
     } catch (error) {
-      console.error('Health check failed:', error.message);
+      console.error('❌ === RESUME UPLOAD ERROR ===');
+      console.error('❌ Platform:', Platform.OS);
+      console.error('❌ Error type:', error.constructor.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Full error:', error);
+      console.error('❌ === END ERROR LOG ===');
       throw error;
     }
   }
-}
 
-// Create singleton instance
-const nexhireAPI = new NexHireAPI();
+  // Helper method to get MIME type from file extension
+  getMimeTypeFromExtension(fileName) {
+    const extension = fileName.toLowerCase().split('.').pop();
+    const mimeTypes = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    };
+    return mimeTypes[extension] || 'application/octet-stream';
+  }
 
-export default nexhireAPI;
+  // Health check
+  async healthCheck() {
