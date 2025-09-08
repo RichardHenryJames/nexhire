@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
+import ResumeUploadModal from '../../components/ResumeUploadModal';
 
 export default function JobDetailsScreen({ route, navigation }) {
   const { jobId } = route.params || {};
@@ -21,6 +21,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   useEffect(() => {
     if (jobId) {
@@ -68,6 +69,9 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleApply = async () => {
+    // ?? DEBUG: Check if new code is deployed
+    console.log('?? NEW handleApply called - code is updated!');
+    
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
         { text: 'Cancel', style: 'cancel' },
@@ -86,127 +90,25 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
 
-    Alert.alert(
-      'Apply for Job',
-      'Are you sure you want to apply for this position?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Apply', onPress: uploadResumeAndApply }
-      ]
-    );
+    // ?? DEBUG: Force show modal to test
+    console.log('?? Setting showResumeModal to true...');
+    setShowResumeModal(true);
+    console.log('?? showResumeModal state updated');
+    
+    // ?? TEMPORARY: Also show an alert to confirm new code is working
+    Alert.alert('Debug', 'New code is working! Modal should appear now.');
+
+    // // ?? DEBUG: Force show modal to test if it works
+    // console.log('?? Showing resume modal for testing...');
+    // setShowResumeModal(true);
   };
 
-  const uploadResumeAndApply = async () => {
-    try {
-      // First, get user's existing resumes
-      const existingResumes = await nexhireAPI.getMyResumes();
-      
-      if (existingResumes.success && existingResumes.data.length >= 3) {
-        // User has max resumes, ask if they want to replace one
-        Alert.alert(
-          'Maximum Resumes Reached',
-          'You have reached the maximum of 3 resumes. Would you like to upload a new resume (this will replace your oldest resume) or use an existing one?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Use Existing', onPress: () => showResumeSelection(existingResumes.data) },
-            { text: 'Upload New', onPress: () => uploadNewResume() }
-          ]
-        );
-        return;
-      }
-
-      // User can upload a new resume
-      await uploadNewResume();
-    } catch (error) {
-      console.error('Error checking existing resumes:', error);
-      // Fallback to upload new resume
-      await uploadNewResume();
-    }
+  const handleResumeSelected = async (resumeData) => {
+    // Now apply with the selected/uploaded resume
+    await submitApplication(resumeData.ResumeID);
   };
 
-  const uploadNewResume = async () => {
-    try {
-      // Use document picker for resume - following expo document picker pattern
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        copyToCacheDirectory: true,
-        multiple: false
-      });
-
-      console.log('?? Document picker result:', result);
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setApplying(true);
-        
-        const file = result.assets[0];
-        console.log('?? Selected file:', {
-          name: file.name,
-          size: file.size,
-          uri: file.uri,
-          mimeType: file.mimeType
-        });
-
-        // Ask for resume label
-        const resumeLabel = await promptForResumeLabel();
-        
-        // Upload resume with label
-        const uploadResult = await nexhireAPI.uploadResume({
-          name: file.name,
-          size: file.size,
-          uri: file.uri,
-          type: file.mimeType
-        }, user.userId, resumeLabel);
-        
-        if (uploadResult.success) {
-          console.log('?? Resume uploaded successfully:', uploadResult.data.resumeURL);
-          // Then submit application with resume URL
-          await submitApplication(uploadResult.data.resumeURL);
-        }
-      } else {
-        console.log('?? Document picker was canceled');
-      }
-    } catch (error) {
-      console.error('Resume upload error:', error);
-      Alert.alert('Upload Failed', 'Failed to upload resume. You can still apply without it.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Apply Without Resume', onPress: () => submitApplication() }
-      ]);
-    } finally {
-      setApplying(false);
-    }
-  };
-
-  const promptForResumeLabel = () => {
-    return new Promise((resolve) => {
-      Alert.prompt(
-        'Resume Label',
-        'Give this resume a name (e.g., "Tech Resume", "Manager Resume"):',
-        [
-          { text: 'Cancel', onPress: () => resolve('Default Resume'), style: 'cancel' },
-          { text: 'OK', onPress: (text) => resolve(text || 'Default Resume') }
-        ],
-        'plain-text',
-        'Default Resume'
-      );
-    });
-  };
-
-  const showResumeSelection = (resumes) => {
-    const resumeOptions = resumes.map(resume => ({
-      text: `${resume.ResumeLabel} ${resume.IsPrimary ? '(Primary)' : ''}`,
-      onPress: () => submitApplication(resume.ResumeURL)
-    }));
-
-    resumeOptions.push({ text: 'Cancel', style: 'cancel' });
-
-    Alert.alert(
-      'Select Resume',
-      'Choose which resume to use for this application:',
-      resumeOptions
-    );
-  };
-
-  const submitApplication = async (resumeURL) => {
+  const submitApplication = async (resumeId) => {
     setApplying(true);
     try {
       // Prepare application data according to backend JobApplicationRequest interface
@@ -216,12 +118,11 @@ export default function JobDetailsScreen({ route, navigation }) {
         expectedSalary: job.SalaryRangeMax || null,
         expectedCurrencyID: job.CurrencyID || null,
         availableFromDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        availabilityDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Both fields for compatibility
       };
 
-      // Include resume URL if provided
-      if (resumeURL) {
-        applicationData.resumeURL = resumeURL;
+      // ? FIXED: Include ResumeID if provided (matches database schema)
+      if (resumeId) {
+        applicationData.resumeId = resumeId; // Use resumeId to match backend
       }
 
       const result = await nexhireAPI.applyForJob(applicationData);
@@ -229,19 +130,45 @@ export default function JobDetailsScreen({ route, navigation }) {
       if (result.success) {
         setHasApplied(true);
         Alert.alert(
-          'Application Submitted',
-          'Your application has been submitted successfully!',
+          'Application Submitted! ??',
+          'Your application has been submitted successfully. Good luck!',
           [
             { text: 'View Applications', onPress: () => navigation.navigate('Applications') },
             { text: 'OK', style: 'default' }
           ]
         );
       } else {
-        Alert.alert('Application Failed', result.error || result.message || 'Failed to submit application');
+        // ? IMPROVED: Better error handling
+        if (result.error?.includes('No resume found')) {
+          // This shouldn't happen with the new flow, but just in case
+          Alert.alert(
+            'Resume Required', 
+            'A resume is required to apply for jobs. Please upload one and try again.',
+            [
+              { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        } else {
+          Alert.alert('Application Failed', result.error || result.message || 'Failed to submit application');
+        }
       }
     } catch (error) {
       console.error('Application error:', error);
-      Alert.alert('Error', error.message || 'Failed to submit application');
+      
+      // ? IMPROVED: Handle resume-related errors specifically
+      if (error.message?.includes('No resume found')) {
+        Alert.alert(
+          'Resume Required', 
+          'A resume is required to apply for jobs. Please upload one and try again.',
+          [
+            { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Failed to submit application');
+      }
     } finally {
       setApplying(false);
     }
@@ -368,7 +295,8 @@ export default function JobDetailsScreen({ route, navigation }) {
         <InfoRow
           icon="briefcase"
           label="Job Type"
-          value={job.JobTypeName || 'Full-time'}
+          value={job.JobTypeName || 'Full-time'
+          }
         />
         <InfoRow
           icon="time"
@@ -471,6 +399,15 @@ export default function JobDetailsScreen({ route, navigation }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* ? NEW: Resume Upload Modal */}
+      <ResumeUploadModal
+        visible={showResumeModal}
+        onClose={() => setShowResumeModal(false)}
+        onResumeSelected={handleResumeSelected}
+        user={user}
+        jobTitle={job?.Title}
+      />
     </ScrollView>
   );
 }

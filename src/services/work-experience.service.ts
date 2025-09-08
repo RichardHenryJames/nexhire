@@ -59,11 +59,19 @@ export class WorkExperienceService {
       throw new ValidationError('Job title and start date are required');
     }
 
+    // ? NEW: Auto-manage current work experience logic
+    const newStartDate = typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate;
+    const isNewCurrent = data.isCurrent === true || data.isCurrent === 1;
+
+    // If this new work experience is marked as current, handle existing current ones
+    if (isNewCurrent) {
+      await this.handleCurrentWorkExperienceUpdate(applicantId, newStartDate);
+    }
+
     // Resolve or create organization
     const organizationId = await this.resolveOrganizationId(data.organizationId ?? null, data.companyName ?? null);
 
     const id = AuthService.generateUniqueId();
-    const startDate = typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate;
     const endDate = data.endDate ? (typeof data.endDate === 'string' ? new Date(data.endDate) : data.endDate) : null;
     const canContact = data.canContact ? (data.canContact === true || data.canContact === 1 ? 1 : 0) : 0;
 
@@ -85,7 +93,7 @@ export class WorkExperienceService {
       applicantId,
       organizationId,
       data.jobTitle,
-      startDate,
+      newStartDate,
       endDate,
       data.salaryFrequency || null,
       data.managerName || null,
@@ -135,6 +143,20 @@ export class WorkExperienceService {
     const existing = await this.getWorkExperienceById(workExperienceId);
     if (!existing) throw new NotFoundError('Work experience not found');
 
+    // ? NEW: Handle current work experience logic for updates too
+    const isBeingSetToCurrent = data.isCurrent === true || data.isCurrent === 1;
+    let newStartDate: Date | null = null;
+
+    if (data.startDate !== undefined) {
+      newStartDate = data.startDate ? (typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate) : null;
+    }
+
+    // If this work experience is being marked as current, handle existing current ones
+    if (isBeingSetToCurrent) {
+      const startDateToUse = newStartDate || new Date(existing.StartDate);
+      await this.handleCurrentWorkExperienceUpdate(existing.ApplicantID, startDateToUse, workExperienceId);
+    }
+
     const updates: string[] = [];
     const params: any[] = [workExperienceId];
     let idx = 1;
@@ -155,8 +177,7 @@ export class WorkExperienceService {
 
     if (data.jobTitle !== undefined) { updates.push(`JobTitle = @param${idx}`); params.push(data.jobTitle || null); idx++; }
     if (data.startDate !== undefined) {
-      const startDate = data.startDate ? (typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate) : null;
-      updates.push(`StartDate = @param${idx}`); params.push(startDate); idx++;
+      updates.push(`StartDate = @param${idx}`); params.push(newStartDate); idx++;
     }
     if (data.endDate !== undefined) {
       const endDate = data.endDate ? (typeof data.endDate === 'string' ? new Date(data.endDate) : data.endDate) : null;
@@ -318,6 +339,130 @@ export class WorkExperienceService {
         `UPDATE Applicants SET UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
         [applicantId]
       );
+    }
+  }
+
+  /**
+   * ? NEW: Smart Current Work Experience Management
+   * Ensures only ONE current work experience per applicant
+   * Auto-updates previous current experience when a newer one is added
+   */
+  static async handleCurrentWorkExperienceUpdate(
+    applicantId: string, 
+    newStartDate: Date, 
+    excludeWorkExperienceId?: string
+  ): Promise<void> {
+    try {
+      console.log(`?? Managing current work experience for applicant ${applicantId}`);
+      
+      // Find all current work experiences (excluding the one being updated)
+      let currentExpQuery = `
+        SELECT WorkExperienceID, StartDate, JobTitle, OrganizationID, CompanyName
+        FROM WorkExperiences 
+        WHERE ApplicantID = @param0 
+        AND IsCurrent = 1 
+        AND (IsActive = 1 OR IsActive IS NULL)
+      `;
+      const queryParams = [applicantId];
+      
+      if (excludeWorkExperienceId) {
+        currentExpQuery += ` AND WorkExperienceID != @param1`;
+        queryParams.push(excludeWorkExperienceId);
+      }
+      
+      const currentExperiences = await dbService.executeQuery(currentExpQuery, queryParams);
+      
+      if (!currentExperiences.recordset || currentExperiences.recordset.length === 0) {
+        console.log(`? No existing current work experiences found - proceeding with new current`);
+        return;
+      }
+      
+      // Process each existing current work experience
+      for (const existingExp of currentExperiences.recordset) {
+        const existingStartDate = new Date(existingExp.StartDate);
+        
+        console.log(`?? Comparing dates:`, {
+          newStartDate: newStartDate.toISOString().split('T')[0],
+          existingStartDate: existingStartDate.toISOString().split('T')[0],
+          newIsLater: newStartDate > existingStartDate
+        });
+        
+        // ? KEY LOGIC: Only update if new start date is GREATER than existing start date
+        if (newStartDate > existingStartDate) {
+          // Calculate end date for previous experience (new start date - 1 day)
+          const newEndDate = new Date(newStartDate);
+          newEndDate.setDate(newEndDate.getDate() - 1);
+          
+          console.log(`?? Auto-updating previous current work experience:`, {
+            workExperienceId: existingExp.WorkExperienceID,
+            company: existingExp.CompanyName || 'Unknown',
+            jobTitle: existingExp.JobTitle,
+            oldStartDate: existingStartDate.toISOString().split('T')[0],
+            newEndDate: newEndDate.toISOString().split('T')[0],
+            markingAsNonCurrent: true
+          });
+          
+          const updateQuery = `
+            UPDATE WorkExperiences 
+            SET 
+              EndDate = @param1,
+              IsCurrent = 0,
+              UpdatedAt = GETUTCDATE()
+            WHERE WorkExperienceID = @param0
+          `;
+          
+          await dbService.executeQuery(updateQuery, [existingExp.WorkExperienceID, newEndDate]);
+          
+          console.log(`? Successfully updated previous current work experience ${existingExp.WorkExperienceID}`);
+        } else {
+          console.log(`?? New start date is NOT greater than existing start date - keeping existing as current:`, {
+            existingCompany: existingExp.CompanyName || 'Unknown',
+            existingStartDate: existingStartDate.toISOString().split('T')[0],
+            newStartDate: newStartDate.toISOString().split('T')[0]
+          });
+          
+          // Optionally, you could throw an error here to prevent adding the new one as current
+          // throw new ValidationError(`Cannot set as current: A more recent work experience already exists starting ${existingStartDate.toISOString().split('T')[0]}`);
+        }
+      }
+      
+    } catch (error) {
+      console.error('? Error in handleCurrentWorkExperienceUpdate:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ? UTILITY: Get current work experience status for debugging
+   */
+  static async getCurrentWorkExperienceStatus(applicantId: string): Promise<any> {
+    try {
+      const query = `
+        SELECT 
+          WorkExperienceID,
+          JobTitle,
+          CompanyName,
+          StartDate,
+          EndDate,
+          IsCurrent,
+          CASE WHEN OrganizationID IS NOT NULL THEN 
+            (SELECT Name FROM Organizations WHERE OrganizationID = we.OrganizationID)
+          ELSE CompanyName END as ResolvedCompanyName
+        FROM WorkExperiences we
+        WHERE ApplicantID = @param0 
+        AND IsCurrent = 1
+        AND (IsActive = 1 OR IsActive IS NULL)
+        ORDER BY StartDate DESC
+      `;
+      
+      const result = await dbService.executeQuery(query, [applicantId]);
+      return {
+        currentCount: result.recordset?.length || 0,
+        currentExperiences: result.recordset || []
+      };
+    } catch (error) {
+      console.error('Error getting current work experience status:', error);
+      return { currentCount: 0, currentExperiences: [] };
     }
   }
 }

@@ -265,6 +265,7 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
     const resumeUrl = await storageService.uploadResume(uploadData);
 
     // Save resume to ApplicantResumes table instead of updating user profile
+    let resumeId: string | null = null;
     try {
       // First get or create applicant profile
       const { ApplicantService } = await import('./profile.service');
@@ -280,19 +281,20 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
       const existingResumes = await ApplicantService.getApplicantResumes(applicantId);
       const isPrimaryResume = existingResumes.length === 0; // Only make primary if it's the first resume
 
-      // Save resume to ApplicantResumes table
-      await ApplicantService.saveApplicantResume(applicantId, {
+      // Save resume to ApplicantResumes table and get the ResumeID
+      resumeId = await ApplicantService.saveApplicantResume(applicantId, {
         resumeLabel: uploadData.resumeLabel || 'Default Resume',
         resumeURL: resumeUrl,
         isPrimary: isPrimaryResume // Only set as primary if it's the first resume
       });
 
       console.log('?? Resume saved to ApplicantResumes table', {
+        resumeId,
         isPrimary: isPrimaryResume,
         totalResumes: existingResumes.length + 1
       });
-    } catch (error: unknown) {
-      console.error('?? Failed to save resume to database:', error);
+    } catch (error) {
+      console.error('? Failed to save resume to database:', error);
       // Continue anyway - resume is uploaded successfully to storage
     }
 
@@ -311,6 +313,7 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
         success: true,
         data: {
           resumeURL: resumeUrl,
+          resumeID: resumeId, // ? NEW: Include ResumeID for job applications
           fileName: uploadData.fileName,
           uploadDate: new Date().toISOString(),
         },

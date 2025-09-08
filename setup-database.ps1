@@ -136,6 +136,8 @@ BEGIN
         CurrentCompanyName NVARCHAR(200) NULL,
         CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
         UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        OpenToRefer BIT DEFAULT 0,
+        ReferralPoints INT DEFAULT 0,
         FOREIGN KEY (UserID) REFERENCES Users(UserID),
         FOREIGN KEY (CurrentOrganizationID) REFERENCES Organizations(OrganizationID)
     );

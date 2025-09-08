@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
+import ResumeUploadModal from '../../components/ResumeUploadModal';
 import { styles } from './JobsScreen.styles';
 
 // Debounce hook
@@ -58,7 +59,7 @@ const isFiltersDirty = (f) => {
 };
 
 export default function JobsScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, isJobSeeker } = useAuth();
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,10 @@ export default function JobsScreen({ navigation }) {
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
   const [showFilters, setShowFilters] = useState(false);
+
+  // ✅ NEW: Resume modal state
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [pendingJobForApplication, setPendingJobForApplication] = useState(null);
 
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
@@ -650,18 +655,55 @@ export default function JobsScreen({ navigation }) {
   // Handle apply - simplified without animations
   const handleApply = useCallback(async (job) => {
     if (!job) return;
+    
+    // ✅ NEW: Check authentication and user type first
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to apply for jobs', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      return;
+    }
+
+    // ✅ NEW: Show resume upload modal instead of direct apply
+    console.log('🔧 Apply button clicked, showing resume modal for job:', job.Title);
+    setPendingJobForApplication(job);
+    setShowResumeModal(true);
+  }, [user, isJobSeeker, navigation]);
+
+  // ✅ NEW: Handle resume selection and then apply
+  const handleResumeSelected = useCallback(async (resumeData) => {
+    if (!pendingJobForApplication) return;
+    
+    const job = pendingJobForApplication;
     const id = job.JobID || job.id;
     
     try {
+      // Hide modal first
+      setShowResumeModal(false);
+      setPendingJobForApplication(null);
+
+      // Apply with the selected resume
+      const applicationData = {
+        jobID: id,
+        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        resumeId: resumeData.ResumeID // Use the ResumeID from the selected/uploaded resume
+      };
+
+      console.log('🔧 Applying with resume data:', { resumeId: resumeData.ResumeID, jobTitle: job.Title });
+      
+      // Update UI immediately for better UX
       if (activeTab === 'openings') {
-        // Immediate update without animation
         setJobs(prev => {
           const updated = prev.filter(j => (j.JobID || j.id) !== id);
           
-          // FIXED: Trigger reload when jobs become empty to refresh pagination metadata
           if (updated.length === 0) {
             console.log('🔄 Jobs array empty after apply - triggering fresh reload to check for more data');
-            // RESET pagination to page 1 to avoid currentPage > totalPages mismatch
             setPagination(p => ({ ...p, page: 1 }));
             setTimeout(() => {
               triggerReload();
@@ -671,7 +713,6 @@ export default function JobsScreen({ navigation }) {
           return updated;
         });
         
-        // FIXED: Update pagination metadata immediately when removing jobs
         setPagination(prev => {
           const newTotal = Math.max((prev.total || 0) - 1, 0);
           const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
@@ -690,7 +731,8 @@ export default function JobsScreen({ navigation }) {
         setSavedCount(c => Math.max((c || 0) - 1, 0));
       }
       
-      const res = await nexhireAPI.applyToJob(id);
+      // Make API call
+      const res = await nexhireAPI.applyForJob(applicationData);
       if (res?.success) {
         setAppliedIds(prev => {
           const next = new Set(prev ?? new Set());
@@ -698,9 +740,22 @@ export default function JobsScreen({ navigation }) {
           return next;
         });
         setAppliedCount(c => (Number(c) || 0) + 1);
+        
+        // ✅ NEW: Show success message
+        Alert.alert(
+          'Application Submitted! 🎉',
+          'Your application has been submitted successfully. Good luck!',
+          [
+            { text: 'View Applications', onPress: () => setActiveTab('applied') },
+            { text: 'OK', style: 'default' }
+          ]
+        );
+      } else {
+        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
       }
     } catch (e) {
       console.error('Apply error', e);
+      Alert.alert('Error', e.message || 'Failed to submit application');
     } finally {
       refreshCounts();
       
@@ -733,7 +788,7 @@ export default function JobsScreen({ navigation }) {
         } catch {}
       }
     }
-  }, [activeTab, refreshCounts, triggerReload]);
+  }, [pendingJobForApplication, activeTab, refreshCounts, triggerReload]);
 
   const handleSave = useCallback(async (job) => {
     if (!job) return;
@@ -1046,6 +1101,18 @@ export default function JobsScreen({ navigation }) {
         onToggleJobType={onToggleJobType}
         onToggleWorkplaceType={onToggleWorkplaceType}
         onSelectCurrency={onSelectCurrency}
+      />
+
+      {/* ✅ NEW: Resume Upload Modal */}
+      <ResumeUploadModal
+        visible={showResumeModal}
+        onClose={() => {
+          setShowResumeModal(false);
+          setPendingJobForApplication(null);
+        }}
+        onResumeSelected={handleResumeSelected}
+        user={user}
+        jobTitle={pendingJobForApplication?.Title}
       />
     </View>
   );

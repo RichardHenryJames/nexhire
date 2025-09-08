@@ -267,13 +267,27 @@ class NexHireAPI {
       jobTitle: workExp.jobTitle,
       startDate: workExp.startDate,
       endDate: workExp.endDate || null,
+      isCurrent: workExp.isCurrent ?? false,  // ✅ FIXED: Include isCurrent field
       companyName: workExp.companyName || null,
       organizationId: workExp.organizationId || null,
+      department: workExp.department || null,  // ✅ ADDED: Missing fields
+      employmentType: workExp.employmentType || null,  // ✅ ADDED
+      location: workExp.location || null,  // ✅ ADDED
+      country: workExp.country || null,  // ✅ ADDED
+      description: workExp.description || null,  // ✅ ADDED
+      skills: workExp.skills || null,  // ✅ ADDED
+      achievements: workExp.achievements || null,  // ✅ ADDED
+      reasonForLeaving: workExp.reasonForLeaving || null,  // ✅ ADDED
+      salary: workExp.salary || null,  // ✅ ADDED
+      currencyId: workExp.currencyId || null,  // ✅ ADDED
       salaryFrequency: workExp.salaryFrequency || null,
       managerName: workExp.managerName || null,
       managerContact: workExp.managerContact || null,
       canContact: workExp.canContact ?? null
     };
+    
+    console.log('🔧 Creating work experience with payload:', JSON.stringify(payload, null, 2));
+    
     return this.apiCall('/work-experiences', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -1144,7 +1158,7 @@ class NexHireAPI {
       });
 
       // Validate file size before upload
-      const fileSizeBytes = (fileData.length * 3) / 4; // Approximate base64 to bytes
+      const fileSizeBytes = (fileData.length * 3) / 4; // 10MB
       const maxSizeBytes = 10 * 1024 * 1024; // 10MB
       if (fileSizeBytes > maxSizeBytes) {
         throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);

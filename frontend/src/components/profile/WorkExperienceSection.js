@@ -36,6 +36,33 @@ const normalizeString = (v) => {
   return typeof v === 'string' ? v.trim() : String(v);
 };
 
+// ? SMART WORK EXPERIENCE VALIDATION - Added validation functions
+const shouldHideCurrentToggle = (startDate, existingWorkExperiences, excludeWorkExperienceId = null) => {
+  if (!startDate) return false;
+  
+  // Find existing current work experience (excluding the one being edited)
+  const currentExp = existingWorkExperiences.find(exp => {
+    const expId = getId(exp);
+    const isCurrent = exp.IsCurrent === 1 || exp.IsCurrent === true || (!exp.EndDate && !exp.endDate);
+    return isCurrent && (!excludeWorkExperienceId || expId !== excludeWorkExperienceId);
+  });
+  
+  if (!currentExp) return false;
+  
+  const newStartDate = new Date(startDate);
+  const existingStartDate = new Date(currentExp.StartDate || currentExp.startDate);
+  
+  // Hide toggle if new start date is older than or equal to existing current
+  return newStartDate <= existingStartDate;
+};
+
+const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperienceId = null) => {
+  // End date required if:
+  // 1. Not marked as current, OR
+  // 2. Currently Working toggle is hidden (older date)
+  return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
+};
+
 const ExperienceItem = ({ item, onEdit, onDelete, editable }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
@@ -115,6 +142,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
   const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship', 'Temporary'];
   const SALARY_FREQUENCIES = ['Annual', 'Monthly', 'Weekly', 'Daily', 'Hourly'];
+
+  // ? SMART START DATE HANDLER - Auto-uncheck current if toggle should be hidden
+  const handleStartDateChange = (date) => {
+    const excludeId = editingItem ? getId(editingItem) : null;
+    setForm(prev => ({
+      ...prev,
+      startDate: date,
+      // Auto-uncheck "Currently Working" if it should be hidden
+      isCurrent: shouldHideCurrentToggle(date, experiences, excludeId) ? false : prev.isCurrent
+    }));
+  };
 
   const applyOrgFilter = (list, q) => {
     if (!Array.isArray(list)) return [];
@@ -273,6 +311,18 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       Alert.alert('Validation', 'Start date is required');
       return;
     }
+    
+    // ? SMART VALIDATION - Check if end date is required
+    const excludeId = editingItem ? getId(editingItem) : null;
+    if (isEndDateRequired(form, experiences, excludeId) && !form.endDate) {
+      Alert.alert(
+        'End Date Required',
+        'Please provide an end date for this position since it cannot be marked as current.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     try {
       setSaving(true);
       const payload = {
@@ -346,6 +396,11 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   // derive a safe, valid list and flag
   const validExperiences = Array.isArray(experiences) ? experiences.filter((e) => !!getId(e)) : [];
   const hasExperiences = validExperiences.length > 0;
+
+  // ? CHECK IF TOGGLE SHOULD BE HIDDEN
+  const excludeId = editingItem ? getId(editingItem) : null;
+  const hideCurrentToggle = shouldHideCurrentToggle(form.startDate, experiences, excludeId);
+  const endDateRequired = isEndDateRequired(form, experiences, excludeId);
 
   return (
     <View style={[styles.sectionContainer, showHeader && { marginBottom: 24 }]}>
@@ -464,15 +519,53 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
             <Text style={styles.label}>Start Date (YYYY-MM-DD) *</Text>
-            <TextInput style={styles.input} value={form.startDate} onChangeText={(t) => setForm({ ...form, startDate: t })} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" autoCapitalize="none" />
+            <TextInput 
+              style={styles.input} 
+              value={form.startDate} 
+              onChangeText={handleStartDateChange}
+              placeholder="YYYY-MM-DD" 
+              keyboardType="numbers-and-punctuation" 
+              autoCapitalize="none" 
+            />
 
-            <View style={styles.rowBetween}>
-              <Text style={styles.label}>Currently Working</Text>
-              <Switch value={!!form.isCurrent} onValueChange={(v) => setForm({ ...form, isCurrent: v, endDate: v ? '' : form.endDate })} />
-            </View>
+            {/* ? SMART CURRENTLY WORKING TOGGLE - Hide when start date is older */}
+            {!hideCurrentToggle && (
+              <View style={styles.rowBetween}>
+                <Text style={styles.label}>Currently Working</Text>
+                <Switch value={!!form.isCurrent} onValueChange={(v) => setForm({ ...form, isCurrent: v, endDate: v ? '' : form.endDate })} />
+              </View>
+            )}
 
-            <Text style={styles.label}>End Date (YYYY-MM-DD)</Text>
-            <TextInput style={[styles.input, form.isCurrent && styles.inputDisabled]} editable={!form.isCurrent} value={form.endDate} onChangeText={(t) => setForm({ ...form, endDate: t })} placeholder="Leave empty if current" keyboardType="numbers-and-punctuation" autoCapitalize="none" />
+            {/* ? SHOW INFO MESSAGE WHEN TOGGLE IS HIDDEN */}
+            {hideCurrentToggle && (
+              <View style={styles.infoContainer}>
+                <Ionicons name="information-circle" size={16} color={colors.warning || '#F59E0B'} />
+                <Text style={styles.infoText}>
+                  Cannot mark as current - you have a newer current position
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.label}>End Date (YYYY-MM-DD){endDateRequired ? ' *' : ''}</Text>
+            <TextInput 
+              style={[
+                styles.input, 
+                form.isCurrent && styles.inputDisabled,
+                endDateRequired && !form.endDate ? styles.errorInput : {}
+              ]} 
+              editable={!form.isCurrent} 
+              value={form.endDate} 
+              onChangeText={(t) => setForm({ ...form, endDate: t })} 
+              placeholder={
+                form.isCurrent 
+                  ? "Present" 
+                  : endDateRequired
+                    ? "Required - Select end date"
+                    : "Leave empty if current"
+              }
+              keyboardType="numbers-and-punctuation" 
+              autoCapitalize="none" 
+            />
 
             <Text style={styles.label}>Location</Text>
             <TextInput style={styles.input} value={form.location} onChangeText={(t) => setForm({ ...form, location: t })} placeholder="City, State" />
@@ -568,6 +661,27 @@ const styles = StyleSheet.create({
   label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12 },
   inputDisabled: { opacity: 0.6 },
+  // ? ADDED STYLES FOR SMART VALIDATION
+  errorInput: { 
+    borderColor: colors.danger || '#E53E3E', 
+    borderWidth: 2 
+  },
+  infoContainer: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoText: {
+    color: '#92400E',
+    fontSize: typography.sizes?.sm || 14,
+    flex: 1,
+  },
   orgPicker: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   orgPickerText: { color: colors.text, fontSize: typography.sizes?.md || 16 },
   orgPickerModal: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginBottom: 12, overflow: 'hidden' },

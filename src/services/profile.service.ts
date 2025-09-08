@@ -306,7 +306,8 @@ export class ApplicantService {
                 'allowRecruitersToContact': 'AllowRecruitersToContact',
                 'hideCurrentCompany': 'HideCurrentCompany',
                 'hideSalaryDetails': 'HideSalaryDetails',
-                
+                'openToRefer': 'OpenToRefer', // ? NEW: Enable referral functionality
+
                 // Status Fields
                 'isOpenToWork': 'IsOpenToWork',
                 'isFeatured': 'IsFeatured',

@@ -30,6 +30,7 @@ const FIELD_ROUTING = {
     'hideSalaryDetails',
     'allowRecruitersToContact',
     'isOpenToWork',
+    'openToRefer', // ? NEW: Enable referral functionality
     
     // Professional information (? REMOVED old salary fields)
     'headline',

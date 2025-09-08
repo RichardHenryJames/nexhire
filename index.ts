@@ -60,6 +60,23 @@ import {
 } from './src/controllers/work-experience.controller';
 import { saveJob as saveJobCtrl, unsaveJob as unsaveJobCtrl, getMySavedJobs as getMySavedJobsCtrl } from './src/controllers/saved-jobs.controller';
 
+// NEW: Referral controllers - UPDATED with new methods
+import {
+    getReferralPlans,
+    purchaseReferralPlan,
+    createReferralRequest,
+    getMyReferralRequests,
+    getAvailableRequests,
+    claimReferralRequest,
+    submitReferralProof,        // NEW: Proof submission
+    verifyReferralCompletion,   // NEW: Verification
+    getMyReferrerRequests,      // NEW: My requests as referrer
+    getReferralAnalytics,
+    checkReferralEligibility,
+    getReferrerStats,
+    getCurrentSubscription
+} from './src/controllers/referral.controller';
+
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
 
@@ -704,6 +721,105 @@ app.http('health', {
 });
 
 // ========================================================================
+// REFERRAL SYSTEM ENDPOINTS - ? FIXED TO MATCH WORKING PATTERN
+// ========================================================================
+
+// Referral Plans
+app.http('referral-plans', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/plans',
+    handler: withErrorHandling(getReferralPlans) // ? Public endpoint - no auth needed
+});
+
+app.http('referral-plans-purchase', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/plans/purchase',
+    handler: withErrorHandling(purchaseReferralPlan) // ? Same pattern as work experience
+});
+
+// Referral Requests
+app.http('referral-requests-create', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests',
+    handler: withErrorHandling(createReferralRequest) // ? Same pattern as work experience
+});
+
+app.http('referral-my-requests', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/my-requests',
+    handler: withErrorHandling(getMyReferralRequests) // ? Same pattern as work experience
+});
+
+app.http('referral-available', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/available',
+    handler: withErrorHandling(getAvailableRequests) // ? Same pattern as work experience
+});
+
+app.http('referral-claim', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/claim',
+    handler: withErrorHandling(claimReferralRequest) // ? Same pattern as work experience
+});
+
+// NEW: Proof Submission & Verification
+app.http('referral-proof-submit', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/proof',
+    handler: withErrorHandling(submitReferralProof) // ? Same pattern as work experience
+});
+
+app.http('referral-verify', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/verify',
+    handler: withErrorHandling(verifyReferralCompletion) // ? Same pattern as work experience
+});
+
+app.http('referral-my-referrer-requests', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/my-referrer-requests',
+    handler: withErrorHandling(getMyReferrerRequests) // ? Same pattern as work experience
+});
+
+// Analytics & Stats
+app.http('referral-analytics', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/analytics',
+    handler: withErrorHandling(getReferralAnalytics) // ? Same pattern as work experience
+});
+
+app.http('referral-eligibility', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/eligibility',
+    handler: withErrorHandling(checkReferralEligibility) // ? Same pattern as work experience
+});
+
+app.http('referral-stats', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/stats',
+    handler: withErrorHandling(getReferrerStats) // ? Same pattern as work experience
+});
+
+app.http('referral-subscription', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/subscription',
+    handler: withErrorHandling(getCurrentSubscription) // ? Same pattern as work experience
+});
+
+// ========================================================================
 // SAVED JOBS ENDPOINTS
 // ========================================================================
 
@@ -738,7 +854,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (29 total):
+ * COMPLETE API ENDPOINT LIST (42 total): ? UPDATED
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):
@@ -748,7 +864,7 @@ export {};
  * POST   /auth/refresh                - Refresh JWT token
  * GET    /health                      - Health check
  * 
- * USER MANAGEMENT (6 endpoints):
+ * USER MANAGEMENT (11 endpoints):
  * GET    /users/profile               - Get user profile
  * PUT    /users/profile               - Update user profile
  * POST   /users/change-password       - User password update
@@ -760,15 +876,15 @@ export {};
  * GET    /users/resumes               - Get user's resumes
  * PUT    /users/resume/{id}/primary   - Set resume as primary
  * DELETE /users/resume/{id}           - Delete a resume
- * POST   /employers/initialize        - Initialize employer profile (NEW)
+ * POST   /employers/initialize        - Initialize employer profile
  * 
  * APPLICANT/EMPLOYER PROFILE (4 endpoints):
- * GET    /applicants/{userId}/profile          - Get applicant profile (NEW)
- * PUT    /applicants/{userId}/profile          - Update applicant profile (NEW)
- * GET    /employers/{userId}/profile           - Get employer profile (NEW)
- * PUT    /employers/{userId}/profile           - Update employer profile (NEW)
+ * GET    /applicants/{userId}/profile          - Get applicant profile
+ * PUT    /applicants/{userId}/profile          - Update applicant profile
+ * GET    /employers/{userId}/profile           - Get employer profile
+ * PUT    /employers/{userId}/profile           - Update employer profile
  * 
- * JOB MANAGEMENT (6 endpoints):
+ * JOB MANAGEMENT (8 endpoints):
  * GET    /jobs                        - List all jobs
  * POST   /jobs                        - Create new job
  * GET    /jobs/{id}                   - Get job details
@@ -778,7 +894,7 @@ export {};
  * POST   /jobs/{id}/close             - Close job
  * GET    /search/jobs                 - Search jobs
  * 
- * JOB APPLICATIONS (6 endpoints):
+ * JOB APPLICATIONS (7 endpoints):
  * POST   /applications                - Apply for job
  * GET    /my/applications             - Get my applications
  * GET    /applications/stats          - Get application stats
@@ -787,14 +903,31 @@ export {};
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- * REFERENCE DATA (6 endpoints):
+ * REFERRAL SYSTEM (13 endpoints): ? EXPANDED
+ * GET    /referral/plans                           - Get all referral plans
+ * POST   /referral/plans/purchase                  - Purchase a referral plan
+ * GET    /referral/subscription                    - Get current subscription
+ * POST   /referral/requests                        - Create referral request
+ * GET    /referral/my-requests                     - Get my referral requests (seeker)
+ * GET    /referral/available                       - Get available requests (referrer)
+ * POST   /referral/requests/{id}/claim             - Claim a referral request
+ * POST   /referral/requests/{id}/proof      ? NEW - Submit proof of referral
+ * POST   /referral/requests/{id}/verify     ? NEW - Verify referral completion
+ * GET    /referral/my-referrer-requests     ? NEW - Get my requests as referrer
+ * GET    /referral/analytics                       - Get referral analytics
+ * GET    /referral/eligibility                     - Check referral eligibility
+ * GET    /referral/stats                           - Get referrer badge stats
+ * 
+ * REFERENCE DATA (9 endpoints):
  * GET    /reference/job-types         - Get job types
+ * GET    /reference/workplace-types   - Get workplace types
  * GET    /reference/currencies        - Get currencies
  * GET    /reference/organizations     - Get organizations
  * GET    /reference/colleges          - Get colleges/universities
  * GET    /reference/industries        - Get industries
  * GET    /reference/universities-by-country - Get universities by country and state
- * GET    /reference/countries         - Get countries (NEW)
+ * GET    /reference/countries         - Get countries
+ * GET    /reference/salary-components - Get salary components
  * 
  * SAVED JOBS (3 endpoints):
  * POST   /saved-jobs                 - Save a job

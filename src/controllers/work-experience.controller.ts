@@ -117,3 +117,27 @@ export const deleteWorkExperience = withErrorHandling(async (req: HttpRequest, c
     };
   }
 });
+
+export const getCurrentWorkExperienceStatus = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+  try {
+    const user = authenticate(req);
+    const { ApplicantService } = await import('../services/profile.service');
+    const profile = await ApplicantService.getApplicantProfile(user.userId);
+    if (!profile || !profile.ApplicantID) throw new NotFoundError('Applicant profile not found');
+
+    const status = await WorkExperienceService.getCurrentWorkExperienceStatus(profile.ApplicantID);
+    return { 
+      status: 200, 
+      jsonBody: { 
+        success: true, 
+        data: status,
+        message: `Found ${status.currentCount} current work experience(s)` 
+      } 
+    };
+  } catch (error: any) {
+    return {
+      status: error instanceof NotFoundError ? 404 : 500,
+      jsonBody: { success: false, error: error?.message || 'Failed to get current work experience status' }
+    };
+  }
+});
