@@ -790,7 +790,7 @@ export default function JobsScreen({ navigation }) {
     setShowResumeModal(true);
   }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal]);
 
-  // ✅ NEW: Subscription modal for quota exhausted users
+  // 🔄 NEW: Subscription modal for quota exhausted users
   const showSubscriptionModal = useCallback(async () => {
     console.log('💳 showSubscriptionModal called in JobsScreen');
     console.log('💳 Navigation object:', navigation);
@@ -849,7 +849,7 @@ export default function JobsScreen({ navigation }) {
     
     Alert.alert(
       'Confirm Subscription',
-      `Subscribe to ${plan.Name} for $${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
+      `Subscribe to ${plan.Name} for ₹${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 

@@ -14,6 +14,19 @@ import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 
+// Helper: format number as INR with rupee symbol (fallback if Intl unsupported)
+const formatINR = (value) => {
+  if (value == null || isNaN(Number(value))) return '?0';
+  try {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })
+      .format(Number(value))
+      .replace('INR', '') // keep symbol only
+      .trim();
+  } catch {
+    return `?${Number(value).toFixed(2)}`;
+  }
+};
+
 export default function PaymentScreen({ route, navigation }) {
   const { plan, returnScreen = 'ReferralPlans' } = route.params || {};
   const { user } = useAuth();
@@ -31,37 +44,25 @@ export default function PaymentScreen({ route, navigation }) {
   const initiatePayment = async () => {
     try {
       setLoading(true);
-      
-      // Create Razorpay order
       const orderData = {
-        amount: plan.Price * 100, // Amount in paise (multiply by 100)
+        amount: Math.round(plan.Price * 100), // paise
         currency: 'INR',
         planId: plan.PlanID,
         planName: plan.Name,
         customerEmail: user.email,
-        customerName: `${user.firstName} ${user.lastName}` || user.email,
+        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
       };
 
       const orderResponse = await nexhireAPI.createRazorpayOrder(orderData);
-      
-      if (!orderResponse.success) {
-        throw new Error(orderResponse.error || 'Failed to create payment order');
-      }
-
+      if (!orderResponse.success) throw new Error(orderResponse.error || 'Failed to create payment order');
       setOrderDetails(orderResponse.data);
-      
-      // For web: Create payment URL and open in new window/redirect
-      const paymentUrl = createRazorpayPaymentUrl(orderResponse.data, orderData);
-      
-      // Open Razorpay checkout in the same window (web-friendly approach)
+      const paymentUrl = createRazorpayPaymentUrl(orderResponse.data);
+
       if (typeof window !== 'undefined') {
-        // Web environment - inject Razorpay script and show checkout
         loadRazorpayScript(orderResponse.data, orderData);
       } else {
-        // Fallback: Open in external browser
         Linking.openURL(paymentUrl);
       }
-
     } catch (error) {
       console.error('Payment initiation error:', error);
       Alert.alert('Payment Error', error.message || 'Failed to initiate payment');
@@ -71,11 +72,11 @@ export default function PaymentScreen({ route, navigation }) {
   };
 
   const loadRazorpayScript = (orderData, customerData) => {
-    // Inject Razorpay script if not already loaded
     if (typeof window.Razorpay === 'undefined') {
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => openRazorpayCheckout(orderData, customerData);
+      script.onerror = () => Alert.alert('Error', 'Failed to load payment gateway script. Please retry.');
       document.head.appendChild(script);
     } else {
       openRazorpayCheckout(orderData, customerData);
@@ -84,58 +85,42 @@ export default function PaymentScreen({ route, navigation }) {
 
   const openRazorpayCheckout = (orderData, customerData) => {
     const options = {
-      key: 'rzp_test_RHBUKjg4k9qx4J', // Test key
+      key: 'rzp_test_RHBUKjg4k9qx4J',
       amount: orderData.amount,
       currency: 'INR',
       name: 'NexHire',
       description: `${customerData.planName} Subscription`,
       order_id: orderData.orderId,
-      handler: function (response) {
-        // Payment successful
+      handler: (response) => {
         handlePaymentSuccess({
           razorpay_payment_id: response.razorpay_payment_id,
           razorpay_order_id: response.razorpay_order_id,
-          razorpay_signature: response.razorpay_signature,
-          planId: plan.PlanID,
-          amount: orderData.amount
+            razorpay_signature: response.razorpay_signature,
+            planId: plan.PlanID,
+            amount: orderData.amount
         });
       },
-      prefill: {
-        name: customerData.customerName,
-        email: customerData.customerEmail,
-      },
-      theme: {
-        color: '#3B82F6'
-      },
-      modal: {
-        ondismiss: function() {
-          // Payment cancelled
-          handlePaymentCancellation();
-        }
-      }
+      prefill: { name: customerData.customerName, email: customerData.customerEmail },
+      theme: { color: '#3B82F6' },
+      modal: { ondismiss: () => handlePaymentCancellation() }
     };
-    
-    const rzp = new window.Razorpay(options);
-    rzp.on('payment.failed', function (response) {
-      // Payment failed
-      handlePaymentFailure({
-        error: response.error
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (response) => {
+        handlePaymentFailure({ error: response.error });
       });
-    });
-    
-    rzp.open();
+      rzp.open();
+    } catch (e) {
+      Alert.alert('Payment Error', 'Unable to open payment gateway. Please try again.');
+    }
   };
 
-  const createRazorpayPaymentUrl = (orderData, customerData) => {
-    // Fallback URL for non-web environments
-    return `https://razorpay.com/payment-link/${orderData.orderId}`;
-  };
+  const createRazorpayPaymentUrl = (orderData) => `https://razorpay.com/payment-link/${orderData.orderId}`;
 
   const handlePaymentSuccess = async (paymentData) => {
     try {
       setLoading(true);
-      
-      // Verify payment and activate subscription
       const verificationData = {
         razorpayPaymentId: paymentData.razorpay_payment_id,
         razorpayOrderId: paymentData.razorpay_order_id,
@@ -143,26 +128,13 @@ export default function PaymentScreen({ route, navigation }) {
         planId: paymentData.planId,
         amount: paymentData.amount,
       };
-
       const result = await nexhireAPI.verifyPaymentAndActivateSubscription(verificationData);
-      
       if (result.success) {
-        // Payment verified and subscription activated
         Alert.alert(
           '?? Payment Successful!',
           `Welcome to ${plan.Name}! Your subscription has been activated and you now have unlimited referral requests.`,
           [
-            {
-              text: 'Start Referring!',
-              onPress: () => {
-                // Navigate back to previous screen
-                if (returnScreen === 'ReferralPlans') {
-                  navigation.navigate('ReferralPlans');
-                } else {
-                  navigation.navigate('Jobs');
-                }
-              }
-            }
+            { text: 'Start Referring!', onPress: () => navigation.navigate(returnScreen === 'ReferralPlans' ? 'ReferralPlans' : 'Jobs') }
           ]
         );
       } else {
@@ -182,7 +154,7 @@ export default function PaymentScreen({ route, navigation }) {
       'Payment Failed',
       `Payment could not be processed. ${errorData.error?.description || 'Please try again.'}`,
       [
-        { text: 'Try Again', onPress: () => initiatePayment() },
+        { text: 'Retry', onPress: () => initiatePayment() },
         { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() }
       ]
     );
@@ -193,7 +165,7 @@ export default function PaymentScreen({ route, navigation }) {
       'Payment Cancelled',
       'You cancelled the payment. Would you like to try again?',
       [
-        { text: 'Try Again', onPress: () => initiatePayment() },
+        { text: 'Retry', onPress: () => initiatePayment() },
         { text: 'Go Back', style: 'cancel', onPress: () => navigation.goBack() }
       ]
     );
@@ -224,7 +196,7 @@ export default function PaymentScreen({ route, navigation }) {
       <View style={styles.content}>
         <View style={styles.planSummary}>
           <Text style={styles.planName}>{plan?.Name}</Text>
-          <Text style={styles.planPrice}>?{plan?.Price}</Text>
+          <Text style={styles.planPrice}>{formatINR(plan?.Price)}</Text>
           <Text style={styles.planDuration}>
             {plan?.DurationDays === 9999 ? 'Lifetime Access' : 
              plan?.DurationDays === 30 ? 'Monthly Subscription' :
@@ -235,22 +207,10 @@ export default function PaymentScreen({ route, navigation }) {
 
         <View style={styles.features}>
           <Text style={styles.featuresTitle}>What you get:</Text>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.featureText}>{plan?.ReferralsPerDay} referral requests per day</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.featureText}>Priority processing</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.featureText}>Email support</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={styles.featureText}>Advanced analytics</Text>
-          </View>
+          <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>{plan?.ReferralsPerDay} referral requests per day</Text></View>
+          <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Priority processing</Text></View>
+            <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Email support</Text></View>
+          <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Advanced analytics</Text></View>
         </View>
 
         <View style={styles.securityInfo}>
@@ -270,7 +230,7 @@ export default function PaymentScreen({ route, navigation }) {
           ) : (
             <>
               <Ionicons name="card" size={20} color={colors.white} />
-              <Text style={styles.payButtonText}>Pay ?{plan?.Price}</Text>
+              <Text style={styles.payButtonText}>Pay {formatINR(plan?.Price)}</Text>
             </>
           )}
         </TouchableOpacity>

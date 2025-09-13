@@ -12,7 +12,7 @@ packages/
 node_modules/
 npm-debug.log*
 
-RazorPayPaymentAPIKeys
+src/secret/*
 
 # Azure Functions / Development tools
 azure-functions-core-tools/

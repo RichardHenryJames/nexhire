@@ -132,7 +132,7 @@ export default function ReferralPlansScreen({ navigation }) {
         <Text style={styles.planName}>{plan.Name}</Text>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
-            {plan.Price === 0 ? 'Free' : `$${plan.Price}`}
+            {plan.Price === 0 ? 'Free' : `₹${plan.Price}`}
           </Text>
           {plan.Price > 0 && (
             <Text style={styles.duration}>/{getDurationText(plan.DurationDays)}</Text>
