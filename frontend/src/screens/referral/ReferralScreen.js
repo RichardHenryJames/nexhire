@@ -56,6 +56,7 @@ export default function ReferralScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading my requests:', error);
+      setMyRequests([]);
     }
   };
 
@@ -67,6 +68,7 @@ export default function ReferralScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading requests to me:', error);
+      setRequestsToMe([]);
     }
   };
 

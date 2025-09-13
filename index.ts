@@ -60,7 +60,7 @@ import {
 } from './src/controllers/work-experience.controller';
 import { saveJob as saveJobCtrl, unsaveJob as unsaveJobCtrl, getMySavedJobs as getMySavedJobsCtrl } from './src/controllers/saved-jobs.controller';
 
-// NEW: Referral controllers - UPDATED with new methods
+// Import referral controllers
 import {
     getReferralPlans,
     purchaseReferralPlan,
@@ -76,6 +76,13 @@ import {
     getReferrerStats,
     getCurrentSubscription
 } from './src/controllers/referral.controller';
+
+// NEW: Payment controllers - Razorpay Integration
+import {
+    createRazorpayOrder,
+    verifyPaymentAndActivateSubscription,
+    getPaymentHistory
+} from './src/controllers/payment.controller';
 
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
@@ -842,6 +849,31 @@ app.http('saved-jobs-my', {
     authLevel: 'anonymous',
     route: 'my/saved-jobs',
     handler: withErrorHandling(getMySavedJobsCtrl)
+});
+
+// ========================================================================
+// PAYMENT SYSTEM ENDPOINTS - ?? Razorpay Integration
+// ========================================================================
+
+app.http('payment-create-order', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'payments/razorpay/create-order',
+    handler: withErrorHandling(createRazorpayOrder)
+});
+
+app.http('payment-verify-activate', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'payments/razorpay/verify-and-activate',
+    handler: withErrorHandling(verifyPaymentAndActivateSubscription)
+});
+
+app.http('payment-history', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'payments/history',
+    handler: withErrorHandling(getPaymentHistory)
 });
 
 // ========================================================================

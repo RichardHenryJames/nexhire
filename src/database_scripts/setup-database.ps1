@@ -442,6 +442,46 @@ BEGIN
     );
     CREATE INDEX IDX_SavedJobs_Applicant ON SavedJobs (ApplicantID, SavedAt DESC);
 END
+
+-- Payment Orders: tracks payment transactions for plans
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PaymentOrders')
+BEGIN
+    CREATE TABLE PaymentOrders (
+        OrderID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL, -- who is paying
+        PlanID INT NOT NULL,                   -- must match ReferralPlans.PlanID type
+        Amount DECIMAL(10,2) NOT NULL,
+        Currency NVARCHAR(10) NOT NULL,
+        Status NVARCHAR(50) DEFAULT 'Pending', -- Pending, Paid, Failed
+        PaymentGateway NVARCHAR(50) NULL,      -- e.g. Razorpay, Stripe
+        PaymentReference NVARCHAR(200) NULL,   -- gateway transaction id
+        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
+        PaidAt DATETIME2 NULL,
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (PlanID) REFERENCES ReferralPlans(PlanID)
+    );
+END
+
+
+-- 2. Payment Transactions Table - Complete transaction log
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='PaymentTransactions')
+BEGIN
+    CREATE TABLE PaymentTransactions (
+        TransactionID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        PaymentID NVARCHAR(100) NULL, -- Razorpay payment ID
+        OrderID NVARCHAR(100) NULL, -- Razorpay order ID
+        Amount INT NOT NULL, -- Amount in paise
+        Currency NVARCHAR(10) NOT NULL DEFAULT 'INR',
+        Status NVARCHAR(20) NOT NULL, -- Success, Failed, Pending
+        PaymentMethod NVARCHAR(50) NOT NULL DEFAULT 'Razorpay',
+        ErrorMessage NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+
+        FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+    );
+END
+
 "@
 
 # Reference Data SQL

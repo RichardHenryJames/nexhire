@@ -38,6 +38,7 @@ BEGIN
         PlanID INT NOT NULL,
         StartDate DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
         EndDate DATETIME2 NOT NULL,            -- calculated as StartDate + DurationDays
+        PaymentID NVARCHAR(100) NULL,
         IsActive BIT DEFAULT 1,
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (PlanID) REFERENCES ReferralPlans(PlanID)

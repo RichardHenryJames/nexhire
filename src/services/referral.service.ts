@@ -310,7 +310,7 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
             
-            // Get paginated data - ? FIX: Use integers for OFFSET/FETCH
+            // Get paginated data - ? FIX: Convert to integers before using in SQL
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
@@ -329,12 +329,11 @@ export class ReferralService {
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
                 ${whereClause}
                 ORDER BY rr.RequestedAt DESC
-                OFFSET @param${paramIndex} ROWS
-                FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+                OFFSET ${offset} ROWS
+                FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Pass integers as strings for SQL Server
-            queryParams.push(offset.toString(), safePageSize.toString());
+            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -541,7 +540,7 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
 
-            // Get paginated data - ? FIX: Use integers for OFFSET/FETCH
+            // Get paginated data - ? FIX: Convert to integers before using in SQL
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
@@ -563,12 +562,11 @@ export class ReferralService {
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 ${whereClause}
                 ORDER BY rr.ReferredAt DESC
-                OFFSET @param1 ROWS
-                FETCH NEXT @param2 ROWS ONLY
+                OFFSET ${offset} ROWS
+                FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Pass integers as strings for SQL Server
-            queryParams.push(offset.toString(), safePageSize.toString());
+            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -607,7 +605,7 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
 
-            // Get paginated data - ? FIX: Use integers for OFFSET/FETCH
+            // Get paginated data - ? FIX: Convert to integers before using in SQL
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
@@ -629,8 +627,8 @@ export class ReferralService {
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 ${whereClause}
                 ORDER BY rr.RequestedAt DESC
-                OFFSET @param1 ROWS
-                FETCH NEXT @param2 ROWS ONLY
+                OFFSET ${offset} ROWS
+                FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
             // ? FIX: Pass integers as strings for SQL Server

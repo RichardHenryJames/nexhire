@@ -1553,20 +1553,27 @@ class NexHireAPI {
     return this.apiCall('/referral/stats');
   }
 
-  // Purchase referral plan
-  async purchaseReferralPlan(planID) {
-    if (!this.token) return { success: false, error: 'Authentication required' };
-    
-    return this.apiCall('/referral/plans/purchase', {
-      method: 'POST',
-      body: JSON.stringify({ planID }),
-    });
-  }
-
-  // Get current referral subscription
+  // ✅ NEW: Get current referral subscription
   async getCurrentReferralSubscription() {
     if (!this.token) return { success: false, error: 'Authentication required' };
     return this.apiCall('/referral/subscription');
+  }
+
+  // ✅ NEW: Razorpay payment integration
+  async createRazorpayOrder(orderData) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/payments/razorpay/create-order', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  async verifyPaymentAndActivateSubscription(verificationData) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/payments/razorpay/verify-and-activate', {
+      method: 'POST',
+      body: JSON.stringify(verificationData),
+    });
   }
 }
 

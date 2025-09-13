@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
@@ -82,6 +82,16 @@ export default function JobsScreen({ navigation }) {
   // ✅ NEW: Resume modal state
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [pendingJobForApplication, setPendingJobForApplication] = useState(null);
+  const [referralMode, setReferralMode] = useState(false); // NEW: distinguish apply vs referral
+
+  // ✅ NEW: Referral tracking state
+  const [referredJobIds, setReferredJobIds] = useState(new Set());
+  const [referralEligibility, setReferralEligibility] = useState({
+    isEligible: true,
+    dailyQuotaRemaining: 5,
+    hasActiveSubscription: false,
+    reason: null
+  });
 
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
@@ -91,7 +101,7 @@ export default function JobsScreen({ navigation }) {
   const [smartEnabled] = useState(false);
   const [personalizationApplied, setPersonalizationApplied] = useState(false);
   const [smartBoosts, setSmartBoosts] = useState({});
-  
+
   const hasBoosts = useMemo(() => {
     if (!smartBoosts) return false;
     return Object.values(smartBoosts).some(v => v !== undefined && v !== null && String(v).trim() !== '');
@@ -110,7 +120,7 @@ export default function JobsScreen({ navigation }) {
     const names = ids.map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
     return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Any';
   }, [filters.jobTypeIds, jobTypes]);
-  
+
   const quickWorkplaceLabel = useMemo(() => {
     const ids = filters.workplaceTypeIds || [];
     if (!ids.length) return 'Any';
@@ -170,20 +180,29 @@ export default function JobsScreen({ navigation }) {
     })();
   }, []);
 
-  // Preload saved IDs
+  // ✅ NEW: Preload referred job IDs
   useEffect(() => {
     (async () => {
+      if (!user || !isJobSeeker) return;
       try {
-        const r = await nexhireAPI.getMySavedJobs(1, 500);
-        if (r?.success) {
-          const ids = new Set((r.data || []).map(s => s.JobID));
-          setSavedIds(ids);
-          setSavedJobs(r.data || []);
-          setSavedCount(Number(r.meta?.total || (r.data || []).length || 0));
+        const [referralRes, eligibilityRes] = await Promise.all([
+          nexhireAPI.getMyReferralRequests(1, 500),
+          nexhireAPI.checkReferralEligibility()
+        ]);
+        
+        if (referralRes?.success && referralRes.data?.requests) {
+          const ids = new Set(referralRes.data.requests.map(r => r.JobID));
+          setReferredJobIds(ids);
         }
-      } catch {}
+        
+        if (eligibilityRes?.success) {
+          setReferralEligibility(eligibilityRes.data);
+        }
+      } catch (e) {
+        console.warn('Failed to load referral data:', e.message);
+      }
     })();
-  }, []);
+  }, [user, isJobSeeker]);
 
   // Counts from backend
   const refreshCounts = useCallback(async () => {
@@ -459,7 +478,17 @@ export default function JobsScreen({ navigation }) {
       console.log(`🔄 Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
-  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, pagination.page, pagination.totalPages, loadMoreJobs]);
+    
+    // Emergency loading - when user has no jobs visible but backend has more
+    if (jobs.length === 0 && backendHasMore && !loading) {
+      console.log('🔄 Emergency pagination: No jobs visible but backend says more available, loading immediately...');
+      setSmartPaginating(true);
+      setTimeout(() => {
+        loadMoreJobs();
+        setTimeout(() => setSmartPaginating(false), 1000);
+      }, 100);
+    }
+  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Handlers =====
   const openFilters = useCallback(() => { setFilterDraft({ ...filters }); setShowFilters(true); }, [filters]);
@@ -618,6 +647,8 @@ export default function JobsScreen({ navigation }) {
     // Simple job cards without animations
     return data.map((job, index) => {
       const id = job.JobID || index;
+      const isReferred = referredJobIds.has(job.JobID || job.id);
+      
       return (
         <View key={id} style={{ marginBottom: 12 }}>
           <JobCard
@@ -626,8 +657,10 @@ export default function JobsScreen({ navigation }) {
             workplaceTypes={workplaceTypes}
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
+            onAskReferral={isReferred ? null : () => handleAskReferral(job)} // ✅ Always call handler - no pre-filtering
             onSave={() => handleSave(job)}
             savedContext={activeTab === 'saved'}
+            isReferred={isReferred}
           />
         </View>
       );
@@ -655,8 +688,6 @@ export default function JobsScreen({ navigation }) {
   // Handle apply - simplified without animations
   const handleApply = useCallback(async (job) => {
     if (!job) return;
-    
-    // ✅ NEW: Check authentication and user type first
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
         { text: 'Cancel', style: 'cancel' },
@@ -664,131 +695,278 @@ export default function JobsScreen({ navigation }) {
       ]);
       return;
     }
-
     if (!isJobSeeker) {
       Alert.alert('Access Denied', 'Only job seekers can apply for positions');
       return;
     }
-
-    // ✅ NEW: Show resume upload modal instead of direct apply
-    console.log('🔧 Apply button clicked, showing resume modal for job:', job.Title);
+    setReferralMode(false); // application flow
     setPendingJobForApplication(job);
     setShowResumeModal(true);
   }, [user, isJobSeeker, navigation]);
 
-  // ✅ NEW: Handle resume selection and then apply
-  const handleResumeSelected = useCallback(async (resumeData) => {
-    if (!pendingJobForApplication) return;
+  // NEW: Ask Referral handler
+  const handleAskReferral = useCallback(async (job) => {
+    console.log('🤝 handleAskReferral called in JobsScreen for job:', job?.Title);
     
-    const job = pendingJobForApplication;
-    const id = job.JobID || job.id;
+    if (!job) return;
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to ask for referrals', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      return;
+    }
     
+    const jobId = job.JobID || job.id;
+    
+    // Check if already referred
+    if (referredJobIds.has(jobId)) {
+      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
+        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+        { text: 'OK' }
+      ]);
+      return;
+    }
+    
+    // ✅ CRITICAL FIX: Always check real-time quota before proceeding
     try {
-      // Hide modal first
-      setShowResumeModal(false);
-      setPendingJobForApplication(null);
-
-      // Apply with the selected resume
-      const applicationData = {
-        jobID: id,
-        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
-        resumeId: resumeData.ResumeID // Use the ResumeID from the selected/uploaded resume
-      };
-
-      console.log('🔧 Applying with resume data:', { resumeId: resumeData.ResumeID, jobTitle: job.Title });
+      console.log('🔍 Checking referral eligibility...');
+      const freshEligibility = await nexhireAPI.checkReferralEligibility();
+      console.log('📊 Eligibility result:', freshEligibility);
       
-      // Update UI immediately for better UX
-      if (activeTab === 'openings') {
-        setJobs(prev => {
-          const updated = prev.filter(j => (j.JobID || j.id) !== id);
+      if (freshEligibility?.success) {
+        const eligibilityData = freshEligibility.data;
+        console.log('📋 Eligibility data:', eligibilityData);
+        
+        if (!eligibilityData.isEligible) {
+          console.log('❌ User not eligible, checking subscription status...');
           
-          if (updated.length === 0) {
-            console.log('🔄 Jobs array empty after apply - triggering fresh reload to check for more data');
-            setPagination(p => ({ ...p, page: 1 }));
-            setTimeout(() => {
-              triggerReload();
-            }, 100);
+          if (!eligibilityData.hasActiveSubscription && eligibilityData.dailyQuotaRemaining === 0) {
+            console.log('💳 Free quota exhausted - showing subscription modal');
+            // ✅ FREE QUOTA EXHAUSTED: Show subscription modal
+            showSubscriptionModal();
+            return;
+          } else {
+            console.log('⏰ Other eligibility issue:', eligibilityData.reason);
+            Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+            return;
           }
-          
-          return updated;
-        });
+        }
         
-        setPagination(prev => {
-          const newTotal = Math.max((prev.total || 0) - 1, 0);
-          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-          return {
-            ...prev,
-            total: newTotal,
-            totalPages: newTotalPages,
-            hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
-          };
-        });
-        
-        setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
-      } else if (activeTab === 'saved') {
-        setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-        setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
-        setSavedCount(c => Math.max((c || 0) - 1, 0));
-      }
-      
-      // Make API call
-      const res = await nexhireAPI.applyForJob(applicationData);
-      if (res?.success) {
-        setAppliedIds(prev => {
-          const next = new Set(prev ?? new Set());
-          next.add(id);
-          return next;
-        });
-        setAppliedCount(c => (Number(c) || 0) + 1);
-        
-        // ✅ NEW: Show success message
-        Alert.alert(
-          'Application Submitted! 🎉',
-          'Your application has been submitted successfully. Good luck!',
-          [
-            { text: 'View Applications', onPress: () => setActiveTab('applied') },
-            { text: 'OK', style: 'default' }
-          ]
-        );
-      } else {
-        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        console.log('✅ User is eligible - proceeding with referral');
+        // Update local state with fresh data
+        setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('Apply error', e);
-      Alert.alert('Error', e.message || 'Failed to submit application');
-    } finally {
-      refreshCounts();
-      
-      if (activeTab === 'saved') {
-        try { 
-          const r = await nexhireAPI.getMySavedJobs(1, 50); 
-          if (r?.success) {
-            setSavedJobs(r.data || []);
-            const ids = new Set((r.data || []).map(s => s.JobID));
-            setSavedIds(ids);
-          }
-        } catch {}
-      } else if (activeTab === 'applied') {
-        try { 
-          const r = await nexhireAPI.getMyApplications(1, 50); 
-          if (r?.success) {
-            const items = (r.data || []).map(a => ({ 
-              JobID: a.JobID, 
-              Title: a.JobTitle || a.Title, 
-              OrganizationName: a.CompanyName || a.OrganizationName, 
-              Location: a.JobLocation || a.Location, 
-              SalaryRangeMin: a.SalaryRangeMin, 
-              SalaryRangeMax: a.SalaryRangeMax, 
-              PublishedAt: a.SubmittedAt 
-            }));
-            setAppliedJobs(items);
-            const ids = new Set((r.data || []).map(a => a.JobID));
-            setAppliedIds(ids);
-          }
-        } catch {}
-      }
+      console.error('🚨 Failed to check referral eligibility:', e);
+      Alert.alert('Error', 'Unable to check referral quota. Please try again.');
+      return;
     }
-  }, [pendingJobForApplication, activeTab, refreshCounts, triggerReload]);
+    
+    // Double-check no existing request (in case of race conditions)
+    try {
+      const existing = await nexhireAPI.getMyReferralRequests(1, 100);
+      if (existing.success && existing.data?.requests) {
+        const already = existing.data.requests.some(r => r.JobID === jobId);
+        if (already) {
+          Alert.alert('Already Requested', 'You have already requested a referral for this job', [
+            { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+            { text: 'OK' }
+          ]);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Referral pre-check failed:', e.message);
+    }
+    
+    // All checks passed - proceed with referral request
+    setReferralMode(true);
+    setPendingJobForApplication(job);
+    setShowResumeModal(true);
+  }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal]);
+
+  // ✅ NEW: Subscription modal for quota exhausted users
+  const showSubscriptionModal = useCallback(async () => {
+    console.log('💳 showSubscriptionModal called in JobsScreen');
+    console.log('💳 Navigation object:', navigation);
+    console.log('💳 Available routes:', navigation.getState?.());
+    
+    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
+    if (Platform.OS === 'web') {
+      console.log('💳 Web platform detected - navigating directly to ReferralPlans');
+      navigation.navigate('ReferralPlans');
+      return;
+    }
+    
+    try {
+      Alert.alert(
+        '🚀 Upgrade Required',
+        `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`,
+        [
+          { 
+            text: 'Maybe Later', 
+            style: 'cancel',
+            onPress: () => console.log('💳 User selected Maybe Later')
+          },
+          { 
+            text: 'View Plans', 
+            onPress: () => {
+              console.log('💳 User selected View Plans - attempting navigation...');
+              try {
+                navigation.navigate('ReferralPlans');
+                console.log('💳 Navigation successful!');
+              } catch (navError) {
+                console.error('💳 Navigation error:', navError);
+                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
+              }
+            }
+          }
+        ]
+      );
+      // Fallback: ensure navigation if user does not pick (defensive – some platforms auto-dismiss custom buttons)
+      setTimeout(() => {
+        const state = navigation.getState?.();
+        const currentRoute = state?.routes?.[state.index]?.name;
+        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0 && !referralEligibility.hasActiveSubscription) {
+          console.log('💳 Fallback navigation to ReferralPlans after Alert timeout');
+            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
+        }
+      }, 3000);
+    } catch (error) {
+      console.error('🚨 Error showing subscription modal:', error);
+      Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
+    }
+  }, [navigation, referralEligibility]);
+
+  // ✅ NEW: Handle plan selection and purchase
+  const handlePlanSelection = useCallback(async (plan) => {
+    console.log('💰 Plan selected in JobsScreen:', plan);
+    
+    Alert.alert(
+      'Confirm Subscription',
+      `Subscribe to ${plan.Name} for $${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Subscribe Now', 
+          onPress: async () => {
+            try {
+              // For demo - simulate successful purchase
+              Alert.alert(
+                '🎉 Subscription Successful!',
+                `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
+                [
+                  { 
+                    text: 'Start Referring!', 
+                    onPress: async () => {
+                      // Refresh eligibility after "purchase"
+                      const eligibilityRes = await nexhireAPI.checkReferralEligibility();
+                      if (eligibilityRes?.success) {
+                        setReferralEligibility(eligibilityRes.data);
+                      }
+                    }
+                  }
+                ]
+              );
+              
+              // TODO: Implement real payment processing
+              // const purchaseResult = await nexhireAPI.purchaseReferralPlan(plan.PlanID);
+              
+            } catch (error) {
+              Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
+            }
+          }
+        }
+      ]
+    );
+  }, []);
+
+  // ✅ UPDATED: Resume selected handler supports both apply & referral flows
+  const handleResumeSelected = useCallback(async (resumeData) => {
+    if (!pendingJobForApplication) return;
+    const job = pendingJobForApplication;
+    const id = job.JobID || job.id;
+    try {
+      setShowResumeModal(false);
+      if (referralMode) {
+        // Create referral request
+        const res = await nexhireAPI.createReferralRequest(id, resumeData.ResumeID);
+        if (res?.success) {
+          // ✅ NEW: Update local tracking after successful referral request
+          setReferredJobIds(prev => new Set([...prev, id]));
+          
+          // Update eligibility (reduce quota)
+          setReferralEligibility(prev => ({
+            ...prev,
+            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
+            isEligible: prev.dailyQuotaRemaining > 1
+          }));
+          
+          Alert.alert(
+            'Referral Request Sent! 🤝',
+            'Your referral request was submitted successfully. You will be notified when someone refers you.',
+            [
+              { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+              { text: 'OK' }
+            ]
+          );
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
+      } else {
+        // Apply flow (existing code preserved)
+        const applicationData = {
+          jobID: id,
+          coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+          resumeId: resumeData.ResumeID
+        };
+        // Optimistic UI update (existing code preserved)
+        if (activeTab === 'openings') {
+          setJobs(prev => {
+            const updated = prev.filter(j => (j.JobID || j.id) !== id);
+            if (updated.length === 0) {
+              setPagination(p => ({ ...p, page: 1 }));
+              setTimeout(() => { triggerReload(); }, 100);
+            }
+            return updated;
+          });
+          setPagination(prev => {
+            const newTotal = Math.max((prev.total || 0) - 1, 0);
+            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
+          });
+          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
+        } else if (activeTab === 'saved') {
+          setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
+          setSavedCount(c => Math.max((c || 0) - 1, 0));
+        }
+        const res = await nexhireAPI.applyForJob(applicationData);
+        if (res?.success) {
+          setAppliedIds(prev => { const next = new Set(prev ?? new Set()); next.add(id); return next; });
+          setAppliedCount(c => (Number(c) || 0) + 1);
+          Alert.alert('Application Submitted', 'Your application has been submitted successfully.', [
+            { text: 'View Applications', onPress: () => setActiveTab('applied') },
+            { text: 'OK', style: 'default' }
+          ]);
+        } else {
+          Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        }
+      }
+    } catch (e) {
+      console.error(referralMode ? 'Referral error' : 'Apply error', e);
+      Alert.alert('Error', e.message || 'Operation failed');
+    } finally {
+      setPendingJobForApplication(null);
+      setReferralMode(false);
+      refreshCounts();
+    }
+  }, [pendingJobForApplication, referralMode, activeTab, refreshCounts, triggerReload, navigation]);
 
   const handleSave = useCallback(async (job) => {
     if (!job) return;
@@ -1109,6 +1287,7 @@ export default function JobsScreen({ navigation }) {
         onClose={() => {
           setShowResumeModal(false);
           setPendingJobForApplication(null);
+          setReferralMode(false);
         }}
         onResumeSelected={handleResumeSelected}
         user={user}

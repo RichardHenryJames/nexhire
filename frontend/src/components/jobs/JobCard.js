@@ -8,7 +8,7 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onAskReferral, savedContext = false }) => {
+const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onAskReferral, savedContext = false, isReferred = false }) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -75,15 +75,22 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
             </TouchableOpacity>
           )}
 
-          {/* NEW: Ask Referral Button */}
-          <TouchableOpacity 
-            style={styles.referralBtn} 
-            onPress={onAskReferral} 
-            accessibilityLabel="Ask for referral"
-          >
-            <Ionicons name="people-outline" size={18} color="#ff6600" />
-            <Text style={styles.referralText}>Ask Referral</Text>
-          </TouchableOpacity>
+          {/* ✅ FIXED: Always show "Ask Referral" or "Referred" - quota check happens on click */}
+          {isReferred ? (
+            <View style={styles.referredPill} accessibilityRole="text">
+              <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+              <Text style={styles.referredText}>Referred</Text>
+            </View>
+          ) : onAskReferral ? (
+            <TouchableOpacity 
+              style={styles.referralBtn} 
+              onPress={onAskReferral} 
+              accessibilityLabel="Ask for referral"
+            >
+              <Ionicons name="people-outline" size={18} color="#ff6600" />
+              <Text style={styles.referralText}>Ask Referral</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
             <Ionicons name="paper-plane-outline" size={18} color="#fff" />
@@ -192,6 +199,18 @@ const styles = StyleSheet.create({
     borderColor: '#ff6600',
   },
   referralText: { color: '#ff6600', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  // ✅ NEW: Referred status pill styles
+  referredPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  referredText: { color: '#10b981', marginLeft: 6, fontWeight: '600', fontSize: 13 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',

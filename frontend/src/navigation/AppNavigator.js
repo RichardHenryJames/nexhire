@@ -31,9 +31,9 @@ import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
-
-// NEW: Referral Screen
 import ReferralScreen from '../screens/referral/ReferralScreen';
+import ReferralPlansScreen from '../screens/referral/ReferralPlansScreen';
+import PaymentScreen from '../screens/payment/PaymentScreen';
 
 import { colors } from '../styles/theme';
 
@@ -194,6 +194,24 @@ function MainStack() {
         options={{ 
           headerShown: true,
           title: 'Referral',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="ReferralPlans" 
+        component={ReferralPlansScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Subscription Plans',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Payment" 
+        component={PaymentScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Secure Payment',
           headerBackTitleVisible: false,
         }}
       />
