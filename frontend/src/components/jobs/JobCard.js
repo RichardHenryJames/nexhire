@@ -8,7 +8,7 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, savedContext = false }) => {
+const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onAskReferral, savedContext = false }) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -74,6 +74,17 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
               <Text style={styles.saveText}>Save</Text>
             </TouchableOpacity>
           )}
+
+          {/* NEW: Ask Referral Button */}
+          <TouchableOpacity 
+            style={styles.referralBtn} 
+            onPress={onAskReferral} 
+            accessibilityLabel="Ask for referral"
+          >
+            <Ionicons name="people-outline" size={18} color="#ff6600" />
+            <Text style={styles.referralText}>Ask Referral</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
             <Ionicons name="paper-plane-outline" size={18} color="#fff" />
             <Text style={styles.applyText}>Apply</Text>
@@ -150,31 +161,42 @@ const styles = StyleSheet.create({
   actionsInline: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8, // Add gap between buttons
   },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10, // Reduced padding to fit 3 buttons
     borderRadius: 8,
     backgroundColor: '#e3f2fd',
-    marginRight: 10,
   },
   savedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10, // Reduced padding to fit 3 buttons
     borderRadius: 8,
     backgroundColor: '#e3f2fd',
-    marginRight: 10,
   },
   saveText: { color: '#0d47a1', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  // NEW: Ask Referral button styles
+  referralBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ff6600',
+  },
+  referralText: { color: '#ff6600', marginLeft: 6, fontWeight: '600', fontSize: 13 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12, // Reduced padding to fit 3 buttons
     borderRadius: 8,
     backgroundColor: '#0066cc',
   },

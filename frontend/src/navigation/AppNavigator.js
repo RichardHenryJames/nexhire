@@ -32,6 +32,9 @@ import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
+// NEW: Referral Screen
+import ReferralScreen from '../screens/referral/ReferralScreen';
+
 import { colors } from '../styles/theme';
 
 const Stack = createStackNavigator();
@@ -105,6 +108,8 @@ function MainTabNavigator() {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'Applications') {
             iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Referrals') {
+            iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -150,6 +155,12 @@ function MainTabNavigator() {
         component={ApplicationsScreen}
         options={{ title: 'Applications' }}
       />
+      {/* NEW: Referrals Tab - positioned between Applications and Profile */}
+      <Tab.Screen 
+        name="Referrals" 
+        component={ReferralScreen}
+        options={{ title: 'Referrals' }}
+      />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
@@ -174,6 +185,15 @@ function MainStack() {
         options={{ 
           headerShown: true,
           title: 'Job Details',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Referral" 
+        component={ReferralScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Referral',
           headerBackTitleVisible: false,
         }}
       />

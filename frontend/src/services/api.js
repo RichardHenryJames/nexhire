@@ -1437,6 +1437,137 @@ class NexHireAPI {
       };
     }
   }
+
+  // ========================================================================
+  // REFERRAL SYSTEM APIs - Complete Integration
+  // ========================================================================
+
+  // Get referral plans (public endpoint)
+  async getReferralPlans() {
+    return this.apiCall('/referral/plans');
+  }
+
+  // Check referral eligibility
+  async checkReferralEligibility() {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/referral/eligibility');
+  }
+
+  // Create referral request (same pattern as applying for job)
+  async createReferralRequest(jobID, resumeID) {
+    try {
+      console.log('🤝 Creating referral request:', { jobID, resumeID });
+      
+      if (!this.token) {
+        throw new Error('Authentication required');
+      }
+
+      if (!jobID || !resumeID) {
+        throw new Error('Job ID and Resume ID are required');
+      }
+
+      return this.apiCall('/referral/requests', {
+        method: 'POST',
+        body: JSON.stringify({ jobID, resumeID })
+      });
+    } catch (error) {
+      console.error('❌ Create referral request failed:', error.message);
+      throw error;
+    }
+  }
+
+  // Get my referral requests (as seeker)
+  async getMyReferralRequests(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/referral/my-requests?${params}`);
+  }
+
+  // Get available referral requests (as potential referrer)
+  async getAvailableReferralRequests(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/referral/available?${params}`);
+  }
+
+  // Claim a referral request (as referrer)
+  async claimReferralRequest(requestId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall(`/referral/requests/${requestId}/claim`, {
+      method: 'POST',
+    });
+  }
+
+  // Submit proof of referral
+  async submitReferralProof(requestId, fileURL, fileType) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall(`/referral/requests/${requestId}/proof`, {
+      method: 'POST',
+      body: JSON.stringify({ fileURL, fileType }),
+    });
+  }
+
+  // Verify referral completion (as seeker)
+  async verifyReferralCompletion(requestId, verified = true) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall(`/referral/requests/${requestId}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ verified }),
+    });
+  }
+
+  // Get my requests as referrer
+  async getMyReferrerRequests(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/referral/my-referrer-requests?${params}`);
+  }
+
+  // Get referral analytics
+  async getReferralAnalytics() {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/referral/analytics');
+  }
+
+  // Get referrer stats (badge counts)
+  async getReferrerStats() {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/referral/stats');
+  }
+
+  // Purchase referral plan
+  async purchaseReferralPlan(planID) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/referral/plans/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ planID }),
+    });
+  }
+
+  // Get current referral subscription
+  async getCurrentReferralSubscription() {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/referral/subscription');
+  }
 }
 
 export default new NexHireAPI();
