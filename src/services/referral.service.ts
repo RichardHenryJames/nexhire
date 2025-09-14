@@ -866,4 +866,84 @@ export class ReferralService {
             throw error;
         }
     }
+
+    /**
+     * Claim a referral request with mandatory proof upload
+     */
+    static async claimReferralRequestWithProof(referrerId: string, dto: { 
+        requestID: string; 
+        proofFileURL: string; 
+        proofFileType: string; 
+        proofDescription?: string; 
+    }): Promise<ReferralRequest> {
+        try {
+            // Check if request is still available
+            const requestQuery = `
+                SELECT RequestID, Status, JobID, ApplicantID
+                FROM ReferralRequests
+                WHERE RequestID = @param0 AND Status = 'Pending'
+            `;
+            const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID]);
+            
+            if (!requestResult.recordset || requestResult.recordset.length === 0) {
+                throw new ValidationError('Request not available for claiming');
+            }
+            
+            const { JobID: jobId, ApplicantID: seekerId } = requestResult.recordset[0];
+            
+            // Verify referrer is eligible (same organization, not the original requester)
+            if (referrerId === seekerId) {
+                throw new ValidationError('You cannot claim your own referral request');
+            }
+            
+            const eligibilityQuery = `
+                SELECT we.OrganizationID
+                FROM WorkExperiences we
+                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+                INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
+                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND j.JobID = @param1
+            `;
+            const eligibilityResult = await dbService.executeQuery(eligibilityQuery, [referrerId, jobId]);
+            
+            if (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0) {
+                throw new ValidationError('You are not eligible to refer for this job - must work at the same company');
+            }
+            
+            // Claim the request and mark as completed with proof
+            const updateQuery = `
+                UPDATE ReferralRequests
+                SET Status = 'Completed', AssignedReferrerID = @param1, ReferredAt = GETUTCDATE()
+                WHERE RequestID = @param0
+            `;
+            
+            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId]);
+            
+            // Create proof record immediately
+            const proofId = AuthService.generateUniqueId();
+            const insertProofQuery = `
+                INSERT INTO ReferralProofs (
+                    ProofID, RequestID, ReferrerID, FileURL, FileType, Description, SubmittedAt
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5, GETUTCDATE()
+                )
+            `;
+            
+            await dbService.executeQuery(insertProofQuery, [
+                proofId, dto.requestID, referrerId, dto.proofFileURL, dto.proofFileType, dto.proofDescription || null
+            ]);
+            
+            // Update referrer stats
+            await this.updateReferrerStats(referrerId);
+            
+            console.log(`? Referral request ${dto.requestID} claimed with proof by ${referrerId}`);
+            
+            // TODO: Notify seeker that referral was completed
+            // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
+            
+            return await this.getReferralRequestById(dto.requestID);
+        } catch (error) {
+            console.error('Error claiming referral request with proof:', error);
+            throw error;
+        }
+    }
 }

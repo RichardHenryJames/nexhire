@@ -50,6 +50,7 @@ export interface ReferralProof {
     ReferrerID: string;
     FileURL: string;
     FileType: string;
+    Description?: string;
     SubmittedAt: Date;
 }
 
@@ -75,12 +76,16 @@ export interface CreateReferralRequestDto {
 
 export interface ClaimReferralRequestDto {
     requestID: string;
+    proofFileURL: string;
+    proofFileType: string;
+    proofDescription?: string;
 }
 
 export interface SubmitReferralProofDto {
     requestID: string;
     fileURL: string;
     fileType: string;
+    description?: string;
 }
 
 export interface VerifyReferralDto {

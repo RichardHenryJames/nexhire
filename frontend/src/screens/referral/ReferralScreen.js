@@ -14,6 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
+import ReferralProofModal from '../../components/ReferralProofModal';
+import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
@@ -23,6 +25,10 @@ export default function ReferralScreen({ navigation }) {
   const [myRequests, setMyRequests] = useState([]);
   const [requestsToMe, setRequestsToMe] = useState([]);
   const [stats, setStats] = useState({ pendingCount: 0 });
+
+  // Proof upload modal state
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   // Refresh data when screen is focused
   useFocusEffect(
@@ -113,58 +119,61 @@ export default function ReferralScreen({ navigation }) {
     );
   };
 
-  const handleClaimRequest = async (requestId) => {
+  // NEW: Enhanced claim request with immediate proof upload
+  const handleClaimRequest = async (request) => {
     try {
-      const result = await nexhireAPI.claimReferralRequest(requestId);
-      if (result.success) {
-        Alert.alert('Success', 'Request claimed successfully!');
-        await loadRequestsToMe();
-      } else {
-        Alert.alert('Error', result.error || 'Failed to claim request');
-      }
+      console.log('?? Claiming request with proof:', request.RequestID);
+      
+      // Open proof modal instead of immediate claim
+      setSelectedRequest(request);
+      setShowProofModal(true);
+      
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to claim request');
+      console.error('Error initiating claim:', error);
+      Alert.alert('Error', error.message || 'Failed to initiate claim');
     }
   };
 
-  const handleSubmitProof = (requestId) => {
-    // For now, show a simple prompt for URL input
-    Alert.prompt(
-      'Submit Proof',
-      'Please enter the URL of your referral proof (screenshot, email, etc.):',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          onPress: async (url) => {
-            if (!url || !url.trim()) {
-              Alert.alert('Error', 'Please enter a valid URL');
-              return;
-            }
-            
-            try {
-              const result = await nexhireAPI.submitReferralProof(
-                requestId, 
-                url.trim(), 
-                'image/png' // Default type
-              );
-              
-              if (result.success) {
-                Alert.alert('Success', 'Proof submitted successfully!');
-                await loadRequestsToMe();
-              } else {
-                Alert.alert('Error', result.error || 'Failed to submit proof');
-              }
-            } catch (error) {
-              Alert.alert('Error', error.message || 'Failed to submit proof');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      '',
-      'url'
-    );
+  // NEW: Handle proof submission with claim
+  const handleProofSubmission = async (proofData) => {
+    if (!selectedRequest) return;
+
+    try {
+      console.log('?? Submitting proof with claim:', proofData);
+      
+      // Use the new enhanced API that combines claim + proof
+      const result = await nexhireAPI.claimReferralRequestWithProof(
+        selectedRequest.RequestID,
+        proofData
+      );
+      
+      if (result.success) {
+        console.log('? Claim with proof successful');
+        
+        // Update UI: move request from "Requests To Me" to "My Referrer Requests"
+        setRequestsToMe(prev => prev.filter(r => r.RequestID !== selectedRequest.RequestID));
+        
+        // Close modal
+        setShowProofModal(false);
+        setSelectedRequest(null);
+        
+        // Refresh data
+        await loadData();
+        
+        showToast('Referral claimed and proof submitted successfully!', 'success');
+      } else {
+        throw new Error(result.error || 'Failed to claim request');
+      }
+    } catch (error) {
+      console.error('? Proof submission failed:', error);
+      Alert.alert('Error', error.message || 'Failed to submit proof');
+    }
+  };
+
+  // OLD: Simple proof submission for already claimed requests
+  const handleSubmitProof = (request) => {
+    setSelectedRequest(request);
+    setShowProofModal(true);
   };
 
   const getStatusColor = (status) => {
@@ -206,6 +215,11 @@ export default function ReferralScreen({ navigation }) {
           <Text style={styles.requestDate}>
             Requested on {formatDate(request.RequestedAt)}
           </Text>
+          {request.ReferrerName && (
+            <Text style={styles.referrerName}>
+              Referred by {request.ReferrerName}
+            </Text>
+          )}
         </View>
         <View style={styles.statusBadge}>
           <Ionicons 
@@ -213,7 +227,9 @@ export default function ReferralScreen({ navigation }) {
             size={16} 
             color={getStatusColor(request.Status)} 
           />
-          <Text style={[styles.statusText, { color: getStatusColor(request.Status) }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(request.Status) }]}
+            numberOfLines={1}
+          >
             {request.Status}
           </Text>
         </View>
@@ -221,10 +237,16 @@ export default function ReferralScreen({ navigation }) {
       
       <View style={styles.requestActions}>
         {request.Status === 'Completed' && (
-          <TouchableOpacity style={styles.viewProofBtn}>
-            <Ionicons name="eye-outline" size={16} color={colors.primary} />
-            <Text style={styles.viewProofText}>View Proof</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity style={styles.viewProofBtn}>
+              <Ionicons name="eye-outline" size={16} color={colors.primary} />
+              <Text style={styles.viewProofText}>View Proof</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.verifyBtn}>
+              <Ionicons name="checkmark-done" size={16} color={colors.success} />
+              <Text style={styles.verifyText}>Verify</Text>
+            </TouchableOpacity>
+          </>
         )}
         
         {request.Status === 'Pending' && (
@@ -264,7 +286,7 @@ export default function ReferralScreen({ navigation }) {
           <>
             <TouchableOpacity 
               style={styles.referBtn}
-              onPress={() => handleClaimRequest(request.RequestID)}
+              onPress={() => handleClaimRequest(request)}
             >
               <Ionicons name="people" size={16} color="#fff" />
               <Text style={styles.referText}>Refer Now</Text>
@@ -279,7 +301,7 @@ export default function ReferralScreen({ navigation }) {
         {request.Status === 'Claimed' && (
           <TouchableOpacity 
             style={styles.proofBtn}
-            onPress={() => handleSubmitProof(request.RequestID)}
+            onPress={() => handleSubmitProof(request)}
           >
             <Ionicons name="camera" size={16} color="#fff" />
             <Text style={styles.proofText}>Submit Proof</Text>
@@ -406,6 +428,18 @@ export default function ReferralScreen({ navigation }) {
 
       {/* Tab Content */}
       {renderTabContent()}
+
+      {/* NEW: Proof Upload Modal */}
+      <ReferralProofModal
+        visible={showProofModal}
+        onClose={() => {
+          setShowProofModal(false);
+          setSelectedRequest(null);
+        }}
+        onSubmit={handleProofSubmission}
+        referralRequest={selectedRequest}
+        jobTitle={selectedRequest?.JobTitle}
+      />
     </View>
   );
 }
@@ -641,5 +675,25 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
+  },
+  referrerName: {
+    fontSize: typography.sizes.sm,
+    color: colors.success,
+    fontWeight: typography.weights.medium,
+  },
+  verifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.success,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  verifyText: {
+    fontSize: typography.sizes.sm,
+    color: colors.white,
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
   },
 });

@@ -270,9 +270,15 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
     try {
         const user = authenticate(req);
         const requestId = (req as any).params?.requestId;
+        const claimData = await extractRequestBody(req) as ClaimReferralRequestDto;
         
         if (!requestId || !isValidGuid(requestId)) {
             throw new ValidationError('Valid Request ID is required');
+        }
+
+        // Proof upload is now mandatory for claiming
+        if (!claimData.proofFileURL || !claimData.proofFileType) {
+            throw new ValidationError('Proof screenshot is required to claim referral');
         }
 
         // Get applicant ID
@@ -285,11 +291,16 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
         }
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
-        const request = await ReferralService.claimReferralRequest(applicantId, { requestID: requestId });
+        const request = await ReferralService.claimReferralRequestWithProof(applicantId, {
+            requestID: requestId,
+            proofFileURL: claimData.proofFileURL,
+            proofFileType: claimData.proofFileType,
+            proofDescription: claimData.proofDescription
+        });
         
         return {
             status: 200,
-            jsonBody: successResponse(request, 'Referral request claimed successfully')
+            jsonBody: successResponse(request, 'Referral request claimed successfully with proof')
         };
     } catch (error: any) {
         return {

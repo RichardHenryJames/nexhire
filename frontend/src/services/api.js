@@ -1530,6 +1530,20 @@ class NexHireAPI {
     });
   }
 
+  // NEW: Claim a referral request with proof upload (enhanced flow)
+  async claimReferralRequestWithProof(requestId, proofData) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    if (!proofData.proofFileURL || !proofData.proofFileType) {
+      throw new Error('Proof screenshot is required');
+    }
+
+    return this.apiCall(`/referral/requests/${requestId}/claim`, {
+      method: 'POST',
+      body: JSON.stringify(proofData),
+    });
+  }
+
   // Submit proof of referral
   async submitReferralProof(requestId, fileURL, fileType) {
     if (!this.token) return { success: false, error: 'Authentication required' };
@@ -1595,6 +1609,123 @@ class NexHireAPI {
       method: 'POST',
       body: JSON.stringify(verificationData),
     });
+  }
+
+  // NEW: Upload file to storage (generic file upload)
+  async uploadFile(fileUri, containerName = 'referral-proofs') {
+    try {
+      console.log('📎 === FILE UPLOAD START ===');
+      console.log('📎 File URI (truncated):', (fileUri || '').substring(0, 60));
+      console.log('📎 Container:', containerName);
+      console.log('📎 Platform:', Platform.OS);
+
+      let fileData;
+      let fileName;
+      let mimeType;
+
+      if (Platform.OS === 'web') {
+        // Web: Expo image picker can return either a blob: URI or a data URI (data:image/jpeg;base64,...)
+        if (fileUri.startsWith('data:')) {
+          // Handle data URI directly
+            // Format: data:<mimeType>;base64,<data>
+            const firstComma = fileUri.indexOf(',');
+            const header = fileUri.substring(5, firstComma); // strip 'data:'
+            const b64 = fileUri.substring(firstComma + 1);
+            // header example: image/jpeg;base64
+            mimeType = header.split(';')[0] || 'image/jpeg';
+            fileData = b64; // already base64 without prefix
+            const extFromMime = mimeType.split('/')[1] || 'jpg';
+            fileName = `proof_${Date.now()}.${extFromMime}`;
+            console.log('📎 Parsed data URI:', { mimeType, size: fileData.length });
+        } else if (fileUri.startsWith('blob:')) {
+          // blob: URL case
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+          mimeType = blob.type || 'image/jpeg';
+          fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const result = reader.result; // data:<mime>;base64,XXXX
+                const base64 = result.split(',')[1];
+                resolve(base64);
+              } catch (e) { reject(e); }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          const extFromMime = mimeType.split('/')[1] || 'jpg';
+          fileName = `proof_${Date.now()}.${extFromMime}`;
+          console.log('📎 Converted blob to base64:', { mimeType, size: fileData.length });
+        } else {
+          // Attempt generic fetch (in case a normal URL was provided)
+          console.log('📎 Attempting generic fetch for URI (not data:/blob:):', fileUri.substring(0, 40));
+          try {
+            const response = await fetch(fileUri);
+            const blob = await response.blob();
+            mimeType = blob.type || 'image/jpeg';
+            fileData = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                try { const base64 = reader.result.split(',')[1]; resolve(base64); } catch (e) { reject(e); }
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            const extFromMime = mimeType.split('/')[1] || 'jpg';
+            fileName = `proof_${Date.now()}.${extFromMime}`;
+          } catch (genericErr) {
+            console.error('❌ Generic fetch failed for fileUri:', genericErr);
+            throw new Error('Invalid file URI for web platform');
+          }
+        }
+      } else {
+        // React Native implementation
+        const { FileSystem } = require('expo-file-system');
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        if (!fileInfo.exists) {
+          throw new Error('File does not exist');
+        }
+        fileData = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+        mimeType = 'image/jpeg';
+        fileName = `proof_${Date.now()}.jpg`;
+      }
+
+      if (!fileData) {
+        throw new Error('Failed to read file data');
+      }
+
+      console.log('📎 File processed (pre-upload):', {
+        fileName,
+        mimeType,
+        dataLength: fileData.length
+      });
+
+      // Upload to storage using generic file upload endpoint
+      const uploadPayload = {
+        fileName,
+        fileData,
+        mimeType,
+        containerName,
+        userId: this.getUserIdFromToken()
+      };
+
+      const result = await this.apiCall('/storage/upload', {
+        method: 'POST',
+        body: JSON.stringify(uploadPayload),
+      });
+
+      console.log('✅ File upload successful:', result.data?.fileUrl);
+      console.log('📎 === FILE UPLOAD END ===');
+
+      return result;
+    } catch (error) {
+      console.error('❌ === FILE UPLOAD ERROR ===');
+      console.error('❌ Error:', error.message);
+      console.error('❌ Stack (if any):', error.stack);
+      console.error('❌ === END ERROR ===');
+      throw error;
+    }
   }
 }
 

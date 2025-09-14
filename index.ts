@@ -872,6 +872,24 @@ app.http('payment-history', {
     handler: withErrorHandling(getPaymentHistory)
 });
 
+// Import storage controller
+import { uploadFile, deleteFile } from './src/controllers/storage.controller';
+
+// NEW: Storage endpoints for file uploads
+app.http('storage-upload', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'storage/upload',
+    handler: withErrorHandling(uploadFile)
+});
+
+app.http('storage-delete', {
+    methods: ['DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'storage/{containerName}/{fileName}',
+    handler: withErrorHandling(deleteFile)
+});
+
 // ========================================================================
 // STARTUP LOG
 // ========================================================================

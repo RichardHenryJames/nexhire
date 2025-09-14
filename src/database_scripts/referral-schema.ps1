@@ -75,6 +75,7 @@ BEGIN
         ReferrerID UNIQUEIDENTIFIER NOT NULL,
         FileURL NVARCHAR(1000) NOT NULL, -- blob/file URL
         FileType NVARCHAR(50),
+        Description NVARCHAR(200),
         SubmittedAt DATETIME2 DEFAULT GETUTCDATE(),
         FOREIGN KEY (RequestID) REFERENCES ReferralRequests(RequestID),
         FOREIGN KEY (ReferrerID) REFERENCES Applicants(ApplicantID)

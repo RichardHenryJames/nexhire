@@ -618,7 +618,7 @@ export default function JobsScreen({ navigation }) {
 
   // Render list without animations
   const renderList = () => {
-    const data = activeTab === 'openings' ? jobs : activeTab === 'applied' ? appliedJobs : savedJobs;
+    const data = activeTab === 'openings' ? jobs : savedJobs;
 
     if (loading && data.length === 0 && activeTab === 'openings') {
       return (
@@ -647,7 +647,9 @@ export default function JobsScreen({ navigation }) {
               ? hasMoreToLoad
                 ? 'Checking for more opportunities...'
                 : `You've seen all ${pagination.total || 65} available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
-              : 'New opportunities will appear here.'
+              : activeTab === 'saved' 
+                ? 'Saved jobs will appear here when you bookmark jobs for later.'
+                : 'New opportunities will appear here.'
             }
           </Text>
 
@@ -696,9 +698,9 @@ export default function JobsScreen({ navigation }) {
   // Tabs header
   const Tabs = () => (
     <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e9ecef' }}>
-      {['openings','applied','saved'].map(key => {
-        const labels = { openings: 'Openings', applied: 'Applied', saved: 'Saved' };
-        const count = key === 'openings' ? openingsCount : key === 'applied' ? appliedCount : savedCount;
+      {['openings','saved'].map(key => {
+        const labels = { openings: 'Openings', saved: 'Saved' };
+        const count = key === 'openings' ? openingsCount : savedCount;
         const active = activeTab === key;
         return (
           <TouchableOpacity key={key} onPress={() => setActiveTab(key)} style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: active ? '#0066cc' : 'transparent' }}>
@@ -1103,22 +1105,6 @@ export default function JobsScreen({ navigation }) {
         try {
           const r = await nexhireAPI.getMySavedJobs(1, 50);
           if (r?.success) setSavedJobs(r.data || []);
-        } catch {}
-      } else if (activeTab === 'applied') {
-        try {
-          const r = await nexhireAPI.getMyApplications(1, 50);
-          if (r?.success) {
-            const items = (r.data || []).map(a => ({
-              JobID: a.JobID,
-              Title: a.JobTitle || a.Title,
-              OrganizationName: a.CompanyName || a.OrganizationName,
-              Location: a.JobLocation || a.Location,
-              SalaryRangeMin: a.SalaryRangeMin,
-              SalaryRangeMax: a.SalaryRangeMax,
-              PublishedAt: a.SubmittedAt,
-            }));
-            setAppliedJobs(items);
-          }
         } catch {}
       }
     })();
