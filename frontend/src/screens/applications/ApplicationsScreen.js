@@ -7,14 +7,18 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
+import ResumeUploadModal from '../../components/ResumeUploadModal';
+import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
 
 export default function ApplicationsScreen({ navigation }) {
-  const { isEmployer, isJobSeeker } = useAuth();
+  const { isEmployer, isJobSeeker, user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,8 +29,26 @@ export default function ApplicationsScreen({ navigation }) {
     totalPages: 0,
   });
 
+  // NEW: Referral state management
+  const [referredJobIds, setReferredJobIds] = useState(new Set());
+  const [referralEligibility, setReferralEligibility] = useState({
+    isEligible: true,
+    dailyQuotaRemaining: 5,
+    hasActiveSubscription: false,
+    reason: null
+  });
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [pendingJobForApplication, setPendingJobForApplication] = useState(null);
+  const [referralMode, setReferralMode] = useState(false);
+  const [primaryResume, setPrimaryResume] = useState(null);
+  // Web withdraw confirmation state
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
+
   useEffect(() => {
+    console.log('?? ApplicationsScreen mounted - console.log is working!');
     fetchApplications();
+    loadReferralData();
+    loadPrimaryResume();
   }, [],);
 
   const fetchApplications = async (resetPage = false) => {
@@ -34,10 +56,15 @@ export default function ApplicationsScreen({ navigation }) {
       const currentPage = resetPage ? 1 : pagination.page;
       setLoading(resetPage);
 
+      console.log('?? FETCHING APPLICATIONS DEBUG - START');
+      console.log('?? Current page:', currentPage);
+      console.log('?? Page size:', pagination.pageSize);
+
       let result;
       if (isJobSeeker) {
         // Get job seeker's own applications
         result = await nexhireAPI.getMyApplications(currentPage, pagination.pageSize);
+        console.log('?? API result:', JSON.stringify(result, null, 2));
       } else {
         // For employers, we'd need to get applications for their jobs
         // This would require a different API call or job-specific applications
@@ -45,6 +72,9 @@ export default function ApplicationsScreen({ navigation }) {
       }
 
       if (result.success) {
+        console.log('?? Applications data:', result.data);
+        console.log('?? Status IDs found:', result.data?.map(app => ({ id: app.ApplicationID, status: app.StatusID, title: app.JobTitle })));
+        
         const newApplications = resetPage ? result.data : [...applications, ...result.data];
         setApplications(newApplications);
         
@@ -59,6 +89,8 @@ export default function ApplicationsScreen({ navigation }) {
       } else {
         console.error('Failed to fetch applications:', result.error);
       }
+      
+      console.log('?? FETCHING APPLICATIONS DEBUG - END');
     } catch (error) {
       console.error('Error fetching applications:', error);
     } finally {
@@ -67,8 +99,46 @@ export default function ApplicationsScreen({ navigation }) {
     }
   };
 
+  // Load referral data
+  const loadReferralData = async () => {
+    if (!user || !isJobSeeker) return;
+    try {
+      const [referralRes, eligibilityRes] = await Promise.all([
+        nexhireAPI.getMyReferralRequests(1, 500),
+        nexhireAPI.checkReferralEligibility()
+      ]);
+      
+      if (referralRes?.success && referralRes.data?.requests) {
+        const ids = new Set(referralRes.data.requests.map(r => r.JobID));
+        setReferredJobIds(ids);
+      }
+      
+      if (eligibilityRes?.success) {
+        setReferralEligibility(eligibilityRes.data);
+      }
+    } catch (e) {
+      console.warn('Failed to load referral data:', e.message);
+    }
+  };
+
+  // Load primary resume
+  const loadPrimaryResume = async () => {
+    if (!user || !isJobSeeker) return;
+    try {
+      const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      if (profile?.success) {
+        const resumes = profile.data?.resumes || [];
+        const primary = resumes.find(r => r.IsPrimary) || resumes[0];
+        if (primary) setPrimaryResume(primary);
+      }
+    } catch (e) {
+      console.warn('Failed to load primary resume:', e.message);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    await loadReferralData(); // Refresh referral data too
     await fetchApplications(true);
   };
 
@@ -126,6 +196,200 @@ export default function ApplicationsScreen({ navigation }) {
   const formatSalary = (amount, currencyCode = 'USD') => {
     if (!amount) return 'Not specified';
     return `$${amount.toLocaleString()} ${currencyCode}`;
+  };
+
+  // NEW: Ask Referral handler (similar to JobsScreen)
+  const handleAskReferral = async (job) => {
+    if (!job) return;
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to ask for referrals', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      return;
+    }
+
+    const jobId = job.JobID || job.id;
+
+    // Check if already referred
+    if (referredJobIds.has(jobId)) {
+      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
+        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+        { text: 'OK' }
+      ]);
+      return;
+    }
+
+    // Check eligibility
+    try {
+      const freshEligibility = await nexhireAPI.checkReferralEligibility();
+      if (freshEligibility?.success) {
+        const eligibilityData = freshEligibility.data;
+        if (!eligibilityData.isEligible) {
+          if (eligibilityData.dailyQuotaRemaining === 0) {
+            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
+            return;
+          }
+          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+          return;
+        }
+        setReferralEligibility(eligibilityData);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Unable to check referral quota. Please try again.');
+      return;
+    }
+
+    // If user has primary resume, create referral directly
+    if (primaryResume?.ResumeID) {
+      await quickReferral(job, primaryResume.ResumeID);
+      return;
+    }
+    
+    // Otherwise show resume modal
+    setReferralMode(true);
+    setPendingJobForApplication(job);
+    setShowResumeModal(true);
+  };
+
+  // Quick referral with primary resume
+  const quickReferral = async (job, resumeId) => {
+    const id = job.JobID || job.id;
+    try {
+      const res = await nexhireAPI.createReferralRequest(id, resumeId);
+      if (res?.success) {
+        setReferredJobIds(prev => new Set([...prev, id]));
+        setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
+        showToast('Referral request sent', 'success');
+      } else {
+        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to send referral request');
+    }
+  };
+
+  // Subscription modal handler
+  const showSubscriptionModal = (reasonOverride = null, hasActiveSubscription = false) => {
+    const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
+    const body = hasActiveSubscription
+      ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
+      : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
+
+    if (Platform.OS === 'web') {
+      navigation.navigate('ReferralPlans');
+      return;
+    }
+    
+    Alert.alert(
+      '?? Upgrade Required',
+      body,
+      [
+        { text: 'Maybe Later', style: 'cancel' },
+        { 
+          text: 'View Plans', 
+          onPress: () => {
+            try {
+              navigation.navigate('ReferralPlans');
+            } catch (navError) {
+              Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Resume selected handler
+  const handleResumeSelected = async (resumeData) => {
+    if (!pendingJobForApplication) return;
+    const job = pendingJobForApplication;
+    const id = job.JobID || job.id;
+    
+    try {
+      setShowResumeModal(false);
+      if (referralMode) {
+        const res = await nexhireAPI.createReferralRequest(id, resumeData.ResumeID);
+        if (res?.success) {
+          setReferredJobIds(prev => new Set([...prev, id]));
+          setReferralEligibility(prev => ({
+            ...prev,
+            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
+            isEligible: prev.dailyQuotaRemaining > 1
+          }));
+          showToast('Referral request sent successfully', 'success');
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Operation failed');
+    } finally {
+      setPendingJobForApplication(null);
+      setReferralMode(false);
+    }
+  };
+
+  // NEW: Handle withdraw application
+  const handleWithdrawApplication = (application) => {
+    console.log('?? Withdraw pressed for application:', application?.ApplicationID, 'status:', application?.StatusID);
+    console.log('?? FULL APPLICATION DATA:', JSON.stringify(application, null, 2));
+
+    if (Platform.OS === 'web') {
+      // Use custom modal (RN Alert unreliable on web for multi-button)
+      setWithdrawTarget(application);
+      return;
+    }
+    Alert.alert(
+      'Withdraw Application',
+      `Are you sure you want to withdraw your application for ${application.JobTitle || 'this job'}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => console.log('?? User cancelled withdrawal') },
+        { text: 'Withdraw', style: 'destructive', onPress: () => { console.log('?? User confirmed withdrawal, calling withdrawApplication...'); withdrawApplication(application); } }
+      ]
+    );
+  };
+
+  // Withdraw application function
+  const withdrawApplication = async (application) => {
+    try {
+      console.log('?? Withdrawing application ID:', application.ApplicationID);
+      console.log('?? Application object:', JSON.stringify(application, null, 2));
+      
+      // Add a simple alert to confirm the function is being called
+      console.log('?? About to call API...');
+      const res = await nexhireAPI.withdrawApplication(application.ApplicationID);
+      console.log('?? API call completed');
+      console.log('? Withdraw API response:', res);
+      
+      if (res.success) {
+        console.log('? Success response received, updating UI...');
+        // Remove the application from the list
+        setApplications(prevApplications => 
+          prevApplications.filter(app => app.ApplicationID !== application.ApplicationID)
+        );
+        
+        // Update pagination total
+        setPagination(prev => ({
+          ...prev,
+          total: Math.max(prev.total - 1, 0)
+        }));
+        
+        showToast('Application withdrawn successfully', 'success');
+        console.log('? UI updated successfully');
+      } else {
+        console.log('? Error response:', res.error || res.message);
+        Alert.alert('Withdrawal Failed', res.error || res.message || 'Failed to withdraw application');
+      }
+    } catch (error) {
+      console.log('? Exception caught:', error);
+      console.error('Withdraw application error:', error);
+      Alert.alert('Error', error.message || 'Failed to withdraw application');
+    }
   };
 
   const ApplicationCard = ({ application }) => (
@@ -194,13 +458,31 @@ export default function ApplicationsScreen({ navigation }) {
 
       <View style={styles.applicationActions}>
         {application.StatusID === 1 && ( // If pending, allow withdrawal
-          <TouchableOpacity style={styles.withdrawButton}>
+          <TouchableOpacity 
+            style={styles.withdrawButton}
+            onPress={() => handleWithdrawApplication(application)}
+          >
             <Text style={styles.withdrawButtonText}>Withdraw</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View Details</Text>
-        </TouchableOpacity>
+        {/* NEW: Ask Referral / Referred button instead of View Details */}
+        {isJobSeeker && (() => {
+          const isReferred = referredJobIds.has(application.JobID);
+          return isReferred ? (
+            <View style={styles.referredPill}>
+              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+              <Text style={styles.referredText}>Referred</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.referralButton}
+              onPress={() => handleAskReferral(application)}
+            >
+              <Ionicons name="people-outline" size={16} color="#ff6600" />
+              <Text style={styles.referralText}>Ask Referral</Text>
+            </TouchableOpacity>
+          );
+        })()}
       </View>
     </TouchableOpacity>
   );
@@ -280,6 +562,39 @@ export default function ApplicationsScreen({ navigation }) {
         ListFooterComponent={<LoadingFooter />}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* NEW: Resume Upload Modal */}
+      <ResumeUploadModal
+        visible={showResumeModal}
+        onClose={() => {
+          setShowResumeModal(false);
+          setPendingJobForApplication(null);
+          setReferralMode(false);
+        }}
+        onResumeSelected={handleResumeSelected}
+        user={user}
+        jobTitle={pendingJobForApplication?.JobTitle || pendingJobForApplication?.Title}
+      />
+
+      {/* Custom Withdraw Confirmation (web only) */}
+      {withdrawTarget && (
+        <View style={styles.confirmOverlay} pointerEvents="auto">
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Withdraw Application</Text>
+            <Text style={styles.confirmMessage} numberOfLines={4}>
+              Are you sure you want to withdraw your application for {withdrawTarget.JobTitle || 'this job'}? This action cannot be undone.
+            </Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={[styles.confirmBtn, styles.cancelBtn]} onPress={() => { console.log('?? Cancel withdraw (web modal)'); setWithdrawTarget(null); }}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmBtn, styles.dangerBtn]} onPress={() => { console.log('?? Confirm withdraw (web modal)'); const target = withdrawTarget; setWithdrawTarget(null); withdrawApplication(target); }}>
+                <Text style={styles.dangerBtnText}>Withdraw</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -401,15 +716,38 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: typography.weights.medium,
   },
-  viewButton: {
+  // NEW: Referral button styles
+  referralButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ff6600',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  viewButtonText: {
+  referralText: {
     fontSize: typography.sizes.sm,
-    color: colors.white,
+    color: '#ff6600',
+    fontWeight: typography.weights.medium,
+  },
+  // NEW: Referred status pill
+  referredPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#10b981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  referredText: {
+    fontSize: typography.sizes.sm,
+    color: '#10b981',
     fontWeight: typography.weights.medium,
   },
   emptyState: {
@@ -448,5 +786,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  // Withdraw confirm styles (web)
+  confirmOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    zIndex: 999,
+  },
+  confirmBox: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: colors.text,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.gray600,
+    marginBottom: 20,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  confirmBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  cancelBtn: {
+    backgroundColor: '#fff',
+    borderColor: colors.border,
+  },
+  dangerBtn: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#dc2626',
+  },
+  cancelBtnText: {
+    color: colors.gray700,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dangerBtnText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

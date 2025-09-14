@@ -440,25 +440,21 @@ app.http('applications-update-status', {
     handler: withErrorHandling(updateApplicationStatus)
 });
 
-app.http('applications-withdraw', {
-    methods: ['DELETE', 'OPTIONS'],
-    authLevel: 'anonymous',
-    route: 'applications/{applicationId}',
-    handler: withErrorHandling(withdrawApplication)
-});
-
+// COMBINED: Details (GET) + Withdraw (DELETE) under one function to avoid route collision issues
 app.http('applications-details', {
-    methods: ['GET', 'OPTIONS'],
+    methods: ['GET', 'DELETE', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'applications/{applicationId}',
-    handler: withErrorHandling(getApplicationDetails)
-});
-
-app.http('applications-stats', {
-    methods: ['GET', 'OPTIONS'],
-    authLevel: 'anonymous',
-    route: 'applications/stats',
-    handler: withErrorHandling(getApplicationStats)
+    handler: withErrorHandling(async (req, context) => {
+        if (req.method === 'OPTIONS') return { status: 200 } as any;
+        if (req.method === 'GET') {
+            return await getApplicationDetails(req, context);
+        }
+        if (req.method === 'DELETE') {
+            return await withdrawApplication(req, context);
+        }
+        return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
+    })
 });
 
 // ========================================================================

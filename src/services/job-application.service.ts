@@ -67,21 +67,29 @@ export class JobApplicationService {
             throw new ValidationError('Maximum number of applications reached for this job');
         }
         
-        // Check if user already applied for this job
+        // Check if user already applied for this job (include status to allow re-applying after withdrawal)
         const existingApplicationQuery = `
-            SELECT ApplicationID FROM JobApplications 
+            SELECT ApplicationID, StatusID FROM JobApplications 
             WHERE JobID = @param0 AND ApplicantID = @param1
         `;
         const existingResult = await dbService.executeQuery(existingApplicationQuery, [validatedData.jobID, applicantId]);
         
+        // Track resurrect scenario (previously withdrawn)
+        let resurrectApplicationId: string | null = null;
         if (existingResult.recordset && existingResult.recordset.length > 0) {
-            // Ensure saved entry is removed if exists when attempting to apply from Saved
-            try { await dbService.executeQuery('DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1', [validatedData.jobID, applicantId]); } catch {}
-            throw new ConflictError('You have already applied for this job');
+            const existing = existingResult.recordset[0];
+            if (existing.StatusID === 6) {
+                // Previously withdrawn – allow reapply by reviving this row
+                resurrectApplicationId = existing.ApplicationID;
+            } else {
+                // Active (or any non-withdrawn) application already exists – block
+                try { await dbService.executeQuery('DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1', [validatedData.jobID, applicantId]); } catch {}
+                throw new ConflictError('You have already applied for this job');
+            }
         }
         
-        // Create application - FIXED: Use multiple separate queries without transactions
-        const applicationId = AuthService.generateUniqueId();
+        // Use existing withdrawn application id if reviving, else create fresh id
+        const applicationId = resurrectApplicationId || AuthService.generateUniqueId();
         
         // ? UPDATED: Determine which resume to use
         let resumeId = null;
@@ -125,73 +133,80 @@ export class JobApplicationService {
         ];
         
         try {
-            // Insert application - ? UPDATED: Use ResumeID instead of ResumeURL
-            const insertQuery = `
-                INSERT INTO JobApplications (
-                    ApplicationID, JobID, ApplicantID, ResumeID, CoverLetter,
-                    ExpectedSalary, ExpectedCurrencyID, AvailableFromDate, StatusID,
-                    SubmittedAt, LastUpdatedAt
-                ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4,
-                    @param5, @param6, @param7, 1,
-                    GETUTCDATE(), GETUTCDATE()
-                )
-            `;
-            
-            await dbService.executeQuery(insertQuery, parameters);
-            
-            // Update job application count
-            const updateJobQuery = `
-                UPDATE Jobs 
-                SET CurrentApplications = ISNULL(CurrentApplications, 0) + 1, UpdatedAt = GETUTCDATE()
-                WHERE JobID = @param0
-            `;
-            await dbService.executeQuery(updateJobQuery, [validatedData.jobID]);
-            
-            // Remove from SavedJobs if present
-            try {
-                const removeSavedQuery = `DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1`;
-                await dbService.executeQuery(removeSavedQuery, [validatedData.jobID, applicantId]);
-            } catch (e) {
-                console.warn('Failed to remove from saved jobs:', e);
+            if (resurrectApplicationId) {
+                // Revive withdrawn application instead of inserting a new one
+                const reviveQuery = `
+                    UPDATE JobApplications
+                    SET 
+                        ResumeID = @param3,
+                        CoverLetter = @param4,
+                        ExpectedSalary = @param5,
+                        ExpectedCurrencyID = @param6,
+                        AvailableFromDate = @param7,
+                        StatusID = 1,
+                        SubmittedAt = GETUTCDATE(),
+                        LastUpdatedAt = GETUTCDATE()
+                    WHERE ApplicationID = @param0 AND JobID = @param1 AND ApplicantID = @param2;
+                    
+                    SELECT 
+                        ja.*, j.Title as JobTitle, o.Name as CompanyName, aps.Status as StatusName
+                    FROM JobApplications ja
+                    INNER JOIN Jobs j ON ja.JobID = j.JobID
+                    INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                    INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                    WHERE ja.ApplicationID = @param0;
+                `;
+                const revived = await dbService.executeQuery<JobApplication>(reviveQuery, parameters);
+                if (!revived.recordset || revived.recordset.length === 0) {
+                    throw new Error('Failed to revive withdrawn application');
+                }
+                // (Do NOT increment job CurrentApplications again to avoid double counting)
+                return revived.recordset[0];
+            } else {
+                // Insert new application
+                const insertQuery = `
+                    INSERT INTO JobApplications (
+                        ApplicationID, JobID, ApplicantID, ResumeID, CoverLetter,
+                        ExpectedSalary, ExpectedCurrencyID, AvailableFromDate, StatusID,
+                        SubmittedAt, LastUpdatedAt
+                    ) VALUES (
+                        @param0, @param1, @param2, @param3, @param4,
+                        @param5, @param6, @param7, 1,
+                        GETUTCDATE(), GETUTCDATE()
+                    )
+                `;
+                await dbService.executeQuery(insertQuery, parameters);
+                // Increment job applications only for brand new application
+                const updateJobQuery = `
+                    UPDATE Jobs 
+                    SET CurrentApplications = ISNULL(CurrentApplications, 0) + 1, UpdatedAt = GETUTCDATE()
+                    WHERE JobID = @param0
+                `;
+                await dbService.executeQuery(updateJobQuery, [validatedData.jobID]);
+                // Remove from SavedJobs if present
+                try {
+                    const removeSavedQuery = `DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1`;
+                    await dbService.executeQuery(removeSavedQuery, [validatedData.jobID, applicantId]);
+                } catch (e) {
+                    console.warn('Failed to remove from saved jobs:', e);
+                }
+                const selectQuery = `
+                    SELECT 
+                        ja.*, j.Title as JobTitle, o.Name as CompanyName, aps.Status as StatusName
+                    FROM JobApplications ja
+                    INNER JOIN Jobs j ON ja.JobID = j.JobID
+                    INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                    INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                    WHERE ja.ApplicationID = @param0
+                `;
+                const result = await dbService.executeQuery<JobApplication>(selectQuery, [applicationId]);
+                if (!result.recordset || result.recordset.length === 0) {
+                    throw new Error('Failed to retrieve created job application');
+                }
+                try { await this.createApplicationTracking(applicationId, 1); } catch (trackingError) { console.warn('Failed to create application tracking:', trackingError); }
+                try { await this.updateApplicantLastApplication(applicantId); await this.updateApplicantSearchScore(applicantUserId); } catch (updateError) { console.warn('Failed to update applicant metadata:', updateError); }
+                return result.recordset[0];
             }
-            
-            // Get the created application with details
-            const selectQuery = `
-                SELECT 
-                    ja.*,
-                    j.Title as JobTitle,
-                    o.Name as CompanyName,
-                    aps.Status as StatusName
-                FROM JobApplications ja
-                INNER JOIN Jobs j ON ja.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-                WHERE ja.ApplicationID = @param0
-            `;
-            
-            const result = await dbService.executeQuery<JobApplication>(selectQuery, [applicationId]);
-            
-            if (!result.recordset || result.recordset.length === 0) {
-                throw new Error('Failed to retrieve created job application');
-            }
-            
-            // Create initial application tracking record (optional)
-            try {
-                await this.createApplicationTracking(applicationId, 1);
-            } catch (trackingError) {
-                console.warn('Failed to create application tracking:', trackingError);
-            }
-            
-            // Update applicant metadata (optional)
-            try {
-                await this.updateApplicantLastApplication(applicantId);
-                await this.updateApplicantSearchScore(applicantUserId);
-            } catch (updateError) {
-                console.warn('Failed to update applicant metadata:', updateError);
-            }
-            
-            return result.recordset[0];
         } catch (error) {
             console.error('Error creating job application:', error);
             console.error('Parameters:', parameters);
@@ -380,17 +395,27 @@ export class JobApplicationService {
     
     // Withdraw application (job seeker)
     static async withdrawApplication(applicationId: string, userId: string): Promise<void> {
+        console.log('?? WITHDRAW APPLICATION DEBUG - START');
+        console.log('?? Application ID:', applicationId);
+        console.log('?? User ID:', userId);
+        
         // Verify user owns this application
         const accessQuery = `
             SELECT ja.ApplicationID FROM JobApplications ja
             INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
             WHERE ja.ApplicationID = @param0 AND a.UserID = @param1
         `;
+        
+        console.log('?? Checking access with query:', accessQuery);
         const accessResult = await dbService.executeQuery(accessQuery, [applicationId, userId]);
+        console.log('?? Access result:', JSON.stringify(accessResult.recordset));
         
         if (!accessResult.recordset || accessResult.recordset.length === 0) {
+            console.log('? Access denied - user does not own this application');
             throw new ValidationError('Access denied to this application');
         }
+        
+        console.log('? Access granted - proceeding with withdrawal');
         
         // Update status to withdrawn (assuming status 6 is rejected/withdrawn)
         const updateQuery = `
@@ -399,7 +424,23 @@ export class JobApplicationService {
             WHERE ApplicationID = @param0
         `;
         
+        console.log('?? Updating application with query:', updateQuery);
+        console.log('?? Parameters:', [applicationId]);
+        
         await dbService.executeQuery(updateQuery, [applicationId]);
+        
+        console.log('? Update query executed successfully');
+        
+        // Verify the update worked
+        const verifyQuery = `
+            SELECT ApplicationID, StatusID, LastUpdatedAt 
+            FROM JobApplications 
+            WHERE ApplicationID = @param0
+        `;
+        const verifyResult = await dbService.executeQuery(verifyQuery, [applicationId]);
+        console.log('?? Verification result:', JSON.stringify(verifyResult.recordset));
+        
+        console.log('?? WITHDRAW APPLICATION DEBUG - END');
     }
     
     // Get application details

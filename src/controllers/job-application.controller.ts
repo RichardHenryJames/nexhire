@@ -209,7 +209,7 @@ export const updateApplicationStatus = withAuth(async (req: HttpRequest, context
     }
 }, ['write:applications']);
 
-// Withdraw application (job seeker) - FIXED: Add comprehensive GUID validation
+// Withdraw application (job seeker) - scope adjusted from write:applications -> apply:jobs (job seeker tokens only have apply:jobs)
 export const withdrawApplication = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const applicationId = req.params.applicationId;
@@ -246,7 +246,7 @@ export const withdrawApplication = withAuth(async (req: HttpRequest, context: In
             }
         };
     }
-}, ['write:applications']);
+}, ['apply:jobs']);
 
 // Get application details - FIXED: Add comprehensive GUID validation
 export const getApplicationDetails = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {

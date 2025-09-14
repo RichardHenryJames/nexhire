@@ -57,25 +57,28 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
         </View>
       )}
 
-      {/* Footer row: salary on left, actions on right */}
-      <View style={styles.footerRow}>
-        <View style={{ flexShrink: 1 }}>
-          {hasSalary ? (<Text style={styles.salary} numberOfLines={1}>{salaryText}</Text>) : null}
+      {/* Salary row - separate from buttons */}
+      {hasSalary && (
+        <View style={styles.salaryRow}>
+          <Text style={styles.salary} numberOfLines={1}>{salaryText}</Text>
         </View>
-        <View style={styles.actionsInline}>
-          {savedContext ? (
-            <View style={styles.savedPill} accessibilityRole="text">
-              <Ionicons name="bookmark" size={18} color="#0d47a1" />
-              <Text style={styles.saveText}>Saved</Text>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-              <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
-              <Text style={styles.saveText}>Save</Text>
-            </TouchableOpacity>
-          )}
+      )}
 
-          {/* ✅ FIXED: Always show "Ask Referral" or "Referred" - quota check happens on click */}
+      {/* Actions row - moved to separate line */}
+      <View style={styles.actionsRow}>
+           {savedContext ? (
+             <View style={styles.savedPill} accessibilityRole="text">
+               <Ionicons name="bookmark" size={18} color="#0d47a1" />
+               <Text style={styles.saveText}>Saved</Text>
+             </View>
+           ) : (
+             <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
+               <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+               <Text style={styles.saveText}>Save</Text>
+             </TouchableOpacity>
+           )}
+
+          {/* Always show "Ask Referral" or "Referred" - quota check happens on click */}
           {isReferred ? (
             <View style={styles.referredPill} accessibilityRole="text">
               <Ionicons name="checkmark-circle" size={18} color="#10b981" />
@@ -92,12 +95,11 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
             </TouchableOpacity>
           ) : null}
 
-          <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-            <Ionicons name="paper-plane-outline" size={18} color="#fff" />
-            <Text style={styles.applyText}>Apply</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+           <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+             <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+             <Text style={styles.applyText}>Apply</Text>
+           </TouchableOpacity>
+       </View>
     </TouchableOpacity>
   );
 };
@@ -159,16 +161,16 @@ const styles = StyleSheet.create({
     color: '#0b6',
     fontWeight: '600',
   },
-  footerRow: {
+  salaryRow: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  actionsRow: {
     marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  actionsInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8, // Add gap between buttons
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   saveBtn: {
     flexDirection: 'row',

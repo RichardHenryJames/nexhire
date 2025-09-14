@@ -526,6 +526,27 @@ class NexHireAPI {
     return this.apiCall(`/jobs/${jobId}/applications?${params}`);
   }
 
+  // NEW: Withdraw application
+  async withdrawApplication(applicationId) {
+    console.log('📡 withdrawApplication API method called with:', applicationId);
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    if (!applicationId) return { success: false, error: 'Application ID is required' };
+    
+    console.log('📡 Making DELETE request to:', `/applications/${applicationId}`);
+    console.log('📡 Token present:', !!this.token);
+    
+    try {
+      const result = await this.apiCall(`/applications/${applicationId}`, {
+        method: 'DELETE',
+      });
+      console.log('📡 API call completed successfully:', result);
+      return result;
+    } catch (error) {
+      console.log('📡 API call failed:', error);
+      throw error;
+    }
+  }
+
   // Saved jobs APIs
   async saveJob(jobId) {
     if (!this.token) return { success: false, error: 'Authentication required' };

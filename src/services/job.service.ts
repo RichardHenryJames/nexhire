@@ -107,7 +107,7 @@ export class JobService {
             whereClause += ` AND j.JobID NOT IN (
                 SELECT DISTINCT ja.JobID FROM JobApplications ja 
                 INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
-                WHERE a.UserID = @param${paramIndex}
+                WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
                 UNION
                 SELECT DISTINCT sj.JobID FROM SavedJobs sj
                 INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
@@ -525,11 +525,12 @@ export class JobService {
             const queryParams: any[] = [];
             let paramIndex = 0;
 
+            // Exclude jobs with withdrawn applications (StatusID=6) for the current user
             if (excludeUserApplications) {
                 whereClause += ` AND j.JobID NOT IN (
                     SELECT DISTINCT ja.JobID FROM JobApplications ja 
                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
-                    WHERE a.UserID = @param${paramIndex}
+                    WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
                     UNION
                     SELECT DISTINCT sj.JobID FROM SavedJobs sj
                     INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
