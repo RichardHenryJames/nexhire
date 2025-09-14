@@ -1727,6 +1727,11 @@ class NexHireAPI {
       throw error;
     }
   }
+
+  async cancelReferralRequest(requestId) {
+    if (!this.token) return { success: false, error: 'Authentication required' }; 
+    return this.apiCall(`/referral/requests/${requestId}/cancel`, { method: 'POST' });
+  }
 }
 
 export default new NexHireAPI();

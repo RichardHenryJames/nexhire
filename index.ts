@@ -74,7 +74,8 @@ import {
     getReferralAnalytics,
     checkReferralEligibility,
     getReferrerStats,
-    getCurrentSubscription
+    getCurrentSubscription,
+    cancelReferralRequest       // NEW: Cancel request
 } from './src/controllers/referral.controller';
 
 // NEW: Payment controllers - Razorpay Integration
@@ -786,6 +787,14 @@ app.http('referral-verify', {
     handler: withErrorHandling(verifyReferralCompletion) // ? Same pattern as work experience
 });
 
+// NEW: Cancel referral request
+app.http('referral-cancel', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/cancel',
+    handler: withErrorHandling(cancelReferralRequest)
+});
+
 app.http('referral-my-referrer-requests', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -959,6 +968,7 @@ export {};
  * POST   /referral/requests/{id}/claim             - Claim a referral request
  * POST   /referral/requests/{id}/proof      ? NEW - Submit proof of referral
  * POST   /referral/requests/{id}/verify     ? NEW - Verify referral completion
+ * POST   /referral/requests/{id}/cancel      ? NEW - Cancel referral request
  * GET    /referral/my-referrer-requests     ? NEW - Get my requests as referrer
  * GET    /referral/analytics                       - Get referral analytics
  * GET    /referral/eligibility                     - Check referral eligibility

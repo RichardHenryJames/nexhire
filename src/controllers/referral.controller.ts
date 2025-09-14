@@ -567,3 +567,34 @@ export const getReferrerStats = withErrorHandling(async (req: HttpRequest, conte
         };
     }
 });
+
+/**
+ * Cancel a referral request
+ * POST /referral/requests/{requestId}/cancel
+ */
+export const cancelReferralRequest = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const requestId = (req as any).params?.requestId;
+        if (!requestId || !isValidGuid(requestId)) {
+            throw new ValidationError('Valid Request ID is required');
+        }
+        const { dbService } = await import('../services/database.service');
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const updated = await ReferralService.cancelReferralRequest(applicantId, requestId);
+        return {
+            status: 200,
+            jsonBody: successResponse(updated, 'Referral request cancelled')
+        };
+    } catch (error: any) {
+        return {
+            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
+            jsonBody: { success: false, error: error?.message || 'Failed to cancel referral request' }
+        };
+    }
+});

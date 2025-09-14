@@ -222,7 +222,10 @@ export class ReferralService {
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
-                    ar.ResumeLabel
+                    ar.ResumeLabel,
+                    rp.FileURL as ProofFileURL,
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription
                 FROM ReferralRequests rr
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -231,6 +234,7 @@ export class ReferralService {
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
                 LEFT JOIN Applicants ar_ref ON rr.AssignedReferrerID = ar_ref.ApplicantID
                 LEFT JOIN Users ur ON ar_ref.UserID = ur.UserID
+                LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 WHERE rr.RequestID = @param0
             `;
             
@@ -320,13 +324,17 @@ export class ReferralService {
                     o.Name as CompanyName,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
-                    ar.ResumeLabel
+                    ar.ResumeLabel,
+                    rp.FileURL as ProofFileURL,
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription
                 FROM ReferralRequests rr
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
+                LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 ${whereClause}
                 ORDER BY rr.RequestedAt DESC
                 OFFSET ${offset} ROWS
@@ -552,7 +560,8 @@ export class ReferralService {
                     u.Email as ApplicantEmail,
                     ar.ResumeLabel,
                     rp.FileURL as ProofFileURL,
-                    rp.FileType as ProofFileType
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription
                 FROM ReferralRequests rr
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -617,7 +626,8 @@ export class ReferralService {
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
                     rp.FileURL as ProofFileURL,
-                    rp.FileType as ProofFileType
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription
                 FROM ReferralRequests rr
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -944,6 +954,60 @@ export class ReferralService {
         } catch (error) {
             console.error('Error claiming referral request with proof:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Cancel a referral request (by seeker) if still pending
+     */
+    static async cancelReferralRequest(applicantId: string, requestId: string): Promise<ReferralRequest> {
+        try {
+            // Verify pending request belongs to applicant
+            const selectQuery = `
+                SELECT RequestID, JobID, Status FROM ReferralRequests 
+                WHERE RequestID = @param0 AND ApplicantID = @param1`;
+            const result = await dbService.executeQuery(selectQuery, [requestId, applicantId]);
+            if (!result.recordset || result.recordset.length === 0) {
+                throw new ValidationError('Referral request not found');
+            }
+            const request = result.recordset[0];
+            if (request.Status !== 'Pending') {
+                throw new ValidationError('Only pending requests can be cancelled');
+            }
+            // Mark as cancelled
+            await dbService.executeQuery(
+                `UPDATE ReferralRequests SET Status = 'Cancelled' WHERE RequestID = @param0`,
+                [requestId]
+            );
+            // Decrement pending counts for eligible referrers
+            await this.updateReferrerStatsAfterCancellation(request.JobID);
+            return await this.getReferralRequestById(requestId);
+        } catch (error) {
+            console.error('Error cancelling referral request:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Adjust referrer stats when a pending request is cancelled
+     */
+    private static async updateReferrerStatsAfterCancellation(jobId: string): Promise<void> {
+        try {
+            const query = `
+                UPDATE rs
+                SET PendingCount = CASE WHEN PendingCount > 0 THEN PendingCount - 1 ELSE 0 END,
+                    LastUpdated = GETUTCDATE()
+                FROM ReferrerStats rs
+                INNER JOIN Applicants a ON rs.ReferrerID = a.ApplicantID
+                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID
+                INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
+                WHERE j.JobID = @param0
+                AND we.IsCurrent = 1
+                AND a.OpenToRefer = 1;
+            `;
+            await dbService.executeQuery(query, [jobId]);
+        } catch (e) {
+            console.warn('Failed to update referrer stats after cancellation:', e);
         }
     }
 }
