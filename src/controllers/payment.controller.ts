@@ -42,12 +42,14 @@ export const createRazorpayOrder = withErrorHandling(async (req: HttpRequest, co
         };
     } catch (error: any) {
         console.error('Create Razorpay order error:', error);
-        return {
-            status: error instanceof ValidationError ? 400 : 500,
+        const status = error instanceof ValidationError ? 400 : error instanceof NotFoundError ? 404 : 500;
+        return { 
+            status, 
             jsonBody: { 
                 success: false, 
-                error: error?.message || 'Failed to create payment order'
-            }
+                error: error?.message || 'Failed to create payment order', 
+                errorCode: error?.name || 'Error' 
+            } 
         };
     }
 });
@@ -77,11 +79,13 @@ export const verifyPaymentAndActivateSubscription = withErrorHandling(async (req
         };
     } catch (error: any) {
         console.error('Verify payment error:', error);
+        const status = error instanceof ValidationError ? 400 : error instanceof NotFoundError ? 404 : 500;
         return {
-            status: error instanceof ValidationError ? 400 : error instanceof NotFoundError ? 404 : 500,
+            status,
             jsonBody: { 
                 success: false, 
-                error: error?.message || 'Payment verification failed'
+                error: error?.message || 'Payment verification failed',
+                errorCode: error?.name || 'Error' 
             }
         };
     }
@@ -112,7 +116,8 @@ export const getPaymentHistory = withErrorHandling(async (req: HttpRequest, cont
             status: 500,
             jsonBody: { 
                 success: false, 
-                error: error?.message || 'Failed to get payment history'
+                error: error?.message || 'Failed to get payment history',
+                errorCode: error?.name || 'Error' 
             }
         };
     }

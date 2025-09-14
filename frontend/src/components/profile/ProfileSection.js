@@ -19,7 +19,8 @@ export default function ProfileSection({
   onCancel, // NEW: optional cancel handler (does not persist)
   style = {},
   defaultCollapsed = false,
-  hideHeaderActions = false // NEW: hide Edit/Save/Cancel (for smart-save sections)
+  hideHeaderActions = false, // NEW: hide Edit/Save/Cancel (for smart-save sections)
+  hideSaveButton = false // NEW: hide only the Save button (e.g., Work Experience section has its own internal save)
 }) {
   const [localEditing, setLocalEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -108,25 +109,27 @@ export default function ProfileSection({
                   <Ionicons name="close" size={16} color={colors.gray600 || '#6B7280'} />
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSaveAndExit}
-                  disabled={saving}
-                  accessibilityRole="button"
-                  accessibilityLabel={saving ? `Saving ${title}` : `Save ${title}`}
-                >
-                  <Ionicons 
-                    name={saving ? 'hourglass' : 'save-outline'} 
-                    size={16} 
-                    color={saving ? colors.gray400 : colors.primary} 
-                  />
-                  <Text style={[
-                    styles.saveButtonText,
-                    saving && styles.editButtonTextDisabled
-                  ]}>
-                    {saving ? 'Saving...' : 'Save'}
-                  </Text>
-                </TouchableOpacity>
+                {!hideSaveButton && (
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleSaveAndExit}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityLabel={saving ? `Saving ${title}` : `Save ${title}`}
+                  >
+                    <Ionicons 
+                      name={saving ? 'hourglass' : 'save-outline'} 
+                      size={16} 
+                      color={saving ? colors.gray400 : colors.primary} 
+                    />
+                    <Text style={[
+                      styles.saveButtonText,
+                      saving && styles.editButtonTextDisabled
+                    ]}>
+                      {saving ? 'Saving...' : 'Save'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <TouchableOpacity

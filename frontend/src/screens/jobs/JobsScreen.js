@@ -7,6 +7,7 @@ import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import { styles } from './JobsScreen.styles';
+import { showToast } from '../../components/Toast';
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -92,6 +93,29 @@ export default function JobsScreen({ navigation }) {
     hasActiveSubscription: false,
     reason: null
   });
+  // Cache primary resume (or fallback first resume) so we can auto-apply without showing modal every time
+  const [primaryResume, setPrimaryResume] = useState(null);
+  const primaryResumeLoadedRef = useRef(false);
+
+  // Load primary resume once (or first resume as fallback)
+  const loadPrimaryResume = useCallback(async () => {
+    if (!user || !isJobSeeker) return;
+    if (primaryResumeLoadedRef.current && primaryResume) return;
+    try {
+      const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      if (profile?.success) {
+        const resumes = profile.data?.resumes || [];
+        const primary = resumes.find(r => r.IsPrimary) || resumes[0];
+        if (primary) setPrimaryResume(primary);
+      }
+    } catch (e) {
+      // silent
+    } finally {
+      primaryResumeLoadedRef.current = true;
+    }
+  }, [user, isJobSeeker, primaryResume]);
+
+  useEffect(() => { loadPrimaryResume(); }, [loadPrimaryResume]);
 
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
@@ -180,7 +204,7 @@ export default function JobsScreen({ navigation }) {
     })();
   }, []);
 
-  // ✅ NEW: Preload referred job IDs
+  // ? NEW: Preload referred job IDs
   useEffect(() => {
     (async () => {
       if (!user || !isJobSeeker) return;
@@ -189,12 +213,12 @@ export default function JobsScreen({ navigation }) {
           nexhireAPI.getMyReferralRequests(1, 500),
           nexhireAPI.checkReferralEligibility()
         ]);
-        
+
         if (referralRes?.success && referralRes.data?.requests) {
           const ids = new Set(referralRes.data.requests.map(r => r.JobID));
           setReferredJobIds(ids);
         }
-        
+
         if (eligibilityRes?.success) {
           setReferralEligibility(eligibilityRes.data);
         }
@@ -215,7 +239,7 @@ export default function JobsScreen({ navigation }) {
       if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
     } catch {}
   }, []);
-  
+
   useEffect(() => { refreshCounts(); }, [refreshCounts]);
 
   // Apply smart filters based on user profile
@@ -286,7 +310,7 @@ export default function JobsScreen({ navigation }) {
   // NEW: guards to prevent duplicate load-more triggers
   const isLoadingMoreRef = useRef(false);
   const lastAutoLoadPageRef = useRef(0);
-  
+
   useEffect(() => () => {
     mountedRef.current = false;
     try { listAbortRef.current?.abort?.(); } catch {}
@@ -360,19 +384,19 @@ export default function JobsScreen({ navigation }) {
     if (loading || loadingMore) return;
     if (isLoadingMoreRef.current) return;
     if (!pagination.hasMore) {
-      console.log('🛑 Load more skipped - no more jobs available');
+      console.log('?? Load more skipped - no more jobs available');
       return;
     }
 
     const nextPage = (pagination.page || 1) + 1;
     if (pagination.totalPages && nextPage > pagination.totalPages) {
-      console.log(`🛑 Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
+      console.log(`?? Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     if (lastAutoLoadPageRef.current === nextPage) {
-      console.log(`🛑 Skipping duplicate auto-load for page ${nextPage}`);
+      console.log(`?? Skipping duplicate auto-load for page ${nextPage}`);
       return;
     }
 
@@ -405,7 +429,7 @@ export default function JobsScreen({ navigation }) {
 
       if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        console.log(`📄 Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
+        console.log(`?? Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
         setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
@@ -418,7 +442,7 @@ export default function JobsScreen({ navigation }) {
         }));
 
         if (list.length === 0) {
-          console.log('🛑 No more jobs returned - setting hasMore to false');
+          console.log('?? No more jobs returned - setting hasMore to false');
           setPagination(prev => ({ ...prev, hasMore: false }));
         } else {
           lastAutoLoadPageRef.current = meta.page || nextPage;
@@ -453,7 +477,7 @@ export default function JobsScreen({ navigation }) {
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5;
 
-    console.log(`🔍 Smart Pagination Check:`, {
+    console.log(`?? Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -461,27 +485,27 @@ export default function JobsScreen({ navigation }) {
       totalPages: pagination.totalPages,
       total: pagination.total
     });
-    
+
     if (!backendHasMore) {
-      console.log('🛑 Smart pagination skipped - backend says no more jobs available');
+      console.log('?? Smart pagination skipped - backend says no more jobs available');
       return;
     }
-    
+
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`🛑 Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`🔄 Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
-    
+
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('🔄 Emergency pagination: No jobs visible but backend says more available, loading immediately...');
+      console.log('?? Emergency pagination: No jobs visible but backend says more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -580,7 +604,7 @@ export default function JobsScreen({ navigation }) {
     if (jt.length) parts.push(jt.slice(0, 3).join('/'));
     if (wt.length) parts.push(wt.join('/'));
     if (smartBoosts.boostLocation) parts.push(smartBoosts.boostLocation);
-    
+
     if (parts.length === 0) {
       if (filters.experienceMin) parts.push(`${filters.experienceMin}+ yrs`);
       const jobTypeNames = (filters.jobTypeIds || []).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
@@ -595,7 +619,7 @@ export default function JobsScreen({ navigation }) {
   // Render list without animations
   const renderList = () => {
     const data = activeTab === 'openings' ? jobs : activeTab === 'applied' ? appliedJobs : savedJobs;
-    
+
     if (loading && data.length === 0 && activeTab === 'openings') {
       return (
         <View style={styles.loadingContainer}>
@@ -603,7 +627,7 @@ export default function JobsScreen({ navigation }) {
         </View>
       );
     }
-    
+
     if (smartPaginating && data.length === 0 && activeTab === 'openings') {
       return (
         <View style={styles.loadingContainer}>
@@ -611,27 +635,27 @@ export default function JobsScreen({ navigation }) {
         </View>
       );
     }
-    
+
     if (data.length === 0) {
       const hasMoreToLoad = activeTab === 'openings' && pagination.hasMore;
-      
+
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No {activeTab} jobs</Text>
           <Text style={styles.emptyMessage}>
-            {activeTab === 'openings' 
-              ? hasMoreToLoad 
+            {activeTab === 'openings'
+              ? hasMoreToLoad
                 ? 'Checking for more opportunities...'
                 : `You've seen all ${pagination.total || 65} available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
               : 'New opportunities will appear here.'
             }
           </Text>
-          
+
           {hasMoreToLoad && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
               onPress={() => {
-                console.log('📱 Manual Load More triggered');
+                console.log('?? Manual Load More triggered');
                 setSmartPaginating(true);
                 loadMoreJobs();
                 setTimeout(() => setSmartPaginating(false), 2000);
@@ -643,12 +667,12 @@ export default function JobsScreen({ navigation }) {
         </View>
       );
     }
-    
+
     // Simple job cards without animations
     return data.map((job, index) => {
       const id = job.JobID || index;
       const isReferred = referredJobIds.has(job.JobID || job.id);
-      
+
       return (
         <View key={id} style={{ marginBottom: 12 }}>
           <JobCard
@@ -657,7 +681,7 @@ export default function JobsScreen({ navigation }) {
             workplaceTypes={workplaceTypes}
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
-            onAskReferral={isReferred ? null : () => handleAskReferral(job)} // ✅ Always call handler - no pre-filtering
+            onAskReferral={isReferred ? null : () => handleAskReferral(job)} // ? Always call handler - no pre-filtering
             onSave={() => handleSave(job)}
             savedContext={activeTab === 'saved'}
             isReferred={isReferred}
@@ -699,15 +723,17 @@ export default function JobsScreen({ navigation }) {
       Alert.alert('Access Denied', 'Only job seekers can apply for positions');
       return;
     }
+    if (!primaryResumeLoadedRef.current) await loadPrimaryResume();
+    if (primaryResume?.ResumeID) { await quickApply(job, primaryResume.ResumeID); return; }
     setReferralMode(false); // application flow
     setPendingJobForApplication(job);
     setShowResumeModal(true);
-  }, [user, isJobSeeker, navigation]);
+  }, [user, isJobSeeker, navigation, primaryResume]);
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-    console.log('🤝 handleAskReferral called in JobsScreen for job:', job?.Title);
-    
+    console.log('?? handleAskReferral called in JobsScreen for job:', job?.Title);
+
     if (!job) return;
     if (!user) {
       Alert.alert('Login Required', 'Please login to ask for referrals', [
@@ -720,9 +746,9 @@ export default function JobsScreen({ navigation }) {
       Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
       return;
     }
-    
+
     const jobId = job.JobID || job.id;
-    
+
     // Check if already referred
     if (referredJobIds.has(jobId)) {
       Alert.alert('Already Requested', 'You have already requested a referral for this job', [
@@ -731,42 +757,39 @@ export default function JobsScreen({ navigation }) {
       ]);
       return;
     }
-    
-    // ✅ CRITICAL FIX: Always check real-time quota before proceeding
+
+    // ? CRITICAL FIX: Always check real-time quota before proceeding
     try {
-      console.log('🔍 Checking referral eligibility...');
+      console.log('?? Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('📊 Eligibility result:', freshEligibility);
-      
+      console.log('?? Eligibility result:', freshEligibility);
+
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('📋 Eligibility data:', eligibilityData);
-        
+        console.log('?? Eligibility data:', eligibilityData);
+
         if (!eligibilityData.isEligible) {
           console.log('❌ User not eligible, checking subscription status...');
-          
-          if (!eligibilityData.hasActiveSubscription && eligibilityData.dailyQuotaRemaining === 0) {
-            console.log('💳 Free quota exhausted - showing subscription modal');
-            // ✅ FREE QUOTA EXHAUSTED: Show subscription modal
-            showSubscriptionModal();
-            return;
-          } else {
-            console.log('⏰ Other eligibility issue:', eligibilityData.reason);
-            Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+          // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
+          if (eligibilityData.dailyQuotaRemaining === 0) {
+            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
             return;
           }
+          console.log('⏰ Other eligibility issue:', eligibilityData.reason);
+          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+          return;
         }
-        
-        console.log('✅ User is eligible - proceeding with referral');
+
+        console.log('? User is eligible - proceeding with referral');
         // Update local state with fresh data
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('🚨 Failed to check referral eligibility:', e);
+      console.error('?? Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
-    
+
     // Double-check no existing request (in case of race conditions)
     try {
       const existing = await nexhireAPI.getMyReferralRequests(1, 100);
@@ -783,86 +806,94 @@ export default function JobsScreen({ navigation }) {
     } catch (e) {
       console.warn('Referral pre-check failed:', e.message);
     }
-    
-    // All checks passed - proceed with referral request
-    setReferralMode(true);
-    setPendingJobForApplication(job);
-    setShowResumeModal(true);
-  }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal]);
 
-  // 🔄 NEW: Subscription modal for quota exhausted users
-  const showSubscriptionModal = useCallback(async () => {
-    console.log('💳 showSubscriptionModal called in JobsScreen');
-    console.log('💳 Navigation object:', navigation);
-    console.log('💳 Available routes:', navigation.getState?.());
-    
-    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
-    if (Platform.OS === 'web') {
-      console.log('💳 Web platform detected - navigating directly to ReferralPlans');
-      navigation.navigate('ReferralPlans');
+    // If user already has a primary resume, skip modal and create referral directly
+    if (primaryResume?.ResumeID) {
+      await quickReferral(job, primaryResume.ResumeID);
       return;
     }
-    
-    try {
-      Alert.alert(
-        '🚀 Upgrade Required',
-        `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`,
-        [
-          { 
-            text: 'Maybe Later', 
-            style: 'cancel',
-            onPress: () => console.log('💳 User selected Maybe Later')
-          },
-          { 
-            text: 'View Plans', 
-            onPress: () => {
-              console.log('💳 User selected View Plans - attempting navigation...');
-              try {
-                navigation.navigate('ReferralPlans');
-                console.log('💳 Navigation successful!');
-              } catch (navError) {
-                console.error('💳 Navigation error:', navError);
-                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
-              }
-            }
-          }
-        ]
-      );
-      // Fallback: ensure navigation if user does not pick (defensive – some platforms auto-dismiss custom buttons)
-      setTimeout(() => {
-        const state = navigation.getState?.();
-        const currentRoute = state?.routes?.[state.index]?.name;
-        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0 && !referralEligibility.hasActiveSubscription) {
-          console.log('💳 Fallback navigation to ReferralPlans after Alert timeout');
-            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
-        }
-      }, 3000);
-    } catch (error) {
-      console.error('🚨 Error showing subscription modal:', error);
-      Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
-    }
-  }, [navigation, referralEligibility]);
+    // Else open modal to pick/upload
+    setReferralMode(true); setPendingJobForApplication(job); setShowResumeModal(true);
+  }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal, primaryResume, loadPrimaryResume]);
 
-  // ✅ NEW: Handle plan selection and purchase
+  // ?? NEW: Subscription modal for quota exhausted users
+  const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
+     console.log('💳 showSubscriptionModal called in JobsScreen');
+     console.log('💳 Navigation object:', navigation);
+     console.log('💳 Available routes:', navigation.getState?.());
+     
+     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
+     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
+     const body = hasActiveSubscription
+       ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
+       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
+
+     if (Platform.OS === 'web') {
+       console.log('💳 Web platform detected - navigating directly to ReferralPlans');
+       navigation.navigate('ReferralPlans');
+       return;
+     }
+     
+     try {
+       Alert.alert(
+         '🚀 Upgrade Required',
+         body,
+         [
+           { 
+             text: 'Maybe Later', 
+             style: 'cancel',
+             onPress: () => console.log('💳 User selected Maybe Later')
+           },
+           { 
+             text: 'View Plans', 
+             onPress: () => {
+               console.log('💳 User selected View Plans - attempting navigation...');
+               try {
+                 navigation.navigate('ReferralPlans');
+                 console.log('💳 Navigation successful!');
+               } catch (navError) {
+                 console.error('💳 Navigation error:', navError);
+                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
+               }
+             }
+           }
+         ]
+       );
+       // Fallback: ensure navigation if user does not pick (defensive – some platforms auto-dismiss custom buttons)
+       setTimeout(() => {
+         const state = navigation.getState?.();
+         const currentRoute = state?.routes?.[state.index]?.name;
+         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
+           console.log('💳 Fallback navigation to ReferralPlans after Alert timeout');
+             try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
+         }
+       }, 3000);
+     } catch (error) {
+       console.error('🚨 Error showing subscription modal:', error);
+       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
+     }
+   }, [navigation, referralEligibility]);
+
+  // ? NEW: Handle plan selection and purchase
   const handlePlanSelection = useCallback(async (plan) => {
-    console.log('💰 Plan selected in JobsScreen:', plan);
-    
+    console.log('?? Plan selected in JobsScreen:', plan);
+
     Alert.alert(
       'Confirm Subscription',
-      `Subscribe to ${plan.Name} for ₹${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
+      `Subscribe to ${plan.Name} for ?${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Subscribe Now', 
+        {
+          text: 'Subscribe Now',
           onPress: async () => {
             try {
               // For demo - simulate successful purchase
               Alert.alert(
-                '🎉 Subscription Successful!',
+                '?? Subscription Successful!',
                 `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
                 [
-                  { 
-                    text: 'Start Referring!', 
+                  {
+                    text: 'Start Referring!',
                     onPress: async () => {
                       // Refresh eligibility after "purchase"
                       const eligibilityRes = await nexhireAPI.checkReferralEligibility();
@@ -873,10 +904,10 @@ export default function JobsScreen({ navigation }) {
                   }
                 ]
               );
-              
+
               // TODO: Implement real payment processing
               // const purchaseResult = await nexhireAPI.purchaseReferralPlan(plan.PlanID);
-              
+
             } catch (error) {
               Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
             }
@@ -886,7 +917,7 @@ export default function JobsScreen({ navigation }) {
     );
   }, []);
 
-  // ✅ UPDATED: Resume selected handler supports both apply & referral flows
+  // ? UPDATED: Resume selected handler supports both apply & referral flows
   const handleResumeSelected = useCallback(async (resumeData) => {
     if (!pendingJobForApplication) return;
     const job = pendingJobForApplication;
@@ -897,27 +928,20 @@ export default function JobsScreen({ navigation }) {
         // Create referral request
         const res = await nexhireAPI.createReferralRequest(id, resumeData.ResumeID);
         if (res?.success) {
-          // ✅ NEW: Update local tracking after successful referral request
+          // ? NEW: Update local tracking after successful referral request
           setReferredJobIds(prev => new Set([...prev, id]));
-          
+
           // Update eligibility (reduce quota)
           setReferralEligibility(prev => ({
             ...prev,
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          
-          Alert.alert(
-            'Referral Request Sent! 🤝',
-            'Your referral request was submitted successfully. You will be notified when someone refers you.',
-            [
-              { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-              { text: 'OK' }
-            ]
-          );
-        } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
-        }
+
+          showToast('Referral request sent successfully', 'success');
+         } else {
+           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+         }
       } else {
         // Apply flow (existing code preserved)
         const applicationData = {
@@ -950,13 +974,12 @@ export default function JobsScreen({ navigation }) {
         if (res?.success) {
           setAppliedIds(prev => { const next = new Set(prev ?? new Set()); next.add(id); return next; });
           setAppliedCount(c => (Number(c) || 0) + 1);
-          Alert.alert('Application Submitted', 'Your application has been submitted successfully.', [
-            { text: 'View Applications', onPress: () => setActiveTab('applied') },
-            { text: 'OK', style: 'default' }
-          ]);
-        } else {
-          Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
-        }
+          showToast('Application submitted successfully', 'success');
+          // Switch to applied tab automatically for quick feedback
+          //setActiveTab('applied');
+         } else {
+           Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+         }
       }
     } catch (e) {
       console.error(referralMode ? 'Referral error' : 'Apply error', e);
@@ -968,29 +991,74 @@ export default function JobsScreen({ navigation }) {
     }
   }, [pendingJobForApplication, referralMode, activeTab, refreshCounts, triggerReload, navigation]);
 
+  // NEW: Auto apply with known resume (no modal)
+  const quickApply = useCallback(async (job, resumeId) => {
+    const id = job.JobID || job.id;
+    try {
+      const applicationData = { jobID: id, coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`, resumeId };
+      const res = await nexhireAPI.applyForJob(applicationData);
+      if (res?.success) {
+        // Remove job from openings list (do NOT auto switch tab)
+        setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+        setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
+        setAppliedCount(c => (Number(c) || 0) + 1);
+        // Update pagination totals
+        setPagination(prev => {
+          const newTotal = Math.max((prev.total || 0) - 1, 0);
+          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
+        });
+        showToast('Application submitted', 'success');
+        // Refresh counts silently
+        refreshCounts();
+      } else {
+        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to submit application');
+    }
+  }, [refreshCounts]);
+
+  // NEW: Auto referral with known resume
+  const quickReferral = useCallback(async (job, resumeId) => {
+    const id = job.JobID || job.id;
+    try {
+      const res = await nexhireAPI.createReferralRequest(id, resumeId);
+      if (res?.success) {
+        setReferredJobIds(prev => new Set([...prev, id]));
+        setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
+        showToast('Referral request sent', 'success');
+      } else {
+        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to send referral request');
+    }
+  }, []);
+
   const handleSave = useCallback(async (job) => {
     if (!job) return;
     const id = job.JobID || job.id;
-    
+
     try {
       if (activeTab === 'openings') {
         // Immediate update without animation
         setJobs(prev => {
           const updated = prev.filter(j => (j.JobID || j.id) !== id);
-          
+
           // FIXED: Trigger reload when jobs become empty to refresh pagination metadata
           if (updated.length === 0) {
-            console.log('🔄 Jobs array empty after save - triggering fresh reload to check for more data');
+            console.log('?? Jobs array empty after save - triggering fresh reload to check for more data');
             // RESET pagination to page 1 to avoid currentPage > totalPages mismatch
             setPagination(p => ({ ...p, page: 1 }));
             setTimeout(() => {
               triggerReload();
             }, 100);
           }
-          
+
           return updated;
         });
-        
+
         // FIXED: Update pagination metadata immediately when removing jobs
         setPagination(prev => {
           const newTotal = Math.max((prev.total || 0) - 1, 0);
@@ -1002,10 +1070,10 @@ export default function JobsScreen({ navigation }) {
             hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
           };
         });
-        
+
         setSavedJobs(prev => [{ ...job, __savedAt: Date.now() }, ...prev]);
       }
-      
+
       const res = await nexhireAPI.saveJob(id);
       if (res?.success) {
         setSavedCount(c => (Number(c) || 0) + 1);
@@ -1020,9 +1088,9 @@ export default function JobsScreen({ navigation }) {
     } finally {
       refreshCounts();
       if (activeTab === 'saved') {
-        try { 
-          const r = await nexhireAPI.getMySavedJobs(1, 50); 
-          if (r?.success) setSavedJobs(r.data || []); 
+        try {
+          const r = await nexhireAPI.getMySavedJobs(1, 50);
+          if (r?.success) setSavedJobs(r.data || []);
         } catch {}
       }
     }
@@ -1059,11 +1127,11 @@ export default function JobsScreen({ navigation }) {
   // Smart pagination monitoring with improved UX
   useEffect(() => {
     if (activeTab !== 'openings' || loading || loadingMore) return;
-    
+
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5; // Trigger when only 5 jobs left
-    
-    console.log(`🔍 Smart Pagination Check:`, {
+
+    console.log(`?? Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -1071,29 +1139,29 @@ export default function JobsScreen({ navigation }) {
       totalPages: pagination.totalPages,
       total: pagination.total
     });
-    
+
     // Don't trigger if backend says no more
     if (!backendHasMore) {
-      console.log('🛑 Smart pagination skipped - backend says no more jobs available');
+      console.log('?? Smart pagination skipped - backend says no more jobs available');
       return;
     }
-    
+
     // FIXED: Additional guard - don't trigger if current page >= totalPages
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`🛑 Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`🔄 Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
-    
+
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('🔄 Emergency pagination: No jobs visible but backend says more available, loading immediately...');
+      console.log('?? Emergency pagination: No jobs visible but backend says more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -1137,7 +1205,7 @@ export default function JobsScreen({ navigation }) {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
               <View style={styles.quickFilterItem}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
                   onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
                 >
@@ -1149,7 +1217,7 @@ export default function JobsScreen({ navigation }) {
               </View>
 
               <View style={styles.quickFilterItem}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
                   onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
                 >
@@ -1161,7 +1229,7 @@ export default function JobsScreen({ navigation }) {
               </View>
 
               <View style={styles.quickFilterItem}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
                   onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
                 >
@@ -1185,8 +1253,8 @@ export default function JobsScreen({ navigation }) {
       {/* Expanded Quick Filter Slider */}
       {activeTab === 'openings' && expandedQuick && (
         <View style={styles.sliderBar}>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 32 }}
             style={{ flexDirection: 'row' }}
@@ -1281,7 +1349,7 @@ export default function JobsScreen({ navigation }) {
         onSelectCurrency={onSelectCurrency}
       />
 
-      {/* ✅ NEW: Resume Upload Modal */}
+      {/* ? NEW: Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
         onClose={() => {

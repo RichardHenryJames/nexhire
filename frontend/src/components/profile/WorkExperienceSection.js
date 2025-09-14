@@ -99,6 +99,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [saving, setSaving] = useState(false);
+  // validation state
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Extended form fields
   const [form, setForm] = useState({
@@ -303,23 +305,27 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const saveForm = async () => {
     console.log('[WorkExp] Save pressed. Editing item:', editingItem && getId(editingItem));
     console.log('[WorkExp] Current form:', JSON.stringify(form));
+    const errors = {};
     if (!form.jobTitle || !normalizeString(form.jobTitle)) {
-      Alert.alert('Validation', 'Job title is required');
-      return;
+      errors.jobTitle = 'Job title is required';
     }
     if (!form.startDate || !normalizeString(form.startDate)) {
-      Alert.alert('Validation', 'Start date is required');
-      return;
+      errors.startDate = 'Start date is required';
     }
     
     // ? SMART VALIDATION - Check if end date is required
     const excludeId = editingItem ? getId(editingItem) : null;
     if (isEndDateRequired(form, experiences, excludeId) && !form.endDate) {
-      Alert.alert(
-        'End Date Required',
-        'Please provide an end date for this position since it cannot be marked as current.',
-        [{ text: 'OK' }]
-      );
+      errors.endDate = 'End date required for non-current position';
+    }
+    
+    setValidationErrors(errors);
+    if (Object.keys(errors).length) {
+      // Web Alert fallback (RN Web Alert sometimes silent)
+      const firstMsg = errors.jobTitle || errors.startDate || errors.endDate;
+      if (firstMsg) {
+        try { Alert.alert('Validation', firstMsg); } catch(_) { /* noop */ }
+      }
       return;
     }
     
@@ -443,7 +449,14 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
           <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Job Title *</Text>
-            <TextInput style={styles.input} value={form.jobTitle} onChangeText={(t) => setForm({ ...form, jobTitle: t })} placeholder="e.g., Software Engineer" autoCapitalize="words" />
+            <TextInput
+              style={[styles.input, validationErrors.jobTitle && styles.errorInput]}
+              value={form.jobTitle}
+              onChangeText={(t) => { setForm({ ...form, jobTitle: t }); if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined })); }}
+              placeholder="e.g., Software Engineer"
+              autoCapitalize="words"
+            />
+            {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
 
             {/* Company picker with inline manual entry */}
             <Text style={styles.label}>Company</Text>
@@ -519,14 +532,15 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
             <Text style={styles.label}>Start Date (YYYY-MM-DD) *</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.startDate} 
-              onChangeText={handleStartDateChange}
-              placeholder="YYYY-MM-DD" 
-              keyboardType="numbers-and-punctuation" 
-              autoCapitalize="none" 
+            <TextInput
+              style={[styles.input, validationErrors.startDate && styles.errorInput]}
+              value={form.startDate}
+              onChangeText={(t) => { handleStartDateChange(t); if (validationErrors.startDate) setValidationErrors(v => ({ ...v, startDate: undefined })); }}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
+              autoCapitalize="none"
             />
+            {validationErrors.startDate ? <Text style={styles.validationText}>{validationErrors.startDate}</Text> : null}
 
             {/* ? SMART CURRENTLY WORKING TOGGLE - Hide when start date is older */}
             {!hideCurrentToggle && (
@@ -548,24 +562,26 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
             <Text style={styles.label}>End Date (YYYY-MM-DD){endDateRequired ? ' *' : ''}</Text>
             <TextInput 
-              style={[
-                styles.input, 
-                form.isCurrent && styles.inputDisabled,
-                endDateRequired && !form.endDate ? styles.errorInput : {}
-              ]} 
-              editable={!form.isCurrent} 
-              value={form.endDate} 
-              onChangeText={(t) => setForm({ ...form, endDate: t })} 
-              placeholder={
-                form.isCurrent 
-                  ? "Present" 
-                  : endDateRequired
-                    ? "Required - Select end date"
-                    : "Leave empty if current"
-              }
-              keyboardType="numbers-and-punctuation" 
-              autoCapitalize="none" 
-            />
+               style={[
+                 styles.input, 
+                 form.isCurrent && styles.inputDisabled,
+-                endDateRequired && !form.endDate ? styles.errorInput : {}
++                (validationErrors.endDate) ? styles.errorInput : {}
+               ]} 
+               editable={!form.isCurrent} 
+               value={form.endDate} 
+               onChangeText={(t) => setForm({ ...form, endDate: t })} 
+               placeholder={
+                 form.isCurrent 
+                   ? "Present" 
+                   : endDateRequired
+                     ? "Required - Select end date"
+                     : "Leave empty if current"
+               }
+               keyboardType="numbers-and-punctuation" 
+               autoCapitalize="none" 
+             />
++            {validationErrors.endDate ? <Text style={styles.validationText}>{validationErrors.endDate}</Text> : null}
 
             <Text style={styles.label}>Location</Text>
             <TextInput style={styles.input} value={form.location} onChangeText={(t) => setForm({ ...form, location: t })} placeholder="City, State" />
@@ -666,6 +682,7 @@ const styles = StyleSheet.create({
     borderColor: colors.danger || '#E53E3E', 
     borderWidth: 2 
   },
+  validationText: { color: colors.danger || '#E53E3E', marginTop: -8, marginBottom: 8, fontSize: 12 },
   infoContainer: {
     backgroundColor: '#FEF3C7',
     borderColor: '#F59E0B',

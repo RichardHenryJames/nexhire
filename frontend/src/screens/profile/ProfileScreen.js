@@ -1087,6 +1087,7 @@ export default function ProfileScreen() {
               icon="briefcase"
               editing={editing}
               onSave={() => Promise.resolve(true)}
+              hideSaveButton
               defaultCollapsed={false}
             >
               <WorkExperienceSection />

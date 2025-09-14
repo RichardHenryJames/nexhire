@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
+import { showToast } from '../../components/Toast';
 
 // Helper: format number as INR with rupee symbol (fallback if Intl unsupported)
 const formatINR = (value) => {
@@ -130,13 +131,8 @@ export default function PaymentScreen({ route, navigation }) {
       };
       const result = await nexhireAPI.verifyPaymentAndActivateSubscription(verificationData);
       if (result.success) {
-        Alert.alert(
-          '?? Payment Successful!',
-          `Welcome to ${plan.Name}! Your subscription has been activated and you now have unlimited referral requests.`,
-          [
-            { text: 'Start Referring!', onPress: () => navigation.navigate(returnScreen === 'ReferralPlans' ? 'ReferralPlans' : 'Jobs') }
-          ]
-        );
+        showToast(`Subscription '${plan.Name}' activated successfully`, 'success');
+        navigation.navigate('Jobs');
       } else {
         throw new Error(result.error || 'Payment verification failed');
       }
@@ -150,25 +146,11 @@ export default function PaymentScreen({ route, navigation }) {
 
   const handlePaymentFailure = (errorData) => {
     console.error('Payment failed:', errorData);
-    Alert.alert(
-      'Payment Failed',
-      `Payment could not be processed. ${errorData.error?.description || 'Please try again.'}`,
-      [
-        { text: 'Retry', onPress: () => initiatePayment() },
-        { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() }
-      ]
-    );
+    showToast(`Payment failed: ${errorData.error?.description || 'Please try again.'}`, 'error');
   };
 
   const handlePaymentCancellation = () => {
-    Alert.alert(
-      'Payment Cancelled',
-      'You cancelled the payment. Would you like to try again?',
-      [
-        { text: 'Retry', onPress: () => initiatePayment() },
-        { text: 'Go Back', style: 'cancel', onPress: () => navigation.goBack() }
-      ]
-    );
+    showToast('Payment cancelled', 'warning');
   };
 
   if (loading) {
@@ -183,16 +165,6 @@ export default function PaymentScreen({ route, navigation }) {
   // Payment initiation screen
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment</Text>
-      </View>
-
       <View style={styles.content}>
         <View style={styles.planSummary}>
           <Text style={styles.planName}>{plan?.Name}</Text>
@@ -259,23 +231,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: typography.sizes.md,
     color: colors.gray600,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
   },
   content: {
     padding: 20,

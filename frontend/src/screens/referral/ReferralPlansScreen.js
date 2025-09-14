@@ -180,16 +180,6 @@ export default function ReferralPlansScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Referral Plans</Text>
-      </View>
-
       <View style={styles.content}>
         <Text style={styles.title}>Upgrade Your Referral Power</Text>
         <Text style={styles.subtitle}>
@@ -283,23 +273,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: typography.sizes.md,
     color: colors.gray600,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
   },
   content: {
     padding: 20,

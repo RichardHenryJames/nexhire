@@ -14,6 +14,7 @@ import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
   const { jobId } = route.params || {};
@@ -32,7 +33,9 @@ export default function JobDetailsScreen({ route, navigation }) {
     hasActiveSubscription: false,
     reason: null
   });
+  const [primaryResume, setPrimaryResume] = useState(null);
 
+  // Load job details and referral status
   useEffect(() => {
     if (jobId) {
       fetchJobDetails();
@@ -42,6 +45,22 @@ export default function JobDetailsScreen({ route, navigation }) {
       setLoading(false);
     }
   }, [jobId]);
+
+  // Load primary resume once
+  useEffect(() => {
+    (async () => {
+      if (user && isJobSeeker) {
+        try {
+          const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+          if (profile?.success) {
+            const resumes = profile.data?.resumes || [];
+            const primary = resumes.find(r => r.IsPrimary) || resumes[0];
+            if (primary) setPrimaryResume(primary);
+          }
+        } catch {}
+      }
+    })();
+  }, [user, isJobSeeker]);
 
   const fetchJobDetails = async () => {
     try {
@@ -126,8 +145,12 @@ export default function JobDetailsScreen({ route, navigation }) {
     }
 
     setReferralMode(false); // ensure apply flow
+    // Auto-apply if primary resume exists
+    if (primaryResume?.ResumeID) {
+      await quickApply(primaryResume.ResumeID);
+      return;
+    }
     setShowResumeModal(true);
-    Alert.alert('Debug', 'New code is working! Modal should appear now.');
   };
 
   // NEW: Ask Referral handler
@@ -205,8 +228,13 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } catch (e) { console.warn('Referral pre-check failed:', e.message); }
     
-    setReferralMode(true);
-    setShowResumeModal(true);
+    // setReferralMode(true);
+    // setShowResumeModal(true);
+    if (primaryResume?.ResumeID) {
+      await quickReferral(primaryResume.ResumeID);
+      return;
+    }
+    setReferralMode(true); setShowResumeModal(true);
   };
 
   // ? NEW: Subscription modal for quota exhausted users
@@ -306,10 +334,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           
-          Alert.alert('Referral Request Sent! ??', 'Your referral request was submitted successfully.', [
-            { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-            { text: 'OK' }
-          ]);
+          showToast('Referral request sent', 'success');
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -346,14 +371,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       
       if (result.success) {
         setHasApplied(true);
-        Alert.alert(
-          'Application Submitted! ??',
-          'Your application has been submitted successfully. Good luck!',
-          [
-            { text: 'View Applications', onPress: () => navigation.navigate('Applications') },
-            { text: 'OK', style: 'default' }
-          ]
-        );
+        showToast('Application submitted', 'success');
       } else {
         // ? IMPROVED: Better error handling
         if (result.error?.includes('No resume found')) {
@@ -388,6 +406,41 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } finally {
       setApplying(false);
+    }
+  };
+
+  // Quick auto-apply using primary resume
+  const quickApply = async (resumeId) => {
+    try {
+      const applicationData = {
+        jobID: jobId,
+        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        resumeId
+      };
+      const res = await nexhireAPI.applyForJob(applicationData);
+      if (res?.success) {
+        setHasApplied(true);
+        showToast('Application submitted', 'success');
+      } else {
+        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to submit application');
+    }
+  };
+
+  const quickReferral = async (resumeId) => {
+    try {
+      const res = await nexhireAPI.createReferralRequest(jobId, resumeId);
+      if (res?.success) {
+        setHasReferred(true);
+        setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
+        showToast('Referral request sent', 'success');
+      } else {
+        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to send referral request');
     }
   };
 
