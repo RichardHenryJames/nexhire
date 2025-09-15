@@ -418,7 +418,7 @@ export class ReferralService {
         try {
             // Verify request exists and is claimed by this referrer
             const requestQuery = `
-                SELECT RequestID, Status, AssignedReferrerID
+                SELECT RequestID, Status, AssignedReferrerID, RequestedAt, ReferredAt
                 FROM ReferralRequests
                 WHERE RequestID = @param0 AND AssignedReferrerID = @param1 AND Status = 'Claimed'
             `;
@@ -459,6 +459,23 @@ export class ReferralService {
                 [dto.requestID]
             );
 
+            // ?? AWARD POINTS FOR PROOF SUBMISSION
+            const request = requestResult.recordset[0];
+            let proofPoints = 15; // Base points for submitting proof
+            
+            // ??? Quick Response Bonus: If completed within 24 hours
+            const requestedAt = new Date(request.RequestedAt);
+            const referredAt = new Date(request.ReferredAt);
+            const now = new Date();
+            const hoursFromClaim = (now.getTime() - referredAt.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursFromClaim <= 24) {
+                proofPoints += 10; // Quick response bonus
+                console.log(`?? Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours`);
+            }
+            
+            await this.awardReferralPoints(referrerId, dto.requestID, proofPoints, 'proof_submission');
+
             // Get the created proof
             const proofQuery = `
                 SELECT ProofID, RequestID, ReferrerID, FileURL, FileType, SubmittedAt
@@ -467,7 +484,7 @@ export class ReferralService {
             `;
             const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
             
-            console.log(`? Proof submitted for request ${dto.requestID} by referrer ${referrerId}`);
+            console.log(`?? Proof submitted for request ${dto.requestID} by referrer ${referrerId} - ${proofPoints} points awarded`);
             
             // TODO: Notify seeker that proof was submitted
             // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
@@ -509,13 +526,14 @@ export class ReferralService {
             const newStatus = dto.verified ? 'Verified' : 'Completed';
             await dbService.executeQuery(updateQuery, [dto.requestID, newStatus, dto.verified ? 1 : 0]);
 
-            // If verified, award points to referrer
+            // If verified, award ADDITIONAL verification points to referrer
             if (dto.verified && referrerId) {
-                await this.awardReferralPoints(referrerId, dto.requestID, 10); // Default 10 points
-                console.log(`?? Referral verified! 10 points awarded to referrer ${referrerId}`);
+                const verificationPoints = 25; // Higher points for verified referrals
+                await this.awardReferralPoints(referrerId, dto.requestID, verificationPoints, 'verification');
+                console.log(`? Referral verified! ${verificationPoints} additional points awarded to referrer ${referrerId}`);
                 
                 // TODO: Notify referrer about points earned
-                // await ReferralNotificationService.notifyReferralVerified(dto.requestID, referrerId, 10);
+                // await ReferralNotificationService.notifyReferralVerified(dto.requestID, referrerId, verificationPoints);
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -661,33 +679,33 @@ export class ReferralService {
     // ===== HELPER METHODS =====
     
     /**
-     * Award points to referrer
+     * Award points to referrer with enhanced tracking
      */
-    private static async awardReferralPoints(referrerId: string, requestId: string, points: number): Promise<void> {
+    private static async awardReferralPoints(referrerId: string, requestId: string, points: number, pointType: string = 'general'): Promise<void> {
         try {
-            // Check if reward already exists
+            // Check if reward already exists for this type
             const existingRewardQuery = `
                 SELECT RewardID FROM ReferralRewards 
-                WHERE ReferrerID = @param0 AND RequestID = @param1
+                WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointType = @param2
             `;
-            const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId]);
+            const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId, pointType]);
             
             if (existingRewardResult.recordset && existingRewardResult.recordset.length > 0) {
-                console.log(`Points already awarded for request ${requestId}`);
+                console.log(`Points already awarded for request ${requestId} (${pointType})`);
                 return;
             }
 
-            // Create reward record
+            // Create reward record with point type tracking
             const rewardId = AuthService.generateUniqueId();
             const insertRewardQuery = `
                 INSERT INTO ReferralRewards (
-                    RewardID, ReferrerID, RequestID, PointsEarned, AwardedAt
+                    RewardID, ReferrerID, RequestID, PointsEarned, PointType, AwardedAt
                 ) VALUES (
-                    @param0, @param1, @param2, @param3, GETUTCDATE()
+                    @param0, @param1, @param2, @param3, @param4, GETUTCDATE()
                 )
             `;
             
-            await dbService.executeQuery(insertRewardQuery, [rewardId, referrerId, requestId, points]);
+            await dbService.executeQuery(insertRewardQuery, [rewardId, referrerId, requestId, points, pointType]);
 
             // Update referrer's total points in Applicants table
             const updatePointsQuery = `
@@ -698,7 +716,7 @@ export class ReferralService {
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
             
-            console.log(`?? Awarded ${points} points to referrer ${referrerId} for request ${requestId}`);
+            console.log(`?? Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
         }

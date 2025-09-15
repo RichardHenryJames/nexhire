@@ -234,7 +234,7 @@ export const applicantProfileSchema = Joi.object({
     allowRecruitersToContact: Joi.boolean().default(true),
     hideCurrentCompany: Joi.boolean().default(false),
     hideSalaryDetails: Joi.boolean().default(false),
-    openToRefer: Joi.boolean().default(false), // ? NEW: Allow referral functionality
+    openToRefer: Joi.boolean().default(true), // ? NEW: Allow referral functionality with default true
     isOpenToWork: Joi.boolean().default(true),
     jobSearchStatus: Joi.string().valid('Actively Looking', 'Open to Opportunities', 'Not Looking').optional(),
     preferredIndustries: Joi.string().optional(),

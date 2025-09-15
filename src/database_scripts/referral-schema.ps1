@@ -90,6 +90,7 @@ BEGIN
         ReferrerID UNIQUEIDENTIFIER NOT NULL,
         RequestID UNIQUEIDENTIFIER NOT NULL,
         PointsEarned INT NOT NULL DEFAULT 10, -- configurable reward
+        PointsType NVARCHAR(50) DEFAULT 'Referral', -- e.g. Referral, Bonus, etc.
         AwardedAt DATETIME2 DEFAULT GETUTCDATE(),
         FOREIGN KEY (ReferrerID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (RequestID) REFERENCES ReferralRequests(RequestID)
@@ -199,6 +200,10 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_Referr
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_Request')
     CREATE INDEX IX_ReferralRewards_Request ON ReferralRewards (RequestID);
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_PointType')
+    CREATE INDEX IX_ReferralRewards_PointType ON ReferralRewards(PointType);
+
 
 -- ReferrerStats
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferrerStats_PendingCount')

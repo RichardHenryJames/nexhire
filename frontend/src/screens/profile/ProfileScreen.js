@@ -23,6 +23,7 @@ import ProfileSection, { useEditing } from '../../components/profile/ProfileSect
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 import ResumeSection from '../../components/profile/ResumeSection';
+import ReferralPointsHeader from '../../components/profile/ReferralPointsHeader'; // 🆕 NEW COMPONENT
 
 export default function ProfileScreen() {
   const { 
@@ -114,11 +115,21 @@ export default function ProfileScreen() {
     ,allowRecruitersToContact: true
     ,hideCurrentCompany: false      // This will now work!
     ,hideSalaryDetails: false       // This will now work!
+    ,openToRefer: true              // NEW: Default to true as per requirement
     
     // Status Fields
     ,isOpenToWork: true
     ,isFeatured: false
     ,featuredUntil: null
+    
+    // 🆕 REFERRAL POINTS AND STATS
+    ,ReferralPoints: 0
+    ,referralStats: {
+      totalReferralsMade: 0,
+      verifiedReferrals: 0,
+      referralRequestsMade: 0,
+      totalPointsFromRewards: 0
+    }
     
     // Additional
     ,tags: ''
@@ -532,7 +543,8 @@ export default function ProfileScreen() {
           hideCurrentCompany: 'Hide Current Company',
           hideSalaryDetails: 'Hide Salary Details',
           allowRecruitersToContact: 'Allow Recruiters to Contact',
-          isOpenToWork: 'Open to Work'
+          isOpenToWork: 'Open to Work',
+          openToRefer: 'Open to Refer' // NEW: Added Open to Refer
         };
         
         Alert.alert(
@@ -608,6 +620,21 @@ export default function ProfileScreen() {
           onPress={() => handlePrivacyToggle('isOpenToWork', !jobSeekerProfile.isOpenToWork)}
         >
           <View style={[styles.switchThumb, jobSeekerProfile.isOpenToWork && styles.switchThumbActive]} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.switchContainer}>
+        <View style={styles.switchInfo}>
+          <Text style={styles.switchLabel}>Open to Refer</Text>
+          <Text style={styles.switchDescription}>
+            Others can request referrals from you at your workplace
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.switch, jobSeekerProfile.openToRefer && styles.switchActive]}
+          onPress={() => handlePrivacyToggle('openToRefer', !jobSeekerProfile.openToRefer)}
+        >
+          <View style={[styles.switchThumb, jobSeekerProfile.openToRefer && styles.switchThumbActive]} />
         </TouchableOpacity>
       </View>
     </View>
@@ -697,11 +724,21 @@ export default function ProfileScreen() {
             allowRecruitersToContact: response.data.AllowRecruitersToContact !== false,
             hideCurrentCompany: response.data.HideCurrentCompany === 1 || response.data.HideCurrentCompany === true,
             hideSalaryDetails: response.data.HideSalaryDetails === 1 || response.data.HideSalaryDetails === true,
+            openToRefer: response.data.OpenToRefer !== false, // Default to true, only false if explicitly set
             
             // Status Fields
             isOpenToWork: response.data.IsOpenToWork !== false,
             isFeatured: response.data.IsFeatured || false,
             featuredUntil: response.data.FeaturedUntil || null,
+            
+            // 🆕 REFERRAL POINTS AND STATS
+            ReferralPoints: response.data.ReferralPoints || 0,
+            referralStats: response.data.referralStats || {
+              totalReferralsMade: 0,
+              verifiedReferrals: 0,
+              referralRequestsMade: 0,
+              totalPointsFromRewards: 0
+            },
             
             // Additional
             tags: response.data.Tags || '',

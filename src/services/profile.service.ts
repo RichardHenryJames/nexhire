@@ -54,7 +54,8 @@ export class ApplicantService {
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    u.Phone
+                    u.Phone,
+                    ISNULL(a.ReferralPoints, 0) as ReferralPoints
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID
                 WHERE a.UserID = @param0
@@ -116,6 +117,39 @@ export class ApplicantService {
                 }
             } catch (e) {
                 console.warn('Could not compute derived work experience fields:', e);
+            }
+
+            // ?? GET REFERRAL STATS FOR PROFILE HEADER
+            try {
+                const referralStatsQuery = `
+                    SELECT 
+                        COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
+                        COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
+                        COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param0 THEN rr.RequestID END) as ReferralRequestsMade,
+                        ISNULL(SUM(CASE WHEN rw.ReferrerID = @param0 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
+                    FROM ReferralRequests rr
+                    LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
+                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param0)
+                `;
+                const statsResult = await dbService.executeQuery(referralStatsQuery, [profile.ApplicantID]);
+                
+                if (statsResult.recordset && statsResult.recordset.length > 0) {
+                    const stats = statsResult.recordset[0];
+                    profile.referralStats = {
+                        totalReferralsMade: stats.TotalReferralsMade || 0,
+                        verifiedReferrals: stats.VerifiedReferrals || 0,
+                        referralRequestsMade: stats.ReferralRequestsMade || 0,
+                        totalPointsFromRewards: stats.TotalPointsFromRewards || 0
+                    };
+                }
+            } catch (e) {
+                console.warn('Could not load referral stats:', e);
+                profile.referralStats = {
+                    totalReferralsMade: 0,
+                    verifiedReferrals: 0,
+                    referralRequestsMade: 0,
+                    totalPointsFromRewards: 0
+                };
             }
 
             // ? NEW: Get salary breakdown for this applicant
@@ -349,7 +383,7 @@ export class ApplicantService {
                     }
                     // Boolean fields (convert to bit: 1/0)
                     else if (['immediatelyAvailable', 'willingToRelocate', 'allowRecruitersToContact', 
-                             'hideCurrentCompany', 'hideSalaryDetails', 'isOpenToWork', 'isFeatured'].includes(key)) {
+                             'hideCurrentCompany', 'hideSalaryDetails', 'openToRefer', 'isOpenToWork', 'isFeatured'].includes(key)) {
                         value = (value === true || value === 1 || value === '1' || value === 'true') ? 1 : 0;
                     }
                     // String fields - keep as is, but handle empty strings
@@ -423,10 +457,11 @@ export class ApplicantService {
                 ImmediatelyAvailable, 
                 WillingToRelocate, 
                 IsFeatured,
+                OpenToRefer,
                 CreatedAt,
                 UpdatedAt
             ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0, 1,
                 GETUTCDATE(), GETUTCDATE()
             )
         `;

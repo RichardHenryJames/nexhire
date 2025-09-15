@@ -154,10 +154,10 @@ export class UserService {
             INSERT INTO Applicants (
                 ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
                 AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                ImmediatelyAvailable, WillingToRelocate, IsFeatured,
+                ImmediatelyAvailable, WillingToRelocate, IsFeatured, OpenToRefer,
                 CreatedAt, UpdatedAt
             ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
+                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0, 1,
                 GETUTCDATE(), GETUTCDATE()
             )
         `;
