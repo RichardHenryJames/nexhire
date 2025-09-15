@@ -220,22 +220,27 @@ const styles = {
   },
   statsSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
     flex: 2,
     justifyContent: 'center',
     paddingHorizontal: 8,
+    paddingTop: 8, // Add consistent top padding
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 0, // Remove vertical padding to have precise control
     paddingHorizontal: 4,
+    justifyContent: 'flex-start', // Changed to flex-start for precise alignment
   },
   statValue: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary || '#111827',
-    marginBottom: 2,
+    marginBottom: 4,
+    textAlign: 'center',
+    lineHeight: 18, // Make line height equal to font size for consistent baseline
+    height: 18, // Fixed height to ensure all numbers sit at same level
   },
   statLabel: {
     fontSize: 12,
@@ -243,13 +248,16 @@ const styles = {
     textAlign: 'center',
     fontWeight: '500',
     lineHeight: 14,
+    paddingHorizontal: 2,
+    marginTop: 4, // Use marginTop instead of marginBottom on statValue
   },
   statDivider: {
     width: 1,
-    height: 36,
+    height: 44, // Adjusted height to match the new layout
     backgroundColor: colors.gray200 || '#E5E7EB',
     marginHorizontal: 8,
     opacity: 0.6,
+    marginTop: 8, // Add top margin to align with the numbers
   },
   actionSection: {
     alignItems: 'center',
