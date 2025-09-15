@@ -78,6 +78,7 @@ export default function ProfileSection({
   return (
     <EditingContext.Provider value={currentEditMode}>
       <View style={[styles.container, style]}>
+        {/* HEADER - Now only contains title and collapse/expand controls */}
         <View style={styles.sectionHeader}>
           <TouchableOpacity
             style={styles.headerLeft}
@@ -95,10 +96,36 @@ export default function ProfileSection({
               style={{ marginLeft: 6 }}
             />
           </TouchableOpacity>
-          {/* Header actions (hidden when hideHeaderActions is true) */}
-          {!hideHeaderActions && !globalEditing && !collapsed && (
-            localEditing && !onEdit ? (
-              <View style={styles.headerActions}>
+          
+          {/* Only show Edit button in header when not in editing mode and not hideHeaderActions */}
+          {!hideHeaderActions && !globalEditing && !collapsed && !localEditing && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditPress}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${title}`}
+            >
+              <Ionicons 
+                name="create" 
+                size={16} 
+                color={colors.primary} 
+              />
+              <Text style={styles.editButtonText}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* CONTENT */}
+        {!collapsed && (
+          <View accessibilityRole="region" accessibilityLabel={`${title} content`}>
+            {children}
+            
+            {/* FOOTER ACTIONS - Save and Cancel buttons moved here */}
+            {!hideHeaderActions && !globalEditing && currentEditMode && (
+              <View style={styles.footerActions}>
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={handleCancelPress}
@@ -120,43 +147,18 @@ export default function ProfileSection({
                     <Ionicons 
                       name={saving ? 'hourglass' : 'save-outline'} 
                       size={16} 
-                      color={saving ? colors.gray400 : colors.primary} 
+                      color={saving ? colors.gray400 : colors.white} 
                     />
                     <Text style={[
                       styles.saveButtonText,
-                      saving && styles.editButtonTextDisabled
+                      saving && styles.saveButtonTextDisabled
                     ]}>
                       {saving ? 'Saving...' : 'Save'}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditPress}
-                disabled={saving}
-                accessibilityRole="button"
-                accessibilityLabel={localEditing ? (saving ? 'Saving' : `Save ${title}`) : `Edit ${title}`}
-              >
-                <Ionicons 
-                  name={localEditing && !onEdit ? (saving ? 'hourglass' : 'create') : 'create'} 
-                  size={16} 
-                  color={saving ? colors.gray400 : colors.primary} 
-                />
-                <Text style={[
-                  styles.editButtonText,
-                  saving && styles.editButtonTextDisabled
-                ]}>
-                  {onEdit ? 'Edit' : (saving ? 'Saving...' : (localEditing ? 'Save' : 'Edit'))}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
-        </View>
-        {!collapsed && (
-          <View accessibilityRole="region" accessibilityLabel={`${title} content`}>
-            {children}
+            )}
           </View>
         )}
       </View>
@@ -187,11 +189,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    flex: 1,
   },
   sectionTitle: {
     fontSize: typography.sizes?.lg || 18,
@@ -210,14 +208,28 @@ const styles = StyleSheet.create({
     color: colors.primary || '#007AFF',
     fontWeight: typography.weights?.medium || '500',
   },
-  editButtonTextDisabled: {
-    color: colors.gray400 || '#CCCCCC',
+  
+  // FOOTER ACTIONS - New styles for buttons at bottom
+  footerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border || '#E5E7EB',
   },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    padding: 8,
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    backgroundColor: colors.surface || '#FFFFFF',
   },
   cancelButtonText: {
     fontSize: typography.sizes?.sm || 14,
@@ -227,12 +239,20 @@ const styles = StyleSheet.create({
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    padding: 8,
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.primary || '#007AFF',
+    minWidth: 100,
+    justifyContent: 'center',
   },
   saveButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.primary || '#007AFF',
-    fontWeight: typography.weights?.medium || '500',
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.bold || 'bold',
+  },
+  saveButtonTextDisabled: {
+    color: colors.gray300 || '#D1D5DB',
   },
 });

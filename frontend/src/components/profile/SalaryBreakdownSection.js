@@ -485,16 +485,35 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
           <Ionicons name="close" size={24} color={colors.text || '#000000'} />
         </TouchableOpacity>
         <Text style={styles.modalTitle}>Edit Salary Breakdown</Text>
-        <TouchableOpacity onPress={() => saveSalaryBreakdown(false)}>
-          <Text style={[styles.addBtnText, { fontWeight: '600' }]}>Save</Text>
-        </TouchableOpacity>
+        {/* Removed Save button from header */}
+        <View style={{ width: 60 }} />
       </View>
       {loading ? (
         <View style={{ padding: 20 }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        renderInlineEditorBody()
+        <View style={{ flex: 1 }}>
+          {renderInlineEditorBody()}
+          
+          {/* Add footer actions */}
+          <View style={styles.salaryModalFooterActions}>
+            <TouchableOpacity 
+              style={styles.salaryModalCancelButton}
+              onPress={() => setShowSalaryModal(false)}
+            >
+              <Ionicons name="close" size={16} color={colors.gray600} />
+              <Text style={styles.salaryModalCancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.salaryModalSaveButton}
+              onPress={() => saveSalaryBreakdown(false)}
+            >
+              <Ionicons name="save-outline" size={16} color={colors.white} />
+              <Text style={styles.salaryModalSaveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -540,6 +559,7 @@ const styles = StyleSheet.create({
   kvValue: { fontSize: typography.sizes?.sm || 14, color: colors.text || '#111827' },
   kvRowMuted: { paddingTop: 6 },
   kvMutedText: { fontSize: typography.sizes?.xs || 12, color: colors.gray500 || '#9CA3AF', fontStyle: 'italic' },
+  noDataText: { fontSize: typography.sizes?.sm || 14, color: colors.gray500 || '#9CA3AF', textAlign: 'center', padding: 20, fontStyle: 'italic' },
 
   modalContainer: { flex: 1, backgroundColor: colors.background || '#FFFFFF' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
@@ -575,4 +595,48 @@ const styles = StyleSheet.create({
   pickerTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   pickerItem: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   pickerItemText: { color: colors.text },
+
+  // Salary modal footer actions styles
+  salaryModalFooterActions: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    alignItems: 'center', 
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border || '#E0E0E0',
+    backgroundColor: colors.background,
+  },
+  salaryModalCancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  salaryModalCancelButtonText: {
+    fontSize: 14,
+    color: colors.gray600,
+    fontWeight: '500',
+  },
+  salaryModalSaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  salaryModalSaveButtonText: {
+    fontSize: 14,
+    color: colors.white,
+    fontWeight: 'bold',
+  },
 });

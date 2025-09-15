@@ -442,9 +442,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
-            <TouchableOpacity onPress={saving ? undefined : saveForm} disabled={saving}>
-              <Text style={styles.saveButton}>{saving ? 'Saving...' : 'Save'}</Text>
-            </TouchableOpacity>
+            {/* Removed Save button from header */}
+            <View style={{ width: 24 }} />
           </View>
 
           <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
@@ -627,6 +626,26 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               <Text style={styles.label}>Recruiter can contact manager</Text>
               <Switch value={!!form.canContact} onValueChange={(v) => setForm({ ...form, canContact: v })} />
             </View>
+
+            {/* Add footer actions at the end of ScrollView content */}
+            <View style={styles.modalFooterActions}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setShowModal(false)}
+                disabled={saving}
+              >
+                <Ionicons name="close" size={16} color={colors.gray600} />
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalSaveButton}
+                onPress={saving ? undefined : saveForm} 
+                disabled={saving}
+              >
+                <Ionicons name={saving ? 'hourglass' : 'save-outline'} size={16} color={colors.white} />
+                <Text style={styles.modalSaveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -671,7 +690,7 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: colors.background },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
-  saveButton: { fontSize: typography.sizes?.md || 16, color: colors.primary, fontWeight: typography.weights?.medium || '500' },
+  // Removed saveButton style as it's now in footer
   formContainer: { padding: 20, paddingBottom: 40 },
   formScroll: { flex: 1 },
   label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
@@ -729,4 +748,47 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   multiline: { height: 100, textAlignVertical: 'top' },
   manualToggleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border },
+  // New footer styles
+  modalFooterActions: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1, 
+    borderTopColor: colors.border || '#E5E7EB',
+  },
+  modalCancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    backgroundColor: colors.surface || '#FFFFFF',
+  },
+  modalCancelButtonText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#6B7280',
+    fontWeight: typography.weights?.medium || '500',
+  },
+  modalSaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.primary || '#007AFF',
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  modalSaveButtonText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.bold || 'bold',
+  },
 });
