@@ -71,7 +71,6 @@ export default function ProfileScreen() {
     ,githubProfile: ''
     
     // Documents
-    ,primaryResumeURL: ''
     ,resumes: [] // ? NEW: Array to store multiple resumes
     ,additionalDocuments: ''
     
@@ -680,7 +679,6 @@ export default function ProfileScreen() {
             githubProfile: response.data.GithubProfile || '',
             
             // Documents - NEW: Include resumes from new schema
-            primaryResumeURL: response.data.primaryResumeURL || '',
             resumes: response.data.resumes || [],
             additionalDocuments: response.data.AdditionalDocuments || '',
             
@@ -1023,6 +1021,42 @@ export default function ProfileScreen() {
     }
   };
 
+  // Helper to handle referral navigation (implement actual navigation later)
+  const handleReferralNavigation = useCallback(() => {
+    // TODO: Navigate to ReferralScreen
+    // navigation.navigate('Referrals');
+    console.log('Navigate to Referrals Screen');
+  }, []);
+
+  // Helper to show referral points details
+  const showReferralPointsDetails = useCallback(() => {
+    const points = Number(jobSeekerProfile.ReferralPoints) || 0;
+    const stats = jobSeekerProfile.referralStats || {};
+    
+    Alert.alert(
+      '🏆 Referral Points System',
+      `You have ${points} referral points!\n\n` +
+      `📊 Your Statistics:\n` +
+      `• Referrals Made: ${Number(stats.totalReferralsMade) || 0}\n` +
+      `• Successfully Verified: ${Number(stats.verifiedReferrals) || 0}\n` +
+      `• Requests Made: ${Number(stats.referralRequestsMade) || 0}\n` +
+      `• Total Rewards Earned: ${Number(stats.totalPointsFromRewards) || 0}\n\n` +
+      `💡 How to Earn More Points:\n` +
+      `• Submit proof of referrals: +15 points\n` +
+      `• Get referrals verified: +25 points\n` +
+      `• Quick responses (< 24hrs): +10 bonus\n` +
+      `• Maximum per referral: 50 points`,
+      [
+        { text: 'Got it!', style: 'default' },
+        { 
+          text: 'View Referrals', 
+          style: 'default',
+          onPress: handleReferralNavigation
+        }
+      ]
+    );
+  }, [jobSeekerProfile.ReferralPoints, jobSeekerProfile.referralStats, handleReferralNavigation]);
+
   // Render the profile screen UI
   return (
     <KeyboardAvoidingView 
@@ -1058,6 +1092,21 @@ export default function ProfileScreen() {
           }}
           showStats={false}
         />
+        
+        {/* 🆕 REFERRAL POINTS HEADER - Beautifully Integrated Below Profile Header */}
+        {userType === 'JobSeeker' && (
+          <ReferralPointsHeader
+            referralPoints={Number(jobSeekerProfile.ReferralPoints) || 0}
+            referralStats={{
+              totalReferralsMade: Number(jobSeekerProfile.referralStats?.totalReferralsMade) || 0,
+              verifiedReferrals: Number(jobSeekerProfile.referralStats?.verifiedReferrals) || 0,
+              referralRequestsMade: Number(jobSeekerProfile.referralStats?.referralRequestsMade) || 0,
+              totalPointsFromRewards: Number(jobSeekerProfile.referralStats?.totalPointsFromRewards) || 0
+            }}
+            onPress={showReferralPointsDetails}
+            compact={false}
+          />
+        )}
         
         {userType === 'JobSeeker' ? (
           <>
@@ -1481,15 +1530,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12, // Reduced from 24 since we have the profile header
+    marginBottom: 16, // Increased for better spacing before profile header
     paddingHorizontal: 4,
   },
   title: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 20, // Reduced from 24
-    fontWeight: '600', // Reduced from bold
-    color: colors.text,
+    fontSize: 22, // Slightly larger for better hierarchy
+    fontWeight: '700', // Bolder for header importance
+    color: colors.textPrimary || colors.text,
+    letterSpacing: 0.3,
   },
   
   // Field styles

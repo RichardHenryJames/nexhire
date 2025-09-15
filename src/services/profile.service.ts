@@ -300,8 +300,7 @@ export class ApplicantService {
                 'linkedInProfile': 'LinkedInProfile',
                 'githubProfile': 'GithubProfile',
                 
-                // Documents
-                'primaryResumeURL': 'PrimaryResumeURL',
+                // Documents - REMOVED: primaryResumeURL (handled via ApplicantResumes table, not Applicants column)
                 'additionalDocuments': 'AdditionalDocuments',
                 
                 // Education (? Enhanced with GraduationYear and GPA)
@@ -719,7 +718,7 @@ export class ApplicantService {
             // Profile completeness (40% weight)
             searchScore += (profile.ProfileCompleteness || 0) * 0.4;
             
-            // Skills presence (20% weight)
+            // Skills presence (20% weight) - use PrimarySkills and SecondarySkills if present
             if (profile.PrimarySkills) searchScore += 20;
             if (profile.SecondarySkills) searchScore += 10;
             

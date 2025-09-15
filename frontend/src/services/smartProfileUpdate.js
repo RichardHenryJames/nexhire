@@ -75,8 +75,7 @@ const FIELD_ROUTING = {
     'linkedInProfile',
     'githubProfile',
     
-    // Documents
-    'primaryResumeURL',
+    // Documents - REMOVED: primaryResumeURL (handled separately via resume API)
     'additionalDocuments',
     
     // Status fields
@@ -86,6 +85,7 @@ const FIELD_ROUTING = {
     
     // ? REMOVED old salary fields (currentSalary, expectedSalaryMin, expectedSalaryMax, etc.)
     // ? REMOVED: lastJobAppliedAt, searchScore (system-managed, not user input)
+    // ? REMOVED: primaryResumeURL (resumes handled via separate ApplicantResumes table)
     
     // ? NEW: Salary breakdown handled separately via dedicated API endpoints
     'salaryBreakdown' // This will be handled specially in backend, not as a direct column update

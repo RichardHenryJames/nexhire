@@ -1,14 +1,19 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../styles/theme'; // ?? FIX: Import from theme.js instead of colors.js
+// Note: If you don't have expo-linear-gradient installed, remove this import and set useGradient to false
+// import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '../../styles/theme';
 
 const ReferralPointsHeader = ({ 
   referralPoints = 0, 
   referralStats = {}, 
   onPress = () => {},
-  compact = false 
+  compact = false,
+  useGradient = false // Set to false by default to avoid import issues
 }) => {
+  const [scaleAnim] = useState(new Animated.Value(1));
+
   // ?? FIX: Ensure all values are properly converted to numbers
   const safeReferralPoints = Number(referralPoints) || 0;
   const {
@@ -22,187 +27,258 @@ const ReferralPointsHeader = ({
   const safeVerifiedReferrals = Number(verifiedReferrals) || 0;
   const safeReferralRequestsMade = Number(referralRequestsMade) || 0;
 
+  // Animation handlers
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Container component - use View for now (LinearGradient can be added later)
+  const Container = View;
+
   if (compact) {
     return (
-      <TouchableOpacity 
-        style={styles.compactContainer}
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.pointsSection}>
-          <Ionicons name="trophy" size={20} color={colors.primary} />
-          <Text style={styles.pointsText}>{safeReferralPoints}</Text>
-          <Text style={styles.pointsLabel}>Points</Text>
-        </View>
-      </TouchableOpacity>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <TouchableOpacity 
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.9}
+          style={styles.compactContainer}
+        >
+          <View style={styles.pointsSection}>
+            <Ionicons name="trophy" size={20} color={colors.primary} />
+            <Text style={styles.pointsText}>{safeReferralPoints}</Text>
+            <Text style={styles.pointsLabel}>Points</Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     );
   }
 
   return (
-    <TouchableOpacity 
-      style={styles.container}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.headerRow}>
-        <View style={styles.pointsSection}>
-          <View style={styles.pointsCircle}>
-            <Ionicons name="trophy" size={24} color={colors.primary} />
-            <Text style={styles.pointsValue}>{safeReferralPoints}</Text>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity 
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+        style={styles.container}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.pointsSection}>
+            <View style={styles.pointsCircle}>
+              <Ionicons name="trophy" size={24} color={colors.primary} />
+              <Text style={styles.pointsValue}>{safeReferralPoints}</Text>
+            </View>
+            <Text style={styles.pointsTitle}>Referral Points</Text>
           </View>
-          <Text style={styles.pointsTitle}>Referral Points</Text>
+          
+          <View style={styles.statsSection}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{safeTotalReferralsMade}</Text>
+              <Text style={styles.statLabel}>Referrals Made</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{safeVerifiedReferrals}</Text>
+              <Text style={styles.statLabel}>Verified</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{safeReferralRequestsMade}</Text>
+              <Text style={styles.statLabel}>Requested</Text>
+            </View>
+          </View>
+          
+          <Ionicons name="chevron-forward" size={20} color={colors.gray400} style={styles.chevronIcon} />
         </View>
         
-        <View style={styles.statsSection}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{safeTotalReferralsMade}</Text>
-            <Text style={styles.statLabel}>Referrals Made</Text>
+        {/* Progress to next level */}
+        {safeReferralPoints > 0 && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${Math.min((safeReferralPoints % 100) / 100 * 100, 100)}%` }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {100 - (safeReferralPoints % 100)} points to next level
+            </Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{safeVerifiedReferrals}</Text>
-            <Text style={styles.statLabel}>Verified</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{safeReferralRequestsMade}</Text>
-            <Text style={styles.statLabel}>Requested</Text>
-          </View>
-        </View>
+        )}
         
-        <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-      </View>
-      
-      {/* Progress to next level */}
-      {safeReferralPoints > 0 && (
-        <View style={styles.progressSection}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${Math.min((safeReferralPoints % 100) / 100 * 100, 100)}%` }
-              ]} 
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {100 - (safeReferralPoints % 100)} points to next level
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
+        {/* Subtle hint for interaction */}
+        <Text style={styles.tapHint}>Tap to view details</Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
 const styles = {
   container: {
-    backgroundColor: 'white',
-    padding: 16,
+    backgroundColor: colors.white || '#FFFFFF',
     marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.gray100 || '#F3F4F6',
   },
   compactContainer: {
-    backgroundColor: colors.primary + '10',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: colors.primary + '10' || '#3B82F615',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.primary + '20' || '#3B82F620',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   pointsSection: {
     alignItems: 'center',
     flex: 1,
   },
   pointsCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary + '15',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary + '15' || '#3B82F615',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.primary + '30' || '#3B82F630',
+    shadowColor: colors.primary || '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   pointsValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.primary || '#3B82F6',
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
   pointsTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textPrimary || '#111827',
+    letterSpacing: 0.2,
   },
   pointsText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.primary,
-    marginLeft: 4,
+    color: colors.primary || '#3B82F6',
+    marginLeft: 6,
   },
   pointsLabel: {
-    fontSize: 12,
-    color: colors.gray600,
+    fontSize: 14,
+    color: colors.textSecondary || '#6B7280',
     marginLeft: 4,
+    fontWeight: '500',
   },
   statsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 2,
+    flex: 2.5,
     justifyContent: 'center',
+    paddingHorizontal: 16,
   },
   statItem: {
     alignItems: 'center',
-    minWidth: 50,
+    minWidth: 60,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.textPrimary || '#111827',
+    marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
-    color: colors.gray600,
-    marginTop: 2,
+    color: colors.textSecondary || '#6B7280',
     textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 14,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: colors.gray200,
+    height: 36,
+    backgroundColor: colors.gray200 || '#E5E7EB',
     marginHorizontal: 12,
+    opacity: 0.6,
+  },
+  chevronIcon: {
+    opacity: 0.6,
+    marginLeft: 8,
   },
   progressSection: {
-    marginTop: 16,
+    marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
+    borderTopColor: colors.gray100 || '#F3F4F6',
   },
   progressBar: {
-    height: 4,
-    backgroundColor: colors.gray200,
-    borderRadius: 2,
+    height: 6,
+    backgroundColor: colors.gray200 || '#E5E7EB',
+    borderRadius: 3,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+    backgroundColor: colors.primary || '#3B82F6',
+    borderRadius: 3,
+    shadowColor: colors.primary || '#3B82F6',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
   },
   progressText: {
-    fontSize: 12,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary || '#6B7280',
     textAlign: 'center',
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
+  tapHint: {
+    fontSize: 12,
+    color: colors.gray400 || '#9CA3AF',
+    textAlign: 'center',
+    fontStyle: 'italic',
     marginTop: 8,
+    opacity: 0.8,
   },
 };
 
