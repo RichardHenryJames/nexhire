@@ -55,11 +55,12 @@ const ReferralPointsHeader = ({
           activeOpacity={0.9}
           style={styles.compactContainer}
         >
-          <View style={styles.pointsSection}>
+          <View style={styles.compactPointsSection}>
             <Ionicons name="trophy" size={20} color={colors.primary} />
             <Text style={styles.pointsText}>{safeReferralPoints}</Text>
             <Text style={styles.pointsLabel}>Points</Text>
           </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} style={styles.compactChevron} />
         </TouchableOpacity>
       </Animated.View>
     );
@@ -80,7 +81,7 @@ const ReferralPointsHeader = ({
               <Ionicons name="trophy" size={24} color={colors.primary} />
               <Text style={styles.pointsValue}>{safeReferralPoints}</Text>
             </View>
-            <Text style={styles.pointsTitle}>Referral Points</Text>
+            <Text style={styles.pointsTitle}>Referral{'\n'}Points</Text>
           </View>
           
           <View style={styles.statsSection}>
@@ -100,7 +101,9 @@ const ReferralPointsHeader = ({
             </View>
           </View>
           
-          <Ionicons name="chevron-forward" size={20} color={colors.gray400} style={styles.chevronIcon} />
+          <View style={styles.actionSection}>
+            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+          </View>
         </View>
         
         {/* Progress to next level */}
@@ -119,9 +122,6 @@ const ReferralPointsHeader = ({
             </Text>
           </View>
         )}
-        
-        {/* Subtle hint for interaction */}
-        <Text style={styles.tapHint}>Tap to view details</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -150,10 +150,19 @@ const styles = {
     borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginHorizontal: 16,
     marginVertical: 8,
     borderWidth: 1,
     borderColor: colors.primary + '20' || '#3B82F620',
+  },
+  compactPointsSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  compactChevron: {
+    marginLeft: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -164,6 +173,7 @@ const styles = {
   pointsSection: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 100,
   },
   pointsCircle: {
     width: 72,
@@ -172,7 +182,7 @@ const styles = {
     backgroundColor: colors.primary + '15' || '#3B82F615',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: colors.primary + '30' || '#3B82F630',
     shadowColor: colors.primary || '#3B82F6',
@@ -189,10 +199,12 @@ const styles = {
     letterSpacing: 0.5,
   },
   pointsTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary || '#111827',
     letterSpacing: 0.2,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   pointsText: {
     fontSize: 18,
@@ -209,13 +221,13 @@ const styles = {
   statsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 2.5,
+    flex: 2,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   statItem: {
     alignItems: 'center',
-    minWidth: 60,
+    flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -236,12 +248,14 @@ const styles = {
     width: 1,
     height: 36,
     backgroundColor: colors.gray200 || '#E5E7EB',
-    marginHorizontal: 12,
+    marginHorizontal: 8,
     opacity: 0.6,
   },
-  chevronIcon: {
-    opacity: 0.6,
-    marginLeft: 8,
+  actionSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 16,
+    minWidth: 32,
   },
   progressSection: {
     marginTop: 20,
@@ -271,14 +285,6 @@ const styles = {
     textAlign: 'center',
     fontWeight: '500',
     letterSpacing: 0.2,
-  },
-  tapHint: {
-    fontSize: 12,
-    color: colors.gray400 || '#9CA3AF',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginTop: 8,
-    opacity: 0.8,
   },
 };
 
