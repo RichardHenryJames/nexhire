@@ -286,7 +286,7 @@ const ReferralPointsBreakdown = ({
                 
                 return (
                   <View key={type} style={styles.tipRow}>
-                    <Text style={styles.tipIcon}>{metadata.icon || '??'}</Text>
+                    <Text style={styles.tipIcon}>{metadata.icon || '🎯'}</Text>
                     <View style={styles.tipContent}>
                       <Text style={styles.tipTitle}>{metadata.title || 'Points'}</Text>
                       <Text style={styles.tipDescription}>{metadata.description || 'Earn referral points'}</Text>
@@ -297,7 +297,7 @@ const ReferralPointsBreakdown = ({
               
               {/* Always show the summary tip */}
               <View style={styles.tipRow}>
-                <Text style={styles.tipIcon}>??</Text>
+                <Text style={styles.tipIcon}>🎯</Text>
                 <View style={styles.tipContent}>
                   <Text style={styles.tipTitle}>Maximum Per Referral</Text>
                   <Text style={styles.tipDescription}>Points vary by activity type and timing bonuses</Text>
