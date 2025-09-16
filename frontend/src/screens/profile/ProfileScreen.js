@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import nexhireAPI from '../../services/api';
@@ -129,6 +130,10 @@ export default function ProfileScreen() {
       referralRequestsMade: 0,
       totalPointsFromRewards: 0
     }
+
+    // 🆕 Load detailed points history for breakdown
+    ,pointsHistory: [] // Will be loaded separately
+    ,pointTypeMetadata: {} // 🆕 Dynamic metadata from backend
     
     // Additional
     ,tags: ''
@@ -660,12 +665,61 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
+  // 🔧 NEW: Handle direct navigation and screen focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🎯 ProfileScreen focused');
+      console.log('🎯 User at focus:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
+      
+      if (user && user.UserID) {
+        console.log('🎯 User found on focus, loading profile...');
+        loadExtendedProfile();
+      } else if (!loading) {
+        console.log('🎯 No user found on focus, auth loading state:', loading);
+        // If not loading and no user, trigger auth check
+        if (!loading) {
+          console.log('🎯 Triggering auth state check...');
+          // Access checkAuthState from AuthContext if available
+        }
+      }
+    }, [user, loading])
+  );
+
+  // 🔧 NEW: Force profile load on component mount (for direct URL navigation)
+  useEffect(() => {
+    console.log('🔍 ProfileScreen mounted, user present:', !!user);
+    console.log('🔍 User data:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
+    console.log('🔍 Auth loading state:', loading);
+    
+    if (user && user.UserID) {
+      console.log('🔍 Triggering loadExtendedProfile for direct navigation...');
+      loadExtendedProfile();
+    } else if (!loading) {
+      console.log('🔍 No user found but auth not loading - user might not be logged in');
+    }
+  }, []); // Empty dependency - runs once on mount
+
   const loadExtendedProfile = async () => {
+    console.log('📡 loadExtendedProfile called');
+    console.log('📡 User data:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
+    
+    if (!user || !user.UserID) {
+      console.log('❌ No user or UserID found, skipping profile load');
+      return;
+    }
+    
     try {
+      console.log('🔄 Starting profile data load...');
       setRefreshing(true);
+      
       if (userType === 'JobSeeker') {
+        console.log('👤 Loading JobSeeker profile for UserID:', user.UserID);
+        
         const response = await nexhireAPI.getApplicantProfile(user.UserID);
+        console.log('📊 JobSeeker profile API response:', response.success ? 'Success' : 'Failed');
+        
         if (response.success) {
+          console.log('✅ Profile data loaded successfully');
           const months = response.data.TotalExperienceMonths != null ? Number(response.data.TotalExperienceMonths) : null;
           const derivedYears = months != null && !isNaN(months) ? Math.round(months / 12) : (response.data.YearsOfExperience || 0);
           setJobSeekerProfile({
@@ -735,8 +789,12 @@ export default function ProfileScreen() {
               totalReferralsMade: 0,
               verifiedReferrals: 0,
               referralRequestsMade: 0,
-              totalPointsFromRewards: 0
+              totalPointsFromRewards: response.data.ReferralPoints || 0 // Use actual points
             },
+
+            // 🔧 Load detailed points history for breakdown (will be loaded separately from API)
+            pointsHistory: [], // Will be loaded from API
+            pointTypeMetadata: {}, // Will be loaded from API
             
             // Additional
             tags: response.data.Tags || '',
@@ -755,10 +813,41 @@ export default function ProfileScreen() {
             bio: response.data.Summary || '',
             industries: response.data.PreferredIndustries ? response.data.PreferredIndustries.split(',').map(s => s.trim()).filter(s => s) : [],
           });
+        } else {
+          console.log('❌ Failed to load JobSeeker profile:', response.error);
+        }
+
+        // 🆕 Load points history for detailed breakdown
+        try {
+          console.log('🏆 Loading referral points history...');
+          const pointsHistoryResponse = await nexhireAPI.getReferralPointsHistory();
+          console.log('🏆 Points history API response:', pointsHistoryResponse);
+          
+          if (pointsHistoryResponse.success && pointsHistoryResponse.data) {
+            console.log('🏆 Total points from points history API:', pointsHistoryResponse.data.totalPoints);
+            
+            setJobSeekerProfile(prev => ({
+              ...prev,
+              pointsHistory: pointsHistoryResponse.data.history || [],
+              pointTypeMetadata: pointsHistoryResponse.data.pointTypeMetadata || {}, // 🆕 Store metadata
+              // 🔧 CRITICAL FIX: Update ReferralPoints from points history API if available
+              ReferralPoints: pointsHistoryResponse.data.totalPoints || prev.ReferralPoints || 0
+            }));
+            
+            console.log('✅ Points history loaded:', pointsHistoryResponse.data.history?.length || 0, 'entries');
+            console.log('🏆 Final ReferralPoints value:', pointsHistoryResponse.data.totalPoints || prev.ReferralPoints || 0);
+          }
+        } catch (pointsError) {
+          console.warn('⚠️ Failed to load points history:', pointsError);
         }
       } else if (userType === 'Employer') {
+        console.log('🏢 Loading Employer profile for UserID:', user.UserID);
+        
         const response = await nexhireAPI.getEmployerProfile(user.UserID);
+        console.log('📊 Employer profile API response:', response.success ? 'Success' : 'Failed');
+        
         if (response.success) {
+          console.log('✅ Employer profile data loaded successfully');
           setEmployerProfile({
             jobTitle: response.data.JobTitle || '',
             department: response.data.Department || '',
@@ -772,46 +861,19 @@ export default function ProfileScreen() {
             linkedInProfile: response.data.LinkedInProfile || '',
             bio: response.data.Bio || '',
           });
+        } else {
+          console.log('❌ Failed to load Employer profile:', response.error);
         }
       }
     } catch (error) {
-      console.error('Error loading extended profile:', error);
+      console.error('❌ Error loading extended profile:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Stack trace:', error.stack);
     } finally {
+      console.log('🔄 Profile load completed, setting refreshing to false');
       setRefreshing(false);
     }
   };
-
-  // After loadExtendedProfile, derive currentCompany from work experiences if missing
-  const deriveCurrentCompanyFromWork = async () => {
-    try {
-      const res = await nexhireAPI.getMyWorkExperiences();
-      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-        // Pick the latest current job (IsCurrent true or EndDate null) or the newest by StartDate
-        const sorted = [...res.data].sort((a, b) => {
-          const aStart = a.StartDate ? new Date(a.StartDate).getTime() : 0;
-          const bStart = b.StartDate ? new Date(b.StartDate).getTime() : 0;
-          return bStart - aStart;
-        });
-        const current = sorted.find(x => x.IsCurrent === 1 || x.IsCurrent === true || !x.EndDate) || sorted[0];
-        const company = current?.CompanyName || current?.OrganizationName || '';
-        const title = current?.JobTitle || '';
-        setJobSeekerProfile(prev => ({
-          ...prev,
-          currentCompany: prev.currentCompany || company || '',
-          currentJobTitle: prev.currentJobTitle || title || prev.currentJobTitle || '',
-        }));
-      }
-    } catch (e) {
-      // silent
-    }
-  };
-
-  useEffect(() => {
-    // When jobSeekerProfile loaded and currentCompany missing, try to derive
-    if (userType === 'JobSeeker' && jobSeekerProfile && (!jobSeekerProfile.currentCompany || jobSeekerProfile.currentCompany.trim() === '')) {
-      deriveCurrentCompanyFromWork();
-    }
-  }, [userType, jobSeekerProfile?.currentCompany, jobSeekerProfile?.currentJobTitle]);
 
   // ? Smart profile save using field routing
   const handleSmartSave = async () => {
@@ -1096,14 +1158,15 @@ export default function ProfileScreen() {
         {/* 🆕 REFERRAL POINTS HEADER - Beautifully Integrated Below Profile Header */}
         {userType === 'JobSeeker' && (
           <ReferralPointsHeader
-            referralPoints={Number(jobSeekerProfile.ReferralPoints) || 0}
+            referralPoints={Number(jobSeekerProfile.ReferralPoints) || 0} // 🔧 FIX: Use actual database value
             referralStats={{
               totalReferralsMade: Number(jobSeekerProfile.referralStats?.totalReferralsMade) || 0,
               verifiedReferrals: Number(jobSeekerProfile.referralStats?.verifiedReferrals) || 0,
               referralRequestsMade: Number(jobSeekerProfile.referralStats?.referralRequestsMade) || 0,
               totalPointsFromRewards: Number(jobSeekerProfile.referralStats?.totalPointsFromRewards) || 0
             }}
-            onPress={showReferralPointsDetails}
+            pointsHistory={jobSeekerProfile.pointsHistory || []} // Pass points history for detailed breakdown
+            pointTypeMetadata={jobSeekerProfile.pointTypeMetadata || {}} // ?? Pass dynamic metadata
             compact={false}
           />
         )}

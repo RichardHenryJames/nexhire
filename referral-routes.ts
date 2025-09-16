@@ -15,7 +15,9 @@ import {
     getReferralAnalytics,
     checkReferralEligibility,
     getReferrerStats,
-    getCurrentSubscription
+    getCurrentSubscription,
+    getMyReferrerRequests,
+    verifyReferralCompletion
 } from './src/controllers/referral.controller';
 
 // ===== REFERRAL PLANS =====
@@ -99,6 +101,28 @@ app.http('referral-claim', {
     handler: withErrorHandling(claimReferralRequest)
 });
 
+/**
+ * Get my requests as referrer (claimed/completed requests)
+ * GET /api/referral/my-referrer-requests
+ */
+app.http('referral-my-referrer-requests', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/my-referrer-requests',
+    handler: withErrorHandling(getMyReferrerRequests)
+});
+
+/**
+ * Verify referral completion
+ * POST /api/referral/requests/{requestId}/verify
+ */
+app.http('referral-verify', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/verify',
+    handler: withErrorHandling(verifyReferralCompletion)
+});
+
 // ===== ANALYTICS & STATS =====
 
 /**
@@ -142,13 +166,15 @@ console.log('   POST /api/referral/requests');
 console.log('   GET  /api/referral/my-requests');
 console.log('   GET  /api/referral/available');
 console.log('   POST /api/referral/requests/{requestId}/claim');
+console.log('   GET  /api/referral/my-referrer-requests');
+console.log('   POST /api/referral/requests/{requestId}/verify');
 console.log('   GET  /api/referral/analytics');
 console.log('   GET  /api/referral/eligibility');
 console.log('   GET  /api/referral/stats');
 
 /*
  * ========================================================================
- * REFERRAL SYSTEM API ENDPOINT LIST (10 endpoints):
+ * REFERRAL SYSTEM API ENDPOINT LIST (11 endpoints):
  * ========================================================================
  *
  * REFERRAL PLANS (3 endpoints):
@@ -156,11 +182,13 @@ console.log('   GET  /api/referral/stats');
  * POST   /api/referral/plans/purchase            - Purchase a referral plan  
  * GET    /api/referral/subscription              - Get current subscription
  *
- * REFERRAL REQUESTS (4 endpoints):
+ * REFERRAL REQUESTS (5 endpoints):
  * POST   /api/referral/requests                  - Create referral request
  * GET    /api/referral/my-requests               - Get my requests (seeker)
  * GET    /api/referral/available                 - Get available requests (referrer)
  * POST   /api/referral/requests/{id}/claim       - Claim a request
+ * GET    /api/referral/my-referrer-requests      - Get my referrer requests
+ * POST   /api/referral/requests/{id}/verify      - Verify referral completion
  *
  * ANALYTICS & STATS (3 endpoints):
  * GET    /api/referral/analytics                 - Get referral dashboard

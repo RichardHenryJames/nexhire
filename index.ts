@@ -64,18 +64,20 @@ import { saveJob as saveJobCtrl, unsaveJob as unsaveJobCtrl, getMySavedJobs as g
 import {
     getReferralPlans,
     purchaseReferralPlan,
+    getCurrentSubscription,
+    checkReferralEligibility,
     createReferralRequest,
     getMyReferralRequests,
-    getAvailableRequests,
+    getAvailableRequests, // ?? FIXED: Correct import name
     claimReferralRequest,
-    submitReferralProof,        // NEW: Proof submission
-    verifyReferralCompletion,   // NEW: Verification
-    getMyReferrerRequests,      // NEW: My requests as referrer
+    submitReferralProof,
+    verifyReferralCompletion,
+    getMyReferrerRequests,
     getReferralAnalytics,
-    checkReferralEligibility,
+    claimReferralRequest as claimReferralRequestWithProof, // ?? FIXED: Use alias for now
+    cancelReferralRequest,
     getReferrerStats,
-    getCurrentSubscription,
-    cancelReferralRequest       // NEW: Cancel request
+    getReferralPointsHistory // ?? NEW: Add points history import
 } from './src/controllers/referral.controller';
 
 // NEW: Payment controllers - Razorpay Integration
@@ -831,6 +833,15 @@ app.http('referral-subscription', {
     handler: withErrorHandling(getCurrentSubscription) // ? Same pattern as work experience
 });
 
+
+// NEW: Get detailed referral points history
+app.http('referral-points-history', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/points-history',
+    handler: withErrorHandling(getReferralPointsHistory)
+});
+
 // ========================================================================
 // SAVED JOBS ENDPOINTS
 // ========================================================================
@@ -973,6 +984,7 @@ export {};
  * GET    /referral/analytics                       - Get referral analytics
  * GET    /referral/eligibility                     - Check referral eligibility
  * GET    /referral/stats                           - Get referrer badge stats
+ * GET    /referral/points-history                   - Get detailed referral points history
  * 
  * REFERENCE DATA (9 endpoints):
  * GET    /reference/job-types         - Get job types

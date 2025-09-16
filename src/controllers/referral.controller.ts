@@ -5,7 +5,6 @@
  */
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { ReferralService } from '../services/referral.service';
 import { 
     withErrorHandling, 
     authenticate  // ? Use authenticate like work experience controllers
@@ -20,13 +19,17 @@ import {
     ValidationError,
     NotFoundError
 } from '../utils/validation';
-import {
+import { 
+    ReferralService
+} from '../services/referral.service';
+import { 
+    PurchaseReferralPlanDto, 
+    ReferralRequestsFilter,
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
+    ClaimReferralRequestWithProofDto,
     SubmitReferralProofDto,
-    VerifyReferralDto,
-    PurchaseReferralPlanDto,
-    ReferralRequestsFilter
+    VerifyReferralDto
 } from '../types/referral.types';
 
 // ===== REFERRAL PLANS =====
@@ -270,7 +273,7 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
     try {
         const user = authenticate(req);
         const requestId = (req as any).params?.requestId;
-        const claimData = await extractRequestBody(req) as ClaimReferralRequestDto;
+        const claimData = await extractRequestBody(req) as ClaimReferralRequestWithProofDto;
         
         if (!requestId || !isValidGuid(requestId)) {
             throw new ValidationError('Valid Request ID is required');
@@ -541,21 +544,21 @@ export const getReferrerStats = withErrorHandling(async (req: HttpRequest, conte
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // Get referrer stats
+        // Get current pending counts from ReferrerStats table
         const statsQuery = `
-            SELECT ReferrerID, PendingCount, LastUpdated
-            FROM ReferrerStats
+            SELECT PendingCount
+            FROM ReferrerStats 
             WHERE ReferrerID = @param0
         `;
         
         const statsResult = await dbService.executeQuery(statsQuery, [applicantId]);
-        const stats = statsResult.recordset && statsResult.recordset.length > 0 
-            ? statsResult.recordset[0] 
-            : { ReferrerID: applicantId, PendingCount: 0, LastUpdated: new Date() };
-        
+        const pendingCount = statsResult.recordset[0]?.PendingCount || 0;
+
         return {
             status: 200,
-            jsonBody: successResponse(stats, 'Referrer stats retrieved successfully')
+            jsonBody: successResponse({
+                pendingCount
+            }, 'Referrer stats retrieved successfully')
         };
     } catch (error: any) {
         return {
@@ -563,6 +566,41 @@ export const getReferrerStats = withErrorHandling(async (req: HttpRequest, conte
             jsonBody: { 
                 success: false, 
                 error: error?.message || 'Failed to get referrer stats'
+            }
+        };
+    }
+});
+
+/**
+ * Get detailed referral points history
+ * GET /referral/points-history
+ */
+export const getReferralPointsHistory = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        
+        // Get applicant ID
+        const { dbService } = await import('../services/database.service');
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
+        
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const pointsData = await ReferralService.getReferralPointsHistory(applicantId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(pointsData, 'Referral points history retrieved successfully')
+        };
+    } catch (error: any) {
+        return {
+            status: error instanceof NotFoundError ? 404 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get referral points history'
             }
         };
     }

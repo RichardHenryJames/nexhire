@@ -1,299 +1,293 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-// Note: If you don't have expo-linear-gradient installed, remove this import and set useGradient to false
-// import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
+import ReferralPointsBreakdown from './ReferralPointsBreakdown';
 
 const ReferralPointsHeader = ({ 
   referralPoints = 0, 
-  referralStats = {}, 
-  onPress = () => {},
-  compact = false,
-  useGradient = false // Set to false by default to avoid import issues
+  referralStats = {},
+  pointsHistory = [], // Points history for detailed breakdown
+  pointTypeMetadata = {}, // ?? NEW: Dynamic metadata from backend
+  onPress,
+  compact = false 
 }) => {
-  const [scaleAnim] = useState(new Animated.Value(1));
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
-  // ?? FIX: Ensure all values are properly converted to numbers
-  const safeReferralPoints = Number(referralPoints) || 0;
-  const {
-    totalReferralsMade = 0,
-    verifiedReferrals = 0,
-    referralRequestsMade = 0
-  } = referralStats;
+  console.log('?? ReferralPointsHeader rendered with:', {
+    referralPoints,
+    pointsHistoryLength: pointsHistory?.length || 0,
+    showBreakdown,
+    hasCustomOnPress: !!onPress
+  });
 
-  // ?? FIX: Convert all stats to numbers to prevent string concatenation
-  const safeTotalReferralsMade = Number(totalReferralsMade) || 0;
-  const safeVerifiedReferrals = Number(verifiedReferrals) || 0;
-  const safeReferralRequestsMade = Number(referralRequestsMade) || 0;
+  // ?? Track modal state changes
+  React.useEffect(() => {
+    console.log('?? showBreakdown changed to:', showBreakdown);
+  }, [showBreakdown]);
 
-  // Animation handlers
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
+  // Default stats structure
+  const stats = {
+    totalReferralsMade: 0,
+    verifiedReferrals: 0,
+    referralRequestsMade: 0,
+    totalPointsFromRewards: 0,
+    ...referralStats
   };
 
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
+  const handlePress = () => {
+    console.log('?? ReferralPointsHeader pressed with:', {
+      referralPoints,
+      pointsHistory: pointsHistory?.length || 0,
+      hasOnPress: !!onPress,
+      showBreakdown
+    });
+    
+    // Always use the modal behavior for now
+    console.log('?? Setting showBreakdown to true');
+    setShowBreakdown(true);
   };
 
-  // Container component - use View for now (LinearGradient can be added later)
-  const Container = View;
+  // Format points display with proper number handling
+  const formatPoints = (points) => {
+    if (Array.isArray(points)) {
+      // Handle array case (sum the values)
+      return points.reduce((sum, point) => sum + (Number(point) || 0), 0);
+    }
+    return Number(points) || 0;
+  };
+
+  const displayPoints = formatPoints(referralPoints);
 
   if (compact) {
     return (
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <>
         <TouchableOpacity 
-          onPress={onPress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          activeOpacity={0.9}
-          style={styles.compactContainer}
+          style={styles.compactContainer} 
+          onPress={handlePress}
+          activeOpacity={0.7}
         >
           <View style={styles.compactPointsSection}>
-            <Ionicons name="trophy" size={20} color={colors.primary} />
-            <Text style={styles.pointsText}>{safeReferralPoints}</Text>
-            <Text style={styles.pointsLabel}>Points</Text>
+            <View style={styles.compactIcon}>
+              <Text style={styles.compactEmoji}>?</Text>
+            </View>
+            <View style={styles.compactInfo}>
+              <Text style={styles.compactPoints}>{displayPoints}</Text>
+              <Text style={styles.compactLabel}>Referral Points</Text>
+              <Text style={styles.tapHint}>Tap for details</Text>
+            </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} style={styles.compactChevron} />
+          <Ionicons name="chevron-forward" size={20} color={colors.gray500} />
         </TouchableOpacity>
-      </Animated.View>
+
+        <ReferralPointsBreakdown
+          visible={showBreakdown}
+          totalPoints={displayPoints}
+          referralStats={stats}
+          pointsHistory={pointsHistory}
+          pointTypeMetadata={pointTypeMetadata}
+          onClose={() => {
+            console.log('?? Closing compact breakdown modal');
+            setShowBreakdown(false);
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+    <>
       <TouchableOpacity 
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={0.9}
-        style={styles.container}
+        style={styles.container} 
+        onPress={handlePress}
+        activeOpacity={0.7} // ?? Add visual feedback
       >
-        <View style={styles.headerRow}>
-          <View style={styles.pointsSection}>
-            <View style={styles.pointsCircle}>
-              <Ionicons name="trophy" size={24} color={colors.primary} />
-              <Text style={styles.pointsValue}>{safeReferralPoints}</Text>
-            </View>
-            <Text style={styles.pointsTitle}>Referral{'\n'}Points</Text>
+        {/* Main Points Display */}
+        <View style={styles.pointsSection}>
+          <View style={styles.pointsIcon}>
+            <Text style={styles.pointsEmoji}>🪙</Text>
           </View>
-          
-          <View style={styles.statsSection}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{safeTotalReferralsMade}</Text>
-              <Text style={styles.statLabel}>Referrals Made</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{safeVerifiedReferrals}</Text>
-              <Text style={styles.statLabel}>Verified</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{safeReferralRequestsMade}</Text>
-              <Text style={styles.statLabel}>Requested</Text>
-            </View>
+          <View style={styles.pointsInfo}>
+            <Text style={styles.pointsNumber}>{displayPoints}</Text>
+            <Text style={styles.pointsLabel}>Referral Points</Text>
           </View>
-          
-          <View style={styles.actionSection}>
-            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+          <View style={styles.detailArrow}>
+            <Ionicons name="chevron-forward" size={20} color={colors.gray500} />
           </View>
         </View>
-        
-        {/* Progress to next level */}
-        {safeReferralPoints > 0 && (
-          <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${Math.min((safeReferralPoints % 100) / 100 * 100, 100)}%` }
-                ]} 
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {100 - (safeReferralPoints % 100)} points to next level
-            </Text>
+
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{stats.totalReferralsMade}</Text>
+            <Text style={styles.statLabel}>Referrals{'\n'}Made</Text>
           </View>
-        )}
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{stats.verifiedReferrals}</Text>
+            <Text style={styles.statLabel}>Verified</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{stats.referralRequestsMade}</Text>
+            <Text style={styles.statLabel}>Requested</Text>
+          </View>
+        </View>
+
+        {/* Tap to Detail Hint */}
+        <View style={styles.hintSection}>
+          <Text style={styles.hintText}>Tap to view detailed breakdown</Text>
+          <Ionicons name="information-circle-outline" size={16} color={colors.gray500} />
+        </View>
       </TouchableOpacity>
-    </Animated.View>
+
+      {/* Points Breakdown Modal */}
+      <ReferralPointsBreakdown
+        visible={showBreakdown}
+        totalPoints={displayPoints}
+        referralStats={stats}
+        pointsHistory={pointsHistory}
+        pointTypeMetadata={pointTypeMetadata} // ?? Pass metadata
+        onClose={() => {
+          console.log('?? Closing breakdown modal');
+          setShowBreakdown(false);
+        }}
+      />
+    </>
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white || '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
+    backgroundColor: colors.surface || colors.background,
     borderRadius: 16,
     padding: 20,
+    marginVertical: 16,
+    marginHorizontal: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: colors.gray100 || '#F3F4F6',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  compactContainer: {
-    backgroundColor: colors.primary + '10' || '#3B82F615',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
+  pointsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  pointsIcon: {
+    marginRight: 16,
+  },
+  pointsEmoji: {
+    fontSize: 32,
+  },
+  pointsInfo: {
+    flex: 1,
+  },
+  pointsNumber: {
+    fontSize: 32,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.primary,
+    lineHeight: 36,
+  },
+  pointsLabel: {
+    fontSize: typography.sizes?.md || 16,
+    color: colors.gray600,
+    marginTop: 2,
+  },
+  detailArrow: {
+    marginLeft: 8,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border + '50',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '50',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border + '50',
+  },
+  statNumber: {
+    fontSize: typography.sizes?.xl || 20,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  hintSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  hintText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray500,
+    marginRight: 4,
+  },
+  compactContainer: {
+    backgroundColor: colors.surface || colors.background,
+    borderRadius: 12,
+    padding: 16,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: colors.primary + '20' || '#3B82F620',
+    marginHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   compactPointsSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  compactChevron: {
-    marginLeft: 12,
+  compactIcon: {
+    marginRight: 12,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  compactEmoji: {
+    fontSize: 24,
   },
-  pointsSection: {
-    alignItems: 'center',
+  compactInfo: {
     flex: 1,
-    minWidth: 100,
   },
-  pointsCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary + '15' || '#3B82F615',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: colors.primary + '30' || '#3B82F630',
-    shadowColor: colors.primary || '#3B82F6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  compactPoints: {
+    fontSize: typography.sizes?.lg || 18,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.primary,
   },
-  pointsValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.primary || '#3B82F6',
+  compactLabel: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600,
+  },
+  tapHint: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray500,
     marginTop: 2,
-    letterSpacing: 0.5,
   },
-  pointsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary || '#111827',
-    letterSpacing: 0.2,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  pointsText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary || '#3B82F6',
-    marginLeft: 6,
-  },
-  pointsLabel: {
-    fontSize: 14,
-    color: colors.textSecondary || '#6B7280',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  statsSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
-    flex: 2,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingTop: 8, // Add consistent top padding
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-    paddingVertical: 0, // Remove vertical padding to have precise control
-    paddingHorizontal: 4,
-    justifyContent: 'flex-start', // Changed to flex-start for precise alignment
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary || '#111827',
-    marginBottom: 4,
-    textAlign: 'center',
-    lineHeight: 18, // Make line height equal to font size for consistent baseline
-    height: 18, // Fixed height to ensure all numbers sit at same level
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary || '#6B7280',
-    textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 14,
-    paddingHorizontal: 2,
-    marginTop: 4, // Use marginTop instead of marginBottom on statValue
-  },
-  statDivider: {
-    width: 1,
-    height: 44, // Adjusted height to match the new layout
-    backgroundColor: colors.gray200 || '#E5E7EB',
-    marginHorizontal: 8,
-    opacity: 0.6,
-    marginTop: 8, // Add top margin to align with the numbers
-  },
-  actionSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingLeft: 16,
-    minWidth: 32,
-  },
-  progressSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100 || '#F3F4F6',
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.gray200 || '#E5E7EB',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary || '#3B82F6',
-    borderRadius: 3,
-    shadowColor: colors.primary || '#3B82F6',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  progressText: {
-    fontSize: 13,
-    color: colors.textSecondary || '#6B7280',
-    textAlign: 'center',
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-};
+});
 
 export default ReferralPointsHeader;

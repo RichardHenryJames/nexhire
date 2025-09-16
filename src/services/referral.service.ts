@@ -15,6 +15,7 @@ import {
     ReferrerStats,
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
+    ClaimReferralRequestWithProofDto,
     SubmitReferralProofDto,
     VerifyReferralDto,
     PurchaseReferralPlanDto,
@@ -459,22 +460,25 @@ export class ReferralService {
                 [dto.requestID]
             );
 
-            // ?? AWARD POINTS FOR PROOF SUBMISSION
+            // ?? FIX: Award points for proof submission with separate quick response bonus tracking
             const request = requestResult.recordset[0];
-            let proofPoints = 15; // Base points for submitting proof
+            let baseProofPoints = 15; // Base points for submitting proof
             
-            // ??? Quick Response Bonus: If completed within 24 hours
+            // Award base proof submission points first
+            console.log(`?? Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
+            await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
+            
+            // Calculate and award quick response bonus separately for better tracking  
             const requestedAt = new Date(request.RequestedAt);
             const referredAt = new Date(request.ReferredAt);
             const now = new Date();
             const hoursFromClaim = (now.getTime() - referredAt.getTime()) / (1000 * 60 * 60);
             
             if (hoursFromClaim <= 24) {
-                proofPoints += 10; // Quick response bonus
-                console.log(`?? Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours`);
+                const quickBonusPoints = 10; // Quick response bonus
+                console.log(`? Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
+                await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
-            
-            await this.awardReferralPoints(referrerId, dto.requestID, proofPoints, 'proof_submission');
 
             // Get the created proof
             const proofQuery = `
@@ -484,7 +488,7 @@ export class ReferralService {
             `;
             const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
             
-            console.log(`?? Proof submitted for request ${dto.requestID} by referrer ${referrerId} - ${proofPoints} points awarded`);
+            console.log(`?? Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
             
             // TODO: Notify seeker that proof was submitted
             // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
@@ -530,7 +534,7 @@ export class ReferralService {
             if (dto.verified && referrerId) {
                 const verificationPoints = 25; // Higher points for verified referrals
                 await this.awardReferralPoints(referrerId, dto.requestID, verificationPoints, 'verification');
-                console.log(`? Referral verified! ${verificationPoints} additional points awarded to referrer ${referrerId}`);
+                console.log(`🔍 Referral verified! ${verificationPoints} additional points awarded to referrer ${referrerId}`);
                 
                 // TODO: Notify referrer about points earned
                 // await ReferralNotificationService.notifyReferralVerified(dto.requestID, referrerId, verificationPoints);
@@ -686,8 +690,9 @@ export class ReferralService {
             // Check if reward already exists for this type
             const existingRewardQuery = `
                 SELECT RewardID FROM ReferralRewards 
-                WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointType = @param2
+                WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointsType = @param2
             `;
+            
             const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId, pointType]);
             
             if (existingRewardResult.recordset && existingRewardResult.recordset.length > 0) {
@@ -699,7 +704,7 @@ export class ReferralService {
             const rewardId = AuthService.generateUniqueId();
             const insertRewardQuery = `
                 INSERT INTO ReferralRewards (
-                    RewardID, ReferrerID, RequestID, PointsEarned, PointType, AwardedAt
+                    RewardID, ReferrerID, RequestID, PointsEarned, PointsType, AwardedAt
                 ) VALUES (
                     @param0, @param1, @param2, @param3, @param4, GETUTCDATE()
                 )
@@ -716,9 +721,10 @@ export class ReferralService {
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
             
-            console.log(`?? Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
+            console.log(`? Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
+            // Don't rethrow - we don't want to break the main referral flow if points can't be awarded
         }
     }
 
@@ -872,13 +878,13 @@ export class ReferralService {
                     (SELECT ISNULL(SUM(PointsEarned), 0) FROM ReferralRewards WHERE ReferrerID = @param0) as TotalPointsEarned,
                     (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0 AND CAST(RequestedAt AS DATE) = CAST(GETUTCDATE() AS DATE)) as DailyQuotaUsed
             `;
-            
+
             const result = await dbService.executeQuery(analyticsQuery, [applicantId]);
             const data = result.recordset[0];
-            
+
             const subscription = await this.getCurrentSubscription(applicantId);
             const eligibility = await this.checkReferralEligibility(applicantId);
-            
+
             return {
                 totalRequestsMade: data.TotalRequestsMade || 0,
                 totalRequestsReceived: data.TotalRequestsReceived || 0,
@@ -896,18 +902,111 @@ export class ReferralService {
     }
 
     /**
+     * 🆕 NEW: Get detailed referral points history for breakdown
+     */
+    static async getReferralPointsHistory(applicantId: string) {
+        try {
+            const historyQuery = `
+                SELECT 
+                    rw.RewardID,
+                    rw.ReferrerID,
+                    rw.RequestID,
+                    rw.PointsEarned,
+                    rw.PointsType,
+                    rw.AwardedAt,
+                    rr.JobID,
+                    j.Title as JobTitle,
+                    o.Name as CompanyName,
+                    CASE 
+                        WHEN rw.PointsType = 'proof_submission' THEN 'Base referral proof submitted'
+                        WHEN rw.PointsType = 'verification' THEN 'Referral verified by job seeker'
+                        WHEN rw.PointsType = 'quick_response_bonus' THEN 'Quick response bonus (< 24 hours)'
+                        ELSE 'Referral activity'
+                    END as Description
+                FROM ReferralRewards rw
+                INNER JOIN ReferralRequests rr ON rw.RequestID = rr.RequestID
+                INNER JOIN Jobs j ON rr.JobID = j.JobID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                WHERE rw.ReferrerID = @param0
+                ORDER BY rw.AwardedAt DESC
+            `;
+
+            const result = await dbService.executeQuery(historyQuery, [applicantId]);
+            
+            // Calculate total points
+            const totalPoints = result.recordset?.reduce((sum, row) => sum + (row.PointsEarned || 0), 0) || 0;
+
+            return {
+                totalPoints,
+                history: result.recordset || [],
+                // 🆕 ADD: Dynamic point type metadata
+                pointTypeMetadata: this.getPointTypeMetadata()
+            };
+        } catch (error) {
+            console.error('Error getting referral points history:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🆕 NEW: Get point type metadata for dynamic frontend rendering
+     */
+    private static getPointTypeMetadata() {
+        return {
+            proof_submission: {
+                icon: '\uD83D\uDCF8', // 📸 Camera emoji
+                title: 'Proof Submissions',
+                description: 'Base points for submitting referral screenshots',
+                color: '#3B82F6', // Primary blue
+                category: 'action'
+            },
+            verification: {
+                icon: '\u2705', // ✅ Check mark emoji  
+                title: 'Verifications',
+                description: 'Bonus points when job seekers confirm referrals',
+                color: '#10B981', // Success green
+                category: 'completion'
+            },
+            quick_response_bonus: {
+                icon: '\u26A1', // ⚡ Lightning emoji
+                title: 'Quick Response Bonus',
+                description: 'Extra points for responding within 24 hours',
+                color: '#F59E0B', // Warning amber
+                category: 'bonus'
+            },
+            // 🚀 FUTURE: Any new point types can be added here without frontend changes
+            monthly_bonus: {
+                icon: '\uD83C\uDF81', // 🎁 Gift emoji
+                title: 'Monthly Bonus',
+                description: 'Special monthly activity bonus',
+                color: '#8B5CF6', // Purple
+                category: 'bonus'
+            },
+            streak_bonus: {
+                icon: '\uD83D\uDD25', // 🔥 Fire emoji
+                title: 'Streak Bonus', 
+                description: 'Consecutive referral streak bonus',
+                color: '#EF4444', // Red
+                category: 'achievement'
+            },
+            general: {
+                icon: '\uD83C\uDFAF', // 🎯 Target emoji
+                title: 'General Points',
+                description: 'Other referral activities',
+                color: '#6B7280', // Gray
+                category: 'general'
+            }
+        };
+    }
+
+    /**
      * Claim a referral request with mandatory proof upload
      */
-    static async claimReferralRequestWithProof(referrerId: string, dto: { 
-        requestID: string; 
-        proofFileURL: string; 
-        proofFileType: string; 
-        proofDescription?: string; 
-    }): Promise<ReferralRequest> {
+    static async claimReferralRequestWithProof(referrerId: string, dto: ClaimReferralRequestWithProofDto): Promise<ReferralRequest> {
         try {
             // Check if request is still available
             const requestQuery = `
-                SELECT RequestID, Status, JobID, ApplicantID
+                SELECT RequestID, Status, JobID, ApplicantID, RequestedAt
                 FROM ReferralRequests
                 WHERE RequestID = @param0 AND Status = 'Pending'
             `;
@@ -917,7 +1016,7 @@ export class ReferralService {
                 throw new ValidationError('Request not available for claiming');
             }
             
-            const { JobID: jobId, ApplicantID: seekerId } = requestResult.recordset[0];
+            const { JobID: jobId, ApplicantID: seekerId, RequestedAt: requestedAt } = requestResult.recordset[0];
             
             // Verify referrer is eligible (same organization, not the original requester)
             if (referrerId === seekerId) {
@@ -937,14 +1036,17 @@ export class ReferralService {
                 throw new ValidationError('You are not eligible to refer for this job - must work at the same company');
             }
             
+            // Get current time for quick response bonus calculation
+            const referredAt = new Date();
+            
             // Claim the request and mark as completed with proof
             const updateQuery = `
                 UPDATE ReferralRequests
-                SET Status = 'Completed', AssignedReferrerID = @param1, ReferredAt = GETUTCDATE()
+                SET Status = 'Completed', AssignedReferrerID = @param1, ReferredAt = @param2
                 WHERE RequestID = @param0
             `;
             
-            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId]);
+            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId, referredAt]);
             
             // Create proof record immediately
             const proofId = AuthService.generateUniqueId();
@@ -952,18 +1054,41 @@ export class ReferralService {
                 INSERT INTO ReferralProofs (
                     ProofID, RequestID, ReferrerID, FileURL, FileType, Description, SubmittedAt
                 ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, @param5, GETUTCDATE()
+                    @param0, @param1, @param2, @param3, @param4, @param5, @param6
                 )
             `;
             
             await dbService.executeQuery(insertProofQuery, [
-                proofId, dto.requestID, referrerId, dto.proofFileURL, dto.proofFileType, dto.proofDescription || null
+                proofId, dto.requestID, referrerId, dto.proofFileURL, dto.proofFileType, dto.proofDescription || null, referredAt
             ]);
+            
+            // ?? FIX: Award points for proof submission with quick response bonus
+            let baseProofPoints = 15; // Base points for submitting proof
+            
+            // Award base proof submission points first
+            console.log(`🎯 Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
+            await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
+
+            // Calculate and award quick response bonus separately for better tracking
+            const requestedTime = new Date(requestedAt);
+            const completedTime = new Date(referredAt);
+            const hoursFromRequest = (completedTime.getTime() - requestedTime.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursFromRequest <= 24) {
+                const quickBonusPoints = 10; // Quick response bonus
+                console.log(`⚡ Quick response bonus awarded! Completed in ${hoursFromRequest.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
+                await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
+            }
             
             // Update referrer stats
             await this.updateReferrerStats(referrerId);
             
-            console.log(`? Referral request ${dto.requestID} claimed with proof by ${referrerId}`);
+            let totalPointsAwarded = baseProofPoints;
+            if (hoursFromRequest <= 24) {
+                totalPointsAwarded += 10; // Add quick bonus to display total
+            }
+            
+            console.log(`🎯 Referral request ${dto.requestID} claimed with proof by ${referrerId} - ${totalPointsAwarded} total points awarded`);
             
             // TODO: Notify seeker that referral was completed
             // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);

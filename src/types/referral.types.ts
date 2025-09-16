@@ -76,6 +76,10 @@ export interface CreateReferralRequestDto {
 
 export interface ClaimReferralRequestDto {
     requestID: string;
+}
+
+export interface ClaimReferralRequestWithProofDto {
+    requestID: string;
     proofFileURL: string;
     proofFileType: string;
     proofDescription?: string;

@@ -40,6 +40,64 @@ import { colors } from '../styles/theme';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// ?? FIXED: Deep Linking Configuration with unique paths
+const linking = {
+  prefixes: [
+    'nexhire://',
+    'https://nexhire.com',
+    'https://www.nexhire.com',
+  ],
+  config: {
+    screens: {
+      // Auth screens - no nesting conflicts
+      Login: 'login',
+      Register: 'register', 
+      UserTypeSelection: 'register/select-type',
+      
+      // Job Seeker Registration Flow - unique paths
+      JobSeekerFlow: {
+        path: 'register/jobseeker',
+        screens: {
+          ExperienceTypeSelection: 'experience',
+          WorkExperienceScreen: 'work',
+          EducationDetailsScreen: 'education',
+          JobPreferencesScreen: 'preferences',
+          PersonalDetails: 'details',
+        },
+      },
+      
+      // Employer Registration Flow - unique paths
+      EmployerFlow: {
+        path: 'register/employer',
+        screens: {
+          EmployerTypeSelection: 'type',
+          OrganizationDetailsScreen: 'organization',
+          EmployerPersonalDetailsScreen: 'details',
+          EmployerAccountScreen: 'account',
+        },
+      },
+      
+      // Main App - simplified structure
+      MainTabs: {
+        path: '',
+        screens: {
+          Home: '',
+          Jobs: 'jobs',
+          CreateJob: 'create-job',
+          Applications: 'applications',
+          Referrals: 'referrals',
+          Profile: 'profile',
+        },
+      },
+      
+      // Modal/Stack screens - unique paths
+      JobDetails: 'job/:jobId',
+      ReferralPlans: 'plans',
+      Payment: 'payment',
+    },
+  },
+};
+
 // Job Seeker Registration Flow
 function JobSeekerFlow() {
   return (
@@ -155,7 +213,6 @@ function MainTabNavigator() {
         component={ApplicationsScreen}
         options={{ title: 'Applications' }}
       />
-      {/* NEW: Referrals Tab - positioned between Applications and Profile */}
       <Tab.Screen 
         name="Referrals" 
         component={ReferralScreen}
@@ -231,3 +288,6 @@ export default function AppNavigator() {
   // Show appropriate stack based on authentication state
   return isAuthenticated ? <MainStack /> : <AuthStack />;
 }
+
+// Export linking config for use in App.js
+export { linking };

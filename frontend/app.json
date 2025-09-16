@@ -8,12 +8,32 @@
     "splash": {
       "backgroundColor": "#3B82F6"
     },
+    "scheme": "nexhire",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexhire.app"
     },
     "android": {
-      "package": "com.nexhire.app"
+      "package": "com.nexhire.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "nexhire.com"
+            },
+            {
+              "scheme": "https", 
+              "host": "www.nexhire.com"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro"
