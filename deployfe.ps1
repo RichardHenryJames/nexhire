@@ -31,7 +31,7 @@ if (-not (Test-Path "web-build/index.html")) {
     exit 1
 }
 
-Write-Host "? Build successful! Build size:" -ForegroundColor Green
+Write-Host "Build successful! Build size:" -ForegroundColor Green
 Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum | ForEach-Object { 
     "{0:N2} MB" -f ($_.Sum / 1MB) 
 }
