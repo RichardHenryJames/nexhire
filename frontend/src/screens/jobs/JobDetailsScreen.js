@@ -23,9 +23,9 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false); // Track saved state
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [referralMode, setReferralMode] = useState(false); // NEW
-  // ? NEW: Referral tracking state
+  const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
   const [referralEligibility, setReferralEligibility] = useState({
     isEligible: true,
@@ -35,32 +35,73 @@ export default function JobDetailsScreen({ route, navigation }) {
   });
   const [primaryResume, setPrimaryResume] = useState(null);
 
+  // ?? Add navigation header with back button
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Job Details',
+      headerStyle: {
+        backgroundColor: colors.surface,
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      },
+      headerTitleStyle: {
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.bold,
+        color: colors.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={handleSaveJob}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons 
+            name={isSaved ? "bookmark" : "bookmark-outline"} 
+            size={24} 
+            color={isSaved ? colors.primary : colors.text} 
+          />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, isSaved]);
+
   // Load job details and referral status
   useEffect(() => {
     if (jobId) {
       fetchJobDetails();
-      // ? NEW: Load referral status
       loadReferralStatus();
+      checkSavedStatus(); // Check if job is saved
     } else {
       setLoading(false);
     }
   }, [jobId]);
 
   // Load primary resume once
-  useEffect(() => {
-    (async () => {
-      if (user && isJobSeeker) {
-        try {
-          const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
-          if (profile?.success) {
-            const resumes = profile.data?.resumes || [];
-            const primary = resumes.find(r => r.IsPrimary) || resumes[0];
-            if (primary) setPrimaryResume(primary);
-          }
-        } catch {}
-      }
-    })();
+  const loadPrimaryResume = useCallback(async () => {
+    if (user && isJobSeeker) {
+      try {
+        const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+        if (profile?.success) {
+          const resumes = profile.data?.resumes || [];
+          const primary = resumes.find(r => r.IsPrimary) || resumes[0];
+          if (primary) setPrimaryResume(primary);
+        }
+      } catch {}
+    }
   }, [user, isJobSeeker]);
+
+  useEffect(() => { loadPrimaryResume(); }, [loadPrimaryResume]);
 
   const fetchJobDetails = async () => {
     try {
@@ -99,7 +140,20 @@ export default function JobDetailsScreen({ route, navigation }) {
     }
   };
 
-  // ? NEW: Load referral status for this job
+  // Check if job is saved
+  const checkSavedStatus = async () => {
+    if (!user || !isJobSeeker) return;
+    try {
+      const result = await nexhireAPI.getMySavedJobs(1, 100);
+      if (result.success) {
+        const isJobSaved = result.data.some(savedJob => savedJob.JobID === jobId);
+        setIsSaved(isJobSaved);
+      }
+    } catch (error) {
+      console.error('Error checking saved status:', error);
+    }
+  };
+
   const loadReferralStatus = async () => {
     if (!user || !isJobSeeker || !jobId) return;
     
@@ -123,7 +177,6 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleApply = async () => {
-    // ?? DEBUG: Check if new code is deployed
     console.log('?? NEW handleApply called - code is updated!');
     
     if (!user) {
@@ -153,7 +206,6 @@ export default function JobDetailsScreen({ route, navigation }) {
     setShowResumeModal(true);
   };
 
-  // NEW: Ask Referral handler
   const handleAskReferral = async () => {
     console.log('?? handleAskReferral called in JobDetailsScreen');
     
@@ -169,7 +221,6 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // Check if already referred
     if (hasReferred) {
       Alert.alert('Already Requested', 'You have already requested a referral for this job', [
         { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
@@ -178,7 +229,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // ? CRITICAL FIX: Always check real-time quota before proceeding
+    // ?? REQUIREMENT 3: Check real-time eligibility and show subscription modal
     try {
       console.log('?? Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
@@ -190,21 +241,17 @@ export default function JobDetailsScreen({ route, navigation }) {
         
         if (!eligibilityData.isEligible) {
           console.log('? User not eligible, checking subscription status...');
-          
-          if (!eligibilityData.hasActiveSubscription && eligibilityData.dailyQuotaRemaining === 0) {
-            console.log('?? Free quota exhausted - showing subscription modal');
-            // ? FREE QUOTA EXHAUSTED: Show subscription modal
-            showSubscriptionModal();
-            return;
-          } else {
-            console.log('? Other eligibility issue:', eligibilityData.reason);
-            Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+          // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
+          if (eligibilityData.dailyQuotaRemaining === 0) {
+            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
             return;
           }
+          console.log('? Other eligibility issue:', eligibilityData.reason);
+          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+          return;
         }
         
         console.log('? User is eligible - proceeding with referral');
-        // Update local state with fresh data
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
@@ -228,8 +275,6 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } catch (e) { console.warn('Referral pre-check failed:', e.message); }
     
-    // setReferralMode(true);
-    // setShowResumeModal(true);
     if (primaryResume?.ResumeID) {
       await quickReferral(primaryResume.ResumeID);
       return;
@@ -237,13 +282,18 @@ export default function JobDetailsScreen({ route, navigation }) {
     setReferralMode(true); setShowResumeModal(true);
   };
 
-  // ? NEW: Subscription modal for quota exhausted users
-  const showSubscriptionModal = useCallback(async () => {
-    console.log('?? showSubscriptionModal called');
+  // ?? REQUIREMENT 3: Improved subscription modal with better logic
+  const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
+    console.log('?? showSubscriptionModal called in JobDetailsScreen');
     console.log('?? Navigation object:', navigation);
     console.log('?? Available routes:', navigation.getState?.());
     
-    // Direct navigation for web (RN Web Alert limitations)
+    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
+    const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
+    const body = hasActiveSubscription
+      ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
+      : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
+
     if (Platform.OS === 'web') {
       console.log('?? Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
@@ -253,32 +303,43 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       Alert.alert(
         '?? Upgrade Required',
-        `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`,
+        body,
         [
-          { text: 'Maybe Later', style: 'cancel', onPress: () => console.log('?? User selected Maybe Later (details screen)') },
-          { text: 'View Plans', onPress: () => {
-              console.log('?? User selected View Plans - attempting navigation (details screen)...');
-              try { navigation.navigate('ReferralPlans'); } catch (e) { console.error('?? Navigation error details screen:', e); }
+          { 
+            text: 'Maybe Later', 
+            style: 'cancel',
+            onPress: () => console.log('?? User selected Maybe Later')
+          },
+          { 
+            text: 'View Plans', 
+            onPress: () => {
+              console.log('?? User selected View Plans - attempting navigation...');
+              try {
+                navigation.navigate('ReferralPlans');
+                console.log('?? Navigation successful!');
+              } catch (navError) {
+                console.error('?? Navigation error:', navError);
+                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
+              }
             }
           }
         ]
       );
-      // Fallback safety navigation after 3s if still not navigated
+      // Fallback: ensure navigation if user does not pick (defensive � some platforms auto-dismiss custom buttons)
       setTimeout(() => {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
-        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0 && !referralEligibility.hasActiveSubscription) {
-          console.log('?? Fallback navigation (details screen) to ReferralPlans');
-          try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed (details)', e); }
+        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
+          console.log('?? Fallback navigation to ReferralPlans after Alert timeout');
+            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
         }
       }, 3000);
     } catch (error) {
       console.error('?? Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
-  }, [navigation]);
+  }, [navigation, referralEligibility]);
 
-  // ? NEW: Handle plan selection
   const handlePlanSelection = async (plan) => {
     console.log('?? Plan selected:', plan);
     
@@ -321,12 +382,12 @@ export default function JobDetailsScreen({ route, navigation }) {
     );
   };
 
+  // ?? REQUIREMENT 2: Refresh page after resume submission to reload primary resume
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
         const res = await nexhireAPI.createReferralRequest(jobId, resumeData.ResumeID);
         if (res.success) {
-          // ? NEW: Update local referral tracking
           setHasReferred(true);
           setReferralEligibility(prev => ({
             ...prev,
@@ -335,6 +396,9 @@ export default function JobDetailsScreen({ route, navigation }) {
           }));
           
           showToast('Referral request sent', 'success');
+          
+          // ?? REQUIREMENT 2: Reload primary resume after submission
+          await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -344,16 +408,17 @@ export default function JobDetailsScreen({ route, navigation }) {
         setReferralMode(false);
         setShowResumeModal(false);
       }
-      return; // skip normal apply flow
+      return;
     }
-    // existing application flow
+    
+    // ?? REQUIREMENT 2: Reload primary resume after application submission
     await submitApplication(resumeData.ResumeID);
+    await loadPrimaryResume();
   };
 
   const submitApplication = async (resumeId) => {
     setApplying(true);
     try {
-      // Prepare application data according to backend JobApplicationRequest interface
       const applicationData = {
         jobID: jobId,
         coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
@@ -362,9 +427,8 @@ export default function JobDetailsScreen({ route, navigation }) {
         availableFromDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       };
 
-      // ? FIXED: Include ResumeID if provided (matches database schema)
       if (resumeId) {
-        applicationData.resumeId = resumeId; // Use resumeId to match backend
+        applicationData.resumeId = resumeId;
       }
 
       const result = await nexhireAPI.applyForJob(applicationData);
@@ -372,10 +436,18 @@ export default function JobDetailsScreen({ route, navigation }) {
       if (result.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
+        
+        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        setTimeout(() => {
+          navigation.navigate('Jobs', { 
+            activeTab: 'openings', 
+            successMessage: `Application submitted for ${job.Title}`,
+            appliedJobId: jobId // 🔧 NEW: Pass jobId so JobsScreen can remove it from list
+          });
+        }, 1500); // Small delay to show toast
+        
       } else {
-        // ? IMPROVED: Better error handling
         if (result.error?.includes('No resume found')) {
-          // This shouldn't happen with the new flow, but just in case
           Alert.alert(
             'Resume Required', 
             'A resume is required to apply for jobs. Please upload one and try again.',
@@ -391,7 +463,6 @@ export default function JobDetailsScreen({ route, navigation }) {
     } catch (error) {
       console.error('Application error:', error);
       
-      // ? IMPROVED: Handle resume-related errors specifically
       if (error.message?.includes('No resume found')) {
         Alert.alert(
           'Resume Required', 
@@ -406,6 +477,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } finally {
       setApplying(false);
+      setShowResumeModal(false);
     }
   };
 
@@ -421,6 +493,16 @@ export default function JobDetailsScreen({ route, navigation }) {
       if (res?.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
+        
+        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        setTimeout(() => {
+          navigation.navigate('Jobs', { 
+            activeTab: 'openings', 
+            successMessage: `Application submitted for ${job.Title}`,
+            appliedJobId: jobId // 🔧 NEW: Pass jobId so JobsScreen can remove it from list
+          });
+        }, 1500);
+        
       } else {
         Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
       }
@@ -441,6 +523,42 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
+    }
+  };
+
+  // ?? REQUIREMENT 4: Implement save/unsave functionality
+  const handleSaveJob = async () => {
+    if (!user || !isJobSeeker) {
+      Alert.alert('Login Required', 'Please login to save jobs', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+
+    try {
+      if (isSaved) {
+        // Unsave the job
+        const result = await nexhireAPI.unsaveJob(jobId);
+        if (result.success) {
+          setIsSaved(false);
+          showToast('Job removed from saved', 'success');
+        } else {
+          Alert.alert('Error', 'Failed to remove job from saved');
+        }
+      } else {
+        // Save the job
+        const result = await nexhireAPI.saveJob(jobId);
+        if (result.success) {
+          setIsSaved(true);
+          showToast('Job saved successfully', 'success');
+        } else {
+          Alert.alert('Error', 'Failed to save job');
+        }
+      }
+    } catch (error) {
+      console.error('Save/Unsave error:', error);
+      Alert.alert('Error', error.message || 'Failed to update saved status');
     }
   };
 
@@ -648,10 +766,26 @@ export default function JobDetailsScreen({ route, navigation }) {
 
       {/* Action Buttons */}
       <View style={styles.actionContainer}>
-        <TouchableOpacity style={styles.saveButton}>
-          <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-          <Text style={styles.saveButtonText}>Save Job</Text>
-        </TouchableOpacity>
+      {/* ?? REQUIREMENT 4: Updated save/unsave button with proper functionality */}
+      <TouchableOpacity
+        style={[
+          styles.saveButton,
+          isSaved && styles.saveButtonActive
+        ]}
+        onPress={handleSaveJob}
+      >
+        <Ionicons
+          name={isSaved ? "bookmark" : "bookmark-outline"}
+          size={20}
+          color={isSaved ? colors.white : colors.primary}
+        />
+        <Text style={[
+          styles.saveButtonText,
+          isSaved && styles.saveButtonTextActive
+        ]}>
+          {isSaved ? "Saved" : "Save Job"}
+        </Text>
+      </TouchableOpacity>
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
@@ -674,6 +808,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             </Text>
           </TouchableOpacity>
         )}
+        
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
@@ -685,13 +820,13 @@ export default function JobDetailsScreen({ route, navigation }) {
           >
             {applying && <ActivityIndicator size="small" color={colors.white} />}
             <Text style={styles.applyButtonText}>
-              {applying ? 'Applying...' : hasApplied ? 'Already Applied' : 'Apply Now'}
+              {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
             </Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ? NEW: Resume Upload Modal */}
+      {/* ?? Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
         onClose={() => { setShowResumeModal(false); setReferralMode(false); }}
@@ -881,11 +1016,18 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.background,
   },
+  saveButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   saveButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
     color: colors.primary,
     marginLeft: 8,
+  },
+  saveButtonTextActive: {
+    color: colors.white,
   },
   applyButton: {
     flex: 2,
@@ -926,5 +1068,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     backgroundColor: '#f3f4f6',
     borderColor: '#d1d5db',
+  },
+  headerButton: {
+    padding: 8,
   },
 });

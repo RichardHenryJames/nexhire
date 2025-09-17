@@ -59,8 +59,11 @@ const isFiltersDirty = (f) => {
   });
 };
 
-export default function JobsScreen({ navigation }) {
+export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
+  
+  // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
+  const { activeTab: initialTab, successMessage, appliedJobId } = route.params || {};
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +174,7 @@ export default function JobsScreen({ navigation }) {
   }, [triggerReload])
 
   // Tabs state and counts
-  const [activeTab, setActiveTab] = useState('openings');
+  const [activeTab, setActiveTab] = useState(initialTab || 'openings'); // 🔧 Use initial tab from navigation
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [savedJobs, setSavedJobs] = useState([]);
   const [appliedCount, setAppliedCount] = useState(0);
@@ -179,6 +182,76 @@ export default function JobsScreen({ navigation }) {
   const [appliedIds, setAppliedIds] = useState(new Set());
   const [savedIds, setSavedIds] = useState(new Set());
   const [smartPaginating, setSmartPaginating] = useState(false);
+
+  // 🔧 REQUIREMENT 1: Show success message and handle applied job removal
+  useEffect(() => {
+    if (successMessage) {
+      setTimeout(() => {
+        showToast(successMessage, 'success');
+      }, 500); // Small delay to ensure screen is loaded
+    }
+    
+    // 🔧 NEW: Remove applied job from jobs list and refresh data
+    if (appliedJobId) {
+      console.log('🔄 Removing applied job from UI and refreshing data:', appliedJobId);
+      
+      // Remove from current jobs list immediately
+      setJobs(prev => {
+        const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
+        console.log(`📊 Jobs list updated: ${prev.length} -> ${filtered.length}`);
+        return filtered;
+      });
+      
+      // Update pagination totals to reflect removal
+      setPagination(prev => {
+        const newTotal = Math.max((prev.total || 0) - 1, 0);
+        const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+        console.log(`📊 Pagination updated: total ${prev.total} -> ${newTotal}`);
+        return { 
+          ...prev, 
+          total: newTotal, 
+          totalPages: newTotalPages, 
+          hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize 
+        };
+      });
+      
+      // Add to applied IDs
+      setAppliedIds(prev => new Set([...prev, appliedJobId]));
+      
+      // Trigger a full refresh to get updated data after a short delay
+      setTimeout(() => {
+        console.log('🔄 Triggering full data refresh...');
+        triggerReload(); // This will refresh the jobs list
+        refreshApplicationsData(); // This will refresh applications
+      }, 1000);
+    }
+  }, [successMessage, appliedJobId, triggerReload, refreshApplicationsData]);
+
+  // 🔧 NEW: Function to refresh applications data
+  const refreshApplicationsData = useCallback(async () => {
+    try {
+      console.log('🔄 Refreshing applications data...');
+      const r = await nexhireAPI.getMyApplications(1, 500);
+      if (r?.success) {
+        const ids = new Set((r.data || []).map(a => a.JobID));
+        setAppliedIds(ids);
+        const items = (r.data || []).map(a => ({
+          JobID: a.JobID,
+          Title: a.JobTitle || a.Title,
+          OrganizationName: a.CompanyName || a.OrganizationName,
+          Location: a.JobLocation || a.Location,
+          SalaryRangeMin: a.SalaryRangeMin,
+          SalaryRangeMax: a.SalaryRangeMax,
+          PublishedAt: a.SubmittedAt,
+        }));
+        setAppliedJobs(items);
+        setAppliedCount(Number(r.meta?.total || items.length || 0));
+        console.log('✅ Applications data refreshed successfully');
+      }
+    } catch (e) {
+      console.error('❌ Failed to refresh applications data:', e);
+    }
+  }, []);
 
   // Preload applied IDs and list
   useEffect(() => {
@@ -203,6 +276,16 @@ export default function JobsScreen({ navigation }) {
       } catch {}
     })();
   }, []);
+
+  // 🔧 NEW: Add focus listener to refresh applications when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('📱 JobsScreen focused, refreshing applications data...');
+      refreshApplicationsData();
+    });
+
+    return unsubscribe;
+  }, [navigation, refreshApplicationsData]);
 
   // ? NEW: Preload referred job IDs
   useEffect(() => {
@@ -505,7 +588,7 @@ export default function JobsScreen({ navigation }) {
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend says more available, loading immediately...');
+      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -594,6 +677,14 @@ export default function JobsScreen({ navigation }) {
     }
     triggerReload();
   }, [triggerReload]);
+
+  // Add this helper (was missing, caused ReferenceError in browser)
+  const removeSavedJobLocally = useCallback((jobId) => {
+    if (!jobId) return;
+    setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== jobId));
+    setSavedIds(prev => { const next = new Set(prev ?? new Set()); next.delete(jobId); return next; });
+    setSavedCount(c => Math.max((c || 0) - 1, 0));
+  }, []);
 
   // Build summary string
   const summaryText = useMemo(() => {
@@ -948,58 +1039,46 @@ export default function JobsScreen({ navigation }) {
         // Create referral request
         const res = await nexhireAPI.createReferralRequest(id, resumeData.ResumeID);
         if (res?.success) {
-          // ? NEW: Update local tracking after successful referral request
           setReferredJobIds(prev => new Set([...prev, id]));
-
-          // Update eligibility (reduce quota)
           setReferralEligibility(prev => ({
             ...prev,
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-
           showToast('Referral request sent successfully', 'success');
-         } else {
-           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
-         }
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
       } else {
-        // Apply flow (existing code preserved)
         const applicationData = {
           jobID: id,
           coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
           resumeId: resumeData.ResumeID
         };
-        // Optimistic UI update (existing code preserved)
-        if (activeTab === 'openings') {
-          setJobs(prev => {
-            const updated = prev.filter(j => (j.JobID || j.id) !== id);
-            if (updated.length === 0) {
-              setPagination(p => ({ ...p, page: 1 }));
-              setTimeout(() => { triggerReload(); }, 100);
-            }
-            return updated;
-          });
-          setPagination(prev => {
-            const newTotal = Math.max((prev.total || 0) - 1, 0);
-            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-          });
-          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
-        } else if (activeTab === 'saved') {
-          setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
-          setSavedCount(c => Math.max((c || 0) - 1, 0));
-        }
         const res = await nexhireAPI.applyForJob(applicationData);
         if (res?.success) {
-          setAppliedIds(prev => { const next = new Set(prev ?? new Set()); next.add(id); return next; });
+          setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
           setAppliedCount(c => (Number(c) || 0) + 1);
+          // Always remove from saved locally (backend auto-removes later)
+            removeSavedJobLocally(id);
+          if (activeTab === 'openings') {
+            setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+            setPagination(prev => {
+              const newTotal = Math.max((prev.total || 0) - 1, 0);
+              const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+              return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
+            });
+          }
+          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
           showToast('Application submitted successfully', 'success');
-          // Switch to applied tab automatically for quick feedback
-          //setActiveTab('applied');
-         } else {
-           Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
-         }
+          // Only refresh applied count (lightweight)
+          try {
+            const appliedRes = await nexhireAPI.getMyApplications(1, 1);
+            if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
+          } catch {}
+        } else {
+          Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        }
       }
     } catch (e) {
       console.error(referralMode ? 'Referral error' : 'Apply error', e);
@@ -1007,9 +1086,8 @@ export default function JobsScreen({ navigation }) {
     } finally {
       setPendingJobForApplication(null);
       setReferralMode(false);
-      refreshCounts();
     }
-  }, [pendingJobForApplication, referralMode, activeTab, refreshCounts, triggerReload, navigation]);
+  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally]);
 
   // NEW: Auto apply with known resume (no modal)
   const quickApply = useCallback(async (job, resumeId) => {
@@ -1018,34 +1096,29 @@ export default function JobsScreen({ navigation }) {
       const applicationData = { jobID: id, coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`, resumeId };
       const res = await nexhireAPI.applyForJob(applicationData);
       if (res?.success) {
-        // 🔧 FIXED: Handle job removal properly for both openings and saved tabs
+        setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
+        setAppliedCount(c => (Number(c) || 0) + 1);
+        removeSavedJobLocally(id); // ensure removal if it was saved
         if (activeTab === 'openings') {
-          // Remove from openings list
           setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          // Update pagination totals
           setPagination(prev => {
             const newTotal = Math.max((prev.total || 0) - 1, 0);
             const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
             return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
           });
-        } else if (activeTab === 'saved') {
-          // 🔧 FIXED: Remove from saved list when applying from saved tab
-          setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          setSavedCount(c => Math.max((c || 0) - 1, 0));
         }
-        
-        setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
-        setAppliedCount(c => (Number(c) || 0) + 1);
         showToast('Application submitted', 'success');
-        // Refresh counts silently
-        refreshCounts();
+        try {
+          const appliedRes = await nexhireAPI.getMyApplications(1, 1);
+          if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
+        } catch {}
       } else {
         Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to submit application');
     }
-  }, [refreshCounts, activeTab]);
+  }, [activeTab, removeSavedJobLocally]);
 
   // NEW: Auto referral with known resume
   const quickReferral = useCallback(async (job, resumeId) => {
@@ -1103,23 +1176,10 @@ export default function JobsScreen({ navigation }) {
   const handleUnsave = useCallback(async (job) => {
     if (!job) return;
     const id = job.JobID || job.id;
-
     try {
       const res = await nexhireAPI.unsaveJob(id);
       if (res?.success) {
-        // Update local state immediately
-        setSavedCount(c => Math.max((Number(c) || 0) - 1, 0));
-        setSavedIds(prev => {
-          const next = new Set(prev ?? new Set());
-          next.delete(id);
-          return next;
-        });
-        
-        // Remove from saved list if we're on saved tab
-        if (activeTab === 'saved') {
-          setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-        }
-        
+        removeSavedJobLocally(id);
         showToast('Job removed from saved', 'success');
       } else {
         Alert.alert('Unsave Failed', res.error || 'Failed to remove job from saved');
@@ -1127,22 +1187,24 @@ export default function JobsScreen({ navigation }) {
     } catch (e) {
       console.error('Unsave error', e);
       Alert.alert('Error', e.message || 'Failed to remove job from saved');
-    } finally {
-      refreshCounts();
     }
-  }, [activeTab, refreshCounts, showToast]);
+  }, [removeSavedJobLocally, showToast]);
 
-  // Tab data loading effect
+  // Tab data loading effect - refresh when switching tabs
   useEffect(() => {
     (async () => {
       if (activeTab === 'saved') {
         try {
+          console.log('🔄 Refreshing saved jobs data...');
           const r = await nexhireAPI.getMySavedJobs(1, 50);
           if (r?.success) setSavedJobs(r.data || []);
         } catch {}
+      } else if (activeTab === 'applied') {
+        // 🔧 NEW: Refresh applied jobs when switching to applied tab
+        await refreshApplicationsData();
       }
     })();
-  }, [activeTab]);
+  }, [activeTab, refreshApplicationsData]);
 
   // Smart pagination monitoring with improved UX
   useEffect(() => {
@@ -1181,7 +1243,7 @@ export default function JobsScreen({ navigation }) {
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend says more available, loading immediately...');
+      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
