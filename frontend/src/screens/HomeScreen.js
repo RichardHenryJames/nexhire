@@ -200,28 +200,54 @@ export default function HomeScreen({ navigation }) {
     );
   };
 
-  const JobCard = ({ job }) => (
-    <TouchableOpacity
-      style={styles.jobCard}
-      onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-    >
-      <View style={styles.jobHeader}>
-        <Text style={styles.jobTitle} numberOfLines={1}>
-          {job.Title}
-        </Text>
-        <Text style={styles.jobCompany}>{job.CompanyName}</Text>
-      </View>
-      <Text style={styles.jobLocation}>{job.Location}</Text>
-      <View style={styles.jobMeta}>
-        <View style={styles.jobTypeTag}>
-          <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+  const JobCard = ({ job }) => {
+    const formatDate = (job) => {
+      // Use same date field priority as the actual API response and JobCard component
+      const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
+      
+      if (!dateString) return 'Recently posted';
+      
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Recently posted';
+      
+      const now = new Date();
+      const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+      
+      if (hours < 1) return 'Just posted';
+      if (hours < 24) return `${hours} hours ago`;
+      
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days} days ago`;
+      
+      const weeks = Math.floor(days / 7);
+      if (weeks < 4) return `${weeks} weeks ago`;
+      
+      return date.toLocaleDateString();
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.jobCard}
+        onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+      >
+        <View style={styles.jobHeader}>
+          <Text style={styles.jobTitle} numberOfLines={1}>
+            {job.Title}
+          </Text>
+          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
         </View>
-        <Text style={styles.jobDate}>
-          {new Date(job.PostedDate).toLocaleDateString()}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <Text style={styles.jobLocation}>{job.Location}</Text>
+        <View style={styles.jobMeta}>
+          <View style={styles.jobTypeTag}>
+            <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+          </View>
+          <Text style={styles.jobDate}>
+            {formatDate(job)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const ApplicationCard = ({ application }) => (
     <TouchableOpacity
