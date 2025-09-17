@@ -157,8 +157,8 @@ export default function HomeScreen({ navigation }) {
     if (!isJobSeeker) return null;
 
     const { stats } = dashboardData;
-    const successRate = stats.applicationSuccessRate || 0;
-    const responseTime = stats.averageResponseTime || 0;
+    const successRate = stats.ApplicationSuccessRate || 0;
+    const responseTime = stats.AverageResponseTime || 0;
     
     return (
       <View style={styles.performanceContainer}>
@@ -348,29 +348,29 @@ export default function HomeScreen({ navigation }) {
             <>
               <StatCard
                 title="Active Jobs"
-                value={stats.activeJobs || 0}
+                value={stats.ActiveJobs || 0}
                 icon="briefcase"
                 color={colors.primary}
-                subtitle={`${stats.totalJobsPosted || 0} total • ${stats.draftJobs || 0} drafts`}
-                trend={stats.jobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.jobsPostedLast30Days}` } : null}
+                subtitle={`${stats.TotalJobsPosted || 0} total ï¿½ ${stats.draftJobs || 0} drafts`}
+                trend={stats.JobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.JobsPostedLast30Days}` } : null}
                 onPress={() => navigation.navigate('Jobs')}
                 size="large"
               />
               <StatCard
                 title="Applications"
-                value={stats.totalApplicationsReceived || 0}
+                value={stats.TotalApplicationsReceived || 0}
                 icon="document-text"
                 color={colors.success}
-                subtitle={`${stats.pendingApplications || 0} pending review`}
-                trend={stats.applicationsReceivedLast30Days > 0 ? { positive: true, value: `+${stats.applicationsReceivedLast30Days}` } : null}
+                subtitle={`${stats.PendingApplications || 0} pending review`}
+                trend={stats.ApplicationsReceivedLast30Days > 0 ? { positive: true, value: `+${stats.ApplicationsReceivedLast30Days}` } : null}
                 onPress={() => navigation.navigate('Applications')}
               />
               <StatCard
                 title="Success Rate"
-                value={`${(stats.hiringSuccessRate || 0).toFixed(1)}%`}
+                value={`${(stats.HiringSuccessRate || 0).toFixed(1)}%`}
                 icon="trophy"
                 color={colors.warning}
-                subtitle={`${stats.offersExtended || 0} offers extended`}
+                subtitle={`${stats.OffersExtended || 0} offers extended`}
                 onPress={() => navigation.navigate('Analytics')}
               />
             </>
@@ -378,20 +378,20 @@ export default function HomeScreen({ navigation }) {
             <>
               <StatCard
                 title="Applications"
-                value={stats.totalApplications || 0}
+                value={stats.TotalApplications || 0}
                 icon="document-text"
                 color={colors.primary}
-                subtitle={`${stats.shortlistedApplications || 0} shortlisted • ${stats.interviewsScheduled || 0} interviews`}
-                trend={stats.applicationsLast30Days > 0 ? { positive: true, value: `+${stats.applicationsLast30Days}` } : null}
+                subtitle={`${stats.SavedJobs || 0} saved jobs`}
+                trend={stats.ApplicationsLast30Days > 0 ? { positive: true, value: `+${stats.ApplicationsLast30Days}` } : null}
                 onPress={() => navigation.navigate('Applications')}
                 size="large"
               />
               <StatCard
                 title="Profile Score"
-                value={`${stats.profileCompleteness || 0}%`}
+                value={`${stats.ProfileCompleteness || 0}%`}
                 icon="person"
-                color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-                subtitle={`${stats.profileViews || 0} profile views`}
+                color={stats.ProfileCompleteness >= 80 ? colors.success : colors.warning}
+                subtitle={`${stats.ProfileViews || 0} profile views`}
                 onPress={() => navigation.navigate('Profile')}
               />
               <StatCard
@@ -399,7 +399,7 @@ export default function HomeScreen({ navigation }) {
                 value={referralStats.totalPointsEarned || stats.totalReferralPoints || 0}
                 icon="star"
                 color={colors.info}
-                subtitle={`${stats.referralRequestsMade || 0} requests • ${stats.completedReferrals || 0} completed`}
+                subtitle={`${stats.ReferralRequestsMade || 0} requests ï¿½ ${stats.completedReferrals || 0} completed`}
                 onPress={() => navigation.navigate('Referrals')}
               />
             </>
@@ -431,8 +431,8 @@ export default function HomeScreen({ navigation }) {
               description="Manage candidate applications"
               icon="people"
               color={colors.success}
-              badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-              urgent={stats.pendingApplications > 10}
+              badge={stats.PendingApplications > 0 ? stats.PendingApplications : null}
+              urgent={stats.PendingApplications > 10}
               onPress={() => navigation.navigate('Applications')}
             />
             <QuickAction
@@ -440,7 +440,7 @@ export default function HomeScreen({ navigation }) {
               description="Track your recruitment progress"
               icon="analytics"
               color={colors.info}
-              badge={stats.interviewsInProgress > 0 ? `${stats.interviewsInProgress} active` : null}
+              badge={stats.InterviewsInProgress > 0 ? `${stats.InterviewsInProgress} active` : null}
               onPress={() => navigation.navigate('Analytics')}
             />
             <QuickAction
@@ -448,7 +448,7 @@ export default function HomeScreen({ navigation }) {
               description="Leverage employee referrals"
               icon="link"
               color={colors.warning}
-              badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
+              badge={stats.referralNetwork?.ReferralsForMyJobs > 0 ? stats.referralNetwork.ReferralsForMyJobs : null}
               onPress={() => navigation.navigate('Referrals')}
             />
           </>
@@ -466,17 +466,17 @@ export default function HomeScreen({ navigation }) {
               description="Track your job applications"
               icon="document-text"
               color={colors.success}
-              badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-              urgent={stats.pendingApplications > 5}
+              badge={stats.PendingApplications > 0 ? stats.PendingApplications : null}
+              urgent={stats.PendingApplications > 5}
               onPress={() => navigation.navigate('Applications')}
             />
             <QuickAction
               title="Complete Profile"
               description="Improve your profile to stand out"
               icon="person"
-              color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-              badge={stats.profileCompleteness < 80 ? `${100 - (stats.profileCompleteness || 0)}%` : null}
-              urgent={stats.profileCompleteness < 60}
+              color={stats.ProfileCompleteness >= 80 ? colors.success : colors.warning}
+              badge={stats.ProfileCompleteness < 80 ? `${100 - (stats.ProfileCompleteness || 0)}%` : null}
+              urgent={stats.ProfileCompleteness < 60}
               onPress={() => navigation.navigate('Profile')}
             />
             <QuickAction
@@ -528,10 +528,10 @@ export default function HomeScreen({ navigation }) {
       )}
 
       {/* Recent Activity Timeline for Employers */}
-      {isEmployer && stats.topPerformingJobs && stats.topPerformingJobs.length > 0 && (
+      {isEmployer && stats.TopPerformingJobs && stats.TopPerformingJobs.length > 0 && (
         <View style={styles.recentContainer}>
           <Text style={styles.sectionTitle}>Top Performing Jobs</Text>
-          {stats.topPerformingJobs.slice(0, 3).map((job, index) => (
+          {stats.TopPerformingJobs.slice(0, 3).map((job, index) => (
             <TouchableOpacity 
               key={job.JobID || index} 
               style={styles.performingJobCard}
