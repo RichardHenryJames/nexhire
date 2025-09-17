@@ -44,18 +44,16 @@ export default function ApplicationsScreen({ navigation }) {
   // Web withdraw confirmation state
   const [withdrawTarget, setWithdrawTarget] = useState(null);
 
-  // ?? MOUNT EFFECT: Initial load
+  // Mount effect: Initial load
   useEffect(() => {
-    console.log('?? ApplicationsScreen mounted - loading initial data');
     fetchApplications();
     loadReferralData();
     loadPrimaryResume();
   }, []);
 
-  // ?? AUTO-REFRESH: Add focus listener to refresh data when screen comes into focus
+  // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      console.log('?? ApplicationsScreen focused - refreshing applications data...');
       fetchApplications(true); // Reset page and refresh
       loadReferralData(); // Also refresh referral data
     });
@@ -68,15 +66,10 @@ export default function ApplicationsScreen({ navigation }) {
       const currentPage = resetPage ? 1 : pagination.page;
       setLoading(resetPage);
 
-      console.log('?? FETCHING APPLICATIONS - API CALL STARTED');
-      console.log('?? Current page:', currentPage);
-      console.log('?? Page size:', pagination.pageSize);
-
       let result;
       if (isJobSeeker) {
-        // ?? API CALL: Get job seeker's own applications from backend
+        // API call: Get job seeker's own applications from backend
         result = await nexhireAPI.getMyApplications(currentPage, pagination.pageSize);
-        console.log('? API response received:', JSON.stringify(result, null, 2));
       } else {
         // For employers, we'd need to get applications for their jobs
         // This would require a different API call or job-specific applications
@@ -84,9 +77,6 @@ export default function ApplicationsScreen({ navigation }) {
       }
 
       if (result.success) {
-        console.log('?? Applications data:', result.data);
-        console.log('?? Status IDs found:', result.data?.map(app => ({ id: app.ApplicationID, status: app.StatusID, title: app.JobTitle })));
-        
         const newApplications = resetPage ? result.data : [...applications, ...result.data];
         setApplications(newApplications);
         
@@ -101,8 +91,6 @@ export default function ApplicationsScreen({ navigation }) {
       } else {
         console.error('Failed to fetch applications:', result.error);
       }
-      
-      console.log('?? FETCHING APPLICATIONS DEBUG - END');
     } catch (error) {
       console.error('Error fetching applications:', error);
     } finally {
@@ -149,28 +137,16 @@ export default function ApplicationsScreen({ navigation }) {
   };
 
   const onRefresh = async () => {
-    console.log('?? Manual refresh triggered');
     setRefreshing(true);
     await loadReferralData(); // Refresh referral data too
     await fetchApplications(true); // Reset page and fetch fresh data
   };
 
   const loadMoreApplications = () => {
-    // ?? FIX INFINITE SCROLL: Only load more if we haven't reached the end
+    // Fix infinite scroll: Only load more if we haven't reached the end
     if (!loading && !refreshing && pagination.page < pagination.totalPages && applications.length < pagination.total) {
-      console.log(`?? Loading more applications - Page ${pagination.page + 1} of ${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, page: prev.page + 1 }));
       fetchApplications(false);
-    } else {
-      console.log('?? Load more skipped - reached end or already loading');
-      console.log('?? Debug info:', {
-        loading,
-        refreshing,
-        currentPage: pagination.page,
-        totalPages: pagination.totalPages,
-        applicationsLength: applications.length,
-        totalCount: pagination.total
-      });
     }
   };
 
@@ -216,7 +192,7 @@ export default function ApplicationsScreen({ navigation }) {
   const formatDate = (dateString) => {
     if (!dateString) return 'Date not available';
     
-    // ?? FIX: Show both date and time instead of just date
+    // Fix: Show both date and time instead of just date
     const date = new Date(dateString);
     const dateOptions = { 
       year: 'numeric', 
@@ -239,8 +215,6 @@ export default function ApplicationsScreen({ navigation }) {
 
   // NEW: Ask Referral handler (similar to JobsScreen)
   const handleAskReferral = async (job) => {
-    console.log('?? handleAskReferral called in ApplicationsScreen for job:', job?.JobTitle);
-
     if (!job) return;
     if (!user) {
       Alert.alert('Login Required', 'Please login to ask for referrals', [
@@ -265,34 +239,28 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // ?? CRITICAL: Real-time eligibility check (SAME AS JobsScreen & JobDetailsScreen)
+    // Real-time eligibility check (SAME AS JobsScreen & JobDetailsScreen)
     try {
-      console.log('?? Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('? Eligibility result:', freshEligibility);
 
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('?? Eligibility data:', eligibilityData);
 
         if (!eligibilityData.isEligible) {
-          console.log('? User not eligible, checking subscription status...');
           // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
           if (eligibilityData.dailyQuotaRemaining === 0) {
             showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
             return;
           }
-          console.log('? Other eligibility issue:', eligibilityData.reason);
           Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
           return;
         }
 
-        console.log('? User is eligible - proceeding with referral');
         // Update local state with fresh data
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('? Failed to check referral eligibility:', e);
+      console.error('Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
@@ -326,12 +294,8 @@ export default function ApplicationsScreen({ navigation }) {
     setShowResumeModal(true);
   };
 
-  // ?? MATCH JobsScreen: Complete subscription modal with all features
+  // Complete subscription modal with all features
   const showSubscriptionModal = async (reasonOverride = null, hasActiveSubscription = false) => {
-    console.log('?? showSubscriptionModal called in ApplicationsScreen');
-    console.log('?? Navigation object:', navigation);
-    console.log('?? Available routes:', navigation.getState?.());
-    
     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
     const body = hasActiveSubscription
@@ -339,30 +303,26 @@ export default function ApplicationsScreen({ navigation }) {
       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
     if (Platform.OS === 'web') {
-      console.log('?? Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
       return;
     }
     
     try {
       Alert.alert(
-        '?? Upgrade Required',
+        'Upgrade Required',
         body,
         [
           { 
             text: 'Maybe Later', 
-            style: 'cancel',
-            onPress: () => console.log('?? User selected Maybe Later')
+            style: 'cancel'
           },
           { 
             text: 'View Plans', 
             onPress: () => {
-              console.log('?? User selected View Plans - attempting navigation...');
               try {
                 navigation.navigate('ReferralPlans');
-                console.log('?? Navigation successful!');
               } catch (navError) {
-                console.error('?? Navigation error:', navError);
+                console.error('Navigation error:', navError);
                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
               }
             }
@@ -375,17 +335,16 @@ export default function ApplicationsScreen({ navigation }) {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-          console.log('?? Fallback navigation to ReferralPlans after Alert timeout');
             try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
         }
       }, 3000);
     } catch (error) {
-      console.error('?? Error showing subscription modal:', error);
+      console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
   };
 
-  // ?? MATCH JobsScreen: Enhanced resume selected handler
+  // Enhanced resume selected handler
   const handleResumeSelected = async (resumeData) => {
     if (!pendingJobForApplication) return;
     const job = pendingJobForApplication;
@@ -405,7 +364,7 @@ export default function ApplicationsScreen({ navigation }) {
           }));
           showToast('Referral request sent successfully', 'success');
           
-          // ?? NEW: Reload primary resume after submission (same as JobDetailsScreen)
+          // NEW: Reload primary resume after submission (same as JobDetailsScreen)
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -420,7 +379,7 @@ export default function ApplicationsScreen({ navigation }) {
     }
   };
 
-  // ?? MATCH JobsScreen: Enhanced quick referral
+  // Enhanced quick referral
   const quickReferral = async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
@@ -443,9 +402,6 @@ export default function ApplicationsScreen({ navigation }) {
 
   // Web withdrawal confirmation logic
   const handleWithdrawApplication = (application) => {
-    console.log('?? Withdraw pressed for application:', application?.ApplicationID, 'status:', application?.StatusID);
-    console.log('?? FULL APPLICATION DATA:', JSON.stringify(application, null, 2));
-
     if (Platform.OS === 'web') {
       // Use custom modal (RN Alert unreliable on web for multi-button)
       setWithdrawTarget(application);
@@ -455,8 +411,8 @@ export default function ApplicationsScreen({ navigation }) {
       'Withdraw Application',
       `Are you sure you want to withdraw your application for ${application.JobTitle || 'this job'}? This action cannot be undone.`,
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => console.log('?? User cancelled withdrawal') },
-        { text: 'Withdraw', style: 'destructive', onPress: () => { console.log('?? User confirmed withdrawal, calling withdrawApplication...'); withdrawApplication(application); } }
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Withdraw', style: 'destructive', onPress: () => withdrawApplication(application) }
       ]
     );
   };
@@ -464,17 +420,9 @@ export default function ApplicationsScreen({ navigation }) {
   // Withdraw application function
   const withdrawApplication = async (application) => {
     try {
-      console.log('?? Withdrawing application ID:', application.ApplicationID);
-      console.log('?? Application object:', JSON.stringify(application, null, 2));
-      
-      // Add a simple alert to confirm the function is being called
-      console.log('?? About to call API...');
       const res = await nexhireAPI.withdrawApplication(application.ApplicationID);
-      console.log('?? API call completed');
-      console.log('? Withdraw API response:', res);
       
       if (res.success) {
-        console.log('? Success response received, updating UI...');
         // Remove the application from the list
         setApplications(prevApplications => 
           prevApplications.filter(app => app.ApplicationID !== application.ApplicationID)
@@ -487,19 +435,17 @@ export default function ApplicationsScreen({ navigation }) {
         }));
         
         showToast('Application withdrawn successfully', 'success');
-        console.log('? UI updated successfully');
       } else {
-        console.log('? Error response:', res.error || res.message);
+        console.error('Withdraw API error:', res.error || res.message);
         Alert.alert('Withdrawal Failed', res.error || res.message || 'Failed to withdraw application');
       }
     } catch (error) {
-      console.log('? Exception caught:', error);
       console.error('Withdraw application error:', error);
       Alert.alert('Error', error.message || 'Failed to withdraw application');
     }
   };
 
-  // ?? ADD: EmptyState component that was missing
+  // EmptyState component that was missing
   const EmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons 
@@ -560,7 +506,7 @@ export default function ApplicationsScreen({ navigation }) {
         {application.CompanyName || 'Company Name'}
       </Text>
 
-      {/* ?? ADD: Job Type Display similar to JobsScreen */}
+      {/* Job Type Display similar to JobsScreen */}
       {application.JobTypeName && (
         <View style={styles.jobTypeContainer}>
           <View style={styles.jobTypeTag}>
@@ -602,7 +548,7 @@ export default function ApplicationsScreen({ navigation }) {
         </Text>
       )}
 
-      {/* ?? ADD: Application Actions section - SAME AS BEFORE */}
+      {/* Application Actions section - SAME AS BEFORE */}
       <View style={styles.applicationActions}>
         {application.StatusID === 1 && ( // If pending, allow withdrawal
           <TouchableOpacity 
@@ -613,7 +559,7 @@ export default function ApplicationsScreen({ navigation }) {
           </TouchableOpacity>
         )}
         
-        {/* ?? MATCH JobsScreen: Ask Referral / Referred button styling */}
+        {/* Ask Referral / Referred button styling */}
         {isJobSeeker && (() => {
           const isReferred = referredJobIds.has(application.JobID);
           return isReferred ? (
@@ -636,7 +582,7 @@ export default function ApplicationsScreen({ navigation }) {
   );
 
   const LoadingFooter = () => {
-    // ?? IMPROVED: Better loading footer with completion status
+    // Better loading footer with completion status
     if (loading && pagination.page > 1) {
       return (
         <View style={styles.loadingFooter}>
@@ -646,7 +592,7 @@ export default function ApplicationsScreen({ navigation }) {
       );
     }
     
-    // ?? NEW: Show completion message when all applications are loaded
+    // Show completion message when all applications are loaded
     if (applications.length > 0 && applications.length >= pagination.total) {
       return (
         <View style={styles.completionFooter}>
@@ -671,7 +617,7 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* ?? ADD: Header section */}
+      {/* Header section */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
           {isEmployer ? 'Job Applications' : 'My Applications'}

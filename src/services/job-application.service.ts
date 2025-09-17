@@ -214,12 +214,12 @@ export class JobApplicationService {
         }
     }
     
-    // Get applications for a user (job seeker) - SIMPLIFIED APPROACH
+    // Get applications for a user (job seeker) - FIXED: Filter out withdrawn applications
     static async getApplicationsByUser(userId: string, params: PaginationParams): Promise<{ applications: JobApplication[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'SubmittedAt', sortOrder = 'desc' } = params;
 
         try {
-            // Simple direct query without complex JOINs first
+            // FIXED: Add WHERE clause to exclude withdrawn applications (StatusID = 6)
             const directQuery = `
                 SELECT 
                     ja.ApplicationID,
@@ -236,7 +236,7 @@ export class JobApplicationService {
                 INNER JOIN Jobs j ON ja.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-                WHERE a.UserID = '${userId}'
+                WHERE a.UserID = '${userId}' AND ja.StatusID != 6
                 ORDER BY ja.SubmittedAt DESC
             `;
 
@@ -260,7 +260,7 @@ export class JobApplicationService {
                 totalPages
             };
         } catch (error) {
-            console.error('Error in getApplicationsByUser (simplified):', error);
+            console.error('Error in getApplicationsByUser (fixed):', error);
             return { applications: [], total: 0, totalPages: 0 };
         }
     }
@@ -395,10 +395,6 @@ export class JobApplicationService {
     
     // Withdraw application (job seeker)
     static async withdrawApplication(applicationId: string, userId: string): Promise<void> {
-        console.log('?? WITHDRAW APPLICATION DEBUG - START');
-        console.log('?? Application ID:', applicationId);
-        console.log('?? User ID:', userId);
-        
         // Verify user owns this application
         const accessQuery = `
             SELECT ja.ApplicationID FROM JobApplications ja
@@ -406,16 +402,11 @@ export class JobApplicationService {
             WHERE ja.ApplicationID = @param0 AND a.UserID = @param1
         `;
         
-        console.log('?? Checking access with query:', accessQuery);
         const accessResult = await dbService.executeQuery(accessQuery, [applicationId, userId]);
-        console.log('?? Access result:', JSON.stringify(accessResult.recordset));
         
         if (!accessResult.recordset || accessResult.recordset.length === 0) {
-            console.log('? Access denied - user does not own this application');
             throw new ValidationError('Access denied to this application');
         }
-        
-        console.log('? Access granted - proceeding with withdrawal');
         
         // Update status to withdrawn (assuming status 6 is rejected/withdrawn)
         const updateQuery = `
@@ -424,12 +415,7 @@ export class JobApplicationService {
             WHERE ApplicationID = @param0
         `;
         
-        console.log('?? Updating application with query:', updateQuery);
-        console.log('?? Parameters:', [applicationId]);
-        
         await dbService.executeQuery(updateQuery, [applicationId]);
-        
-        console.log('? Update query executed successfully');
         
         // Verify the update worked
         const verifyQuery = `
@@ -438,9 +424,6 @@ export class JobApplicationService {
             WHERE ApplicationID = @param0
         `;
         const verifyResult = await dbService.executeQuery(verifyQuery, [applicationId]);
-        console.log('?? Verification result:', JSON.stringify(verifyResult.recordset));
-        
-        console.log('?? WITHDRAW APPLICATION DEBUG - END');
     }
     
     // Get application details
@@ -550,6 +533,7 @@ export class JobApplicationService {
     }
     
     private static async getJobSeekerApplicationStats(userId: string): Promise<any> {
+        // FIXED: Exclude withdrawn applications (StatusID = 6) from stats
         const query = `
             SELECT 
                 COUNT(*) as TotalApplications,
@@ -559,7 +543,7 @@ export class JobApplicationService {
                 SUM(CASE WHEN ja.StatusID = 6 THEN 1 ELSE 0 END) as RejectedApplications
             FROM JobApplications ja
             INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
-            WHERE a.UserID = @param0
+            WHERE a.UserID = @param0 AND ja.StatusID != 6
         `;
         
         const result = await dbService.executeQuery(query, [userId]);
