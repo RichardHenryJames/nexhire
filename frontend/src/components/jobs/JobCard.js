@@ -8,7 +8,7 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onAskReferral, savedContext = false, isReferred = false }) => {
+const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onUnsave, onAskReferral, savedContext = false, isReferred = false, isSaved = false }) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -66,17 +66,26 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
 
       {/* Actions row - moved to separate line */}
       <View style={styles.actionsRow}>
-           {savedContext ? (
-             <View style={styles.savedPill} accessibilityRole="text">
-               <Ionicons name="bookmark" size={18} color="#0d47a1" />
-               <Text style={styles.saveText}>Saved</Text>
-             </View>
-           ) : (
-             <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-               <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
-               <Text style={styles.saveText}>Save</Text>
-             </TouchableOpacity>
-           )}
+        {/* 🔧 FIXED: Dynamic save/unsave button based on saved state */}
+        {savedContext ? (
+          // In saved tab context, always show "Saved" pill with unsave functionality
+          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+            <Ionicons name="bookmark" size={18} color="#0d47a1" />
+            <Text style={styles.saveText}>Saved</Text>
+          </TouchableOpacity>
+        ) : isSaved ? (
+          // In openings tab, if already saved, show "Saved" pill with unsave functionality
+          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+            <Ionicons name="bookmark" size={18} color="#0d47a1" />
+            <Text style={styles.saveText}>Saved</Text>
+          </TouchableOpacity>
+        ) : (
+          // In openings tab, if not saved, show "Save" button
+          <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
+            <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+            <Text style={styles.saveText}>Save</Text>
+          </TouchableOpacity>
+        )}
 
           {/* Always show "Ask Referral" or "Referred" - quota check happens on click */}
           {isReferred ? (

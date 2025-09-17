@@ -102,19 +102,15 @@ export class JobService {
         const queryParams: any[] = [];
         let paramIndex = 0;
 
-        // User-specific filtering to exclude applied/saved jobs
+        // User-specific filtering to exclude applied jobs ONLY (not saved jobs)
         if (excludeUserApplications) {
             whereClause += ` AND j.JobID NOT IN (
                 SELECT DISTINCT ja.JobID FROM JobApplications ja 
                 INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
                 WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-                UNION
-                SELECT DISTINCT sj.JobID FROM SavedJobs sj
-                INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
-                WHERE a.UserID = @param${paramIndex + 1}
             )`;
-            queryParams.push(excludeUserApplications, excludeUserApplications);
-            paramIndex += 2;
+            queryParams.push(excludeUserApplications);
+            paramIndex += 1;
         }
 
         const searchTerm = (search || f.search || f.q || '').toString().trim();
@@ -525,19 +521,15 @@ export class JobService {
             const queryParams: any[] = [];
             let paramIndex = 0;
 
-            // Exclude jobs with withdrawn applications (StatusID=6) for the current user
+            // Exclude applied jobs ONLY (not saved jobs) for the current user
             if (excludeUserApplications) {
                 whereClause += ` AND j.JobID NOT IN (
                     SELECT DISTINCT ja.JobID FROM JobApplications ja 
                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
                     WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-                    UNION
-                    SELECT DISTINCT sj.JobID FROM SavedJobs sj
-                    INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
-                    WHERE a.UserID = @param${paramIndex + 1}
                 )`;
-                queryParams.push(excludeUserApplications, excludeUserApplications);
-                paramIndex += 2;
+                queryParams.push(excludeUserApplications);
+                paramIndex += 1;
             }
 
             const searchTerm = (f.search || f.q || '').toString().trim();

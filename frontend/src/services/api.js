@@ -427,7 +427,7 @@ class NexHireAPI {
 
     const base = { page: page.toString(), pageSize: pageSize.toString(), ...filters };
 
-    // Always add user exclusion if user is logged in
+    // Add user exclusion if user is logged in to exclude applied jobs (not saved jobs)
     if (userId && this.token) {
       base.excludeUserApplications = userId;
     }
