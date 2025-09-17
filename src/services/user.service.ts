@@ -383,7 +383,7 @@ export class UserService {
         await dbService.executeQuery(query, [userId]);
     }
 
-    // Get user dashboard stats
+    // Get user dashboard stats - ENHANCED with comprehensive analytics
     static async getDashboardStats(userId: string): Promise<any> {
         const user = await this.findById(userId);
         if (!user) {
@@ -391,62 +391,683 @@ export class UserService {
         }
 
         if (user.UserType === appConstants.userTypes.JOB_SEEKER) {
-            return await this.getJobSeekerStats(userId);
+            return await this.getEnhancedJobSeekerStats(userId);
         } else if (user.UserType === appConstants.userTypes.EMPLOYER) {
-            return await this.getEmployerStats(userId);
+            return await this.getEnhancedEmployerStats(userId);
         }
 
         return {};
     }
 
-    // Private helper methods
-    private static async incrementLoginAttempts(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET LoginAttempts = LoginAttempts + 1,
-                AccountLockoutEnd = CASE 
-                    WHEN LoginAttempts >= 4 THEN DATEADD(MINUTE, 30, GETUTCDATE())
-                    ELSE AccountLockoutEnd
-                END
-            WHERE UserID = @param0
-        `;
+    // ENHANCED: Comprehensive job seeker stats
+    private static async getEnhancedJobSeekerStats(userId: string): Promise<any> {
+        try {
+            // Get applicant ID
+            const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+            const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+            
+            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+                return this.getBasicJobSeekerStats(userId);
+            }
+            
+            const applicantId = applicantResult.recordset[0].ApplicantID;
 
-        await dbService.executeQuery(query, [userId]);
+            const statsQuery = `
+                -- Core Application Stats (excluding withdrawn)
+                SELECT 
+                    -- Application Statistics
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID != 6) as TotalApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID = 1) as PendingApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID = 2) as UnderReviewApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID = 3) as ShortlistedApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID IN (4, 5)) as InterviewsScheduled,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID = 5) as OffersReceived,
+                    
+                    -- Saved Jobs
+                    (SELECT COUNT(*) 
+                     FROM SavedJobs sj 
+                     INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0) as SavedJobs,
+                    
+                    -- Profile Information
+                    (SELECT ISNULL(ProfileCompleteness, 0) 
+                     FROM Applicants WHERE UserID = @param0) as ProfileCompleteness,
+                    
+                    (SELECT ISNULL(ProfileViews, 0) 
+                     FROM Applicants WHERE UserID = @param0) as ProfileViews,
+                    
+                    -- Recent Activity (Last 30 days)
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.SubmittedAt >= DATEADD(DAY, -30, GETUTCDATE())
+                     AND ja.StatusID != 6) as ApplicationsLast30Days,
+                    
+                    (SELECT COUNT(*) 
+                     FROM SavedJobs sj 
+                     INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND sj.SavedAt >= DATEADD(DAY, -30, GETUTCDATE())) as SavedJobsLast30Days,
+                    
+                    -- Application Success Rate
+                    (SELECT 
+                        CASE 
+                            WHEN COUNT(*) > 0 
+                            THEN CAST((COUNT(CASE WHEN ja.StatusID IN (3, 4, 5) THEN 1 END) * 100.0 / COUNT(*)) AS DECIMAL(5,2))
+                            ELSE 0 
+                        END
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID != 6) as ApplicationSuccessRate,
+                    
+                    -- Average Response Time (in days)
+                    (SELECT 
+                        ISNULL(AVG(CAST(DATEDIFF(HOUR, ja.SubmittedAt, ja.LastUpdatedAt) AS FLOAT) / 24.0), 0)
+                     FROM JobApplications ja 
+                     INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
+                     WHERE a.UserID = @param0 AND ja.StatusID > 1 AND ja.StatusID != 6) as AverageResponseTimeInDays
+            `;
+
+            const result = await dbService.executeQuery(statsQuery, [userId]);
+            const baseStats = result.recordset[0] || {};
+
+            // Get referral statistics
+            const referralStats = await this.getReferralStats(applicantId);
+            
+            // Get resume statistics
+            const resumeStats = await this.getResumeStats(applicantId);
+            
+            // Get recent applications breakdown
+            const recentActivityStats = await this.getRecentActivityStats(userId);
+            
+            // Get skills and preferences info
+            const profileInsights = await this.getProfileInsights(applicantId);
+
+            return {
+                // Core application metrics
+                totalApplications: baseStats.TotalApplications || 0,
+                pendingApplications: baseStats.PendingApplications || 0,
+                underReviewApplications: baseStats.UnderReviewApplications || 0,
+                shortlistedApplications: baseStats.ShortlistedApplications || 0,
+                interviewsScheduled: baseStats.InterviewsScheduled || 0,
+                offersReceived: baseStats.OffersReceived || 0,
+                
+                // Job management
+                savedJobs: baseStats.SavedJobs || 0,
+                
+                // Profile metrics
+                profileCompleteness: baseStats.ProfileCompleteness || 0,
+                profileViews: baseStats.ProfileViews || 0,
+                
+                // Performance metrics
+                applicationSuccessRate: baseStats.ApplicationSuccessRate || 0,
+                averageResponseTime: Math.round((baseStats.AverageResponseTimeInDays || 0) * 10) / 10,
+                
+                // Recent activity
+                applicationsLast30Days: baseStats.ApplicationsLast30Days || 0,
+                savedJobsLast30Days: baseStats.SavedJobsLast30Days || 0,
+                
+                // Referral metrics
+                referralRequestsMade: referralStats.referralRequestsMade || 0,
+                referralRequestsReceived: referralStats.referralRequestsReceived || 0,
+                completedReferrals: referralStats.completedReferrals || 0,
+                totalReferralPoints: referralStats.totalReferralPoints || 0,
+                referralSuccessRate: referralStats.referralSuccessRate || 0,
+                
+                // Resume metrics
+                totalResumes: resumeStats.totalResumes || 0,
+                primaryResumeSet: resumeStats.primaryResumeSet || false,
+                
+                // Activity insights
+                recentActivity: recentActivityStats,
+                
+                // Profile insights
+                profileInsights: profileInsights,
+                
+                // Recommendations
+                recommendations: await this.getJobSeekerRecommendations(userId, baseStats),
+                
+                // Summary metrics for quick overview
+                summary: {
+                    isActiveJobSeeker: (baseStats.ApplicationsLast30Days || 0) > 0,
+                    profileStrength: this.calculateProfileStrength(baseStats.ProfileCompleteness || 0, resumeStats.totalResumes || 0),
+                    needsAttention: this.getJobSeekerAttentionItems(baseStats, referralStats, resumeStats)
+                }
+            };
+
+        } catch (error) {
+            console.error('Error getting enhanced job seeker stats:', error);
+            return this.getBasicJobSeekerStats(userId);
+        }
     }
 
-    private static async updateLastLogin(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET LastLoginAt = GETUTCDATE(), 
-                LastActive = GETUTCDATE(),
-                LoginAttempts = 0,
-                AccountLockoutEnd = NULL
-            WHERE UserID = @param0
-        `;
+    // ENHANCED: Comprehensive employer stats
+    private static async getEnhancedEmployerStats(userId: string): Promise<any> {
+        try {
+            const statsQuery = `
+                -- Core Job and Application Stats
+                SELECT 
+                    -- Job Statistics
+                    (SELECT COUNT(*) FROM Jobs WHERE PostedByUserID = @param0) as TotalJobsPosted,
+                    (SELECT COUNT(*) FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Published') as ActiveJobs,
+                    (SELECT COUNT(*) FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Draft') as DraftJobs,
+                    (SELECT COUNT(*) FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Closed') as ClosedJobs,
+                    
+                    -- Application Statistics
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0) as TotalApplicationsReceived,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID = 1) as PendingApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID = 2) as UnderReviewApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID = 3) as ShortlistedApplications,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID IN (4, 5)) as InterviewsInProgress,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID = 5) as OffersExtended,
+                    
+                    -- Recent Activity (Last 30 days)
+                    (SELECT COUNT(*) 
+                     FROM Jobs WHERE PostedByUserID = @param0 AND CreatedAt >= DATEADD(DAY, -30, GETUTCDATE())) as JobsPostedLast30Days,
+                    
+                    (SELECT COUNT(*) 
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.SubmittedAt >= DATEADD(DAY, -30, GETUTCDATE())) as ApplicationsReceivedLast30Days,
+                    
+                    -- Performance Metrics
+                    (SELECT 
+                        CASE 
+                            WHEN COUNT(*) > 0 
+                            THEN CAST(AVG(CAST(j.CurrentApplications AS FLOAT)) AS DECIMAL(10,2))
+                            ELSE 0 
+                        END
+                     FROM Jobs j WHERE j.PostedByUserID = @param0 AND j.Status = 'Published') as AverageApplicationsPerJob,
+                    
+                    -- Hiring Success Rate
+                    (SELECT 
+                        CASE 
+                            WHEN COUNT(*) > 0 
+                            THEN CAST((COUNT(CASE WHEN ja.StatusID = 5 THEN 1 END) * 100.0 / COUNT(*)) AS DECIMAL(5,2))
+                            ELSE 0 
+                        END
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID IN (3, 4, 5, 6)) as HiringSuccessRate,
+                    
+                    -- Average Response Time
+                    (SELECT 
+                        ISNULL(AVG(CAST(DATEDIFF(HOUR, ja.SubmittedAt, ja.LastUpdatedAt) AS FLOAT) / 24.0), 0)
+                     FROM JobApplications ja 
+                     INNER JOIN Jobs j ON ja.JobID = j.JobID 
+                     WHERE j.PostedByUserID = @param0 AND ja.StatusID > 1) as AverageResponseTimeInDays
+            `;
 
-        await dbService.executeQuery(query, [userId]);
+            const result = await dbService.executeQuery(statsQuery, [userId]);
+            const baseStats = result.recordset[0] || {};
+
+            // Get employer-specific referral stats
+            const employerReferralStats = await this.getEmployerReferralStats(userId);
+            
+            // Get top performing jobs
+            const topJobs = await this.getTopPerformingJobs(userId);
+            
+            // Get hiring pipeline insights
+            const pipelineInsights = await this.getHiringPipelineInsights(userId);
+            
+            // Get organization metrics (if applicable)
+            const organizationMetrics = await this.getOrganizationMetrics(userId);
+
+            return {
+                // Core job metrics
+                totalJobsPosted: baseStats.TotalJobsPosted || 0,
+                activeJobs: baseStats.ActiveJobs || 0,
+                draftJobs: baseStats.DraftJobs || 0,
+                closedJobs: baseStats.ClosedJobs || 0,
+                
+                // Application metrics
+                totalApplicationsReceived: baseStats.TotalApplicationsReceived || 0,
+                pendingApplications: baseStats.PendingApplications || 0,
+                underReviewApplications: baseStats.UnderReviewApplications || 0,
+                shortlistedApplications: baseStats.ShortlistedApplications || 0,
+                interviewsInProgress: baseStats.InterviewsInProgress || 0,
+                offersExtended: baseStats.OffersExtended || 0,
+                
+                // Performance metrics
+                averageApplicationsPerJob: baseStats.AverageApplicationsPerJob || 0,
+                hiringSuccessRate: baseStats.HiringSuccessRate || 0,
+                averageResponseTime: Math.round((baseStats.AverageResponseTimeInDays || 0) * 10) / 10,
+                
+                // Recent activity
+                jobsPostedLast30Days: baseStats.JobsPostedLast30Days || 0,
+                applicationsReceivedLast30Days: baseStats.ApplicationsReceivedLast30Days || 0,
+                
+                // Referral network metrics
+                referralNetwork: employerReferralStats,
+                
+                // Job performance insights
+                topPerformingJobs: topJobs,
+                
+                // Hiring pipeline
+                pipelineInsights: pipelineInsights,
+                
+                // Organization metrics
+                organizationMetrics: organizationMetrics,
+                
+                // Recommendations
+                recommendations: await this.getEmployerRecommendations(userId, baseStats),
+                
+                // Summary metrics
+                summary: {
+                    isActiveHiring: (baseStats.JobsPostedLast30Days || 0) > 0,
+                    hiringVelocity: this.calculateHiringVelocity(baseStats),
+                    needsAttention: this.getEmployerAttentionItems(baseStats)
+                }
+            };
+
+        } catch (error) {
+            console.error('Error getting enhanced employer stats:', error);
+            return this.getBasicEmployerStats(userId);
+        }
     }
 
-    private static async getJobSeekerStats(userId: string): Promise<any> {
+    // Helper methods for enhanced analytics
+
+    private static async getReferralStats(applicantId: string): Promise<any> {
+        try {
+            const query = `
+                SELECT 
+                    (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0) as ReferralRequestsMade,
+                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0) as ReferralRequestsReceived,
+                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0 AND Status IN ('Completed', 'Verified')) as CompletedReferrals,
+                    (SELECT ISNULL(SUM(PointsEarned), 0) FROM ReferralRewards WHERE ReferrerID = @param0) as TotalReferralPoints,
+                    (SELECT 
+                        CASE 
+                            WHEN COUNT(*) > 0 
+                            THEN CAST((COUNT(CASE WHEN Status IN ('Completed', 'Verified') THEN 1 END) * 100.0 / COUNT(*)) AS DECIMAL(5,2))
+                            ELSE 0 
+                        END
+                     FROM ReferralRequests WHERE AssignedReferrerID = @param0) as ReferralSuccessRate
+            `;
+            
+            const result = await dbService.executeQuery(query, [applicantId]);
+            return result.recordset[0] || {};
+        } catch (error) {
+            console.error('Error getting referral stats:', error);
+            return {};
+        }
+    }
+
+    private static async getResumeStats(applicantId: string): Promise<any> {
+        try {
+            const query = `
+                SELECT 
+                    COUNT(*) as TotalResumes,
+                    CASE WHEN EXISTS(SELECT 1 FROM ApplicantResumes WHERE ApplicantID = @param0 AND IsPrimary = 1) 
+                         THEN 1 ELSE 0 END as PrimaryResumeSet
+                FROM ApplicantResumes 
+                WHERE ApplicantID = @param0
+            `;
+            
+            const result = await dbService.executeQuery(query, [applicantId]);
+            return result.recordset[0] || { totalResumes: 0, primaryResumeSet: false };
+        } catch (error) {
+            console.error('Error getting resume stats:', error);
+            return { totalResumes: 0, primaryResumeSet: false };
+        }
+    }
+
+    private static async getRecentActivityStats(userId: string): Promise<any[]> {
+        try {
+            const query = `
+                SELECT TOP 10
+                    'application' as ActivityType,
+                    j.Title as JobTitle,
+                    o.Name as CompanyName,
+                    ja.SubmittedAt as ActivityDate,
+                    aps.Status as CurrentStatus
+                FROM JobApplications ja
+                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                INNER JOIN Jobs j ON ja.JobID = j.JobID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                WHERE a.UserID = @param0 AND ja.StatusID != 6
+                ORDER BY ja.SubmittedAt DESC
+            `;
+            
+            const result = await dbService.executeQuery(query, [userId]);
+            return result.recordset || [];
+        } catch (error) {
+            console.error('Error getting recent activity stats:', error);
+            return [];
+        }
+    }
+
+    private static async getProfileInsights(applicantId: string): Promise<any> {
+        try {
+            const query = `
+                SELECT 
+                    PrimarySkills,
+                    SecondarySkills,
+                    PreferredJobTypes,
+                    PreferredWorkTypes,
+                    PreferredLocations,
+                    CurrentJobTitle,
+                    ISNULL(TotalExperienceMonths, 0) as TotalExperienceMonths,
+                    LinkedInProfile,
+                    IsOpenToWork,
+                    AllowRecruitersToContact
+                FROM Applicants 
+                WHERE ApplicantID = @param0
+            `;
+            
+            const result = await dbService.executeQuery(query, [applicantId]);
+            const profile = result.recordset[0] || {};
+            
+            return {
+                hasSkills: !!(profile.PrimarySkills || profile.SecondarySkills),
+                hasPreferences: !!(profile.PreferredJobTypes || profile.PreferredWorkTypes),
+                experienceYears: Math.floor((profile.TotalExperienceMonths || 0) / 12),
+                isOpenToWork: profile.IsOpenToWork || false,
+                allowsRecruiterContact: profile.AllowRecruitersToContact || false,
+                hasLinkedIn: !!profile.LinkedInProfile
+            };
+        } catch (error) {
+            console.error('Error getting profile insights:', error);
+            return {};
+        }
+    }
+
+    private static async getEmployerReferralStats(userId: string): Promise<any> {
+        try {
+            const query = `
+                SELECT 
+                    (SELECT COUNT(DISTINCT rr.RequestID)
+                     FROM ReferralRequests rr
+                     INNER JOIN Jobs j ON rr.JobID = j.JobID
+                     WHERE j.PostedByUserID = @param0) as ReferralsForMyJobs,
+                    
+                    (SELECT COUNT(DISTINCT rr.RequestID)
+                     FROM ReferralRequests rr
+                     INNER JOIN Jobs j ON rr.JobID = j.JobID
+                     WHERE j.PostedByUserID = @param0 AND rr.Status IN ('Completed', 'Verified')) as CompletedReferralsForMyJobs
+            `;
+            
+            const result = await dbService.executeQuery(query, [userId]);
+            return result.recordset[0] || {};
+        } catch (error) {
+            console.error('Error getting employer referral stats:', error);
+            return {};
+        }
+    }
+
+    private static async getTopPerformingJobs(userId: string): Promise<any[]> {
+        try {
+            const query = `
+                SELECT TOP 5
+                    j.JobID,
+                    j.Title,
+                    j.Status,
+                    j.CreatedAt,
+                    ISNULL(j.CurrentApplications, 0) as ApplicationCount,
+                    (SELECT COUNT(*) FROM JobApplications ja WHERE ja.JobID = j.JobID AND ja.StatusID = 3) as ShortlistedCount,
+                    (SELECT COUNT(*) FROM JobApplications ja WHERE ja.JobID = j.JobID AND ja.StatusID = 5) as HiredCount
+                FROM Jobs j
+                WHERE j.PostedByUserID = @param0
+                ORDER BY ISNULL(j.CurrentApplications, 0) DESC, j.CreatedAt DESC
+            `;
+            
+            const result = await dbService.executeQuery(query, [userId]);
+            return result.recordset || [];
+        } catch (error) {
+            console.error('Error getting top performing jobs:', error);
+            return [];
+        }
+    }
+
+    private static async getHiringPipelineInsights(userId: string): Promise<any> {
+        try {
+            const query = `
+                SELECT 
+                    COUNT(CASE WHEN ja.StatusID = 1 THEN 1 END) as Applied,
+                    COUNT(CASE WHEN ja.StatusID = 2 THEN 1 END) as Reviewing,
+                    COUNT(CASE WHEN ja.StatusID = 3 THEN 1 END) as Shortlisted,
+                    COUNT(CASE WHEN ja.StatusID = 4 THEN 1 END) as Interview,
+                    COUNT(CASE WHEN ja.StatusID = 5 THEN 1 END) as Hired,
+                    COUNT(CASE WHEN ja.StatusID = 6 THEN 1 END) as Rejected
+                FROM JobApplications ja
+                INNER JOIN Jobs j ON ja.JobID = j.JobID
+                WHERE j.PostedByUserID = @param0
+            `;
+            
+            const result = await dbService.executeQuery(query, [userId]);
+            const pipeline = result.recordset[0] || {};
+            
+            // Calculate conversion rates
+            const total = Object.values(pipeline).reduce((sum: number, count: any) => sum + (count || 0), 0);
+            
+            return {
+                pipeline,
+                conversions: {
+                    appliedToReviewing: total > 0 ? Math.round(((pipeline.Reviewing || 0) / total) * 100) : 0,
+                    reviewingToShortlisted: (pipeline.Reviewing || 0) > 0 ? Math.round(((pipeline.Shortlisted || 0) / (pipeline.Reviewing || 0)) * 100) : 0,
+                    shortlistedToHired: (pipeline.Shortlisted || 0) > 0 ? Math.round(((pipeline.Hired || 0) / (pipeline.Shortlisted || 0)) * 100) : 0
+                }
+            };
+        } catch (error) {
+            console.error('Error getting hiring pipeline insights:', error);
+            return { pipeline: {}, conversions: {} };
+        }
+    }
+
+    private static async getOrganizationMetrics(userId: string): Promise<any> {
+        try {
+            // Get employer's organization
+            const orgQuery = `
+                SELECT o.OrganizationID, o.Name, o.Size, o.Industry
+                FROM Employers e
+                INNER JOIN Organizations o ON e.OrganizationID = o.OrganizationID
+                WHERE e.UserID = @param0
+            `;
+            
+            const orgResult = await dbService.executeQuery(orgQuery, [userId]);
+            if (!orgResult.recordset || orgResult.recordset.length === 0) {
+                return {};
+            }
+            
+            const org = orgResult.recordset[0];
+            
+            // Get organization-wide metrics
+            const metricsQuery = `
+                SELECT 
+                    COUNT(DISTINCT e.EmployerID) as TotalEmployers,
+                    COUNT(DISTINCT j.JobID) as TotalJobs,
+                    COUNT(DISTINCT ja.ApplicationID) as TotalApplications
+                FROM Organizations o
+                LEFT JOIN Employers e ON o.OrganizationID = e.OrganizationID
+                LEFT JOIN Jobs j ON o.OrganizationID = j.OrganizationID
+                LEFT JOIN JobApplications ja ON j.JobID = ja.JobID
+                WHERE o.OrganizationID = @param0
+            `;
+            
+            const metricsResult = await dbService.executeQuery(metricsQuery, [org.OrganizationID]);
+            const metrics = metricsResult.recordset[0] || {};
+            
+            return {
+                organizationName: org.Name,
+                organizationSize: org.Size,
+                industry: org.Industry,
+                totalEmployers: metrics.TotalEmployers || 0,
+                totalJobs: metrics.TotalJobs || 0,
+                totalApplications: metrics.TotalApplications || 0
+            };
+        } catch (error) {
+            console.error('Error getting organization metrics:', error);
+            return {};
+        }
+    }
+
+    private static calculateProfileStrength(completeness: number, resumeCount: number): string {
+        const score = completeness + (resumeCount > 0 ? 10 : 0);
+        if (score >= 80) return 'Strong';
+        if (score >= 60) return 'Good';
+        if (score >= 40) return 'Fair';
+        return 'Weak';
+    }
+
+    private static calculateHiringVelocity(stats: any): string {
+        const recentJobs = stats.JobsPostedLast30Days || 0;
+        const recentApps = stats.ApplicationsReceivedLast30Days || 0;
+        
+        if (recentJobs >= 3 && recentApps >= 10) return 'High';
+        if (recentJobs >= 1 && recentApps >= 5) return 'Medium';
+        if (recentJobs >= 1 || recentApps >= 1) return 'Low';
+        return 'Inactive';
+    }
+
+    private static getJobSeekerAttentionItems(baseStats: any, referralStats: any, resumeStats: any): string[] {
+        const items: string[] = [];
+        
+        if ((baseStats.ProfileCompleteness || 0) < 80) {
+            items.push('Complete your profile to increase visibility');
+        }
+        
+        if ((resumeStats.totalResumes || 0) === 0) {
+            items.push('Upload your resume to start applying');
+        } else if (!resumeStats.primaryResumeSet) {
+            items.push('Set a primary resume for quicker applications');
+        }
+        
+        if ((baseStats.ApplicationsLast30Days || 0) === 0) {
+            items.push('No recent applications - explore new opportunities');
+        }
+        
+        if ((baseStats.PendingApplications || 0) > 5) {
+            items.push('Several applications pending - consider following up');
+        }
+        
+        return items;
+    }
+
+    private static getEmployerAttentionItems(baseStats: any): string[] {
+        const items: string[] = [];
+        
+        if ((baseStats.PendingApplications || 0) > 10) {
+            items.push('Many applications need review');
+        }
+        
+        if ((baseStats.ActiveJobs || 0) === 0) {
+            items.push('No active job postings');
+        }
+        
+        if ((baseStats.AverageResponseTimeInDays || 0) > 7) {
+            items.push('Consider faster response times to improve candidate experience');
+        }
+        
+        if ((baseStats.DraftJobs || 0) > 0) {
+            items.push('You have unpublished draft jobs');
+        }
+        
+        return items;
+    }
+
+    private static async getJobSeekerRecommendations(userId: string, stats: any): Promise<string[]> {
+        const recommendations: string[] = [];
+        
+        if ((stats.ApplicationSuccessRate || 0) < 20) {
+            recommendations.push('Consider improving your profile and tailoring applications');
+        }
+        
+        if ((stats.SavedJobs || 0) > 10 && (stats.ApplicationsLast30Days || 0) < 5) {
+            recommendations.push('You have many saved jobs - consider applying to some');
+        }
+        
+        if ((stats.ProfileViews || 0) < 5) {
+            recommendations.push('Optimize your profile keywords to increase visibility');
+        }
+        
+        return recommendations;
+    }
+
+    private static async getEmployerRecommendations(userId: string, stats: any): Promise<string[]> {
+        const recommendations: string[] = [];
+        
+        if ((stats.HiringSuccessRate || 0) < 10) {
+            recommendations.push('Consider reviewing your job requirements and hiring process');
+        }
+        
+        if ((stats.AverageApplicationsPerJob || 0) < 5) {
+            recommendations.push('Improve job descriptions to attract more candidates');
+        }
+        
+        if ((stats.InterviewsInProgress || 0) > 0) {
+            recommendations.push('Schedule interviews with shortlisted candidates');
+        }
+        
+        return recommendations;
+    }
+
+    // Fallback methods for basic stats (in case enhanced queries fail)
+    private static async getBasicJobSeekerStats(userId: string): Promise<any> {
         const query = `
             SELECT 
                 (SELECT COUNT(*) FROM JobApplications ja 
                  INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
-                 WHERE a.UserID = @param0) as TotalApplications,
+                 WHERE a.UserID = @param0 AND ja.StatusID != 6) as TotalApplications,
                 (SELECT COUNT(*) FROM JobApplications ja 
                  INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
                  WHERE a.UserID = @param0 AND ja.StatusID = 3) as ShortlistedApplications,
                 (SELECT COUNT(*) FROM JobApplications ja 
                  INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
                  WHERE a.UserID = @param0 AND ja.StatusID IN (4, 5)) as InterviewsScheduled,
-                (SELECT ProfileCompleteness FROM Applicants WHERE UserID = @param0) as ProfileCompleteness
+                (SELECT ISNULL(ProfileCompleteness, 0) FROM Applicants WHERE UserID = @param0) as ProfileCompleteness
         `;
 
         const result = await dbService.executeQuery(query, [userId]);
         return result.recordset[0] || {};
     }
 
-    private static async getEmployerStats(userId: string): Promise<any> {
+    private static async getBasicEmployerStats(userId: string): Promise<any> {
         const query = `
             SELECT 
                 (SELECT COUNT(*) FROM Jobs WHERE PostedByUserID = @param0) as TotalJobsPosted,
@@ -461,6 +1082,15 @@ export class UserService {
 
         const result = await dbService.executeQuery(query, [userId]);
         return result.recordset[0] || {};
+    }
+
+    // Keep original method names for backward compatibility
+    private static async getJobSeekerStats(userId: string): Promise<any> {
+        return await this.getEnhancedJobSeekerStats(userId);
+    }
+
+    private static async getEmployerStats(userId: string): Promise<any> {
+        return await this.getEnhancedEmployerStats(userId);
     }
 
     // Update applicant education data - FIXED: Use only existing database fields
@@ -698,5 +1328,33 @@ export class UserService {
         await dbService.executeQuery(query, parameters);
         
         return { success: true, message: 'Job preferences updated successfully' };
+    }
+
+    // Private helper methods
+    private static async incrementLoginAttempts(userId: string): Promise<void> {
+        const query = `
+            UPDATE Users 
+            SET LoginAttempts = LoginAttempts + 1,
+                AccountLockoutEnd = CASE 
+                    WHEN LoginAttempts >= 4 THEN DATEADD(MINUTE, 30, GETUTCDATE())
+                    ELSE AccountLockoutEnd
+                END
+            WHERE UserID = @param0
+        `;
+
+        await dbService.executeQuery(query, [userId]);
+    }
+
+    private static async updateLastLogin(userId: string): Promise<void> {
+        const query = `
+            UPDATE Users 
+            SET LastLoginAt = GETUTCDATE(), 
+                LastActive = GETUTCDATE(),
+                LoginAttempts = 0,
+                AccountLockoutEnd = NULL
+            WHERE UserID = @param0
+        `;
+
+        await dbService.executeQuery(query, [userId]);
     }
 }

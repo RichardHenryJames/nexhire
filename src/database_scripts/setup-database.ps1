@@ -577,6 +577,49 @@ UNION SELECT 'Communication', 'Soft Skills', 1 WHERE NOT EXISTS (SELECT 1 FROM S
 
 "@
 
+# Essential indexes (added inline per request)
+$indexesSQL = @"
+PRINT 'Creating essential performance indexes (inline)';
+
+-- Users
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Users_Email_IsActive')
+    CREATE INDEX IX_Users_Email_IsActive ON Users(Email, IsActive) INCLUDE (UserID, Password, UserType, FirstName, LastName);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Users_LastActive')
+    CREATE INDEX IX_Users_LastActive ON Users(LastActive DESC) INCLUDE (UserID, UserType, EmailVerified);
+
+-- Applicants
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Applicants_UserID')
+    CREATE INDEX IX_Applicants_UserID ON Applicants(UserID) INCLUDE (ApplicantID, ProfileCompleteness, IsOpenToWork, OpenToRefer);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Applicants_OpenToRefer_IsOpenToWork')
+    CREATE INDEX IX_Applicants_OpenToRefer_IsOpenToWork ON Applicants(OpenToRefer, IsOpenToWork) INCLUDE (ApplicantID, CurrentOrganizationID);
+
+-- Jobs
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Jobs_Status_JobType_Workplace_Location')
+    CREATE INDEX IX_Jobs_Status_JobType_Workplace_Location ON Jobs(Status, JobTypeID, WorkplaceTypeID, Location, IsRemote) INCLUDE (JobID, Title, OrganizationID, CreatedAt, PublishedAt, SalaryRangeMin, SalaryRangeMax);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Jobs_PostedByUserID_Status_CreatedAt')
+    CREATE INDEX IX_Jobs_PostedByUserID_Status_CreatedAt ON Jobs(PostedByUserID, Status, CreatedAt DESC) INCLUDE (JobID, Title, OrganizationID, CurrentApplications);
+
+-- JobApplications
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_JobApplications_ApplicantID_StatusID')
+    CREATE INDEX IX_JobApplications_ApplicantID_StatusID ON JobApplications(ApplicantID, StatusID) INCLUDE (ApplicationID, JobID, SubmittedAt);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_JobApplications_JobID_StatusID')
+    CREATE INDEX IX_JobApplications_JobID_StatusID ON JobApplications(JobID, StatusID) INCLUDE (ApplicationID, ApplicantID, SubmittedAt);
+
+-- Employers
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Employers_UserID_OrganizationID')
+    CREATE INDEX IX_Employers_UserID_OrganizationID ON Employers(UserID, OrganizationID) INCLUDE (EmployerID, Role, IsVerified);
+
+-- WorkExperiences
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_WorkExperiences_ApplicantID_IsCurrent')
+    CREATE INDEX IX_WorkExperiences_ApplicantID_IsCurrent ON WorkExperiences(ApplicantID, IsCurrent) INCLUDE (OrganizationID, JobTitle, StartDate);
+
+-- SavedJobs (extra covering index for frequency)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_SavedJobs_JobID')
+    CREATE INDEX IX_SavedJobs_JobID ON SavedJobs(JobID) INCLUDE (ApplicantID, SavedAt);
+
+PRINT 'Essential indexes created.';
+"@
+
 try {
     Write-Host " Creating database schema..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $schemaSQL -QueryTimeout 120
@@ -585,6 +628,10 @@ try {
     Write-Host " Inserting reference data..." -ForegroundColor Yellow
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referenceDataSQL -QueryTimeout 60
     Write-Host "Reference data inserted successfully" -ForegroundColor Green
+
+    Write-Host " Creating essential indexes..." -ForegroundColor Yellow
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $indexesSQL -QueryTimeout 180
+    Write-Host "Essential indexes created successfully" -ForegroundColor Green
     
     # Test the reference data endpoints
     Write-Host " Testing database setup..." -ForegroundColor Yellow

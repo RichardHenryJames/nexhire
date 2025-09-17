@@ -172,44 +172,44 @@ $referralIndexesSQL = @"
 -- ApplicantReferralSubscriptions
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Subscriptions_Applicant_Active')
     CREATE INDEX IX_Subscriptions_Applicant_Active
-    ON ApplicantReferralSubscriptions (ApplicantID, IsActive, EndDate);
+    ON ApplicantReferralSubscriptions (ApplicantID, IsActive, EndDate) INCLUDE (PlanID, StartDate, PaymentID);
 
--- ReferralRequests
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Applicant')
-    CREATE INDEX IX_ReferralRequests_Applicant ON ReferralRequests (ApplicantID, Status);
+-- ReferralRequests (core access patterns)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Applicant_Status_RequestedAt')
+    CREATE INDEX IX_ReferralRequests_Applicant_Status_RequestedAt ON ReferralRequests (ApplicantID, Status, RequestedAt DESC) INCLUDE (JobID, AssignedReferrerID, ReferredAt);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Job')
-    CREATE INDEX IX_ReferralRequests_Job ON ReferralRequests (JobID, Status);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_AssignedReferrer_Status_RequestedAt')
+    CREATE INDEX IX_ReferralRequests_AssignedReferrer_Status_RequestedAt ON ReferralRequests (AssignedReferrerID, Status, RequestedAt DESC) INCLUDE (JobID, ApplicantID, ReferredAt);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Referrer')
-    CREATE INDEX IX_ReferralRequests_Referrer ON ReferralRequests (AssignedReferrerID, Status);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Job_Status_RequestedAt')
+    CREATE INDEX IX_ReferralRequests_Job_Status_RequestedAt ON ReferralRequests (JobID, Status, RequestedAt DESC) INCLUDE (ApplicantID, AssignedReferrerID, ReferredAt);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_RequestedAt')
-    CREATE INDEX IX_ReferralRequests_RequestedAt ON ReferralRequests (RequestedAt DESC);
+-- Lightweight single column fallbacks (only if composites missing earlier versions)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRequests_Status')
+    CREATE INDEX IX_ReferralRequests_Status ON ReferralRequests (Status);
 
 -- ReferralProofs
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralProofs_Request')
-    CREATE INDEX IX_ReferralProofs_Request ON ReferralProofs (RequestID);
+    CREATE INDEX IX_ReferralProofs_Request ON ReferralProofs (RequestID) INCLUDE (ReferrerID, SubmittedAt);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralProofs_Referrer')
-    CREATE INDEX IX_ReferralProofs_Referrer ON ReferralProofs (ReferrerID);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralProofs_Referrer_SubmittedAt')
+    CREATE INDEX IX_ReferralProofs_Referrer_SubmittedAt ON ReferralProofs (ReferrerID, SubmittedAt DESC) INCLUDE (RequestID);
 
--- ReferralRewards
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_Referrer')
-    CREATE INDEX IX_ReferralRewards_Referrer ON ReferralRewards (ReferrerID);
+-- ReferralRewards (fix incorrect PointsType name previously typed as PointType)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_Referrer_AwardedAt')
+    CREATE INDEX IX_ReferralRewards_Referrer_AwardedAt ON ReferralRewards (ReferrerID, AwardedAt DESC) INCLUDE (RequestID, PointsEarned, PointsType);
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_Request')
-    CREATE INDEX IX_ReferralRewards_Request ON ReferralRewards (RequestID);
+    CREATE INDEX IX_ReferralRewards_Request ON ReferralRewards (RequestID) INCLUDE (ReferrerID, PointsEarned, AwardedAt);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_PointType')
-    CREATE INDEX IX_ReferralRewards_PointType ON ReferralRewards(PointType);
-
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferralRewards_PointsType')
+    CREATE INDEX IX_ReferralRewards_PointsType ON ReferralRewards (PointsType) INCLUDE (ReferrerID, PointsEarned, AwardedAt);
 
 -- ReferrerStats
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ReferrerStats_PendingCount')
-    CREATE INDEX IX_ReferrerStats_PendingCount ON ReferrerStats (PendingCount DESC);
+    CREATE INDEX IX_ReferrerStats_PendingCount ON ReferrerStats (PendingCount DESC) INCLUDE (LastUpdated);
 
-PRINT '? All indexes created successfully';
+PRINT '? All referral indexes created/verified successfully';
 "@
 
 try {
@@ -222,7 +222,7 @@ try {
     Write-Host "? Referral reference data inserted successfully" -ForegroundColor Green
 
     Write-Host "?? Creating indexes..." -ForegroundColor Yellow
-    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referralIndexesSQL -QueryTimeout 60
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $referralIndexesSQL -QueryTimeout 120
     Write-Host "? Indexes created successfully" -ForegroundColor Green
 
     Write-Host "?? Referral system setup completed successfully!" -ForegroundColor Green
