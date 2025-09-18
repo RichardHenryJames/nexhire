@@ -506,6 +506,15 @@ export class UserService {
             
             const applicantId = applicantResult.recordset[0].ApplicantID;
 
+            // FIRST: Recalculate profile completeness to ensure it's up to date
+            let profileCompleteness = 0;
+            try {
+                profileCompleteness = await this.recalculateApplicantProfileCompleteness(applicantId);
+                console.log(`? Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
+            } catch (error) {
+                console.error('? Failed to recalculate profile completeness:', error);
+            }
+
             const statsQuery = `
                 -- Core Application Stats (excluding withdrawn)
                 SELECT 
@@ -546,9 +555,8 @@ export class UserService {
                      INNER JOIN Applicants a ON sj.ApplicantID = a.ApplicantID 
                      WHERE a.UserID = @param0) as SavedJobs,
                     
-                    -- Profile Information
-                    (SELECT ISNULL(ProfileCompleteness, 0) 
-                     FROM Applicants WHERE UserID = @param0) as ProfileCompleteness,
+                    -- Profile Information (use freshly calculated completeness)
+                    ${profileCompleteness} as ProfileCompleteness,
 
                     -- Aggregated Profile Views (Option 3: on-demand aggregation)
                     (SELECT COUNT(*) FROM ApplicantProfileViews apv 
@@ -591,10 +599,12 @@ export class UserService {
 
             // Get referral statistics
             const referralStats = await this.getReferralStats(applicantId);
+            console.log(`?? Referral stats for applicant ${applicantId}:`, referralStats);
             
             // Get resume statistics
             const resumeStats = await this.getResumeStats(applicantId);
-            
+            console.log(`?? Resume stats for applicant ${applicantId}:`, resumeStats);
+
             // Get recent applications breakdown
             const recentActivityStats = await this.getRecentActivityStats(userId);
             
@@ -613,8 +623,8 @@ export class UserService {
                 // Job management
                 savedJobs: baseStats.SavedJobs || 0,
                 
-                // Profile metrics
-                profileCompleteness: baseStats.ProfileCompleteness || 0,
+                // Profile metrics - use the recalculated value
+                profileCompleteness: profileCompleteness,
                 profileViews: baseStats.ProfileViews || 0,
                 
                 // Performance metrics
@@ -648,7 +658,7 @@ export class UserService {
                 // Summary metrics for quick overview
                 summary: {
                     isActiveJobSeeker: (baseStats.ApplicationsLast30Days || 0) > 0,
-                    profileStrength: this.calculateProfileStrength(baseStats.ProfileCompleteness || 0, resumeStats.totalResumes || 0),
+                    profileStrength: this.calculateProfileStrength(profileCompleteness, resumeStats.totalResumes || 0),
                     needsAttention: this.getJobSeekerAttentionItems(baseStats, referralStats, resumeStats)
                 }
             };
@@ -811,31 +821,53 @@ export class UserService {
 
     private static async getReferralStats(applicantId: string): Promise<any> {
         try {
+            console.log(`?? Getting referral stats for applicant: ${applicantId}`);
+            
+            // Use the EXACT same query structure as the working profile service
             const query = `
                 SELECT 
-                    (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0) as ReferralRequestsMade,
-                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0) as ReferralRequestsReceived,
-                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0 AND Status IN ('Completed', 'Verified')) as CompletedReferrals,
-                    (SELECT ISNULL(SUM(PointsEarned), 0) FROM ReferralRewards WHERE ReferrerID = @param0) as TotalReferralPoints,
-                    (SELECT 
-                        CASE 
-                            WHEN COUNT(*) > 0 
-                            THEN CAST((COUNT(CASE WHEN Status IN ('Completed', 'Verified') THEN 1 END) * 100.0 / COUNT(*)) AS DECIMAL(5,2))
-                            ELSE 0 
-                        END
-                     FROM ReferralRequests WHERE AssignedReferrerID = @param0) as ReferralSuccessRate
+                    COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
+                    COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
+                    COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param0 THEN rr.RequestID END) as ReferralRequestsMade,
+                    ISNULL(SUM(CASE WHEN rw.ReferrerID = @param0 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
+                FROM ReferralRequests rr
+                LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
+                WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param0)
             `;
             
             const result = await dbService.executeQuery(query, [applicantId]);
-            return result.recordset[0] || {};
+            const stats = result.recordset[0] || {};
+            
+            console.log(`?? Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
+            
+            // Map the results exactly as the profile service does
+            const mappedStats = {
+                referralRequestsMade: stats.ReferralRequestsMade || 0,
+                referralRequestsReceived: stats.TotalReferralsMade || 0,
+                completedReferrals: stats.VerifiedReferrals || 0,
+                totalReferralPoints: stats.TotalPointsFromRewards || 0,
+                referralSuccessRate: stats.TotalReferralsMade > 0 ? Math.round((stats.VerifiedReferrals / stats.TotalReferralsMade) * 100) : 0
+            };
+            
+            console.log(`?? Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            
+            return mappedStats;
         } catch (error) {
-            console.error('Error getting referral stats:', error);
-            return {};
+            console.error('? Error getting referral stats:', error);
+            return {
+                referralRequestsMade: 0,
+                referralRequestsReceived: 0,
+                completedReferrals: 0,
+                totalReferralPoints: 0,
+                referralSuccessRate: 0
+            };
         }
     }
 
     private static async getResumeStats(applicantId: string): Promise<any> {
         try {
+            console.log(`?? Getting resume stats for applicant: ${applicantId}`);
+            
             const query = `
                 SELECT 
                     COUNT(*) as TotalResumes,
@@ -846,9 +878,20 @@ export class UserService {
             `;
             
             const result = await dbService.executeQuery(query, [applicantId]);
-            return result.recordset[0] || { totalResumes: 0, primaryResumeSet: false };
+            const resumeData = result.recordset[0] || { TotalResumes: 0, PrimaryResumeSet: 0 };
+            
+            console.log(`?? Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
+            
+            const mappedStats = { 
+                totalResumes: resumeData.TotalResumes || 0, 
+                primaryResumeSet: resumeData.PrimaryResumeSet === 1 || resumeData.PrimaryResumeSet === true
+            };
+            
+            console.log(`?? Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            
+            return mappedStats;
         } catch (error) {
-            console.error('Error getting resume stats:', error);
+            console.error('? Error getting resume stats:', error);
             return { totalResumes: 0, primaryResumeSet: false };
         }
     }
@@ -1191,78 +1234,133 @@ export class UserService {
 
     // Centralized profile completeness recalculation (enhanced with more factors)
     private static async recalculateApplicantProfileCompleteness(applicantId: string): Promise<number> {
-        const query = `
-            SELECT 
-                a.Institution, a.HighestEducation, a.FieldOfStudy,
-                a.PrimarySkills, a.SecondarySkills, a.Summary,
-                a.PreferredJobTypes, a.PreferredWorkTypes, a.PreferredLocations,
-                a.CurrentJobTitle, a.LinkedInProfile,
-                (SELECT COUNT(*) FROM ApplicantResumes r WHERE r.ApplicantID = a.ApplicantID) AS ResumeCount,
-                (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount,
-                u.ProfilePictureURL
-            FROM Applicants a
-            INNER JOIN Users u ON a.UserID = u.UserID
-            WHERE a.ApplicantID = @param0
-        `;
-        const result = await dbService.executeQuery(query, [applicantId]);
-        if (!result.recordset || result.recordset.length === 0) {
-            throw new NotFoundError('Applicant not found for completeness recalculation');
+        try {
+            const query = `
+                SELECT 
+                    a.Institution, a.HighestEducation, a.FieldOfStudy,
+                    a.PrimarySkills, a.SecondarySkills, a.Summary,
+                    a.PreferredJobTypes, a.PreferredWorkTypes, a.PreferredLocations,
+                    a.CurrentJobTitle, a.LinkedInProfile,
+                    (SELECT COUNT(*) FROM ApplicantResumes r WHERE r.ApplicantID = a.ApplicantID) AS ResumeCount,
+                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount,
+                    u.ProfilePictureURL
+                FROM Applicants a
+                INNER JOIN Users u ON a.UserID = u.UserID
+                WHERE a.ApplicantID = @param0
+            `;
+            const result = await dbService.executeQuery(query, [applicantId]);
+            if (!result.recordset || result.recordset.length === 0) {
+                throw new NotFoundError('Applicant not found for completeness recalculation');
+            }
+            const row: any = result.recordset[0];
+            const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
+
+            console.log(`?? Profile data for ${applicantId}:`, {
+                Institution: row.Institution,
+                HighestEducation: row.HighestEducation,
+                FieldOfStudy: row.FieldOfStudy,
+                PrimarySkills: row.PrimarySkills,
+                SecondarySkills: row.SecondarySkills,
+                Summary: row.Summary,
+                PreferredJobTypes: row.PreferredJobTypes,
+                PreferredWorkTypes: row.PreferredWorkTypes,
+                PreferredLocations: row.PreferredLocations,
+                CurrentJobTitle: row.CurrentJobTitle,
+                LinkedInProfile: row.LinkedInProfile,
+                ResumeCount: row.ResumeCount,
+                WorkExpCount: row.WorkExpCount,
+                ProfilePictureURL: row.ProfilePictureURL ? 'Yes' : 'No'
+            });
+
+            // Components (10)
+            const educationComplete = hasValue(row.Institution) && hasValue(row.HighestEducation) && hasValue(row.FieldOfStudy) ? 1 : 0; // 1
+            const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0; //2
+            const secondarySkills = hasValue(row.SecondarySkills) ? 1 : 0; //3
+            const summaryPresent = hasValue(row.Summary) ? 1 : 0; //4
+            const jobPrefsPresent = (hasValue(row.PreferredJobTypes) || hasValue(row.PreferredWorkTypes) || hasValue(row.PreferredLocations)) ? 1 : 0; //5
+            const resumePresent = (row.ResumeCount || 0) > 0 ? 1 : 0; //6
+            const workExpPresent = (row.WorkExpCount || 0) > 0 ? 1 : 0; //7
+            const profilePicPresent = hasValue(row.ProfilePictureURL) ? 1 : 0; //8
+            const linkedInPresent = hasValue(row.LinkedInProfile) ? 1 : 0; //9
+            const currentJobTitlePresent = hasValue(row.CurrentJobTitle) ? 1 : 0; //10
+
+            const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
+            const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
+
+            console.log(`?? Profile completeness calculation for ${applicantId}:`, {
+                educationComplete,
+                primarySkills,
+                secondarySkills,
+                summaryPresent,
+                jobPrefsPresent,
+                resumePresent,
+                workExpPresent,
+                profilePicPresent,
+                linkedInPresent,
+                currentJobTitlePresent,
+                total: achieved,
+                percentage: completeness
+            });
+
+            await dbService.executeQuery(
+                `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
+                [applicantId, completeness]
+            );
+            return completeness;
+        } catch (error) {
+            console.error('Error recalculating profile completeness:', error);
+            return 0;
         }
-        const row: any = result.recordset[0];
-        const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
-
-        // Components (10)
-        const educationComplete = hasValue(row.Institution) && hasValue(row.HighestEducation) && hasValue(row.FieldOfStudy) ? 1 : 0; // 1
-        const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0; //2
-        const secondarySkills = hasValue(row.SecondarySkills) ? 1 : 0; //3
-        const summaryPresent = hasValue(row.Summary) ? 1 : 0; //4
-        const jobPrefsPresent = (hasValue(row.PreferredJobTypes) || hasValue(row.PreferredWorkTypes) || hasValue(row.PreferredLocations)) ? 1 : 0; //5
-        const resumePresent = (row.ResumeCount || 0) > 0 ? 1 : 0; //6
-        const workExpPresent = (row.WorkExpCount || 0) > 0 ? 1 : 0; //7
-        const profilePicPresent = hasValue(row.ProfilePictureURL) ? 1 : 0; //8
-        const linkedInPresent = hasValue(row.LinkedInProfile) ? 1 : 0; //9
-        const currentJobTitlePresent = hasValue(row.CurrentJobTitle) ? 1 : 0; //10
-
-        const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
-        const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
-
-        await dbService.executeQuery(
-            `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
-            [applicantId, completeness]
-        );
-        return completeness;
     }
 
     // Public wrapper to allow other services to trigger recomputation
-    static async recomputeProfileCompletenessByApplicantId(applicantId: string): Promise<number> {
-        return this.recalculateApplicantProfileCompleteness(applicantId);
+    static async recomputeProfileCompletenessByApplicantId(applicantId: string) {
+        try {
+            return await this.recalculateApplicantProfileCompleteness(applicantId);
+        } catch (error) {
+            console.error('Error triggering profile completeness recomputation:', error);
+            throw error;
+        }
     }
 
-    // Private helper methods
+    // Increment login attempts (with lockout logic)
     private static async incrementLoginAttempts(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET LoginAttempts = LoginAttempts + 1,
-                AccountLockoutEnd = CASE 
-                    WHEN LoginAttempts >= 4 THEN DATEADD(MINUTE, 30, GETUTCDATE())
-                    ELSE AccountLockoutEnd
-                END
-            WHERE UserID = @param0
-        `;
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
 
-        await dbService.executeQuery(query, [userId]);
+        const maxAttempts = 5;
+        const lockoutDuration = 30; // minutes
+
+        // If already locked, check if lockout period has expired
+        if (user.AccountLockoutEnd && new Date(user.AccountLockoutEnd) > new Date()) {
+            throw new ValidationError('Account is temporarily locked');
+        }
+
+        let newAttempts = user.LoginAttempts + 1;
+
+        // If exceeded, lock the account
+        if (newAttempts > maxAttempts) {
+            newAttempts = 0; // Reset attempts after locking
+            await dbService.executeQuery(
+                `UPDATE Users SET LoginAttempts = @param1, AccountLockoutEnd = DATEADD(MINUTE, @param2, GETUTCDATE()) WHERE UserID = @param0`,
+                [userId, newAttempts, lockoutDuration]
+            );
+            throw new ValidationError('Account is temporarily locked due to multiple failed login attempts. Please try again later.');
+        } else {
+            await dbService.executeQuery(
+                `UPDATE Users SET LoginAttempts = @param1 WHERE UserID = @param0`,
+                [userId, newAttempts]
+            );
+        }
     }
 
+    // Update last login date
     private static async updateLastLogin(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET LastLoginAt = GETUTCDATE(), 
-                LastActive = GETUTCDATE(),
-                LoginAttempts = 0,
-                AccountLockoutEnd = NULL
-            WHERE UserID = @param0
-        `;
-
-        await dbService.executeQuery(query, [userId]);
+        await dbService.executeQuery(
+            `UPDATE Users SET LastLoginAt = GETUTCDATE(), LoginAttempts = 0, AccountLockoutEnd = NULL WHERE UserID = @param0`,
+            [userId]
+        );
     }
 }
