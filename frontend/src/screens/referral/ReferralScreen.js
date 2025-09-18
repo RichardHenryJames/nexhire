@@ -427,7 +427,7 @@ export default function ReferralScreen({ navigation }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           <Text style={styles.tabDescription}>
-            Referral requests where you can help others
+            Referral requests where you can help others and earn rewards
           </Text>
           
           {requestsToMe.length === 0 ? (

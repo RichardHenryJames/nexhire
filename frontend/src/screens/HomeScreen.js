@@ -490,7 +490,7 @@ export default function HomeScreen({ navigation }) {
               description="Improve your profile to stand out"
               icon="person"
               color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-              badge={stats.profileCompleteness < 80 ? `${100 - (stats.profileCompleteness || 0)}%` : null}
+              badge={stats.profileCompleteness < 80 ? `${stats.profileCompleteness || 0}%` : null}
               urgent={stats.profileCompleteness < 60}
               onPress={() => navigation.navigate('Profile')}
             />
