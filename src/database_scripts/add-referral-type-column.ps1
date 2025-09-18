@@ -38,6 +38,17 @@ ELSE
 BEGIN
     PRINT '?? OrganizationID column already exists in ReferralRequests table';
 END
+
+-- Add ReferralMessage column to ReferralRequests table (OPTIONAL field)
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ReferralRequests' AND COLUMN_NAME = 'ReferralMessage')
+BEGIN
+    ALTER TABLE ReferralRequests ADD ReferralMessage NVARCHAR(1000) NULL;
+    PRINT '? Added ReferralMessage column to ReferralRequests table';
+END
+ELSE
+BEGIN
+    PRINT '?? ReferralMessage column already exists in ReferralRequests table';
+END
 "@
 
 $addConstraintsSQL = @"
@@ -77,7 +88,14 @@ BEGIN
     PRINT '?? Created index on OrganizationID column';
 END
 
-PRINT '?? Database schema updated successfully for external referral support!';
+-- Create index for ReferralMessage (for search/filtering if needed)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralRequests_ReferralMessage')
+BEGIN
+    CREATE INDEX IX_ReferralRequests_ReferralMessage ON ReferralRequests (ReferralMessage);
+    PRINT '?? Created index on ReferralMessage column';
+END
+
+PRINT '?? ReferralRequests table updated with ReferralMessage column for both internal and external referrals!';
 "@
 
 try {

@@ -215,10 +215,10 @@ export class ReferralService {
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
                         RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, 
-                        ReferralType, OrganizationID
+                        ReferralType, OrganizationID, ReferralMessage
                     ) VALUES (
                         @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(),
-                        'external', @param4
+                        'external', @param4, @param5
                     )
                 `;
                 
@@ -228,7 +228,7 @@ export class ReferralService {
                     : null;
                 
                 await dbService.executeQuery(insertQuery, [
-                    requestId, dto.jobID, applicantId, dto.resumeID, organizationId
+                    requestId, dto.jobID, applicantId, dto.resumeID, organizationId, dto.referralMessage || null
                 ]);
                 
                 // Update referrer stats for external referrals
@@ -244,13 +244,17 @@ export class ReferralService {
                 // 🔄 CREATE INTERNAL REFERRAL REQUEST (existing logic)
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
-                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralType
+                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, 
+                        ReferralType, ReferralMessage
                     ) VALUES (
-                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), 'internal'
+                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), 
+                        'internal', @param4
                     )
                 `;
                 
-                await dbService.executeQuery(insertQuery, [requestId, dto.jobID, applicantId, dto.resumeID]);
+                await dbService.executeQuery(insertQuery, [
+                    requestId, dto.jobID, applicantId, dto.resumeID, dto.referralMessage || null
+                ]);
                 
                 // Update referrer stats (increment pending counts for eligible referrers)
                 await this.updateReferrerStatsForNewRequest(dto.jobID);
@@ -273,7 +277,7 @@ export class ReferralService {
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    rr.ReferralType, rr.OrganizationID,
+                    rr.ReferralType, rr.OrganizationID, rr.ReferralMessage,
                     -- Internal job data (will be null for external)
                     j.Title as InternalJobTitle,
                     jo.Name as InternalCompanyName,
@@ -344,6 +348,7 @@ export class ReferralService {
                 VerifiedByApplicant: rawData.VerifiedByApplicant,
                 ReferralType: rawData.ReferralType,
                 OrganizationID: rawData.OrganizationID,
+                ReferralMessage: rawData.ReferralMessage, // 🆕 NEW: Include referral message
                 JobTitle: jobTitle,
                 CompanyName: companyName,
                 ApplicantName: rawData.ApplicantName,

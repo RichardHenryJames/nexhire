@@ -38,6 +38,7 @@ export interface ReferralRequest {
     // ?? NEW: Minimal external referral support
     ReferralType: 'internal' | 'external';
     OrganizationID?: string; // ?? NEW: For external referrals, store matched organization ID
+    ReferralMessage?: string; // ?? NEW: Optional message from candidate to referrer
     
     // ?? NEW: Proof-related fields (fix TypeScript error)
     ProofFileURL?: string;
@@ -82,13 +83,13 @@ export interface CreateReferralRequestDto {
     jobID: string; // Required - can be internal GUID or external job identifier
     resumeID: string;
     referralType: 'internal' | 'external';
+    referralMessage?: string; // ?? NEW: Optional message from candidate to referrer
     
     // ?? NEW: External job details (stored as metadata in frontend/cache)
     jobTitle?: string; // For external referrals
     companyName?: string; // For external referrals
     organizationId?: string; // ?? NEW: Matched organization ID from dropdown
     jobUrl?: string; // For external referrals
-    jobDescription?: string; // For external referrals
 }
 
 export interface ClaimReferralRequestDto {

@@ -32,6 +32,7 @@ import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import ReferralScreen from '../screens/referral/ReferralScreen';
+import AskReferralScreen from '../screens/referral/AskReferralScreen';
 import ReferralPlansScreen from '../screens/referral/ReferralPlansScreen';
 import PaymentScreen from '../screens/payment/PaymentScreen';
 
@@ -92,6 +93,7 @@ const linking = {
       
       // Modal/Stack screens - unique paths
       JobDetails: 'job/:jobId',
+      AskReferral: 'ask-referral',
       ReferralPlans: 'plans',
       Payment: 'payment',
     },
@@ -251,6 +253,15 @@ function MainStack() {
         options={{ 
           headerShown: true,
           title: 'Referral',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="AskReferral" 
+        component={AskReferralScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Ask for Referral',
           headerBackTitleVisible: false,
         }}
       />

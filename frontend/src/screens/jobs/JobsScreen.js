@@ -1037,7 +1037,11 @@ export default function JobsScreen({ navigation, route }) {
       setShowResumeModal(false);
       if (referralMode) {
         // Create referral request
-        const res = await nexhireAPI.createReferralRequest(id, resumeData.ResumeID);
+        const res = await nexhireAPI.createReferralRequest({
+          jobID: id,
+          resumeID: resumeData.ResumeID,
+          referralType: 'internal' // Default to internal for existing functionality
+        });
         if (res?.success) {
           setReferredJobIds(prev => new Set([...prev, id]));
           setReferralEligibility(prev => ({
@@ -1124,7 +1128,12 @@ export default function JobsScreen({ navigation, route }) {
   const quickReferral = useCallback(async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
-      const res = await nexhireAPI.createReferralRequest(id, resumeId);
+      // 🔧 FIXED: Call API with proper object format for internal referrals
+      const res = await nexhireAPI.createReferralRequest({
+        jobID: id,
+        resumeID: resumeId,
+        referralType: 'internal' // Default to internal for existing functionality
+      });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id]));
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));

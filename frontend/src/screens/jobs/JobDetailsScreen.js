@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  TextInput // 🆕 NEW: Import TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
@@ -34,6 +35,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     reason: null
   });
   const [primaryResume, setPrimaryResume] = useState(null);
+  const [referralMessage, setReferralMessage] = useState(''); // 🆕 NEW: Add referral message state
 
   // ?? Add navigation header with back button
   useEffect(() => {
@@ -386,7 +388,13 @@ export default function JobDetailsScreen({ route, navigation }) {
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
-        const res = await nexhireAPI.createReferralRequest(jobId, resumeData.ResumeID);
+        // 🔧 FIXED: Call API with proper object format for internal referrals
+        const res = await nexhireAPI.createReferralRequest({
+          jobID: jobId,
+          resumeID: resumeData.ResumeID,
+          referralType: 'internal', // Default to internal for existing functionality
+          referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+        });
         if (res.success) {
           setHasReferred(true);
           setReferralEligibility(prev => ({
@@ -396,8 +404,9 @@ export default function JobDetailsScreen({ route, navigation }) {
           }));
           
           showToast('Referral request sent', 'success');
+          setReferralMessage(''); // Clear message after successful submission
           
-          // ?? REQUIREMENT 2: Reload primary resume after submission
+          // 🔧 REQUIREMENT 2: Reload primary resume after submission
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -513,11 +522,18 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   const quickReferral = async (resumeId) => {
     try {
-      const res = await nexhireAPI.createReferralRequest(jobId, resumeId);
+      // 🔧 FIXED: Call API with proper object format for backward compatibility
+      const res = await nexhireAPI.createReferralRequest({
+        jobID: jobId,
+        resumeID: resumeId,
+        referralType: 'internal', // Default to internal for existing functionality
+        referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+      });
       if (res?.success) {
         setHasReferred(true);
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
         showToast('Referral request sent', 'success');
+        setReferralMessage(''); // Clear message after successful submission
       } else {
         Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
       }
@@ -766,26 +782,27 @@ export default function JobDetailsScreen({ route, navigation }) {
 
       {/* Action Buttons */}
       <View style={styles.actionContainer}>
-      {/* ?? REQUIREMENT 4: Updated save/unsave button with proper functionality */}
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          isSaved && styles.saveButtonActive
-        ]}
-        onPress={handleSaveJob}
-      >
-        <Ionicons
-          name={isSaved ? "bookmark" : "bookmark-outline"}
-          size={20}
-          color={isSaved ? colors.white : colors.primary}
-        />
-        <Text style={[
-          styles.saveButtonText,
-          isSaved && styles.saveButtonTextActive
-        ]}>
-          {isSaved ? "Saved" : "Save Job"}
-        </Text>
-      </TouchableOpacity>
+        {/* 🔧 REQUIREMENT 4: Updated save/unsave button with proper functionality */}
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            isSaved && styles.saveButtonActive
+          ]}
+          onPress={handleSaveJob}
+        >
+          <Ionicons
+            name={isSaved ? "bookmark" : "bookmark-outline"}
+            size={20}
+            color={isSaved ? colors.white : colors.primary}
+          />
+          <Text style={[
+            styles.saveButtonText,
+            isSaved && styles.saveButtonTextActive
+          ]}>
+            {isSaved ? "Saved" : "Save Job"}
+          </Text>
+        </TouchableOpacity>
+        
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
@@ -826,6 +843,26 @@ export default function JobDetailsScreen({ route, navigation }) {
         )}
       </View>
 
+      {/* 🆕 NEW: Referral Message Input */}
+      {isJobSeeker && !hasReferred && (
+        <View style={styles.referralMessageSection}>
+          <Text style={styles.referralMessageLabel}>Message to Referrer (Optional)</Text>
+          <TextInput
+            style={styles.referralMessageInput}
+            placeholder="Tell them why you're interested in this role..."
+            value={referralMessage}
+            onChangeText={setReferralMessage}
+            multiline
+            numberOfLines={3}
+            maxLength={500}
+            textAlignVertical="top"
+          />
+          <Text style={styles.referralMessageHint}>
+            Help referrers understand your interest and background
+          </Text>
+        </View>
+      )}
+      
       {/* ?? Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
@@ -1071,5 +1108,37 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+  },
+  // 🆕 NEW: Referral message styles (updated layout)
+  referralMessageSection: {
+    margin: 20,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  referralMessageLabel: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    color: colors.text,
+    marginBottom: 12,
+  },
+  referralMessageInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    backgroundColor: colors.background,
+    minHeight: 80,
+    maxHeight: 120,
+  },
+  referralMessageHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    marginTop: 8,
   },
 });

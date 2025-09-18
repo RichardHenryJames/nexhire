@@ -35,9 +35,10 @@ export default function AskReferralScreen({ navigation }) {
 
   // Form state
   const [formData, setFormData] = useState({
+    jobId: '', // Add Job ID field
     jobTitle: '',
     jobUrl: '',
-    jobDescription: '',
+    referralMessage: '', // ?? CHANGED: Replace jobDescription with referralMessage
     selectedResumeId: '',
   });
 
@@ -90,6 +91,10 @@ export default function AskReferralScreen({ navigation }) {
       newErrors.company = 'Company selection is required';
     }
 
+    if (!formData.jobId.trim()) {
+      newErrors.jobId = 'Job ID is required';
+    }
+
     if (!formData.jobTitle.trim()) {
       newErrors.jobTitle = 'Job title is required';
     }
@@ -124,18 +129,15 @@ export default function AskReferralScreen({ navigation }) {
 
     setSubmitting(true);
     try {
-      // Generate external job ID from company + job title
-      const externalJobId = `${selectedCompany.name.toLowerCase().replace(/\s+/g, '-')}-${formData.jobTitle.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-
       const requestData = {
-        jobID: externalJobId,
+        jobID: formData.jobId, // Use the Job ID from form instead of generating one
         resumeID: formData.selectedResumeId,
         referralType: 'external',
         jobTitle: formData.jobTitle,
         companyName: selectedCompany.name,
         organizationId: selectedCompany.id.toString(), // ?? NEW: Include organization ID
         jobUrl: formData.jobUrl || undefined,
-        jobDescription: formData.jobDescription || undefined,
+        referralMessage: formData.referralMessage || undefined, // ?? CHANGED: Use referralMessage instead of jobDescription
       };
 
       console.log('?? Submitting external referral request:', requestData);
@@ -225,18 +227,10 @@ export default function AskReferralScreen({ navigation }) {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Ask for Referral</Text>
-            <Text style={styles.headerSubtitle}>
-              Request referrals for jobs you found on company career portals
-            </Text>
-          </View>
+          <Text style={styles.title}>Ask for Referral</Text>
+          <Text style={styles.subtitle}>
+            Request referrals for jobs you found on company career portals
+          </Text>
         </View>
 
         {/* Eligibility Status */}
@@ -293,6 +287,26 @@ export default function AskReferralScreen({ navigation }) {
             )}
           </View>
 
+          {/* Job ID */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Job ID <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, errors.jobId && styles.inputError]}
+              placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
+              value={formData.jobId}
+              onChangeText={(value) => updateFormData('jobId', value)}
+              maxLength={100}
+            />
+            {errors.jobId && (
+              <Text style={styles.errorText}>{errors.jobId}</Text>
+            )}
+            <Text style={styles.helperText}>
+              Enter the job ID or reference number from the company's job posting
+            </Text>
+          </View>
+
           {/* Job Title */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -326,21 +340,26 @@ export default function AskReferralScreen({ navigation }) {
             )}
           </View>
 
-          {/* Job Description (Optional) */}
+          {/* Referral Message */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Job Description (Optional)</Text>
+            <Text style={styles.label}>Referral Message</Text>
             <TextInput
-              style={[styles.textArea, errors.jobDescription && styles.inputError]}
-              placeholder="Brief description of the role, requirements, etc..."
-              value={formData.jobDescription}
-              onChangeText={(value) => updateFormData('jobDescription', value)}
+              style={[styles.textArea, errors.referralMessage && styles.inputError]}
+              placeholder="Tell the referrer about yourself and why you're interested in this role... 
+              
+Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns with my passion for building scalable web applications. I'd be grateful for any referral help!'"
+              value={formData.referralMessage}
+              onChangeText={(value) => updateFormData('referralMessage', value)}
               multiline
               numberOfLines={4}
               maxLength={1000}
               textAlignVertical="top"
             />
-            <Text style={styles.charCount}>
-              {formData.jobDescription.length}/1000 characters
+            {errors.referralMessage && (
+              <Text style={styles.errorText}>{errors.referralMessage}</Text>
+            )}
+            <Text style={styles.helperText}>
+              Optional: Help referrers understand your background and interest in the role (max 1000 characters)
             </Text>
           </View>
 
@@ -571,28 +590,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
+  title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
     marginBottom: 4,
   },
-  headerSubtitle: {
+  subtitle: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
   },
