@@ -500,7 +500,7 @@ export default function HomeScreen({ navigation }) {
               icon="people"
               color={colors.info}
               badge={referralStats.dailyQuotaRemaining > 0 ? `${referralStats.dailyQuotaRemaining} left` : null}
-              onPress={() => navigation.navigate('Referrals')}
+              onPress={() => navigation.navigate('AskReferral')}
             />
           </>
         )}

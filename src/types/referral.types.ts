@@ -26,7 +26,7 @@ export interface ApplicantReferralSubscription {
 
 export interface ReferralRequest {
     RequestID: string;
-    JobID: string;
+    JobID: string; // Required - can be internal GUID or external job identifier
     ApplicantID: string;
     ResumeID: string;
     Status: 'Pending' | 'Claimed' | 'Completed' | 'Verified';
@@ -34,6 +34,15 @@ export interface ReferralRequest {
     AssignedReferrerID?: string;
     ReferredAt?: Date;
     VerifiedByApplicant: boolean;
+    
+    // ?? NEW: Minimal external referral support
+    ReferralType: 'internal' | 'external';
+    OrganizationID?: string; // ?? NEW: For external referrals, store matched organization ID
+    
+    // ?? NEW: Proof-related fields (fix TypeScript error)
+    ProofFileURL?: string;
+    ProofFileType?: string;
+    ProofDescription?: string;
     
     // Joined data for display
     JobTitle?: string;
@@ -70,8 +79,16 @@ export interface ReferrerStats {
 
 // Request/Response DTOs
 export interface CreateReferralRequestDto {
-    jobID: string;
+    jobID: string; // Required - can be internal GUID or external job identifier
     resumeID: string;
+    referralType: 'internal' | 'external';
+    
+    // ?? NEW: External job details (stored as metadata in frontend/cache)
+    jobTitle?: string; // For external referrals
+    companyName?: string; // For external referrals
+    organizationId?: string; // ?? NEW: Matched organization ID from dropdown
+    jobUrl?: string; // For external referrals
+    jobDescription?: string; // For external referrals
 }
 
 export interface ClaimReferralRequestDto {
@@ -112,6 +129,10 @@ export interface ReferralAnalytics {
     currentSubscription?: ApplicantReferralSubscription;
     dailyQuotaUsed: number;
     dailyQuotaLimit: number;
+    
+    // ?? NEW: Breakdown by referral type
+    internalRequests?: number;
+    externalRequests?: number;
 }
 
 // Referral Eligibility Check
@@ -130,6 +151,7 @@ export interface ReferralRequestsFilter {
     companyName?: string;
     dateFrom?: Date;
     dateTo?: Date;
+    referralType?: 'internal' | 'external'; // ?? NEW: Filter by type
 }
 
 export interface PaginatedReferralRequests {
@@ -146,4 +168,21 @@ export interface ReferralNotificationSettings {
     emailOnClaimed: boolean;
     emailOnCompleted: boolean;
     pushNotifications: boolean;
+}
+
+// ?? NEW: External job matching interface
+export interface ExternalJobMatch {
+    companyName: string;
+    matchingReferrers: Array<{
+        referrerId: string;
+        referrerName: string;
+        currentJobTitle: string;
+        experienceYears: number;
+    }>;
+
+    // ?? NEW: External job details
+    jobUrl?: string;
+    jobDescription?: string;
+    location?: string;
+    salaryRange?: string;
 }

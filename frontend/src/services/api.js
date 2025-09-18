@@ -1459,6 +1459,11 @@ class NexHireAPI {
     }
   }
 
+  // NEW: Get all resumes for current user (alias for getMyResumes)
+  async getUserResumes() {
+    return this.getMyResumes();
+  }
+
   // ========================================================================
   // REFERRAL SYSTEM APIs - Complete Integration
   // ========================================================================
@@ -1474,22 +1479,60 @@ class NexHireAPI {
     return this.apiCall('/referral/eligibility');
   }
 
-  // Create referral request (same pattern as applying for job)
-  async createReferralRequest(jobID, resumeID) {
+  // Create referral request (supports both internal and external)
+  async createReferralRequest(requestData) {
     try {
-      console.log('🤝 Creating referral request:', { jobID, resumeID });
+      console.log('🤝 Creating referral request:', requestData);
       
       if (!this.token) {
         throw new Error('Authentication required');
       }
 
-      if (!jobID || !resumeID) {
-        throw new Error('Job ID and Resume ID are required');
+      // Support both old format (jobID, resumeID) and new format (object with referralType)
+      let payload;
+      
+      if (typeof requestData === 'object' && requestData.referralType) {
+        // 🆕 NEW FORMAT: External referral support
+        payload = {
+          jobID: requestData.jobID,
+          resumeID: requestData.resumeID || requestData.resumeId, // Handle both formats
+          referralType: requestData.referralType,
+          // For external referrals, include job details for display
+          jobTitle: requestData.jobTitle,
+          companyName: requestData.companyName,
+          organizationId: requestData.organizationId, // 🆕 NEW: Include organization ID
+          jobUrl: requestData.jobUrl,
+          jobDescription: requestData.jobDescription
+        };
+        
+        if (!payload.jobID || !payload.resumeID || !payload.referralType) {
+          throw new Error('Job ID, Resume ID, and Referral Type are required');
+        }
+        
+        if (payload.referralType === 'external' && (!payload.jobTitle || !payload.companyName)) {
+          throw new Error('Job title and company name are required for external referrals');
+        }
+      } else {
+        // 🔄 OLD FORMAT: Internal referral (backward compatibility)
+        const jobID = typeof requestData === 'string' ? requestData : requestData.jobID;
+        const resumeID = requestData.resumeID;
+        
+        if (!jobID || !resumeID) {
+          throw new Error('Job ID and Resume ID are required');
+        }
+        
+        payload = {
+          jobID,
+          resumeID,
+          referralType: 'internal'
+        };
       }
+
+      console.log('🤝 Final payload:', payload);
 
       return this.apiCall('/referral/requests', {
         method: 'POST',
-        body: JSON.stringify({ jobID, resumeID })
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error('❌ Create referral request failed:', error.message);

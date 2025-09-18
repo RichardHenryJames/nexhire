@@ -141,7 +141,7 @@ export class ReferralService {
     // ===== REFERRAL REQUESTS =====
     
     /**
-     * Create a new referral request
+     * Create a new referral request (supports both internal and external)
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
@@ -150,28 +150,49 @@ export class ReferralService {
             if (!eligibility.isEligible) {
                 throw new ValidationError(eligibility.reason || 'Not eligible for referrals');
             }
+
+            const isExternal = dto.referralType === 'external';
             
-            // Check if already requested for this job
-            const existingQuery = `
-                SELECT RequestID FROM ReferralRequests 
-                WHERE JobID = @param0 AND ApplicantID = @param1
-            `;
-            const existingResult = await dbService.executeQuery(existingQuery, [dto.jobID, applicantId]);
-            
-            if (existingResult.recordset && existingResult.recordset.length > 0) {
-                throw new ConflictError('You have already requested a referral for this job');
-            }
-            
-            // Verify job exists and is active
-            const jobQuery = `
-                SELECT JobID, Title, OrganizationID 
-                FROM Jobs 
-                WHERE JobID = @param0 AND Status = 'Published'
-            `;
-            const jobResult = await dbService.executeQuery(jobQuery, [dto.jobID]);
-            
-            if (!jobResult.recordset || jobResult.recordset.length === 0) {
-                throw new NotFoundError('Job not found or not available');
+            if (isExternal) {
+                // 🆕 EXTERNAL REFERRAL VALIDATION
+                if (!dto.jobTitle || !dto.companyName) {
+                    throw new ValidationError('Job title and company name are required for external referrals');
+                }
+                
+                // Check if already requested for this external job (by jobID)
+                const existingQuery = `
+                    SELECT RequestID FROM ReferralRequests 
+                    WHERE ApplicantID = @param0 AND ReferralType = 'external' AND JobID = @param1
+                `;
+                const existingResult = await dbService.executeQuery(existingQuery, [applicantId, dto.jobID]);
+                
+                if (existingResult.recordset && existingResult.recordset.length > 0) {
+                    throw new ConflictError('You have already requested a referral for this external job');
+                }
+            } else {
+                // 🔄 INTERNAL REFERRAL VALIDATION (existing logic)
+                // Check if already requested for this job
+                const existingQuery = `
+                    SELECT RequestID FROM ReferralRequests 
+                    WHERE JobID = @param0 AND ApplicantID = @param1
+                `;
+                const existingResult = await dbService.executeQuery(existingQuery, [dto.jobID, applicantId]);
+                
+                if (existingResult.recordset && existingResult.recordset.length > 0) {
+                    throw new ConflictError('You have already requested a referral for this job');
+                }
+                
+                // Verify job exists and is active
+                const jobQuery = `
+                    SELECT JobID, Title, OrganizationID 
+                    FROM Jobs 
+                    WHERE JobID = @param0 AND Status = 'Published'
+                `;
+                const jobResult = await dbService.executeQuery(jobQuery, [dto.jobID]);
+                
+                if (!jobResult.recordset || jobResult.recordset.length === 0) {
+                    throw new NotFoundError('Job not found or not available');
+                }
             }
             
             // Verify resume belongs to applicant
@@ -188,18 +209,52 @@ export class ReferralService {
             
             // Create the referral request
             const requestId = AuthService.generateUniqueId();
-            const insertQuery = `
-                INSERT INTO ReferralRequests (
-                    RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt
-                ) VALUES (
-                    @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE()
-                )
-            `;
             
-            await dbService.executeQuery(insertQuery, [requestId, dto.jobID, applicantId, dto.resumeID]);
-            
-            // Update referrer stats (increment pending counts for eligible referrers)
-            await this.updateReferrerStatsForNewRequest(dto.jobID);
+            if (isExternal) {
+                // 🆕 CREATE EXTERNAL REFERRAL REQUEST WITH ORGANIZATION ID
+                const insertQuery = `
+                    INSERT INTO ReferralRequests (
+                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, 
+                        ReferralType, OrganizationID
+                    ) VALUES (
+                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(),
+                        'external', @param4
+                    )
+                `;
+                
+                // Parse organizationId if provided, otherwise null
+                const organizationId = dto.organizationId && dto.organizationId !== '999999' 
+                    ? parseInt(dto.organizationId, 10) 
+                    : null;
+                
+                await dbService.executeQuery(insertQuery, [
+                    requestId, dto.jobID, applicantId, dto.resumeID, organizationId
+                ]);
+                
+                // Update referrer stats for external referrals
+                if (organizationId) {
+                    // Use organization ID for precise matching
+                    await this.updateReferrerStatsForExternalRequestByOrgId(organizationId);
+                } else if (dto.companyName) {
+                    // Fallback to company name matching
+                    await this.updateReferrerStatsForExternalRequest(dto.companyName);
+                }
+                
+            } else {
+                // 🔄 CREATE INTERNAL REFERRAL REQUEST (existing logic)
+                const insertQuery = `
+                    INSERT INTO ReferralRequests (
+                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralType
+                    ) VALUES (
+                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), 'internal'
+                    )
+                `;
+                
+                await dbService.executeQuery(insertQuery, [requestId, dto.jobID, applicantId, dto.resumeID]);
+                
+                // Update referrer stats (increment pending counts for eligible referrers)
+                await this.updateReferrerStatsForNewRequest(dto.jobID);
+            }
             
             // Return the created request with joined data
             return await this.getReferralRequestById(requestId);
@@ -210,7 +265,7 @@ export class ReferralService {
     }
 
     /**
-     * Get referral request by ID with joined data
+     * Get referral request by ID with joined data (supports external referrals)
      */
     static async getReferralRequestById(requestId: string): Promise<ReferralRequest> {
         try {
@@ -218,34 +273,87 @@ export class ReferralService {
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    j.Title as JobTitle,
-                    o.Name as CompanyName,
+                    rr.ReferralType, rr.OrganizationID,
+                    -- Internal job data (will be null for external)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    -- External organization data (will be null for internal)
+                    eo.Name as ExternalCompanyName,
+                    -- Applicant data
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
+                    -- Referrer data
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ar.ResumeLabel,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription
                 FROM ReferralRequests rr
-                INNER JOIN Jobs j ON rr.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                -- LEFT JOIN for internal jobs
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID AND rr.ReferralType = 'internal'
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                -- LEFT JOIN for external organizations
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ReferralType = 'external'
+                -- Applicant data (always present)
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
+                -- Referrer data (optional)
                 LEFT JOIN Applicants ar_ref ON rr.AssignedReferrerID = ar_ref.ApplicantID
                 LEFT JOIN Users ur ON ar_ref.UserID = ur.UserID
+                -- Proof data (optional)
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 WHERE rr.RequestID = @param0
             `;
             
-            const result = await dbService.executeQuery<ReferralRequest>(query, [requestId]);
+            const result = await dbService.executeQuery<any>(query, [requestId]);
             
             if (!result.recordset || result.recordset.length === 0) {
                 throw new NotFoundError('Referral request not found');
             }
             
-            return result.recordset[0];
+            const rawData = result.recordset[0];
+            
+            // Determine job title and company name based on referral type
+            let jobTitle: string;
+            let companyName: string;
+            
+            if (rawData.ReferralType === 'external') {
+                // For external referrals, try to get from organization or parse from JobID
+                companyName = rawData.ExternalCompanyName || 'External Company';
+                jobTitle = 'External Job'; // Will be enhanced with stored job details in future
+                
+                // 🚀 FUTURE: Parse job details from JobID or separate storage
+                // const externalJobDetails = await this.getExternalJobDetails(rawData.JobID);
+                // jobTitle = externalJobDetails?.jobTitle || 'External Job';
+            } else {
+                // For internal referrals, use job data
+                jobTitle = rawData.InternalJobTitle || 'Internal Job';
+                companyName = rawData.InternalCompanyName || 'Company';
+            }
+            
+            return {
+                RequestID: rawData.RequestID,
+                JobID: rawData.JobID,
+                ApplicantID: rawData.ApplicantID,
+                ResumeID: rawData.ResumeID,
+                Status: rawData.Status,
+                RequestedAt: rawData.RequestedAt,
+                AssignedReferrerID: rawData.AssignedReferrerID,
+                ReferredAt: rawData.ReferredAt,
+                VerifiedByApplicant: rawData.VerifiedByApplicant,
+                ReferralType: rawData.ReferralType,
+                OrganizationID: rawData.OrganizationID,
+                JobTitle: jobTitle,
+                CompanyName: companyName,
+                ApplicantName: rawData.ApplicantName,
+                ApplicantEmail: rawData.ApplicantEmail,
+                ReferrerName: rawData.ReferrerName,
+                ResumeLabel: rawData.ResumeLabel,
+                ProofFileURL: rawData.ProofFileURL,
+                ProofFileType: rawData.ProofFileType,
+                ProofDescription: rawData.ProofDescription
+            };
         } catch (error) {
             console.error('Error getting referral request:', error);
             throw error;
@@ -828,6 +936,98 @@ export class ReferralService {
             await dbService.executeQuery(query, [jobId]);
         } catch (error) {
             console.error('Error updating referrer stats:', error);
+            // Don't throw - this is non-critical
+        }
+    }
+
+    /**
+     * Update referrer stats for external request (by company name matching)
+     */
+    private static async updateReferrerStatsForExternalRequest(companyName: string): Promise<void> {
+        try {
+            // Find all eligible referrers who work at the specified company
+            const query = `
+                INSERT INTO ReferrerStats (ReferrerID, PendingCount, LastUpdated)
+                SELECT DISTINCT 
+                    a.ApplicantID,
+                    1,
+                    GETUTCDATE()
+                FROM Applicants a
+                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID
+                LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
+                WHERE (
+                    -- Match by organization name
+                    (o.Name = @param0 AND we.IsCurrent = 1)
+                    OR
+                    -- Match by company name in work experience
+                    (we.CompanyName = @param0 AND we.IsCurrent = 1)
+                )
+                AND a.OpenToRefer = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM ReferrerStats rs WHERE rs.ReferrerID = a.ApplicantID
+                )
+                
+                -- Update existing stats
+                UPDATE rs
+                SET PendingCount = PendingCount + 1, LastUpdated = GETUTCDATE()
+                FROM ReferrerStats rs
+                INNER JOIN Applicants a ON rs.ReferrerID = a.ApplicantID
+                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID
+                LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
+                WHERE (
+                    -- Match by organization name
+                    (o.Name = @param0 AND we.IsCurrent = 1)
+                    OR
+                    -- Match by company name in work experience
+                    (we.CompanyName = @param0 AND we.IsCurrent = 1)
+                )
+                AND a.OpenToRefer = 1
+            `;
+            
+            await dbService.executeQuery(query, [companyName]);
+            console.log(`📊 Updated referrer stats for external request at ${companyName}`);
+        } catch (error) {
+            console.error('Error updating referrer stats for external request:', error);
+            // Don't throw - this is non-critical
+        }
+    }
+
+    /**
+     * 🆕 NEW: Update referrer stats for external request (by organization ID - more precise)
+     */
+    private static async updateReferrerStatsForExternalRequestByOrgId(organizationId: number): Promise<void> {
+        try {
+            // Find all eligible referrers who work at the specified organization
+            const query = `
+                INSERT INTO ReferrerStats (ReferrerID, PendingCount, LastUpdated)
+                SELECT DISTINCT 
+                    a.ApplicantID,
+                    1,
+                    GETUTCDATE()
+                FROM Applicants a
+                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID
+                WHERE we.OrganizationID = @param0 
+                AND we.IsCurrent = 1 
+                AND a.OpenToRefer = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM ReferrerStats rs WHERE rs.ReferrerID = a.ApplicantID
+                )
+                
+                -- Update existing stats
+                UPDATE rs
+                SET PendingCount = PendingCount + 1, LastUpdated = GETUTCDATE()
+                FROM ReferrerStats rs
+                INNER JOIN Applicants a ON rs.ReferrerID = a.ApplicantID
+                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID
+                WHERE we.OrganizationID = @param0 
+                AND we.IsCurrent = 1 
+                AND a.OpenToRefer = 1
+            `;
+            
+            await dbService.executeQuery(query, [organizationId]);
+            console.log(`📊 Updated referrer stats for external request at organization ID ${organizationId}`);
+        } catch (error) {
+            console.error('Error updating referrer stats for external request by org ID:', error);
             // Don't throw - this is non-critical
         }
     }
