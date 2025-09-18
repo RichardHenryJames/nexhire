@@ -135,6 +135,11 @@ export class WorkExperienceService {
 
     // Update derived fields on Applicants
     await this.updateApplicantDerivedFields(applicantId);
+    // Recalculate profile completeness (centralized)
+    try {
+      const { UserService } = await import('./user.service');
+      await UserService.recomputeProfileCompletenessByApplicantId(applicantId);
+    } catch (e) { console.warn('Completeness recalculation failed (create):', (e as any)?.message); }
 
     return await this.getWorkExperienceById(id);
   }
@@ -209,6 +214,10 @@ export class WorkExperienceService {
     await dbService.executeQuery(query, params);
 
     await this.updateApplicantDerivedFields(existing.ApplicantID);
+    try {
+      const { UserService } = await import('./user.service');
+      await UserService.recomputeProfileCompletenessByApplicantId(existing.ApplicantID);
+    } catch (e) { console.warn('Completeness recalculation failed (update):', (e as any)?.message); }
     return await this.getWorkExperienceById(workExperienceId);
   }
 
@@ -220,6 +229,11 @@ export class WorkExperienceService {
         `;
     await dbService.executeQuery(query, [workExperienceId]);
     await this.updateApplicantDerivedFields(existing.ApplicantID);
+    // Recalculate profile completeness (centralized)
+    try {
+      const { UserService } = await import('./user.service');
+      await UserService.recomputeProfileCompletenessByApplicantId(existing.ApplicantID);
+    } catch (e) { console.warn('Completeness recalculation failed (delete):', (e as any)?.message); }
   }
 
   static async resolveOrganizationId(explicitId: number | null, companyName?: string | null | string[]): Promise<number | null> {

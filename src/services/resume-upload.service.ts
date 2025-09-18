@@ -293,6 +293,12 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
         isPrimary: isPrimaryResume,
         totalResumes: existingResumes.length + 1
       });
+
+      // Recalculate profile completeness (centralized)
+      try {
+        const { UserService } = await import('./user.service');
+        await UserService.recomputeProfileCompletenessByApplicantId(applicantId);
+      } catch (e) { console.warn('Completeness recalculation failed (resume upload):', (e as any)?.message); }
     } catch (error) {
       console.error('? Failed to save resume to database:', error);
       // Continue anyway - resume is uploaded successfully to storage

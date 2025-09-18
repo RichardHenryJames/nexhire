@@ -122,7 +122,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <Text style={[styles.statTitle, isLarge && styles.statTitleLarge]}>{title}</Text>
           {subtitle && (
-            <Text style={styles.statSubtitle}>{subtitle}</Text>
+            <Text style={styles.statSubtitle} numberOfLines={2}>{subtitle}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -340,7 +340,7 @@ export default function HomeScreen({ navigation }) {
         )}
       </View>
 
-      {/* Primary Stats Overview */}
+      {/* Primary Stats Overview - Updated to 2x2 Grid */}
       <View style={styles.statsContainer}>
         <Text style={styles.sectionTitle}>Overview</Text>
         <View style={styles.statsGrid}>
@@ -351,10 +351,9 @@ export default function HomeScreen({ navigation }) {
                 value={stats.ActiveJobs || 0}
                 icon="briefcase"
                 color={colors.primary}
-                subtitle={`${stats.TotalJobsPosted || 0} total � ${stats.draftJobs || 0} drafts`}
+                subtitle={`${stats.TotalJobsPosted || 0} total • ${stats.draftJobs || 0} drafts`}
                 trend={stats.JobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.JobsPostedLast30Days}` } : null}
                 onPress={() => navigation.navigate('Jobs')}
-                size="large"
               />
               <StatCard
                 title="Applications"
@@ -373,6 +372,14 @@ export default function HomeScreen({ navigation }) {
                 subtitle={`${stats.OffersExtended || 0} offers extended`}
                 onPress={() => navigation.navigate('Analytics')}
               />
+              <StatCard
+                title="Pipeline"
+                value={stats.InterviewsInProgress || 0}
+                icon="people"
+                color={colors.info}
+                subtitle={`${stats.ShortlistedApplications || 0} shortlisted`}
+                onPress={() => navigation.navigate('Analytics')}
+              />
             </>
           ) : (
             <>
@@ -381,7 +388,7 @@ export default function HomeScreen({ navigation }) {
                 value={stats.TotalApplications || 0}
                 icon="document-text"
                 color={colors.primary}
-                subtitle={`${stats.SavedJobs || 0} saved jobs`}
+                subtitle={`${stats.savedJobs || 0} saved jobs`}
                 trend={stats.ApplicationsLast30Days > 0 ? { positive: true, value: `+${stats.ApplicationsLast30Days}` } : null}
                 onPress={() => navigation.navigate('Applications')}
                 size="large"
@@ -396,11 +403,19 @@ export default function HomeScreen({ navigation }) {
               />
               <StatCard
                 title="Referral Points"
-                value={referralStats.totalPointsEarned || stats.totalReferralPoints || 0}
+                value={stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
                 icon="star"
                 color={colors.info}
-                subtitle={`${stats.ReferralRequestsMade || 0} requests � ${stats.completedReferrals || 0} completed`}
+                subtitle={`${stats.referralRequestsMade || 0} requested • ${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
                 onPress={() => navigation.navigate('Referrals')}
+              />
+              <StatCard
+                title="Interview Rate"
+                value={`${(stats.applicationSuccessRate || 0).toFixed(1)}%`}
+                icon="trending-up"
+                color={colors.success}
+                subtitle={`${stats.interviewsScheduled || 0} interviews`}
+                onPress={() => navigation.navigate('Applications')}
               />
             </>
           )}
@@ -649,7 +664,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
   },
   statCard: {
     backgroundColor: colors.surface,
@@ -664,10 +682,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    width: '48%', // Makes it 2x2 grid with gap
+    minHeight: 120,
   },
   statCardLarge: {
     padding: 20,
     borderLeftWidth: 6,
+    width: '48%', // Keep consistent with regular cards
   },
   statContent: {
     flex: 1,
@@ -713,7 +734,9 @@ const styles = StyleSheet.create({
   statSubtitle: {
     fontSize: typography.sizes.xs,
     color: colors.gray500,
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 14,
+    flexWrap: 'wrap',
   },
   performanceContainer: {
     padding: 20,
