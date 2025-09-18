@@ -1497,12 +1497,12 @@ class NexHireAPI {
           jobID: requestData.jobID,
           resumeID: requestData.resumeID || requestData.resumeId, // Handle both formats
           referralType: requestData.referralType,
+          referralMessage: requestData.referralMessage, // 🆕 NEW: Include referral message
           // For external referrals, include job details for display
           jobTitle: requestData.jobTitle,
           companyName: requestData.companyName,
           organizationId: requestData.organizationId, // 🆕 NEW: Include organization ID
           jobUrl: requestData.jobUrl,
-          jobDescription: requestData.jobDescription
         };
         
         if (!payload.jobID || !payload.resumeID || !payload.referralType) {
@@ -1524,7 +1524,8 @@ class NexHireAPI {
         payload = {
           jobID,
           resumeID,
-          referralType: 'internal'
+          referralType: 'internal',
+          referralMessage: requestData.referralMessage // 🆕 NEW: Include referral message for backward compatibility
         };
       }
 

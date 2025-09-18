@@ -43,119 +43,226 @@ export default function AskReferralScreen({ navigation }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [referralEligibility, setReferralEligibility] = useState({
+    isEligible: true,
+    dailyQuotaRemaining: 5,
+    hasActiveSubscription: false,
+    reason: null
+  }); // ?? NEW: Add referral eligibility state
 
+  // Load initial data
   useEffect(() => {
-    loadData();
+    console.log('?? AskReferralScreen: Component mounted');
+    loadResumes();
+    loadCompanies();
+    loadReferralEligibility(); // ?? NEW: Load referral eligibility on mount
   }, []);
 
-  const loadData = async () => {
+  // Debug useEffect to log form state changes
+  useEffect(() => {
+    console.log('?? Form data updated:', {
+      jobId: formData.jobId,
+      jobTitle: formData.jobTitle,
+      selectedResumeId: formData.selectedResumeId,
+      referralMessage: formData.referralMessage?.length || 0,
+    });
+  }, [formData]);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      console.log('?? Selected company:', selectedCompany.name, selectedCompany.id);
+    }
+  }, [selectedCompany]);
+
+  const loadResumes = async () => {
     setLoading(true);
     try {
-      // Load user's resumes, eligibility, and companies
-      const [resumesRes, eligibilityRes, companiesRes] = await Promise.all([
-        nexhireAPI.getUserResumes(),
-        nexhireAPI.checkReferralEligibility(),
-        nexhireAPI.getOrganizations()
-      ]);
-
-      if (resumesRes.success) {
+      // Load user's resumes
+      const resumesRes = await nexhireAPI.getUserResumes();
+      if (resumesRes?.success && resumesRes.data) {
         const resumeList = resumesRes.data || [];
         setResumes(resumeList);
         
         // Auto-select primary resume if available
-        const primaryResume = resumeList.find(r => r.IsPrimary);
-        if (primaryResume) {
+        const primaryResume = resumeList.find(r => r?.IsPrimary);
+        if (primaryResume?.ResumeID) {
           setFormData(prev => ({ ...prev, selectedResumeId: primaryResume.ResumeID }));
         }
-      }
-
-      if (eligibilityRes.success) {
-        setEligibility(eligibilityRes.data);
-      }
-
-      if (companiesRes.success) {
-        setCompanies(companiesRes.data || []);
+      } else {
+        setResumes([]);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-      Alert.alert('Error', 'Failed to load data. Please try again.');
+      console.error('Error loading resumes:', error);
+      setResumes([]);
+      Alert.alert('Error', 'Failed to load resumes. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadCompanies = async () => {
+    try {
+      // Use the same method that works in profile screen
+      const result = await nexhireAPI.getOrganizations(''); // Empty string for no search filter
+      console.log('Organizations API response:', result);
+      
+      if (result?.success && result.data && Array.isArray(result.data)) {
+        // The API service already handles the mapping, so we can use the data directly
+        console.log('Using mapped organizations from API service:', result.data.length, 'items');
+        setCompanies(result.data);
+      } else {
+        console.error('API call failed or returned invalid data:', result);
+        setCompanies([]);
+      }
+    } catch (error) {
+      console.error('Failed to load companies:', error);
+      setCompanies([]);
+    }
+  };
+
+  // ?? NEW: Load referral eligibility
+  const loadReferralEligibility = async () => {
+    try {
+      const result = await nexhireAPI.checkReferralEligibility();
+      if (result?.success) {
+        setReferralEligibility(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to load referral eligibility:', error);
+    }
+  };
+
   const validateForm = () => {
+    console.log('?? Validating form...');
     const newErrors = {};
 
+    // Check company selection
     if (!selectedCompany) {
+      console.log('? Company not selected');
       newErrors.company = 'Company selection is required';
+    } else {
+      console.log('? Company selected:', selectedCompany.name);
     }
 
-    if (!formData.jobId.trim()) {
+    // Check job ID
+    if (!formData.jobId || !formData.jobId.trim()) {
+      console.log('? Job ID missing');
       newErrors.jobId = 'Job ID is required';
+    } else {
+      console.log('? Job ID provided:', formData.jobId);
     }
 
-    if (!formData.jobTitle.trim()) {
+    // Check job title
+    if (!formData.jobTitle || !formData.jobTitle.trim()) {
+      console.log('? Job title missing');
       newErrors.jobTitle = 'Job title is required';
+    } else {
+      console.log('? Job title provided:', formData.jobTitle);
     }
 
+    // Check resume selection
     if (!formData.selectedResumeId) {
+      console.log('? Resume not selected');
       newErrors.resume = 'Please select a resume';
+    } else {
+      console.log('? Resume selected:', formData.selectedResumeId);
     }
 
     // Validate URL format if provided
-    if (formData.jobUrl.trim()) {
+    if (formData.jobUrl && formData.jobUrl.trim()) {
       try {
         new URL(formData.jobUrl);
+        console.log('? Valid URL provided');
       } catch {
+        console.log('? Invalid URL format');
         newErrors.jobUrl = 'Please enter a valid URL';
       }
     }
 
+    const errorCount = Object.keys(newErrors).length;
+    console.log(`?? Validation complete. Errors found: ${errorCount}`);
+    if (errorCount > 0) {
+      console.log('? Validation errors:', newErrors);
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return errorCount === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      showToast('Please fix the errors above', 'error');
-      return;
-    }
-
-    if (!eligibility?.isEligible) {
-      Alert.alert('Not Eligible', eligibility?.reason || 'You are not eligible for referrals');
-      return;
-    }
-
-    setSubmitting(true);
+    console.log('?? Submit button clicked');
+    
     try {
+      setSubmitting(true);
+      
+      // Check quota before validation
+      if (referralEligibility.dailyQuotaRemaining === 0) {
+        Alert.alert(
+          'Quota Exceeded',
+          'You have used all your daily referral requests. Please upgrade your plan to continue.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade', onPress: handleUpgradeClick }
+          ]
+        );
+        return;
+      }
+      
+      console.log('?? Starting form validation...');
+      // Validate form
+      if (!validateForm()) {
+        console.log('? Form validation failed');
+        return;
+      }
+      console.log('? Form validation passed');
+
+      // Remove eligibility check since it seems to be causing issues
+      // The backend will handle eligibility validation
+      console.log('?? Preparing request data...');
+
       const requestData = {
-        jobID: formData.jobId, // Use the Job ID from form instead of generating one
+        jobID: formData.jobId,
         resumeID: formData.selectedResumeId,
         referralType: 'external',
         jobTitle: formData.jobTitle,
         companyName: selectedCompany.name,
-        organizationId: selectedCompany.id.toString(), // ?? NEW: Include organization ID
+        organizationId: selectedCompany.id.toString(),
         jobUrl: formData.jobUrl || undefined,
-        referralMessage: formData.referralMessage || undefined, // ?? CHANGED: Use referralMessage instead of jobDescription
+        referralMessage: formData.referralMessage || undefined,
       };
 
       console.log('?? Submitting external referral request:', requestData);
 
       const result = await nexhireAPI.createReferralRequest(requestData);
+      console.log('?? API Response:', result);
 
-      if (result.success) {
+      if (result?.success) {
+        console.log('? Referral request submitted successfully');
         showToast('Referral request submitted successfully!', 'success');
+
+        // Update eligibility after successful submission
+        setReferralEligibility(prev => ({
+          ...prev,
+          dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
+          isEligible: prev.dailyQuotaRemaining > 1
+        }));
+
+        // Reset form
+        resetForm();
         
-        // Navigate back to referrals screen to show the new request
-        navigation.navigate('Referrals');
+        // Navigate back or to success screen
+        navigation.goBack();
       } else {
-        throw new Error(result.error || 'Failed to submit referral request');
+        const errorMessage = result?.error || result?.message || 'Failed to submit referral request';
+        console.error('? API returned error:', errorMessage);
+        Alert.alert('Request Failed', errorMessage);
       }
     } catch (error) {
-      console.error('Error submitting referral request:', error);
-      Alert.alert('Error', error.message || 'Failed to submit referral request');
+      console.error('? Error in handleSubmit:', error);
+      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
+      console.log('?? Resetting submitting state');
       setSubmitting(false);
     }
   };
@@ -179,25 +286,25 @@ export default function AskReferralScreen({ navigation }) {
 
   const handleCompanySearch = async (searchTerm) => {
     setCompanySearchTerm(searchTerm);
-    if (searchTerm.trim().length === 0) {
-      setCompanies([]);
-      return;
-    }
+    // For now, just filter the existing companies list
+    // In the future, we could implement server-side search
+  };
 
-    setLoadingCompanies(true);
-    try {
-      const response = await nexhireAPI.searchCompanies(searchTerm.trim());
-      if (response.success) {
-        setCompanies(response.data);
-      } else {
-        showToast(response.error || 'Failed to load companies', 'error');
-      }
-    } catch (error) {
-      console.error('Error searching companies:', error);
-      showToast('Failed to load companies. Please try again.', 'error');
-    } finally {
-      setLoadingCompanies(false);
-    }
+  const resetForm = () => {
+    setFormData({
+      jobId: '',
+      jobTitle: '',
+      jobUrl: '',
+      referralMessage: '',
+      selectedResumeId: '',
+    });
+    setSelectedCompany(null);
+    setErrors({});
+  };
+
+  // ?? NEW: Handle upgrade banner click
+  const handleUpgradeClick = () => {
+    navigation.navigate('ReferralPlans');
   };
 
   if (loading) {
@@ -263,6 +370,49 @@ export default function AskReferralScreen({ navigation }) {
           </View>
         )}
 
+        {/* Quota Status Banner */}
+        {referralEligibility.dailyQuotaRemaining !== undefined && (
+          <View style={[
+            styles.quotaBanner,
+            referralEligibility.dailyQuotaRemaining === 0 ? styles.quotaBannerWarning : styles.quotaBannerSuccess
+          ]}>
+            {referralEligibility.dailyQuotaRemaining === 0 ? (
+              <TouchableOpacity 
+                style={styles.quotaBannerContent}
+                onPress={handleUpgradeClick}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name="warning" 
+                  size={20} 
+                  color={colors.warning} 
+                  style={styles.quotaBannerIcon}
+                />
+                <Text style={[styles.quotaBannerText, styles.quotaBannerWarningText]}>
+                  Daily free quota (5) exceeded. Please upgrade your plan.
+                </Text>
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={16} 
+                  color={colors.warning} 
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.quotaBannerContent}>
+                <Ionicons 
+                  name="checkmark-circle" 
+                  size={20} 
+                  color={colors.success} 
+                  style={styles.quotaBannerIcon}
+                />
+                <Text style={[styles.quotaBannerText, styles.quotaBannerSuccessText]}>
+                  {referralEligibility.dailyQuotaRemaining} referral requests remaining today
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Form */}
         <View style={styles.form}>
           {/* Company Selection */}
@@ -278,7 +428,7 @@ export default function AskReferralScreen({ navigation }) {
                 styles.companySelectorText,
                 !selectedCompany && styles.companySelectorPlaceholder
               ]}>
-                {selectedCompany ? selectedCompany.name : 'Select company'}
+                {selectedCompany?.name || 'Select company'}
               </Text>
               <Ionicons name="chevron-down" size={20} color={colors.gray500} />
             </TouchableOpacity>
@@ -448,19 +598,24 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!eligibility?.isEligible || submitting || resumes.length === 0) && styles.submitButtonDisabled
+            (submitting || referralEligibility.dailyQuotaRemaining === 0) && styles.submitButtonDisabled
           ]}
-          onPress={handleSubmit}
-          disabled={!eligibility?.isEligible || submitting || resumes.length === 0}
+          onPress={() => {
+            console.log('?? Submit button pressed');
+            console.log('?? Submitting state:', submitting);
+            console.log('?? Quota remaining:', referralEligibility.dailyQuotaRemaining);
+            handleSubmit();
+          }}
+          disabled={submitting || referralEligibility.dailyQuotaRemaining === 0}
         >
-          {submitting ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <>
-              <Ionicons name="paper-plane" size={20} color={colors.white} />
-              <Text style={styles.submitButtonText}>Submit Referral Request</Text>
-            </>
-          )}
+          <Text style={[
+            styles.submitButtonText,
+            (submitting || referralEligibility.dailyQuotaRemaining === 0) && styles.submitButtonTextDisabled
+          ]}>
+            {submitting ? 'Submitting...' : 
+             referralEligibility.dailyQuotaRemaining === 0 ? 'Quota Exceeded - Upgrade Required' :
+             'Submit Referral Request'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -501,7 +656,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           ) : (
             <FlatList
               data={companies.filter(company =>
-                company.name.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+                company.name?.toLowerCase()?.includes(companySearchTerm.toLowerCase()) ||
                 (company.industry && company.industry.toLowerCase().includes(companySearchTerm.toLowerCase()))
               )}
               keyExtractor={(item) => item.id.toString()}
@@ -800,13 +955,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: colors.gray400,
-    opacity: 0.6,
+    backgroundColor: colors.gray300,
   },
   submitButtonText: {
     color: colors.white,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
+    textAlign: 'center',
+  },
+  submitButtonTextDisabled: {
+    color: colors.gray500,
   },
   // ?? NEW: Company selector styles
   companySelector: {
@@ -914,5 +1072,45 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: 'center',
     marginTop: 4,
+  },
+  helperText: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    marginTop: 4,
+  },
+  // ?? NEW: Quota banner styles
+  quotaBanner: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  quotaBannerSuccess: {
+    backgroundColor: colors.success + '15',
+    borderColor: colors.success + '30',
+  },
+  quotaBannerWarning: {
+    backgroundColor: colors.warning + '15',
+    borderColor: colors.warning + '30',
+  },
+  quotaBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  quotaBannerIcon: {
+    marginRight: 12,
+  },
+  quotaBannerText: {
+    flex: 1,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+  },
+  quotaBannerSuccessText: {
+    color: colors.success,
+  },
+  quotaBannerWarningText: {
+    color: colors.warning,
   },
 });
