@@ -80,15 +80,16 @@ export interface ReferrerStats {
 
 // Request/Response DTOs
 export interface CreateReferralRequestDto {
-    jobID: string; // Required - can be internal GUID or external job identifier
+    // ? NEW SCHEMA: Either jobID (internal UNIQUEIDENTIFIER) OR extJobID (external STRING)
+    jobID?: string; // Internal job UNIQUEIDENTIFIER - null for external referrals
+    extJobID?: string; // External job identifier STRING - null for internal referrals
     resumeID: string;
-    referralType: 'internal' | 'external';
-    referralMessage?: string; // ?? NEW: Optional message from candidate to referrer
+    referralMessage?: string; // Optional message from candidate to referrer
     
-    // ?? NEW: External job details (stored as metadata in frontend/cache)
-    jobTitle?: string; // For external referrals
-    companyName?: string; // For external referrals
-    organizationId?: string; // ?? NEW: Matched organization ID from dropdown
+    // External job details (for external referrals from AskReferral screen)
+    jobTitle?: string; // Required for external referrals
+    companyName?: string; // Required for external referrals
+    organizationId?: string; // Matched organization ID from dropdown
     jobUrl?: string; // For external referrals
 }
 

@@ -353,11 +353,11 @@ export default function ApplicationsScreen({ navigation }) {
     try {
       setShowResumeModal(false);
       if (referralMode) {
-        // ?? FIXED: Call API with proper object format for internal referrals
+        // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
         const res = await nexhireAPI.createReferralRequest({
-          jobID: id,
-          resumeID: resumeData.ResumeID,
-          referralType: 'internal' // Default to internal for existing functionality
+          jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
+          extJobID: null, // Explicitly null for internal referrals
+          resumeID: resumeData.ResumeID
         });
         if (res?.success) {
           setReferredJobIds(prev => new Set([...prev, id]));
@@ -387,11 +387,11 @@ export default function ApplicationsScreen({ navigation }) {
   const quickReferral = async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
-      // ?? FIXED: Call API with proper object format for internal referrals
+      // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
       const res = await nexhireAPI.createReferralRequest({
-        jobID: id,
-        resumeID: resumeId,
-        referralType: 'internal' // Default to internal for existing functionality
+        jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
+        extJobID: null, // Explicitly null for internal referrals
+        resumeID: resumeId
       });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id]));

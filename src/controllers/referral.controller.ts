@@ -141,29 +141,36 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
         const user = authenticate(req);
         const requestData = await extractRequestBody(req) as CreateReferralRequestDto;
         
-        if (!requestData.jobID || !requestData.resumeID) {
-            throw new ValidationError('Job ID and Resume ID are required');
+        if (!requestData.resumeID) {
+            throw new ValidationError('Resume ID is required');
         }
 
-        if (!requestData.referralType) {
-            // Default to internal for backward compatibility
-            requestData.referralType = 'internal';
+        // ? NEW SCHEMA: Validate based on presence of jobID vs extJobID
+        const hasJobID = !!requestData.jobID;
+        const hasExtJobID = !!requestData.extJobID;
+        
+        if (!hasJobID && !hasExtJobID) {
+            throw new ValidationError('Either jobID (internal) or extJobID (external) must be provided');
+        }
+        
+        if (hasJobID && hasExtJobID) {
+            throw new ValidationError('Cannot provide both jobID and extJobID - use only one');
         }
 
-        // Validate based on referral type
-        if (requestData.referralType === 'internal') {
-            if (!isValidGuid(requestData.jobID) || !isValidGuid(requestData.resumeID)) {
+        // Validate based on referral type (derived from data presence)
+        if (hasJobID) {
+            // INTERNAL REFERRAL VALIDATION
+            if (!isValidGuid(requestData.jobID!) || !isValidGuid(requestData.resumeID)) {
                 throw new ValidationError('Invalid Job ID or Resume ID format for internal referrals');
             }
-        } else if (requestData.referralType === 'external') {
+        } else if (hasExtJobID) {
+            // EXTERNAL REFERRAL VALIDATION
             if (!isValidGuid(requestData.resumeID)) {
                 throw new ValidationError('Invalid Resume ID format');
             }
             if (!requestData.jobTitle || !requestData.companyName) {
                 throw new ValidationError('Job title and company name are required for external referrals');
             }
-        } else {
-            throw new ValidationError('Referral type must be either "internal" or "external"');
         }
 
         // Get applicant ID

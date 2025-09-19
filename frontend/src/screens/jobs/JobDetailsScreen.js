@@ -388,11 +388,11 @@ export default function JobDetailsScreen({ route, navigation }) {
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
-        // 🔧 FIXED: Call API with proper object format for internal referrals
+        // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
         const res = await nexhireAPI.createReferralRequest({
-          jobID: jobId,
+          jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
+          extJobID: null, // Explicitly null for internal referrals
           resumeID: resumeData.ResumeID,
-          referralType: 'internal', // Default to internal for existing functionality
           referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
         });
         if (res.success) {
@@ -420,7 +420,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // ?? REQUIREMENT 2: Reload primary resume after application submission
+    // 🔧 REQUIREMENT 2: Reload primary resume after application submission
     await submitApplication(resumeData.ResumeID);
     await loadPrimaryResume();
   };
@@ -522,12 +522,12 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   const quickReferral = async (resumeId) => {
     try {
-      // 🔧 FIXED: Call API with proper object format for backward compatibility
+      // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
       const res = await nexhireAPI.createReferralRequest({
-        jobID: jobId,
+        jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
+        extJobID: null, // Explicitly null for internal referrals
         resumeID: resumeId,
-        referralType: 'internal', // Default to internal for existing functionality
-        referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+        referralMessage: referralMessage.trim() || undefined
       });
       if (res?.success) {
         setHasReferred(true);

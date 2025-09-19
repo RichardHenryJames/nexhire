@@ -1488,44 +1488,54 @@ class NexHireAPI {
         throw new Error('Authentication required');
       }
 
-      // Support both old format (jobID, resumeID) and new format (object with referralType)
+      // ✅ NEW SCHEMA: Support jobID/extJobID approach instead of referralType
       let payload;
       
-      if (typeof requestData === 'object' && requestData.referralType) {
-        // 🆕 NEW FORMAT: External referral support
+      if (typeof requestData === 'object') {
+        // 🆕 NEW FORMAT: Determine type by presence of jobID vs extJobID
+        const hasJobID = !!requestData.jobID;
+        const hasExtJobID = !!requestData.extJobID;
+        
+        if (!hasJobID && !hasExtJobID) {
+          throw new Error('Either jobID (internal) or extJobID (external) must be provided');
+        }
+        
+        if (hasJobID && hasExtJobID) {
+          throw new Error('Cannot provide both jobID and extJobID - use only one');
+        }
+
         payload = {
-          jobID: requestData.jobID,
+          jobID: requestData.jobID || undefined, // Internal job UNIQUEIDENTIFIER
+          extJobID: requestData.extJobID || undefined, // External job STRING identifier
           resumeID: requestData.resumeID || requestData.resumeId, // Handle both formats
-          referralType: requestData.referralType,
-          referralMessage: requestData.referralMessage, // 🆕 NEW: Include referral message
-          // For external referrals, include job details for display
+          referralMessage: requestData.referralMessage,
+          // For external referrals, include job details
           jobTitle: requestData.jobTitle,
           companyName: requestData.companyName,
-          organizationId: requestData.organizationId, // 🆕 NEW: Include organization ID
+          organizationId: requestData.organizationId,
           jobUrl: requestData.jobUrl,
         };
         
-        if (!payload.jobID || !payload.resumeID || !payload.referralType) {
-          throw new Error('Job ID, Resume ID, and Referral Type are required');
+        if (!payload.resumeID) {
+          throw new Error('Resume ID is required');
         }
         
-        if (payload.referralType === 'external' && (!payload.jobTitle || !payload.companyName)) {
+        if (hasExtJobID && (!payload.jobTitle || !payload.companyName)) {
           throw new Error('Job title and company name are required for external referrals');
         }
       } else {
-        // 🔄 OLD FORMAT: Internal referral (backward compatibility)
+        // 🔄 OLD FORMAT: String jobID means internal referral (backward compatibility)
         const jobID = typeof requestData === 'string' ? requestData : requestData.jobID;
-        const resumeID = requestData.resumeID;
         
-        if (!jobID || !resumeID) {
-          throw new Error('Job ID and Resume ID are required');
+        if (!jobID) {
+          throw new Error('Job ID is required');
         }
         
         payload = {
           jobID,
-          resumeID,
-          referralType: 'internal',
-          referralMessage: requestData.referralMessage // 🆕 NEW: Include referral message for backward compatibility
+          extJobID: undefined,
+          resumeID: requestData.resumeID,
+          referralMessage: requestData.referralMessage
         };
       }
 

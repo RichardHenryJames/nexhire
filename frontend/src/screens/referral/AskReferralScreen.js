@@ -216,14 +216,13 @@ export default function AskReferralScreen({ navigation }) {
       }
       console.log('? Form validation passed');
 
-      // Remove eligibility check since it seems to be causing issues
-      // The backend will handle eligibility validation
       console.log('?? Preparing request data...');
 
+      // ? NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
-        jobID: formData.jobId,
+        jobID: null, // Explicitly null for external referrals
+        extJobID: formData.jobId, // External job identifier (STRING)
         resumeID: formData.selectedResumeId,
-        referralType: 'external',
         jobTitle: formData.jobTitle,
         companyName: selectedCompany.name,
         organizationId: selectedCompany.id.toString(),
