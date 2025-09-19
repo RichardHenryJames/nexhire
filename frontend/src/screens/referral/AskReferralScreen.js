@@ -47,8 +47,37 @@ export default function AskReferralScreen({ navigation }) {
     isEligible: true,
     dailyQuotaRemaining: 5,
     hasActiveSubscription: false,
-    reason: null
+    reason: null,
+    currentPlan: null // ? NEW: Add current plan info
   }); // ?? NEW: Add referral eligibility state
+
+  // ? FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Ask for Referral',
+      headerStyle: {
+        backgroundColor: colors.surface,
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      },
+      headerTitleStyle: {
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.bold,
+        color: colors.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text || colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   // Load initial data
   useEffect(() => {
@@ -125,7 +154,12 @@ export default function AskReferralScreen({ navigation }) {
     try {
       const result = await nexhireAPI.checkReferralEligibility();
       if (result?.success) {
-        setReferralEligibility(result.data);
+        // ? ENHANCED: Include current plan information
+        const eligibilityData = {
+          ...result.data,
+          currentPlan: result.data.currentPlan || result.data.planName || (result.data.hasActiveSubscription ? 'Premium Plan' : 'Free Plan')
+        };
+        setReferralEligibility(eligibilityData);
       }
     } catch (error) {
       console.error('Failed to load referral eligibility:', error);
@@ -331,14 +365,6 @@ export default function AskReferralScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Ask for Referral</Text>
-          <Text style={styles.subtitle}>
-            Request referrals for jobs you found on company career portals
-          </Text>
-        </View>
-
         {/* Eligibility Status */}
         {eligibility && (
           <View style={[
@@ -369,7 +395,7 @@ export default function AskReferralScreen({ navigation }) {
           </View>
         )}
 
-        {/* Quota Status Banner */}
+        {/* ? IMPROVED: Enhanced Quota Status Banner with actual plan name and better spacing */}
         {referralEligibility.dailyQuotaRemaining !== undefined && (
           <View style={[
             styles.quotaBanner,
@@ -388,7 +414,10 @@ export default function AskReferralScreen({ navigation }) {
                   style={styles.quotaBannerIcon}
                 />
                 <Text style={[styles.quotaBannerText, styles.quotaBannerWarningText]}>
-                  Daily free quota (5) exceeded. Please upgrade your plan.
+                  {referralEligibility.currentPlan 
+                    ? `${referralEligibility.currentPlan} daily quota exceeded. Upgrade for more requests.`
+                    : 'Daily free quota (5) exceeded. Upgrade for unlimited requests.'
+                  }
                 </Text>
                 <Ionicons 
                   name="chevron-forward" 
@@ -405,12 +434,37 @@ export default function AskReferralScreen({ navigation }) {
                   style={styles.quotaBannerIcon}
                 />
                 <Text style={[styles.quotaBannerText, styles.quotaBannerSuccessText]}>
-                  {referralEligibility.dailyQuotaRemaining} referral requests remaining today
+                  {referralEligibility.currentPlan 
+                    ? `${referralEligibility.currentPlan}: ${referralEligibility.dailyQuotaRemaining} requests remaining today`
+                    : `${referralEligibility.dailyQuotaRemaining} free referral requests remaining today`
+                  }
                 </Text>
               </View>
             )}
           </View>
         )}
+
+        {/* ? IMPROVED: More compelling and catchy description */}
+        <View style={styles.introSection}>
+          <Text style={styles.introTitle}>🚀 Boost Your Job Application Success Rate</Text>
+          <Text style={styles.introText}>
+            Get referred by current employees and increase your chances of landing your dream job by up to 5x! Our platform connects you with professionals who can advocate for your skills and help you stand out from hundreds of other applicants.
+          </Text>
+          <View style={styles.benefitsContainer}>
+            <View style={styles.benefitItem}>
+              <Ionicons name="trending-up" size={16} color={colors.success} />
+              <Text style={styles.benefitText}>5x higher interview rate</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Ionicons name="people" size={16} color={colors.primary} />
+              <Text style={styles.benefitText}>Skip the ATS black hole</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Ionicons name="flash" size={16} color={colors.warning} />
+              <Text style={styles.benefitText}>Faster hiring process</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Form */}
         <View style={styles.form}>
@@ -577,16 +631,17 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           </View>
         </View>
 
-        {/* Info Card */}
+        {/* Enhanced Info Card */}
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={20} color={colors.primary} />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>How it works:</Text>
+            <Text style={styles.infoTitle}>How our referral system works:</Text>
             <Text style={styles.infoText}>
-              1. Submit your referral request{'\n'}
-              2. Employees from the company will see your request{'\n'}
-              3. They can help refer you and earn reward points{'\n'}
-              4. You'll be notified when someone helps you
+              1. Submit your request with job details{'\n'}
+              2. Employees get notified and can review your profile{'\n'}
+              3. They refer you internally and earn rewards{'\n'}
+              4. You get fast-tracked in the hiring process{'\n'}
+              5. Land the job with insider advocacy!
             </Text>
           </View>
         </View>
@@ -613,7 +668,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           ]}>
             {submitting ? 'Submitting...' : 
              referralEligibility.dailyQuotaRemaining === 0 ? 'Quota Exceeded - Upgrade Required' :
-             'Submit Referral Request'}
+             'Ask Referral'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -743,29 +798,64 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+  
+  // ? ADDED: Header button style for navigation
+  headerButton: {
+    padding: 8,
+  },
+  
+  // ? IMPROVED: Enhanced intro section styles with better spacing and visual appeal
+  introSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20, // ? INCREASED: Better spacing from header/quota banner
+    paddingBottom: 16,
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 8, // ? ADDED: Space between intro and form
   },
-  title: {
-    fontSize: typography.sizes.xl,
+  introTitle: {
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: 4,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 12,
   },
-  subtitle: {
+  introText: {
+    fontSize: typography.sizes.md,
+    color: colors.gray700,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  
+  // ? NEW: Benefits container styles
+  benefitsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '10',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  benefitText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontWeight: typography.weights.medium,
+    color: colors.primary,
+    marginLeft: 6,
   },
+  
   eligibilityCard: {
     flexDirection: 'row',
     alignItems: 'center',
     margin: 16,
+    marginBottom: 12, // ? REDUCED: Less space to quota banner
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -1077,10 +1167,11 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     marginTop: 4,
   },
-  // ?? NEW: Quota banner styles
+  // ? IMPROVED: Enhanced quota banner styles with better spacing
   quotaBanner: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: 16,
+    marginTop: 8, // ? REDUCED: Better spacing from header
+    marginBottom: 8, // ? REDUCED: Better spacing to intro section
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
@@ -1105,6 +1196,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+    lineHeight: 18, // ? ADDED: Better line height for readability
   },
   quotaBannerSuccessText: {
     color: colors.success,
