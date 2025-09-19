@@ -785,70 +785,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Action Buttons */}
-      <View style={styles.actionContainer}>
-        {/* 🔧 REQUIREMENT 4: Updated save/unsave button with proper functionality */}
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            isSaved && styles.saveButtonActive
-          ]}
-          onPress={handleSaveJob}
-        >
-          <Ionicons
-            name={isSaved ? "bookmark" : "bookmark-outline"}
-            size={20}
-            color={isSaved ? colors.white : colors.primary}
-          />
-          <Text style={[
-            styles.saveButtonText,
-            isSaved && styles.saveButtonTextActive
-          ]}>
-            {isSaved ? "Saved" : "Save Job"}
-          </Text>
-        </TouchableOpacity>
-        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
-              styles.referralButton,
-              hasReferred && styles.referralButtonDisabled
-            ]}
-            onPress={hasReferred ? null : handleAskReferral}
-            disabled={hasReferred}
-          >
-            <Ionicons 
-              name={hasReferred ? "checkmark-circle" : "people-outline"} 
-              size={20} 
-              color={hasReferred ? "#10b981" : colors.warning} 
-            />
-            <Text style={[
-              styles.referralButtonText, 
-              hasReferred && { color: "#10b981" }
-            ]}>
-              {hasReferred ? "Referred" : "Ask Referral"}
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
-              styles.applyButton, 
-              (hasApplied || applying) && styles.applyButtonDisabled
-            ]} 
-            onPress={handleApply}
-            disabled={hasApplied || applying}
-          >
-            {applying && <ActivityIndicator size="small" color={colors.white} />}
-            <Text style={styles.applyButtonText}>
-              {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* 🆕 NEW: Referral Message Section (Collapsible) */}
+      {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
       {isJobSeeker && !hasReferred && (
         <View style={styles.referralMessageSection}>
           {!showReferralMessageInput ? (
@@ -900,6 +837,48 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           )}
         </View>
       )}
+
+      {/* Action Buttons - REMOVED Save Job button since it's in the header */}
+      <View style={styles.actionContainer}>        
+        {isJobSeeker && (
+          <TouchableOpacity 
+            style={[
+              styles.referralButton,
+              hasReferred && styles.referralButtonDisabled
+            ]}
+            onPress={hasReferred ? null : handleAskReferral}
+            disabled={hasReferred}
+          >
+            <Ionicons 
+              name={hasReferred ? "checkmark-circle" : "people-outline"} 
+              size={20} 
+              color={hasReferred ? "#10b981" : colors.warning} 
+            />
+            <Text style={[
+              styles.referralButtonText, 
+              hasReferred && { color: "#10b981" }
+            ]}>
+              {hasReferred ? "Referred" : "Ask Referral"}
+            </Text>
+          </TouchableOpacity>
+        )}
+        
+        {isJobSeeker && (
+          <TouchableOpacity 
+            style={[
+              styles.applyButton, 
+              (hasApplied || applying) && styles.applyButtonDisabled
+            ]} 
+            onPress={handleApply}
+            disabled={hasApplied || applying}
+          >
+            {applying && <ActivityIndicator size="small" color={colors.white} />}
+            <Text style={styles.applyButtonText}>
+              {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       {/* ?? Resume Upload Modal */}
       <ResumeUploadModal
@@ -1080,30 +1059,6 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
   },
-  saveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.background,
-  },
-  saveButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  saveButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.primary,
-    marginLeft: 8,
-  },
-  saveButtonTextActive: {
-    color: colors.white,
-  },
   applyButton: {
     flex: 2,
     flexDirection: 'row',
@@ -1147,10 +1102,10 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
   },
-  // 🆕 NEW: Referral message styles (collapsible design)
+  // 🆕 MOVED: Referral message styles - updated margin since now above buttons
   referralMessageSection: {
     margin: 20,
-    marginTop: 0,
+    marginBottom: 8, // Reduced margin since action buttons come after this
   },
   addMessageButton: {
     flexDirection: 'row',
