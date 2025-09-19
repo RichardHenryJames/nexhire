@@ -36,6 +36,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   });
   const [primaryResume, setPrimaryResume] = useState(null);
   const [referralMessage, setReferralMessage] = useState(''); // 🆕 NEW: Add referral message state
+  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false); // 🆕 NEW: Control message input visibility
 
   // ?? Add navigation header with back button
   useEffect(() => {
@@ -404,7 +405,9 @@ export default function JobDetailsScreen({ route, navigation }) {
           }));
           
           showToast('Referral request sent', 'success');
-          setReferralMessage(''); // Clear message after successful submission
+          // 🆕 NEW: Clear and collapse message section after successful submission
+          setReferralMessage('');
+          setShowReferralMessageInput(false);
           
           // 🔧 REQUIREMENT 2: Reload primary resume after submission
           await loadPrimaryResume();
@@ -527,13 +530,15 @@ export default function JobDetailsScreen({ route, navigation }) {
         jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
         extJobID: null, // Explicitly null for internal referrals
         resumeID: resumeId,
-        referralMessage: referralMessage.trim() || undefined
+        referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
       });
       if (res?.success) {
         setHasReferred(true);
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
         showToast('Referral request sent', 'success');
-        setReferralMessage(''); // Clear message after successful submission
+        // 🆕 NEW: Clear and collapse message section after successful submission
+        setReferralMessage('');
+        setShowReferralMessageInput(false);
       } else {
         Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
       }
@@ -843,23 +848,56 @@ export default function JobDetailsScreen({ route, navigation }) {
         )}
       </View>
 
-      {/* 🆕 NEW: Referral Message Input */}
+      {/* 🆕 NEW: Referral Message Section (Collapsible) */}
       {isJobSeeker && !hasReferred && (
         <View style={styles.referralMessageSection}>
-          <Text style={styles.referralMessageLabel}>Message to Referrer (Optional)</Text>
-          <TextInput
-            style={styles.referralMessageInput}
-            placeholder="Tell them why you're interested in this role..."
-            value={referralMessage}
-            onChangeText={setReferralMessage}
-            multiline
-            numberOfLines={3}
-            maxLength={500}
-            textAlignVertical="top"
-          />
-          <Text style={styles.referralMessageHint}>
-            Help referrers understand your interest and background
-          </Text>
+          {!showReferralMessageInput ? (
+            // Collapsed state - just show button to expand
+            <TouchableOpacity
+              style={styles.addMessageButton}
+              onPress={() => setShowReferralMessageInput(true)}
+            >
+              <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+              <Text style={styles.addMessageButtonText}>Add referral message (optional)</Text>
+              <Ionicons name="chevron-down" size={16} color={colors.gray500} />
+            </TouchableOpacity>
+          ) : (
+            // Expanded state - show input and collapse button
+            <>
+              <View style={styles.messageHeader}>
+                <Text style={styles.referralMessageLabel}>Message to Referrer</Text>
+                <TouchableOpacity
+                  style={styles.collapseButton}
+                  onPress={() => {
+                    setShowReferralMessageInput(false);
+                    setReferralMessage(''); // Clear message when collapsed
+                  }}
+                >
+                  <Ionicons name="chevron-up" size={16} color={colors.gray500} />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.referralMessageInput}
+                placeholder="Tell them why you're interested in this role and your background...
+
+Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns perfectly with my career goals. I'd be grateful for any referral help!'"
+                value={referralMessage}
+                onChangeText={setReferralMessage}
+                multiline
+                numberOfLines={4}
+                maxLength={1000}
+                textAlignVertical="top"
+              />
+              <View style={styles.messageFooter}>
+                <Text style={styles.referralMessageHint}>
+                  Help referrers understand your interest and background
+                </Text>
+                <Text style={styles.characterCount}>
+                  {referralMessage.length}/1000
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       )}
       
@@ -1109,36 +1147,72 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
   },
-  // 🆕 NEW: Referral message styles (updated layout)
+  // 🆕 NEW: Referral message styles (collapsible design)
   referralMessageSection: {
     margin: 20,
     marginTop: 0,
+  },
+  addMessageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  addMessageButtonText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    marginLeft: 12,
+    fontWeight: typography.weights.medium,
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  collapseButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: colors.gray100,
   },
   referralMessageLabel: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
     color: colors.text,
-    marginBottom: 12,
   },
   referralMessageInput: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: typography.sizes.md,
     color: colors.text,
-    backgroundColor: colors.background,
-    minHeight: 80,
-    maxHeight: 120,
+    backgroundColor: colors.surface,
+    minHeight: 120,
+    maxHeight: 160,
+    textAlignVertical: 'top',
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
   referralMessageHint: {
     fontSize: typography.sizes.sm,
     color: colors.gray500,
-    marginTop: 8,
+    flex: 1,
+  },
+  characterCount: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray400,
+    fontWeight: typography.weights.medium,
   },
 });
