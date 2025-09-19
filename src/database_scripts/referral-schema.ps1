@@ -58,10 +58,14 @@ BEGIN
         AssignedReferrerID UNIQUEIDENTIFIER NULL, -- initially null until someone claims
         ReferredAt DATETIME2 NULL,
         VerifiedByApplicant BIT DEFAULT 0, -- seeker can confirm referral was real
+        ExtJobID NVARCHAR(100),
+        ReferralMessage NVARCHAR(1000),
+        OrganizationID INT NULL,
         FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (ResumeID) REFERENCES ApplicantResumes(ResumeID),
         FOREIGN KEY (AssignedReferrerID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID),
         CONSTRAINT UQ_Referral UNIQUE (JobID, ApplicantID)
     );
 END
