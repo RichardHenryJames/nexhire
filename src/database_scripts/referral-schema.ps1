@@ -50,7 +50,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReferralRequests')
 BEGIN
     CREATE TABLE ReferralRequests (
         RequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-        JobID NVARCHAR(100) NOT NULL, -- changed from UNIQUEIDENTIFIER to NVARCHAR(100)
+        JobID UNIQUEIDENTIFIER NULL,
         ApplicantID UNIQUEIDENTIFIER NOT NULL, -- seeker
         ResumeID UNIQUEIDENTIFIER NOT NULL,
         Status NVARCHAR(50) DEFAULT 'Pending', -- Pending, Claimed, Completed, Verified
@@ -58,7 +58,7 @@ BEGIN
         AssignedReferrerID UNIQUEIDENTIFIER NULL, -- initially null until someone claims
         ReferredAt DATETIME2 NULL,
         VerifiedByApplicant BIT DEFAULT 0, -- seeker can confirm referral was real
-        -- removed FOREIGN KEY (JobID) REFERENCES Jobs(JobID), because JobID may also be string
+        FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (ResumeID) REFERENCES ApplicantResumes(ResumeID),
         FOREIGN KEY (AssignedReferrerID) REFERENCES Applicants(ApplicantID),
