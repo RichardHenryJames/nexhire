@@ -236,11 +236,17 @@ export class JobService {
               jt.Type as JobTypeName,
               o.Name as OrganizationName,
               ISNULL(o.LogoURL, '') as OrganizationLogo,
-              ISNULL(c.Symbol, '$') as CurrencySymbol
+              ISNULL(c.Symbol, '$') as CurrencySymbol,
+              CASE 
+                  WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
+                  WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                  ELSE 'External Recruiter'
+              END as PostedByName
           FROM Jobs j
           INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
           INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
           LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
+          LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
           ${whereClause}
         `;
 
@@ -275,11 +281,15 @@ export class JobService {
                 o.LogoURL as OrganizationLogo,
                 o.Description as OrganizationDescription,
                 c.Symbol as CurrencySymbol,
-                u.FirstName + ' ' + u.LastName as PostedByName
+                CASE 
+                    WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
+                    WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                    ELSE 'External Recruiter'
+                END as PostedByName
             FROM Jobs j
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-            INNER JOIN Users u ON j.PostedByUserID = u.UserID
+            LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             WHERE j.JobID = @param0
         `;
@@ -654,11 +664,17 @@ export class JobService {
                   jt.Type as JobTypeName,
                   o.Name as OrganizationName,
                   ISNULL(o.LogoURL, '') as OrganizationLogo,
-                  ISNULL(c.Symbol, '$') as CurrencySymbol
+                  ISNULL(c.Symbol, '$') as CurrencySymbol,
+                  CASE 
+                      WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
+                      WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                      ELSE 'External Recruiter'
+                  END as PostedByName
                 FROM Jobs j
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
+                LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
                 ${whereClause}
             `;
 
