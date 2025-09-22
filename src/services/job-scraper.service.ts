@@ -147,7 +147,7 @@ export class JobScraperService {
 
       let processed = 0;
       for (const job of jobsData.slice(0, 50)) { // Limit to 50 jobs
-        if (!job.id || !job.position || !job.company) return;
+        if (!job.id || !job.position || !job.company) continue;
 
         // ? ENHANCED POSTED DATE HANDLING
         let postedDate = new Date(); // Default to current time
@@ -1229,10 +1229,10 @@ export class JobScraperService {
     description += `?? **Y Combinator Ecosystem**: Many jobs posted here are from Y Combinator companies and other high-growth startups.\n\n`;
     
     description += `?? **What This Means**:\n`;
-    description += `• Early-stage company with high growth potential\n`;
-    description += `• Opportunity to make significant impact\n`;
-    description += `• Work with cutting-edge technologies\n`;
-    description += `• Potential for equity and rapid career growth\n\n`;
+    description += `ï¿½ Early-stage company with high growth potential\n`;
+    description += `ï¿½ Opportunity to make significant impact\n`;
+    description += `ï¿½ Work with cutting-edge technologies\n`;
+    description += `ï¿½ Potential for equity and rapid career growth\n\n`;
     
     description += `?? **Position**: ${title}\n\n`;
     
@@ -1301,7 +1301,7 @@ export class JobScraperService {
     if (!salaryText) return {};
     
     // Match patterns like "?5-8 Lakhs PA" or "?10-15 LPA" or "?3,00,000 - ?5,00,000"
-    const lakhsMatch = salaryText.match(/??(\d+)-(\d+)\s*lakhs?/i);
+    const lakhsMatch = salaryText.match(/â‚¹?(\d+)-(\d+)\s*lakhs?/i);
     if (lakhsMatch) {
       return {
         min: parseInt(lakhsMatch[1]) * 100000, // Convert lakhs to rupees
@@ -1309,8 +1309,8 @@ export class JobScraperService {
       };
     }
     
-    // Match exact amounts like "?3,00,000 - ?5,00,000"
-    const exactMatch = salaryText.match(/??([\d,]+)\s*-\s*??([\d,]+)/);
+    // Match exact amounts like "â‚¹3,00,000 - â‚¹5,00,000"
+    const exactMatch = salaryText.match(/â‚¹?([\d,]+)\s*-\s*â‚¹?([\d,]+)/);
     if (exactMatch) {
       return {
         min: parseInt(exactMatch[1].replace(/,/g, '')),

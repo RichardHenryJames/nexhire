@@ -640,7 +640,8 @@ export default function JobDetailsScreen({ route, navigation }) {
     
     // Split by comma and clean up tags
     return job.Tags
-      .split('${tag.trim()}')
+      .split(',')
+      .map(tag => tag.trim())
       .filter(tag => tag.length > 0)
       .filter(tag => !['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid'].includes(tag))
       .slice(0, 10); // Limit to 10 tags
@@ -683,30 +684,6 @@ export default function JobDetailsScreen({ route, navigation }) {
       ))}
     </View>
   );
-
-  // NEW: Helper function to get job source information
-  const getJobSourceInfo = () => {
-    // For internal jobs, just show "Nexhire"
-    if (!job.ExternalJobID) return 'Nexhire';
-
-    // For external jobs, fetch and display the source name
-    const source = job.ExternalSourceName || job.Source || 'Unknown Source';
-    return source.charAt(0).toUpperCase() + source.slice(1);
-  };
-
-  // NEW: Helper function to get job source name (for display)
-  const getJobSourceName = () => {
-    if (!job.ExternalJobID) return 'Nexhire';
-
-    const source = job.ExternalSourceName || job.Source || 'this job board';
-    return source.charAt(0).toUpperCase() + source.slice(1);
-  };
-
-  // NEW: Parse job tags into an array
-  const parseJobTags = () => {
-    if (!job.Tags) return [];
-    return job.Tags.split(',').map(tag => tag.trim());
-  };
 
   if (loading) {
     return (
