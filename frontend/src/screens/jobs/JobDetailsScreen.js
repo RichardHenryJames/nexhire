@@ -614,6 +614,53 @@ export default function JobDetailsScreen({ route, navigation }) {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // ✅ NEW: Helper functions for external job information
+  const getJobSourceInfo = () => {
+    if (!job.ExternalJobID) return 'NexHire';
+    
+    const source = job.ExternalJobID.split('_')[0];
+    const sourceMap = {
+      'remoteok': 'RemoteOK',
+      'adzuna': 'Adzuna',
+      'weworkremotely': 'WeWorkRemotely',
+      'hackernews': 'Hacker News',
+      'naukri': 'Naukri.com'
+    };
+    
+    return sourceMap[source.toLowerCase()] || 'External Job Board';
+  };
+
+  const getJobSourceName = () => {
+    if (!job.ExternalJobID) return 'Job Board';
+    return getJobSourceInfo();
+  };
+
+  const parseJobTags = () => {
+    if (!job.Tags) return [];
+    
+    // Split by comma and clean up tags
+    return job.Tags
+      .split('${tag.trim()}')
+      .filter(tag => tag.length > 0)
+      .filter(tag => !['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid'].includes(tag))
+      .slice(0, 10); // Limit to 10 tags
+  };
+
+  const openExternalApplication = () => {
+    if (!job.ApplicationURL) return;
+    
+    // For React Native, you'd use Linking.openURL
+    // For web, we can use window.open
+    if (Platform.OS === 'web') {
+      window.open(job.ApplicationURL, '_blank');
+    } else {
+      // For mobile
+      import('react-native').then(({ Linking }) => {
+        Linking.openURL(job.ApplicationURL);
+      });
+    }
+  };
+
   const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={20} color={colors.primary} />
@@ -636,6 +683,30 @@ export default function JobDetailsScreen({ route, navigation }) {
       ))}
     </View>
   );
+
+  // NEW: Helper function to get job source information
+  const getJobSourceInfo = () => {
+    // For internal jobs, just show "Nexhire"
+    if (!job.ExternalJobID) return 'Nexhire';
+
+    // For external jobs, fetch and display the source name
+    const source = job.ExternalSourceName || job.Source || 'Unknown Source';
+    return source.charAt(0).toUpperCase() + source.slice(1);
+  };
+
+  // NEW: Helper function to get job source name (for display)
+  const getJobSourceName = () => {
+    if (!job.ExternalJobID) return 'Nexhire';
+
+    const source = job.ExternalSourceName || job.Source || 'this job board';
+    return source.charAt(0).toUpperCase() + source.slice(1);
+  };
+
+  // NEW: Parse job tags into an array
+  const parseJobTags = () => {
+    if (!job.Tags) return [];
+    return job.Tags.split(',').map(tag => tag.trim());
+  };
 
   if (loading) {
     return (
@@ -724,7 +795,53 @@ export default function JobDetailsScreen({ route, navigation }) {
             value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
           />
         ) : null}
+        {/* ✅ NEW: Show job source information */}
+        {job.ExternalJobID && (
+          <InfoRow
+            icon="globe-outline"
+            label="Job Source"
+            value={getJobSourceInfo()}
+          />
+        )}
       </View>
+
+      {/* ✅ NEW: External Application Section */}
+      {job.ApplicationURL && (
+        <View style={styles.externalApplicationSection}>
+          <View style={styles.externalApplicationHeader}>
+            <Ionicons name="link" size={20} color={colors.primary} />
+            <Text style={styles.externalApplicationTitle}>
+              Apply Directly on {getJobSourceName()}
+            </Text>
+          </View>
+          <Text style={styles.externalApplicationDescription}>
+            This job was posted on {getJobSourceName()}. You can apply directly on their platform for the most up-to-date application process.
+          </Text>
+          <TouchableOpacity
+            style={styles.externalApplicationButton}
+            onPress={() => openExternalApplication()}
+          >
+            <Ionicons name="open-outline" size={20} color={colors.white} />
+            <Text style={styles.externalApplicationButtonText}>
+              Apply on {getJobSourceName()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ✅ NEW: Job Tags Section */}
+      {job.Tags && (
+        <View style={styles.jobTagsSection}>
+          <Text style={styles.jobTagsSectionTitle}>Skills & Technologies</Text>
+          <View style={styles.jobTagsContainer}>
+            {parseJobTags().map((tag, index) => (
+              <View key={index} style={styles.jobTag}>
+                <Text style={styles.jobTagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Job Description */}
       {job.Description && (
@@ -1168,6 +1285,75 @@ const styles = StyleSheet.create({
   characterCount: {
     fontSize: typography.sizes.sm,
     color: colors.gray400,
+    fontWeight: typography.weights.medium,
+  },
+  // ✅ NEW: External application styles
+  externalApplicationSection: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    marginTop: 8,
+  },
+  externalApplicationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  externalApplicationTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginLeft: 8,
+  },
+  externalApplicationDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 12,
+  },
+  externalApplicationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  externalApplicationButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    marginLeft: 8,
+  },
+  // ✅ NEW: Job tags styles
+  jobTagsSection: {
+    padding: 20,
+    backgroundColor: colors.surface,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  jobTagsSectionTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 12,
+  },
+  jobTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  jobTag: {
+    backgroundColor: colors.primary + '10',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  jobTagText: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
 });

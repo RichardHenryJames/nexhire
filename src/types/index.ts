@@ -126,6 +126,7 @@ export interface Job {
     Tags?: string;
     InternalNotes?: string;
     ExternalJobID?: string;
+    ApplicationURL?: string; // ? NEW: Application URL from scraped sources
     SearchScore?: number;
     FeaturedUntil?: Date;
 }

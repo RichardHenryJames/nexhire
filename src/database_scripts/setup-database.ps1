@@ -257,6 +257,7 @@ END
         JobID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
         OrganizationID INT NOT NULL,
         PostedByUserID UNIQUEIDENTIFIER NULL,
+        ApplicationURL NVARCHAR(500) NULL,
         PostedByType TINYINT NOT NULL DEFAULT 0, -- 0=System, 1=User
         Title NVARCHAR(200) NOT NULL,
         JobTypeID INT NOT NULL,

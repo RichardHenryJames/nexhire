@@ -1,25 +1,16 @@
 /**
  * Production-Ready Job Scraper Service for NexHire
  * Integrates with existing NexHire database and architecture
- * Features: Human-like scraping, API validation, India market focus
+ * Features: Human-like scraping, API validation, India market focus, Full HTML parsing with Cheerio
  */
 
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import * as cheerio from 'cheerio';
 
-// ?? FIXED: Remove all cheerio imports to prevent Azure runtime failure
-// HTML parsing will be disabled but service will work
-// let cheerio: any = null;
-// try {
-//   cheerio = require('cheerio');
-//   console.log('? Cheerio loaded successfully');
-// } catch (error) {
-//   console.log('?? Cheerio not available in this environment, HTML parsing disabled');
-// }
-
-console.log('?? Cheerio disabled for Azure compatibility - API-only scraping mode');
+console.log('? Cheerio imported successfully - HTML scraping fully enabled');
 
 interface ScrapedJob {
   externalJobId: string;
@@ -55,10 +46,11 @@ export class JobScraperService {
     enabled: true,
     maxJobsPerRun: 150,
     sources: {
-      remoteok: { enabled: true, rateLimit: 2000 },
-      adzuna: { enabled: true, rateLimit: 3000 },
-      naukri: { enabled: false }, // Disabled until selectors fixed
-      weworkremotely: { enabled: false } // Disabled until parsing fixed
+      remoteok: { enabled: true, rateLimit: 2000 }, // Keep trying with better headers
+      adzuna: { enabled: true, rateLimit: 3000 }, // Works but truncated
+      naukri: { enabled: false }, // ? Needs headless browser - too complex for Azure
+      weworkremotely: { enabled: true, rateLimit: 1500 }, // ? RSS feed with FULL descriptions
+      hackernews: { enabled: true, rateLimit: 1000 } // ? NEW: YC Jobs API confirmed working via curl
     },
     excludeKeywords: ['adult', 'gambling', 'crypto', 'mlm', 'scam']
   };
@@ -155,7 +147,7 @@ export class JobScraperService {
 
       let processed = 0;
       for (const job of jobsData.slice(0, 50)) { // Limit to 50 jobs
-        if (!job.id || !job.position || !job.company) continue;
+        if (!job.id || !job.position || !job.company) return;
 
         // ? ENHANCED POSTED DATE HANDLING
         let postedDate = new Date(); // Default to current time
@@ -349,6 +341,304 @@ export class JobScraperService {
     return jobs;
   }
 
+  // ? NEW: Scrape Naukri.com for full job descriptions (India-focused)
+  private static async scrapeNaukri(): Promise<ScrapedJob[]> {
+    const jobs: ScrapedJob[] = [];
+    
+    if (!cheerio) {
+      console.log('?? Cheerio not available - skipping Naukri');
+      return jobs;
+    }
+    
+    try {
+      console.log('?? Scraping Naukri.com for India jobs...');
+      
+      const searchUrls = [
+        'https://www.naukri.com/software-engineer-jobs-in-bangalore',
+        'https://www.naukri.com/developer-jobs-in-mumbai',
+        'https://www.naukri.com/software-jobs-in-delhi'
+      ];
+      
+      for (const url of searchUrls) {
+        try {
+          const response = await this.makeHumanRequest(url, { timeout: 15000 });
+          
+          if (response.status !== 200) {
+            console.log(`?? Naukri ${url}: HTTP ${response.status}`);
+            continue;
+          }
+          
+          const $ = cheerio.load(response.data);
+          
+          // Naukri job selectors (updated for current structure)
+          $('.jobTuple').each((index, element) => {
+            if (index >= 10) return false; // Limit per URL
+            
+            const $job = $(element);
+            const title = $job.find('.title').text().trim();
+            const company = $job.find('.comp-name').text().trim();
+            const location = $job.find('.locationsContainer').text().trim();
+            const experience = $job.find('.expwdth').text().trim();
+            const salary = $job.find('.sal').text().trim();
+            const description = $job.find('.job-description').text().trim();
+            const jobUrl = $job.find('.title a').attr('href');
+            
+            if (title && company) {
+              jobs.push({
+                externalJobId: `naukri_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                title: title.substring(0, 200),
+                company: company.substring(0, 100),
+                location: location || 'India',
+                description: description || `${title} position at ${company}. Full job details available on application.`,
+                salaryMin: this.extractSalaryFromText(salary).min,
+                salaryMax: this.extractSalaryFromText(salary).max,
+                jobType: 'Full-time',
+                workplaceType: this.detectWorkplaceType(location, title, description),
+                experienceLevel: experience,
+                applicationUrl: jobUrl ? `https://www.naukri.com${jobUrl}` : undefined,
+                source: 'Naukri',
+                postedDate: new Date() // Naukri doesn't always show post date
+              });
+            }
+          });
+          
+          console.log(`? Naukri: Found ${jobs.length} jobs from ${url}`);
+          
+          // Human delay between requests
+          await this.humanDelay(3000, 6000);
+          
+        } catch (error: any) {
+          console.log(`?? Naukri ${url} failed: ${error.message}`);
+        }
+      }
+      
+      console.log(`?? Naukri total: ${jobs.length} India-focused jobs with full descriptions`);
+      
+    } catch (error: any) {
+      console.error('? Naukri scraping failed:', error.message);
+    }
+    
+    return jobs;
+  }
+
+  // ? NEW: Scrape WeWorkRemotely for full job descriptions
+  private static async scrapeWeWorkRemotely(): Promise<ScrapedJob[]> {
+    const jobs: ScrapedJob[] = [];
+    
+    if (!cheerio) {
+      console.log('?? Cheerio not available - skipping WeWorkRemotely');
+      return jobs;
+    }
+    
+    try {
+      console.log('?? Scraping WeWorkRemotely for remote jobs...');
+      
+      const categories = ['programming', 'product', 'design'];
+      
+      for (const category of categories) {
+        try {
+          const url = `https://weworkremotely.com/categories/remote-${category}-jobs`;
+          const response = await this.makeHumanRequest(url, { timeout: 15000 });
+          
+          if (response.status !== 200) {
+            console.log(`?? WeWorkRemotely ${category}: HTTP ${response.status}`);
+            continue;
+          }
+          
+          const $ = cheerio.load(response.data);
+          
+          // WeWorkRemotely job selectors
+          $('.jobs li').each((index, element) => {
+            if (index >= 8) return false; // Limit per category
+            
+            const $job = $(element);
+            const $link = $job.find('.title a');
+            const title = $link.text().trim();
+            const company = $job.find('.company').text().trim();
+            const location = $job.find('.region').text().trim() || 'Remote';
+            const jobUrl = $link.attr('href');
+            
+            // Get additional details if available
+            const tags = $job.find('.tags .tag').map((i, el) => $(el).text().trim()).get().join(', ');
+            const description = $job.find('.description').text().trim();
+            
+            if (title && company && !title.toLowerCase().includes('featured')) {
+              jobs.push({
+                externalJobId: `weworkremotely_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                title: title.substring(0, 200),
+                company: company.substring(0, 100),
+                location: location,
+                description: description || `${title} position at ${company}. Remote work opportunity with full job details available on application.`,
+                jobType: 'Full-time',
+                workplaceType: 'Remote',
+                requirements: tags,
+                applicationUrl: jobUrl ? `https://weworkremotely.com${jobUrl}` : undefined,
+                source: 'WeWorkRemotely',
+                postedDate: new Date()
+              });
+            }
+          });
+          
+          console.log(`? WeWorkRemotely ${category}: Found jobs`);
+          
+          // Human delay between requests
+          await this.humanDelay(4000, 7000);
+          
+        } catch (error: any) {
+          console.log(`?? WeWorkRemotely ${category} failed: ${error.message}`);
+        }
+      }
+      
+      console.log(`?? WeWorkRemotely total: ${jobs.length} remote jobs with full descriptions`);
+      
+    } catch (error: any) {
+      console.error('? WeWorkRemotely scraping failed:', error.message);
+    }
+    
+    return jobs;
+  }
+
+  // ? NEW: Scrape WeWorkRemotely RSS feeds for FULL job descriptions
+  private static async scrapeWeWorkRemotelyRSS(): Promise<ScrapedJob[]> {
+    const jobs: ScrapedJob[] = [];
+    
+    try {
+      console.log('?? Scraping WeWorkRemotely RSS feeds for complete job descriptions...');
+      
+      const rssFeeds = [
+        { category: 'programming', url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss' },
+        { category: 'product', url: 'https://weworkremotely.com/categories/remote-product-jobs.rss' },
+        { category: 'design', url: 'https://weworkremotely.com/categories/remote-design-jobs.rss' }
+      ];
+      
+      for (const feed of rssFeeds) {
+        try {
+          console.log(`?? Fetching ${feed.category} jobs from RSS...`);
+          
+          const response = await this.makeHumanRequest(feed.url, { 
+            timeout: 15000,
+            headers: {
+              'Accept': 'application/rss+xml, application/xml, text/xml'
+            }
+          });
+          
+          if (response.status !== 200) {
+            console.log(`?? WeWorkRemotely ${feed.category}: HTTP ${response.status}`);
+            continue;
+          }
+          
+          // Parse RSS XML manually (no need for heavy XML parser)
+          const xmlContent = response.data;
+          const itemsRegex = /<item>(.*?)<\/item>/gs;
+          let match;
+          let itemCount = 0;
+          
+          while ((match = itemsRegex.exec(xmlContent)) !== null && itemCount < 10) {
+            const itemContent = match[1];
+            
+            // Extract fields using regex
+            const title = this.extractRSSField(itemContent, 'title');
+            const description = this.extractRSSField(itemContent, 'description');
+            const link = this.extractRSSField(itemContent, 'link');
+            const pubDate = this.extractRSSField(itemContent, 'pubDate');
+            
+            if (title && description) {
+              // Extract company name from title (usually format: "Company: Job Title")
+              const titleParts = title.split(': ');
+              const company = titleParts[0] || 'Unknown Company';
+              const jobTitle = titleParts[1] || title;
+              
+              // Clean up HTML entities in description
+              const cleanDescription = description
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&')
+                .replace(/<[^>]+>/g, ' ') // Remove HTML tags
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              jobs.push({
+                externalJobId: `weworkremotely_${Date.now()}_${itemCount}_${Math.random().toString(36).substr(2, 5)}`,
+                title: jobTitle.substring(0, 200),
+                company: company.substring(0, 100),
+                location: 'Remote',
+                description: cleanDescription, // ? FULL DESCRIPTION from RSS
+                jobType: 'Full-time',
+                workplaceType: 'Remote',
+                applicationUrl: link,
+                source: 'WeWorkRemotely',
+                postedDate: pubDate ? new Date(pubDate) : new Date()
+              });
+              
+              itemCount++;
+            }
+          }
+          
+          console.log(`? WeWorkRemotely ${feed.category}: ${itemCount} jobs with full descriptions`);
+          
+          // Human delay between RSS feeds
+          await this.humanDelay(2000, 4000);
+          
+        } catch (error: any) {
+          console.log(`?? WeWorkRemotely ${feed.category} RSS failed: ${error.message}`);
+        }
+      }
+      
+      console.log(`?? WeWorkRemotely total: ${jobs.length} remote jobs with COMPLETE descriptions`);
+      
+    } catch (error: any) {
+      console.error('? WeWorkRemotely RSS scraping failed:', error.message);
+    }
+    
+    return jobs;
+  }
+
+  // ? HELPER: Extract field from RSS XML content
+  private static extractRSSField(xmlContent: string, fieldName: string): string {
+    const regex = new RegExp(`<${fieldName}[^>]*><!\\[CDATA\\[(.*?)\\]\\]><\/${fieldName}>`, 's');
+    const cdataMatch = xmlContent.match(regex);
+    if (cdataMatch) {
+      return cdataMatch[1].trim();
+    }
+    
+    // Fallback to regular field extraction
+    const simpleRegex = new RegExp(`<${fieldName}[^>]*>(.*?)<\/${fieldName}>`, 's');
+    const simpleMatch = xmlContent.match(simpleRegex);
+    return simpleMatch ? simpleMatch[1].trim() : '';
+  }
+
+  // Scrape Naukri and WeWorkRemotely (Enhanced HTML scraping for full descriptions)
+  private static async scrapeNaukriAndWeWorkRemotely(): Promise<ScrapedJob[]> {
+    let jobs: ScrapedJob[] = [];
+    
+    try {
+      // Naukri scraping
+      if (this.config.sources.naukri.enabled) {
+        const naukriJobs = await this.scrapeNaukri();
+        jobs = [...jobs, ...naukriJobs];
+        
+        console.log(`? Naukri: ${naukriJobs.length} jobs scraped`);
+      }
+    } catch (error: any) {
+      console.error('? Naukri scraping failed:', error.message);
+    }
+    
+    try {
+      // WeWorkRemotely scraping
+      if (this.config.sources.weworkremotely.enabled) {
+        const weWorkRemotelyJobs = await this.scrapeWeWorkRemotely();
+        jobs = [...jobs, ...weWorkRemotelyJobs];
+        
+        console.log(`? WeWorkRemotely: ${weWorkRemotelyJobs.length} jobs scraped`);
+      }
+    } catch (error: any) {
+      console.error('? WeWorkRemotely scraping failed:', error.message);
+    }
+    
+    return jobs;
+  }
+
   // Main scraping orchestrator
   static async scrapeAndPopulateJobs(): Promise<ScrapingResult> {
     const startTime = Date.now();
@@ -416,6 +706,56 @@ export class JobScraperService {
           result.errors.push(`Adzuna: ${error.message}`);
           result.summary.sourceBreakdown['Adzuna'] = 0;
         }
+      }
+
+      // Scrape Naukri and WeWorkRemotely (Enhanced HTML scraping for full descriptions)
+      if (this.config.sources.naukri.enabled || this.config.sources.weworkremotely.enabled) {
+        try {
+          const htmlJobs = await this.scrapeNaukriAndWeWorkRemotely();
+          allScrapedJobs.push(...htmlJobs);
+          
+          result.summary.sourceBreakdown['Naukri'] = htmlJobs.filter(job => job.source === 'Naukri').length;
+          result.summary.sourceBreakdown['WeWorkRemotely'] = htmlJobs.filter(job => job.source === 'WeWorkRemotely').length;
+          
+          console.log(`? Naukri & WeWorkRemotely: ${htmlJobs.length} jobs scraped`);
+        } catch (error: any) {
+          console.error('? Naukri/WeWorkRemotely failed:', error.message);
+          result.errors.push(`Naukri/WeWorkRemotely: ${error.message}`);
+          result.summary.sourceBreakdown['Naukri'] = 0;
+          result.summary.sourceBreakdown['WeWorkRemotely'] = 0;
+        }
+      }
+
+      // Scrape WeWorkRemotely RSS (confirmed working - full descriptions!)
+      if (this.config.sources.weworkremotely.enabled) {
+        try {
+          const weworkRemotelyJobs = await this.scrapeWeWorkRemotelyRSS();
+          allScrapedJobs.push(...weworkRemotelyJobs);
+          result.summary.sourceBreakdown['WeWorkRemotely'] = weworkRemotelyJobs.length;
+          console.log(`? WeWorkRemotely: ${weworkRemotelyJobs.length} jobs with full descriptions`);
+        } catch (error: any) {
+          console.error('? WeWorkRemotely failed:', error.message);
+          result.errors.push(`WeWorkRemotely: ${error.message}`);
+          result.summary.sourceBreakdown['WeWorkRemotely'] = 0;
+        }
+        
+        await this.humanDelay(2000, 4000);
+      }
+
+      // Scrape HackerNews Jobs (confirmed working via curl - YC ecosystem)
+      if (this.config.sources.hackernews.enabled) {
+        try {
+          const hackerNewsJobs = await this.scrapeHackerNewsJobs();
+          allScrapedJobs.push(...hackerNewsJobs);
+          result.summary.sourceBreakdown['HackerNews'] = hackerNewsJobs.length;
+          console.log(`?? HackerNews: ${hackerNewsJobs.length} startup jobs from YC ecosystem`);
+        } catch (error: any) {
+          console.error('? HackerNews failed:', error.message);
+          result.errors.push(`HackerNews: ${error.message}`);
+          result.summary.sourceBreakdown['HackerNews'] = 0;
+        }
+        
+        await this.humanDelay(1000, 2000);
       }
 
       result.summary.totalJobsScraped = allScrapedJobs.length;
@@ -500,7 +840,7 @@ export class JobScraperService {
           SalaryRangeMin, SalaryRangeMax, CurrencyID, SalaryPeriod, CompensationType,
           ExperienceMin, ExperienceMax, Status, Priority, Visibility,
           PublishedAt, ExpiresAt, CreatedAt, UpdatedAt, ExternalJobID,
-          Tags, CurrentApplications
+          Tags, CurrentApplications, ApplicationURL
         )
         VALUES (
           @param0, @param1, 0, @param2, @param3, @param4,
@@ -508,7 +848,7 @@ export class JobScraperService {
           @param10, @param11, @param12, @param13, @param14,
           @param15, @param16, @param17, @param18, @param19,
           @param20, @param21, @param22, @param23, @param24,
-          @param25, @param26
+          @param25, @param26, @param27
         )
       `;
       
@@ -539,7 +879,8 @@ export class JobScraperService {
         now, // @param23 - UpdatedAt (scraping timestamp)
         job.externalJobId, // @param24 - ExternalJobID
         `${job.source}, ${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 100) : ''}`, // @param25 - Tags
-        0 // @param26 - CurrentApplications
+        0, // @param26 - CurrentApplications
+        job.applicationUrl // @param27 - ApplicationURL ? NEW
       ];
       
       await dbService.executeQuery(insertQuery, values);
@@ -709,7 +1050,7 @@ export class JobScraperService {
     if (locationLower.includes('australia') || locationLower.includes('sydney') || locationLower.includes('melbourne')) return 'Australia';
     if (locationLower.includes('germany') || locationLower.includes('berlin')) return 'Germany';
     if (locationLower.includes('france') || locationLower.includes('paris')) return 'France';
-    if (locationLower.includes('remote') || locationLower.includes('worldwide')) return 'Remote';
+    if (locationLower.includes('remote') || locationLower.includes('worldwide')) return 'United States';
     
     return 'United States';
   }
@@ -721,7 +1062,7 @@ export class JobScraperService {
     const expPatterns = [
       /(\d+)\+?\s*years?\s+(?:of\s+)?experience/,
       /(\d+)-\d+\s*years/,
-      /minimum\s+(?:of\s+)?(\d+)\s*years/
+      /maximum\s+(?:of\s+)?(\d+)\s*years/
     ];
 
     for (const pattern of expPatterns) {
@@ -782,6 +1123,127 @@ export class JobScraperService {
     return mapping[countryCode] || countryCode.toUpperCase();
   }
 
+  // ? NEW: Scrape HackerNews Jobs API (Y Combinator ecosystem) - CONFIRMED WORKING via curl
+  private static async scrapeHackerNewsJobs(): Promise<ScrapedJob[]> {
+    const jobs: ScrapedJob[] = [];
+    
+    try {
+      console.log('?? Scraping HackerNews Jobs API (YC ecosystem)...');
+      
+      // Get job story IDs from HackerNews API
+      const jobStoriesResponse = await this.makeHumanRequest('https://hacker-news.firebaseio.com/v0/jobstories.json', { 
+        json: true,
+        timeout: 15000
+      });
+      
+      if (jobStoriesResponse.status !== 200 || !Array.isArray(jobStoriesResponse.data)) {
+        throw new Error(`Failed to fetch job stories: HTTP ${jobStoriesResponse.status}`);
+      }
+      
+      const jobIds = jobStoriesResponse.data.slice(0, 15); // Limit to latest 15 job posts
+      console.log(`?? HackerNews: Found ${jobIds.length} job stories`);
+      
+      let processed = 0;
+      for (const jobId of jobIds) {
+        try {
+          // Get individual job details
+          const jobResponse = await this.makeHumanRequest(`https://hacker-news.firebaseio.com/v0/item/${jobId}.json`, { 
+            json: true,
+            timeout: 10000
+          });
+          
+          if (jobResponse.status !== 200 || !jobResponse.data) {
+            console.log(`?? HackerNews: Failed to fetch job ${jobId}`);
+            continue;
+          }
+          
+          const job = jobResponse.data;
+          
+          // Validate required fields
+          if (!job.title || job.type !== 'job') {
+            continue;
+          }
+          
+          // Extract company and job title from title
+          let company = 'Unknown Company';
+          let jobTitle = job.title;
+          
+          // Common patterns: "Company Name Is Hiring [Job Title]" or "Company (YC XXX) Is Hiring"
+          const hiringMatch = job.title.match(/^(.+?)\s+(?:\([^)]+\)\s+)?[Ii]s [Hh]iring\s*(?:[-:]?\s*(.+))?/);
+          if (hiringMatch) {
+            company = hiringMatch[1].trim();
+            jobTitle = hiringMatch[2] ? hiringMatch[2].trim() : job.title;
+            
+            // Clean up YC batch info from company name
+            company = company.replace(/\s*\([^)]*YC[^)]*\)/g, '').trim();
+          }
+          
+          // Get application URL (often points to YC job board)
+          const applicationUrl = job.url || `https://news.ycombinator.com/item?id=${job.id}`;
+          
+          // Convert Unix timestamp to Date
+          const postedDate = job.time ? new Date(job.time * 1000) : new Date();
+          
+          // Create enhanced description for YC jobs
+          const description = this.createHackerNewsDescription(job.title, company, applicationUrl);
+          
+          jobs.push({
+            externalJobId: `hackernews_${job.id}`,
+            title: jobTitle.substring(0, 200),
+            company: company.substring(0, 100),
+            location: 'Remote', // Most YC/HN jobs are remote-friendly
+            description: description,
+            jobType: 'Full-time',
+            workplaceType: 'Remote',
+            applicationUrl: applicationUrl,
+            source: 'HackerNews',
+            postedDate: postedDate
+          });
+          
+          processed++;
+          
+          // Human delay between requests
+          await this.humanDelay(800, 1500);
+          
+        } catch (error: any) {
+          console.log(`?? HackerNews job ${jobId} failed: ${error.message}`);
+        }
+      }
+      
+      console.log(`?? HackerNews: Successfully processed ${processed} jobs from YC ecosystem`);
+      
+    } catch (error: any) {
+      console.error('? HackerNews scraping failed:', error.message);
+      throw error;
+    }
+    
+    return jobs;
+  }
+
+  // ? HELPER: Create enhanced description for HackerNews/YC jobs
+  private static createHackerNewsDescription(title: string, company: string, applicationUrl: string): string {
+    let description = `Join ${company} - a dynamic startup opportunity posted on Hacker News.\n\n`;
+    
+    description += `?? **Startup Opportunity**: This position was posted on Hacker News, indicating it's likely from an innovative startup or tech company.\n\n`;
+    
+    description += `?? **Y Combinator Ecosystem**: Many jobs posted here are from Y Combinator companies and other high-growth startups.\n\n`;
+    
+    description += `?? **What This Means**:\n`;
+    description += `• Early-stage company with high growth potential\n`;
+    description += `• Opportunity to make significant impact\n`;
+    description += `• Work with cutting-edge technologies\n`;
+    description += `• Potential for equity and rapid career growth\n\n`;
+    
+    description += `?? **Position**: ${title}\n\n`;
+    
+    description += `?? **Next Steps**: Click "Apply Now" to view the complete job details and application process. `;
+    description += `Many startup positions offer competitive compensation, equity, and the chance to shape the company's future.\n\n`;
+    
+    description += `?? **Startup Culture**: Expect a fast-paced, innovative environment where your contributions directly impact the company's success.`;
+    
+    return description;
+  }
+
   // Public configuration methods
   static getConfig() {
     return { ...this.config };
@@ -832,5 +1294,39 @@ export class JobScraperService {
     } catch (error: any) {
       throw new Error(`Failed to get scraping stats: ${error.message}`);
     }
+  }
+
+  // ? HELPER: Extract salary from text (for Naukri and other sources)
+  private static extractSalaryFromText(salaryText: string): { min?: number; max?: number } {
+    if (!salaryText) return {};
+    
+    // Match patterns like "?5-8 Lakhs PA" or "?10-15 LPA" or "?3,00,000 - ?5,00,000"
+    const lakhsMatch = salaryText.match(/??(\d+)-(\d+)\s*lakhs?/i);
+    if (lakhsMatch) {
+      return {
+        min: parseInt(lakhsMatch[1]) * 100000, // Convert lakhs to rupees
+        max: parseInt(lakhsMatch[2]) * 100000
+      };
+    }
+    
+    // Match exact amounts like "?3,00,000 - ?5,00,000"
+    const exactMatch = salaryText.match(/??([\d,]+)\s*-\s*??([\d,]+)/);
+    if (exactMatch) {
+      return {
+        min: parseInt(exactMatch[1].replace(/,/g, '')),
+        max: parseInt(exactMatch[2].replace(/,/g, ''))
+      };
+    }
+    
+    // Match USD amounts like "$80,000 - $120,000"
+    const usdMatch = salaryText.match(/\$?([\d,]+)\s*-\s*\$?([\d,]+)/);
+    if (usdMatch) {
+      return {
+        min: parseInt(usdMatch[1].replace(/,/g, '')),
+        max: parseInt(usdMatch[2].replace(/,/g, ''))
+      };
+    }
+    
+    return {};
   }
 }
