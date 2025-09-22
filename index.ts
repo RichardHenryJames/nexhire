@@ -920,7 +920,7 @@ app.http('storage-delete', {
 app.http('scraping-ping', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/ping',
+    route: 'jobs/scrape/ping',
     handler: withErrorHandling(async (req, context) => {
         return {
             status: 200,
@@ -941,7 +941,7 @@ app.http('scraping-ping', {
 app.http('job-scraper-trigger', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/trigger',
+    route: 'jobs/scrape/trigger',
     handler: withErrorHandling(async (req, context) => {
         try {
             // Verify admin authentication inline
@@ -1020,7 +1020,7 @@ app.http('job-scraper-trigger', {
 app.http('scraping-config', {
     methods: ['GET', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/config',
+    route: 'jobs/scrape/config',
     handler: withErrorHandling(async (req, context) => {
         try {
             // Admin auth check
@@ -1101,7 +1101,7 @@ app.http('scraping-config', {
 app.http('scraping-stats', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/stats',
+    route: 'jobs/scrape/stats',
     handler: withErrorHandling(async (req, context) => {
         try {
             // Admin auth
@@ -1153,7 +1153,7 @@ app.http('scraping-stats', {
 app.http('scraping-cleanup', {
     methods: ['DELETE', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/cleanup',
+    route: 'jobs/scrape/cleanup',
     handler: withErrorHandling(async (req, context) => {
         try {
             // Admin auth
@@ -1237,7 +1237,7 @@ app.http('scraping-cleanup', {
 app.http('scraping-health', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
-    route: 'admin/scraping/health',
+    route: 'jobs/scrape/health',
     handler: withErrorHandling(async (req, context) => {
         try {
             // Try to load service and get real health data
@@ -1390,11 +1390,11 @@ export {}
  * GET    /applications/{id}           - Get application details
  * 
  * ??? JOB SCRAPING SYSTEM (6 endpoints): ?? AUTOMATED JOB POPULATION
- * POST   /admin/jobs/scrape/trigger           - Manually trigger job scraping
- * GET    /admin/jobs/scrape/config            - Get scraping configuration
- * PUT    /admin/jobs/scrape/config            - Update scraping configuration
- * GET    /admin/jobs/scrape/stats             - Get scraping statistics
- * DELETE /admin/jobs/scrape/cleanup           - Clean up old scraped jobs
+ * POST   /jobs/scrape/trigger           - Manually trigger job scraping
+ * GET    /jobs/scrape/config            - Get scraping configuration
+ * PUT    /jobs/scrape/config            - Update scraping configuration
+ * GET    /jobs/scrape/stats             - Get scraping statistics
+ * DELETE /jobs/scrape/cleanup           - Clean up old scraped jobs
  * GET    /health/scraper                      - Scraper service health check
  * 
  * REFERRAL SYSTEM (13 endpoints): ?? EXPANDED
