@@ -87,15 +87,8 @@ import {
     getPaymentHistory
 } from './src/controllers/payment.controller';
 
-// Import job scraper controllers - FIXED: Static imports instead of dynamic
-import {
-    triggerJobScraping,
-    getScrapingConfig,
-    updateScrapingConfig,
-    getScrapingStats,
-    cleanupScrapedJobs,
-    scrapingHealthCheck
-} from './src/controllers/job-scraper.controller';
+// Import storage controller - MOVED HERE to prevent execution issues
+import { uploadFile, deleteFile } from './src/controllers/storage.controller';
 
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
@@ -902,10 +895,10 @@ app.http('payment-history', {
     handler: withErrorHandling(getPaymentHistory)
 });
 
-// Import storage controller
-import { uploadFile, deleteFile } from './src/controllers/storage.controller';
+// ========================================================================
+// STORAGE ENDPOINTS - File uploads (import now at top)
+// ========================================================================
 
-// NEW: Storage endpoints for file uploads
 app.http('storage-upload', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -921,14 +914,107 @@ app.http('storage-delete', {
 });
 
 // ========================================================================
-// JOB SCRAPING ENDPOINTS - ?? FIXED: Static imports for Azure compatibility
+// DIAGNOSTIC ENDPOINT - Simple test without any imports
+// ========================================================================
+
+app.http('scraping-ping', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/ping',
+    handler: withErrorHandling(async (req, context) => {
+        return {
+            status: 200,
+            jsonBody: {
+                success: true,
+                message: 'Scraping section loaded successfully',
+                timestamp: new Date().toISOString(),
+                test: 'This endpoint has zero dependencies'
+            }
+        };
+    })
+});
+
+// ========================================================================
+// JOB SCRAPING ENDPOINTS - ?? PROPER IMPLEMENTATION with Dynamic Loading
 // ========================================================================
 
 app.http('job-scraper-trigger', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'admin/scraping/trigger',
-    handler: withErrorHandling(triggerJobScraping)
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Verify admin authentication inline
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: {
+                        success: false,
+                        error: 'Authorization header required'
+                    }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: {
+                        success: false,
+                        error: 'Admin access required'
+                    }
+                };
+            }
+
+            console.log('?? Manual job scraping triggered by admin:', payload.userId);
+            
+            // Dynamic import of JobScraperService
+            try {
+                const { JobScraperService } = await import('./src/services/job-scraper.service');
+                const result = await JobScraperService.scrapeAndPopulateJobs();
+                
+                return {
+                    status: result.success ? 200 : 500,
+                    jsonBody: {
+                        success: result.success,
+                        message: `Job scraping completed. ${result.jobsAdded} jobs added.`,
+                        data: {
+                            jobsAdded: result.jobsAdded,
+                            totalJobsScraped: result.summary.totalJobsScraped,
+                            indiaJobsAdded: result.summary.indiaJobsAdded,
+                            sourceBreakdown: result.summary.sourceBreakdown,
+                            executionTimeSeconds: Math.round(result.summary.executionTime / 1000),
+                            errors: result.errors
+                        }
+                    }
+                };
+            } catch (serviceError) {
+                console.error('JobScraperService failed:', serviceError);
+                return {
+                    status: 503,
+                    jsonBody: {
+                        success: false,
+                        error: 'Job scraping service is temporarily unavailable',
+                        details: serviceError instanceof Error ? serviceError.message : 'Unknown error'
+                    }
+                };
+            }
+        } catch (error: any) {
+            console.error('Job scraping trigger failed:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: 'Internal server error',
+                    details: error.message
+                }
+            };
+        }
+    })
 });
 
 app.http('scraping-config', {
@@ -936,13 +1022,79 @@ app.http('scraping-config', {
     authLevel: 'anonymous',
     route: 'admin/scraping/config',
     handler: withErrorHandling(async (req, context) => {
-        if (req.method === 'GET') {
-            return await getScrapingConfig(req, context);
-        } else if (req.method === 'PUT') {
-            return await updateScrapingConfig(req, context);
+        try {
+            // Admin auth check
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Authorization header required' }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Admin access required' }
+                };
+            }
+
+            // Dynamic import and actual functionality
+            const { JobScraperService } = await import('./src/services/job-scraper.service');
+            
+            if (req.method === 'GET') {
+                const config = JobScraperService.getConfig();
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: config,
+                        message: 'Scraping configuration retrieved successfully'
+                    }
+                };
+            } else if (req.method === 'PUT') {
+                const updates = await req.json() as any;
+                
+                // Validate updates
+                if (updates.maxJobsPerRun && (updates.maxJobsPerRun < 1 || updates.maxJobsPerRun > 500)) {
+                    return {
+                        status: 400,
+                        jsonBody: {
+                            success: false,
+                            error: 'maxJobsPerRun must be between 1 and 500'
+                        }
+                    };
+                }
+
+                JobScraperService.updateConfig(updates);
+                
+                return {
+                    status: 200,
+                    jsonBody: {
+                        success: true,
+                        data: JobScraperService.getConfig(),
+                        message: 'Configuration updated successfully'
+                    }
+                };
+            }
+            
+            return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
+            
+        } catch (serviceError) {
+            console.error('Scraping config error:', serviceError);
+            return {
+                status: 503,
+                jsonBody: {
+                    success: false,
+                    error: 'Configuration service temporarily unavailable',
+                    details: serviceError instanceof Error ? serviceError.message : 'Unknown error'
+                }
+            };
         }
-        
-        return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
     })
 });
 
@@ -950,21 +1102,211 @@ app.http('scraping-stats', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'admin/scraping/stats',
-    handler: withErrorHandling(getScrapingStats)
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Admin auth
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Authorization header required' }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Admin access required' }
+                };
+            }
+
+            // Get actual stats from service
+            const { JobScraperService } = await import('./src/services/job-scraper.service');
+            const stats = await JobScraperService.getScrapingStats();
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: stats,
+                    message: 'Scraping statistics retrieved successfully'
+                }
+            };
+        } catch (serviceError) {
+            console.error('Scraping stats error:', serviceError);
+            return {
+                status: 503,
+                jsonBody: {
+                    success: false,
+                    error: 'Statistics service temporarily unavailable',
+                    details: serviceError instanceof Error ? serviceError.message : 'Unknown error'
+                }
+            };
+        }
+    })
 });
 
 app.http('scraping-cleanup', {
     methods: ['DELETE', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'admin/scraping/cleanup',
-    handler: withErrorHandling(cleanupScrapedJobs)
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Admin auth
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Authorization header required' }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Admin access required' }
+                };
+            }
+
+            const { daysOld = 90, source = null } = req.query as any;
+            
+            if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
+                return {
+                    status: 400,
+                    jsonBody: {
+                        success: false,
+                        error: 'daysOld must be between 1 and 365'
+                    }
+                };
+            }
+
+            // Perform actual cleanup
+            const { dbService } = await import('./src/services/database.service');
+            
+            let cleanupQuery = `
+                DELETE FROM Jobs 
+                WHERE PostedByType = 0 
+                  AND ExternalJobID IS NOT NULL
+                  AND CreatedAt < DATEADD(day, -@param0, GETUTCDATE())
+            `;
+            
+            const queryParams: any[] = [parseInt(daysOld)];
+            
+            if (source) {
+                cleanupQuery += ` AND ExternalJobID LIKE @param1`;
+                queryParams.push(`${source}_%`);
+            }
+
+            const result = await dbService.executeQuery(cleanupQuery, queryParams);
+            const deletedCount = result.rowsAffected?.[0] || 0;
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: {
+                        deletedJobs: deletedCount,
+                        daysOld: parseInt(daysOld),
+                        source: source || 'all'
+                    },
+                    message: `Cleanup completed. ${deletedCount} jobs removed.`
+                }
+            };
+        } catch (serviceError) {
+            console.error('Cleanup error:', serviceError);
+            return {
+                status: 503,
+                jsonBody: {
+                    success: false,
+                    error: 'Cleanup service temporarily unavailable',
+                    details: serviceError instanceof Error ? serviceError.message : 'Unknown error'
+                }
+            };
+        }
+    })
 });
 
 app.http('scraping-health', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'admin/scraping/health',
-    handler: withErrorHandling(scrapingHealthCheck)
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Try to load service and get real health data
+            const { JobScraperService } = await import('./src/services/job-scraper.service');
+            
+            const config = JobScraperService.getConfig();
+            const stats = await JobScraperService.getScrapingStats();
+            
+            // Determine real health status
+            const totalJobs = stats.summary?.TotalScrapedJobs || 0;
+            const jobsLast24h = stats.summary?.JobsLast24h || 0;
+            const isHealthy = config.enabled && totalJobs >= 0;
+            
+            const healthData = {
+                status: isHealthy ? 'healthy' : 'degraded',
+                scrapingEnabled: config.enabled,
+                totalScrapedJobs: totalJobs,
+                jobsLast24h: jobsLast24h,
+                indiaJobs: stats.summary?.TotalIndiaJobs || 0,
+                activeSources: Object.keys(config.sources).filter(source => 
+                    (config.sources as any)[source]?.enabled
+                ),
+                lastCheck: new Date().toISOString(),
+                recommendations: [] as string[]
+            };
+            
+            // Add intelligent recommendations
+            if (!config.enabled) {
+                healthData.recommendations.push('Enable job scraping in configuration');
+            }
+            if (jobsLast24h === 0 && totalJobs === 0) {
+                healthData.recommendations.push('No jobs scraped yet - run initial scraping');
+            } else if (jobsLast24h === 0) {
+                healthData.recommendations.push('No jobs scraped in last 24 hours - check sources');
+            }
+            if (totalJobs < 100) {
+                healthData.recommendations.push('Low job count - consider running scraper more frequently');
+            }
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: healthData,
+                    message: `Scraper health status: ${healthData.status}`
+                }
+            };
+        } catch (serviceError) {
+            // If service can't load, return basic health info
+            console.warn('JobScraperService unavailable for health check:', serviceError);
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: {
+                        status: 'service-unavailable',
+                        message: 'Scraping service temporarily unavailable but endpoint is working',
+                        error: serviceError instanceof Error ? serviceError.message : 'Service load failed',
+                        lastCheck: new Date().toISOString(),
+                        recommendations: [
+                            'Service dependencies may need to be resolved',
+                            'Check application logs for detailed error information'
+                        ]
+                    },
+                    message: 'Health check endpoint operational, service unavailable'
+                }
+            };
+        }
+    })
 });
 
 // ========================================================================
@@ -973,7 +1315,28 @@ app.http('scraping-health', {
 
 console.log('NexHire Backend API - All functions registered');
 console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
-export {};
+
+// ========================================================================
+// FINAL TEST ENDPOINT - Added at the very end
+// ========================================================================
+
+app.http('test-endpoint', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'test-final',
+    handler: withErrorHandling(async (req, context) => {
+        return {
+            status: 200,
+            jsonBody: {
+                success: true,
+                message: 'Final test endpoint works',
+                timestamp: new Date().toISOString()
+            }
+        };
+    })
+});
+
+export {}
 
 /*
  * ========================================================================

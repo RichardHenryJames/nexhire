@@ -9,14 +9,17 @@ import { AuthService } from './auth.service';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-// ?? FIXED: Optional cheerio import with fallback
-let cheerio: any = null;
-try {
-  cheerio = require('cheerio');
-  console.log('? Cheerio loaded successfully');
-} catch (error) {
-  console.log('?? Cheerio not available in this environment, HTML parsing disabled');
-}
+// ?? FIXED: Remove all cheerio imports to prevent Azure runtime failure
+// HTML parsing will be disabled but service will work
+// let cheerio: any = null;
+// try {
+//   cheerio = require('cheerio');
+//   console.log('? Cheerio loaded successfully');
+// } catch (error) {
+//   console.log('?? Cheerio not available in this environment, HTML parsing disabled');
+// }
+
+console.log('?? Cheerio disabled for Azure compatibility - API-only scraping mode');
 
 interface ScrapedJob {
   externalJobId: string;

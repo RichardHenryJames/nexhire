@@ -16,16 +16,7 @@ import {
     errorResponse
 } from '../utils/validation';
 
-// Dynamic import of JobScraperService to avoid initialization issues
-async function getJobScraperService() {
-    try {
-        const { JobScraperService } = await import('../services/job-scraper.service');
-        return JobScraperService;
-    } catch (error) {
-        console.error('Failed to load JobScraperService:', error);
-        throw new Error('Job scraping service is temporarily unavailable');
-    }
-}
+import { JobScraperService } from '../services/job-scraper.service';
 
 // Helper function to verify admin access
 async function verifyAdminAccess(req: HttpRequest): Promise<{ success: boolean; error?: string; userId?: string }> {
@@ -48,7 +39,7 @@ async function verifyAdminAccess(req: HttpRequest): Promise<{ success: boolean; 
     }
 }
 
-// Trigger job scraping manually (admin only)
+// Trigger job scraping manually (admin only) - FIXED: Using static import
 export const triggerJobScraping = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     // Verify admin authentication
     const authResult = await verifyAdminAccess(req);
@@ -62,7 +53,6 @@ export const triggerJobScraping = withErrorHandling(async (req: HttpRequest, con
     console.log('?? Manual job scraping triggered by admin:', authResult.userId);
     
     try {
-        const JobScraperService = await getJobScraperService();
         const result = await JobScraperService.scrapeAndPopulateJobs();
         
         const responseData = {
@@ -91,7 +81,7 @@ export const triggerJobScraping = withErrorHandling(async (req: HttpRequest, con
     }
 });
 
-// Get scraping configuration
+// Get scraping configuration - FIXED: Using static import
 export const getScrapingConfig = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const authResult = await verifyAdminAccess(req);
     if (!authResult.success) {
@@ -102,7 +92,6 @@ export const getScrapingConfig = withErrorHandling(async (req: HttpRequest, cont
     }
 
     try {
-        const JobScraperService = await getJobScraperService();
         const config = JobScraperService.getConfig();
         
         return {
@@ -118,7 +107,7 @@ export const getScrapingConfig = withErrorHandling(async (req: HttpRequest, cont
     }
 });
 
-// Update scraping configuration
+// Update scraping configuration - FIXED: Using static import
 export const updateScrapingConfig = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const authResult = await verifyAdminAccess(req);
     if (!authResult.success) {
@@ -139,7 +128,6 @@ export const updateScrapingConfig = withErrorHandling(async (req: HttpRequest, c
     }
 
     try {
-        const JobScraperService = await getJobScraperService();
         JobScraperService.updateConfig(updates);
         
         return {
@@ -155,7 +143,7 @@ export const updateScrapingConfig = withErrorHandling(async (req: HttpRequest, c
     }
 });
 
-// Get scraping statistics
+// Get scraping statistics - FIXED: Using static import
 export const getScrapingStats = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const authResult = await verifyAdminAccess(req);
     if (!authResult.success) {
@@ -166,7 +154,6 @@ export const getScrapingStats = withErrorHandling(async (req: HttpRequest, conte
     }
 
     try {
-        const JobScraperService = await getJobScraperService();
         const stats = await JobScraperService.getScrapingStats();
         
         return {
@@ -229,10 +216,9 @@ export const cleanupScrapedJobs = withErrorHandling(async (req: HttpRequest, con
     };
 });
 
-// Scraper health check with actual service status
+// Scraper health check with actual service status - FIXED: Using static import
 export const scrapingHealthCheck = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
-        const JobScraperService = await getJobScraperService();
         const config = JobScraperService.getConfig();
         const stats = await JobScraperService.getScrapingStats();
         
