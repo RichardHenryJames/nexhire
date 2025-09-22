@@ -87,6 +87,16 @@ import {
     getPaymentHistory
 } from './src/controllers/payment.controller';
 
+// Import job scraper controllers - FIXED: Static imports instead of dynamic
+import {
+    triggerJobScraping,
+    getScrapingConfig,
+    updateScrapingConfig,
+    getScrapingStats,
+    cleanupScrapedJobs,
+    scrapingHealthCheck
+} from './src/controllers/job-scraper.controller';
+
 // Import profile services
 import { ApplicantService, EmployerService } from './src/services/profile.service';
 
@@ -911,6 +921,53 @@ app.http('storage-delete', {
 });
 
 // ========================================================================
+// JOB SCRAPING ENDPOINTS - ?? FIXED: Static imports for Azure compatibility
+// ========================================================================
+
+app.http('job-scraper-trigger', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/trigger',
+    handler: withErrorHandling(triggerJobScraping)
+});
+
+app.http('scraping-config', {
+    methods: ['GET', 'PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/config',
+    handler: withErrorHandling(async (req, context) => {
+        if (req.method === 'GET') {
+            return await getScrapingConfig(req, context);
+        } else if (req.method === 'PUT') {
+            return await updateScrapingConfig(req, context);
+        }
+        
+        return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
+    })
+});
+
+app.http('scraping-stats', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/stats',
+    handler: withErrorHandling(getScrapingStats)
+});
+
+app.http('scraping-cleanup', {
+    methods: ['DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/cleanup',
+    handler: withErrorHandling(cleanupScrapedJobs)
+});
+
+app.http('scraping-health', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'admin/scraping/health',
+    handler: withErrorHandling(scrapingHealthCheck)
+});
+
+// ========================================================================
 // STARTUP LOG
 // ========================================================================
 
@@ -920,7 +977,7 @@ export {};
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (42 total): ? UPDATED
+ * COMPLETE API ENDPOINT LIST (48 total): ??? UPDATED WITH JOB SCRAPING
  * ========================================================================
  * 
  * AUTHENTICATION (5 endpoints):
@@ -969,7 +1026,15 @@ export {};
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- * REFERRAL SYSTEM (13 endpoints): ? EXPANDED
+ * ??? JOB SCRAPING SYSTEM (6 endpoints): ?? AUTOMATED JOB POPULATION
+ * POST   /admin/jobs/scrape/trigger           - Manually trigger job scraping
+ * GET    /admin/jobs/scrape/config            - Get scraping configuration
+ * PUT    /admin/jobs/scrape/config            - Update scraping configuration
+ * GET    /admin/jobs/scrape/stats             - Get scraping statistics
+ * DELETE /admin/jobs/scrape/cleanup           - Clean up old scraped jobs
+ * GET    /health/scraper                      - Scraper service health check
+ * 
+ * REFERRAL SYSTEM (13 endpoints): ?? EXPANDED
  * GET    /referral/plans                           - Get all referral plans
  * POST   /referral/plans/purchase                  - Purchase a referral plan
  * GET    /referral/subscription                    - Get current subscription
@@ -977,14 +1042,14 @@ export {};
  * GET    /referral/my-requests                     - Get my referral requests (seeker)
  * GET    /referral/available                       - Get available requests (referrer)
  * POST   /referral/requests/{id}/claim             - Claim a referral request
- * POST   /referral/requests/{id}/proof      ? NEW - Submit proof of referral
- * POST   /referral/requests/{id}/verify     ? NEW - Verify referral completion
- * POST   /referral/requests/{id}/cancel      ? NEW - Cancel referral request
- * GET    /referral/my-referrer-requests     ? NEW - Get my requests as referrer
+ * POST   /referral/requests/{id}/proof      ?? NEW - Submit proof of referral
+ * POST   /referral/requests/{id}/verify     ?? NEW - Verify referral completion
+ * POST   /referral/requests/{id}/cancel     ?? NEW - Cancel referral request
+ * GET    /referral/my-referrer-requests     ?? NEW - Get my requests as referrer
  * GET    /referral/analytics                       - Get referral analytics
  * GET    /referral/eligibility                     - Check referral eligibility
  * GET    /referral/stats                           - Get referrer badge stats
- * GET    /referral/points-history                   - Get detailed referral points history
+ * GET    /referral/points-history                  - Get detailed referral points history
  * 
  * REFERENCE DATA (9 endpoints):
  * GET    /reference/job-types         - Get job types
@@ -1001,5 +1066,14 @@ export {};
  * POST   /saved-jobs                 - Save a job
  * DELETE /saved-jobs/{jobId}        - Unsave a job
  * GET    /my/saved-jobs              - Get my saved jobs
+ * 
+ * ?? PAYMENT SYSTEM (3 endpoints): ?? RAZORPAY INTEGRATION
+ * POST   /payments/razorpay/create-order      - Create Razorpay payment order
+ * POST   /payments/razorpay/verify-and-activate - Verify payment and activate subscription
+ * GET    /payments/history                    - Get payment transaction history
+ * 
+ * ?? STORAGE & FILES (2 endpoints): ?? AZURE BLOB STORAGE
+ * POST   /storage/upload                      - Upload files to Azure Blob Storage
+ * DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
  * ========================================================================
  */
