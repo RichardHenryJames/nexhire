@@ -8,7 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  TextInput // 🆕 NEW: Import TextInput
+  TextInput, // 🆕 NEW: Import TextInput
+  Image // 🎨 NEW: Import Image for company logos
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
@@ -725,8 +726,47 @@ export default function JobDetailsScreen({ route, navigation }) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{job.Title}</Text>
-        <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+        <View style={styles.companyHeader}>
+          {/* 🏢 Company Logo and Details */}
+          <View style={styles.companyInfo}>
+            {job.OrganizationLogo ? (
+              <Image 
+                source={{ uri: job.OrganizationLogo }} 
+                style={styles.companyLogo}
+                onError={() => console.log('Company logo load error for:', job.OrganizationName)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={32} color="#666" />
+              </View>
+            )}
+            
+            <View style={styles.companyDetails}>
+              <Text style={styles.title}>{job.Title}</Text>
+              <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+              
+              {/* 💼 LinkedIn Profile Link */}
+              {job.OrganizationLinkedIn && (
+                <TouchableOpacity 
+                  style={styles.linkedinButton}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open(job.OrganizationLinkedIn, '_blank');
+                    } else {
+                      import('react-native').then(({ Linking }) => {
+                        Linking.openURL(job.OrganizationLinkedIn);
+                      });
+                    }
+                  }}
+                >
+                  <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
+                  <Text style={styles.linkedinText}>View Company Profile</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+        
         <Text style={styles.salary}>{formatSalary()}</Text>
         
         {/* Status tags */}
@@ -1039,17 +1079,62 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  companyHeader: {
+    marginBottom: 16,
+  },
+  companyInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  companyLogo: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+    marginRight: 16,
+  },
+  logoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyDetails: {
+    flex: 1,
+  },
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 8,
+    lineHeight: 28,
   },
   company: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.medium,
     color: colors.gray700,
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  linkedinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+  },
+  linkedinText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+    marginLeft: 6,
   },
   salary: {
     fontSize: typography.sizes.lg,

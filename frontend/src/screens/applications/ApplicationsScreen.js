@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image, // ?? NEW: Import Image for company logos
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -495,9 +496,52 @@ export default function ApplicationsScreen({ navigation }) {
       }}
     >
       <View style={styles.applicationHeader}>
-        <Text style={styles.jobTitle} numberOfLines={2}>
-          {application.JobTitle || `Job ID: ${application.JobID}`}
-        </Text>
+        <View style={styles.jobInfo}>
+          {/* ?? Company Logo */}
+          <View style={styles.logoContainer}>
+            {application.CompanyLogo || application.OrganizationLogo ? (
+              <Image 
+                source={{ uri: application.CompanyLogo || application.OrganizationLogo }} 
+                style={styles.companyLogo}
+                onError={() => console.log('Company logo load error for:', application.CompanyName)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={20} color="#666" />
+              </View>
+            )}
+          </View>
+          
+          {/* Job Title and Company */}
+          <View style={styles.jobDetails}>
+            <Text style={styles.jobTitle} numberOfLines={2}>
+              {application.JobTitle || `Job ID: ${application.JobID}`}
+            </Text>
+            <Text style={styles.companyName}>
+              {application.CompanyName || 'Company Name'}
+            </Text>
+            
+            {/* ?? LinkedIn Profile Link */}
+            {application.CompanyLinkedIn && (
+              <TouchableOpacity 
+                style={styles.linkedinButton}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.open(application.CompanyLinkedIn, '_blank');
+                  } else {
+                    import('react-native').then(({ Linking }) => {
+                      Linking.openURL(application.CompanyLinkedIn);
+                    });
+                  }
+                }}
+              >
+                <Ionicons name="logo-linkedin" size={14} color="#0066cc" />
+                <Text style={styles.linkedinText}>Company Profile</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        
         <View style={[
           styles.statusBadge, 
           { backgroundColor: getStatusColor(application.StatusID) + '20' }
@@ -510,10 +554,6 @@ export default function ApplicationsScreen({ navigation }) {
           </Text>
         </View>
       </View>
-      
-      <Text style={styles.companyName}>
-        {application.CompanyName || 'Company Name'}
-      </Text>
 
       {/* Job Type Display similar to JobsScreen */}
       {application.JobTypeName && (
@@ -749,17 +789,47 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  jobTitle: {
+  jobInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginRight: 12,
+  },
+  logoContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.gray100,
+  },
+  logoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  jobDetails: {
+    flex: 1,
+  },
+  jobTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginRight: 12,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    marginLeft: 8,
   },
   statusText: {
     fontSize: typography.sizes.xs,
@@ -769,7 +839,22 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
     color: colors.gray700,
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  linkedinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  linkedinText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+    marginLeft: 4,
   },
   // ?? Job Type Display Styles (matching JobsScreen)
   jobTypeContainer: {
@@ -974,5 +1059,37 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 14,
     fontWeight: '700',
+  },
+  // NEW: Company logo styles
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.gray100,
+  },
+  logoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  linkedinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  linkedinText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+    marginLeft: 4,
   },
 });

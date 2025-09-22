@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const resolveNameById = (list, id, idKey, nameKey) => {
@@ -12,6 +12,8 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
+  const logo = job.OrganizationLogo || job.organizationLogo || '';
+  
   const parts = [];
   if (job.City) parts.push(job.City);
   if (job.State) parts.push(job.State);
@@ -41,9 +43,30 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        <Text style={styles.company} numberOfLines={1}>{org}</Text>
+        <View style={styles.titleRow}>
+          {/* 🏢 Company Logo */}
+          <View style={styles.logoContainer}>
+            {logo ? (
+              <Image 
+                source={{ uri: logo }} 
+                style={styles.logo}
+                onError={() => console.log('Logo load error for:', org)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={20} color="#666" />
+              </View>
+            )}
+          </View>
+          
+          {/* Job Title and Company */}
+          <View style={styles.titleContent}>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            <Text style={styles.company} numberOfLines={1}>{org}</Text>
+          </View>
+        </View>
       </View>
+      
       <View style={styles.metaRow}>
         <Text style={styles.meta}>{loc}</Text>
         <Text style={styles.dot}> • </Text>
@@ -129,15 +152,44 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 6,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  logoContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  logoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  titleContent: {
+    flex: 1,
+  },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111',
+    marginBottom: 2,
   },
   company: {
     fontSize: 14,
     color: '#444',
-    marginTop: 2,
+    fontWeight: '500',
   },
   metaRow: {
     flexDirection: 'row',

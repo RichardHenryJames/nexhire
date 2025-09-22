@@ -236,6 +236,8 @@ export class JobService {
               jt.Type as JobTypeName,
               o.Name as OrganizationName,
               ISNULL(o.LogoURL, '') as OrganizationLogo,
+              ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
+              ISNULL(o.Website, '') as OrganizationWebsite,
               ISNULL(c.Symbol, '$') as CurrencySymbol,
               CASE 
                   WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
@@ -279,6 +281,8 @@ export class JobService {
                 jt.Type as JobTypeName,
                 o.Name as OrganizationName,
                 o.LogoURL as OrganizationLogo,
+                o.LinkedInProfile as OrganizationLinkedIn,
+                o.Website as OrganizationWebsite,
                 o.Description as OrganizationDescription,
                 c.Symbol as CurrencySymbol,
                 CASE 
@@ -664,6 +668,8 @@ export class JobService {
                   jt.Type as JobTypeName,
                   o.Name as OrganizationName,
                   ISNULL(o.LogoURL, '') as OrganizationLogo,
+                  ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
+                  ISNULL(o.Website, '') as OrganizationWebsite,
                   ISNULL(c.Symbol, '$') as CurrencySymbol,
                   CASE 
                       WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
