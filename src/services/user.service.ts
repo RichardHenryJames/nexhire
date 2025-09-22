@@ -76,6 +76,12 @@ export class UserService {
             else if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
                 await this.createApplicantProfileTx(tx, userId);
             }
+            // ? NEW: Handle Admin user registration (no additional profile needed)
+            else if (validatedData.userType === 'Admin') {
+                console.log(`? Admin user created: ${userId} (${validatedData.email})`);
+                // Admin users don't need additional profiles like Applicants or Employers
+                // They have full system access through their userType
+            }
 
             await tx.commit();
             return user;

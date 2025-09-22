@@ -66,13 +66,13 @@ export const errorResponse = (error: string, message?: string): ApiResponse => (
     message
 });
 
-// FIXED: Updated user registration schema to include organization details for employers
+// FIXED: Updated user registration schema to include Admin and organization details for employers
 export const userRegistrationSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
     firstName: Joi.string().min(2).max(100).required(),
     lastName: Joi.string().min(2).max(100).required(),
-    userType: Joi.string().valid('JobSeeker', 'Employer').required(),
+    userType: Joi.string().valid('JobSeeker', 'Employer', 'Admin').required(), // ? ADDED ADMIN
     phone: Joi.string().pattern(/^\+?[\d\s\-()]+$/).optional(),
     dateOfBirth: Joi.date().max('now').optional(),
     gender: Joi.string().valid('Male', 'Female', 'Other', 'Prefer not to say').optional(),
@@ -116,6 +116,18 @@ export const userRegistrationSchema = Joi.object({
     establishedDate: Joi.when('userType', {
         is: 'Employer',
         then: Joi.date().max('now').optional(),
+        otherwise: Joi.optional()
+    }),
+    
+    // ? NEW: Admin-specific fields (optional)
+    adminLevel: Joi.when('userType', {
+        is: 'Admin',
+        then: Joi.string().valid('Super', 'Admin', 'Moderator').optional().default('Admin'),
+        otherwise: Joi.optional()
+    }),
+    permissions: Joi.when('userType', {
+        is: 'Admin',
+        then: Joi.array().items(Joi.string()).optional(),
         otherwise: Joi.optional()
     })
 });
