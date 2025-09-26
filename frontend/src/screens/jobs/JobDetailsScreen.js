@@ -8,8 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  TextInput, // 🆕 NEW: Import TextInput
-  Image // 🎨 NEW: Import Image for company logos
+  TextInput,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
@@ -25,58 +25,49 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
-  const [isSaved, setIsSaved] = useState(false); // Track saved state
+  const [isSaved, setIsSaved] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null
-  });
+  const [referralEligibility, setReferralEligibility] = useState({ isEligible: true, dailyQuotaRemaining: 5, hasActiveSubscription: false, reason: null });
   const [primaryResume, setPrimaryResume] = useState(null);
-  const [referralMessage, setReferralMessage] = useState(''); // 🆕 NEW: Add referral message state
-  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false); // 🆕 NEW: Control message input visibility
+  const [referralMessage, setReferralMessage] = useState('');
+  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [showCoverLetterInput, setShowCoverLetterInput] = useState(false);
+
+  // Initialize default cover letter when job loads (only once)
+  useEffect(() => {
+    if (job?.Title && !coverLetter) {
+      setCoverLetter(`I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`);
+    }
+  }, [job?.Title]);
+
+  // Helper builder for cover letter
+  const buildCoverLetter = useCallback(() => {
+    const fallback = job?.Title
+      ? `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`
+      : 'I am very interested in this position and believe my skills and experience make me a great candidate.';
+    const custom = coverLetter.trim();
+    return custom.length ? custom : fallback;
+  }, [coverLetter, job?.Title]);
 
   // ?? Add navigation header with back button
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
-      headerStyle: {
-        backgroundColor: colors.surface,
-        elevation: 0,
-        shadowOpacity: 0,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      },
-      headerTitleStyle: {
-        fontSize: typography.sizes.lg,
-        fontWeight: typography.weights.bold,
-        color: colors.text,
-      },
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerLeft: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
       headerRight: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={handleSaveJob}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons 
-            name={isSaved ? "bookmark" : "bookmark-outline"} 
-            size={24} 
-            color={isSaved ? colors.primary : colors.text} 
-          />
+        <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
         </TouchableOpacity>
-      ),
+      )
     });
   }, [navigation, isSaved]);
 
@@ -434,7 +425,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       const applicationData = {
         jobID: jobId,
-        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        coverLetter: buildCoverLetter(), // 🆕 NEW: Use custom cover letter
         expectedSalary: job.SalaryRangeMax || null,
         expectedCurrencyID: job.CurrencyID || null,
         availableFromDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -499,7 +490,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       const applicationData = {
         jobID: jobId,
-        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        coverLetter: buildCoverLetter(), // 🆕 NEW: Use custom cover letter
         resumeId
       };
       const res = await nexhireAPI.applyForJob(applicationData);
@@ -994,6 +985,58 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         </View>
       )}
 
+      {/* 🆕 NEW: Cover Letter Section - appears before action buttons */}
+      {isJobSeeker && !hasApplied && (
+        <View style={styles.coverLetterSection}>
+          {!showCoverLetterInput ? (
+            // Collapsed state - show button to expand
+            <TouchableOpacity
+              style={styles.addMessageButton}
+              onPress={() => setShowCoverLetterInput(true)}
+            >
+              <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+              <Text style={styles.addMessageButtonText}>
+                {coverLetter ? 'Edit cover letter' : 'Add cover letter (optional)'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.gray500} />
+            </TouchableOpacity>
+          ) : (
+            // Expanded state - show input and collapse button
+            <>
+              <View style={styles.messageHeader}>
+                <Text style={styles.referralMessageLabel}>Cover Letter</Text>
+                <TouchableOpacity
+                  style={styles.collapseButton}
+                  onPress={() => setShowCoverLetterInput(false)}
+                >
+                  <Ionicons name="chevron-up" size={16} color={colors.gray500} />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.coverLetterInput}
+                placeholder="Write a personalized cover letter to stand out...
+
+Highlight your relevant experience, skills, and why you're excited about this specific role and company."
+                value={coverLetter}
+                onChangeText={setCoverLetter}
+                multiline
+                numberOfLines={8}
+                maxLength={2000}
+                textAlignVertical="top"
+              />
+              <View style={styles.messageFooter}>
+                <Text style={styles.referralMessageHint}>
+                  Personalize to highlight relevant achievements
+                </Text>
+                <Text style={styles.characterCount}>
+                  {coverLetter.length}/2000
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+      )}
+
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
       <View style={styles.actionContainer}>        
         {isJobSeeker && (
@@ -1358,6 +1401,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     minHeight: 120,
     maxHeight: 160,
+    textAlignVertical: 'top',
+  },
+  // 🆕 NEW: Cover letter section styles
+  coverLetterSection: {
+    margin: 20,
+    marginTop: 0,
+    marginBottom: 8,
+  },
+  coverLetterInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    backgroundColor: colors.surface,
+    minHeight: 160,
+    maxHeight: 260,
     textAlignVertical: 'top',
   },
   messageFooter: {
