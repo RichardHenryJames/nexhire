@@ -745,24 +745,46 @@ export default function JobDetailsScreen({ route, navigation }) {
               <Text style={styles.title}>{job.Title}</Text>
               <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
               
-              {/* 💼 LinkedIn Profile Link */}
-              {job.OrganizationLinkedIn && (
-                <TouchableOpacity 
-                  style={styles.linkedinButton}
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      window.open(job.OrganizationLinkedIn, '_blank');
-                    } else {
-                      import('react-native').then(({ Linking }) => {
-                        Linking.openURL(job.OrganizationLinkedIn);
-                      });
-                    }
-                  }}
-                >
-                  <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
-                  <Text style={styles.linkedinText}>View Company Profile</Text>
-                </TouchableOpacity>
-              )}
+              {/* Company Links Container */}
+              <View style={styles.companyLinksContainer}>
+                {/* 🌐 Website URL Link */}
+                {job.OrganizationWebsite && (
+                  <TouchableOpacity 
+                    style={styles.websiteButton}
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(job.OrganizationWebsite, '_blank');
+                      } else {
+                        import('react-native').then(({ Linking }) => {
+                          Linking.openURL(job.OrganizationWebsite);
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons name="globe-outline" size={16} color="#0066cc" />
+                    <Text style={styles.websiteText}>Visit Website</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* 💼 LinkedIn Profile Link */}
+                {job.OrganizationLinkedIn && (
+                  <TouchableOpacity 
+                    style={styles.linkedinButton}
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(job.OrganizationLinkedIn, '_blank');
+                      } else {
+                        import('react-native').then(({ Linking }) => {
+                          Linking.openURL(job.OrganizationLinkedIn);
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
+                    <Text style={styles.linkedinText}>LinkedIn Profile</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -1108,18 +1130,25 @@ const styles = StyleSheet.create({
   companyDetails: {
     flex: 1,
   },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 8,
-    lineHeight: 28,
+  companyLinksContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
   },
-  company: {
-    fontSize: typography.sizes.lg,
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#e8f4fd',
+    borderRadius: 16,
+  },
+  websiteText: {
+    fontSize: typography.sizes.sm,
+    color: '#0066cc',
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
-    marginBottom: 8,
+    marginLeft: 6,
   },
   linkedinButton: {
     flexDirection: 'row',
@@ -1128,7 +1157,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: colors.primary + '10',
     borderRadius: 16,
-    alignSelf: 'flex-start',
   },
   linkedinText: {
     fontSize: typography.sizes.sm,

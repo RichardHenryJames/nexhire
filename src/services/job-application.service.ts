@@ -214,12 +214,12 @@ export class JobApplicationService {
         }
     }
     
-    // Get applications for a user (job seeker) - FIXED: Filter out withdrawn applications
+    // Get applications for a user (job seeker) - FIXED: Include organization logo and contact info with consistent naming
     static async getApplicationsByUser(userId: string, params: PaginationParams): Promise<{ applications: JobApplication[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'SubmittedAt', sortOrder = 'desc' } = params;
 
         try {
-            // FIXED: Add WHERE clause to exclude withdrawn applications (StatusID = 6)
+            // ENHANCED: Include organization info with consistent field names (no duplicates)
             const directQuery = `
                 SELECT 
                     ja.ApplicationID,
@@ -228,14 +228,25 @@ export class JobApplicationService {
                     ja.StatusID,
                     ja.SubmittedAt,
                     ja.LastUpdatedAt,
+                    ja.ExpectedSalary,
+                    ja.CoverLetter,
+                    ja.AvailableFromDate,
                     j.Title as JobTitle,
+                    j.JobTypeID,
+                    jt.Type as JobTypeName,
                     o.Name as CompanyName,
+                    o.LogoURL as OrganizationLogo,
+                    o.Website as OrganizationWebsite,
+                    o.LinkedInProfile as OrganizationLinkedIn,
+                    c.Code as CurrencyCode,
                     aps.Status as StatusName
                 FROM JobApplications ja
                 INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
                 INNER JOIN Jobs j ON ja.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
+                LEFT JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                LEFT JOIN Currencies c ON ja.ExpectedCurrencyID = c.CurrencyID
                 WHERE a.UserID = '${userId}' AND ja.StatusID != 6
                 ORDER BY ja.SubmittedAt DESC
             `;
@@ -260,7 +271,7 @@ export class JobApplicationService {
                 totalPages
             };
         } catch (error) {
-            console.error('Error in getApplicationsByUser (fixed):', error);
+            console.error('Error in getApplicationsByUser (enhanced):', error);
             return { applications: [], total: 0, totalPages: 0 };
         }
     }

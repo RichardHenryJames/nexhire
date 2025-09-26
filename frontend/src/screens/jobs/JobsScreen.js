@@ -70,7 +70,7 @@ export default function JobsScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 100, total: 0, totalPages: 0, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -1050,6 +1050,9 @@ export default function JobsScreen({ navigation, route }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           showToast('Referral request sent successfully', 'success');
+          
+          // 🔧 FIXED: Reload primary resume after successful referral
+          await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -1075,6 +1078,13 @@ export default function JobsScreen({ navigation, route }) {
           }
           setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
           showToast('Application submitted successfully', 'success');
+          
+          // 🔧 FIXED: Reload primary resume after successful application
+          console.log('🔄 Reloading primary resume after successful application...');
+          primaryResumeLoadedRef.current = false; // Reset the loaded flag
+          await loadPrimaryResume(); // Reload primary resume
+          console.log('✅ Primary resume reloaded, next applications will auto-apply');
+          
           // Only refresh applied count (lightweight)
           try {
             const appliedRes = await nexhireAPI.getMyApplications(1, 1);
@@ -1091,7 +1101,7 @@ export default function JobsScreen({ navigation, route }) {
       setPendingJobForApplication(null);
       setReferralMode(false);
     }
-  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally]);
+  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally, loadPrimaryResume]);
 
   // NEW: Auto apply with known resume (no modal)
   const quickApply = useCallback(async (job, resumeId) => {

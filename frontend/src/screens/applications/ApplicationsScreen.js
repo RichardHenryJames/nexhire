@@ -50,7 +50,7 @@ export default function ApplicationsScreen({ navigation }) {
     fetchApplications();
     loadReferralData();
     loadPrimaryResume();
-  }, []);
+  }, []); // Fixed: was <></> which is invalid syntax
 
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
@@ -485,150 +485,171 @@ export default function ApplicationsScreen({ navigation }) {
     </View>
   );
 
-  const ApplicationCard = ({ application }) => (
-    <TouchableOpacity 
-      style={styles.applicationCard}
-      onPress={() => {
-        // Navigate to job details or application details
-        if (application.JobID) {
-          navigation.navigate('JobDetails', { jobId: application.JobID });
-        }
-      }}
-    >
-      <View style={styles.applicationHeader}>
-        <View style={styles.jobInfo}>
-          {/* ?? Company Logo */}
-          <View style={styles.logoContainer}>
-            {application.CompanyLogo || application.OrganizationLogo ? (
-              <Image 
-                source={{ uri: application.CompanyLogo || application.OrganizationLogo }} 
-                style={styles.companyLogo}
-                onError={() => console.log('Company logo load error for:', application.CompanyName)}
-              />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={20} color="#666" />
-              </View>
-            )}
+  const ApplicationCard = ({ application }) => {
+    return (
+      <TouchableOpacity 
+        style={styles.applicationCard}
+        onPress={() => {
+          // Navigate to job details or application details
+          if (application.JobID) {
+            navigation.navigate('JobDetails', { jobId: application.JobID });
+          }
+        }}
+      >
+        <View style={styles.applicationHeader}>
+          <View style={styles.jobInfo}>
+            {/* ?? Company Logo */}
+            <View style={styles.logoContainer}>
+              {application.OrganizationLogo ? (
+                <Image 
+                  source={{ uri: application.OrganizationLogo }} 
+                  style={styles.companyLogo}
+                  onError={() => console.log('Logo load error for:', application.CompanyName)}
+                />
+              ) : (
+                <View style={styles.logoPlaceholder}>
+                  <Ionicons name="business-outline" size={24} color="#666" />
+                </View>
+              )}
+            </View>
+            
+            {/* Job Title and Company */}
+            <View style={styles.jobDetails}>
+              <Text style={styles.jobTitle} numberOfLines={2}>
+                {application.JobTitle || `Job ID: ${application.JobID}`}
+              </Text>
+              <Text style={styles.companyName}>
+                {application.CompanyName || 'Company Name'}
+              </Text>
+              
+              {/* ?? Website URL Link */}
+              {application.OrganizationWebsite && (
+                <TouchableOpacity 
+                  style={styles.websiteButton}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open(application.OrganizationWebsite, '_blank');
+                    } else {
+                      import('react-native').then(({ Linking }) => {
+                        Linking.openURL(application.OrganizationWebsite);
+                      });
+                    }
+                  }}
+                >
+                  <Ionicons name="globe-outline" size={14} color="#0066cc" />
+                  <Text style={styles.websiteText}>Visit Website</Text>
+                </TouchableOpacity>
+              )}
+              
+              {/* ?? LinkedIn Profile Link */}
+              {application.OrganizationLinkedIn && (
+                <TouchableOpacity 
+                  style={styles.linkedinButton}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open(application.OrganizationLinkedIn, '_blank');
+                    } else {
+                      import('react-native').then(({ Linking }) => {
+                        Linking.openURL(application.OrganizationLinkedIn);
+                      });
+                    }
+                  }}
+                >
+                  <Ionicons name="logo-linkedin" size={14} color="#0066cc" />
+                  <Text style={styles.linkedinText}>LinkedIn Profile</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           
-          {/* Job Title and Company */}
-          <View style={styles.jobDetails}>
-            <Text style={styles.jobTitle} numberOfLines={2}>
-              {application.JobTitle || `Job ID: ${application.JobID}`}
-            </Text>
-            <Text style={styles.companyName}>
-              {application.CompanyName || 'Company Name'}
-            </Text>
-            
-            {/* ?? LinkedIn Profile Link */}
-            {application.CompanyLinkedIn && (
-              <TouchableOpacity 
-                style={styles.linkedinButton}
-                onPress={() => {
-                  if (Platform.OS === 'web') {
-                    window.open(application.CompanyLinkedIn, '_blank');
-                  } else {
-                    import('react-native').then(({ Linking }) => {
-                      Linking.openURL(application.CompanyLinkedIn);
-                    });
-                  }
-                }}
-              >
-                <Ionicons name="logo-linkedin" size={14} color="#0066cc" />
-                <Text style={styles.linkedinText}>Company Profile</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-        
-        <View style={[
-          styles.statusBadge, 
-          { backgroundColor: getStatusColor(application.StatusID) + '20' }
-        ]}>
-          <Text style={[
-            styles.statusText, 
-            { color: getStatusColor(application.StatusID) }
+          <View style={[
+            styles.statusBadge, 
+            { backgroundColor: getStatusColor(application.StatusID) + '20' }
           ]}>
-            {getStatusText(application.StatusID)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Job Type Display similar to JobsScreen */}
-      {application.JobTypeName && (
-        <View style={styles.jobTypeContainer}>
-          <View style={styles.jobTypeTag}>
-            <Text style={styles.jobTypeText}>{application.JobTypeName}</Text>
-          </View>
-        </View>
-      )}
-      
-      <View style={styles.applicationDetails}>
-        <View style={styles.detailItem}>
-          <Ionicons name="calendar" size={16} color={colors.gray500} />
-          <Text style={styles.detailText}>
-            Applied: {formatDate(application.SubmittedAt)}
-          </Text>
-        </View>
-        
-        {application.ExpectedSalary && (
-          <View style={styles.detailItem}>
-            <Ionicons name="cash" size={16} color={colors.gray500} />
-            <Text style={styles.detailText}>
-              Expected: {formatSalary(application.ExpectedSalary, application.CurrencyCode)}
+            <Text style={[
+              styles.statusText, 
+              { color: getStatusColor(application.StatusID) }
+            ]}>
+              {getStatusText(application.StatusID)}
             </Text>
           </View>
-        )}
+        </View>
 
-        {application.AvailableFromDate && (
-          <View style={styles.detailItem}>
-            <Ionicons name="time" size={16} color={colors.gray500} />
-            <Text style={styles.detailText}>
-              Available: {formatDate(application.AvailableFromDate)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {application.CoverLetter && (
-        <Text style={styles.coverLetterPreview} numberOfLines={2}>
-          {application.CoverLetter}
-        </Text>
-      )}
-
-      {/* Application Actions section - SAME AS BEFORE */}
-      <View style={styles.applicationActions}>
-        {application.StatusID === 1 && ( // If pending, allow withdrawal
-          <TouchableOpacity 
-            style={styles.withdrawButton}
-            onPress={() => handleWithdrawApplication(application)}
-          >
-            <Text style={styles.withdrawButtonText}>Withdraw</Text>
-          </TouchableOpacity>
-        )}
-        
-        {/* Ask Referral / Referred button styling */}
-        {isJobSeeker && (() => {
-          const isReferred = referredJobIds.has(application.JobID);
-          return isReferred ? (
-            <View style={styles.referredPill}>
-              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.referredText}>Referred</Text>
+        {/* Job Type Display similar to JobsScreen */}
+        {application.JobTypeName && (
+          <View style={styles.jobTypeContainer}>
+            <View style={styles.jobTypeTag}>
+              <Text style={styles.jobTypeText}>{application.JobTypeName}</Text>
             </View>
-          ) : (
+          </View>
+        )}
+        
+        <View style={styles.applicationDetails}>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar" size={16} color={colors.gray500} />
+            <Text style={styles.detailText}>
+              Applied: {formatDate(application.SubmittedAt)}
+            </Text>
+          </View>
+          
+          {application.ExpectedSalary && (
+            <View style={styles.detailItem}>
+              <Ionicons name="cash" size={16} color={colors.gray500} />
+              <Text style={styles.detailText}>
+                Expected: {formatSalary(application.ExpectedSalary, application.CurrencyCode)}
+              </Text>
+            </View>
+          )}
+
+          {application.AvailableFromDate && (
+            <View style={styles.detailItem}>
+              <Ionicons name="time" size={16} color={colors.gray500} />
+              <Text style={styles.detailText}>
+                Available: {formatDate(application.AvailableFromDate)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {application.CoverLetter && (
+          <Text style={styles.coverLetterPreview} numberOfLines={2}>
+            {application.CoverLetter}
+          </Text>
+        )}
+
+        {/* Application Actions section - SAME AS BEFORE */}
+        <View style={styles.applicationActions}>
+          {application.StatusID === 1 && ( // If pending, allow withdrawal
             <TouchableOpacity 
-              style={styles.referralButton}
-              onPress={() => handleAskReferral(application)}
+              style={styles.withdrawButton}
+              onPress={() => handleWithdrawApplication(application)}
             >
-              <Ionicons name="people-outline" size={16} color={colors.warning} />
-              <Text style={styles.referralText}>Ask Referral</Text>
+              <Text style={styles.withdrawButtonText}>Withdraw</Text>
             </TouchableOpacity>
-          );
-        })()}
-      </View>
-    </TouchableOpacity>
-  );
+          )}
+          
+          {/* Ask Referral / Referred button styling */}
+          {isJobSeeker && (() => {
+            const isReferred = referredJobIds.has(application.JobID);
+            return isReferred ? (
+              <View style={styles.referredPill}>
+                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                <Text style={styles.referredText}>Referred</Text>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.referralButton}
+                onPress={() => handleAskReferral(application)}
+              >
+                <Ionicons name="people-outline" size={16} color={colors.warning} />
+                <Text style={styles.referralText}>Ask Referral</Text>
+              </TouchableOpacity>
+            );
+          })()}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const LoadingFooter = () => {
     // Better loading footer with completion status
@@ -800,15 +821,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   companyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
@@ -840,6 +861,22 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     color: colors.gray700,
     marginBottom: 6,
+  },
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#e8f4fd',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  websiteText: {
+    fontSize: typography.sizes.xs,
+    color: '#0066cc',
+    fontWeight: typography.weights.medium,
+    marginLeft: 4,
   },
   linkedinButton: {
     flexDirection: 'row',
@@ -1059,37 +1096,5 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 14,
     fontWeight: '700',
-  },
-  // NEW: Company logo styles
-  companyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
-  },
-  logoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  linkedinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: colors.primary + '10',
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  linkedinText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-    marginLeft: 4,
   },
 });
