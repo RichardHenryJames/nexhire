@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,31 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
 
 export default function PersonalDetailsScreen({ navigation, route }) {
+  const { register, pendingGoogleAuth } = useAuth();
+  
+  // ?? Add safety checks for route params
+  const routeParams = route?.params || {};
+  const { 
+    userType = 'JobSeeker', 
+    experienceType = 'Student', 
+    workExperienceData = null, 
+    educationData = null, 
+    jobPreferences = null, 
+    fromGoogleAuth = false, 
+    skipEmailPassword = false 
+  } = routeParams;
+
+  // ?? Check if this is a Google user
+  const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
+  const googleUser = pendingGoogleAuth?.user;
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -29,8 +48,22 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const { register } = useAuth();
-  const { userType, experienceType, workExperienceData, educationData, jobPreferences } = route.params;
+  // ?? Pre-populate Google user data
+  useEffect(() => {
+    if (isGoogleUser && googleUser) {
+      console.log('?? Pre-populating Google user data:', googleUser);
+      
+      setFormData(prev => ({
+        ...prev,
+        firstName: googleUser.given_name || googleUser.name?.split(' ')[0] || '',
+        lastName: googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '',
+        email: googleUser.email || '',
+        // No password needed for Google users
+        password: 'google-oauth-user',
+        confirmPassword: 'google-oauth-user',
+      }));
+    }
+  }, [isGoogleUser, googleUser]);
 
   // Validation functions
   const validateEmail = (email) => {
@@ -70,16 +103,19 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (!validatePassword(formData.password)) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
+    // ?? Skip password validation for Google users
+    if (!isGoogleUser) {
+      if (!formData.password) {
+        newErrors.password = 'Password is required';
+      } else if (!validatePassword(formData.password)) {
+        newErrors.password = 'Password must be at least 8 characters';
+      }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = 'Please confirm your password';
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
     }
 
     // Optional field validations
@@ -107,10 +143,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // Prepare comprehensive registration data
+      // ?? Prepare registration data for Google vs regular users
       const registrationData = {
         email: formData.email.trim().toLowerCase(),
-        password: formData.password,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         userType: userType,
@@ -126,37 +161,62 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.location && { location: formData.location.trim() }),
       };
 
+      // ?? Add password only for non-Google users
+      if (!isGoogleUser) {
+        registrationData.password = formData.password;
+      }
+
+      // ?? Add Google OAuth data if applicable
+      if (isGoogleUser && pendingGoogleAuth) {
+        registrationData.googleAuth = {
+          googleId: googleUser.id,
+          accessToken: pendingGoogleAuth.accessToken,
+          idToken: pendingGoogleAuth.idToken,
+          verified: googleUser.verified_email,
+          picture: googleUser.picture,
+          locale: googleUser.locale,
+        };
+      }
+
       // ?? COMPREHENSIVE LOGGING FOR DEBUGGING
       console.log('=== REGISTRATION PAYLOAD DEBUG ===');
+      console.log('Is Google User:', isGoogleUser);
       console.log('Email:', registrationData.email);
       console.log('User Type:', registrationData.userType);
       console.log('Experience Type:', registrationData.experienceType);
+      console.log('Has Google Auth Data:', !!registrationData.googleAuth);
       
-      console.log('Work Experience Data:', workExperienceData ? {
-        currentJobTitle: workExperienceData.currentJobTitle,
-        currentCompany: workExperienceData.currentCompany,
-        yearsOfExperience: workExperienceData.yearsOfExperience,
-        primarySkills: workExperienceData.primarySkills,
-        secondarySkills: workExperienceData.secondarySkills,
-        summary: workExperienceData.summary,
-        workArrangement: workExperienceData.workArrangement,
-        jobType: workExperienceData.jobType
-      } : 'No work experience data');
+      if (workExperienceData) {
+        console.log('Work Experience Data:', {
+          currentJobTitle: workExperienceData.currentJobTitle,
+          currentCompany: workExperienceData.currentCompany,
+          yearsOfExperience: workExperienceData.yearsOfExperience,
+          primarySkills: workExperienceData.primarySkills,
+          secondarySkills: workExperienceData.secondarySkills,
+          summary: workExperienceData.summary,
+          workArrangement: workExperienceData.workArrangement,
+          jobType: workExperienceData.jobType
+        });
+      }
       
-      console.log('Education Data:', educationData ? {
-        college: educationData.college,
-        customCollege: educationData.customCollege,
-        degreeType: educationData.degreeType,
-        fieldOfStudy: educationData.fieldOfStudy,
-        yearInCollege: educationData.yearInCollege,
-        selectedCountry: educationData.selectedCountry
-      } : 'No education data');
+      if (educationData) {
+        console.log('Education Data:', {
+          college: educationData.college,
+          customCollege: educationData.customCollege,
+          degreeType: educationData.degreeType,
+          fieldOfStudy: educationData.fieldOfStudy,
+          yearInCollege: educationData.yearInCollege,
+          selectedCountry: educationData.selectedCountry
+        });
+      }
       
-      console.log('Job Preferences:', jobPreferences ? {
-        preferredJobTypes: jobPreferences.preferredJobTypes,
-        workplaceType: jobPreferences.workplaceType,
-        preferredLocations: jobPreferences.preferredLocations
-      } : 'No job preferences');
+      if (jobPreferences) {
+        console.log('Job Preferences:', {
+          preferredJobTypes: jobPreferences.preferredJobTypes,
+          workplaceType: jobPreferences.workplaceType,
+          preferredLocations: jobPreferences.preferredLocations
+        });
+      }
       
       console.log('Complete Registration Payload:', JSON.stringify(registrationData, null, 2));
       console.log('=== END REGISTRATION PAYLOAD DEBUG ===');
@@ -166,13 +226,17 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (result.success) {
         Alert.alert(
           'Success', 
-          'Account created successfully! Welcome to NexHire!', 
+          isGoogleUser 
+            ? 'Your Google account has been linked successfully! Welcome to NexHire!' 
+            : 'Account created successfully! Welcome to NexHire!', 
           [
             { 
               text: 'Get Started', 
               onPress: () => {
-                // Navigate to the main app
-                // The AuthContext will handle navigation automatically
+                // ?? FIXED: No manual navigation needed!
+                // The AuthContext will automatically handle navigation
+                // when isAuthenticated becomes true after successful registration
+                console.log('? Registration successful, AuthContext will handle navigation automatically');
               }
             }
           ]
@@ -193,26 +257,38 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     placeholder,
     secureTextEntry = false,
     keyboardType = 'default',
-    required = false
+    required = false,
+    disabled = false
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
         {placeholder} {required && '*'}
+        {disabled && (
+          <Text style={styles.disabledLabel}> - From Google Account</Text>
+        )}
       </Text>
       <TextInput
-        style={[styles.input, errors[key] && styles.inputError]}
-        placeholder={`Enter ${placeholder.toLowerCase()}`}
+        style={[
+          styles.input, 
+          errors[key] && styles.inputError,
+          disabled && styles.inputDisabled
+        ]}
+        placeholder={disabled ? 'Pre-filled from Google' : `Enter ${placeholder.toLowerCase()}`}
         value={formData[key]}
         onChangeText={(text) => {
-          setFormData({ ...formData, [key]: text });
-          if (errors[key]) {
-            setErrors({ ...errors, [key]: null });
+          if (!disabled) {
+            setFormData({ ...formData, [key]: text });
+            if (errors[key]) {
+              setErrors({ ...errors, [key]: null });
+            }
           }
         }}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={key === 'email' ? 'none' : 'words'}
         autoCorrect={false}
+        editable={!disabled}
+        selectTextOnFocus={!disabled}
       />
       {errors[key] && <Text style={styles.errorText}>{errors[key]}</Text>}
     </View>
@@ -235,25 +311,57 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
             </TouchableOpacity>
             
-            <Text style={styles.title}>Create your account</Text>
+            {/* ?? Show Google user info if applicable */}
+            {isGoogleUser && googleUser && (
+              <View style={styles.googleUserInfo}>
+                {googleUser.picture && (
+                  <Image 
+                    source={{ uri: googleUser.picture }} 
+                    style={styles.googleUserAvatar}
+                  />
+                )}
+                <View style={styles.googleUserTextContainer}>
+                  <Text style={styles.googleUserWelcome}>
+                    Completing profile for
+                  </Text>
+                  <Text style={styles.googleUserName}>{googleUser.name}</Text>
+                  <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                </View>
+                <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+              </View>
+            )}
+            
+            <Text style={styles.title}>
+              {isGoogleUser ? 'Complete Your Profile' : 'Create your account'}
+            </Text>
             <Text style={styles.subtitle}>
-              Just a few more details and you're all set!
+              {isGoogleUser 
+                ? 'Just a few more details and you\'re all set!'
+                : 'Just a few more details and you\'re all set!'
+              }
             </Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.row}>
               <View style={styles.halfInput}>
-                {renderInput('firstName', 'First Name', false, 'default', true)}
+                {renderInput('firstName', 'First Name', false, 'default', true, isGoogleUser)}
               </View>
               <View style={styles.halfInput}>
-                {renderInput('lastName', 'Last Name', false, 'default', true)}
+                {renderInput('lastName', 'Last Name', false, 'default', true, isGoogleUser)}
               </View>
             </View>
 
-            {renderInput('email', 'Email Address', false, 'email-address', true)}
-            {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
-            {renderInput('confirmPassword', 'Confirm Password', true, 'default', true)}
+            {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
+            
+            {/* ?? Only show password fields for non-Google users */}
+            {!isGoogleUser && (
+              <>
+                {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
+                {renderInput('confirmPassword', 'Confirm Password', true, 'default', true)}
+              </>
+            )}
+            
             {renderInput('phone', 'Phone Number', false, 'phone-pad')}
             {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
             {renderInput('location', 'Current Location', false, 'default')}
@@ -329,19 +437,36 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             
             {jobPreferences && (
               <>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="briefcase" size={16} color={colors.primary} />
-                  <Text style={styles.summaryText}>
-                    {jobPreferences.preferredJobTypes.map(jt => jt.Type).join(', ')}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="location" size={16} color={colors.primary} />
-                  <Text style={styles.summaryText}>
-                    {jobPreferences.workplaceType === 'remote' ? 'Remote' : 
-                     jobPreferences.workplaceType === 'hybrid' ? 'Hybrid' : 'On-site'} work
-                  </Text>
-                </View>
+                {/* ?? Add null check for preferredJobTypes array */}
+                {jobPreferences.preferredJobTypes && Array.isArray(jobPreferences.preferredJobTypes) && jobPreferences.preferredJobTypes.length > 0 && (
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="briefcase" size={16} color={colors.primary} />
+                    <Text style={styles.summaryText}>
+                      {jobPreferences.preferredJobTypes.map(jt => jt?.Type || jt).filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                )}
+                
+                {/* ?? Add null check for workplaceType */}
+                {jobPreferences.workplaceType && (
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="location" size={16} color={colors.primary} />
+                    <Text style={styles.summaryText}>
+                      {jobPreferences.workplaceType === 'remote' ? 'Remote' : 
+                       jobPreferences.workplaceType === 'hybrid' ? 'Hybrid' : 'On-site'} work
+                    </Text>
+                  </View>
+                )}
+                
+                {/* ?? Add null check for preferredLocations */}
+                {jobPreferences.preferredLocations && Array.isArray(jobPreferences.preferredLocations) && jobPreferences.preferredLocations.length > 0 && (
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="map" size={16} color={colors.primary} />
+                    <Text style={styles.summaryText}>
+                      Locations: {jobPreferences.preferredLocations.map(loc => loc?.name || loc).filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -352,19 +477,25 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             disabled={loading}
           >
             <Text style={styles.registerButtonText}>
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading 
+                ? (isGoogleUser ? 'Completing Profile...' : 'Creating Account...') 
+                : (isGoogleUser ? 'Complete Profile' : 'Create Account')
+              }
             </Text>
             {!loading && <Ionicons name="checkmark" size={20} color={colors.white} />}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => navigation.navigate('Login')}
-          >
-            <Text style={styles.loginButtonText}>
-              Already have an account? Sign In
-            </Text>
-          </TouchableOpacity>
+          {/* Only show login link for non-Google users */}
+          {!isGoogleUser && (
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.loginButtonText}>
+                Already have an account? Sign In
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -390,6 +521,43 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     padding: 8,
     marginBottom: 16,
+  },
+  // ?? Google user info styles
+  googleUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
+  },
+  googleUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  googleUserTextContainer: {
+    flex: 1,
+  },
+  googleUserWelcome: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 2,
+  },
+  googleUserName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  googleUserEmail: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
   },
   title: {
     fontSize: typography.sizes.xl,
@@ -421,6 +589,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     color: colors.gray600,
   },
+  disabledLabel: {
+    color: colors.success,
+    fontWeight: typography.weights.normal,
+  },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -429,6 +601,11 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: typography.sizes.md,
     color: colors.text,
+  },
+  inputDisabled: {
+    backgroundColor: colors.gray100,
+    borderColor: colors.success,
+    color: colors.gray700,
   },
   inputError: {
     borderColor: colors.danger,

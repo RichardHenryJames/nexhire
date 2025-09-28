@@ -84,37 +84,65 @@ class GoogleAuthService {
       const clientId = this.getClientId();
       console.log('?? Using client ID configuration for:', this.getCurrentPlatform());
 
-      // Create auth request
-      const request = new AuthSession.AuthRequest({
-        clientId,
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri: AuthSession.makeRedirectUri({ 
-          scheme: 'com.nexhire.app',
-          useProxy: true 
-        }),
-        responseType: AuthSession.ResponseType.Code,
-        additionalParameters: {
-          access_type: 'offline',
-          prompt: 'select_account',
-        },
+      // Create redirect URI
+      const redirectUri = AuthSession.makeRedirectUri({ 
+        scheme: undefined,
+        useProxy: false
       });
 
-      console.log('?? Auth request created, prompting user...');
-      const result = await request.promptAsync(this.discovery);
+      console.log('?? === DETAILED REDIRECT DEBUG ===');
+      console.log('?? Current window.location.href:', window.location.href);
+      console.log('?? Current window.location.origin:', window.location.origin);
+      console.log('?? Generated redirect URI:', redirectUri);
+      console.log('?? === END REDIRECT DEBUG ===');
 
+      // Manual OAuth URL construction without PKCE
+      const authParams = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'token', // Implicit flow
+        scope: 'openid profile email',
+        prompt: 'select_account',
+        state: Math.random().toString(36).substring(2, 15), // Random state for security
+      });
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
+      
+      console.log('?? Manual OAuth URL (no PKCE):', authUrl);
+      console.log('?? Auth URL includes response_type=token:', authUrl.includes('response_type=token'));
+      console.log('?? Auth URL does NOT include code_challenge:', !authUrl.includes('code_challenge'));
+
+      // FIXED: Use WebBrowser.openAuthSessionAsync instead of AuthSession.startAsync
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+      console.log('?? Auth result:', result);
       console.log('?? Auth result type:', result.type);
 
       if (result.type === 'success') {
-        console.log('? Google authorization successful, exchanging code for tokens...');
+        console.log('? Google authorization successful with manual implicit flow');
         
-        const tokenResult = await this.exchangeCodeForTokens(
-          result.params.code,
-          request.redirectUri
-        );
+        // Parse tokens from the URL
+        let accessToken, idToken;
+        
+        if (result.url) {
+          // Extract tokens from URL fragment or query parameters
+          const urlParts = result.url.split('#')[1] || result.url.split('?')[1];
+          if (urlParts) {
+            const params = new URLSearchParams(urlParts);
+            accessToken = params.get('access_token');
+            idToken = params.get('id_token');
+          }
+        }
+        
+        if (!accessToken) {
+          console.error('?? No access token in result URL:', result.url);
+          console.log('?? Full result object:', result);
+          throw new Error('No access token received from Google');
+        }
 
-        console.log('? Token exchange successful');
+        console.log('? Tokens extracted from URL successfully');
         
-        const userInfo = await this.getUserInfo(tokenResult.access_token);
+        const userInfo = await this.getUserInfo(accessToken);
         
         console.log('? User info retrieved:', {
           email: userInfo.email,
@@ -125,9 +153,9 @@ class GoogleAuthService {
         return {
           success: true,
           data: {
-            accessToken: tokenResult.access_token,
-            refreshToken: tokenResult.refresh_token,
-            idToken: tokenResult.id_token,
+            accessToken: accessToken,
+            refreshToken: null, // Implicit flow doesn't provide refresh tokens
+            idToken: idToken,
             user: userInfo,
           }
         };
@@ -138,47 +166,24 @@ class GoogleAuthService {
           error: 'User cancelled', 
           cancelled: true 
         };
+      } else if (result.type === 'dismiss') {
+        console.log('?? User dismissed Google Sign-In popup');
+        return { 
+          success: false, 
+          error: 'Authentication popup was closed', 
+          dismissed: true 
+        };
       } else {
-        console.error('? Google authentication failed:', result);
-        throw new Error(result.error?.message || 'Google authentication failed');
+        console.error('?? Google authentication failed:', result);
+        throw new Error(result.error?.message || `Authentication failed: ${result.type}`);
       }
     } catch (error) {
-      console.error('? Google Sign-In error:', error);
+      console.error('?? Google Sign-In error:', error);
       return { 
         success: false, 
         error: error.message || 'Google Sign-In failed'
       };
     }
-  }
-
-  async exchangeCodeForTokens(code, redirectUri) {
-    const clientId = this.getClientId();
-    
-    console.log('?? Exchanging authorization code for tokens...');
-    
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      body: new URLSearchParams({
-        client_id: clientId,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
-      }).toString(),
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('? Token exchange failed:', data);
-      throw new Error(data.error_description || 'Token exchange failed');
-    }
-    
-    console.log('? Token exchange successful');
-    return data;
   }
 
   async getUserInfo(accessToken) {
@@ -194,7 +199,7 @@ class GoogleAuthService {
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('? Failed to fetch user info:', data);
+      console.error('?? Failed to fetch user info:', data);
       throw new Error('Failed to fetch user info');
     }
     

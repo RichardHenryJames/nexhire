@@ -71,9 +71,15 @@ export const AuthProvider = ({ children }) => {
       
       if (!googleResult.success) {
         if (googleResult.cancelled) {
-          return { success: false, cancelled: true };
+          console.log('?? User cancelled Google Sign-In');
+          return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
+        }
+        if (googleResult.dismissed) {
+          console.log('?? User dismissed Google Sign-In popup');
+          return { success: false, dismissed: true, message: 'Authentication popup was closed' };
         }
         if (googleResult.needsConfig) {
+          console.log('?? Google OAuth not configured');
           return { 
             success: false, 
             error: googleResult.error,
@@ -131,7 +137,7 @@ export const AuthProvider = ({ children }) => {
 
     } catch (error) {
       const errorMessage = error.message || 'Google Sign-In failed';
-      console.error('? Google Sign-In error:', error);
+      console.error('?? Google Sign-In error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -216,7 +222,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Existing register method (unchanged)
+  // Existing register method (FIXED - no timing hacks needed)
   const register = async (userData) => {
     try {
       setLoading(true);
@@ -226,8 +232,17 @@ export const AuthProvider = ({ children }) => {
       console.log('Attempting registration for:', userData.email);
       console.log('Full userData received:', JSON.stringify(userData, null, 2));
       
+      // ?? Check if this is a Google OAuth registration
+      const isGoogleRegistration = !!userData.googleAuth;
+      
       // Separate education and work experience data from registration data
       const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
+      
+      // ?? Add placeholder password for Google OAuth users if not provided
+      if (isGoogleRegistration && !registrationData.password) {
+        registrationData.password = `google-oauth-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+        console.log('?? Added placeholder password for Google OAuth user');
+      }
       
       console.log('Separated registration data:', JSON.stringify(registrationData, null, 2));
       console.log('Separated education data:', educationData ? JSON.stringify(educationData, null, 2) : 'None');
@@ -240,11 +255,43 @@ export const AuthProvider = ({ children }) => {
       
       if (result.success) {
         console.log('Registration successful, attempting auto-login...');
-        // Auto-login after successful registration
-        const loginResult = await login(userData.email, userData.password);
+        
+        // ?? Handle different login flows for Google vs regular users
+        let loginResult;
+        
+        if (isGoogleRegistration) {
+          console.log('?? Attempting Google OAuth login after registration...');
+          // For Google users, try to login with Google OAuth data
+          try {
+            const googleLoginData = {
+              accessToken: userData.googleAuth.accessToken,
+              idToken: userData.googleAuth.idToken,
+              user: {
+                id: userData.googleAuth.googleId,
+                email: userData.email,
+                name: `${userData.firstName} ${userData.lastName}`,
+                verified_email: userData.googleAuth.verified,
+                picture: userData.googleAuth.picture,
+              }
+            };
+            
+            loginResult = await nexhireAPI.loginWithGoogle(googleLoginData);
+            console.log('?? Google login result:', loginResult);
+          } catch (googleLoginError) {
+            console.warn('?? Google login failed, falling back to regular login:', googleLoginError);
+            // Fallback to regular login with placeholder password
+            loginResult = await login(userData.email, registrationData.password);
+          }
+        } else {
+          // Regular user login
+          loginResult = await login(userData.email, userData.password);
+        }
         
         if (loginResult.success) {
           console.log('Auto-login successful, now saving additional profile data...');
+          
+          // ?? FIXED: Ensure API token is properly set before profile updates
+          await nexhireAPI.init(); // Re-initialize API to sync token
           
           // Save education data if provided
           if (educationData) {
@@ -253,12 +300,12 @@ export const AuthProvider = ({ children }) => {
               const educationResult = await nexhireAPI.updateEducation(educationData);
               console.log('Education save result:', educationResult);
               if (educationResult.success) {
-                console.log('Education data saved successfully');
+                console.log('? Education data saved successfully');
               } else {
-                console.warn('Education data save failed:', educationResult.error);
+                console.warn('? Education data save failed:', educationResult.error);
               }
             } catch (educationError) {
-              console.warn('Error saving education data:', educationError);
+              console.warn('? Error saving education data:', educationError);
             }
           }
           
@@ -296,16 +343,16 @@ export const AuthProvider = ({ children }) => {
               const jobPreferencesResult = await nexhireAPI.updateJobPreferences(jobPreferences);
               console.log('Job preferences save result:', jobPreferencesResult);
               if (jobPreferencesResult.success) {
-                console.log('Job preferences saved successfully');
+                console.log('? Job preferences saved successfully');
               } else {
-                console.warn('Job preferences save failed:', jobPreferencesResult.error);
+                console.warn('? Job preferences save failed:', jobPreferencesResult.error);
               }
             } catch (jobPreferencesError) {
-              console.warn('Error saving job preferences:', jobPreferencesError);
+              console.warn('? Error saving job preferences:', jobPreferencesError);
             }
           }
           
-          console.log('Registration flow completed successfully');
+          console.log('? Registration flow completed successfully');
         }
         
         console.log('=== END AUTH CONTEXT REGISTRATION DEBUG ===');

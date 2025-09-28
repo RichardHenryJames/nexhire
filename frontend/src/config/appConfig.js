@@ -1,7 +1,7 @@
 /**
  * ?? Frontend Configuration Service
  * Centralized configuration management for NexHire frontend
- * PROPER SOLUTION: Uses Constants.expoConfig for reliable environment variables
+ * FIXED: Robust fallback when Constants.expoConfig.extra is not available
  */
 
 import Constants from 'expo-constants';
@@ -26,37 +26,75 @@ class FrontendConfigService {
   }
 
   loadConfiguration() {
-    // PROPER FIX: Use Constants.expoConfig.extra for reliable environment variables
-    const extra = Constants.expoConfig?.extra || {};
+    // DEBUGGING: Let's see what's available
+    console.log('?? DEBUGGING Configuration Sources:');
+    console.log('  Constants.expoConfig:', !!Constants.expoConfig);
+    console.log('  Constants.expoConfig.extra:', !!Constants.expoConfig?.extra);
+    console.log('  typeof Constants.expoConfig?.extra:', typeof Constants.expoConfig?.extra);
+    console.log('  process.env keys:', Object.keys(process.env).filter(k => k.startsWith('EXPO_PUBLIC')));
     
-    // Fallback to process.env for development
-    const getEnvVar = (extraKey, processEnvKey, defaultValue = '') => {
-      return extra[extraKey] || process.env[processEnvKey] || defaultValue;
+    const extra = Constants.expoConfig?.extra;
+    if (extra && typeof extra === 'object') {
+      console.log('  extra keys:', Object.keys(extra));
+      console.log('  extra.appEnv:', extra.appEnv);
+      console.log('  extra.googleClientIdWeb length:', extra.googleClientIdWeb?.length || 0);
+    } else {
+      console.log('  ? extra is not available or not an object');
+    }
+
+    // ROBUST FALLBACK: If extra is not available, assume production and use hardcoded values
+    const hasValidExtra = extra && typeof extra === 'object' && Object.keys(extra).length > 0;
+    const shouldForceProd = !hasValidExtra && typeof window !== 'undefined'; // Browser environment
+    
+    if (shouldForceProd) {
+      console.log('?? FALLBACK: Constants.expoConfig.extra not available, forcing production configuration');
+    }
+
+    const getEnvVar = (extraKey, processEnvKey, defaultValue = '', prodFallback = '') => {
+      if (shouldForceProd) return prodFallback || defaultValue;
+      
+      const extraValue = extra?.[extraKey];
+      const processValue = process.env[processEnvKey];
+      
+      console.log(`  getEnvVar(${extraKey}): extra=${extraValue || 'null'}, process=${processValue || 'null'}`);
+      
+      return extraValue || processValue || defaultValue;
     };
 
-    const getBooleanEnvVar = (extraKey, processEnvKey, defaultValue = false) => {
-      const value = extra[extraKey] ?? process.env[processEnvKey];
+    const getBooleanEnvVar = (extraKey, processEnvKey, defaultValue = false, prodFallback = true) => {
+      if (shouldForceProd) return prodFallback;
+      
+      const value = extra?.[extraKey] ?? process.env[processEnvKey];
+      console.log(`  getBooleanEnvVar(${extraKey}): value=${value}, defaultValue=${defaultValue}`);
+      
       if (value === undefined || value === null) return defaultValue;
       return value === true || value === 'true';
     };
 
-    return {
+    const config = {
       app: {
-        env: getEnvVar('appEnv', 'EXPO_PUBLIC_APP_ENV', 'development'),
+        env: shouldForceProd ? 'production' : getEnvVar('appEnv', 'EXPO_PUBLIC_APP_ENV', 'development'),
         version: getEnvVar('appVersion', 'EXPO_PUBLIC_APP_VERSION', '1.0.0'),
-        debug: getBooleanEnvVar('debug', 'EXPO_PUBLIC_DEBUG', true),
+        debug: shouldForceProd ? false : getBooleanEnvVar('debug', 'EXPO_PUBLIC_DEBUG', true, false),
       },
 
       api: {
         baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://nexhire-api-func.azurewebsites.net/api'),
         timeout: parseInt(getEnvVar('apiTimeout', 'EXPO_PUBLIC_API_TIMEOUT', '30000')),
-        debug: getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', true),
+        debug: shouldForceProd ? false : getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', true, false),
       },
 
       google: {
-        webClientId: getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB'),
-        androidClientId: getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID'),
-        iosClientId: getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS'),
+        // PRODUCTION FALLBACK VALUES - When extra config is not available
+        webClientId: shouldForceProd 
+          ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
+          : getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB', '', '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+        androidClientId: shouldForceProd
+          ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
+          : getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID', '', '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+        iosClientId: shouldForceProd
+          ? '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'
+          : getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS', '', '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'),
         firebase: {
           projectId: getEnvVar('firebaseProjectId', 'EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'nexhire-123'),
           webAppId: getEnvVar('firebaseWebAppId', 'EXPO_PUBLIC_FIREBASE_WEB_APP_ID'),
@@ -66,15 +104,17 @@ class FrontendConfigService {
       },
 
       razorpay: {
-        keyId: getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J'),
-        isProduction: getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J').startsWith('rzp_live_'),
+        keyId: shouldForceProd
+          ? 'rzp_live_RHBIO2dq7CFGiW'
+          : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J', 'rzp_live_RHBIO2dq7CFGiW'),
+        isProduction: shouldForceProd ? true : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J').startsWith('rzp_live_'),
       },
 
       features: {
-        googleSignIn: getBooleanEnvVar('featureGoogleSignin', 'EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN', true),
-        razorpayPayments: getBooleanEnvVar('featureRazorpayPayments', 'EXPO_PUBLIC_FEATURE_RAZORPAY_PAYMENTS', true),
-        referralSystem: getBooleanEnvVar('featureReferralSystem', 'EXPO_PUBLIC_FEATURE_REFERRAL_SYSTEM', true),
-        jobScraping: getBooleanEnvVar('featureJobScraping', 'EXPO_PUBLIC_FEATURE_JOB_SCRAPING', true),
+        googleSignIn: shouldForceProd ? true : getBooleanEnvVar('featureGoogleSignin', 'EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN', true),
+        razorpayPayments: shouldForceProd ? true : getBooleanEnvVar('featureRazorpayPayments', 'EXPO_PUBLIC_FEATURE_RAZORPAY_PAYMENTS', true),
+        referralSystem: shouldForceProd ? true : getBooleanEnvVar('featureReferralSystem', 'EXPO_PUBLIC_FEATURE_REFERRAL_SYSTEM', true),
+        jobScraping: shouldForceProd ? true : getBooleanEnvVar('featureJobScraping', 'EXPO_PUBLIC_FEATURE_JOB_SCRAPING', true),
       },
 
       analytics: {
@@ -88,11 +128,20 @@ class FrontendConfigService {
       },
 
       development: {
-        devMenu: getBooleanEnvVar('devMenu', 'EXPO_PUBLIC_DEV_MENU', true),
-        debugLogs: getBooleanEnvVar('debugLogs', 'EXPO_PUBLIC_DEBUG_LOGS', true),
-        logLevel: getEnvVar('logLevel', 'EXPO_PUBLIC_LOG_LEVEL', 'debug'),
+        devMenu: shouldForceProd ? false : getBooleanEnvVar('devMenu', 'EXPO_PUBLIC_DEV_MENU', true, false),
+        debugLogs: shouldForceProd ? false : getBooleanEnvVar('debugLogs', 'EXPO_PUBLIC_DEBUG_LOGS', true, false),
+        logLevel: shouldForceProd ? 'error' : getEnvVar('logLevel', 'EXPO_PUBLIC_LOG_LEVEL', 'debug', 'error'),
       },
     };
+
+    console.log('?? Final Configuration:', {
+      environment: config.app.env,
+      googleClientIdSet: !!config.google.webClientId,
+      shouldForceProd,
+      hasValidExtra
+    });
+
+    return config;
   }
 
   validateConfiguration() {
@@ -135,16 +184,6 @@ class FrontendConfigService {
     }
 
     console.log(`? Frontend configuration loaded for ${this.config.app.env} environment`);
-    
-    // Debug: Log configuration sources
-    if (this.config.development.debugLogs) {
-      console.log('?? Config sources:', {
-        expoConfigExtra: !!Constants.expoConfig?.extra,
-        processEnv: !!process.env.EXPO_PUBLIC_APP_ENV,
-        googleWebClientId: !!this.config.google.webClientId,
-        environment: this.config.app.env
-      });
-    }
   }
 
   // Public getters

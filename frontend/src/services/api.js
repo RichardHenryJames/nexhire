@@ -234,10 +234,17 @@ class NexHireAPI {
     });
 
     if (result.success && result.data?.tokens) {
+      // 🔧 FIXED: Properly set tokens and sync API state
       await this.setTokens(
         result.data.tokens.accessToken,
         result.data.tokens.refreshToken
       );
+      
+      // 🔧 CRITICAL: Update instance token immediately
+      this.token = result.data.tokens.accessToken;
+      this.refreshToken = result.data.tokens.refreshToken;
+      
+      console.log('✅ Login successful, token set and synchronized');
     }
 
     return result;
@@ -260,11 +267,18 @@ class NexHireAPI {
       });
 
       if (result.success && result.data?.tokens) {
+        // 🔧 FIXED: Properly set tokens and sync API state
         await this.setTokens(
           result.data.tokens.accessToken,
           result.data.tokens.refreshToken
         );
+        
+        // 🔧 CRITICAL: Update instance token immediately
+        this.token = result.data.tokens.accessToken;
+        this.refreshToken = result.data.tokens.refreshToken;
+        
         console.log('✅ Google login successful for:', googleTokenData.user.email);
+        console.log('✅ Token set and synchronized');
       }
 
       return result;
@@ -351,7 +365,7 @@ class NexHireAPI {
     console.log('🔍 === API UPDATE EDUCATION DEBUG ===');
     console.log('🎓 Input education data:', JSON.stringify(educationData, null, 2));
     
-    // If not authenticated yet, don't call the API; allow flow to continue
+    // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
       console.warn('⚠️ updateEducation called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
@@ -373,7 +387,7 @@ class NexHireAPI {
       return { success: false, error: 'Authentication required' };
     }
     // Require minimum fields as backend: jobTitle + startDate
-    if (!workExp || !workExp.jobTitle || !workExp.startDate) {
+    if (!workExp || !workExp.jobTitle || !workExp.sendDate) {
       return { success: false, error: 'jobTitle and startDate are required' };
     }
     const payload = {
@@ -438,6 +452,7 @@ class NexHireAPI {
     console.log('🔍 === API UPDATE JOB PREFERENCES DEBUG ===');
     console.log('🎯 Input job preferences data:', JSON.stringify(jobPreferencesData, null, 2));
     
+    // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
       console.warn('⚠️ updateJobPreferences called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
@@ -1077,7 +1092,7 @@ class NexHireAPI {
     }
     
     try {
-      console.log('💰 Making API call to:', `${API_BASE_URL}/applicants/${userId}/profile`);
+      console.log('💰 Making API call to:', `/applicants/${userId}/profile`);
       
       const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
