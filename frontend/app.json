@@ -5,10 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#3B82F6"
-    },
-    "scheme": "nexhire",
+    "scheme": "com.nexhire.app",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexhire.app"
@@ -38,11 +38,11 @@
     "web": {
       "bundler": "metro"
     },
-    "platforms": [
-      "ios",
-      "android",
-      "web"
+    "plugins": [
+      "expo-router"
     ],
-    "plugins": []
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

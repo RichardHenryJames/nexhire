@@ -63,8 +63,11 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
 BEGIN
     CREATE TABLE Users (
         UserID uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
+        GoogleId NVARCHAR(100) NULL,
         Email nvarchar(320) UNIQUE NOT NULL,
         Password nvarchar(255) NOT NULL,
+        LoginMethod NVARCHAR(50) NULL DEFAULT 'Password',
+        GoogleAccessToken NVARCHAR(MAX) NULL,
         UserType nvarchar(50) NOT NULL,
         FirstName nvarchar(100) NOT NULL,
         LastName nvarchar(100) NOT NULL,
@@ -84,6 +87,8 @@ BEGIN
         LoginAttempts int DEFAULT 0,
         AccountLockoutEnd datetime2
     );
+
+CREATE INDEX IX_Users_GoogleId ON Users(GoogleId) WHERE GoogleId IS NOT NULL;
 END
 
 -- Create Applicants table

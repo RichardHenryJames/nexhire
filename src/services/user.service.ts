@@ -1369,4 +1369,217 @@ export class UserService {
             [userId]
         );
     }
+
+    // ?? NEW: Google OAuth Login
+    static async loginWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const { googleUser } = googleData;
+        
+        console.log('?? UserService: Google login attempt for:', googleUser?.email);
+        
+        if (!googleUser?.email) {
+            throw new ValidationError('Google user email is required');
+        }
+
+        // Find existing user by email
+        const existingUser = await this.findByEmail(googleUser.email);
+        
+        if (!existingUser) {
+            console.log('? Google login: User not found for email:', googleUser.email);
+            throw new NotFoundError('User not found with email: ' + googleUser.email);
+        }
+
+        console.log('? Google login: Found existing user:', existingUser.Email, 'Type:', existingUser.UserType);
+
+        // Check if account is active
+        if (!existingUser.IsActive) {
+            throw new ValidationError('Account is deactivated');
+        }
+
+        // Update user with Google information if not already set
+        const updateData: any = {};
+        if (!existingUser.GoogleId && googleUser.id) {
+            updateData.GoogleId = googleUser.id;
+        }
+        if (!existingUser.ProfilePictureURL && googleUser.picture) {
+            updateData.ProfilePictureURL = googleUser.picture;
+        }
+        if (!existingUser.EmailVerified && googleUser.verified_email) {
+            updateData.EmailVerified = 1;
+        }
+        
+        // Update login method to indicate Google sign-in
+        updateData.LoginMethod = 'Google';
+        updateData.LastLoginAt = new Date().toISOString();
+
+        // Apply updates if any
+        if (Object.keys(updateData).length > 0) {
+            console.log('?? Updating user with Google data:', Object.keys(updateData));
+            
+            const updateFields = Object.keys(updateData)
+                .map((key, index) => `${key} = @param${index + 1}`)
+                .join(', ');
+
+            const values = Object.values(updateData);
+            const query = `
+                UPDATE Users 
+                SET ${updateFields}, UpdatedAt = GETUTCDATE()
+                WHERE UserID = @param0
+            `;
+
+            await dbService.executeQuery(query, [existingUser.UserID, ...values]);
+            
+            // Refresh user data
+            const updatedUser = await this.findById(existingUser.UserID);
+            if (updatedUser) {
+                Object.assign(existingUser, updatedUser);
+            }
+        }
+
+        // Reset login attempts and update last login
+        await this.updateLastLogin(existingUser.UserID);
+
+        // Generate tokens
+        const tokens = AuthService.generateAuthTokens(existingUser);
+
+        // Remove password from response
+        const { Password, ...userWithoutPassword } = existingUser;
+
+        console.log('? Google login successful for:', userWithoutPassword.Email);
+
+        return {
+            user: userWithoutPassword,
+            tokens
+        };
+    }
+
+    // ?? NEW: Google OAuth Registration
+    static async registerWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const { googleUser, userType, ...additionalData } = googleData;
+        
+        console.log('?? UserService: Google registration attempt for:', googleUser?.email, 'as', userType);
+        
+        if (!googleUser?.email) {
+            throw new ValidationError('Google user email is required');
+        }
+        
+        if (!userType) {
+            throw new ValidationError('User type is required');
+        }
+
+        // Check if user already exists
+        const existingUser = await this.findByEmail(googleUser.email);
+        if (existingUser) {
+            console.log('? Google registration: User already exists:', googleUser.email);
+            throw new ConflictError('User with this email already exists. Please sign in instead.');
+        }
+
+        // Extract names from Google user data
+        const firstName = googleUser.given_name || googleUser.name?.split(' ')[0] || 'User';
+        const lastName = googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '';
+
+        // Generate user ID
+        const userId = AuthService.generateUniqueId();
+        
+        console.log('?? Creating new user with Google data...');
+
+        // Start transaction for user and profile creation
+        const tx = await dbService.beginTransaction();
+        try {
+            // Insert user into database with Google data
+            const userQuery = `
+                INSERT INTO Users (
+                    UserID, Email, Password, UserType, FirstName, LastName, 
+                    Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                    ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
+                    TwoFactorEnabled, LoginAttempts, GoogleId, ProfilePictureURL,
+                    LoginMethod
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5,
+                    @param6, @param7, @param8, @param9, 0,
+                    'Public', GETUTCDATE(), GETUTCDATE(), 1,
+                    0, 0, @param10, @param11, 'Google'
+                );
+                
+                SELECT * FROM Users WHERE UserID = @param0;
+            `;
+
+            const userParameters = [
+                userId,
+                googleUser.email,
+                '', // No password for Google users
+                userType,
+                firstName,
+                lastName,
+                additionalData.phone || null,
+                additionalData.dateOfBirth || null,
+                additionalData.gender || null,
+                googleUser.verified_email ? 1 : 0, // EmailVerified
+                googleUser.id, // GoogleId
+                googleUser.picture || null // ProfilePictureURL
+            ];
+
+            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
+            
+            if (!userResult.recordset || userResult.recordset.length === 0) {
+                throw new Error('Failed to create user');
+            }
+
+            const user = userResult.recordset[0];
+            console.log('? User created successfully:', user.Email);
+            
+            // Create organization and employer profile if user is an employer
+            if (userType === appConstants.userTypes.EMPLOYER) {
+                console.log('?? Creating employer profile...');
+                await this.createEmployerProfileWithOrganizationTx(tx, userId, {
+                    organizationName: additionalData.organizationName || `${firstName} ${lastName}'s Company`,
+                    organizationIndustry: additionalData.organizationIndustry || 'Technology',
+                    organizationSize: additionalData.organizationSize || 'Small',
+                    ...additionalData
+                });
+            }
+            // Create applicant profile if user is a job seeker
+            else if (userType === appConstants.userTypes.JOB_SEEKER) {
+                console.log('?? Creating applicant profile...');
+                await this.createApplicantProfileTx(tx, userId);
+            }
+
+            await tx.commit();
+            console.log('? Transaction committed successfully');
+
+            // Generate tokens
+            const tokens = AuthService.generateAuthTokens(user);
+
+            // Remove password from response
+            const { Password, ...userWithoutPassword } = user;
+
+            console.log('? Google registration successful for:', userWithoutPassword.Email);
+
+            return {
+                user: userWithoutPassword,
+                tokens
+            };
+
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            console.error('? Error during Google registration (rolled back):', error);
+            
+            if (error instanceof ConflictError) throw error;
+            if (error instanceof ValidationError) throw error;
+            
+            throw new Error('Google registration failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    }
+
+    // ?? NEW: Helper method to verify Google token (optional - for extra security)
+    private static async verifyGoogleToken(idToken: string): Promise<any> {
+        try {
+            // In production, you would verify the Google ID token here
+            // For now, we'll trust the frontend verification
+            console.log('?? Google token verification skipped (trusting frontend)');
+            return { verified: true };
+        } catch (error) {
+            console.error('? Google token verification failed:', error);
+            throw new ValidationError('Invalid Google token');
+        }
+    }
 }

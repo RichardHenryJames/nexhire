@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import nexhireAPI from '../services/api';
+import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 
 const AuthContext = createContext();
@@ -16,8 +17,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // ?? NEW: Store Google auth data for new users who need to complete registration
+  const [pendingGoogleAuth, setPendingGoogleAuth] = useState(null);
 
-  // ? Initialize smart auth methods
+  // Initialize smart auth methods
   const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
 
   // Initialize auth state on app start
@@ -54,6 +58,136 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ?? NEW: Google Sign-In Flow
+  const loginWithGoogle = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('?? Starting Google Sign-In flow...');
+      
+      // Step 1: Get Google authentication
+      const googleResult = await googleAuth.signIn();
+      
+      if (!googleResult.success) {
+        if (googleResult.cancelled) {
+          return { success: false, cancelled: true };
+        }
+        if (googleResult.needsConfig) {
+          return { 
+            success: false, 
+            error: googleResult.error,
+            needsConfig: true
+          };
+        }
+        throw new Error(googleResult.error || 'Google authentication failed');
+      }
+
+      console.log('? Google auth successful, checking with backend...');
+
+      // Step 2: Try to login with existing account
+      try {
+        const loginResult = await nexhireAPI.loginWithGoogle(googleResult.data);
+        
+        if (loginResult.success) {
+          console.log('? Existing user login successful');
+          setUser(loginResult.data.user);
+          return { success: true, user: loginResult.data.user };
+        }
+        
+        // Check if it's a user not found error
+        if (loginResult.needsRegistration) {
+          console.log('?? New user detected, storing Google data for registration');
+          setPendingGoogleAuth(googleResult.data);
+          
+          return { 
+            success: false, 
+            needsRegistration: true,
+            googleUser: googleResult.data.user,
+            message: 'New user needs to complete registration'
+          };
+        }
+        
+        throw new Error(loginResult.error || 'Login failed');
+        
+      } catch (loginError) {
+        console.log('?? Login attempt failed:', loginError.message);
+        
+        // If it's a user not found error, prepare for registration
+        if (loginError.message.includes('not found') || loginError.message.includes('USER_NOT_FOUND')) {
+          console.log('?? New user detected, storing Google data for registration');
+          setPendingGoogleAuth(googleResult.data);
+          
+          return { 
+            success: false, 
+            needsRegistration: true,
+            googleUser: googleResult.data.user,
+            message: 'New user needs to complete registration'
+          };
+        }
+        
+        throw loginError;
+      }
+
+    } catch (error) {
+      const errorMessage = error.message || 'Google Sign-In failed';
+      console.error('? Google Sign-In error:', error);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ?? NEW: Complete Google registration after user selects type
+  const completeGoogleRegistration = async (userTypeData) => {
+    try {
+      if (!pendingGoogleAuth) {
+        throw new Error('No pending Google authentication data found');
+      }
+
+      setLoading(true);
+      setError(null);
+
+      console.log('?? Completing Google registration...');
+      console.log('??? User type:', userTypeData.userType);
+      console.log('?? Email:', pendingGoogleAuth.user.email);
+
+      // Register with Google data + user type selection
+      const result = await nexhireAPI.registerWithGoogle(pendingGoogleAuth, userTypeData);
+
+      if (result.success) {
+        console.log('? Google registration completed successfully');
+        setUser(result.data.user);
+        setPendingGoogleAuth(null); // Clear pending data
+        
+        // Return success with indication that profile may need completion
+        return { 
+          success: true, 
+          user: result.data.user,
+          needsProfileCompletion: true,
+          userType: userTypeData.userType
+        };
+      } else {
+        throw new Error(result.error || result.message || 'Registration failed');
+      }
+
+    } catch (error) {
+      const errorMessage = error.message || 'Google registration failed';
+      console.error('? Google registration error:', error);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ?? NEW: Clear pending Google auth (if user cancels registration)
+  const clearPendingGoogleAuth = () => {
+    setPendingGoogleAuth(null);
+  };
+
+  // Existing login method (unchanged)
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -82,6 +216,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Existing register method (unchanged)
   const register = async (userData) => {
     try {
       setLoading(true);
@@ -191,11 +326,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Enhanced logout to handle Google tokens
   const logout = async () => {
     try {
       console.log('Starting logout process for user:', user?.Email);
       setLoading(true);
       
+      // Revoke Google tokens if user signed in with Google
+      if (user?.LoginMethod === 'Google' || user?.GoogleId) {
+        try {
+          console.log('?? Revoking Google tokens...');
+          await googleAuth.signOut(user.GoogleAccessToken);
+          console.log('? Google tokens revoked');
+        } catch (googleError) {
+          console.warn('?? Could not revoke Google tokens:', googleError);
+        }
+      }
+
       // Call API logout
       console.log('Calling API logout...');
       const result = await nexhireAPI.logout();
@@ -204,23 +351,26 @@ export const AuthProvider = ({ children }) => {
         console.log('Logout successful:', result.message);
         setUser(null);
         setError(null);
+        setPendingGoogleAuth(null); // Clear any pending Google auth
         console.log('User state cleared, should redirect to auth screens');
       } else {
         console.warn('Logout had issues but continuing:', result.message);
         setUser(null);
         setError(null);
+        setPendingGoogleAuth(null);
       }
     } catch (error) {
       console.error('Logout error:', error);
       setUser(null);
       setError(null);
+      setPendingGoogleAuth(null);
     } finally {
       setLoading(false);
       console.log('Logout process completed');
     }
   };
 
-  // Legacy profile update (kept)
+  // Legacy profile update (kept for compatibility)
   const updateProfile = async (profileData) => {
     try {
       setError(null);
@@ -266,15 +416,27 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     error,
+    pendingGoogleAuth, // ?? NEW: Expose pending Google auth data
+    
+    // Authentication methods
     login,
+    loginWithGoogle, // ?? NEW: Google Sign-In method
+    completeGoogleRegistration, // ?? NEW: Complete Google registration
+    clearPendingGoogleAuth, // ?? NEW: Clear pending Google auth
     register,
     logout,
+    
+    // Profile methods
     updateProfile,           
-    clearError,
-    checkAuthState,
     updateProfileSmart,
     togglePrivacySetting,
     updateCompleteProfile,
+    
+    // Utility methods
+    clearError,
+    checkAuthState,
+    
+    // User state helpers
     isAuthenticated: !!user,
     isEmployer: user?.UserType === 'Employer',
     isJobSeeker: user?.UserType === 'JobSeeker',
@@ -283,6 +445,12 @@ export const AuthProvider = ({ children }) => {
     userName: user ? `${user.FirstName} ${user.LastName}` : null,
     userEmail: user?.Email || null,
     userId: user?.UserID || null,
+    
+    // ?? NEW: Google auth state helpers
+    hasGoogleAuth: !!user?.GoogleId,
+    isGoogleUser: user?.LoginMethod === 'Google',
+    hasPendingGoogleAuth: !!pendingGoogleAuth,
+    googleAuthAvailable: googleAuth.isConfigured(),
   };
 
   return (

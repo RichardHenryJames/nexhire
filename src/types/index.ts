@@ -47,6 +47,11 @@ export interface User {
     TwoFactorEnabled: boolean;
     LoginAttempts: number; // Added missing field
     AccountLockoutEnd?: Date; // Added missing field
+
+    // ?? NEW: Google OAuth fields
+    GoogleId?: string;
+    LoginMethod?: string; // 'Password', 'Google', etc.
+    GoogleAccessToken?: string; // Optional: store for potential token revocation
 }
 
 export interface Organization {

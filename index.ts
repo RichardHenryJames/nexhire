@@ -15,7 +15,9 @@ import {
     verifyEmail, 
     getDashboardStats, 
     deactivateAccount, 
-    refreshToken 
+    refreshToken,
+    googleLogin,  // ?? NEW: Google OAuth login
+    googleRegister  // ?? NEW: Google OAuth registration
 } from './src/controllers/user.controller';
 import { 
     createJob, 
@@ -109,6 +111,22 @@ app.http('auth-login', {
     authLevel: 'anonymous',
     route: 'auth/login',
     handler: withErrorHandling(login)
+});
+
+// ?? NEW: Google OAuth Login
+app.http('auth-google-login', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'auth/google',
+    handler: withErrorHandling(googleLogin)
+});
+
+// ?? NEW: Google OAuth Registration
+app.http('auth-google-register', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'auth/google-register',
+    handler: withErrorHandling(googleRegister)
 });
 
 // FIXED: Add logout endpoint
@@ -1313,8 +1331,9 @@ app.http('scraping-health', {
 // STARTUP LOG
 // ========================================================================
 
-console.log('NexHire Backend API - All functions registered');
-console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
+console.log('?? NexHire Backend API - All functions registered (with Google OAuth)');
+console.log('?? Google OAuth endpoints added: /auth/google, /auth/google-register');
+console.log('?? API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 
 // ========================================================================
 // FINAL TEST ENDPOINT - Added at the very end
@@ -1340,12 +1359,14 @@ export {}
 
 /*
  * ========================================================================
- * COMPLETE API ENDPOINT LIST (48 total): ??? UPDATED WITH JOB SCRAPING
+ * ?? UPDATED API ENDPOINT LIST (50 total - Added Google OAuth):
  * ========================================================================
  * 
- * AUTHENTICATION (5 endpoints):
+ * AUTHENTICATION (7 endpoints): ?? +2 Google OAuth
  * POST   /auth/register               - User registration
  * POST   /auth/login                  - User login
+ * POST   /auth/google                 - ?? Google OAuth login
+ * POST   /auth/google-register        - ?? Google OAuth registration
  * POST   /auth/logout                 - User logout
  * POST   /auth/refresh                - Refresh JWT token
  * GET    /health                      - Health check

@@ -33,6 +33,74 @@ export const login = withErrorHandling(async (req: HttpRequest, context: Invocat
     };
 });
 
+// ?? NEW: Google OAuth Login
+export const googleLogin = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { accessToken, idToken, user: googleUser } = await extractRequestBody(req);
+    
+    console.log('?? Google login attempt for:', googleUser?.email);
+    
+    try {
+        // Verify Google token and find/create user
+        const result = await UserService.loginWithGoogle({
+            accessToken,
+            idToken,
+            googleUser
+        });
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, 'Google login successful')
+        };
+    } catch (error: any) {
+        console.error('? Google login failed:', error.message);
+        
+        // If user not found, return specific error for frontend to handle
+        if (error.message.includes('User not found') || error.message.includes('not found')) {
+            return {
+                status: 404,
+                jsonBody: errorResponse('USER_NOT_FOUND', 'Account not found. Please complete registration.')
+            };
+        }
+        
+        throw error;
+    }
+});
+
+// ?? NEW: Google OAuth Registration
+export const googleRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { accessToken, idToken, user: googleUser, userType, ...additionalData } = await extractRequestBody(req);
+    
+    console.log('?? Google registration attempt for:', googleUser?.email, 'as', userType);
+    
+    try {
+        // Register new user with Google data
+        const result = await UserService.registerWithGoogle({
+            accessToken,
+            idToken,
+            googleUser,
+            userType,
+            ...additionalData
+        });
+        
+        return {
+            status: 201,
+            jsonBody: successResponse(result, 'Google registration successful')
+        };
+    } catch (error: any) {
+        console.error('? Google registration failed:', error.message);
+        
+        // If user already exists, return specific error
+        if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+            return {
+                status: 409,
+                jsonBody: errorResponse('USER_EXISTS', 'Account already exists. Please sign in instead.')
+            };
+        }
+        
+        throw error;
+    }
+});
+
 // Logout user
 export const logout = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {

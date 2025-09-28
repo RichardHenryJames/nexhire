@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,42 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../../contexts/AuthContext';
 import { colors, typography } from '../../../styles/theme';
 
-export default function UserTypeSelectionScreen({ navigation }) {
+export default function UserTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  // ?? NEW: Extract Google user info from params (if coming from Google auth)
+  const googleUser = route?.params?.googleUser;
+  const fromGoogleAuth = route?.params?.fromGoogleAuth;
+  
+  const { completeGoogleRegistration, hasPendingGoogleAuth } = useAuth();
 
-  const handleContinue = () => {
+  // Show welcome message for Google users
+  useEffect(() => {
+    if (googleUser && fromGoogleAuth) {
+      console.log('?? Google user detected:', googleUser.name);
+    }
+  }, [googleUser, fromGoogleAuth]);
+
+  const handleContinue = async () => {
     if (!selectedType) {
       Alert.alert('Selection Required', 'Please select whether you are looking for jobs or hiring talent');
       return;
     }
 
-    // Navigate to appropriate flow based on selection
+    // ?? NEW: Handle Google registration completion
+    if (googleUser && fromGoogleAuth) {
+      await handleGoogleRegistrationContinue();
+      return;
+    }
+
+    // Original flow for regular users
     if (selectedType === 'JobSeeker') {
       navigation.navigate('JobSeekerFlow', { 
         screen: 'ExperienceTypeSelection',
@@ -34,6 +56,76 @@ export default function UserTypeSelectionScreen({ navigation }) {
     }
   };
 
+  // ?? NEW: Handle Google user registration completion
+  const handleGoogleRegistrationContinue = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('?? Completing Google registration...');
+      console.log('??? Selected type:', selectedType);
+      console.log('?? Google user:', googleUser.email);
+
+      const result = await completeGoogleRegistration({
+        userType: selectedType,
+        // You can add experience type for job seekers here later
+        // experienceType: selectedType === 'JobSeeker' ? 'Student' : undefined
+      });
+
+      if (result.success) {
+        console.log('? Google registration completed successfully');
+        
+        // Show success message
+        Alert.alert(
+          'Welcome to NexHire!',
+          `Your ${selectedType === 'JobSeeker' ? 'job seeker' : 'employer'} account has been created successfully.`,
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                // Navigate based on user type to complete profile
+                if (selectedType === 'JobSeeker') {
+                  navigation.replace('JobSeekerFlow', {
+                    screen: 'ExperienceTypeSelection',
+                    params: { 
+                      userType: 'JobSeeker',
+                      fromGoogleAuth: true,
+                      skipEmailPassword: true 
+                    }
+                  });
+                } else {
+                  navigation.replace('EmployerFlow', {
+                    screen: 'EmployerTypeSelection', 
+                    params: { 
+                      userType: 'Employer',
+                      fromGoogleAuth: true,
+                      skipEmailPassword: true
+                    }
+                  });
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        console.error('? Google registration failed:', result.error);
+        Alert.alert(
+          'Registration Failed',
+          result.error || 'Failed to complete account setup. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('? Google registration error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const UserTypeCard = ({ type, title, subtitle, icon, description }) => (
     <TouchableOpacity
       style={[
@@ -41,6 +133,7 @@ export default function UserTypeSelectionScreen({ navigation }) {
         selectedType === type && styles.cardSelected
       ]}
       onPress={() => setSelectedType(type)}
+      disabled={loading}
     >
       <View style={styles.cardHeader}>
         <Ionicons 
@@ -72,9 +165,30 @@ export default function UserTypeSelectionScreen({ navigation }) {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome to NexHire!</Text>
+          {/* ?? NEW: Show Google user info if available */}
+          {googleUser && (
+            <View style={styles.googleUserInfo}>
+              {googleUser.picture && (
+                <Image 
+                  source={{ uri: googleUser.picture }} 
+                  style={styles.googleUserAvatar}
+                />
+              )}
+              <Text style={styles.googleUserWelcome}>
+                Welcome, {googleUser.given_name || googleUser.name}!
+              </Text>
+              <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+            </View>
+          )}
+          
+          <Text style={styles.title}>
+            {googleUser ? 'Complete Your Profile' : 'Welcome to NexHire!'}
+          </Text>
           <Text style={styles.subtitle}>
-            Let's get started by understanding what you're looking for
+            {googleUser 
+              ? 'Let us know what you\'re looking for to personalize your experience'
+              : 'Let\'s get started by understanding what you\'re looking for'
+            }
           </Text>
         </View>
 
@@ -99,32 +213,45 @@ export default function UserTypeSelectionScreen({ navigation }) {
         <TouchableOpacity
           style={[
             styles.continueButton,
-            !selectedType && styles.continueButtonDisabled
+            (!selectedType || loading) && styles.continueButtonDisabled
           ]}
           onPress={handleContinue}
-          disabled={!selectedType}
+          disabled={!selectedType || loading}
         >
-          <Text style={[
-            styles.continueButtonText,
-            !selectedType && styles.continueButtonTextDisabled
-          ]}>
-            Continue
-          </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={!selectedType ? colors.gray400 : colors.white} 
-          />
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Ionicons name="reload-outline" size={20} color={colors.white} />
+              <Text style={styles.continueButtonText}>Setting up...</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[
+                styles.continueButtonText,
+                !selectedType && styles.continueButtonTextDisabled
+              ]}>
+                Continue
+              </Text>
+              <Ionicons 
+                name="arrow-forward" 
+                size={20} 
+                color={!selectedType ? colors.gray400 : colors.white} 
+              />
+            </>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.loginButtonText}>
-            Already have an account? Sign In
-          </Text>
-        </TouchableOpacity>
+        {/* Only show login link if not coming from Google auth */}
+        {!googleUser && (
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => navigation.navigate('Login')}
+            disabled={loading}
+          >
+            <Text style={styles.loginButtonText}>
+              Already have an account? Sign In
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -143,6 +270,32 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 40,
+  },
+  // ?? NEW: Google user info styles
+  googleUserInfo: {
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  googleUserAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 8,
+  },
+  googleUserWelcome: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  googleUserEmail: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
   },
   title: {
     fontSize: typography.sizes.xxl,
@@ -217,6 +370,11 @@ const styles = StyleSheet.create({
   },
   continueButtonDisabled: {
     backgroundColor: colors.gray300,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   continueButtonText: {
     color: colors.white,

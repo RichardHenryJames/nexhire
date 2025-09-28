@@ -8,12 +8,12 @@ import crypto from 'crypto';
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
+import { config } from '../config/appConfig';
 
 // Lazy init to allow env variables in cloud runtime
 function getRazorpayClient() {
-  const key_id = process.env.RAZORPAY_KEY_ID || 'rzp_test_RHBUKjg4k9qx4J';
-  const key_secret = process.env.RAZORPAY_KEY_SECRET || 'IGx3G02rEoPHqS32Jk70DfGW';
-  return new Razorpay({ key_id, key_secret });
+  const razorpayConfig = config.getRazorpayConfig();
+  return new Razorpay(razorpayConfig);
 }
 
 export class RazorpayService {
@@ -29,6 +29,11 @@ export class RazorpayService {
     customerName: string;
   }, userId: string) {
     try {
+      // Check if payment system is enabled
+      if (!config.isFeatureEnabled('paymentSystem')) {
+        throw new ValidationError('Payment system is currently disabled');
+      }
+
       // Validate amount (should be in paise, minimum 100 paise = ?1)
       if (!orderData.amount || orderData.amount < 100) {
         throw new ValidationError('Invalid payment amount (minimum ?1)');
@@ -76,10 +81,11 @@ export class RazorpayService {
           planName: plan.Name,
           userId: userId,
           customerEmail: orderData.customerEmail,
+          environment: config.app.env,
         }
       });
 
-      // Store order details in PaymentOrders (schema: OrderID, ApplicantID, PlanID, Amount DECIMAL(10,2), Currency, Status, PaymentGateway, PaymentReference, CreatedAt, PaidAt)
+      // Store order details in PaymentOrders
       const internalOrderId = AuthService.generateUniqueId();
       const insertQuery = `
         INSERT INTO PaymentOrders (
@@ -98,13 +104,19 @@ export class RazorpayService {
         order.id // PaymentReference
       ]);
 
+      if (config.isDevelopment()) {
+        console.log(`?? Razorpay order created: ${order.id} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} mode)`);
+      }
+
       return {
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
         receipt: order.receipt,
         status: order.status,
-        internalOrderId
+        internalOrderId,
+        razorpayKeyId: config.razorpay.keyId, // Include for frontend
+        isProduction: config.razorpay.isProduction,
       };
     } catch (error: any) {
       console.error('Error creating Razorpay order (debug):', {
@@ -112,6 +124,7 @@ export class RazorpayService {
         stack: error?.stack,
         code: error?.code,
         description: error?.description,
+        environment: config.app.env,
       });
       if (error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
@@ -133,6 +146,11 @@ export class RazorpayService {
     amount: number;
   }, userId: string) {
     try {
+      // Check if payment system is enabled
+      if (!config.isFeatureEnabled('paymentSystem')) {
+        throw new ValidationError('Payment system is currently disabled');
+      }
+
       // Step 1: Verify payment signature
       const isSignatureValid = this.verifyPaymentSignature(
         verificationData.razorpayOrderId,
@@ -250,7 +268,7 @@ export class RazorpayService {
         'INR'
       ]);
 
-      console.log(`? Subscription activated for user ${userId}, plan ${plan.Name}`);
+      console.log(`?? Subscription activated for user ${userId}, plan ${plan.Name} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} payment)`);
 
       return {
         success: true,
@@ -258,7 +276,9 @@ export class RazorpayService {
         planName: plan.Name,
         referralsPerDay: plan.ReferralsPerDay,
         validUntil: endDate,
-        paymentId: verificationData.razorpayPaymentId
+        paymentId: verificationData.razorpayPaymentId,
+        environment: config.app.env,
+        isProduction: config.razorpay.isProduction,
       };
 
     } catch (error: any) {
@@ -300,7 +320,7 @@ export class RazorpayService {
    */
   private static verifyPaymentSignature(orderId: string, paymentId: string, signature: string): boolean {
     try {
-      const key_secret = process.env.RAZORPAY_KEY_SECRET || 'IGx3G02rEoPHqS32Jk70DfGW';
+      const key_secret = config.razorpay.keySecret;
       const expectedSignature = crypto
         .createHmac('sha256', key_secret)
         .update(`${orderId}|${paymentId}`)
@@ -359,11 +379,26 @@ export class RazorpayService {
         total,
         page,
         pageSize,
-        totalPages: Math.ceil(total / pageSize)
+        totalPages: Math.ceil(total / pageSize),
+        environment: config.app.env,
+        isProduction: config.razorpay.isProduction,
       };
     } catch (error) {
       console.error('Error getting payment history:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get Razorpay configuration status for debugging
+   */
+  static getConfigStatus() {
+    return {
+      isConfigured: !!config.razorpay.keyId && !!config.razorpay.keySecret,
+      isProduction: config.razorpay.isProduction,
+      keyId: config.razorpay.keyId?.substring(0, 10) + '...',
+      featureEnabled: config.isFeatureEnabled('paymentSystem'),
+      environment: config.app.env,
+    };
   }
 }
