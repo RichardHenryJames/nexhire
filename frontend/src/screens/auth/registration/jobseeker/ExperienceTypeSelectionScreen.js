@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,19 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     fromGoogleAuth = false, 
     googleUser = null 
   } = route.params || {};
+
+  // ?? NEW: Guard against hard refresh with lost Google data
+  useEffect(() => {
+    if (fromGoogleAuth && !googleUser) {
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
+      
+      // Silent immediate redirect
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
+  }, [fromGoogleAuth, googleUser, navigation]);
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -45,32 +58,23 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // ?? NEW: Handle Skip to final screen
+  // ?? FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
   const handleSkipToFinal = () => {
     if (!selectedType) {
       Alert.alert('Selection Required', 'Please select your experience level first');
       return;
     }
 
-    Alert.alert(
-      'Skip Registration Steps?',
-      'You can complete your profile now and add work/education details later.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Skip to Profile',
-          onPress: () => {
-            navigation.navigate('PersonalDetails', {
-              userType,
-              experienceType: selectedType,
-              fromGoogleAuth,
-              googleUser,
-              skippedSteps: true,
-            });
-          }
-        }
-      ]
-    );
+    console.log('🔧 Skip button clicked, selectedType:', selectedType);
+    
+    // Navigate directly to PersonalDetailsScreenDirect (same route used in UserTypeSelectionScreen)
+    navigation.navigate('PersonalDetailsScreenDirect', {
+      userType,
+      experienceType: selectedType,
+      fromGoogleAuth,
+      googleUser,
+      skippedSteps: true,
+    });
   };
 
   const ExperienceCard = ({ type, title, icon, description, examples }) => (
@@ -118,7 +122,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
 
-          {/* ?? NEW: Show Google user info if available */}
+          {/* ?? Show Google user info if available */}
           {googleUser && fromGoogleAuth && (
             <View style={styles.googleUserInfo}>
               {googleUser.picture && (
@@ -162,28 +166,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           />
         </View>
 
-        {/* Skip Button - NEW PART */}
-        <TouchableOpacity
-          style={[
-            styles.skipButton,
-            !selectedType && styles.skipButtonDisabled
-          ]}
-          onPress={handleSkipToFinal}
-          disabled={!selectedType}
-        >
-          <Text style={[
-            styles.skipButtonText,
-            !selectedType && styles.skipButtonTextDisabled
-          ]}>
-            Skip
-          </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={!selectedType ? colors.gray400 : colors.white} 
-          />
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[
             styles.continueButton,
@@ -196,7 +178,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             styles.continueButtonText,
             !selectedType && styles.continueButtonTextDisabled
           ]}>
-            Continue with Setup
+            Continue with Full Setup
           </Text>
           <Ionicons 
             name="arrow-forward" 
@@ -205,28 +187,32 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           />
         </TouchableOpacity>
 
-        {/* ?? NEW: Skip Button for Google users */}
-        {googleUser && fromGoogleAuth && (
-          <TouchableOpacity
-            style={[
-              styles.skipButton,
-              !selectedType && styles.skipButtonDisabled
-            ]}
-            onPress={handleSkipToFinal}
-            disabled={!selectedType}
-          >
-            <Ionicons 
-              name="flash-outline" 
-              size={20} 
-              color={!selectedType ? colors.gray400 : colors.primary} 
-            />
-            <Text style={[
-              styles.skipButtonText,
-              !selectedType && styles.skipButtonTextDisabled
-            ]}>
-              Skip to Profile Completion
-            </Text>
-          </TouchableOpacity>
+        {/* ?? FIXED: Single "Skip to Profile Completion" button - always shown */}
+        <TouchableOpacity
+          style={[
+            styles.skipButton,
+            !selectedType && styles.skipButtonFaded
+          ]}
+          onPress={handleSkipToFinal}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name="flash-outline" 
+            size={20} 
+            color={!selectedType ? colors.gray500 : colors.primary} 
+          />
+          <Text style={[
+            styles.skipButtonText,
+            !selectedType && styles.skipButtonTextFaded
+          ]}>
+            Skip to Profile Completion
+          </Text>
+        </TouchableOpacity>
+        
+        {!selectedType && (
+          <Text style={styles.skipHintText}>
+            💡 Select your experience level above to enable skip option
+          </Text>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -262,7 +248,7 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     lineHeight: 22,
   },
-  // NEW STYLES FOR GOOGLE USER INFO
+  // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -355,7 +341,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     gap: 8,
-    marginTop: 20,
+    marginBottom: 16,
   },
   continueButtonDisabled: {
     backgroundColor: colors.gray300,
@@ -368,29 +354,38 @@ const styles = StyleSheet.create({
   continueButtonTextDisabled: {
     color: colors.gray400,
   },
-  // ?? NEW: Skip button styles
+  // Skip button styles (matching UserTypeSelectionScreen)
   skipButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    padding: 16,
     borderRadius: 12,
-    marginTop: 12,
+    marginBottom: 16,
     gap: 8,
     borderWidth: 2,
     borderColor: colors.primary,
     backgroundColor: colors.surface,
   },
-  skipButtonDisabled: {
-    borderColor: colors.gray300,
-    backgroundColor: colors.gray100,
+  skipButtonFaded: {
+    borderColor: colors.gray400,
+    backgroundColor: colors.gray50,
+    opacity: 0.6,
   },
   skipButtonText: {
     color: colors.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
   },
-  skipButtonTextDisabled: {
-    color: colors.gray400,
+  skipButtonTextFaded: {
+    color: colors.gray600,
+  },
+  skipHintText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    textAlign: 'center',
+    marginTop: -8,
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
 });

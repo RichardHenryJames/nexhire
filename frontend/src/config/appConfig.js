@@ -1,20 +1,22 @@
 /**
- * ?? Frontend Configuration Service
+ * Frontend Configuration Service
  * Centralized configuration management for NexHire frontend
- * FIXED: Robust fallback when Constants.expoConfig.extra is not available
+ * Provides robust fallback when Constants.expoConfig.extra is not available
  */
 
 import Constants from 'expo-constants';
+
+const ENABLE_CONFIG_LOGS = process.env.SHOW_CONFIG_LOGS === 'true';
 
 class FrontendConfigService {
   constructor() {
     if (FrontendConfigService.instance) {
       return FrontendConfigService.instance;
     }
-    
+
     this.config = this.loadConfiguration();
     this.validateConfiguration();
-    
+
     FrontendConfigService.instance = this;
   }
 
@@ -26,47 +28,18 @@ class FrontendConfigService {
   }
 
   loadConfiguration() {
-    // DEBUGGING: Let's see what's available
-    console.log('?? DEBUGGING Configuration Sources:');
-    console.log('  Constants.expoConfig:', !!Constants.expoConfig);
-    console.log('  Constants.expoConfig.extra:', !!Constants.expoConfig?.extra);
-    console.log('  typeof Constants.expoConfig?.extra:', typeof Constants.expoConfig?.extra);
-    console.log('  process.env keys:', Object.keys(process.env).filter(k => k.startsWith('EXPO_PUBLIC')));
-    
     const extra = Constants.expoConfig?.extra;
-    if (extra && typeof extra === 'object') {
-      console.log('  extra keys:', Object.keys(extra));
-      console.log('  extra.appEnv:', extra.appEnv);
-      console.log('  extra.googleClientIdWeb length:', extra.googleClientIdWeb?.length || 0);
-    } else {
-      console.log('  ? extra is not available or not an object');
-    }
-
-    // ROBUST FALLBACK: If extra is not available, assume production and use hardcoded values
     const hasValidExtra = extra && typeof extra === 'object' && Object.keys(extra).length > 0;
-    const shouldForceProd = !hasValidExtra && typeof window !== 'undefined'; // Browser environment
-    
-    if (shouldForceProd) {
-      console.log('?? FALLBACK: Constants.expoConfig.extra not available, forcing production configuration');
-    }
+    const shouldForceProd = !hasValidExtra && typeof window !== 'undefined';
 
     const getEnvVar = (extraKey, processEnvKey, defaultValue = '', prodFallback = '') => {
       if (shouldForceProd) return prodFallback || defaultValue;
-      
-      const extraValue = extra?.[extraKey];
-      const processValue = process.env[processEnvKey];
-      
-      console.log(`  getEnvVar(${extraKey}): extra=${extraValue || 'null'}, process=${processValue || 'null'}`);
-      
-      return extraValue || processValue || defaultValue;
+      return extra?.[extraKey] || process.env[processEnvKey] || defaultValue;
     };
 
     const getBooleanEnvVar = (extraKey, processEnvKey, defaultValue = false, prodFallback = true) => {
       if (shouldForceProd) return prodFallback;
-      
       const value = extra?.[extraKey] ?? process.env[processEnvKey];
-      console.log(`  getBooleanEnvVar(${extraKey}): value=${value}, defaultValue=${defaultValue}`);
-      
       if (value === undefined || value === null) return defaultValue;
       return value === true || value === 'true';
     };
@@ -85,16 +58,15 @@ class FrontendConfigService {
       },
 
       google: {
-        // PRODUCTION FALLBACK VALUES - When extra config is not available
-        webClientId: shouldForceProd 
+        webClientId: shouldForceProd
           ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB', '', '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+          : getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB'),
         androidClientId: shouldForceProd
           ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID', '', '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+          : getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID'),
         iosClientId: shouldForceProd
           ? '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS', '', '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'),
+          : getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS'),
         firebase: {
           projectId: getEnvVar('firebaseProjectId', 'EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'nexhire-123'),
           webAppId: getEnvVar('firebaseWebAppId', 'EXPO_PUBLIC_FIREBASE_WEB_APP_ID'),
@@ -107,7 +79,9 @@ class FrontendConfigService {
         keyId: shouldForceProd
           ? 'rzp_live_RHBIO2dq7CFGiW'
           : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J', 'rzp_live_RHBIO2dq7CFGiW'),
-        isProduction: shouldForceProd ? true : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J').startsWith('rzp_live_'),
+        isProduction: shouldForceProd
+          ? true
+          : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J').startsWith('rzp_live_'),
       },
 
       features: {
@@ -134,12 +108,9 @@ class FrontendConfigService {
       },
     };
 
-    console.log('?? Final Configuration:', {
-      environment: config.app.env,
-      googleClientIdSet: !!config.google.webClientId,
-      shouldForceProd,
-      hasValidExtra
-    });
+    if (ENABLE_CONFIG_LOGS) {
+      console.log('FrontendConfig Debug:', { config, shouldForceProd, hasValidExtra });
+    }
 
     return config;
   }
@@ -148,45 +119,30 @@ class FrontendConfigService {
     const warnings = [];
     const errors = [];
 
-    // API validation
     if (!this.config.api.baseUrl) {
       errors.push('API base URL is required');
     }
 
-    // Google OAuth validation
     if (this.config.features.googleSignIn) {
-      if (!this.config.google.webClientId) {
-        warnings.push('Google OAuth Web Client ID not configured - Google Sign-In will be disabled');
-      }
-      if (!this.config.google.androidClientId) {
-        warnings.push('Google OAuth Android Client ID not configured');
-      }
-      if (!this.config.google.iosClientId) {
-        warnings.push('Google OAuth iOS Client ID not configured');
-      }
+      if (!this.config.google.webClientId) warnings.push('Google OAuth Web Client ID not configured');
+      if (!this.config.google.androidClientId) warnings.push('Google OAuth Android Client ID not configured');
+      if (!this.config.google.iosClientId) warnings.push('Google OAuth iOS Client ID not configured');
     }
 
-    // Razorpay validation
-    if (this.config.features.razorpayPayments) {
-      if (!this.config.razorpay.keyId) {
-        warnings.push('Razorpay Key ID not configured - Payments will be disabled');
-      }
+    if (this.config.features.razorpayPayments && !this.config.razorpay.keyId) {
+      warnings.push('Razorpay Key ID not configured - Payments will be disabled');
     }
 
-    // Log warnings
-    warnings.forEach(warning => {
-      console.warn(`?? ${warning}`);
-    });
+    warnings.forEach(warning => console.warn(`⚠️ ${warning}`));
 
-    // Throw errors
     if (errors.length > 0) {
       throw new Error(`Frontend configuration validation failed:\n${errors.join('\n')}`);
     }
 
-    console.log(`? Frontend configuration loaded for ${this.config.app.env} environment`);
+    console.log(`✅ Frontend configuration loaded for ${this.config.app.env} environment`);
   }
 
-  // Public getters
+  // --- Getters ---
   get app() { return this.config.app; }
   get api() { return this.config.api; }
   get google() { return this.config.google; }
@@ -196,58 +152,38 @@ class FrontendConfigService {
   get external() { return this.config.external; }
   get development() { return this.config.development; }
 
-  // Helper methods
-  isDevelopment() {
-    return this.config.app.env === 'development';
-  }
-
-  isProduction() {
-    return this.config.app.env === 'production';
-  }
-
-  isFeatureEnabled(feature) {
-    return this.config.features[feature];
-  }
+  // Helpers
+  isDevelopment() { return this.config.app.env === 'development'; }
+  isProduction() { return this.config.app.env === 'production'; }
+  isFeatureEnabled(feature) { return this.config.features[feature]; }
 
   shouldLog(level) {
     if (!this.config.development.debugLogs) return false;
-    
     const levels = ['debug', 'info', 'warn', 'error'];
-    const configLevel = levels.indexOf(this.config.development.logLevel);
-    const messageLevel = levels.indexOf(level);
-    
-    return messageLevel >= configLevel;
+    return levels.indexOf(level) >= levels.indexOf(this.config.development.logLevel);
   }
 
-  // Service-specific configuration
+  // Config summaries
   getGoogleOAuthConfig(platform) {
     if (!this.isFeatureEnabled('googleSignIn')) {
       throw new Error('Google Sign-In feature is disabled');
     }
-
     const clientIds = {
       web: this.config.google.webClientId,
       android: this.config.google.androidClientId,
       ios: this.config.google.iosClientId,
     };
-
-    const clientId = clientIds[platform];
-    if (!clientId) {
+    if (!clientIds[platform]) {
       throw new Error(`Google OAuth client ID not configured for ${platform}`);
     }
-
-    return { clientId };
+    return { clientId: clientIds[platform] };
   }
 
   getRazorpayConfig() {
     if (!this.isFeatureEnabled('razorpayPayments')) {
       throw new Error('Razorpay payments feature is disabled');
     }
-
-    return {
-      key: this.config.razorpay.keyId,
-      isProduction: this.config.razorpay.isProduction,
-    };
+    return { key: this.config.razorpay.keyId, isProduction: this.config.razorpay.isProduction };
   }
 
   getApiConfig() {
@@ -262,16 +198,12 @@ class FrontendConfigService {
     };
   }
 
-  // Configuration summary for debugging
   getConfigSummary() {
     return {
       environment: this.config.app.env,
       version: this.config.app.version,
       features: this.config.features,
-      api: {
-        baseUrl: this.config.api.baseUrl,
-        timeout: this.config.api.timeout,
-      },
+      api: { baseUrl: this.config.api.baseUrl, timeout: this.config.api.timeout },
       services: {
         googleOAuth: {
           web: !!this.config.google.webClientId,
@@ -284,17 +216,14 @@ class FrontendConfigService {
     };
   }
 
-  // Debug helper
   logConfig() {
     if (this.shouldLog('debug')) {
-      console.log('?? Frontend Configuration:', this.getConfigSummary());
+      console.log('Frontend Configuration:', this.getConfigSummary());
     }
   }
 }
 
-// Initialize static property
+// Singleton instance
 FrontendConfigService.instance = null;
-
-// Export singleton instance
 export const frontendConfig = FrontendConfigService.getInstance();
 export default frontendConfig;

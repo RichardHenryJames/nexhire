@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Image,
@@ -37,6 +36,19 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
     hasPendingGoogleAuth,
     googleUserEmail: googleUser?.email
   });
+
+  // ?? NEW: Guard against hard refresh with lost Google data
+  useEffect(() => {
+    if (fromGoogleAuth && !pendingGoogleAuth && !googleUser) {
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
+      
+      // Silent immediate redirect
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
+  }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
 
   // Show welcome message for Google users
   useEffect(() => {

@@ -69,6 +69,19 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     googleUserEmail: googleUser?.email
   });
 
+  // ?? NEW: Guard against hard refresh with lost Google data
+  useEffect(() => {
+    if (fromGoogleAuth && !pendingGoogleAuth && !googleUser) {
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
+      
+      // Silent immediate redirect
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
+  }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -299,7 +312,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       };
 
       // ?? NEW: If user filled current company in skip flow, create workExperienceData
-      if (skippedSteps && (formData.currentCompany || formData.organizationId)) {
+      // BUT only for experienced professionals, NOT for students
+      if (skippedSteps && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId)) {
         console.log('🔧 Creating work experience from skip flow company data');
         registrationData.workExperienceData = {
           companyName: formData.currentCompany?.trim() || null,
@@ -523,11 +537,11 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* ?? NEW: Current Company Dropdown (replacing text input) */}
-            {userType === 'JobSeeker' && <OrgPickerButton />}
+            {/* ?? NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
+            {userType === 'JobSeeker' && experienceType !== 'Student' && <OrgPickerButton />}
 
             {/* ?? NEW: Show jobTitle and startDate fields only when company is selected */}
-            {userType === 'JobSeeker' && (formData.currentCompany || formData.organizationId) && (
+            {userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
                   <Ionicons name="information-circle" size={16} color={colors.primary} />
@@ -576,8 +590,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               </Text>
             </View>
             
-            {/* ?? Show current company if filled */}
-            {formData.currentCompany && (
+            {/* ?? Show current company if filled - ONLY for experienced professionals */}
+            {experienceType !== 'Student' && formData.currentCompany && (
               <View style={styles.summaryItem}>
                 <Ionicons name="business" size={16} color={colors.primary} />
                 <Text style={styles.summaryText}>
