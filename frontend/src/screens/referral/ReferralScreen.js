@@ -266,13 +266,41 @@ export default function ReferralScreen({ navigation }) {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
+    
+    // Enhanced: Show both date and time up to hour (matching ApplicationsScreen)
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    const dateOptions = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    const timeOptions = { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    };
+    
+    return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
   const renderMyRequestCard = (request) => (
     <View key={request.RequestID} style={styles.requestCard}>
       <View style={styles.requestHeader}>
+        {/* Company Logo */}
+        <View style={styles.logoContainer}>
+          {request.OrganizationLogo ? (
+            <Image 
+              source={{ uri: request.OrganizationLogo }} 
+              style={styles.companyLogo}
+              onError={() => console.log('Logo load error for:', request.CompanyName)}
+            />
+          ) : (
+            <View style={styles.logoPlaceholder}>
+              <Ionicons name="business-outline" size={24} color={colors.gray500} />
+            </View>
+          )}
+        </View>
+
         <View style={styles.requestInfo}>
           <Text style={styles.jobTitle} numberOfLines={1}>
             {request.JobTitle || 'Job Title'}
@@ -280,15 +308,22 @@ export default function ReferralScreen({ navigation }) {
           <Text style={styles.companyName} numberOfLines={1}>
             {request.CompanyName || 'Company'}
           </Text>
-          <Text style={styles.requestDate}>
-            Requested on {formatDate(request.RequestedAt)}
-          </Text>
-          {request.ReferrerName && (
-            <Text style={styles.referrerName}>
-              Referred by {request.ReferrerName}
+          <View style={styles.timestampRow}>
+            <Ionicons name="time-outline" size={14} color={colors.gray500} />
+            <Text style={styles.requestDate}>
+              Requested on {formatDate(request.RequestedAt)}
             </Text>
+          </View>
+          {request.ReferrerName && (
+            <View style={styles.referrerRow}>
+              <Ionicons name="person-circle-outline" size={14} color={colors.success} />
+              <Text style={styles.referrerName}>
+                Referred by {request.ReferrerName}
+              </Text>
+            </View>
           )}
         </View>
+        
         <View style={styles.statusBadge}>
           <Ionicons 
             name={getStatusIcon(request.Status)} 
@@ -339,6 +374,21 @@ export default function ReferralScreen({ navigation }) {
   const renderRequestToMeCard = (request) => (
     <View key={request.RequestID} style={styles.requestCard}>
       <View style={styles.requestHeader}>
+        {/* Company Logo */}
+        <View style={styles.logoContainer}>
+          {request.OrganizationLogo ? (
+            <Image 
+              source={{ uri: request.OrganizationLogo }} 
+              style={styles.companyLogo}
+              onError={() => console.log('Logo load error for:', request.CompanyName)}
+            />
+          ) : (
+            <View style={styles.logoPlaceholder}>
+              <Ionicons name="business-outline" size={24} color={colors.gray500} />
+            </View>
+          )}
+        </View>
+
         <View style={styles.requestInfo}>
           <Text style={styles.jobTitle} numberOfLines={1}>
             {request.JobTitle || 'Job Title'}
@@ -346,12 +396,18 @@ export default function ReferralScreen({ navigation }) {
           <Text style={styles.companyName} numberOfLines={1}>
             {request.CompanyName || 'Company'}
           </Text>
-          <Text style={styles.seekerInfo}>
-            Requested by {request.ApplicantName || 'Job Seeker'}
-          </Text>
-          <Text style={styles.requestDate}>
-            {formatDate(request.RequestedAt)}
-          </Text>
+          <View style={styles.seekerRow}>
+            <Ionicons name="person-outline" size={14} color={colors.primary} />
+            <Text style={styles.seekerInfo}>
+              Requested by {request.ApplicantName || 'Job Seeker'}
+            </Text>
+          </View>
+          <View style={styles.timestampRow}>
+            <Ionicons name="time-outline" size={14} color={colors.gray500} />
+            <Text style={styles.requestDate}>
+              {formatDate(request.RequestedAt)}
+            </Text>
+          </View>
         </View>
       </View>
       
@@ -697,9 +753,28 @@ const styles = StyleSheet.create({
   },
   requestHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  logoContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  companyLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+  },
+  logoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   requestInfo: {
     flex: 1,
@@ -714,16 +789,33 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: typography.sizes.md,
     color: colors.gray700,
+    marginBottom: 6,
+  },
+  timestampRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
+  },
+  seekerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  referrerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   seekerInfo: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    marginBottom: 4,
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
   },
   requestDate: {
     fontSize: typography.sizes.sm,
     color: colors.gray500,
+    marginLeft: 4,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -732,6 +824,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: colors.gray100,
     borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   statusText: {
     fontSize: typography.sizes.xs,
@@ -814,6 +907,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.success,
     fontWeight: typography.weights.medium,
+    marginLeft: 4,
   },
   verifyBtn: {
     flexDirection: 'row',

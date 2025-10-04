@@ -736,6 +736,7 @@ export class ReferralService {
                     rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     j.Title as JobTitle,
+                    o.LogoURL as OrganizationLogo,
                     o.Name as CompanyName,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ur.Email as ReferrerEmail,
@@ -1052,6 +1053,7 @@ export class ReferralService {
                     rw.AwardedAt,
                     rr.JobID,
                     j.Title as JobTitle,
+                    o.LogoURL as OrganizationLogo,
                     o.Name as CompanyName,
                     CASE 
                         WHEN rw.PointsType = 'proof_submission' THEN 'Base referral proof submitted'
