@@ -55,7 +55,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // Add navigation header with back button
+  // Navigation header (remove save button if already applied)
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
@@ -66,20 +66,20 @@ export default function JobDetailsScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      headerRight: () => (
+      headerRight: hasApplied ? undefined : () => (
         <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
         </TouchableOpacity>
       )
     });
-  }, [navigation, isSaved]);
+  }, [navigation, isSaved, hasApplied]);
 
   // Load job details and referral status
   useEffect(() => {
     if (jobId) {
       fetchJobDetails();
       loadReferralStatus();
-      checkSavedStatus(); // Check if job is saved
+      checkSavedStatus();
     } else {
       setLoading(false);
     }

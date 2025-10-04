@@ -178,12 +178,15 @@ export class ReferralService {
                 if (existingResult.recordset?.length) {
                     throw new ConflictError('You have already requested a referral for this job');
                 }
-                
-                // Verify job exists and is active
-                const jobQuery = `SELECT JobID FROM Jobs WHERE JobID = @param0 AND Status = 'Published'`;
-                const jobResult = await dbService.executeQuery(jobQuery, [dto.jobID]);
-                if (!jobResult.recordset?.length) {
-                    throw new NotFoundError('Job not found or not available');
+                // Verify job exists first (any status)
+                const jobExistsQuery = `SELECT JobID, Status FROM Jobs WHERE JobID = @param0`;
+                const jobExistsResult = await dbService.executeQuery(jobExistsQuery, [dto.jobID]);
+                if (!jobExistsResult.recordset?.length) {
+                    throw new NotFoundError('Job not found');
+                }
+                // If not published block with ValidationError as requested
+                if (jobExistsResult.recordset[0].Status !== 'Published') {
+                    throw new ValidationError('Job not open for referrals');
                 }
             }
 

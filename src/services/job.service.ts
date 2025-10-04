@@ -15,70 +15,117 @@ const MAX_PAGE_SIZE = 100;
 const MAX_UNPAGED_TOTAL = 500; // only allow all=true when total <= this
 
 export class JobService {
-    // Create new job
+    // Create new job (schema-aligned with database)
     static async createJob(jobData: any, postedByUserID: string, organizationID: string): Promise<Job> {
-        const validatedData = validateRequest<JobCreateRequest>(jobCreateSchema, jobData);
+        // 1. Validate and normalize input
+        const validated = validateRequest<JobCreateRequest>(jobCreateSchema, jobData);
         
-        // Generate job ID
+        // 2. Resolve / derive required DB columns that are NOT part of request
+        // Department NOT NULL in DB – fallback if not provided
+        const department = validated.department?.trim() || 'General';
+        // Location NOT NULL – fallback if missing (prefer explicit location else remote marker)
+        const location = validated.location?.trim() || (validated.isRemote ? 'Remote' : 'Unspecified');
+        // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to 1 (Onsite) if not found
+        let workplaceTypeId: number = 1;
+        if (validated.workplaceType) {
+            const wtQuery = 'SELECT WorkplaceTypeID FROM WorkplaceTypes WHERE Type = @param0';
+            const wtResult = await dbService.executeQuery(wtQuery, [validated.workplaceType]);
+            if (wtResult.recordset && wtResult.recordset.length > 0) {
+                workplaceTypeId = wtResult.recordset[0].WorkplaceTypeID;
+            }
+        }
+        // ExternalJobID (NOT NULL): prefix to distinguish manually posted jobs
         const jobId = AuthService.generateUniqueId();
+        const externalJobId = `USR_${jobId.substring(0, 8)}`;
         
-        // Build the INSERT query dynamically based on provided fields
-        const fields = [
-            'JobID', 'OrganizationID', 'PostedByUserID', 'Title', 'JobTypeID',
-            'Level', 'Department', 'Description', 'Responsibilities', 'Requirements',
-            'PreferredQualifications', 'BenefitsOffered', 'Location', 'Country',
-            'State', 'City', 'PostalCode', 'IsRemote', 'WorkplaceType',
-            'RemoteRestrictions', 'SalaryRangeMin', 'SalaryRangeMax', 'CurrencyID',
-            'SalaryPeriod', 'CompensationType', 'BonusDetails', 'EquityOffered',
-            'ProjectDuration', 'ProjectStartDate', 'ProjectEndDate', 'ProjectBudget',
-            'ContractExtensionPossible', 'ContractConversionPossible', 'ExperienceMin',
-            'ExperienceMax', 'ExperienceLevel', 'RequiredCertifications', 'RequiredEducation',
-            'Status', 'Priority', 'Visibility', 'ApplicationDeadline', 'TargetHiringDate',
-            'MaxApplications', 'InterviewStages', 'InterviewProcess', 'AssessmentRequired',
-            'AssessmentDetails', 'TimeZone', 'Language', 'Tags', 'InternalNotes',
-            'CreatedAt', 'UpdatedAt', 'CurrentApplications'
-        ];
-
-        const values = [
-            jobId, organizationID, postedByUserID, validatedData.title, validatedData.jobTypeID,
-            validatedData.level, validatedData.department, validatedData.description,
-            validatedData.responsibilities, validatedData.requirements, validatedData.preferredQualifications,
-            validatedData.benefitsOffered, validatedData.location, validatedData.country,
-            validatedData.state, validatedData.city, validatedData.postalCode,
-            validatedData.isRemote || false, validatedData.workplaceType, validatedData.remoteRestrictions,
-            validatedData.salaryRangeMin, validatedData.salaryRangeMax, validatedData.currencyID,
-            validatedData.salaryPeriod, validatedData.compensationType, validatedData.bonusDetails,
-            validatedData.equityOffered, validatedData.projectDuration, validatedData.projectStartDate,
-            validatedData.projectEndDate, validatedData.projectBudget, validatedData.contractExtensionPossible,
-            validatedData.contractConversionPossible, validatedData.experienceMin, validatedData.experienceMax,
-            validatedData.experienceLevel, validatedData.requiredCertifications, validatedData.requiredEducation,
-            'Draft', validatedData.priority || 'Normal', validatedData.visibility || 'Public',
-            validatedData.applicationDeadline, validatedData.targetHiringDate, validatedData.maxApplications,
-            validatedData.interviewStages, validatedData.interviewProcess, validatedData.assessmentRequired || false,
-            validatedData.assessmentDetails, validatedData.timeZone, validatedData.language || 'English',
-            validatedData.tags, validatedData.internalNotes, null, null, 0
-        ];
-
-        const placeholders = fields.map((_, index) => `@param${index}`);
-
-        const query = `
+        // 3. Build the insert dynamically ONLY with columns that exist in Jobs table
+        //    Avoid old / non-existent columns like Level, PreferredQualifications, ExperienceLevel, Language, WorkplaceType (text)
+        const fields: string[] = [];
+        const values: any[] = [];
+        const add = (column: string, value: any) => { fields.push(column); values.push(value); };
+        
+        // Required/base columns
+        add('JobID', jobId);
+        add('OrganizationID', organizationID);
+        add('PostedByUserID', postedByUserID);
+        add('PostedByType', 1); // 1 = User posted
+        add('Title', validated.title);
+        add('JobTypeID', validated.jobTypeID || 1);
+        add('WorkplaceTypeID', workplaceTypeId);
+        add('Department', department);
+        add('Description', validated.description);
+        add('Location', location);
+        add('ExternalJobID', externalJobId);
+        
+        // Optional (present in DB schema)
+        const opt = (col: string, val: any) => { if (val !== undefined && val !== null && val !== '') add(col, val); };
+        opt('Responsibilities', validated.responsibilities);
+        opt('BenefitsOffered', validated.benefitsOffered);
+        opt('Country', validated.country);
+        opt('State', validated.state);
+        opt('City', validated.city);
+        opt('PostalCode', validated.postalCode);
+        opt('IsRemote', validated.isRemote ? 1 : 0);
+        opt('RemoteRestrictions', validated.remoteRestrictions);
+        opt('SalaryRangeMin', validated.salaryRangeMin);
+        opt('SalaryRangeMax', validated.salaryRangeMax);
+        opt('CurrencyID', validated.currencyID);
+        opt('SalaryPeriod', validated.salaryPeriod);
+        opt('CompensationType', validated.compensationType);
+        opt('BonusDetails', validated.bonusDetails);
+        opt('EquityOffered', validated.equityOffered);
+        opt('ProjectDuration', validated.projectDuration);
+        opt('ProjectStartDate', validated.projectStartDate);
+        opt('ProjectEndDate', validated.projectEndDate);
+        opt('ProjectBudget', validated.projectBudget);
+        opt('ContractExtensionPossible', validated.contractExtensionPossible);
+        opt('ContractConversionPossible', validated.contractConversionPossible);
+        opt('ExperienceMin', validated.experienceMin);
+        opt('ExperienceMax', validated.experienceMax);
+        opt('RequiredCertifications', validated.requiredCertifications);
+        opt('RequiredEducation', validated.requiredEducation);
+        opt('Priority', validated.priority);
+        opt('Visibility', validated.visibility);
+        opt('ApplicationDeadline', validated.applicationDeadline);
+        opt('TargetHiringDate', validated.targetHiringDate);
+        opt('MaxApplications', validated.maxApplications);
+        opt('InterviewStages', validated.interviewStages);
+        opt('InterviewProcess', validated.interviewProcess);
+        opt('AssessmentRequired', validated.assessmentRequired);
+        opt('AssessmentDetails', validated.assessmentDetails);
+        opt('TimeZone', validated.timeZone);
+        opt('Tags', validated.tags);
+        opt('InternalNotes', validated.internalNotes);
+        // Status: start as Draft (explicit for clarity)
+        add('Status', 'Draft');
+        // CurrentApplications default 0
+        add('CurrentApplications', 0);
+        
+        // 4. Build parameter placeholders
+        const placeholders = fields.map((_, i) => `@param${i}`);
+        const insertQuery = `
             INSERT INTO Jobs (${fields.join(', ')})
             VALUES (${placeholders.join(', ')});
-            
             SELECT j.*, jt.Type as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             WHERE j.JobID = @param0;
         `;
-
-        const result = await dbService.executeQuery<Job>(query, values);
         
-        if (!result.recordset || result.recordset.length === 0) {
-            throw new Error('Failed to create job');
+        try {
+            const result = await dbService.executeQuery<Job>(insertQuery, values);
+            if (!result.recordset || result.recordset.length === 0) {
+                throw new Error('Failed to create job');
+            }
+            return result.recordset[0];
+        } catch (err: any) {
+            // Provide clearer diagnostics for schema mismatch
+            if (err?.message?.includes('Invalid column name')) {
+                console.error('? Job creation failed due to schema mismatch. Columns attempted:', fields);
+            }
+            throw err;
         }
-
-        return result.recordset[0];
     }
 
     // Get all jobs with filtering and pagination (page-based only)
@@ -98,7 +145,7 @@ export class JobService {
         const normalizedSort = sortBy && allowedSort[sortBy] ? allowedSort[sortBy] : 'j.CreatedAt';
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
         
-        let whereClause = "WHERE j.Status IN ('Published', 'Draft') AND o.IsActive = 1";
+        let whereClause = "WHERE j.Status = 'Published' AND o.IsActive = 1";
         const queryParams: any[] = [];
         let paramIndex = 0;
 
@@ -531,7 +578,7 @@ export class JobService {
             } = searchParams || {};
 
             const f = { ...rest } as any;
-            let whereClause = "WHERE o.IsActive = 1 AND j.Status IN ('Published', 'Draft')";
+            let whereClause = "WHERE o.IsActive = 1 AND j.Status = 'Published'";
             const queryParams: any[] = [];
             let paramIndex = 0;
 
