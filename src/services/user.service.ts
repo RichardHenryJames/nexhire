@@ -98,51 +98,71 @@ export class UserService {
         // Generate only EmployerID (OrganizationID is auto-increment in database)
         const employerId = AuthService.generateUniqueId();
         
-        // Insert organization - OrganizationID is IDENTITY, database will auto-generate it
-        const orgQuery = `
-            INSERT INTO Organizations (
-                Name, Description, Industry, Size, Headquarters, 
-                Website, Type, EstablishedDate, CreatedAt, UpdatedAt
-            ) 
-            OUTPUT INSERTED.OrganizationID
-            VALUES (
-                @param0, @param1, @param2, @param3, @param4,
-                @param5, @param6, @param7, GETUTCDATE(), GETUTCDATE()
-            )
+        const organizationName = userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`;
+        
+        // FIXED: Check if organization already exists
+        const existingOrgQuery = `
+            SELECT OrganizationID 
+            FROM Organizations 
+            WHERE Name = @param0
         `;
-
-        const orgParameters = [
-            userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`,
-            userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
-            userData.organizationIndustry || 'Technology',
-            userData.organizationSize || 'Small',
-            userData.organizationLocation || 'Remote',  // Maps to Headquarters column
-            userData.organizationWebsite || '',
-            userData.organizationType || 'Company',
-            userData.establishedDate || null
-        ];
-
-        const orgResult = await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
         
-        // Get the auto-generated OrganizationID
-        if (!orgResult.recordset || orgResult.recordset.length === 0) {
-            throw new Error('Failed to create organization - no ID returned');
+        const existingOrgResult = await dbService.executeTransactionQuery(tx, existingOrgQuery, [organizationName]);
+        
+        let organizationId: number;
+        
+        if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
+            // Organization exists, use existing OrganizationID
+            organizationId = existingOrgResult.recordset[0].OrganizationID;
+            console.log(`? Using existing organization: ${organizationName} (ID: ${organizationId})`);
+        } else {
+            // Organization doesn't exist, create new one
+            const orgQuery = `
+                INSERT INTO Organizations (
+                    Name, Description, Industry, Size, Headquarters, 
+                    Website, Type, EstablishedDate, CreatedAt, UpdatedAt
+                ) 
+                OUTPUT INSERTED.OrganizationID
+                VALUES (
+                    @param0, @param1, @param2, @param3, @param4,
+                    @param5, @param6, @param7, GETUTCDATE(), GETUTCDATE()
+                )
+            `;
+
+            const orgParameters = [
+                organizationName,
+                userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
+                userData.organizationIndustry || 'Technology',
+                userData.organizationSize || 'Small',
+                userData.organizationLocation || 'Remote',  // Maps to Headquarters column
+                userData.organizationWebsite || '',
+                userData.organizationType || 'Company',
+                userData.establishedDate || null
+            ];
+
+            const orgResult = await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
+            
+            // Get the auto-generated OrganizationID
+            if (!orgResult.recordset || orgResult.recordset.length === 0) {
+                throw new Error('Failed to create organization - no ID returned');
+            }
+            organizationId = orgResult.recordset[0].OrganizationID;
+            console.log(`? Created new organization: ${organizationName} (ID: ${organizationId})`);
         }
-        const organizationId = orgResult.recordset[0].OrganizationID;
         
-        // Employer profile creation with the auto-generated OrganizationID
+        // Employer profile creation with the OrganizationID (existing or new)
+        // FIXED: Use only columns that exist in the database schema
         const employerQuery = `
             INSERT INTO Employers (
-                EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
-                CanScheduleInterviews, CanSendMessages, JoinedAt
+                EmployerID, UserID, OrganizationID, Role, IsVerified, JoinedAt
             ) VALUES (
-                @param0, @param1, @param2, 1, 1, 1, 1, GETUTCDATE()
+                @param0, @param1, @param2, 'Recruiter', 0, GETUTCDATE()
             )
         `;
 
         await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
         
-        console.log(`? (TX) Created organization ${organizationId} (auto-increment) and employer profile ${employerId} for user ${userId}`);
+        console.log(`? Created employer profile ${employerId} for user ${userId} with organization ${organizationId}`);
         return { organizationId: organizationId.toString(), employerId };
     }
 

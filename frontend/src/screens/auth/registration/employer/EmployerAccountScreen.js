@@ -25,7 +25,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
     skipEmailPassword
   } = route.params || {};
   
-  const { user, pendingGoogleAuth, register } = useAuth();
+  const { user, pendingGoogleAuth, register, clearPendingGoogleAuth } = useAuth();
 
   // Check if this is a Google user
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
@@ -128,23 +128,14 @@ export default function EmployerAccountScreen({ navigation, route }) {
         const result = await register(registrationData);
         
         if (result.success) {
-          Alert.alert(
-            'Welcome to NexHire!', 
-            'Your employer account has been created successfully with Google authentication!', 
-            [
-              { 
-                text: 'Get Started', 
-                onPress: () => {
-                  // Navigate to the main app
-                  // The AuthContext will handle navigation automatically
-                }
-              }
-            ]
-          );
+          // FIXED: Clear pending Google auth and let AuthContext handle navigation
+          console.log('🔧 Employer registration successful, clearing Google auth and letting AuthContext handle navigation');
+          clearPendingGoogleAuth();
+          // Navigation will be handled automatically by AuthContext when isAuthenticated becomes true
+          return;
         } else {
           throw new Error(result.error || 'Google registration failed');
         }
-        return;
       }
 
       // Original flow for non-Google users
