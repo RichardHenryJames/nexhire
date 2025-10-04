@@ -338,7 +338,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
                 styles.skipButtonText,
                 !selectedType && styles.skipButtonTextFaded
               ]}>
-                Skip to Profile Completion
+                Skip to Profile Register
               </Text>
             </TouchableOpacity>
             {!selectedType && (

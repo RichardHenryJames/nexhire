@@ -220,7 +220,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           />
         </TouchableOpacity>
 
-        {/* FIXED: Single "Skip to Profile Completion" button - always shown */}
+        {/* FIXED: Single "Skip to Profile Register" button - always shown */}
         <TouchableOpacity
           style={[
             styles.skipButton,
@@ -238,7 +238,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             styles.skipButtonText,
             !selectedType && styles.skipButtonTextFaded
           ]}>
-            Skip to Profile Completion
+            Skip to Profile Register
           </Text>
         </TouchableOpacity>
         

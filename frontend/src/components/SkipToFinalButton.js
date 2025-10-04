@@ -50,7 +50,7 @@ export default function SkipToFinalButton({
         styles.skipButtonText,
         (disabled || !selectedValue) && styles.skipButtonTextDisabled
       ]}>
-        Skip to Profile Completion
+        Skip to Profile Register
       </Text>
     </TouchableOpacity>
   );

@@ -95,36 +95,42 @@ export class UserService {
 
     // FIXED: Create employer profile with organization during registration (transactional)
     private static async createEmployerProfileWithOrganizationTx(tx: any, userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
-        // Generate IDs
-        const organizationId = AuthService.generateUniqueId();
+        // Generate only EmployerID (OrganizationID is auto-increment in database)
         const employerId = AuthService.generateUniqueId();
         
-        // Updated organization creation to match actual database schema
+        // Insert organization - OrganizationID is IDENTITY, database will auto-generate it
         const orgQuery = `
             INSERT INTO Organizations (
-                OrganizationID, Name, Description, Industry, Size, Location, 
+                Name, Description, Industry, Size, Headquarters, 
                 Website, Type, EstablishedDate, CreatedAt, UpdatedAt
-            ) VALUES (
-                @param0, @param1, @param2, @param3, @param4, @param5,
-                @param6, @param7, @param8, GETUTCDATE(), GETUTCDATE()
+            ) 
+            OUTPUT INSERTED.OrganizationID
+            VALUES (
+                @param0, @param1, @param2, @param3, @param4,
+                @param5, @param6, @param7, GETUTCDATE(), GETUTCDATE()
             )
         `;
 
         const orgParameters = [
-            organizationId,
             userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`,
             userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
             userData.organizationIndustry || 'Technology',
             userData.organizationSize || 'Small',
-            userData.organizationLocation || 'Remote',
+            userData.organizationLocation || 'Remote',  // Maps to Headquarters column
             userData.organizationWebsite || '',
             userData.organizationType || 'Company',
             userData.establishedDate || null
         ];
 
-        await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
+        const orgResult = await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
         
-        // Employer profile creation
+        // Get the auto-generated OrganizationID
+        if (!orgResult.recordset || orgResult.recordset.length === 0) {
+            throw new Error('Failed to create organization - no ID returned');
+        }
+        const organizationId = orgResult.recordset[0].OrganizationID;
+        
+        // Employer profile creation with the auto-generated OrganizationID
         const employerQuery = `
             INSERT INTO Employers (
                 EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
@@ -136,8 +142,8 @@ export class UserService {
 
         await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
         
-        console.log(`? (TX) Created organization ${organizationId} and employer profile ${employerId} for user ${userId}`);
-        return { organizationId, employerId };
+        console.log(`? (TX) Created organization ${organizationId} (auto-increment) and employer profile ${employerId} for user ${userId}`);
+        return { organizationId: organizationId.toString(), employerId };
     }
 
     // Legacy non-transactional helper (kept for backward compatibility; prefer the TX version)
