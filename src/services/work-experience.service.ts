@@ -441,7 +441,7 @@ export class WorkExperienceService {
       }
       
     } catch (error) {
-      console.error('? Error in handleCurrentWorkExperienceUpdate:', error);
+      console.error('Error in handleCurrentWorkExperienceUpdate:', error);
       throw error;
     }
   }

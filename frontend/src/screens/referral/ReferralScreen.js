@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
+    padding: 16, // Reduced from 20
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -649,10 +649,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4
   },
   headerSubtitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm, // Reduced from md
     color: colors.gray600,
   },
   tabNavigation: {
@@ -666,8 +666,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: 12, // Reduced from 16
+    paddingHorizontal: 8, // Reduced from 12
     position: 'relative',
   },
   activeTabButton: {
@@ -688,8 +688,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    marginLeft: 8,
-    minWidth: 20,
+    marginLeft: 6, // Reduced from 8
+    minWidth: 18, // Reduced from 20
     alignItems: 'center',
   },
   notificationBadge: {
@@ -704,72 +704,72 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: 32, // Reduced from 40
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 10, // Reduced from 12
     fontSize: typography.sizes.md,
     color: colors.gray600,
   },
   tabContent: {
     flex: 1,
-    padding: 16,
+    padding: 12, // Reduced from 16
   },
   tabDescription: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
-    marginBottom: 16,
+    marginBottom: 12, // Reduced from 16
     textAlign: 'center',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingVertical: 48, // Reduced from 60
+    paddingHorizontal: 32, // Reduced from 40
   },
   emptyTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 12, // Reduced from 16
+    marginBottom: 6, // Reduced from 8
   },
   emptyText: {
     fontSize: typography.sizes.md,
     color: colors.gray600,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20, // Reduced from 22
   },
   requestCard: {
     backgroundColor: colors.surface,
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
+    padding: 12, // Reduced from 16
+    marginBottom: 10, // Reduced from 12
+    borderRadius: 10, // Reduced from 12
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04, // Reduced from 0.05
+    shadowRadius: 6, // Reduced from 8
+    shadowOffset: { width: 0, height: 1 }, // Reduced from height: 2
     elevation: 2,
   },
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10, // Reduced from 12
   },
   logoContainer: {
-    marginRight: 12,
-    marginTop: 2,
+    marginRight: 10, // Reduced from 12
+    marginTop: 0, // Reduced from 2
   },
   companyLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
+    width: 42, // Reduced from 48
+    height: 42, // Reduced from 48
+    borderRadius: 8, // Reduced from 10
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
+    width: 42, // Reduced from 48
+    height: 42, // Reduced from 48
+    borderRadius: 8, // Reduced from 10
     backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
@@ -778,28 +778,30 @@ const styles = StyleSheet.create({
   },
   requestInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 8, // Reduced from 12
   },
   jobTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4
+    lineHeight: 18, // Added for better compactness
   },
   companyName: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm, // Reduced from md
     color: colors.gray700,
-    marginBottom: 6,
+    marginBottom: 4, // Reduced from 6
+    lineHeight: 16, // Added for better compactness
   },
   timestampRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4
   },
   seekerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4
   },
   referrerRow: {
     flexDirection: 'row',
@@ -807,45 +809,47 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   seekerInfo: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.primary,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
+    lineHeight: 14, // Added for better compactness
   },
   requestDate: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.gray500,
     marginLeft: 4,
+    lineHeight: 14, // Added for better compactness
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6, // Reduced from 8
+    paddingVertical: 3, // Reduced from 4
     backgroundColor: colors.gray100,
-    borderRadius: 12,
+    borderRadius: 10, // Reduced from 12
     alignSelf: 'flex-start',
   },
   statusText: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.medium,
-    marginLeft: 4,
+    marginLeft: 3, // Reduced from 4
   },
   requestActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: 6, // Reduced from 8
   },
   viewProofBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: colors.primary + '20',
     borderRadius: 6,
   },
   viewProofText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.primary,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
@@ -853,13 +857,13 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: colors.danger + '20',
     borderRadius: 6,
   },
   cancelText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.danger,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
@@ -867,59 +871,60 @@ const styles = StyleSheet.create({
   referBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12, // Reduced from 16
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: colors.success,
     borderRadius: 6,
   },
   referText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
   },
   dismissBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: colors.gray200,
     borderRadius: 6,
   },
   dismissText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.gray600,
     fontWeight: typography.weights.medium,
   },
   proofBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12, // Reduced from 16
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: '#ff6600',
     borderRadius: 6,
   },
   proofText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
   },
   referrerName: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.success,
     fontWeight: typography.weights.medium,
     marginLeft: 4,
+    lineHeight: 14, // Added for better compactness
   },
   verifyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 6, // Reduced from 8
     backgroundColor: colors.success,
     borderRadius: 6,
-    marginLeft: 8,
+    marginLeft: 6, // Reduced from 8
   },
   verifyText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs, // Reduced from sm
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.medium,

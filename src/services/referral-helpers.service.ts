@@ -79,7 +79,7 @@ export class ReferralNotificationService {
      */
     static async sendDailyReferralDigest(): Promise<void> {
         try {
-            console.log('?? Sending daily referral digest...');
+            console.log('Sending daily referral digest...');
             
             // Get all referrers who opted in for daily digest
             const query = `
@@ -109,7 +109,7 @@ export class ReferralNotificationService {
      */
     static async updateReferrerBadgeCounts(): Promise<void> {
         try {
-            console.log('?? Updating referrer badge counts...');
+            console.log('Updating referrer badge counts...');
             
             // This is typically run as a background job every few minutes
             const updateQuery = `
@@ -136,7 +136,7 @@ export class ReferralNotificationService {
             `;
             
             await dbService.executeQuery(updateQuery, []);
-            console.log('? Referrer badge counts updated');
+            console.log('Referrer badge counts updated');
             
         } catch (error) {
             console.error('Error updating referrer badge counts:', error);

@@ -37,7 +37,7 @@ export const login = withErrorHandling(async (req: HttpRequest, context: Invocat
 export const googleLogin = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { accessToken, idToken, user: googleUser } = await extractRequestBody(req);
     
-    console.log('?? Google login attempt for:', googleUser?.email);
+    console.log('Google login attempt for:', googleUser?.email);
     
     try {
         // Verify Google token and find/create user
@@ -52,7 +52,7 @@ export const googleLogin = withErrorHandling(async (req: HttpRequest, context: I
             jsonBody: successResponse(result, 'Google login successful')
         };
     } catch (error: any) {
-        console.error('? Google login failed:', error.message);
+        console.error('Google login failed:', error.message);
         
         // If user not found, return specific error for frontend to handle
         if (error.message.includes('User not found') || error.message.includes('not found')) {
@@ -70,7 +70,7 @@ export const googleLogin = withErrorHandling(async (req: HttpRequest, context: I
 export const googleRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { accessToken, idToken, user: googleUser, userType, ...additionalData } = await extractRequestBody(req);
     
-    console.log('?? Google registration attempt for:', googleUser?.email, 'as', userType);
+    console.log('Google registration attempt for:', googleUser?.email, 'as', userType);
     
     try {
         // Register new user with Google data
@@ -87,7 +87,7 @@ export const googleRegister = withErrorHandling(async (req: HttpRequest, context
             jsonBody: successResponse(result, 'Google registration successful')
         };
     } catch (error: any) {
-        console.error('? Google registration failed:', error.message);
+        console.error('Google registration failed:', error.message);
         
         // If user already exists, return specific error
         if (error.message.includes('already exists') || error.message.includes('duplicate')) {

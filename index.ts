@@ -705,16 +705,16 @@ app.http('users-resume-delete', {
             
             // ? FIXED: Delete from database first
             await ApplicantService.deleteApplicantResume(profile.ApplicantID, resumeId);
-            console.log('? Resume deleted from database');
+            console.log('Resume deleted from database');
             
             // ? FIXED: Delete file from Azure Storage
             try {
                 const { ResumeStorageService } = await import('./src/services/resume-upload.service');
                 const storageService = new ResumeStorageService();
                 await storageService.deleteOldResume(decoded.userId, resumeToDelete.ResumeURL);
-                console.log('? Resume file deleted from storage');
+                console.log('Resume file deleted from storage');
             } catch (storageError) {
-                console.error('?? Warning: Failed to delete file from storage:', storageError);
+                console.error('Warning: Failed to delete file from storage:', storageError);
                 // Don't fail the entire operation if storage deletion fails
             }
             
@@ -726,7 +726,7 @@ app.http('users-resume-delete', {
                 }
             };
         } catch (error) {
-            console.error('? Error deleting resume:', error);
+            console.error('Error deleting resume:', error);
             return {
                 status: 500,
                 jsonBody: {
@@ -988,7 +988,7 @@ app.http('job-scraper-trigger', {
                 };
             }
 
-            console.log('?? Manual job scraping triggered by admin:', payload.userId);
+            console.log('Manual job scraping triggered by admin:', payload.userId);
             
             // Dynamic import of JobScraperService
             try {
@@ -1331,9 +1331,9 @@ app.http('scraping-health', {
 // STARTUP LOG
 // ========================================================================
 
-console.log('?? NexHire Backend API - All functions registered (with Google OAuth)');
-console.log('?? Google OAuth endpoints added: /auth/google, /auth/google-register');
-console.log('?? API Base URL: https://nexhire-api-func.azurewebsites.net/api');
+console.log('NexHire Backend API - All functions registered (with Google OAuth)');
+console.log('Google OAuth endpoints added: /auth/google, /auth/google-register');
+console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
 
 // ========================================================================
 // FINAL TEST ENDPOINT - Added at the very end

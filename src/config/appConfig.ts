@@ -232,20 +232,20 @@ class ConfigService {
     // Google OAuth validation
     if (this.config.features.googleSignIn) {
       if (!this.config.google.webClientId) {
-        console.warn('?? Google OAuth Web Client ID not configured - Google Sign-In will be disabled');
+        console.warn('Google OAuth Web Client ID not configured - Google Sign-In will be disabled');
       }
     }
 
     // Razorpay validation
     if (this.config.features.paymentSystem) {
       if (!this.config.razorpay.keyId || !this.config.razorpay.keySecret) {
-        console.warn('?? Razorpay credentials not configured - Payment system will be disabled');
+        console.warn('Razorpay credentials not configured - Payment system will be disabled');
       }
     }
 
     // Azure Storage validation
     if (!this.config.azure.storage.accountKey && !this.config.azure.storage.connectionString) {
-      console.warn('?? Azure Storage not configured - File uploads will be disabled');
+      console.warn('Azure Storage not configured - File uploads will be disabled');
     }
 
     if (errors.length > 0) {

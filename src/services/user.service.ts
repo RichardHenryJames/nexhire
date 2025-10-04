@@ -518,7 +518,7 @@ export class UserService {
                 profileCompleteness = await this.recalculateApplicantProfileCompleteness(applicantId);
                 console.log(`? Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
             } catch (error) {
-                console.error('? Failed to recalculate profile completeness:', error);
+                console.error('Failed to recalculate profile completeness:', error);
             }
 
             const statsQuery = `
@@ -859,7 +859,7 @@ export class UserService {
             
             return mappedStats;
         } catch (error) {
-            console.error('? Error getting referral stats:', error);
+            console.error('Error getting referral stats:', error);
             return {
                 referralRequestsMade: 0,
                 referralRequestsReceived: 0,
@@ -897,7 +897,7 @@ export class UserService {
             
             return mappedStats;
         } catch (error) {
-            console.error('? Error getting resume stats:', error);
+            console.error('Error getting resume stats:', error);
             return { totalResumes: 0, primaryResumeSet: false };
         }
     }
@@ -1374,7 +1374,7 @@ export class UserService {
     static async loginWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
         const { googleUser } = googleData;
         
-        console.log('?? UserService: Google login attempt for:', googleUser?.email);
+        console.log('UserService: Google login attempt for:', googleUser?.email);
         
         if (!googleUser?.email) {
             throw new ValidationError('Google user email is required');
@@ -1384,11 +1384,11 @@ export class UserService {
         const existingUser = await this.findByEmail(googleUser.email);
         
         if (!existingUser) {
-            console.log('? Google login: User not found for email:', googleUser.email);
+            console.log('Google login: User not found for email:', googleUser.email);
             throw new NotFoundError('User not found with email: ' + googleUser.email);
         }
 
-        console.log('? Google login: Found existing user:', existingUser.Email, 'Type:', existingUser.UserType);
+        console.log('Google login: Found existing user:', existingUser.Email, 'Type:', existingUser.UserType);
 
         // Check if account is active
         if (!existingUser.IsActive) {
@@ -1413,7 +1413,7 @@ export class UserService {
 
         // Apply updates if any
         if (Object.keys(updateData).length > 0) {
-            console.log('?? Updating user with Google data:', Object.keys(updateData));
+            console.log('Updating user with Google data:', Object.keys(updateData));
             
             const updateFields = Object.keys(updateData)
                 .map((key, index) => `${key} = @param${index + 1}`)
@@ -1444,7 +1444,7 @@ export class UserService {
         // Remove password from response
         const { Password, ...userWithoutPassword } = existingUser;
 
-        console.log('? Google login successful for:', userWithoutPassword.Email);
+        console.log('Google login successful for:', userWithoutPassword.Email);
 
         return {
             user: userWithoutPassword,
@@ -1456,7 +1456,7 @@ export class UserService {
     static async registerWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
         const { googleUser, userType, ...additionalData } = googleData;
         
-        console.log('?? UserService: Google registration attempt for:', googleUser?.email, 'as', userType);
+        console.log('UserService: Google registration attempt for:', googleUser?.email, 'as', userType);
         
         if (!googleUser?.email) {
             throw new ValidationError('Google user email is required');
@@ -1469,7 +1469,7 @@ export class UserService {
         // Check if user already exists
         const existingUser = await this.findByEmail(googleUser.email);
         if (existingUser) {
-            console.log('? Google registration: User already exists:', googleUser.email);
+            console.log('Google registration: User already exists:', googleUser.email);
             throw new ConflictError('User with this email already exists. Please sign in instead.');
         }
 
@@ -1480,7 +1480,7 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
-        console.log('?? Creating new user with Google data...');
+        console.log('Creating new user with Google data...');
 
         // Start transaction for user and profile creation
         const tx = await dbService.beginTransaction();
@@ -1525,11 +1525,11 @@ export class UserService {
             }
 
             const user = userResult.recordset[0];
-            console.log('? User created successfully:', user.Email);
+            console.log('User created successfully:', user.Email);
             
             // Create organization and employer profile if user is an employer
             if (userType === appConstants.userTypes.EMPLOYER) {
-                console.log('?? Creating employer profile...');
+                console.log('Creating employer profile...');
                 await this.createEmployerProfileWithOrganizationTx(tx, userId, {
                     organizationName: additionalData.organizationName || `${firstName} ${lastName}'s Company`,
                     organizationIndustry: additionalData.organizationIndustry || 'Technology',
@@ -1539,12 +1539,12 @@ export class UserService {
             }
             // Create applicant profile if user is a job seeker
             else if (userType === appConstants.userTypes.JOB_SEEKER) {
-                console.log('?? Creating applicant profile...');
+                console.log('Creating applicant profile...');
                 await this.createApplicantProfileTx(tx, userId);
             }
 
             await tx.commit();
-            console.log('? Transaction committed successfully');
+            console.log('Transaction committed successfully');
 
             // Generate tokens
             const tokens = AuthService.generateAuthTokens(user);
@@ -1552,7 +1552,7 @@ export class UserService {
             // Remove password from response
             const { Password, ...userWithoutPassword } = user;
 
-            console.log('? Google registration successful for:', userWithoutPassword.Email);
+            console.log('Google registration successful for:', userWithoutPassword.Email);
 
             return {
                 user: userWithoutPassword,
@@ -1561,7 +1561,7 @@ export class UserService {
 
         } catch (error) {
             try { await tx.rollback(); } catch {}
-            console.error('? Error during Google registration (rolled back):', error);
+            console.error('Error during Google registration (rolled back):', error);
             
             if (error instanceof ConflictError) throw error;
             if (error instanceof ValidationError) throw error;
@@ -1575,10 +1575,10 @@ export class UserService {
         try {
             // In production, you would verify the Google ID token here
             // For now, we'll trust the frontend verification
-            console.log('?? Google token verification skipped (trusting frontend)');
+            console.log('Google token verification skipped (trusting frontend)');
             return { verified: true };
         } catch (error) {
-            console.error('? Google token verification failed:', error);
+            console.error('Google token verification failed:', error);
             throw new ValidationError('Invalid Google token');
         }
     }

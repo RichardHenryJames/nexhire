@@ -50,7 +50,7 @@ export const triggerJobScraping = withErrorHandling(async (req: HttpRequest, con
         };
     }
 
-    console.log('?? Manual job scraping triggered by admin:', authResult.userId);
+    console.log('Manual job scraping triggered by admin:', authResult.userId);
     
     try {
         const result = await JobScraperService.scrapeAndPopulateJobs();

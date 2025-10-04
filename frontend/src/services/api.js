@@ -1909,6 +1909,35 @@ class NexHireAPI {
     return this.apiCall('/referral/subscription');
   }
 
+  // ✅ NEW: Cancel a referral request (by seeker)
+  async cancelReferralRequest(requestId) {
+    console.log('🚫 API: Cancelling referral request:', requestId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!requestId) {
+      console.error('❌ No request ID provided');
+      return { success: false, error: 'Request ID is required' };
+    }
+    
+    try {
+      console.log('🚫 Making POST request to:', `/referral/requests/${requestId}/cancel`);
+      
+      const result = await this.apiCall(`/referral/requests/${requestId}/cancel`, {
+        method: 'POST',
+      });
+      
+      console.log('✅ Cancel request successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Cancel request failed:', error.message);
+      throw error;
+    }
+  }
+
   // ✅ NEW: Razorpay payment integration
   async createRazorpayOrder(orderData) {
     if (!this.token) return { success: false, error: 'Authentication required' };

@@ -580,7 +580,7 @@ export class ApplicantService {
                             console.log(`??? Deleted old resume file from storage: ${oldestResume.ResumeURL}`);
                         }
                     } catch (storageError) {
-                        console.warn('?? Failed to delete old resume from storage:', storageError);
+                        console.warn('Failed to delete old resume from storage:', storageError);
                         // Continue - database cleanup succeeded
                     }
                     
