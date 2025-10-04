@@ -19,34 +19,48 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   
   const { 
     userType, 
-    fromGoogleAuth = false, 
+    fromGoogleAuth: fromGoogleAuthParam = false, 
     googleUser: routeGoogleUser = null 
   } = route.params || {};
+
+  // 🔧 Handle fromGoogleAuth as string from URL params
+  const fromGoogleAuth = fromGoogleAuthParam === true || fromGoogleAuthParam === 'true';
 
   // 🔧 Use googleUser from route or fallback to context
   const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
 
+  // 🔧 DEBUG: Log what we have
+  useEffect(() => {
+    console.log('📍 ExperienceTypeSelectionScreen - Google Status:', {
+      fromGoogleAuth,
+      fromGoogleAuthParam,
+      hasGoogleUser: !!googleUser,
+      hasPendingAuth: !!pendingGoogleAuth,
+      googleUserName: googleUser?.name,
+      googleUserEmail: googleUser?.email,
+      googleUserStructure: googleUser,
+      pendingAuthUserStructure: pendingGoogleAuth?.user
+    });
+  }, [fromGoogleAuth, fromGoogleAuthParam, googleUser, pendingGoogleAuth]);
+
   // 🔧 IMPROVED: Guard against hard refresh with lost Google data
   useEffect(() => {
-    if (fromGoogleAuth && !googleUser) {
-      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
+    if (fromGoogleAuth && !googleUser && !pendingGoogleAuth) {
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to user type selection');
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        console.log('🌐 Using window.location redirect for web');
-        window.location.href = '/login';
+        console.log('🌐 Using window.location redirect for web to UserTypeSelection');
+        window.location.href = '/register';
         return;
       }
       
-      // For native: Use navigation reset
+      // For native: Use navigation replace to UserTypeSelection
       setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
+        navigation.replace('UserTypeSelectionScreen');
       }, 100);
     }
-  }, [fromGoogleAuth, googleUser, navigation]);
+  }, [fromGoogleAuth, googleUser, pendingGoogleAuth, navigation]);
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -138,11 +152,11 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           </TouchableOpacity>
 
           {/* Show Google user info if available */}
-          {googleUser && fromGoogleAuth && (
+          {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
             <View style={styles.googleUserInfo}>
-              {googleUser.picture && (
+              {(googleUser?.picture || pendingGoogleAuth?.user?.picture) && (
                 <Image 
-                  source={{ uri: googleUser.picture }} 
+                  source={{ uri: googleUser?.picture || pendingGoogleAuth?.user?.picture }} 
                   style={styles.googleUserAvatar}
                 />
               )}
@@ -150,8 +164,12 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
                 <Text style={styles.googleUserWelcome}>
                   ✅ Google Account Connected
                 </Text>
-                <Text style={styles.googleUserName}>{googleUser.name}</Text>
-                <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                <Text style={styles.googleUserName}>
+                  {googleUser?.name || googleUser?.given_name || pendingGoogleAuth?.user?.name || 'Google User'}
+                </Text>
+                <Text style={styles.googleUserEmail}>
+                  {googleUser?.email || pendingGoogleAuth?.user?.email || 'Email'}
+                </Text>
               </View>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             </View>
@@ -355,6 +373,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
+    marginTop: 24, // ADDED: Equal spacing above button
     gap: 8,
     marginBottom: 16,
   },

@@ -446,37 +446,34 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     secureTextEntry = false,
     keyboardType = 'default',
     required = false,
-    disabled = false
+    prefilled = false // NEW: Changed from "disabled" to "prefilled" to indicate it's editable
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
         {placeholder} {required && '*'}
-        {disabled && (
-          <Text style={styles.disabledLabel}> - From Google Account</Text>
+        {prefilled && (
+          <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>
         )}
       </Text>
       <TextInput
         style={[
           styles.input, 
           errors[key] && styles.inputError,
-          disabled && styles.inputDisabled
+          prefilled && styles.inputPrefilled
         ]}
-        placeholder={disabled ? 'Pre-filled from Google' : `Enter ${placeholder.toLowerCase()}`}
         value={formData[key]}
         onChangeText={(text) => {
-          if (!disabled) {
-            setFormData({ ...formData, [key]: text });
-            if (errors[key]) {
-              setErrors({ ...errors, [key]: null });
-            }
+          setFormData({ ...formData, [key]: text });
+          if (errors[key]) {
+            setErrors({ ...errors, [key]: null });
           }
         }}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={key === 'email' ? 'none' : 'words'}
         autoCorrect={false}
-        editable={!disabled}
-        selectTextOnFocus={!disabled}
+        editable={true} // CHANGED: Always editable now
+        selectTextOnFocus={true} // CHANGED: Always allow text selection
       />
       {errors[key] && <Text style={styles.errorText}>{errors[key]}</Text>}
     </View>
@@ -853,7 +850,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24, // CHANGED: Reduced from 32 to 24
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -916,32 +913,42 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-    lineHeight: 22,
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    marginBottom: 24,
   },
   form: {
-    gap: 20,
-    marginBottom: 24,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 20, // CHANGED: Reduced from 24 to 20
+    paddingTop: 24, // CHANGED: Reduced from 32 to 24
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   halfInput: {
     flex: 1,
+    marginRight: 8,
   },
   inputContainer: {
-    gap: 8,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.gray600,
   },
-  disabledLabel: {
+  prefilledLabel: {
     color: colors.success,
     fontWeight: typography.weights.normal,
+    fontSize: typography.sizes.xs,
   },
   input: {
     backgroundColor: colors.surface,
@@ -952,10 +959,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.text,
   },
-  inputDisabled: {
-    backgroundColor: colors.gray100,
+  inputPrefilled: {
+    backgroundColor: colors.success + '08', // Very light green background
     borderColor: colors.success,
-    color: colors.gray700,
+    borderWidth: 1.5,
   },
   inputError: {
     borderColor: colors.danger,
@@ -963,8 +970,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.danger,
     fontSize: typography.sizes.sm,
+    marginTop: 4,
   },
-  // NEW: Selection button styles (for company dropdown)
   selectionButton: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -978,21 +985,21 @@ const styles = StyleSheet.create({
   selectionValue: {
     fontSize: typography.sizes.md,
     color: colors.text,
-    flex: 1,
   },
   selectionPlaceholder: {
-    color: colors.gray400,
+    color: colors.gray500,
   },
   genderContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 8,
   },
   genderButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
@@ -1001,123 +1008,115 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   genderButtonText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.text,
+    textAlign: 'center',
+    fontWeight: typography.weights.medium,
   },
   genderButtonTextActive: {
     color: colors.white,
+    fontWeight: typography.weights.semibold,
   },
-  // NEW: Company fields notice styles
   companyFieldsNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary + '10',
-    padding: 12,
+    backgroundColor: colors.info + '10',
     borderRadius: 8,
-    marginBottom: 8,
-    gap: 8,
+    padding: 12,
+    marginBottom: 16,
   },
   companyFieldsNoticeText: {
     fontSize: typography.sizes.sm,
-    color: colors.primary,
-    flex: 1,
-    fontWeight: typography.weights.medium,
+    color: colors.info,
+    marginLeft: 8,
   },
   summaryContainer: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 24,
+    marginTop: 16,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   summaryTitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    paddingVertical: 8,
   },
   summaryText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    marginLeft: 8,
   },
   registerButton: {
     backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 8,
     padding: 16,
-    borderRadius: 12,
-    gap: 8,
-    marginBottom: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  registerButtonText: {
+    fontSize: typography.sizes.md,
+    color: colors.white,
+    fontWeight: typography.weights.bold,
+    marginRight: 8,
   },
   buttonDisabled: {
     backgroundColor: colors.gray400,
   },
-  registerButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
   loginButton: {
+    marginTop: 16,
     alignItems: 'center',
-    padding: 12,
   },
   loginButtonText: {
-    color: colors.primary,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+    color: colors.primary,
   },
-  // NEW: Modal styles (for company picker)
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   modalTitle: {
+    flex: 1,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
+    textAlign: 'center',
   },
   modalItem: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 8,
   },
   modalItemText: {
     fontSize: typography.sizes.md,
     color: colors.text,
-  },
-  // NEW: Styles for job title and start date notice
-  companyFieldsNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.warning + '10',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  companyFieldsNoticeText: {
-    color: colors.warning,
-    fontSize: typography.sizes.sm,
-    marginLeft: 8,
   },
 });

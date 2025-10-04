@@ -80,13 +80,21 @@ export default function EmployerAccountScreen({ navigation, route }) {
         organizationName: selectedCompany?.name || employerDetails?.organizationName || 'My Organization',
         organizationIndustry: selectedCompany?.industry || 'Technology',
         organizationSize: selectedCompany?.size || 'Small',
-        organizationWebsite: selectedCompany?.website || '',
         organizationType: employerType === 'freelancer' ? 'Individual' : 'Company',
         jobTitle: employerDetails?.jobTitle || 'Hiring Manager',
         department: employerDetails?.department || 'Human Resources',
-        linkedInProfile: employerDetails?.linkedInProfile || '',
-        bio: employerDetails?.bio || '',
       };
+
+      // Only add optional fields if they have values
+      if (selectedCompany?.website && selectedCompany.website.trim()) {
+        organizationPayload.organizationWebsite = selectedCompany.website.trim();
+      }
+      if (employerDetails?.linkedInProfile && employerDetails.linkedInProfile.trim()) {
+        organizationPayload.linkedInProfile = employerDetails.linkedInProfile.trim();
+      }
+      if (employerDetails?.bio && employerDetails.bio.trim()) {
+        organizationPayload.bio = employerDetails.bio.trim();
+      }
 
       // Handle Google users vs regular users differently
       if (isGoogleUser && pendingGoogleAuth) {
@@ -226,27 +234,27 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
               First Name
-              {isGoogleUser && <Text style={styles.disabledLabel}> - From Google</Text>}
+              {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
-              style={[styles.input, isGoogleUser && styles.inputDisabled]} 
+              style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
               value={firstName} 
               onChangeText={setFirstName}
-              editable={!isGoogleUser}
-              placeholder={isGoogleUser ? 'Pre-filled from Google' : 'Enter first name'}
+              editable={true}
+              placeholder="Enter first name"
             />
           </View>
           <View style={[styles.field, { flex: 1, marginLeft: 6 }]}> 
             <Text style={styles.label}>
               Last Name
-              {isGoogleUser && <Text style={styles.disabledLabel}> - From Google</Text>}
+              {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
-              style={[styles.input, isGoogleUser && styles.inputDisabled]} 
+              style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
               value={lastName} 
               onChangeText={setLastName}
-              editable={!isGoogleUser}
-              placeholder={isGoogleUser ? 'Pre-filled from Google' : 'Enter last name'}
+              editable={true}
+              placeholder="Enter last name"
             />
           </View>
         </View>
@@ -254,15 +262,15 @@ export default function EmployerAccountScreen({ navigation, route }) {
         <View style={styles.field}> 
           <Text style={styles.label}>
             Email Address
-            {isGoogleUser && <Text style={styles.disabledLabel}> - From Google</Text>}
+            {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
           </Text>
           <TextInput 
-            style={[styles.input, isGoogleUser && styles.inputDisabled]} 
+            style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
             value={email} 
             onChangeText={setEmail} 
             autoCapitalize="none"
-            editable={!isGoogleUser}
-            placeholder={isGoogleUser ? 'Pre-filled from Google' : 'Enter email address'}
+            editable={true}
+            placeholder="Enter email address"
           />
         </View>
 
@@ -326,7 +334,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={styles.summaryItem}>
             <Ionicons name="briefcase" size={16} color={colors.primary} />
             <Text style={styles.summaryText}>
-              {employerDetails?.jobTitle || 'Hiring Manager'} � {employerDetails?.department || 'Human Resources'}
+              {employerDetails?.jobTitle || 'Hiring Manager'} · {employerDetails?.department || 'Human Resources'}
             </Text>
           </View>
           <View style={styles.summaryItem}>
@@ -424,9 +432,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
-  disabledLabel: {
+  prefilledLabel: {
     color: colors.success,
     fontWeight: typography.weights.normal,
+    fontSize: typography.sizes.xs,
   },
   input: { 
     backgroundColor: colors.surface, 
@@ -437,10 +446,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.sizes.md,
   },
-  inputDisabled: {
-    backgroundColor: colors.gray100,
+  inputPrefilled: {
+    backgroundColor: colors.success + '08',
     borderColor: colors.success,
-    color: colors.gray700,
+    borderWidth: 1.5,
   },
   summaryContainer: {
     backgroundColor: colors.surface,

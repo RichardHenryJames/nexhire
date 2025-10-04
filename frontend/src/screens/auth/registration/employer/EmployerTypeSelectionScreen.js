@@ -414,6 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
+    marginTop: 24, // ADDED: Equal spacing above button
     gap: 8,
   },
   continueButtonDisabled: {

@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
-  Image
+  Image,
+  useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import RenderHtml from 'react-native-render-html';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
@@ -21,6 +23,7 @@ import { showToast } from '../../components/Toast';
 export default function JobDetailsScreen({ route, navigation }) {
   const { jobId } = route.params || {};
   const { user, isJobSeeker } = useAuth();
+  const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -34,7 +37,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [referralMessage, setReferralMessage] = useState('');
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
-  const [showCoverLetterInput, setShowCoverLetterInput] = useState(false);
+  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -677,6 +680,27 @@ export default function JobDetailsScreen({ route, navigation }) {
     </View>
   );
 
+  // Custom renderer for list items to add bullet points
+  const customRenderers = {
+    li: ({ TDefaultRenderer, ...props }) => {
+      return (
+        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+          <Text style={{ 
+            fontSize: typography.sizes.md, 
+            color: colors.text,
+            marginRight: 8,
+            lineHeight: 22,
+          }}>
+            •
+          </Text>
+          <View style={{ flex: 1 }}>
+            <TDefaultRenderer {...props} />
+          </View>
+        </View>
+      );
+    },
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -873,12 +897,77 @@ export default function JobDetailsScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Job Description */}
+      {/* Job Description - FIXED HTML RENDERING */}
       {job.Description && (
-        <Section
-          title="Job Description"
-          content={job.Description}
-        />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Job Description</Text>
+          <RenderHtml
+            contentWidth={width}
+            source={{ html: job.Description }}
+            renderers={customRenderers}
+            tagsStyles={{
+              body: {
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              p: {
+                marginBottom: 8,
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              h1: {
+                fontSize: typography.sizes.xl,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 8,
+                marginTop: 4,
+              },
+              h2: {
+                fontSize: typography.sizes.lg,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 6,
+                marginTop: 4,
+              },
+              h3: {
+                fontSize: typography.sizes.md,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 6,
+                marginTop: 4,
+              },
+              ul: {
+                marginBottom: 8,
+                marginTop: 4,
+                paddingLeft: 0,
+              },
+              ol: {
+                marginBottom: 8,
+                marginTop: 4,
+              },
+              li: {
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              strong: {
+                fontWeight: typography.weights.bold,
+              },
+              em: {
+                fontStyle: 'italic',
+              },
+              a: {
+                color: colors.primary,
+                textDecorationLine: 'underline',
+              },
+            }}
+            defaultTextProps={{
+              selectable: true,
+            }}
+          />
+        </View>
       )}
 
       {/* Responsibilities */}
@@ -988,11 +1077,11 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
       {/* 🆕 NEW: Cover Letter Section - appears before action buttons */}
       {isJobSeeker && !hasApplied && (
         <View style={styles.coverLetterSection}>
-          {!showCoverLetterInput ? (
+          {!showCoverLetterMessageInput ? (
             // Collapsed state - show button to expand
             <TouchableOpacity
               style={styles.addMessageButton}
-              onPress={() => setShowCoverLetterInput(true)}
+              onPress={() => setShowCoverLetterMessageInput(true)}
             >
               <Ionicons name="document-text-outline" size={20} color={colors.primary} />
               <Text style={styles.addMessageButtonText}>
@@ -1007,7 +1096,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                 <Text style={styles.referralMessageLabel}>Cover Letter</Text>
                 <TouchableOpacity
                   style={styles.collapseButton}
-                  onPress={() => setShowCoverLetterInput(false)}
+                  onPress={() => setShowCoverLetterMessageInput(false)}
                 >
                   <Ionicons name="chevron-up" size={16} color={colors.gray500} />
                 </TouchableOpacity>

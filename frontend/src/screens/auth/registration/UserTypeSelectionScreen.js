@@ -16,26 +16,37 @@ import { colors, typography } from '../../../styles/theme';
 export default function UserTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false); // 🔧 NEW: State for confirmation
-  const linkTo = useLinkTo(); // 🔧 NEW: Web-compatible navigation hook
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const linkTo = useLinkTo();
   
-  // 🔧 IMPROVED: Get Google user info from multiple sources
+  // 🔧 Get from context
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
   
-  // Check route params first, then fallback to context
-  const routeGoogleUser = route?.params?.googleUser;
-  const routeFromGoogleAuth = route?.params?.fromGoogleAuth;
-  
-  const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
-  const fromGoogleAuth = routeFromGoogleAuth || hasPendingGoogleAuth;
+  const { 
+    userType,
+    fromGoogleAuth: fromGoogleAuthParam = false, 
+    googleUser: routeGoogleUser = null 
+  } = route.params || {};
 
-  console.log('🔍 UserTypeSelection state:', {
-    hasRouteParams: !!route?.params,
-    hasGoogleUser: !!googleUser,
-    fromGoogleAuth,
-    hasPendingGoogleAuth,
-    googleUserEmail: googleUser?.email
-  });
+  // 🔧 Handle fromGoogleAuth as string from URL params
+  const fromGoogleAuth = fromGoogleAuthParam === true || fromGoogleAuthParam === 'true' || hasPendingGoogleAuth;
+
+  // 🔧 Use googleUser from route or fallback to context (SAME AS ExperienceTypeSelectionScreen)
+  const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
+
+  // 🔧 DEBUG: Log what we have
+  useEffect(() => {
+    console.log('📍 UserTypeSelection - Google Status:', {
+      fromGoogleAuth,
+      fromGoogleAuthParam,
+      hasGoogleUser: !!googleUser,
+      hasPendingAuth: !!pendingGoogleAuth,
+      googleUserName: googleUser?.name,
+      googleUserEmail: googleUser?.email,
+      googleUserStructure: googleUser,
+      pendingAuthUserStructure: pendingGoogleAuth?.user
+    });
+  }, [fromGoogleAuth, fromGoogleAuthParam, googleUser, pendingGoogleAuth]);
 
   // NEW: Guard against hard refresh with lost Google data
   useEffect(() => {
@@ -61,10 +72,10 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
 
   // Show welcome message for Google users
   useEffect(() => {
-    if (googleUser && fromGoogleAuth) {
-      console.log('👋 Google user detected:', googleUser.name || googleUser.email);
-    }
-  }, [googleUser, fromGoogleAuth]);
+    console.log('👋 Google user detected:', googleUser?.name || googleUser?.email || 'undefined');
+    console.log('📊 Full googleUser object:', googleUser);
+    console.log('📊 pendingGoogleAuth.user:', pendingGoogleAuth?.user);
+  }, [googleUser, fromGoogleAuth, pendingGoogleAuth]);
 
   const handleContinue = async () => {
     if (!selectedType) {
@@ -222,11 +233,11 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
       <View style={styles.content}>
         <View style={styles.header}>
           {/* NEW: Show Google user info if available */}
-          {googleUser && (
+          {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
             <View style={styles.googleUserInfo}>
-              {googleUser.picture && (
+              {(googleUser?.picture || pendingGoogleAuth?.user?.picture) && (
                 <Image 
-                  source={{ uri: googleUser.picture }} 
+                  source={{ uri: googleUser?.picture || pendingGoogleAuth?.user?.picture }} 
                   style={styles.googleUserAvatar}
                 />
               )}
@@ -234,8 +245,12 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
                 <Text style={styles.googleUserWelcome}>
                   ✅ Google Account Connected
                 </Text>
-                <Text style={styles.googleUserName}>{googleUser.name}</Text>
-                <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                <Text style={styles.googleUserName}>
+                  {googleUser?.name || googleUser?.given_name || pendingGoogleAuth?.user?.name || 'Google User'}
+                </Text>
+                <Text style={styles.googleUserEmail}>
+                  {googleUser?.email || pendingGoogleAuth?.user?.email || 'Email'}
+                </Text>
                 <Text style={styles.googleUserNote}>
                   Your basic info has been captured from Google
                 </Text>
@@ -513,6 +528,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
+    marginTop: 24, // ADDED: Equal spacing above button
     marginBottom: 16,
     gap: 8,
   },
