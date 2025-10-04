@@ -10,26 +10,41 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
+  const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
+  
   const { 
     userType, 
     fromGoogleAuth = false, 
-    googleUser = null 
+    googleUser: routeGoogleUser = null 
   } = route.params || {};
 
-  // ?? NEW: Guard against hard refresh with lost Google data
+  // 🔧 Use googleUser from route or fallback to context
+  const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
+
+  // 🔧 IMPROVED: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !googleUser) {
       console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
       
-      // Silent immediate redirect
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      // 🔧 For web: Use window.location for reliable redirect
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Using window.location redirect for web');
+        window.location.href = '/login';
+        return;
+      }
+      
+      // For native: Use navigation reset
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }, 100);
     }
   }, [fromGoogleAuth, googleUser, navigation]);
 
@@ -58,7 +73,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // ?? FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
+  // FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
   const handleSkipToFinal = () => {
     if (!selectedType) {
       Alert.alert('Selection Required', 'Please select your experience level first');
@@ -122,7 +137,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
 
-          {/* ?? Show Google user info if available */}
+          {/* Show Google user info if available */}
           {googleUser && fromGoogleAuth && (
             <View style={styles.googleUserInfo}>
               {googleUser.picture && (
@@ -187,7 +202,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           />
         </TouchableOpacity>
 
-        {/* ?? FIXED: Single "Skip to Profile Completion" button - always shown */}
+        {/* FIXED: Single "Skip to Profile Completion" button - always shown */}
         <TouchableOpacity
           style={[
             styles.skipButton,

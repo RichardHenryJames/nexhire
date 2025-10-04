@@ -173,16 +173,21 @@ class NexHireAPI {
   // Initialize API with stored tokens
   async init() {
     try {
+      console.log('🔧 API.init() called - loading tokens from storage...');
       this.token = await this.getToken('nexhire_token');
       this.refreshToken = await this.getToken('nexhire_refresh_token');
       
       if (this.token) {
-        console.log('Found stored auth token');
+        console.log('✅ API.init() - Token loaded successfully');
+        console.log('🔧 Token preview:', this.token.substring(0, 20) + '...');
+        return true;
       } else {
-        console.log('No stored auth token found');
+        console.log('⚠️ API.init() - No stored auth token found');
+        return false;
       }
     } catch (error) {
-      console.error('Error initializing API:', error);
+      console.error('❌ API.init() - Error initializing API:', error);
+      return false;
     }
   }
 
@@ -350,6 +355,18 @@ class NexHireAPI {
 
   // User Profile APIs
   async getProfile() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 getProfile: Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ getProfile: No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    console.log('🔧 getProfile: Token present:', !!this.token);
     return this.apiCall('/users/profile');
   }
 
@@ -383,13 +400,22 @@ class NexHireAPI {
 
   // WORK EXPERIENCES: New CRUD endpoints
   async createWorkExperience(workExp) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
     // Require minimum fields as backend: jobTitle + startDate
     if (!workExp || !workExp.jobTitle || !workExp.startDate) {
       return { success: false, error: 'jobTitle and startDate are required' };
     }
+    
     const payload = {
       jobTitle: workExp.jobTitle,
       startDate: workExp.startDate,
@@ -414,6 +440,7 @@ class NexHireAPI {
     };
     
     console.log('🔧 Creating work experience with payload:', JSON.stringify(payload, null, 2));
+    console.log('🔧 Token present:', !!this.token);
     
     return this.apiCall('/work-experiences', {
       method: 'POST',
@@ -422,16 +449,34 @@ class NexHireAPI {
   }
 
   async getMyWorkExperiences() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 getMyWorkExperiences - Token present:', !!this.token);
     return this.apiCall('/work-experiences/my');
   }
 
   async updateWorkExperienceById(id, data) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 updateWorkExperienceById - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
@@ -439,9 +484,18 @@ class NexHireAPI {
   }
 
   async deleteWorkExperience(id) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 deleteWorkExperience - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'DELETE'
     });
@@ -1772,9 +1826,20 @@ class NexHireAPI {
 
   // ✅ NEW: Get detailed points history for breakdown
   async getReferralPointsHistory() {
-    if (!this.token) return { success: false, error: 'Authentication required' };
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
+      return { success: false, error: 'Authentication required' };
+    }
+    
     try {
       console.log('🏆 Loading referral points history...');
+      console.log('🔧 Token present:', !!this.token);
       
       // This endpoint should return detailed points history with breakdown by type
       const result = await this.apiCall('/referral/points-history');

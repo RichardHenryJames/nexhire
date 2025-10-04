@@ -8,22 +8,22 @@ const ReferralPointsHeader = ({
   referralPoints = 0, 
   referralStats = {},
   pointsHistory = [], // Points history for detailed breakdown
-  pointTypeMetadata = {}, // ?? NEW: Dynamic metadata from backend
+  pointTypeMetadata = {}, // NEW: Dynamic metadata from backend
   onPress,
   compact = false 
 }) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  console.log('?? ReferralPointsHeader rendered with:', {
+  console.log('ReferralPointsHeader rendered with:', {
     referralPoints,
     pointsHistoryLength: pointsHistory?.length || 0,
     showBreakdown,
     hasCustomOnPress: !!onPress
   });
 
-  // ?? Track modal state changes
+  // Track modal state changes
   React.useEffect(() => {
-    console.log('?? showBreakdown changed to:', showBreakdown);
+    console.log('showBreakdown changed to:', showBreakdown);
   }, [showBreakdown]);
 
   // Default stats structure
@@ -36,7 +36,7 @@ const ReferralPointsHeader = ({
   };
 
   const handlePress = () => {
-    console.log('?? ReferralPointsHeader pressed with:', {
+    console.log('ReferralPointsHeader pressed with:', {
       referralPoints,
       pointsHistory: pointsHistory?.length || 0,
       hasOnPress: !!onPress,
@@ -44,7 +44,7 @@ const ReferralPointsHeader = ({
     });
     
     // Always use the modal behavior for now
-    console.log('?? Setting showBreakdown to true');
+    console.log('Setting showBreakdown to true');
     setShowBreakdown(true);
   };
 
@@ -87,7 +87,7 @@ const ReferralPointsHeader = ({
           pointsHistory={pointsHistory}
           pointTypeMetadata={pointTypeMetadata}
           onClose={() => {
-            console.log('?? Closing compact breakdown modal');
+            console.log('Closing compact breakdown modal');
             setShowBreakdown(false);
           }}
         />
@@ -100,7 +100,7 @@ const ReferralPointsHeader = ({
       <TouchableOpacity 
         style={styles.container} 
         onPress={handlePress}
-        activeOpacity={0.7} // ?? Add visual feedback
+        activeOpacity={0.7} // Add visual feedback
       >
         {/* Main Points Display */}
         <View style={styles.pointsSection}>
@@ -147,9 +147,9 @@ const ReferralPointsHeader = ({
         totalPoints={displayPoints}
         referralStats={stats}
         pointsHistory={pointsHistory}
-        pointTypeMetadata={pointTypeMetadata} // ?? Pass metadata
+        pointTypeMetadata={pointTypeMetadata} // Pass metadata
         onClose={() => {
-          console.log('?? Closing breakdown modal');
+          console.log('Closing breakdown modal');
           setShowBreakdown(false);
         }}
       />

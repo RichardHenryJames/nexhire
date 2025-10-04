@@ -218,10 +218,10 @@ const ResumeSection = ({
 
   const setPrimaryResume = async (resumeId) => {
     try {
-      console.log('?? Setting primary resume:', resumeId);
+      console.log('Setting primary resume:', resumeId);
       setLoading(true);
       const response = await nexhireAPI.setPrimaryResume(resumeId);
-      console.log('?? Set primary response:', response);
+      console.log('Set primary response:', response);
       if (response.success) {
         Alert.alert('Success!', 'Primary resume updated successfully');
         await loadResumes();
@@ -232,7 +232,7 @@ const ResumeSection = ({
         Alert.alert('Error', response.error || 'Failed to update primary resume');
       }
     } catch (error) {
-      console.error('?? Error setting primary resume:', error);
+      console.error('Error setting primary resume:', error);
       Alert.alert('Error', error.message || 'Failed to update primary resume');
     } finally {
       setLoading(false);
@@ -265,46 +265,46 @@ const ResumeSection = ({
   };
 
   const performDeleteResume = async (resumeId, resumeLabel) => {
-    console.log('??? === PERFORM DELETE RESUME START ===');
-    console.log('??? Resume ID:', resumeId);
-    console.log('??? Resume Label:', resumeLabel);
-    console.log('??? Current resumes count:', resumes.length);
+    console.log('?=== PERFORM DELETE RESUME START ===');
+    console.log('?Resume ID:', resumeId);
+    console.log('?Resume Label:', resumeLabel);
+    console.log('?Current resumes count:', resumes.length);
     
     try {
-      console.log('??? Setting loading state...');
+      console.log('?Setting loading state...');
       setDeleting(true);
       
       // ? FIXED: Ensure we have proper authentication
       if (!nexhireAPI.token) {
-        console.error('??? No auth token available');
+        console.error('?No auth token available');
         Alert.alert('Authentication Error', 'Please login again to delete resumes');
         return;
       }
       
-      console.log('??? Auth token verified, making API call...');
+      console.log('?Auth token verified, making API call...');
       const response = await nexhireAPI.deleteResume(resumeId);
-      console.log('??? API response received:', response);
+      console.log('?API response received:', response);
       
       if (response && response.success) {
         console.log('? Resume deleted successfully from server');
         
         // ? FIXED: Immediately update local state to remove deleted resume
-        console.log('?? Updating local resumes state...');
+        console.log('Updating local resumes state...');
         setResumes(prevResumes => {
           const updatedResumes = prevResumes.filter(r => r.ResumeID !== resumeId);
-          console.log('?? Updated local resumes count:', updatedResumes.length);
+          console.log('Updated local resumes count:', updatedResumes.length);
           return updatedResumes;
         });
         
         // ? FIXED: Update parent profile state as well
         if (setProfile) {
-          console.log('?? Updating parent profile state...');
+          console.log('Updating parent profile state...');
           setProfile(prev => {
             const updatedResumes = (prev.resumes || []).filter(r => r.ResumeID !== resumeId);
             const newPrimaryURL = updatedResumes.find(r => r.IsPrimary)?.ResumeURL || updatedResumes[0]?.ResumeURL || '';
             
-            console.log('?? Updated profile resumes count:', updatedResumes.length);
-            console.log('?? New primary resume URL:', newPrimaryURL);
+            console.log('Updated profile resumes count:', updatedResumes.length);
+            console.log('New primary resume URL:', newPrimaryURL);
             
             return {
               ...prev,
@@ -318,7 +318,7 @@ const ResumeSection = ({
         Alert.alert('? Success', 'Resume deleted successfully');
         
         // ? OPTIONAL: Reload from server as backup verification
-        console.log('?? Reloading resumes from server for verification...');
+        console.log('Reloading resumes from server for verification...');
         setTimeout(() => {
           loadResumes();
         }, 500);
@@ -331,10 +331,10 @@ const ResumeSection = ({
         Alert.alert('Error', response?.error || 'Failed to delete resume');
       }
     } catch (error) {
-      console.error('??? === ERROR DELETING RESUME ===');
-      console.error('??? Error type:', error.constructor.name);
-      console.error('??? Error message:', error.message);
-      console.error('??? Full error:', error);
+      console.error('?=== ERROR DELETING RESUME ===');
+      console.error('?Error type:', error.constructor.name);
+      console.error('?Error message:', error.message);
+      console.error('?Full error:', error);
       
       // ? IMPROVED: Better error messages based on error type
       let errorMessage = 'Failed to delete resume';
@@ -348,9 +348,9 @@ const ResumeSection = ({
       
       Alert.alert('Error', errorMessage);
     } finally {
-      console.log('??? Clearing loading state...');
+      console.log('?Clearing loading state...');
       setDeleting(false);
-      console.log('??? === PERFORM DELETE RESUME END ===');
+      console.log('?=== PERFORM DELETE RESUME END ===');
     }
   };
 

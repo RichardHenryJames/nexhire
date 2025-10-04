@@ -62,12 +62,12 @@ export default function LoginScreen({ navigation }) {
     // If successful, navigation will happen automatically via auth context
   };
 
-  // ?? FIXED: Handle Google Sign-In with automatic navigation for new users
+  // FIXED: Handle Google Sign-In with automatic navigation for new users
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
       
-      console.log('?? Login screen: Starting Google Sign-In...');
+      console.log('Login screen: Starting Google Sign-In...');
       
       const result = await loginWithGoogle();
       
@@ -87,9 +87,9 @@ export default function LoginScreen({ navigation }) {
           [{ text: 'OK' }]
         );
       } else if (result.needsRegistration) {
-        console.log('?? New Google user needs registration - navigation will happen automatically');
+        console.log('New Google user needs registration - navigation will happen automatically');
         
-        // ?? FIXED: No manual navigation needed!
+        // FIXED: No manual navigation needed!
         // The AuthContext has set pendingGoogleAuth state
         // AppNavigator will automatically detect hasPendingGoogleAuth and navigate to UserTypeSelection
         
@@ -106,7 +106,7 @@ export default function LoginScreen({ navigation }) {
         );
       }
     } catch (error) {
-      console.error('?? Google Sign-In error:', error);
+      console.error('Google Sign-In error:', error);
       Alert.alert(
         'Sign-In Error',
         error.message || 'An unexpected error occurred. Please try again.',
@@ -145,7 +145,7 @@ export default function LoginScreen({ navigation }) {
             </Text>
           </View>
 
-          {/* ?? NEW: Google Sign-In Section */}
+          {/* NEW: Google Sign-In Section */}
           {googleAuthAvailable && (
             <>
               <View style={screenStyles.googleSection}>
@@ -326,7 +326,7 @@ const screenStyles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
   },
-  // ?? NEW: Google Sign-In styles
+  // NEW: Google Sign-In styles
   googleSection: {
     marginBottom: spacing.lg,
   },

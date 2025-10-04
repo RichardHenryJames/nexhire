@@ -1,5 +1,5 @@
 /**
- * ?? Environment Loader for Frontend
+ * Environment Loader for Frontend
  * Automatically loads the correct environment configuration at runtime
  */
 
@@ -54,7 +54,7 @@ class EnvironmentLoader {
   }
 
   loadEnvironment() {
-    console.log(`?? Loading ${this.currentEnv} environment configuration`);
+    console.log(`Loading ${this.currentEnv} environment configuration`);
     
     // This is conceptual - in practice, you'd copy the right .env file
     // or use a build process to select the environment

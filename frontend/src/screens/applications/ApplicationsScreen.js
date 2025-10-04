@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Image, // ?? NEW: Import Image for company logos
+  Image, // NEW: Import Image for company logos
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -331,7 +331,7 @@ export default function ApplicationsScreen({ navigation }) {
         ]
       );
       
-      // Fallback: ensure navigation if user does not pick (defensive – some platforms auto-dismiss custom buttons)
+      // Fallback: ensure navigation if user does not pick (defensive ï¿½ some platforms auto-dismiss custom buttons)
       setTimeout(() => {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
@@ -498,7 +498,7 @@ export default function ApplicationsScreen({ navigation }) {
       >
         <View style={styles.applicationHeader}>
           <View style={styles.jobInfo}>
-            {/* ?? Company Logo */}
+            {/* Company Logo */}
             <View style={styles.logoContainer}>
               {application.OrganizationLogo ? (
                 <Image 
@@ -522,7 +522,7 @@ export default function ApplicationsScreen({ navigation }) {
                 {application.CompanyName || 'Company Name'}
               </Text>
               
-              {/* ?? Website URL Link */}
+              {/* Website URL Link */}
               {application.OrganizationWebsite && (
                 <TouchableOpacity 
                   style={styles.websiteButton}
@@ -541,7 +541,7 @@ export default function ApplicationsScreen({ navigation }) {
                 </TouchableOpacity>
               )}
               
-              {/* ?? LinkedIn Profile Link */}
+              {/* LinkedIn Profile Link */}
               {application.OrganizationLinkedIn && (
                 <TouchableOpacity 
                   style={styles.linkedinButton}
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     marginLeft: 4,
   },
-  // ?? Job Type Display Styles (matching JobsScreen)
+  // Job Type Display Styles (matching JobsScreen)
   jobTypeContainer: {
     flexDirection: 'row',
     marginBottom: 12,
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 18,
   },
-  // ?? Application Actions (matching JobsScreen)
+  // Application Actions (matching JobsScreen)
   applicationActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: typography.weights.medium,
   },
-  // ?? MATCH JobsScreen: Referral button styles (exact match)
+  // MATCH JobsScreen: Referral button styles (exact match)
   referralButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
-  // ?? MATCH JobsScreen: Referred status pill (exact match)
+  // MATCH JobsScreen: Referred status pill (exact match)
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',

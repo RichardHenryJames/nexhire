@@ -37,16 +37,25 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
     googleUserEmail: googleUser?.email
   });
 
-  // ?? NEW: Guard against hard refresh with lost Google data
+  // NEW: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !pendingGoogleAuth && !googleUser) {
       console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
       
-      // Silent immediate redirect
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      // 🔧 For web: Use window.location for reliable redirect
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Using window.location redirect for web');
+        window.location.href = '/login';
+        return;
+      }
+      
+      // For native: Use navigation reset
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }, 100);
     }
   }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
 
@@ -63,7 +72,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
       return;
     }
 
-    // ?? FIXED: Don't complete Google registration here!
+    // FIXED: Don't complete Google registration here!
     // Just navigate to the registration flow like regular users
     // The PersonalDetailsScreen will handle the actual registration with Google auth data
     
@@ -88,7 +97,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // ?? NEW: Handle Skip to final screen - WEB COMPATIBLE VERSION with useLinkTo fallback
+  // NEW: Handle Skip to final screen - WEB COMPATIBLE VERSION with useLinkTo fallback
   const handleSkipToFinal = () => {
     console.log('🔧 Skip button clicked, selectedType:', selectedType);
     
@@ -212,7 +221,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          {/* ?? NEW: Show Google user info if available */}
+          {/* NEW: Show Google user info if available */}
           {googleUser && (
             <View style={styles.googleUserInfo}>
               {googleUser.picture && (
@@ -387,7 +396,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  // ?? NEW: Google user info styles
+  // NEW: Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',

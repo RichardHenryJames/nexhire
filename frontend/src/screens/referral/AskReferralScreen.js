@@ -26,7 +26,7 @@ export default function AskReferralScreen({ navigation }) {
   const [resumes, setResumes] = useState([]);
   const [eligibility, setEligibility] = useState(null);
 
-  // ?? NEW: Company/Organization state
+  // NEW: Company/Organization state
   const [companies, setCompanies] = useState([]);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [companySearchTerm, setCompanySearchTerm] = useState('');
@@ -38,7 +38,7 @@ export default function AskReferralScreen({ navigation }) {
     jobId: '', // Add Job ID field
     jobTitle: '',
     jobUrl: '',
-    referralMessage: '', // ?? CHANGED: Replace jobDescription with referralMessage
+    referralMessage: '', // CHANGED: Replace jobDescription with referralMessage
     selectedResumeId: '',
   });
 
@@ -49,7 +49,7 @@ export default function AskReferralScreen({ navigation }) {
     hasActiveSubscription: false,
     reason: null,
     currentPlan: null // ? NEW: Add current plan info
-  }); // ?? NEW: Add referral eligibility state
+  }); // NEW: Add referral eligibility state
 
   // ? FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
@@ -81,15 +81,15 @@ export default function AskReferralScreen({ navigation }) {
 
   // Load initial data
   useEffect(() => {
-    console.log('?? AskReferralScreen: Component mounted');
+    console.log('AskReferralScreen: Component mounted');
     loadResumes();
     loadCompanies();
-    loadReferralEligibility(); // ?? NEW: Load referral eligibility on mount
+    loadReferralEligibility(); // NEW: Load referral eligibility on mount
   }, []);
 
   // Debug useEffect to log form state changes
   useEffect(() => {
-    console.log('?? Form data updated:', {
+    console.log('Form data updated:', {
       jobId: formData.jobId,
       jobTitle: formData.jobTitle,
       selectedResumeId: formData.selectedResumeId,
@@ -99,7 +99,7 @@ export default function AskReferralScreen({ navigation }) {
 
   useEffect(() => {
     if (selectedCompany) {
-      console.log('?? Selected company:', selectedCompany.name, selectedCompany.id);
+      console.log('Selected company:', selectedCompany.name, selectedCompany.id);
     }
   }, [selectedCompany]);
 
@@ -149,7 +149,7 @@ export default function AskReferralScreen({ navigation }) {
     }
   };
 
-  // ?? NEW: Load referral eligibility
+  // NEW: Load referral eligibility
   const loadReferralEligibility = async () => {
     try {
       const result = await nexhireAPI.checkReferralEligibility();
@@ -167,7 +167,7 @@ export default function AskReferralScreen({ navigation }) {
   };
 
   const validateForm = () => {
-    console.log('?? Validating form...');
+    console.log('Validating form...');
     const newErrors = {};
 
     // Check company selection
@@ -214,7 +214,7 @@ export default function AskReferralScreen({ navigation }) {
     }
 
     const errorCount = Object.keys(newErrors).length;
-    console.log(`?? Validation complete. Errors found: ${errorCount}`);
+    console.log(`Validation complete. Errors found: ${errorCount}`);
     if (errorCount > 0) {
       console.log('? Validation errors:', newErrors);
     }
@@ -224,7 +224,7 @@ export default function AskReferralScreen({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    console.log('?? Submit button clicked');
+    console.log('Submit button clicked');
     
     try {
       setSubmitting(true);
@@ -242,7 +242,7 @@ export default function AskReferralScreen({ navigation }) {
         return;
       }
       
-      console.log('?? Starting form validation...');
+      console.log('Starting form validation...');
       // Validate form
       if (!validateForm()) {
         console.log('? Form validation failed');
@@ -250,7 +250,7 @@ export default function AskReferralScreen({ navigation }) {
       }
       console.log('? Form validation passed');
 
-      console.log('?? Preparing request data...');
+      console.log('Preparing request data...');
 
       // ? NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
@@ -264,10 +264,10 @@ export default function AskReferralScreen({ navigation }) {
         referralMessage: formData.referralMessage || undefined,
       };
 
-      console.log('?? Submitting external referral request:', requestData);
+      console.log('Submitting external referral request:', requestData);
 
       const result = await nexhireAPI.createReferralRequest(requestData);
-      console.log('?? API Response:', result);
+      console.log('API Response:', result);
 
       if (result?.success) {
         console.log('? Referral request submitted successfully');
@@ -295,7 +295,7 @@ export default function AskReferralScreen({ navigation }) {
       const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
-      console.log('?? Resetting submitting state');
+      console.log('Resetting submitting state');
       setSubmitting(false);
     }
   };
@@ -335,7 +335,7 @@ export default function AskReferralScreen({ navigation }) {
     setErrors({});
   };
 
-  // ?? NEW: Handle upgrade banner click
+  // NEW: Handle upgrade banner click
   const handleUpgradeClick = () => {
     navigation.navigate('ReferralPlans');
   };
@@ -655,9 +655,9 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
             (submitting || referralEligibility.dailyQuotaRemaining === 0) && styles.submitButtonDisabled
           ]}
           onPress={() => {
-            console.log('?? Submit button pressed');
-            console.log('?? Submitting state:', submitting);
-            console.log('?? Quota remaining:', referralEligibility.dailyQuotaRemaining);
+            console.log('Submit button pressed');
+            console.log('Submitting state:', submitting);
+            console.log('Quota remaining:', referralEligibility.dailyQuotaRemaining);
             handleSubmit();
           }}
           disabled={submitting || referralEligibility.dailyQuotaRemaining === 0}
@@ -673,7 +673,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         </TouchableOpacity>
       </View>
 
-      {/* ?? NEW: Company Selection Modal */}
+      {/* NEW: Company Selection Modal */}
       <Modal
         visible={showCompanyModal}
         animationType="slide"
@@ -1055,7 +1055,7 @@ const styles = StyleSheet.create({
   submitButtonTextDisabled: {
     color: colors.gray500,
   },
-  // ?? NEW: Company selector styles
+  // NEW: Company selector styles
   companySelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
   companySelectorPlaceholder: {
     color: colors.gray500,
   },
-  // ?? NEW: Company modal styles
+  // NEW: Company modal styles
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,

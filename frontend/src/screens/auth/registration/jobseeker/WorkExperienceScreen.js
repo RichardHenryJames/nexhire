@@ -51,23 +51,40 @@ const WORK_ARRANGEMENTS = [
 ];
 
 export default function WorkExperienceScreen({ navigation, route }) {
-  const [formData, setFormData] = useState({
-    isCurrentlyWorking: true,
+  // NEW: Separate state for current and previous work experiences
+  const [currentWorkData, setCurrentWorkData] = useState({
     currentJobTitle: '',
     organizationId: null,
     currentCompany: '',
     startDate: '',
-    endDate: '',
-
     yearsOfExperience: '',
     workArrangement: '',
     jobType: '',
     primarySkills: '',
     secondarySkills: '',
-    previousJobTitle: '',
-    previousCompany: '',
     summary: '',
   });
+
+  const [previousWorkData, setPreviousWorkData] = useState({
+    currentJobTitle: '',
+    organizationId: null,
+    currentCompany: '',
+    startDate: '',
+    endDate: '',
+    yearsOfExperience: '',
+    workArrangement: '',
+    jobType: '',
+    primarySkills: '',
+    secondarySkills: '',
+    summary: '',
+  });
+
+  // Track which tab is active
+  const [activeTab, setActiveTab] = useState('current'); // 'current' or 'previous'
+
+  // NEW: Computed formData based on active tab
+  const formData = activeTab === 'current' ? currentWorkData : previousWorkData;
+  const setFormData = activeTab === 'current' ? setCurrentWorkData : setPreviousWorkData;
 
   // Modals
   const [showExperienceModal, setShowExperienceModal] = useState(false);
@@ -89,7 +106,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       ...prevData,
       [field]: value
     }));
-  }, []);
+  }, [setFormData]);
 
   const InputField = useMemo(() => React.memo(({ label, value, onChangeText, placeholder, multiline = false, required = false, keyboardType = 'default' }) => (
     <View style={styles.inputContainer}>
@@ -207,31 +224,82 @@ export default function WorkExperienceScreen({ navigation, route }) {
     closeOrgModal();
   };
 
+  // NEW: Validate and prepare work experience data
+  const prepareWorkExperienceData = () => {
+    const workExperiences = [];
+
+    // Add current work if filled
+    if (currentWorkData.currentJobTitle?.trim()) {
+      workExperiences.push({
+        jobTitle: currentWorkData.currentJobTitle.trim(),
+        companyName: currentWorkData.currentCompany?.trim() || null,
+        organizationId: currentWorkData.organizationId || null,
+        startDate: currentWorkData.startDate?.trim() || null,
+        endDate: null, // Current work has no end date
+        isCurrentPosition: true,
+        workArrangement: currentWorkData.workArrangement || null,
+        jobType: currentWorkData.jobType || null,
+        primarySkills: currentWorkData.primarySkills?.trim() || null,
+        secondarySkills: currentWorkData.secondarySkills?.trim() || null,
+        summary: currentWorkData.summary?.trim() || null,
+      });
+    }
+
+    // Add previous work if filled
+    if (previousWorkData.currentJobTitle?.trim()) {
+      workExperiences.push({
+        jobTitle: previousWorkData.currentJobTitle.trim(),
+        companyName: previousWorkData.currentCompany?.trim() || null,
+        organizationId: previousWorkData.organizationId || null,
+        startDate: previousWorkData.startDate?.trim() || null,
+        endDate: previousWorkData.endDate?.trim() || null,
+        isCurrentPosition: false,
+        workArrangement: previousWorkData.workArrangement || null,
+        jobType: previousWorkData.jobType || null,
+        primarySkills: previousWorkData.primarySkills?.trim() || null,
+        secondarySkills: previousWorkData.secondarySkills?.trim() || null,
+        summary: previousWorkData.summary?.trim() || null,
+      });
+    }
+
+    return workExperiences;
+  };
+
   const handleContinue = () => {
-    if (!formData.currentJobTitle.trim()) {
-      Alert.alert('Required Field', 'Please enter your current or most recent job title');
+    // Validate at least current OR previous is filled
+    const hasCurrentWork = currentWorkData.currentJobTitle?.trim();
+    const hasPreviousWork = previousWorkData.currentJobTitle?.trim();
+
+    if (!hasCurrentWork && !hasPreviousWork) {
+      Alert.alert('Required Field', 'Please enter at least one work experience (current or previous)');
       return;
     }
-    if (!formData.startDate.trim()) {
-      Alert.alert('Required Field', 'Please enter your start date (YYYY-MM-DD)');
+
+    // Validate current work if filled
+    if (hasCurrentWork && !currentWorkData.startDate?.trim()) {
+      Alert.alert('Required Field', 'Please enter start date for your current position');
       return;
     }
+
+    // Validate previous work if filled
+    if (hasPreviousWork) {
+      if (!previousWorkData.startDate?.trim()) {
+        Alert.alert('Required Field', 'Please enter start date for your previous position');
+        return;
+      }
+      if (!previousWorkData.endDate?.trim()) {
+        Alert.alert('Required Field', 'Please enter end date for your previous position');
+        return;
+      }
+    }
+
+    // NEW: Pass array of work experiences
+    const workExperiences = prepareWorkExperienceData();
 
     navigation.navigate('EducationDetailsScreen', { 
       userType, 
       experienceType,
-      workExperienceData: {
-        jobTitle: formData.currentJobTitle?.trim(),
-        companyName: formData.currentCompany?.trim() || null,
-        organizationId: formData.organizationId || null,
-        startDate: formData.startDate?.trim(),
-        endDate: formData.endDate?.trim() || null,
-        workArrangement: formData.workArrangement,
-        jobType: formData.jobType,
-        primarySkills: formData.primarySkills,
-        secondarySkills: formData.secondarySkills,
-        summary: formData.summary,
-      }
+      workExperienceData: workExperiences, // Now an array!
     });
   };
 
@@ -278,18 +346,18 @@ export default function WorkExperienceScreen({ navigation, route }) {
               <Text style={styles.inputLabel}>Employment Status</Text>
               <View style={styles.toggleContainer}>
                 <TouchableOpacity
-                  style={[styles.toggleOption, formData.isCurrentlyWorking === true && styles.toggleOptionSelected]}
-                  onPress={() => updateField('isCurrentlyWorking', true)}
+                  style={[styles.toggleOption, activeTab === 'current' && styles.toggleOptionSelected]}
+                  onPress={() => setActiveTab('current')}
                 >
-                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === true && styles.toggleTextSelected]}>
+                  <Text style={[styles.toggleText, activeTab === 'current' && styles.toggleTextSelected]}>
                     Currently Working
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.toggleOption, formData.isCurrentlyWorking === false && styles.toggleOptionSelected]}
-                  onPress={() => updateField('isCurrentlyWorking', false)}
+                  style={[styles.toggleOption, activeTab === 'previous' && styles.toggleOptionSelected]}
+                  onPress={() => setActiveTab('previous')}
                 >
-                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === false && styles.toggleTextSelected]}>
+                  <Text style={[styles.toggleText, activeTab === 'previous' && styles.toggleTextSelected]}>
                     Previously Worked
                   </Text>
                 </TouchableOpacity>
@@ -298,7 +366,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
             {/* Job Title (required) */}
             <InputField
-              label={formData.isCurrentlyWorking ? "Current Job Title" : "Most Recent Job Title"}
+              label={activeTab === 'current' ? "Current Job Title" : "Most Recent Job Title"}
               value={formData.currentJobTitle}
               onChangeText={(text) => updateField('currentJobTitle', text)}
               placeholder="e.g. Software Engineer, Marketing Manager"
@@ -317,13 +385,18 @@ export default function WorkExperienceScreen({ navigation, route }) {
               required
               keyboardType="numbers-and-punctuation"
             />
-            <InputField
-              label="End Date"
-              value={formData.endDate}
-              onChangeText={(text) => updateField('endDate', text)}
-              placeholder={formData.isCurrentlyWorking ? 'Leave empty if current' : 'YYYY-MM-DD'}
-              keyboardType="numbers-and-punctuation"
-            />
+            
+            {/* FIXED: Only show End Date field when on "Previously Worked" tab */}
+            {activeTab === 'previous' && (
+              <InputField
+                label="End Date"
+                value={formData.endDate}
+                onChangeText={(text) => updateField('endDate', text)}
+                placeholder="YYYY-MM-DD"
+                required
+                keyboardType="numbers-and-punctuation"
+              />
+            )}
 
             {/* Optional older fields */}
             <View style={{ height: 8 }} />

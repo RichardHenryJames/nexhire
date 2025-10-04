@@ -19,7 +19,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const { pendingGoogleAuth } = useAuth();
   const { employerType = 'startup', selectedCompany, fromGoogleAuth, skipEmailPassword } = route.params || {};
 
-  // ?? Check if this is a Google user
+  // Check if this is a Google user
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
   const googleUser = pendingGoogleAuth?.user;
 
@@ -28,10 +28,10 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const [linkedInProfile, setLinkedInProfile] = useState('');
   const [bio, setBio] = useState('');
 
-  // ?? Pre-populate some data for Google users
+  // Pre-populate some data for Google users
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('?? Setting up employer details for Google user:', googleUser.name);
+      console.log('Setting up employer details for Google user:', googleUser.name);
       
       // You could potentially derive job title from LinkedIn data if available
       // For now, we'll keep the defaults but could enhance this
@@ -60,7 +60,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           <Ionicons name="arrow-back" size={22} color={colors.primary} />
         </TouchableOpacity>
 
-        {/* ?? Show Google user info if applicable */}
+        {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>
             {googleUser.picture && (
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   scroll: { 
     flex: 1 
   },
-  // ?? Google user info styles
+  // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',

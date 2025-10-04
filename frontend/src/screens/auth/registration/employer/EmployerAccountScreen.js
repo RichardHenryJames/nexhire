@@ -27,7 +27,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   
   const { user, pendingGoogleAuth, register } = useAuth();
 
-  // ?? Check if this is a Google user
+  // Check if this is a Google user
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
   const googleUser = pendingGoogleAuth?.user;
 
@@ -40,10 +40,10 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // ?? Pre-populate Google user data
+  // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('?? Pre-populating Google user data for employer:', googleUser);
+      console.log('Pre-populating Google user data for employer:', googleUser);
       
       setFirstName(googleUser.given_name || googleUser.name?.split(' ')[0] || '');
       setLastName(googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '');
@@ -58,7 +58,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
     if (!firstName.trim() || !lastName.trim()) return 'Name is required';
     if (!email.trim()) return 'Email is required';
     
-    // ?? Skip password validation for Google users and already authenticated users
+    // Skip password validation for Google users and already authenticated users
     if (!nexhireAPI.token && !isGoogleUser) {
       if (!password || password.length < 6) return 'Password must be at least 6 characters';
       if (password !== confirmPassword) return 'Passwords do not match';
@@ -88,9 +88,9 @@ export default function EmployerAccountScreen({ navigation, route }) {
         bio: employerDetails?.bio || '',
       };
 
-      // ?? Handle Google users vs regular users differently
+      // Handle Google users vs regular users differently
       if (isGoogleUser && pendingGoogleAuth) {
-        console.log('?? Completing Google employer registration...');
+        console.log('Completing Google employer registration...');
         
         // Prepare comprehensive registration data for Google user
         const registrationData = {
@@ -115,7 +115,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...organizationPayload,
         };
 
-        console.log('?? Google employer registration payload:', JSON.stringify(registrationData, null, 2));
+        console.log('Google employer registration payload:', JSON.stringify(registrationData, null, 2));
 
         const result = await register(registrationData);
         
@@ -178,7 +178,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         { text: 'Continue', onPress: () => navigation.replace('Main') }
       ]);
     } catch (e) {
-      console.error('?? Employer account creation error:', e);
+      console.error('Employer account creation error:', e);
       Alert.alert('Error', e.message || 'Failed to complete setup');
     } finally {
       setSubmitting(false);
@@ -192,7 +192,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <Ionicons name="arrow-back" size={22} color={colors.primary} />
         </TouchableOpacity>
 
-        {/* ?? Show Google user info if applicable */}
+        {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>
             {googleUser.picture && (
@@ -288,7 +288,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           />
         </View>
 
-        {/* ?? Only show password fields for non-Google users and unauthenticated users */}
+        {/* Only show password fields for non-Google users and unauthenticated users */}
         {!nexhireAPI.token && !isGoogleUser && (
           <>
             <View style={styles.field}> 
@@ -326,7 +326,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={styles.summaryItem}>
             <Ionicons name="briefcase" size={16} color={colors.primary} />
             <Text style={styles.summaryText}>
-              {employerDetails?.jobTitle || 'Hiring Manager'} • {employerDetails?.department || 'Human Resources'}
+              {employerDetails?.jobTitle || 'Hiring Manager'} ï¿½ {employerDetails?.department || 'Human Resources'}
             </Text>
           </View>
           <View style={styles.summaryItem}>
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   row: { 
     flexDirection: 'row' 
   },
-  // ?? Google user info styles
+  // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',

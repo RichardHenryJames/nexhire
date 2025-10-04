@@ -13,13 +13,56 @@ export const useAuth = () => {
   return context;
 };
 
+// NEW: Helper functions for sessionStorage persistence
+const GOOGLE_AUTH_STORAGE_KEY = 'nexhire_pending_google_auth';
+
+const savePendingGoogleAuthToStorage = (data) => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      if (data) {
+        sessionStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
+        console.log('? Saved pending Google auth to sessionStorage');
+      } else {
+        sessionStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
+        console.log('?Cleared pending Google auth from sessionStorage');
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to save to sessionStorage:', error);
+  }
+};
+
+const loadPendingGoogleAuthFromStorage = () => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const stored = sessionStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        console.log('? Loaded pending Google auth from sessionStorage:', data.user?.email);
+        return data;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load from sessionStorage:', error);
+  }
+  return null;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // ?? NEW: Store Google auth data for new users who need to complete registration
-  const [pendingGoogleAuth, setPendingGoogleAuth] = useState(null);
+  // IMPROVED: Initialize from sessionStorage on mount
+  const [pendingGoogleAuth, setPendingGoogleAuthState] = useState(() => {
+    return loadPendingGoogleAuthFromStorage();
+  });
+
+  // NEW: Wrapper to sync with sessionStorage
+  const setPendingGoogleAuth = (data) => {
+    setPendingGoogleAuthState(data);
+    savePendingGoogleAuthToStorage(data);
+  };
 
   // Initialize smart auth methods
   const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
@@ -29,9 +72,9 @@ export const AuthProvider = ({ children }) => {
     checkAuthState();
   }, []);
 
-  // ?? DEBUG: Track pendingGoogleAuth state changes
+  // DEBUG: Track pendingGoogleAuth state changes
   useEffect(() => {
-    console.log('?? AuthContext pendingGoogleAuth changed:', {
+    console.log('AuthContext pendingGoogleAuth changed:', {
       hasPendingGoogleAuth: !!pendingGoogleAuth,
       userEmail: pendingGoogleAuth?.user?.email,
       userName: pendingGoogleAuth?.user?.name,
@@ -68,13 +111,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ?? NEW: Google Sign-In Flow
+  // NEW: Google Sign-In Flow
   const loginWithGoogle = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('?? Starting Google Sign-In flow...');
+      console.log('Starting Google Sign-In flow...');
       
       // Step 1: Get Google authentication
       const googleResult = await googleAuth.signIn();
@@ -89,7 +132,7 @@ export const AuthProvider = ({ children }) => {
           return { success: false, dismissed: true, message: 'Authentication popup was closed' };
         }
         if (googleResult.needsConfig) {
-          console.log('?? Google OAuth not configured');
+          console.log('Google OAuth not configured');
           return { 
             success: false, 
             error: googleResult.error,
@@ -113,10 +156,10 @@ export const AuthProvider = ({ children }) => {
         
         // Check if it's a user not found error
         if (loginResult.needsRegistration) {
-          console.log('?? New user detected, storing Google data for registration');
+          console.log('New user detected, storing Google data for registration');
           setPendingGoogleAuth(googleResult.data);
           
-          console.log('?? Pending Google auth set:', {
+          console.log('Pending Google auth set:', {
             hasAccessToken: !!googleResult.data.accessToken,
             userEmail: googleResult.data.user?.email,
             userName: googleResult.data.user?.name
@@ -133,14 +176,14 @@ export const AuthProvider = ({ children }) => {
         throw new Error(loginResult.error || 'Login failed');
         
       } catch (loginError) {
-        console.log('?? Login attempt failed:', loginError.message);
+        console.log('Login attempt failed:', loginError.message);
         
         // If it's a user not found error, prepare for registration
         if (loginError.message.includes('not found') || loginError.message.includes('USER_NOT_FOUND')) {
-          console.log('?? New user detected from error, storing Google data for registration');
+          console.log('New user detected from error, storing Google data for registration');
           setPendingGoogleAuth(googleResult.data);
           
-          console.log('?? Pending Google auth set from error:', {
+          console.log('Pending Google auth set from error:', {
             hasAccessToken: !!googleResult.data.accessToken,
             userEmail: googleResult.data.user?.email,
             userName: googleResult.data.user?.name
@@ -159,7 +202,7 @@ export const AuthProvider = ({ children }) => {
 
     } catch (error) {
       const errorMessage = error.message || 'Google Sign-In failed';
-      console.error('?? Google Sign-In error:', error);
+      console.error('Google Sign-In error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -167,7 +210,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ?? NEW: Clear pending Google auth (if user cancels registration)
+  // IMPROVED: Clear pending Google auth
   const clearPendingGoogleAuth = () => {
     setPendingGoogleAuth(null);
   };
@@ -211,16 +254,16 @@ export const AuthProvider = ({ children }) => {
       console.log('Attempting registration for:', userData.email);
       console.log('Full userData received:', JSON.stringify(userData, null, 2));
       
-      // ?? Check if this is a Google OAuth registration
+      // Check if this is a Google OAuth registration
       const isGoogleRegistration = !!userData.googleAuth;
       
       // Separate education and work experience data from registration data
       const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
       
-      // ?? Add placeholder password for Google OAuth users if not provided
+      // Add placeholder password for Google OAuth users if not provided
       if (isGoogleRegistration && !registrationData.password) {
         registrationData.password = `google-oauth-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-        console.log('?? Added placeholder password for Google OAuth user');
+        console.log('Added placeholder password for Google OAuth user');
       }
       
       console.log('Separated registration data:', JSON.stringify(registrationData, null, 2));
@@ -235,11 +278,11 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         console.log('Registration successful, attempting auto-login...');
         
-        // ?? Handle different login flows for Google vs regular users
+        // Handle different login flows for Google vs regular users
         let loginResult;
         
         if (isGoogleRegistration) {
-          console.log('?? Attempting Google OAuth login after registration...');
+          console.log('Attempting Google OAuth login after registration...');
           // For Google users, try to login with Google OAuth data
           try {
             const googleLoginData = {
@@ -255,9 +298,9 @@ export const AuthProvider = ({ children }) => {
             };
             
             loginResult = await nexhireAPI.loginWithGoogle(googleLoginData);
-            console.log('?? Google login result:', loginResult);
+            console.log('Google login result:', loginResult);
           } catch (googleLoginError) {
-            console.warn('?? Google login failed, falling back to regular login:', googleLoginError);
+            console.warn('Google login failed, falling back to regular login:', googleLoginError);
             // Fallback to regular login with placeholder password
             loginResult = await login(userData.email, registrationData.password);
           }
@@ -269,11 +312,11 @@ export const AuthProvider = ({ children }) => {
         if (loginResult.success) {
           console.log('Auto-login successful, now saving additional profile data...');
           
-          // ?? CRITICAL FIX: Set user state so isAuthenticated becomes true
+          // CRITICAL FIX: Set user state so isAuthenticated becomes true
           setUser(loginResult.user || loginResult.data?.user);
           console.log('? User state set after auto-login:', loginResult.user?.Email || loginResult.data?.user?.Email);
           
-          // ?? FIXED: Ensure API token is properly set before profile updates
+          // FIXED: Ensure API token is properly set before profile updates
           await nexhireAPI.init(); // Re-initialize API to sync token
           
           // Save education data if provided
@@ -294,29 +337,56 @@ export const AuthProvider = ({ children }) => {
           
           // Save work experience data (new API) if provided and has required fields
           if (workExperienceData) {
-            const jobTitle = workExperienceData.currentJobTitle || workExperienceData.jobTitle;
-            const companyName = workExperienceData.currentCompany || workExperienceData.companyName;
-            const organizationId = workExperienceData.organizationId || null;
-            const startDate = workExperienceData.startDate || workExperienceData.start_date;
-            const endDate = workExperienceData.endDate || workExperienceData.end_date;
+            console.log('Processing work experience data...');
             
-            if (jobTitle && startDate) {
-              console.log('Creating initial work experience with new API');
-              try {
-                const createResult = await nexhireAPI.createWorkExperience({
-                  jobTitle,
-                  companyName,
-                  organizationId,
-                  startDate,
-                  endDate: endDate || null,
-                });
-                console.log('Create work experience result:', createResult);
-              } catch (workError) {
-                console.warn('Error creating initial work experience:', workError);
+            // Normalize to array
+            const workExperiences = Array.isArray(workExperienceData) ? workExperienceData : [workExperienceData];
+            console.log(`Found ${workExperiences.length} work experience(s) to save`);
+            
+            // Save each work experience
+            for (const [index, workExp] of workExperiences.entries()) {
+              const jobTitle = workExp.currentJobTitle || workExp.jobTitle;
+              const companyName = workExp.currentCompany || workExp.companyName;
+              const organizationId = workExp.organizationId || null;
+              const startDate = workExp.startDate || workExp.start_date;
+              const endDate = workExp.endDate || workExp.end_date;
+              const isCurrentPosition = workExp.isCurrentPosition !== undefined ? workExp.isCurrentPosition : !endDate;
+              
+              if (jobTitle && startDate) {
+                console.log(`Creating work experience ${index + 1}/${workExperiences.length}`);
+                console.log(`   - Position: ${jobTitle} at ${companyName || 'Unknown Company'}`);
+                console.log(`   - Current: ${isCurrentPosition ? 'Yes' : 'No'}`);
+                
+                try {
+                  const createResult = await nexhireAPI.createWorkExperience({
+                    jobTitle,
+                    companyName,
+                    organizationId,
+                    startDate,
+                    endDate: isCurrentPosition ? null : endDate,
+                    isCurrent: isCurrentPosition,
+                    // Additional optional fields
+                    workArrangement: workExp.workArrangement || null,
+                    jobType: workExp.jobType || null,
+                    primarySkills: workExp.primarySkills || null,
+                    secondarySkills: workExp.secondarySkills || null,
+                    summary: workExp.summary || null,
+                  });
+                  
+                  if (createResult.success) {
+                    console.log(`? Work experience ${index + 1} saved successfully`);
+                  } else {
+                    console.warn(`Work experience ${index + 1} save failed:`, createResult.error);
+                  }
+                } catch (workError) {
+                  console.warn(`Error creating work experience ${index + 1}:`, workError);
+                }
+              } else {
+                console.log(`Skipping work experience ${index + 1} (missing jobTitle or startDate)`);
               }
-            } else {
-              console.log('Skipping work experience creation (missing jobTitle or startDate)');
             }
+            
+            console.log('? All work experiences processed');
           }
           
           // Save job preferences if provided
@@ -365,11 +435,11 @@ export const AuthProvider = ({ children }) => {
       // Revoke Google tokens if user signed in with Google
       if (user?.LoginMethod === 'Google' || user?.GoogleId) {
         try {
-          console.log('?? Revoking Google tokens...');
+          console.log('Revoking Google tokens...');
           await googleAuth.signOut(user.GoogleAccessToken);
           console.log('? Google tokens revoked');
         } catch (googleError) {
-          console.warn('?? Could not revoke Google tokens:', googleError);
+          console.warn('Could not revoke Google tokens:', googleError);
         }
       }
 
@@ -446,12 +516,12 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     error,
-    pendingGoogleAuth, // ?? NEW: Expose pending Google auth data
+    pendingGoogleAuth, // NEW: Expose pending Google auth data
     
     // Authentication methods
     login,
-    loginWithGoogle, // ?? NEW: Google Sign-In method
-    clearPendingGoogleAuth, // ?? NEW: Clear pending Google auth
+    loginWithGoogle, // NEW: Google Sign-In method
+    clearPendingGoogleAuth, // NEW: Clear pending Google auth
     register,
     logout,
     
@@ -475,7 +545,7 @@ export const AuthProvider = ({ children }) => {
     userEmail: user?.Email || null,
     userId: user?.UserID || null,
     
-    // ?? NEW: Google auth state helpers
+    // NEW: Google auth state helpers
     hasGoogleAuth: !!user?.GoogleId,
     isGoogleUser: user?.LoginMethod === 'Google',
     hasPendingGoogleAuth: !!pendingGoogleAuth,

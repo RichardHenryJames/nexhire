@@ -559,28 +559,27 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               </View>
             )}
 
-            <Text style={styles.label}>End Date (YYYY-MM-DD){endDateRequired ? ' *' : ''}</Text>
-            <TextInput 
-               style={[
-                 styles.input, 
-                 form.isCurrent && styles.inputDisabled,
--                endDateRequired && !form.endDate ? styles.errorInput : {}
-+                (validationErrors.endDate) ? styles.errorInput : {}
-               ]} 
-               editable={!form.isCurrent} 
-               value={form.endDate} 
-               onChangeText={(t) => setForm({ ...form, endDate: t })} 
-               placeholder={
-                 form.isCurrent 
-                   ? "Present" 
-                   : endDateRequired
-                     ? "Required - Select end date"
-                     : "Leave empty if current"
-               }
-               keyboardType="numbers-and-punctuation" 
-               autoCapitalize="none" 
-             />
-+            {validationErrors.endDate ? <Text style={styles.validationText}>{validationErrors.endDate}</Text> : null}
+            {/* FIXED: Only show End Date field when NOT currently working */}
+            {!form.isCurrent && (
+              <>
+                <Text style={styles.label}>End Date (YYYY-MM-DD){endDateRequired ? ' *' : ''}</Text>
+                <TextInput 
+                  style={[
+                    styles.input,
+                    (validationErrors.endDate) ? styles.errorInput : {}
+                  ]} 
+                  value={form.endDate} 
+                  onChangeText={(t) => { 
+                    setForm({ ...form, endDate: t }); 
+                    if (validationErrors.endDate) setValidationErrors(v => ({ ...v, endDate: undefined })); 
+                  }} 
+                  placeholder={endDateRequired ? "Required - Select end date" : "YYYY-MM-DD"}
+                  keyboardType="numbers-and-punctuation" 
+                  autoCapitalize="none" 
+                />
+                {validationErrors.endDate ? <Text style={styles.validationText}>{validationErrors.endDate}</Text> : null}
+              </>
+            )}
 
             <Text style={styles.label}>Location</Text>
             <TextInput style={styles.input} value={form.location} onChangeText={(t) => setForm({ ...form, location: t })} placeholder="City, State" />

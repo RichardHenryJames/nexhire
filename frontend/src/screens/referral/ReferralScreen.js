@@ -106,7 +106,7 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const handleCancelRequest = async (requestId) => {
-    console.log('?? Cancel button clicked for request:', requestId);
+    console.log('Cancel button clicked for request:', requestId);
     
     // Find the request object for better UX
     const request = myRequests.find(r => r.RequestID === requestId);
@@ -133,11 +133,11 @@ export default function ReferralScreen({ navigation }) {
 
   // Separate function to perform the actual cancellation
   const performCancelRequest = async (requestId) => {
-    console.log('?? User confirmed cancellation for request:', requestId);
+    console.log('User confirmed cancellation for request:', requestId);
     try {
-      console.log('?? Making API call to cancel request...');
+      console.log('Making API call to cancel request...');
       const res = await nexhireAPI.cancelReferralRequest(requestId);
-      console.log('?? API response:', res);
+      console.log('API response:', res);
       
       if (res.success) {
         console.log('? Cancel request successful');
@@ -157,7 +157,7 @@ export default function ReferralScreen({ navigation }) {
   // NEW: Enhanced claim request with immediate proof upload
   const handleClaimRequest = async (request) => {
     try {
-      console.log('?? Claiming request with proof:', request.RequestID);
+      console.log('Claiming request with proof:', request.RequestID);
       
       // Open proof modal instead of immediate claim
       setSelectedRequest(request);
@@ -174,7 +174,7 @@ export default function ReferralScreen({ navigation }) {
     if (!selectedRequest) return;
 
     try {
-      console.log('?? Submitting proof with claim:', proofData);
+      console.log('Submitting proof with claim:', proofData);
       
       // Use the new enhanced API that combines claim + proof
       const result = await nexhireAPI.claimReferralRequestWithProof(
@@ -213,7 +213,7 @@ export default function ReferralScreen({ navigation }) {
 
   // NEW: View proof of referral
   const handleViewProof = (request) => {
-    console.log('?? View Proof pressed for request:', request.RequestID, 'Status:', request.Status, 'ProofURL:', request.ProofFileURL);
+    console.log('View Proof pressed for request:', request.RequestID, 'Status:', request.Status, 'ProofURL:', request.ProofFileURL);
     if (!request.ProofFileURL) {
       Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
       return;

@@ -467,19 +467,19 @@ export default function JobsScreen({ navigation, route }) {
     if (loading || loadingMore) return;
     if (isLoadingMoreRef.current) return;
     if (!pagination.hasMore) {
-      console.log('?? Load more skipped - no more jobs available');
+      console.log('Load more skipped - no more jobs available');
       return;
     }
 
     const nextPage = (pagination.page || 1) + 1;
     if (pagination.totalPages && nextPage > pagination.totalPages) {
-      console.log(`?? Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
+      console.log(`Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     if (lastAutoLoadPageRef.current === nextPage) {
-      console.log(`?? Skipping duplicate auto-load for page ${nextPage}`);
+      console.log(`Skipping duplicate auto-load for page ${nextPage}`);
       return;
     }
 
@@ -560,7 +560,7 @@ export default function JobsScreen({ navigation, route }) {
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5;
 
-    console.log(`?? Smart Pagination Check:`, {
+    console.log(`Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -570,25 +570,25 @@ export default function JobsScreen({ navigation, route }) {
     });
 
     if (!backendHasMore) {
-      console.log('?? Smart pagination skipped - backend says no more jobs available');
+      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
+      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -748,7 +748,7 @@ export default function JobsScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
               onPress={() => {
-                console.log('?? Manual Load More triggered');
+                console.log('Manual Load More triggered');
                 setSmartPaginating(true);
                 loadMoreJobs();
                 setTimeout(() => setSmartPaginating(false), 2000);
@@ -843,7 +843,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-    console.log('?? handleAskReferral called in JobsScreen for job:', job?.Title);
+    console.log('handleAskReferral called in JobsScreen for job:', job?.Title);
 
     if (!job) return;
     if (!user) {
@@ -871,13 +871,13 @@ export default function JobsScreen({ navigation, route }) {
 
     // ? CRITICAL FIX: Always check real-time quota before proceeding
     try {
-      console.log('?? Checking referral eligibility...');
+      console.log('Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('?? Eligibility result:', freshEligibility);
+      console.log('Eligibility result:', freshEligibility);
 
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('?? Eligibility data:', eligibilityData);
+        console.log('Eligibility data:', eligibilityData);
 
         if (!eligibilityData.isEligible) {
           console.log('❌ User not eligible, checking subscription status...');
@@ -896,7 +896,7 @@ export default function JobsScreen({ navigation, route }) {
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('?? Failed to check referral eligibility:', e);
+      console.error('Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
@@ -927,7 +927,7 @@ export default function JobsScreen({ navigation, route }) {
     setReferralMode(true); setPendingJobForApplication(job); setShowResumeModal(true);
   }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal, primaryResume, loadPrimaryResume]);
 
-  // ?? NEW: Subscription modal for quota exhausted users
+  // NEW: Subscription modal for quota exhausted users
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
      console.log('💳 showSubscriptionModal called in JobsScreen');
      console.log('💳 Navigation object:', navigation);
@@ -987,7 +987,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // ? NEW: Handle plan selection and purchase
   const handlePlanSelection = useCallback(async (plan) => {
-    console.log('?? Plan selected in JobsScreen:', plan);
+    console.log('Plan selected in JobsScreen:', plan);
 
     Alert.alert(
       'Confirm Subscription',
@@ -1000,7 +1000,7 @@ export default function JobsScreen({ navigation, route }) {
             try {
               // For demo - simulate successful purchase
               Alert.alert(
-                '?? Subscription Successful!',
+                'Subscription Successful!',
                 `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
                 [
                   {
@@ -1232,7 +1232,7 @@ export default function JobsScreen({ navigation, route }) {
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5; // Trigger when only 5 jobs left
 
-    console.log(`?? Smart Pagination Check:`, {
+    console.log(`Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -1243,26 +1243,26 @@ export default function JobsScreen({ navigation, route }) {
 
     // Don't trigger if backend says no more
     if (!backendHasMore) {
-      console.log('?? Smart pagination skipped - backend says no more jobs available');
+      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     // FIXED: Additional guard - don't trigger if current page >= totalPages
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
+      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();

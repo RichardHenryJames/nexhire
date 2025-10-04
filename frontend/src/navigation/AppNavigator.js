@@ -41,7 +41,7 @@ import { colors } from '../styles/theme';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ?? FIXED: Deep Linking Configuration with unique paths
+// FIXED: Deep Linking Configuration with unique paths
 const linking = {
   prefixes: [
     'nexhire://',
@@ -55,7 +55,7 @@ const linking = {
       Register: 'register', 
       UserTypeSelection: 'register/select-type',
       
-      // ?? NEW: Direct skip screens for web navigation
+      // NEW: Direct skip screens for web navigation
       PersonalDetailsScreenDirect: 'register/complete-profile',
       EmployerAccountScreenDirect: 'register/complete-employer',
       
@@ -141,18 +141,18 @@ function EmployerFlow() {
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
 
-  console.log('?? AuthStack state:', {
+  console.log('AuthStack state:', {
     hasPendingGoogleAuth,
     googleUserEmail: pendingGoogleAuth?.user?.email
   });
 
-  // ?? FIXED: Better initial route logic
+  // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      console.log('?? Google auth pending - starting at UserTypeSelection');
+      console.log('Google auth pending - starting at UserTypeSelection');
       return "UserTypeSelection";
     }
-    console.log('?? No pending auth - starting at Login');
+    console.log('No pending auth - starting at Login');
     return "Login";
   };
 
@@ -168,7 +168,7 @@ function AuthStack() {
       <Stack.Screen 
         name="UserTypeSelection" 
         component={UserTypeSelectionScreen}
-        // ?? Pass Google user data automatically when coming from Google auth
+        // Pass Google user data automatically when coming from Google auth
         initialParams={hasPendingGoogleAuth ? {
           googleUser: pendingGoogleAuth?.user,
           fromGoogleAuth: true
@@ -177,7 +177,7 @@ function AuthStack() {
       <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
       <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
       
-      {/* ?? NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
+      {/* NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
       <Stack.Screen 
         name="PersonalDetailsScreenDirect" 
         component={PersonalDetailsScreen}
@@ -333,7 +333,7 @@ function MainStack() {
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
 
-  console.log('?? AppNavigator state check:', {
+  console.log('AppNavigator state check:', {
     loading,
     isAuthenticated,
     hasPendingGoogleAuth
@@ -344,14 +344,14 @@ export default function AppNavigator() {
     return <LoadingScreen />;
   }
 
-  // ?? FIXED: Better logic for handling Google registration flow
+  // FIXED: Better logic for handling Google registration flow
   // Priority:
   // 1. If user has pending Google auth (new Google user) -> show AuthStack to complete registration
   // 2. If user is authenticated and no pending Google auth -> show MainStack 
   // 3. Otherwise -> show AuthStack for login/registration
 
   if (hasPendingGoogleAuth) {
-    console.log('?? Pending Google auth detected - showing registration flow');
+    console.log('Pending Google auth detected - showing registration flow');
     return <AuthStack />;
   }
 
@@ -360,7 +360,7 @@ export default function AppNavigator() {
     return <MainStack />;
   }
 
-  console.log('?? User not authenticated - showing auth flow');
+  console.log('User not authenticated - showing auth flow');
   return <AuthStack />;
 }
 

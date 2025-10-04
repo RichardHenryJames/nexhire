@@ -41,7 +41,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const { 
     userType = 'JobSeeker', 
     experienceType = 'Student', 
-    workExperienceData = null, 
+    workExperienceData = null, // 🔧 Can be single object or array now
     educationData = null, 
     jobPreferences = null, 
     fromGoogleAuth = false, 
@@ -55,6 +55,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     fromGoogleAuth,
     skippedSteps,
     hasWorkData: !!workExperienceData,
+    workDataType: Array.isArray(workExperienceData) ? 'array' : typeof workExperienceData,
+    workDataCount: Array.isArray(workExperienceData) ? workExperienceData.length : (workExperienceData ? 1 : 0),
     hasEducationData: !!educationData,
     hasJobPreferences: !!jobPreferences
   });
@@ -69,16 +71,25 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     googleUserEmail: googleUser?.email
   });
 
-  // ?? NEW: Guard against hard refresh with lost Google data
+  // NEW: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !pendingGoogleAuth && !googleUser) {
       console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
       
-      // Silent immediate redirect
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      // 🔧 For web: Use window.location for reliable redirect
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Using window.location redirect for web');
+        window.location.href = '/login';
+        return;
+      }
+      
+      // For native: Use navigation reset
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }, 100);
     }
   }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
 
@@ -92,15 +103,15 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     dateOfBirth: '',
     gender: '',
     location: '',
-    currentCompany: '', // ?? Company name (for display and fallback)
-    organizationId: null, // ?? NEW: Organization ID from database
-    jobTitle: '', // ?? NEW: Job title (required when company is selected)
-    startDate: '', // ?? NEW: Start date (required when company is selected)
+    currentCompany: '', // Company name (for display and fallback)
+    organizationId: null, // NEW: Organization ID from database
+    jobTitle: '', // NEW: Job title (required when company is selected)
+    startDate: '', // NEW: Start date (required when company is selected)
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // ?? NEW: Organization picker state
+  // NEW: Organization picker state
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [orgQuery, setOrgQuery] = useState('');
   const debouncedOrgQuery = useDebounce(orgQuery, 300);
@@ -108,7 +119,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [orgLoading, setOrgLoading] = useState(false);
   const [manualOrgMode, setManualOrgMode] = useState(false);
 
-  // ?? Pre-populate Google user data
+  // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
       console.log('🔧 Pre-populating Google user data:', googleUser);
@@ -125,7 +136,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     }
   }, [isGoogleUser, googleUser]);
 
-  // ?? NEW: Debounced organization search
+  // NEW: Debounced organization search
   useEffect(() => {
     const search = async () => {
       if (!showOrgModal || manualOrgMode) return;
@@ -146,7 +157,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     search();
   }, [debouncedOrgQuery, showOrgModal, manualOrgMode]);
 
-  // ?? NEW: Organization filter helper
+  // NEW: Organization filter helper
   const applyOrgFilter = (list, q) => {
     if (!Array.isArray(list)) return [];
     if (!q || !q.trim()) return list;
@@ -158,7 +169,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     );
   };
 
-  // ?? NEW: Organization modal handlers
+  // NEW: Organization modal handlers
   const openOrgModal = () => {
     setShowOrgModal(true);
     setManualOrgMode(false);
@@ -231,7 +242,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // ?? Skip password validation for Google users
+    // Skip password validation for Google users
     if (!isGoogleUser) {
       if (!formData.password) {
         newErrors.password = 'Password is required';
@@ -246,7 +257,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }
     }
 
-    // ?? NEW: Validate jobTitle and startDate when company is selected
+    // NEW: Validate jobTitle and startDate when company is selected
     if (formData.currentCompany || formData.organizationId) {
       if (!formData.jobTitle.trim()) {
         newErrors.jobTitle = 'Job title is required when company is selected';
@@ -293,7 +304,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // ?? Prepare registration data for Google vs regular users
+      // Prepare registration data for Google vs regular users
       const registrationData = {
         email: formData.email.trim().toLowerCase(),
         firstName: formData.firstName.trim(),
@@ -306,16 +317,24 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         
         // Include all the collected data for profile completion
         experienceType,
-        ...(workExperienceData && { workExperienceData }),
-        ...(educationData && { educationData }),
-        ...(jobPreferences && { jobPreferences }),
       };
 
-      // ?? NEW: If user filled current company in skip flow, create workExperienceData
+      // 🔧 NEW: Handle workExperienceData as array
+      if (workExperienceData) {
+        if (Array.isArray(workExperienceData)) {
+          // Multiple work experiences from WorkExperienceScreen
+          registrationData.workExperienceData = workExperienceData;
+        } else {
+          // Single work experience (legacy or skip flow)
+          registrationData.workExperienceData = [workExperienceData];
+        }
+      }
+
+      // 🔧 NEW: If user filled current company in skip flow, create workExperienceData
       // BUT only for experienced professionals, NOT for students
       if (skippedSteps && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId)) {
         console.log('🔧 Creating work experience from skip flow company data');
-        registrationData.workExperienceData = {
+        const skipFlowWorkExp = {
           companyName: formData.currentCompany?.trim() || null,
           organizationId: formData.organizationId || null,
           jobTitle: formData.jobTitle?.trim() || 'Professional', // Use actual job title from form
@@ -323,14 +342,29 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           endDate: null, // Currently working
           isCurrentPosition: true,
         };
+
+        // Add to existing array or create new one
+        if (registrationData.workExperienceData) {
+          registrationData.workExperienceData.push(skipFlowWorkExp);
+        } else {
+          registrationData.workExperienceData = [skipFlowWorkExp];
+        }
       }
 
-      // ?? Add password only for non-Google users
+      // Add education and job preferences
+      if (educationData) {
+        registrationData.educationData = educationData;
+      }
+      if (jobPreferences) {
+        registrationData.jobPreferences = jobPreferences;
+      }
+
+      // Add password only for non-Google users
       if (!isGoogleUser) {
         registrationData.password = formData.password;
       }
 
-      // ?? Add Google OAuth data if applicable
+      // Add Google OAuth data if applicable
       if (isGoogleUser && pendingGoogleAuth) {
         registrationData.googleAuth = {
           googleId: googleUser.id,
@@ -342,7 +376,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         };
       }
 
-      // ?? COMPREHENSIVE LOGGING FOR DEBUGGING
+      // COMPREHENSIVE LOGGING FOR DEBUGGING
       console.log('=== REGISTRATION PAYLOAD DEBUG ===');
       console.log('Is Google User:', isGoogleUser);
       console.log('Email:', registrationData.email);
@@ -354,7 +388,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       console.log('Organization ID:', formData.organizationId);
       
       if (registrationData.workExperienceData) {
-        console.log('Work Experience Data:', registrationData.workExperienceData);
+        console.log('Work Experience Data (Array):', JSON.stringify(registrationData.workExperienceData, null, 2));
+        console.log('Work Experience Count:', registrationData.workExperienceData.length);
       }
       
       if (educationData) {
@@ -380,7 +415,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             { 
               text: 'Get Started', 
               onPress: () => {
-                // ?? FIXED: No manual navigation needed!
+                // FIXED: No manual navigation needed!
                 // The AuthContext will automatically handle navigation
                 // when isAuthenticated becomes true after successful registration
                 console.log('🔧 Registration successful, AuthContext will handle navigation automatically');
@@ -389,7 +424,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           ]
         );
 
-        // ?? Clear pending Google auth data
+        // Clear pending Google auth data
         if (isGoogleUser) {
           console.log('🔧 Clearing pending Google auth data after successful registration');
           clearPendingGoogleAuth();
@@ -449,7 +484,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
   const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
-  // ?? NEW: Organization Picker Button
+  // NEW: Organization Picker Button
   const OrgPickerButton = () => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
@@ -479,7 +514,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
             </TouchableOpacity>
             
-            {/* ?? Show Google user info if applicable */}
+            {/* Show Google user info if applicable */}
             {isGoogleUser && googleUser && (
               <View style={styles.googleUserInfo}>
                 {googleUser.picture && (
@@ -525,7 +560,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
             {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
             
-            {/* ?? Only show password fields for non-Google users */}
+            {/* Only show password fields for non-Google users */}
             {!isGoogleUser && (
               <>
                 {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
@@ -537,10 +572,10 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* ?? NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
+            {/* NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
             {userType === 'JobSeeker' && experienceType !== 'Student' && <OrgPickerButton />}
 
-            {/* ?? NEW: Show jobTitle and startDate fields only when company is selected */}
+            {/* NEW: Show jobTitle and startDate fields only when company is selected */}
             {userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
@@ -590,7 +625,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               </Text>
             </View>
             
-            {/* ?? Show current company if filled - ONLY for experienced professionals */}
+            {/* 🔧 FIXED: Show current company if filled - ONLY for experienced professionals */}
             {experienceType !== 'Student' && formData.currentCompany && (
               <View style={styles.summaryItem}>
                 <Ionicons name="business" size={16} color={colors.primary} />
@@ -600,22 +635,46 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               </View>
             )}
             
-            {workExperienceData && (
-              <>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="briefcase" size={16} color={colors.primary} />
-                  <Text style={styles.summaryText}>
-                    {workExperienceData.currentJobTitle} at {workExperienceData.currentCompany}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="time" size={16} color={colors.primary} />
-                  <Text style={styles.summaryText}>
-                    {workExperienceData.yearsOfExperience} experience
-                  </Text>
-                </View>
-              </>
-            )}
+            {/* 🔧 IMPROVED: Show ALL work experiences (handle both array and single object) */}
+            {(() => {
+              // Normalize to array
+              const experiences = Array.isArray(workExperienceData) 
+                ? workExperienceData 
+                : (workExperienceData ? [workExperienceData] : []);
+
+              return experiences.map((exp, index) => {
+                if (!exp.companyName && !exp.jobTitle) return null;
+                
+                return (
+                  <React.Fragment key={index}>
+                    <View style={styles.summaryItem}>
+                      <Ionicons name="briefcase" size={16} color={colors.primary} />
+                      <Text style={styles.summaryText}>
+                        {(exp.jobTitle || 'Professional')} at {exp.companyName || 'Company'}
+                        {exp.isCurrentPosition ? ' (Current)' : ' (Previous)'}
+                      </Text>
+                    </View>
+                    {exp.startDate && (
+                      <View style={styles.summaryItem}>
+                        <Ionicons name="calendar" size={16} color={colors.primary} />
+                        <Text style={styles.summaryText}>
+                          {exp.startDate}
+                          {exp.endDate ? ` - ${exp.endDate}` : ' - Present'}
+                        </Text>
+                      </View>
+                    )}
+                    {exp.workArrangement && (
+                      <View style={styles.summaryItem}>
+                        <Ionicons name="business" size={16} color={colors.primary} />
+                        <Text style={styles.summaryText}>
+                          {exp.workArrangement} • {exp.jobType || 'Full-time'}
+                        </Text>
+                      </View>
+                    )}
+                  </React.Fragment>
+                );
+              });
+            })()}
             
             {educationData && (
               <>
@@ -636,7 +695,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             
             {jobPreferences && (
               <>
-                {/* ?? Add null check for preferredJobTypes array */}
+                {/* 🔧 Add null check for preferredJobTypes array */}
                 {jobPreferences.preferredJobTypes && Array.isArray(jobPreferences.preferredJobTypes) && jobPreferences.preferredJobTypes.length > 0 && (
                   <View style={styles.summaryItem}>
                     <Ionicons name="briefcase" size={16} color={colors.primary} />
@@ -646,7 +705,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                   </View>
                 )}
                 
-                {/* ?? Add null check for workplaceType */}
+                {/* 🔧 Add null check for workplaceType */}
                 {jobPreferences.workplaceType && (
                   <View style={styles.summaryItem}>
                     <Ionicons name="location" size={16} color={colors.primary} />
@@ -657,7 +716,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                   </View>
                 )}
                 
-                {/* ?? Add null check for preferredLocations */}
+                {/* 🔧 Add null check for preferredLocations */}
                 {jobPreferences.preferredLocations && Array.isArray(jobPreferences.preferredLocations) && jobPreferences.preferredLocations.length > 0 && (
                   <View style={styles.summaryItem}>
                     <Ionicons name="map" size={16} color={colors.primary} />
@@ -698,7 +757,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* ?? NEW: COMPANY PICKER MODAL (similar to WorkExperienceScreen) */}
+      {/* NEW: COMPANY PICKER MODAL (similar to WorkExperienceScreen) */}
       <Modal
         visible={showOrgModal}
         animationType="slide"
@@ -905,7 +964,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
   },
-  // ?? NEW: Selection button styles (for company dropdown)
+  // NEW: Selection button styles (for company dropdown)
   selectionButton: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -948,7 +1007,7 @@ const styles = StyleSheet.create({
   genderButtonTextActive: {
     color: colors.white,
   },
-  // ?? NEW: Company fields notice styles
+  // NEW: Company fields notice styles
   companyFieldsNotice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1016,7 +1075,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
-  // ?? NEW: Modal styles (for company picker)
+  // NEW: Modal styles (for company picker)
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1047,7 +1106,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.text,
   },
-  // ?? NEW: Styles for job title and start date notice
+  // NEW: Styles for job title and start date notice
   companyFieldsNotice: {
     flexDirection: 'row',
     alignItems: 'center',

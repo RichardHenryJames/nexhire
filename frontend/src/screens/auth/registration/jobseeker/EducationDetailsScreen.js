@@ -515,14 +515,14 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [error, setError] = useState(null);
   
-  // ?? CRITICAL FIX: Single search term with modal type tracking
+  // CRITICAL FIX: Single search term with modal type tracking
   const [searchTerm, setSearchTerm] = useState('');
   const [activeModal, setActiveModal] = useState(null); // 'college', 'country', 'degree', 'field', 'year'
   
-  // ?? CRITICAL FIX: Debounce search term
+  // CRITICAL FIX: Debounce search term
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  // ?? CRITICAL FIX: Prevent modal state conflicts
+  // CRITICAL FIX: Prevent modal state conflicts
   const modalRefs = useRef({
     college: false,
     country: false,
@@ -591,7 +591,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       setLoading(true);
       setError(null);
       
-      console.log(`?? Loading colleges for country: ${formData.selectedCountry}`);
+      console.log(`Loading colleges for country: ${formData.selectedCountry}`);
       
       const response = await nexhireAPI.getColleges(formData.selectedCountry);
       
@@ -629,7 +629,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     }
   };
 
-  // ?? CRITICAL FIX: Memoized filtering with proper dependencies
+  // CRITICAL FIX: Memoized filtering with proper dependencies
   const filteredData = React.useMemo(() => {
     if (activeModal === 'college') {
       if (!debouncedSearchTerm.trim()) return allColleges;
@@ -724,7 +724,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     });
   };
 
-  // ?? CRITICAL FIX: Unified modal control functions
+  // CRITICAL FIX: Unified modal control functions
   const openModal = (modalType) => {
     setActiveModal(modalType);
     setSearchTerm('');
@@ -740,7 +740,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     }
   };
 
-  // ?? CRITICAL FIX: Safe selection handlers
+  // CRITICAL FIX: Safe selection handlers
   const handleSelection = (item, type) => {
     switch (type) {
       case 'country':
@@ -772,7 +772,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     closeModal();
   };
 
-  // ?? CRITICAL FIX: Render item function with proper keys
+  // CRITICAL FIX: Render item function with proper keys
   const renderModalItem = ({ item, index }) => {
     // Handle category headers for degree types
     if (item.type === 'header') {
@@ -1024,7 +1024,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* ?? CRITICAL FIX: Single Universal Modal */}
+      {/* CRITICAL FIX: Single Universal Modal */}
       <Modal
         visible={activeModal !== null}
         animationType="slide"

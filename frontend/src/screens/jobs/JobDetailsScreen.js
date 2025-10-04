@@ -52,7 +52,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // ?? Add navigation header with back button
+  // Add navigation header with back button
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
@@ -172,7 +172,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleApply = async () => {
-    console.log('?? NEW handleApply called - code is updated!');
+    console.log('NEW handleApply called - code is updated!');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -202,7 +202,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleAskReferral = async () => {
-    console.log('?? handleAskReferral called in JobDetailsScreen');
+    console.log('handleAskReferral called in JobDetailsScreen');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to ask for referrals', [
@@ -224,15 +224,15 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // ?? REQUIREMENT 3: Check real-time eligibility and show subscription modal
+    // REQUIREMENT 3: Check real-time eligibility and show subscription modal
     try {
-      console.log('?? Checking referral eligibility...');
+      console.log('Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('?? Eligibility result:', freshEligibility);
+      console.log('Eligibility result:', freshEligibility);
       
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('?? Eligibility data:', eligibilityData);
+        console.log('Eligibility data:', eligibilityData);
         
         if (!eligibilityData.isEligible) {
           console.log('? User not eligible, checking subscription status...');
@@ -250,7 +250,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('?? Failed to check referral eligibility:', e);
+      console.error('Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
@@ -277,11 +277,11 @@ export default function JobDetailsScreen({ route, navigation }) {
     setReferralMode(true); setShowResumeModal(true);
   };
 
-  // ?? REQUIREMENT 3: Improved subscription modal with better logic
+  // REQUIREMENT 3: Improved subscription modal with better logic
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-    console.log('?? showSubscriptionModal called in JobDetailsScreen');
-    console.log('?? Navigation object:', navigation);
-    console.log('?? Available routes:', navigation.getState?.());
+    console.log('showSubscriptionModal called in JobDetailsScreen');
+    console.log('Navigation object:', navigation);
+    console.log('Available routes:', navigation.getState?.());
     
     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
@@ -290,30 +290,30 @@ export default function JobDetailsScreen({ route, navigation }) {
       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
     if (Platform.OS === 'web') {
-      console.log('?? Web platform detected - navigating directly to ReferralPlans');
+      console.log('Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
       return;
     }
     
     try {
       Alert.alert(
-        '?? Upgrade Required',
+        'Upgrade Required',
         body,
         [
           { 
             text: 'Maybe Later', 
             style: 'cancel',
-            onPress: () => console.log('?? User selected Maybe Later')
+            onPress: () => console.log('User selected Maybe Later')
           },
           { 
             text: 'View Plans', 
             onPress: () => {
-              console.log('?? User selected View Plans - attempting navigation...');
+              console.log('User selected View Plans - attempting navigation...');
               try {
                 navigation.navigate('ReferralPlans');
-                console.log('?? Navigation successful!');
+                console.log('Navigation successful!');
               } catch (navError) {
-                console.error('?? Navigation error:', navError);
+                console.error('Navigation error:', navError);
                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
               }
             }
@@ -325,18 +325,18 @@ export default function JobDetailsScreen({ route, navigation }) {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-          console.log('?? Fallback navigation to ReferralPlans after Alert timeout');
+          console.log('Fallback navigation to ReferralPlans after Alert timeout');
             try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
         }
       }, 3000);
     } catch (error) {
-      console.error('?? Error showing subscription modal:', error);
+      console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
   }, [navigation, referralEligibility]);
 
   const handlePlanSelection = async (plan) => {
-    console.log('?? Plan selected:', plan);
+    console.log('Plan selected:', plan);
     
     Alert.alert(
       'Confirm Subscription',
@@ -349,7 +349,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             try {
               // For demo - simulate successful purchase
               Alert.alert(
-                '?? Subscription Successful!',
+                'Subscription Successful!',
                 `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
                 [
                   { 
@@ -377,7 +377,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     );
   };
 
-  // ?? REQUIREMENT 2: Refresh page after resume submission to reload primary resume
+  // REQUIREMENT 2: Refresh page after resume submission to reload primary resume
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
@@ -539,7 +539,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     }
   };
 
-  // ?? REQUIREMENT 4: Implement save/unsave functionality
+  // REQUIREMENT 4: Implement save/unsave functionality
   const handleSaveJob = async () => {
     if (!user || !isJobSeeker) {
       Alert.alert('Login Required', 'Please login to save jobs', [
@@ -1079,7 +1079,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         )}
       </View>
       
-      {/* ?? Resume Upload Modal */}
+      {/* Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
         onClose={() => { setShowResumeModal(false); setReferralMode(false); }}

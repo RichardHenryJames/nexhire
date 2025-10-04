@@ -6,15 +6,15 @@ import { colors, typography } from '../../styles/theme';
 const ReferralPointsBreakdown = ({ 
   totalPoints = 0, 
   pointsHistory = [], 
-  pointTypeMetadata = {}, // ?? NEW: Dynamic metadata from backend
+  pointTypeMetadata = {}, // NEW: Dynamic metadata from backend
   referralStats = {},
   onClose,
   visible 
 }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
 
-  // ?? Debug logging
-  console.log('?? ReferralPointsBreakdown props:', {
+  // Debug logging
+  console.log('ReferralPointsBreakdown props:', {
     totalPoints,
     pointsHistoryLength: pointsHistory?.length || 0,
     pointsHistory,
@@ -276,7 +276,7 @@ const ReferralPointsBreakdown = ({
             </View>
           )}
 
-          {/* How to Earn More Points - ?? UPDATED: Dynamic tips from metadata */}
+          {/* How to Earn More Points - UPDATED: Dynamic tips from metadata */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>💡 How to Earn More Points</Text>
             <View style={styles.tipsContainer}>

@@ -17,7 +17,7 @@ class GoogleAuthService {
     
     // Log configuration status on initialization
     if (frontendConfig.shouldLog('debug')) {
-      console.log('?? Google Auth Service initialized');
+      console.log('Google Auth Service initialized');
       this.logConfigStatus();
     }
   }
@@ -28,7 +28,7 @@ class GoogleAuthService {
       const config = frontendConfig.getGoogleOAuthConfig(platform);
       return config.clientId;
     } catch (error) {
-      console.warn('?? Google OAuth configuration error:', error.message);
+      console.warn('Google OAuth configuration error:', error.message);
       return null;
     }
   }
@@ -53,17 +53,17 @@ class GoogleAuthService {
       clientId: this.getClientId()?.substring(0, 20) + '...',
       featureEnabled: frontendConfig.isFeatureEnabled('googleSignIn'),
     };
-    console.log('?? Google OAuth Status:', summary);
+    console.log('Google OAuth Status:', summary);
   }
 
   async signIn() {
     try {
-      console.log('?? Starting Google Sign-In flow...');
-      console.log('?? Platform:', this.getCurrentPlatform());
+      console.log('Starting Google Sign-In flow...');
+      console.log('Platform:', this.getCurrentPlatform());
       
       // Check if feature is enabled
       if (!frontendConfig.isFeatureEnabled('googleSignIn')) {
-        console.warn('?? Google Sign-In feature is disabled');
+        console.warn('Google Sign-In feature is disabled');
         return {
           success: false,
           error: 'Google Sign-In feature is disabled in configuration',
@@ -73,7 +73,7 @@ class GoogleAuthService {
       
       // Check if Google OAuth is configured
       if (!this.isConfigured()) {
-        console.warn('?? Google OAuth not configured - using demo mode');
+        console.warn('Google OAuth not configured - using demo mode');
         return {
           success: false,
           error: 'Google Sign-In not configured yet. Please set up OAuth credentials.',
@@ -82,7 +82,7 @@ class GoogleAuthService {
       }
 
       const clientId = this.getClientId();
-      console.log('?? Using client ID configuration for:', this.getCurrentPlatform());
+      console.log('Using client ID configuration for:', this.getCurrentPlatform());
 
       // Create redirect URI
       const redirectUri = AuthSession.makeRedirectUri({ 
@@ -90,11 +90,11 @@ class GoogleAuthService {
         useProxy: false
       });
 
-      console.log('?? === DETAILED REDIRECT DEBUG ===');
-      console.log('?? Current window.location.href:', window.location.href);
-      console.log('?? Current window.location.origin:', window.location.origin);
-      console.log('?? Generated redirect URI:', redirectUri);
-      console.log('?? === END REDIRECT DEBUG ===');
+      console.log('=== DETAILED REDIRECT DEBUG ===');
+      console.log('Current window.location.href:', window.location.href);
+      console.log('Current window.location.origin:', window.location.origin);
+      console.log('Generated redirect URI:', redirectUri);
+      console.log('=== END REDIRECT DEBUG ===');
 
       // Manual OAuth URL construction without PKCE
       const authParams = new URLSearchParams({
@@ -108,15 +108,15 @@ class GoogleAuthService {
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
       
-      console.log('?? Manual OAuth URL (no PKCE):', authUrl);
-      console.log('?? Auth URL includes response_type=token:', authUrl.includes('response_type=token'));
-      console.log('?? Auth URL does NOT include code_challenge:', !authUrl.includes('code_challenge'));
+      console.log('Manual OAuth URL (no PKCE):', authUrl);
+      console.log('Auth URL includes response_type=token:', authUrl.includes('response_type=token'));
+      console.log('Auth URL does NOT include code_challenge:', !authUrl.includes('code_challenge'));
 
       // FIXED: Use WebBrowser.openAuthSessionAsync instead of AuthSession.startAsync
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      console.log('?? Auth result:', result);
-      console.log('?? Auth result type:', result.type);
+      console.log('Auth result:', result);
+      console.log('Auth result type:', result.type);
 
       if (result.type === 'success') {
         console.log('? Google authorization successful with manual implicit flow');
@@ -135,8 +135,8 @@ class GoogleAuthService {
         }
         
         if (!accessToken) {
-          console.error('?? No access token in result URL:', result.url);
-          console.log('?? Full result object:', result);
+          console.error('No access token in result URL:', result.url);
+          console.log('Full result object:', result);
           throw new Error('No access token received from Google');
         }
 
@@ -160,25 +160,25 @@ class GoogleAuthService {
           }
         };
       } else if (result.type === 'cancel') {
-        console.log('?? User cancelled Google Sign-In');
+        console.log('User cancelled Google Sign-In');
         return { 
           success: false, 
           error: 'User cancelled', 
           cancelled: true 
         };
       } else if (result.type === 'dismiss') {
-        console.log('?? User dismissed Google Sign-In popup');
+        console.log('User dismissed Google Sign-In popup');
         return { 
           success: false, 
           error: 'Authentication popup was closed', 
           dismissed: true 
         };
       } else {
-        console.error('?? Google authentication failed:', result);
+        console.error('Google authentication failed:', result);
         throw new Error(result.error?.message || `Authentication failed: ${result.type}`);
       }
     } catch (error) {
-      console.error('?? Google Sign-In error:', error);
+      console.error('Google Sign-In error:', error);
       return { 
         success: false, 
         error: error.message || 'Google Sign-In failed'
@@ -187,7 +187,7 @@ class GoogleAuthService {
   }
 
   async getUserInfo(accessToken) {
-    console.log('?? Fetching user info from Google...');
+    console.log('Fetching user info from Google...');
     
     const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { 
@@ -199,7 +199,7 @@ class GoogleAuthService {
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('?? Failed to fetch user info:', data);
+      console.error('Failed to fetch user info:', data);
       throw new Error('Failed to fetch user info');
     }
     
@@ -219,7 +219,7 @@ class GoogleAuthService {
 
   async signOut(accessToken) {
     try {
-      console.log('?? Revoking Google tokens...');
+      console.log('Revoking Google tokens...');
       
       if (accessToken) {
         await fetch(`https://oauth2.googleapis.com/revoke?token=${accessToken}`, {
@@ -230,7 +230,7 @@ class GoogleAuthService {
       
       return { success: true };
     } catch (error) {
-      console.warn('?? Could not revoke Google tokens:', error);
+      console.warn('Could not revoke Google tokens:', error);
       // Don't throw error - local logout should still work
       return { 
         success: true, 
@@ -239,7 +239,7 @@ class GoogleAuthService {
     }
   }
 
-  // ??? Development helper - returns mock Google user for testing
+  // ?Development helper - returns mock Google user for testing
   getMockGoogleUser() {
     if (!frontendConfig.isDevelopment()) {
       throw new Error('Mock users only available in development');

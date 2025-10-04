@@ -101,7 +101,7 @@ class SmartProfileUpdateService {
   }
 
   /**
-   * ?? MAIN FIX: Smart update that routes fields to correct tables
+   * MAIN FIX: Smart update that routes fields to correct tables
    */
   async updateProfile(userId, profileData) {
     try {
@@ -296,7 +296,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
 
   return {
     /**
-     * ?? Smart profile update that fixes the hide current company issue
+     * Smart profile update that fixes the hide current company issue
      */
     updateProfileSmart,
 
@@ -305,7 +305,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
      */
     async togglePrivacySetting(setting, value) {
       try {
-        console.log(`?? Toggling ${setting} to ${value}...`);
+        console.log(`Toggling ${setting} to ${value}...`);
         
         const profileData = { [setting]: value };
         const result = await updateProfileSmart(profileData);

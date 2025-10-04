@@ -534,7 +534,7 @@ export default function ProfileScreen() {
    */
   const handlePrivacyToggle = async (setting, value) => {
     try {
-      console.log(`??? Toggling ${setting} to ${value} using smart update...`);
+      console.log(`?Toggling ${setting} to ${value} using smart update...`);
       
       const result = await togglePrivacySetting(setting, value);
       
@@ -564,7 +564,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // ??? Privacy Settings Content 
+  // ?Privacy Settings Content
   const renderPrivacySettingsContent = () => (
     <View style={styles.privacyContainer}>
       <View style={styles.switchContainer}>
@@ -1166,7 +1166,7 @@ export default function ProfileScreen() {
               totalPointsFromRewards: Number(jobSeekerProfile.referralStats?.totalPointsFromRewards) || 0
             }}
             pointsHistory={jobSeekerProfile.pointsHistory || []} // Pass points history for detailed breakdown
-            pointTypeMetadata={jobSeekerProfile.pointTypeMetadata || {}} // ?? Pass dynamic metadata
+            pointTypeMetadata={jobSeekerProfile.pointTypeMetadata || {}} // Pass dynamic metadata
             compact={false}
           />
         )}
