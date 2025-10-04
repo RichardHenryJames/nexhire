@@ -269,6 +269,10 @@ export const AuthProvider = ({ children }) => {
         if (loginResult.success) {
           console.log('Auto-login successful, now saving additional profile data...');
           
+          // ?? CRITICAL FIX: Set user state so isAuthenticated becomes true
+          setUser(loginResult.user || loginResult.data?.user);
+          console.log('? User state set after auto-login:', loginResult.user?.Email || loginResult.data?.user?.Email);
+          
           // ?? FIXED: Ensure API token is properly set before profile updates
           await nexhireAPI.init(); // Re-initialize API to sync token
           

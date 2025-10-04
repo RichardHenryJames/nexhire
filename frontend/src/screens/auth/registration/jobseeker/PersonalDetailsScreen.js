@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,24 @@ import {
   Platform,
   ScrollView,
   Image,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
+import nexhireAPI from '../../../../services/api';
+
+// Debounce hook for search
+const useDebounce = (value, delay = 300) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const h = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(h);
+  }, [value, delay]);
+  return debounced;
+};
 
 export default function PersonalDetailsScreen({ navigation, route }) {
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
@@ -65,15 +79,26 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     dateOfBirth: '',
     gender: '',
     location: '',
-    currentCompany: '', // ?? NEW: Current company field for referrals
+    currentCompany: '', // ?? Company name (for display and fallback)
+    organizationId: null, // ?? NEW: Organization ID from database
+    jobTitle: '', // ?? NEW: Job title (required when company is selected)
+    startDate: '', // ?? NEW: Start date (required when company is selected)
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // ?? NEW: Organization picker state
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [orgQuery, setOrgQuery] = useState('');
+  const debouncedOrgQuery = useDebounce(orgQuery, 300);
+  const [orgResults, setOrgResults] = useState([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [manualOrgMode, setManualOrgMode] = useState(false);
+
   // ?? Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('?? Pre-populating Google user data:', googleUser);
+      console.log('🔧 Pre-populating Google user data:', googleUser);
       
       setFormData(prev => ({
         ...prev,
@@ -86,6 +111,74 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }));
     }
   }, [isGoogleUser, googleUser]);
+
+  // ?? NEW: Debounced organization search
+  useEffect(() => {
+    const search = async () => {
+      if (!showOrgModal || manualOrgMode) return;
+      try {
+        setOrgLoading(true);
+        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        // Apply client-side filter for better UX
+        const filtered = applyOrgFilter(raw, debouncedOrgQuery);
+        setOrgResults(filtered);
+      } catch (e) {
+        console.error('Organization search error:', e);
+        setOrgResults([]);
+      } finally {
+        setOrgLoading(false);
+      }
+    };
+    search();
+  }, [debouncedOrgQuery, showOrgModal, manualOrgMode]);
+
+  // ?? NEW: Organization filter helper
+  const applyOrgFilter = (list, q) => {
+    if (!Array.isArray(list)) return [];
+    if (!q || !q.trim()) return list;
+    const s = q.toLowerCase();
+    return list.filter(o =>
+      (o.name && o.name.toLowerCase().includes(s)) ||
+      (o.website && o.website.toLowerCase().includes(s)) ||
+      (o.industry && o.industry.toLowerCase().includes(s))
+    );
+  };
+
+  // ?? NEW: Organization modal handlers
+  const openOrgModal = () => {
+    setShowOrgModal(true);
+    setManualOrgMode(false);
+    if (orgResults.length === 0) setOrgQuery('');
+  };
+
+  const closeOrgModal = () => setShowOrgModal(false);
+
+  const handleSelectOrganization = (org) => {
+    if (org.id === 999999) {
+      setFormData(prev => ({
+        ...prev,
+        organizationId: null,
+        currentCompany: '',
+        jobTitle: '', // Clear job title when company is deselected
+        startDate: '', // Clear start date when company is deselected
+      }));
+      // Clear errors for these fields
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.jobTitle;
+        delete newErrors.startDate;
+        return newErrors;
+      });
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        organizationId: org.id,
+        currentCompany: org.name
+      }));
+    }
+    closeOrgModal();
+  };
 
   // Validation functions
   const validateEmail = (email) => {
@@ -140,6 +233,28 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }
     }
 
+    // ?? NEW: Validate jobTitle and startDate when company is selected
+    if (formData.currentCompany || formData.organizationId) {
+      if (!formData.jobTitle.trim()) {
+        newErrors.jobTitle = 'Job title is required when company is selected';
+      }
+      if (!formData.startDate.trim()) {
+        newErrors.startDate = 'Start date is required when company is selected';
+      } else {
+        // Validate date format (YYYY-MM-DD)
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(formData.startDate)) {
+          newErrors.startDate = 'Please use YYYY-MM-DD format';
+        } else {
+          const startDate = new Date(formData.startDate);
+          const today = new Date();
+          if (startDate > today) {
+            newErrors.startDate = 'Start date cannot be in the future';
+          }
+        }
+      }
+    }
+
     // Optional field validations
     if (formData.phone && !validatePhoneNumber(formData.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
@@ -175,7 +290,6 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
-        ...(formData.currentCompany && { currentCompany: formData.currentCompany.trim() }),
         
         // Include all the collected data for profile completion
         experienceType,
@@ -183,6 +297,19 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(educationData && { educationData }),
         ...(jobPreferences && { jobPreferences }),
       };
+
+      // ?? NEW: If user filled current company in skip flow, create workExperienceData
+      if (skippedSteps && (formData.currentCompany || formData.organizationId)) {
+        console.log('🔧 Creating work experience from skip flow company data');
+        registrationData.workExperienceData = {
+          companyName: formData.currentCompany?.trim() || null,
+          organizationId: formData.organizationId || null,
+          jobTitle: formData.jobTitle?.trim() || 'Professional', // Use actual job title from form
+          startDate: formData.startDate?.trim() || new Date().toISOString().split('T')[0], // Use actual start date
+          endDate: null, // Currently working
+          isCurrentPosition: true,
+        };
+      }
 
       // ?? Add password only for non-Google users
       if (!isGoogleUser) {
@@ -208,37 +335,20 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       console.log('User Type:', registrationData.userType);
       console.log('Experience Type:', registrationData.experienceType);
       console.log('Has Google Auth Data:', !!registrationData.googleAuth);
+      console.log('Skipped Steps:', skippedSteps);
+      console.log('Current Company:', formData.currentCompany);
+      console.log('Organization ID:', formData.organizationId);
       
-      if (workExperienceData) {
-        console.log('Work Experience Data:', {
-          currentJobTitle: workExperienceData.currentJobTitle,
-          currentCompany: workExperienceData.currentCompany,
-          yearsOfExperience: workExperienceData.yearsOfExperience,
-          primarySkills: workExperienceData.primarySkills,
-          secondarySkills: workExperienceData.secondarySkills,
-          summary: workExperienceData.summary,
-          workArrangement: workExperienceData.workArrangement,
-          jobType: workExperienceData.jobType
-        });
+      if (registrationData.workExperienceData) {
+        console.log('Work Experience Data:', registrationData.workExperienceData);
       }
       
       if (educationData) {
-        console.log('Education Data:', {
-          college: educationData.college,
-          customCollege: educationData.customCollege,
-          degreeType: educationData.degreeType,
-          fieldOfStudy: educationData.fieldOfStudy,
-          yearInCollege: educationData.yearInCollege,
-          selectedCountry: educationData.selectedCountry
-        });
+        console.log('Education Data:', educationData);
       }
       
       if (jobPreferences) {
-        console.log('Job Preferences:', {
-          preferredJobTypes: jobPreferences.preferredJobTypes,
-          workplaceType: jobPreferences.workplaceType,
-          preferredLocations: jobPreferences.preferredLocations
-        });
+        console.log('Job Preferences:', jobPreferences);
       }
       
       console.log('Complete Registration Payload:', JSON.stringify(registrationData, null, 2));
@@ -259,7 +369,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                 // ?? FIXED: No manual navigation needed!
                 // The AuthContext will automatically handle navigation
                 // when isAuthenticated becomes true after successful registration
-                console.log('? Registration successful, AuthContext will handle navigation automatically');
+                console.log('🔧 Registration successful, AuthContext will handle navigation automatically');
               }
             }
           ]
@@ -267,7 +377,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
         // ?? Clear pending Google auth data
         if (isGoogleUser) {
-          console.log('? Clearing pending Google auth data after successful registration');
+          console.log('🔧 Clearing pending Google auth data after successful registration');
           clearPendingGoogleAuth();
         }
       } else {
@@ -324,6 +434,21 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   );
 
   const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
+
+  // ?? NEW: Organization Picker Button
+  const OrgPickerButton = () => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>
+        Current Company {skippedSteps && '(for referrals)'}
+      </Text>
+      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
+        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
+          {formData.currentCompany || 'Select or search company'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView 
@@ -398,8 +523,23 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* ?? NEW: Current Company field - especially important for referrals */}
-            {renderInput('currentCompany', 'Current Company (for referrals)', false, 'default')}
+            {/* ?? NEW: Current Company Dropdown (replacing text input) */}
+            {userType === 'JobSeeker' && <OrgPickerButton />}
+
+            {/* ?? NEW: Show jobTitle and startDate fields only when company is selected */}
+            {userType === 'JobSeeker' && (formData.currentCompany || formData.organizationId) && (
+              <>
+                <View style={styles.companyFieldsNotice}>
+                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Text style={styles.companyFieldsNoticeText}>
+                    Please provide your role details at {formData.currentCompany}
+                  </Text>
+                </View>
+                
+                {renderInput('jobTitle', 'Job Title', false, 'default', true)}
+                {renderInput('startDate', 'Start Date (YYYY-MM-DD)', false, 'default', true)}
+              </>
+            )}
 
             {/* Gender Selection */}
             <View style={styles.inputContainer}>
@@ -441,7 +581,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               <View style={styles.summaryItem}>
                 <Ionicons name="business" size={16} color={colors.primary} />
                 <Text style={styles.summaryText}>
-                  Currently at {formData.currentCompany}
+                  {formData.jobTitle ? `${formData.jobTitle} at ${formData.currentCompany}` : `Currently at ${formData.currentCompany}`}
                 </Text>
               </View>
             )}
@@ -543,6 +683,86 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
+
+      {/* ?? NEW: COMPANY PICKER MODAL (similar to WorkExperienceScreen) */}
+      <Modal
+        visible={showOrgModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowOrgModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowOrgModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Company</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              value={orgQuery}
+              onChangeText={setOrgQuery}
+              autoCapitalize="words"
+            />
+            {manualOrgMode ? (
+              <TouchableOpacity
+                onPress={() => {
+                  const name = (orgQuery || '').trim();
+                  if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                  setFormData(prev => ({
+                    ...prev,
+                    organizationId: null,
+                    currentCompany: name,
+                    // Keep jobTitle and startDate so user can fill them
+                  }));
+                  setShowOrgModal(false);
+                }}
+              >
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            ) : (orgLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
+                <Ionicons name="refresh" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Manual toggle */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}
+            onPress={() => setManualOrgMode(v => !v)}
+          >
+            <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
+            <Text style={{ color: colors.text, marginLeft: 8 }}>My company is not listed</Text>
+          </TouchableOpacity>
+
+          {!manualOrgMode && (
+            <FlatList
+              data={orgResults}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
+                  <View>
+                    <Text style={styles.modalItemText}>{item.name}</Text>
+                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
+                </TouchableOpacity>
+              )}
+              keyboardShouldPersistTaps="handled"
+              removeClippedSubviews
+              windowSize={8}
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -567,7 +787,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 16,
   },
-  // ?? Google user info styles
+  // 🔧 Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -671,6 +891,25 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
   },
+  // ?? NEW: Selection button styles (for company dropdown)
+  selectionButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectionValue: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    flex: 1,
+  },
+  selectionPlaceholder: {
+    color: colors.gray400,
+  },
   genderContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -694,6 +933,22 @@ const styles = StyleSheet.create({
   },
   genderButtonTextActive: {
     color: colors.white,
+  },
+  // ?? NEW: Company fields notice styles
+  companyFieldsNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '10',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  companyFieldsNoticeText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    flex: 1,
+    fontWeight: typography.weights.medium,
   },
   summaryContainer: {
     backgroundColor: colors.surface,
@@ -746,5 +1001,50 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+  },
+  // ?? NEW: Modal styles (for company picker)
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalItemText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  // ?? NEW: Styles for job title and start date notice
+  companyFieldsNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warning + '10',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  companyFieldsNoticeText: {
+    color: colors.warning,
+    fontSize: typography.sizes.sm,
+    marginLeft: 8,
   },
 });

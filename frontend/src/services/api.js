@@ -387,7 +387,7 @@ class NexHireAPI {
       return { success: false, error: 'Authentication required' };
     }
     // Require minimum fields as backend: jobTitle + startDate
-    if (!workExp || !workExp.jobTitle || !workExp.sendDate) {
+    if (!workExp || !workExp.jobTitle || !workExp.startDate) {
       return { success: false, error: 'jobTitle and startDate are required' };
     }
     const payload = {
