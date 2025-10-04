@@ -14,6 +14,7 @@ import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
+import { frontendConfig } from '../../config/appConfig'; // Added
 
 // Helper: format number as INR with rupee symbol (fallback if Intl unsupported)
 const formatINR = (value) => {
@@ -85,26 +86,38 @@ export default function PaymentScreen({ route, navigation }) {
   };
 
   const openRazorpayCheckout = (orderData, customerData) => {
+    const key = frontendConfig?.razorpay?.keyId;
+    if (!key) {
+      Alert.alert('Configuration Error', 'Payment gateway key is not configured.');
+      return;
+    }
+
     const options = {
-      key: 'rzp_test_RHBUKjg4k9qx4J',
+      key, // replaced hard-coded key with config-driven key
       amount: orderData.amount,
       currency: 'INR',
       name: 'NexHire',
-      description: `${customerData.planName} Subscription`,
-      order_id: orderData.orderId,
+      description: `${customerData.planName} Subscription` || 'Subscription Payment',
+      order_id: orderData.orderId || orderData.id, // support both shapes
       handler: (response) => {
         handlePaymentSuccess({
           razorpay_payment_id: response.razorpay_payment_id,
           razorpay_order_id: response.razorpay_order_id,
-            razorpay_signature: response.razorpay_signature,
-            planId: plan.PlanID,
-            amount: orderData.amount
+          razorpay_signature: response.razorpay_signature,
+          planId: plan.PlanID,
+          amount: orderData.amount
         });
       },
       prefill: { name: customerData.customerName, email: customerData.customerEmail },
       theme: { color: '#3B82F6' },
       modal: { ondismiss: () => handlePaymentCancellation() }
     };
+
+    if (!options.order_id || !/^order_/.test(options.order_id)) {
+      console.warn('Razorpay order id missing or invalid format:', options.order_id);
+      Alert.alert('Payment Error', 'Invalid order id received. Please retry.');
+      return;
+    }
 
     try {
       const rzp = new window.Razorpay(options);
@@ -117,7 +130,7 @@ export default function PaymentScreen({ route, navigation }) {
     }
   };
 
-  const createRazorpayPaymentUrl = (orderData) => `https://razorpay.com/payment-link/${orderData.orderId}`;
+  const createRazorpayPaymentUrl = (orderData) => `https://razorpay.com/payment-link/${orderData.orderId || orderData.id}`;
 
   const handlePaymentSuccess = async (paymentData) => {
     try {
@@ -181,7 +194,7 @@ export default function PaymentScreen({ route, navigation }) {
           <Text style={styles.featuresTitle}>What you get:</Text>
           <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>{plan?.ReferralsPerDay} referral requests per day</Text></View>
           <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Priority processing</Text></View>
-            <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Email support</Text></View>
+          <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Email support</Text></View>
           <View style={styles.feature}><Ionicons name="checkmark-circle" size={20} color={colors.success} /><Text style={styles.featureText}>Advanced analytics</Text></View>
         </View>
 
