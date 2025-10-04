@@ -29,6 +29,16 @@ export const AuthProvider = ({ children }) => {
     checkAuthState();
   }, []);
 
+  // ?? DEBUG: Track pendingGoogleAuth state changes
+  useEffect(() => {
+    console.log('?? AuthContext pendingGoogleAuth changed:', {
+      hasPendingGoogleAuth: !!pendingGoogleAuth,
+      userEmail: pendingGoogleAuth?.user?.email,
+      userName: pendingGoogleAuth?.user?.name,
+      hasAccessToken: !!pendingGoogleAuth?.accessToken
+    });
+  }, [pendingGoogleAuth]);
+
   const checkAuthState = async () => {
     try {
       setLoading(true);
@@ -71,11 +81,11 @@ export const AuthProvider = ({ children }) => {
       
       if (!googleResult.success) {
         if (googleResult.cancelled) {
-          console.log('?? User cancelled Google Sign-In');
+          console.log('? User cancelled Google Sign-In');
           return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
         }
         if (googleResult.dismissed) {
-          console.log('?? User dismissed Google Sign-In popup');
+          console.log('? User dismissed Google Sign-In popup');
           return { success: false, dismissed: true, message: 'Authentication popup was closed' };
         }
         if (googleResult.needsConfig) {
@@ -106,6 +116,12 @@ export const AuthProvider = ({ children }) => {
           console.log('?? New user detected, storing Google data for registration');
           setPendingGoogleAuth(googleResult.data);
           
+          console.log('?? Pending Google auth set:', {
+            hasAccessToken: !!googleResult.data.accessToken,
+            userEmail: googleResult.data.user?.email,
+            userName: googleResult.data.user?.name
+          });
+          
           return { 
             success: false, 
             needsRegistration: true,
@@ -121,8 +137,14 @@ export const AuthProvider = ({ children }) => {
         
         // If it's a user not found error, prepare for registration
         if (loginError.message.includes('not found') || loginError.message.includes('USER_NOT_FOUND')) {
-          console.log('?? New user detected, storing Google data for registration');
+          console.log('?? New user detected from error, storing Google data for registration');
           setPendingGoogleAuth(googleResult.data);
+          
+          console.log('?? Pending Google auth set from error:', {
+            hasAccessToken: !!googleResult.data.accessToken,
+            userEmail: googleResult.data.user?.email,
+            userName: googleResult.data.user?.name
+          });
           
           return { 
             success: false, 
@@ -138,49 +160,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const errorMessage = error.message || 'Google Sign-In failed';
       console.error('?? Google Sign-In error:', error);
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ?? NEW: Complete Google registration after user selects type
-  const completeGoogleRegistration = async (userTypeData) => {
-    try {
-      if (!pendingGoogleAuth) {
-        throw new Error('No pending Google authentication data found');
-      }
-
-      setLoading(true);
-      setError(null);
-
-      console.log('?? Completing Google registration...');
-      console.log('??? User type:', userTypeData.userType);
-      console.log('?? Email:', pendingGoogleAuth.user.email);
-
-      // Register with Google data + user type selection
-      const result = await nexhireAPI.registerWithGoogle(pendingGoogleAuth, userTypeData);
-
-      if (result.success) {
-        console.log('? Google registration completed successfully');
-        setUser(result.data.user);
-        setPendingGoogleAuth(null); // Clear pending data
-        
-        // Return success with indication that profile may need completion
-        return { 
-          success: true, 
-          user: result.data.user,
-          needsProfileCompletion: true,
-          userType: userTypeData.userType
-        };
-      } else {
-        throw new Error(result.error || result.message || 'Registration failed');
-      }
-
-    } catch (error) {
-      const errorMessage = error.message || 'Google registration failed';
-      console.error('? Google registration error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -468,7 +447,6 @@ export const AuthProvider = ({ children }) => {
     // Authentication methods
     login,
     loginWithGoogle, // ?? NEW: Google Sign-In method
-    completeGoogleRegistration, // ?? NEW: Complete Google registration
     clearPendingGoogleAuth, // ?? NEW: Clear pending Google auth
     register,
     logout,

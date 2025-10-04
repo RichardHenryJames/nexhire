@@ -16,9 +16,13 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
 
 export default function PersonalDetailsScreen({ navigation, route }) {
-  const { register, pendingGoogleAuth } = useAuth();
+  const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
-  // ?? Add safety checks for route params
+  // 🔧 DEBUG: Log when component mounts
+  console.log('📱 PersonalDetailsScreen mounted!');
+  console.log('📍 Route params:', route?.params);
+  
+  // 🔧 Add safety checks for route params
   const routeParams = route?.params || {};
   const { 
     userType = 'JobSeeker', 
@@ -27,12 +31,29 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     educationData = null, 
     jobPreferences = null, 
     fromGoogleAuth = false, 
-    skipEmailPassword = false 
+    skipEmailPassword = false,
+    skippedSteps = false, // 🔧 NEW: Check if user skipped from UserTypeSelection
   } = routeParams;
 
-  // ?? Check if this is a Google user
+  console.log('🔧 PersonalDetailsScreen config:', {
+    userType,
+    experienceType,
+    fromGoogleAuth,
+    skippedSteps,
+    hasWorkData: !!workExperienceData,
+    hasEducationData: !!educationData,
+    hasJobPreferences: !!jobPreferences
+  });
+
+  // 🔧 Check if this is a Google user
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
   const googleUser = pendingGoogleAuth?.user;
+
+  console.log('👤 Google user status:', {
+    isGoogleUser,
+    hasGoogleUser: !!googleUser,
+    googleUserEmail: googleUser?.email
+  });
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -44,6 +65,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     dateOfBirth: '',
     gender: '',
     location: '',
+    currentCompany: '', // ?? NEW: Current company field for referrals
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -152,13 +174,14 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.phone && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.location && { location: formData.location.trim() }),
+        ...(formData.currentCompany && { currentCompany: formData.currentCompany.trim() }),
         
         // Include all the collected data for profile completion
         experienceType,
         ...(workExperienceData && { workExperienceData }),
         ...(educationData && { educationData }),
         ...(jobPreferences && { jobPreferences }),
-        ...(formData.location && { location: formData.location.trim() }),
       };
 
       // ?? Add password only for non-Google users
@@ -241,6 +264,12 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             }
           ]
         );
+
+        // ?? Clear pending Google auth data
+        if (isGoogleUser) {
+          console.log('? Clearing pending Google auth data after successful registration');
+          clearPendingGoogleAuth();
+        }
       } else {
         Alert.alert('Registration Failed', result.error || 'Unable to create account. Please try again.');
       }
@@ -322,10 +351,13 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                 )}
                 <View style={styles.googleUserTextContainer}>
                   <Text style={styles.googleUserWelcome}>
-                    Completing profile for
+                    ✅ Google Account Connected
                   </Text>
                   <Text style={styles.googleUserName}>{googleUser.name}</Text>
                   <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                  <Text style={styles.googleUserNote}>
+                    Your basic info has been pre-filled from Google
+                  </Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={24} color={colors.success} />
               </View>
@@ -366,6 +398,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
             {renderInput('location', 'Current Location', false, 'default')}
 
+            {/* ?? NEW: Current Company field - especially important for referrals */}
+            {renderInput('currentCompany', 'Current Company (for referrals)', false, 'default')}
+
             {/* Gender Selection */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Gender (Optional)</Text>
@@ -400,6 +435,16 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                 {experienceType === 'Student' ? 'Student' : 'Experienced Professional'}
               </Text>
             </View>
+            
+            {/* ?? Show current company if filled */}
+            {formData.currentCompany && (
+              <View style={styles.summaryItem}>
+                <Ionicons name="business" size={16} color={colors.primary} />
+                <Text style={styles.summaryText}>
+                  Currently at {formData.currentCompany}
+                </Text>
+              </View>
+            )}
             
             {workExperienceData && (
               <>
@@ -526,38 +571,50 @@ const styles = StyleSheet.create({
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginBottom: 24,
+    padding: 20,
+    backgroundColor: colors.success + '10',
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: colors.success,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
+    shadowColor: colors.success,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   googleUserAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: colors.success,
   },
   googleUserTextContainer: {
     flex: 1,
   },
   googleUserWelcome: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    marginBottom: 2,
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+    marginBottom: 4,
   },
   googleUserName: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 2,
   },
   googleUserEmail: {
     fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 4,
+  },
+  googleUserNote: {
+    fontSize: typography.sizes.xs,
     color: colors.gray500,
+    fontStyle: 'italic',
   },
   title: {
     fontSize: typography.sizes.xl,

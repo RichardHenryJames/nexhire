@@ -62,7 +62,7 @@ export default function LoginScreen({ navigation }) {
     // If successful, navigation will happen automatically via auth context
   };
 
-  // ?? NEW: Handle Google Sign-In
+  // ?? FIXED: Handle Google Sign-In with automatic navigation for new users
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
@@ -73,10 +73,13 @@ export default function LoginScreen({ navigation }) {
       
       if (result.success) {
         console.log('? Google login successful');
-        // Navigation handled by auth context
+        // Navigation handled by auth context automatically
       } else if (result.cancelled) {
-        console.log('?? User cancelled Google Sign-In');
+        console.log('? User cancelled Google Sign-In');
         // Do nothing - user cancelled
+      } else if (result.dismissed) {
+        console.log('? User dismissed Google Sign-In popup');
+        // Do nothing - user dismissed
       } else if (result.needsConfig) {
         Alert.alert(
           'Google Sign-In Not Available',
@@ -84,25 +87,16 @@ export default function LoginScreen({ navigation }) {
           [{ text: 'OK' }]
         );
       } else if (result.needsRegistration) {
-        console.log('?? New Google user needs registration');
+        console.log('?? New Google user needs registration - navigation will happen automatically');
         
-        Alert.alert(
-          'Account Not Found',
-          `No account found for ${result.googleUser?.email}. Would you like to create a new account?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Create Account', 
-              onPress: () => {
-                // Navigate to user type selection with Google user info
-                navigation.navigate('UserTypeSelection', {
-                  googleUser: result.googleUser,
-                  fromGoogleAuth: true
-                });
-              }
-            }
-          ]
-        );
+        // ?? FIXED: No manual navigation needed!
+        // The AuthContext has set pendingGoogleAuth state
+        // AppNavigator will automatically detect hasPendingGoogleAuth and navigate to UserTypeSelection
+        
+        // Optional: Show a brief success message that registration is starting
+        // But don't block with an Alert - let the automatic navigation happen
+        console.log('? Google authentication successful, starting registration flow...');
+        
       } else {
         console.error('? Google Sign-In failed:', result.error);
         Alert.alert(
@@ -112,7 +106,7 @@ export default function LoginScreen({ navigation }) {
         );
       }
     } catch (error) {
-      console.error('? Google Sign-In error:', error);
+      console.error('?? Google Sign-In error:', error);
       Alert.alert(
         'Sign-In Error',
         error.message || 'An unexpected error occurred. Please try again.',

@@ -10,23 +10,38 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLinkTo } from '@react-navigation/native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, typography } from '../../../styles/theme';
 
 export default function UserTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false); // 🔧 NEW: State for confirmation
+  const linkTo = useLinkTo(); // 🔧 NEW: Web-compatible navigation hook
   
-  // ?? NEW: Extract Google user info from params (if coming from Google auth)
-  const googleUser = route?.params?.googleUser;
-  const fromGoogleAuth = route?.params?.fromGoogleAuth;
+  // 🔧 IMPROVED: Get Google user info from multiple sources
+  const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
   
-  const { completeGoogleRegistration, hasPendingGoogleAuth } = useAuth();
+  // Check route params first, then fallback to context
+  const routeGoogleUser = route?.params?.googleUser;
+  const routeFromGoogleAuth = route?.params?.fromGoogleAuth;
+  
+  const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
+  const fromGoogleAuth = routeFromGoogleAuth || hasPendingGoogleAuth;
+
+  console.log('🔍 UserTypeSelection state:', {
+    hasRouteParams: !!route?.params,
+    hasGoogleUser: !!googleUser,
+    fromGoogleAuth,
+    hasPendingGoogleAuth,
+    googleUserEmail: googleUser?.email
+  });
 
   // Show welcome message for Google users
   useEffect(() => {
     if (googleUser && fromGoogleAuth) {
-      console.log('?? Google user detected:', googleUser.name);
+      console.log('👋 Google user detected:', googleUser.name || googleUser.email);
     }
   }, [googleUser, fromGoogleAuth]);
 
@@ -36,93 +51,113 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
       return;
     }
 
-    // ?? NEW: Handle Google registration completion
-    if (googleUser && fromGoogleAuth) {
-      await handleGoogleRegistrationContinue();
-      return;
-    }
-
-    // Original flow for regular users
+    // ?? FIXED: Don't complete Google registration here!
+    // Just navigate to the registration flow like regular users
+    // The PersonalDetailsScreen will handle the actual registration with Google auth data
+    
     if (selectedType === 'JobSeeker') {
       navigation.navigate('JobSeekerFlow', { 
         screen: 'ExperienceTypeSelection',
-        params: { userType: 'JobSeeker' }
+        params: { 
+          userType: 'JobSeeker',
+          fromGoogleAuth: fromGoogleAuth,
+          googleUser: googleUser
+        }
       });
     } else {
       navigation.navigate('EmployerFlow', { 
         screen: 'EmployerTypeSelection',
-        params: { userType: 'Employer' }
+        params: { 
+          userType: 'Employer',
+          fromGoogleAuth: fromGoogleAuth,
+          googleUser: googleUser
+        }
       });
     }
   };
 
-  // ?? NEW: Handle Google user registration completion
-  const handleGoogleRegistrationContinue = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('?? Completing Google registration...');
-      console.log('??? Selected type:', selectedType);
-      console.log('?? Google user:', googleUser.email);
-
-      const result = await completeGoogleRegistration({
-        userType: selectedType,
-        // You can add experience type for job seekers here later
-        // experienceType: selectedType === 'JobSeeker' ? 'Student' : undefined
-      });
-
-      if (result.success) {
-        console.log('? Google registration completed successfully');
-        
-        // Show success message
-        Alert.alert(
-          'Welcome to NexHire!',
-          `Your ${selectedType === 'JobSeeker' ? 'job seeker' : 'employer'} account has been created successfully.`,
-          [
-            {
-              text: 'Continue',
-              onPress: () => {
-                // Navigate based on user type to complete profile
-                if (selectedType === 'JobSeeker') {
-                  navigation.replace('JobSeekerFlow', {
-                    screen: 'ExperienceTypeSelection',
-                    params: { 
-                      userType: 'JobSeeker',
-                      fromGoogleAuth: true,
-                      skipEmailPassword: true 
-                    }
-                  });
-                } else {
-                  navigation.replace('EmployerFlow', {
-                    screen: 'EmployerTypeSelection', 
-                    params: { 
-                      userType: 'Employer',
-                      fromGoogleAuth: true,
-                      skipEmailPassword: true
-                    }
-                  });
-                }
-              }
-            }
-          ]
-        );
+  // ?? NEW: Handle Skip to final screen - WEB COMPATIBLE VERSION with useLinkTo fallback
+  const handleSkipToFinal = () => {
+    console.log('🔧 Skip button clicked, selectedType:', selectedType);
+    
+    if (!selectedType) {
+      // 🔧 For web: Use window.confirm instead of Alert
+      if (typeof window !== 'undefined' && window.confirm) {
+        window.confirm('Please select whether you\'re looking for jobs or hiring talent first.');
       } else {
-        console.error('? Google registration failed:', result.error);
-        Alert.alert(
-          'Registration Failed',
-          result.error || 'Failed to complete account setup. Please try again.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Selection Required', 'Please select your user type first');
+      }
+      return;
+    }
+
+    console.log('✅ Navigating to final screen for:', selectedType);
+    
+    try {
+      if (selectedType === 'JobSeeker') {
+        console.log('📍 Attempting navigation to PersonalDetailsScreenDirect');
+        
+        const params = {
+          userType: 'JobSeeker',
+          fromGoogleAuth: fromGoogleAuth,
+          googleUser: googleUser,
+          skippedSteps: true,
+          experienceType: 'Unknown',
+        };
+        
+        // 🔧 TRY METHOD 1: Standard navigation
+        navigation.navigate('PersonalDetailsScreenDirect', params);
+        
+        // 🔧 TRY METHOD 2: Use linkTo as fallback for web (after small delay)
+        setTimeout(() => {
+          try {
+            // Encode params as URL query string
+            const queryParams = new URLSearchParams({
+              userType: 'JobSeeker',
+              fromGoogleAuth: fromGoogleAuth.toString(),
+              skippedSteps: 'true',
+              experienceType: 'Unknown',
+            }).toString();
+            
+            linkTo(`/register/complete-profile?${queryParams}`);
+            console.log('🌐 Web navigation fallback triggered');
+          } catch (linkError) {
+            console.warn('Link navigation failed:', linkError);
+          }
+        }, 100);
+        
+        console.log('✅ Navigation dispatched');
+      } else {
+        console.log('📍 Attempting navigation to EmployerAccountScreenDirect');
+        
+        navigation.navigate('EmployerAccountScreenDirect', {
+          userType: 'Employer',
+          fromGoogleAuth: fromGoogleAuth,
+          googleUser: googleUser,
+          skippedSteps: true,
+          employerType: 'company',
+        });
+        
+        // 🔧 Web fallback
+        setTimeout(() => {
+          try {
+            const queryParams = new URLSearchParams({
+              userType: 'Employer',
+              fromGoogleAuth: fromGoogleAuth.toString(),
+              skippedSteps: 'true',
+              employerType: 'company',
+            }).toString();
+            
+            linkTo(`/register/complete-employer?${queryParams}`);
+            console.log('🌐 Web navigation fallback triggered');
+          } catch (linkError) {
+            console.warn('Link navigation failed:', linkError);
+          }
+        }, 100);
+        
+        console.log('✅ Navigation dispatched');
       }
     } catch (error) {
-      console.error('? Google registration error:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'An unexpected error occurred. Please try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setLoading(false);
+      console.error('💥 Navigation error:', error);
     }
   };
 
@@ -174,10 +209,17 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
                   style={styles.googleUserAvatar}
                 />
               )}
-              <Text style={styles.googleUserWelcome}>
-                Welcome, {googleUser.given_name || googleUser.name}!
-              </Text>
-              <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+              <View style={styles.googleUserTextContainer}>
+                <Text style={styles.googleUserWelcome}>
+                  ✅ Google Account Connected
+                </Text>
+                <Text style={styles.googleUserName}>{googleUser.name}</Text>
+                <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
+                <Text style={styles.googleUserNote}>
+                  Your basic info has been captured from Google
+                </Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={24} color={colors.success} />
             </View>
           )}
           
@@ -229,7 +271,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
                 styles.continueButtonText,
                 !selectedType && styles.continueButtonTextDisabled
               ]}>
-                Continue
+                Continue with Full Setup
               </Text>
               <Ionicons 
                 name="arrow-forward" 
@@ -239,6 +281,37 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
             </>
           )}
         </TouchableOpacity>
+
+        {/* 🔧 NEW: Skip Button for Google users */}
+        {googleUser && (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.skipButton,
+                !selectedType && styles.skipButtonFaded,
+              ]}
+              onPress={handleSkipToFinal}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="flash-outline" 
+                size={20} 
+                color={!selectedType ? colors.gray500 : colors.primary} 
+              />
+              <Text style={[
+                styles.skipButtonText,
+                !selectedType && styles.skipButtonTextFaded
+              ]}>
+                Skip to Profile Completion
+              </Text>
+            </TouchableOpacity>
+            {!selectedType && (
+              <Text style={styles.skipHintText}>
+                💡 Select a user type above to enable skip option
+              </Text>
+            )}
+          </>
+        )}
 
         {/* Only show login link if not coming from Google auth */}
         {!googleUser && (
@@ -251,6 +324,37 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
               Already have an account? Sign In
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* 🔧 CONFIRMATION DIALOG: Skip Registration Steps? */}
+        {showSkipConfirm && (
+          <View style={styles.confirmationDialog}>
+            <Text style={styles.confirmationTitle}>
+              Skip Registration Steps?
+            </Text>
+            <Text style={styles.confirmationMessage}>
+              You can complete your profile details now and fill in work/education information later.
+            </Text>
+
+            <View style={styles.confirmationActions}>
+              <TouchableOpacity
+                style={styles.confirmationButton}
+                onPress={() => setShowSkipConfirm(false)} // Cancel
+              >
+                <Text style={styles.confirmationButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.confirmationButton,
+                  styles.confirmationButtonPrimary
+                ]}
+                onPress={confirmSkip} // Confirm skip
+              >
+                <Text style={styles.confirmationButtonText}>Skip to Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -273,29 +377,52 @@ const styles = StyleSheet.create({
   },
   // ?? NEW: Google user info styles
   googleUserInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 24,
+    padding: 20,
+    backgroundColor: colors.success + '10',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.success,
+    shadowColor: colors.success,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   googleUserAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: colors.success,
   },
   googleUserWelcome: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+    color: colors.success,
     marginBottom: 4,
   },
   googleUserEmail: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
+    marginBottom: 4,
+  },
+  googleUserTextContainer: {
+    flex: 1,
+  },
+  googleUserName: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  googleUserNote: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    fontStyle: 'italic',
   },
   title: {
     fontSize: typography.sizes.xxl,
@@ -371,6 +498,27 @@ const styles = StyleSheet.create({
   continueButtonDisabled: {
     backgroundColor: colors.gray300,
   },
+  skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  skipButtonDisabled: {
+    borderColor: colors.gray300,
+    backgroundColor: colors.gray100,
+  },
+  skipButtonFaded: {
+    borderColor: colors.gray400,
+    backgroundColor: colors.gray50,
+    opacity: 0.6,
+  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -381,8 +529,27 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
   },
+  skipButtonText: {
+    color: colors.primary,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
   continueButtonTextDisabled: {
     color: colors.gray400,
+  },
+  skipButtonTextDisabled: {
+    color: colors.gray400,
+  },
+  skipButtonTextFaded: {
+    color: colors.gray600,
+  },
+  skipHintText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    textAlign: 'center',
+    marginTop: -8,
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   loginButton: {
     alignItems: 'center',
@@ -392,5 +559,49 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+  },
+  // 🔧 NEW: Confirmation dialog styles
+  confirmationDialog: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.black + '80',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmationTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+    marginBottom: 16,
+  },
+  confirmationMessage: {
+    fontSize: typography.sizes.md,
+    color: colors.gray200,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  confirmationActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  confirmationButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 8,
+    alignItems: 'center',
+  },
+  confirmationButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  confirmationButtonText: {
+    color: colors.text,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
   },
 });
