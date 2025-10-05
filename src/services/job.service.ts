@@ -437,10 +437,10 @@ export class JobService {
             UPDATE Jobs 
             SET Status = 'Published', 
                 PublishedAt = GETUTCDATE(), 
-                UpdatedAt = GETUTCDATETIME(),
+                UpdatedAt = GETUTCDATE(),
                 ExpiresAt = CASE 
                     WHEN ApplicationDeadline IS NOT NULL THEN ApplicationDeadline
-                    ELSE DATEADD(DAY, 30, GETUTCDATETIME())
+                    ELSE DATEADD(DAY, 30, GETUTCDATE())
                 END
             WHERE JobID = @param0
         `;
@@ -512,6 +512,18 @@ export class JobService {
     static async getJobsByOrganization(organizationId: string, params: PaginationParams & { status?: string; search?: string; postedByUserId?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search, postedByUserId } = params as any;
 
+        // ?? DEBUG: Log incoming params
+        console.log('?? JobService.getJobsByOrganization params:', {
+            organizationId,
+            page,
+            pageSize,
+            sortBy,
+            sortOrder,
+            status,
+            search,
+            postedByUserId
+        });
+
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
             UpdatedAt: 'j.UpdatedAt',
@@ -528,13 +540,19 @@ export class JobService {
         if (status && ['Draft','Published','Closed'].includes(status)) {
             whereClause += ` AND j.Status = @param${paramIndex}`;
             queryParams.push(status);
+            console.log(`?? Added status filter: j.Status = @param${paramIndex} (value: ${status})`);
             paramIndex++;
+        } else {
+            console.log('?? Status filter NOT added:', { status, isValid: status && ['Draft','Published','Closed'].includes(status) });
         }
+        
         if (postedByUserId) {
             whereClause += ` AND j.PostedByUserID = @param${paramIndex}`;
             queryParams.push(postedByUserId);
+            console.log(`?? Added postedByUserId filter: @param${paramIndex} (value: ${postedByUserId})`);
             paramIndex++;
         }
+        
         if (search) {
             const tokens = String(search).trim().split(/\s+/).filter(Boolean);
             if (tokens.length) {
@@ -551,11 +569,19 @@ export class JobService {
             }
         }
 
+        // ?? DEBUG: Log final WHERE clause and params
+        console.log('?? Final WHERE clause:', whereClause);
+        console.log('?? Final query params:', queryParams);
+
         // Get total count
         const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
+        console.log('?? Count query:', countQuery);
+        
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset[0]?.total || 0;
         const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+        console.log('?? Count result:', { total, totalPages });
 
         const offset = (page - 1) * pageSize;
         const dataQuery = `
@@ -569,7 +595,17 @@ export class JobService {
             OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex+1} ROWS ONLY`;
         queryParams.push(offset, pageSize);
 
+        console.log('?? Data query:', dataQuery);
+        console.log('?? Data query params:', queryParams);
+
         const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
+        
+        console.log('?? Query result:', {
+            jobsCount: dataResult.recordset?.length || 0,
+            firstJobStatus: dataResult.recordset?.[0]?.Status,
+            allStatuses: dataResult.recordset?.map(j => j.Status)
+        });
+
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 

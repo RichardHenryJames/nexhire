@@ -195,6 +195,15 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
     
+    // ?? DEBUG: Log received params
+    console.log('?? Backend getJobsByOrganization params:', {
+        organizationId,
+        status: params.status,
+        page: params.page,
+        search: params.search,
+        postedByUserId: params.postedByUserId
+    });
+    
     let validated: PaginationParams;
     try {
         validated = validateRequest<PaginationParams>(paginationSchema, params);
@@ -203,12 +212,17 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
     }
 
     if (!organizationId) return { status: 400, jsonBody: { success: false, error: 'Organization ID is required' } };
-    if (!isValidGuid(organizationId)) return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID format' } };
+    
+    // ? FIXED: Validate it's a valid integer, but keep as string for service method
+    const orgIdNum = parseInt(organizationId);
+    if (isNaN(orgIdNum) || orgIdNum <= 0) {
+        return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID - must be a positive integer' } };
+    }
 
     try {
         // Verify user has access to this organization
         const accessQuery = `SELECT 1 FROM Employers WHERE UserID = @param0 AND OrganizationID = @param1`;
-        const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]);
+        const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]); // Pass as string
         if (!accessResult.recordset || accessResult.recordset.length === 0) {
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
@@ -216,12 +230,23 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
         // Merge pagination with additional filters
         const extendedParams = {
             ...validated,
-            status: params.status,
+            status: params.status, // ? Pass status filter from query params
             search: params.search,
             postedByUserId: params.postedByUserId
         };
+        
+        // ?? DEBUG: Log params being sent to service
+        console.log('?? Backend calling JobService with params:', extendedParams);
 
+        // Pass organizationId as string - SQL Server handles conversion to INT
         const result = await JobService.getJobsByOrganization(organizationId, extendedParams);
+        
+        // ?? DEBUG: Log service result
+        console.log('?? Backend JobService result:', {
+            jobsCount: result.jobs.length,
+            firstJobStatus: result.jobs[0]?.Status,
+            allStatuses: result.jobs.map(j => j.Status)
+        });
         
         return {
             status: 200,

@@ -2034,6 +2034,94 @@ class NexHireAPI {
       return { success: false, error: error.message || 'Failed to fetch organization jobs' };
     }
   }
+
+  // ✅ NEW: Publish a draft job
+  async publishJob(jobId) {
+    console.log('📢 API: Publishing job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('📢 Making POST request to:', `/jobs/${jobId}/publish`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}/publish`, {
+        method: 'POST',
+      });
+      
+      console.log('✅ Publish job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Publish job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to publish job' };
+    }
+  }
+
+  // ✅ NEW: Update a job
+  async updateJob(jobId, jobData) {
+    console.log('📝 API: Updating job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('📝 Making PUT request to:', `/jobs/${jobId}`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}`, {
+        method: 'PUT',
+        body: JSON.stringify(jobData),
+      });
+      
+      console.log('✅ Update job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Update job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to update job' };
+    }
+  }
+
+  // ✅ NEW: Delete a job
+  async deleteJob(jobId) {
+    console.log('🗑️ API: Deleting job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('🗑️ Making DELETE request to:', `/jobs/${jobId}`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}`, {
+        method: 'DELETE',
+      });
+      
+      console.log('✅ Delete job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Delete job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to delete job' };
+    }
+  }
 }
 
 export default new NexHireAPI();

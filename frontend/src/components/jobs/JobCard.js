@@ -8,7 +8,26 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onUnsave, onAskReferral, savedContext = false, isReferred = false, isSaved = false }) => {
+const JobCard = ({ 
+  job, 
+  onPress, 
+  jobTypes = [], 
+  workplaceTypes = [], 
+  onApply, 
+  onSave, 
+  onUnsave, 
+  onAskReferral, 
+  savedContext = false, 
+  isReferred = false, 
+  isSaved = false,
+  // Props to hide action buttons for employer context
+  hideApply = false,
+  hideSave = false,
+  hideReferral = false,
+  // ✅ NEW: Props for employer publish action
+  onPublish = null,
+  showPublish = false
+}) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -39,6 +58,9 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
   const salaryText = hasSalary
     ? `$${Number(job.SalaryRangeMin).toLocaleString()} - $${Number(job.SalaryRangeMax).toLocaleString()} ${job.SalaryPeriod || 'Annual'}`
     : '';
+
+  // ✅ NEW: Check if we should show any actions row
+  const showActions = !hideApply || !hideSave || !hideReferral || showPublish;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
@@ -87,51 +109,65 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
         </View>
       )}
 
-      {/* Actions row - moved to separate line */}
-      <View style={styles.actionsRow}>
-        {/* 🔧 FIXED: Dynamic save/unsave button based on saved state */}
-        {savedContext ? (
-          // In saved tab context, always show "Saved" pill with unsave functionality
-          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-            <Ionicons name="bookmark" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Saved</Text>
-          </TouchableOpacity>
-        ) : isSaved ? (
-          // In openings tab, if already saved, show "Saved" pill with unsave functionality
-          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-            <Ionicons name="bookmark" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Saved</Text>
-          </TouchableOpacity>
-        ) : (
-          // In openings tab, if not saved, show "Save" button
-          <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-            <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Save</Text>
-          </TouchableOpacity>
-        )}
+      {/* ✅ UPDATED: Show actions row if any action is visible OR if publish button should show */}
+      {showActions && (
+        <View style={styles.actionsRow}>
+          {/* Save button - only show if not hidden */}
+          {!hideSave && (
+            savedContext ? (
+              <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+                <Ionicons name="bookmark" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Saved</Text>
+              </TouchableOpacity>
+            ) : isSaved ? (
+              <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+                <Ionicons name="bookmark" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Saved</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
+                <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+            )
+          )}
 
-          {/* Always show "Ask Referral" or "Referred" - quota check happens on click */}
-          {isReferred ? (
-            <View style={styles.referredPill} accessibilityRole="text">
-              <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-              <Text style={styles.referredText}>Referred</Text>
-            </View>
-          ) : onAskReferral ? (
-            <TouchableOpacity 
-              style={styles.referralBtn} 
-              onPress={onAskReferral} 
-              accessibilityLabel="Ask for referral"
-            >
-              <Ionicons name="people-outline" size={18} color="#ff6600" />
-              <Text style={styles.referralText}>Ask Referral</Text>
+          {/* Referral button - only show if not hidden */}
+          {!hideReferral && (
+            isReferred ? (
+              <View style={styles.referredPill} accessibilityRole="text">
+                <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                <Text style={styles.referredText}>Referred</Text>
+              </View>
+            ) : onAskReferral ? (
+              <TouchableOpacity 
+                style={styles.referralBtn} 
+                onPress={onAskReferral} 
+                accessibilityLabel="Ask for referral"
+              >
+                <Ionicons name="people-outline" size={18} color="#ff6600" />
+                <Text style={styles.referralText}>Ask Referral</Text>
+              </TouchableOpacity>
+            ) : null
+          )}
+
+          {/* ✅ NEW: Publish button for employers (draft jobs only) */}
+          {showPublish && onPublish && (
+            <TouchableOpacity style={styles.publishBtn} onPress={onPublish} accessibilityLabel="Publish job">
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Text style={styles.publishText}>Publish</Text>
             </TouchableOpacity>
-          ) : null}
+          )}
 
-           <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-             <Ionicons name="paper-plane-outline" size={18} color="#fff" />
-             <Text style={styles.applyText}>Apply</Text>
-           </TouchableOpacity>
-       </View>
+          {/* Apply button - only show if not hidden */}
+          {!hideApply && onApply && (
+            <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+              <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -274,6 +310,16 @@ const styles = StyleSheet.create({
     borderColor: '#10b981',
   },
   referredText: { color: '#10b981', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  // ✅ NEW: Publish button styles (for employers)
+  publishBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#0066cc',
+  },
+  publishText: { color: '#fff', marginLeft: 6, fontWeight: '700', fontSize: 13 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',

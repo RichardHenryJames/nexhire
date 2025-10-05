@@ -37,8 +37,7 @@ export default function EmployerJobsScreen({ navigation }) {
     abortRef.current = controller;
     setLoading(page===1);
     try {
-      // Need employer profile to get OrganizationID; API already filters by auth in backend so just call custom endpoint via search params
-      // Re-use existing getJobsByOrganization backend route via nexhireAPI (assumed helper). If not present, fallback to /jobs with filters.
+      // Build params with status filter based on active tab
       const params = {
         page,
         pageSize: pagination.pageSize,
@@ -46,7 +45,27 @@ export default function EmployerJobsScreen({ navigation }) {
         search: search.trim() || undefined,
         postedByUserId: onlyMine ? (user.userId || user.id || user.sub || user.UserID) : undefined
       };
+      
+      // ?? DEBUG: Log the params being sent
+      console.log('?? EmployerJobsScreen loading jobs with params:', {
+        activeTab,
+        status: params.status,
+        page: params.page,
+        onlyMine,
+        postedByUserId: params.postedByUserId,
+        search: params.search
+      });
+      
       const res = await nexhireAPI.getOrganizationJobs(params, { signal: controller.signal });
+      
+      // ?? DEBUG: Log the response
+      console.log('?? API response:', {
+        success: res?.success,
+        jobsCount: res?.data?.length,
+        firstJobStatus: res?.data?.[0]?.Status,
+        allStatuses: res?.data?.map(j => j.Status)
+      });
+      
       if (res?.success) {
         setJobs(res.data || []);
         setPagination(p => ({ ...p, page: res.meta?.page || page, total: res.meta?.total || res.data.length, totalPages: res.meta?.totalPages || 1 }));
@@ -65,16 +84,42 @@ export default function EmployerJobsScreen({ navigation }) {
 
   const publishJob = async (jobId) => {
     try {
+      console.log('?? Publishing job:', jobId);
       const res = await nexhireAPI.publishJob(jobId);
-      if (res?.success) { showToast('Job published', 'success'); load(1); }
+      if (res?.success) { 
+        showToast('Job published', 'success');
+        
+        // ? CRITICAL FIX: Remove published job from current list immediately
+        setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
+        
+        // ? CRITICAL FIX: Reload BOTH tabs to ensure data is fresh
+        console.log('?? Reloading jobs after publish...');
+        await load(1);
+        
+        // ? OPTIONAL: Auto-switch to Published tab to show the newly published job
+        // setTimeout(() => setActiveTab('published'), 500);
+      }
       else Alert.alert('Error', res.error || 'Publish failed');
-    } catch(e) { Alert.alert('Error', e.message || 'Publish failed'); }
+    } catch(e) { 
+      console.error('? Publish error:', e);
+      Alert.alert('Error', e.message || 'Publish failed'); 
+    }
   };
 
   const openJob = (job) => navigation.navigate('JobDetails', { jobId: job.JobID });
 
   const renderJob = (job) => {
     const isDraft = job.Status === 'Draft';
+    
+    // ? CRITICAL FIX: Client-side filtering as safety net
+    // Only show Draft jobs in Draft tab, Published jobs in Published tab
+    const shouldShow = (activeTab === 'draft' && isDraft) || (activeTab === 'published' && !isDraft);
+    
+    if (!shouldShow) {
+      console.log(`?? Filtering out job "${job.Title}" (Status: ${job.Status}) from ${activeTab} tab`);
+      return null;
+    }
+    
     return (
       <View key={job.JobID} style={{ marginBottom:12 }}>
         <JobCard
@@ -83,15 +128,10 @@ export default function EmployerJobsScreen({ navigation }) {
           hideApply // hide seeker actions
           hideReferral
           hideSave
+          // ? NEW: Pass publish props to JobCard
+          showPublish={isDraft}
+          onPublish={isDraft ? () => publishJob(job.JobID) : null}
         />
-        {isDraft && (
-          <View style={{ flexDirection:'row', marginTop:8, gap:8 }}>
-            <TouchableOpacity style={localStyles.actionBtn} onPress={() => publishJob(job.JobID)}>
-              <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
-              <Text style={localStyles.actionText}>Publish</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     );
   };
@@ -146,7 +186,10 @@ export default function EmployerJobsScreen({ navigation }) {
             <Text style={jobStyles.emptyTitle}>No jobs</Text>
             <Text style={jobStyles.emptyMessage}>No {activeTab} jobs found.</Text>
           </View>
-        ) : jobs.map(renderJob)}
+        ) : (
+          // ? FIXED: Filter out null values from renderJob (when job doesn't match active tab)
+          jobs.map(renderJob).filter(Boolean)
+        )}
       </ScrollView>
     </View>
   );
