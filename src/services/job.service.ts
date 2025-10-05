@@ -520,6 +520,7 @@ export class JobService {
             sortBy,
             sortOrder,
             status,
+            statusType: typeof status,
             search,
             postedByUserId
         });
@@ -537,19 +538,35 @@ export class JobService {
         const queryParams: any[] = [organizationId];
         let paramIndex = 1;
 
-        if (status && ['Draft','Published','Closed'].includes(status)) {
-            whereClause += ` AND j.Status = @param${paramIndex}`;
-            queryParams.push(status);
-            console.log(`?? Added status filter: j.Status = @param${paramIndex} (value: ${status})`);
-            paramIndex++;
+        // ?? CRITICAL FIX: More explicit status handling with detailed logging
+        console.log('?? Status filter check:', {
+            statusValue: status,
+            statusType: typeof status,
+            statusLength: status ? String(status).length : 0,
+            isValidValue: status && ['Draft','Published','Closed'].includes(status),
+            validValues: ['Draft','Published','Closed']
+        });
+        
+        if (status) {
+            const normalizedStatus = String(status).trim();
+            console.log('?? Normalized status value:', normalizedStatus);
+            
+            if (['Draft','Published','Closed'].includes(normalizedStatus)) {
+                whereClause += ` AND j.Status = @param${paramIndex}`;
+                queryParams.push(normalizedStatus);
+                console.log(`? Added status filter: j.Status = @param${paramIndex} (value: '${normalizedStatus}')`);
+                paramIndex++;
+            } else {
+                console.log(`? Status value '${normalizedStatus}' is NOT in valid list ['Draft','Published','Closed']`);
+            }
         } else {
-            console.log('?? Status filter NOT added:', { status, isValid: status && ['Draft','Published','Closed'].includes(status) });
+            console.log('? Status is undefined/null/empty - no filter added');
         }
         
         if (postedByUserId) {
             whereClause += ` AND j.PostedByUserID = @param${paramIndex}`;
             queryParams.push(postedByUserId);
-            console.log(`?? Added postedByUserId filter: @param${paramIndex} (value: ${postedByUserId})`);
+            console.log(`? Added postedByUserId filter: @param${paramIndex} (value: ${postedByUserId})`);
             paramIndex++;
         }
         

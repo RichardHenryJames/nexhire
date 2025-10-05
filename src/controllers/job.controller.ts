@@ -228,10 +228,14 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
 
+        // ?? CRITICAL FIX: Normalize and explicitly pass status
+        const normalizedStatus = params.status ? String(params.status).trim() : undefined;
+        console.log('?? Normalized status:', normalizedStatus);
+        
         // ? SECURITY: Always filter by authenticated user's ID
         const extendedParams = {
             ...validated,
-            status: params.status, // ? Pass status filter from query params
+            status: normalizedStatus, // ?? Explicitly pass normalized status
             search: params.search,
             postedByUserId // ? Always use authenticated user's ID
         };
