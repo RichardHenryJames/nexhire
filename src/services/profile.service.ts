@@ -36,7 +36,7 @@ interface SalaryBreakdown {
 }
 
 export class ApplicantService {
-    // Get applicant profile by user ID
+    // Get applicant profile with extended data
     static async getApplicantProfile(userId: string): Promise<any> {
         try {
             // Check if user exists and is a job seeker
@@ -271,7 +271,7 @@ export class ApplicantService {
                     component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
             }
             
-            console.log(`? Updated salary breakdown for applicant ${applicantId}`);
+            console.log(`Updated salary breakdown for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error updating salary breakdown:', error);
             throw error;
@@ -425,7 +425,7 @@ export class ApplicantService {
                 await dbService.executeQuery(updateQuery, parameters);
             }
 
-            console.log(`? Updated applicant profile for user ${userId}:`, {
+            console.log(`Updated applicant profile for user ${userId}:`, {
                 fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
                 applicantId: applicantId,
                 profileFieldsCount: updateFields.length > 0 ? updateFields.length - 2 : 0, // Exclude ProfileCompleteness and UpdatedAt
@@ -466,7 +466,7 @@ export class ApplicantService {
         `;
         
         await dbService.executeQuery(query, [applicantId, userId]);
-        console.log(`? Created applicant profile ${applicantId} for user ${userId}`);
+        console.log(`Created applicant profile ${applicantId} for user ${userId}`);
         
         return applicantId;
     }
@@ -607,7 +607,7 @@ export class ApplicantService {
                 resumeData.isPrimary ? 1 : 0
             ]);
 
-            console.log(`?? Saved resume ${resumeId} for applicant ${applicantId}`);
+            console.log(`Saved resume ${resumeId} for applicant ${applicantId}`);
             return resumeId;
         } catch (error) {
             console.error('Error saving applicant resume:', error);
@@ -644,7 +644,7 @@ export class ApplicantService {
                 [resumeId, applicantId]
             );
 
-            console.log(`?? Deleted resume ${resumeId} for applicant ${applicantId}`);
+            console.log(`Deleted resume ${resumeId} for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error deleting applicant resume:', error);
             throw error;
@@ -674,7 +674,7 @@ export class ApplicantService {
                 [resumeId]
             );
 
-            console.log(`?? Set resume ${resumeId} as primary for applicant ${applicantId}`);
+            console.log(`Set resume ${resumeId} as primary for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error setting primary resume:', error);
             throw error;
@@ -696,7 +696,7 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId]);
-            console.log(`?? Updated LastJobAppliedAt for user ${userId}`);
+            console.log(`Updated LastJobAppliedAt for user ${userId}`);
         } catch (error) {
             console.error('Error updating LastJobAppliedAt:', error);
             // Don't throw - this is non-critical
@@ -745,7 +745,7 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId, searchScore]);
-            console.log(`?? Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
+            console.log(`Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
         } catch (error) {
             console.error('Error calculating search score:', error);
             // Don't throw - this is non-critical
@@ -759,16 +759,24 @@ export class EmployerService {
         try {
             const query = `
                 SELECT 
-                    e.*,
+                    e.EmployerID,
+                    e.UserID,
+                    e.OrganizationID,
+                    e.Role,
+                    e.IsVerified,
+                    e.JoinedAt,
                     o.Name as OrganizationName,
                     o.Industry as OrganizationIndustry,
                     o.Size as OrganizationSize,
-                    o.Location as OrganizationLocation,
+                    o.Headquarters as OrganizationHeadquarters,
                     o.Website as OrganizationWebsite,
+                    o.Description as OrganizationDescription,
+                    o.LogoURL as OrganizationLogoURL,
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    u.Phone
+                    u.Phone,
+                    u.ProfilePictureURL
                 FROM Employers e
                 INNER JOIN Organizations o ON e.OrganizationID = o.OrganizationID
                 INNER JOIN Users u ON e.UserID = u.UserID
@@ -806,16 +814,9 @@ export class EmployerService {
             
             const { EmployerID: employerId, OrganizationID: organizationId } = employerResult.recordset[0];
 
-            // Update employer fields
+            // Update employer fields (only Role is user-updatable in Employers table)
             const employerFields: EmployerFieldMapping = {
-                'jobTitle': 'JobTitle',
-                'department': 'Department', 
-                'canPostJobs': 'CanPostJobs',
-                'canManageApplications': 'CanViewApplications',
-                'canViewAnalytics': 'CanScheduleInterviews',
-                'recruitmentFocus': 'Bio',
-                'linkedInProfile': 'LinkedInProfile',
-                'bio': 'Bio'
+                'role': 'Role'
             };
 
             const employerUpdates: string[] = [];
@@ -826,13 +827,7 @@ export class EmployerService {
                 if (key in employerFields && profileData[key] !== undefined) {
                     const dbField = employerFields[key];
                     employerUpdates.push(`${dbField} = @param${employerParamIndex}`);
-                    
-                    let value = profileData[key];
-                    if (key.startsWith('can')) {
-                        value = value ? 1 : 0;
-                    }
-                    
-                    employerParams.push(value);
+                    employerParams.push(profileData[key]);
                     employerParamIndex++;
                 }
             });
@@ -841,7 +836,13 @@ export class EmployerService {
             const orgFields: OrganizationFieldMapping = {
                 'organizationName': 'Name',
                 'organizationSize': 'Size',
-                'industry': 'Industry'
+                'industry': 'Industry',
+                'headquarters': 'Headquarters',
+                'website': 'Website',
+                'description': 'Description',
+                'linkedInProfile': 'LinkedInProfile',
+                'contactEmail': 'ContactEmail',
+                'contactPhone': 'ContactPhone'
             };
 
             const orgUpdates: string[] = [];
@@ -861,20 +862,23 @@ export class EmployerService {
             if (employerUpdates.length > 0) {
                 const employerUpdateQuery = `
                     UPDATE Employers 
-                    SET ${employerUpdates.join(', ')}, LastUpdatedAt = GETUTCDATE()
+                    SET ${employerUpdates.join(', ')}
                     WHERE EmployerID = @param0
                 `;
                 await dbService.executeQuery(employerUpdateQuery, employerParams);
             }
 
             if (orgUpdates.length > 0) {
+                orgUpdates.push('UpdatedAt = GETUTCDATE()');
                 const orgUpdateQuery = `
                     UPDATE Organizations 
-                    SET ${orgUpdates.join(', ')}, UpdatedAt = GETUTCDATE()
+                    SET ${orgUpdates.join(', ')}
                     WHERE OrganizationID = @param0
                 `;
                 await dbService.executeQuery(orgUpdateQuery, orgParams);
             }
+
+            console.log(`Updated employer profile for user ${userId}`);
 
             // Return updated profile
             return await this.getEmployerProfile(userId);

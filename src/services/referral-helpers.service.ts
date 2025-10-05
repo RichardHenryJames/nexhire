@@ -16,7 +16,7 @@ export class ReferralNotificationService {
             // This would integrate with your notification system
             // For now, we'll just log and potentially send emails
             
-            console.log(`?? New referral request ${requestId} for organization ${organizationId}`);
+            console.log(`New referral request ${requestId} for organization ${organizationId}`);
             
             // TODO: Integrate with email service or push notification service
             // Example:
@@ -34,7 +34,7 @@ export class ReferralNotificationService {
      */
     static async notifyReferralClaimed(requestId: string, referrerId: string, seekerId: string): Promise<void> {
         try {
-            console.log(`?? Referral request ${requestId} claimed by ${referrerId} for seeker ${seekerId}`);
+            console.log(`Referral request ${requestId} claimed by ${referrerId} for seeker ${seekerId}`);
             
             // Notify the seeker that their request was claimed
             // TODO: Send email/push notification to seeker
@@ -49,7 +49,7 @@ export class ReferralNotificationService {
      */
     static async notifyReferralCompleted(requestId: string, referrerId: string, seekerId: string): Promise<void> {
         try {
-            console.log(`?? Referral request ${requestId} completed by ${referrerId} for seeker ${seekerId}`);
+            console.log(`Referral request ${requestId} completed by ${referrerId} for seeker ${seekerId}`);
             
             // Notify the seeker that their referral was submitted
             // TODO: Send email/push notification to seeker
@@ -64,7 +64,7 @@ export class ReferralNotificationService {
      */
     static async notifyReferralVerified(requestId: string, referrerId: string, pointsEarned: number): Promise<void> {
         try {
-            console.log(`?? Referral request ${requestId} verified, ${pointsEarned} points awarded to ${referrerId}`);
+            console.log(`Referral request ${requestId} verified, ${pointsEarned} points awarded to ${referrerId}`);
             
             // Notify the referrer about points earned
             // TODO: Send email/push notification to referrer
@@ -96,7 +96,7 @@ export class ReferralNotificationService {
             
             for (const referrer of result.recordset || []) {
                 // TODO: Send personalized daily digest email
-                console.log(`?? Would send daily digest to ${referrer.Email} (${referrer.PendingCount} pending)`);
+                console.log(`Would send daily digest to ${referrer.Email} (${referrer.PendingCount} pending)`);
             }
             
         } catch (error) {

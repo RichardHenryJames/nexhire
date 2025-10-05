@@ -367,7 +367,7 @@ export class WorkExperienceService {
     excludeWorkExperienceId?: string
   ): Promise<void> {
     try {
-      console.log(`?? Managing current work experience for applicant ${applicantId}`);
+      console.log(`Managing current work experience for applicant ${applicantId}`);
       
       // Find all current work experiences (excluding the one being updated)
       let currentExpQuery = `
@@ -387,7 +387,7 @@ export class WorkExperienceService {
       const currentExperiences = await dbService.executeQuery(currentExpQuery, queryParams);
       
       if (!currentExperiences.recordset || currentExperiences.recordset.length === 0) {
-        console.log(`? No existing current work experiences found - proceeding with new current`);
+        console.log(`No existing current work experiences found - proceeding with new current`);
         return;
       }
       
@@ -395,7 +395,7 @@ export class WorkExperienceService {
       for (const existingExp of currentExperiences.recordset) {
         const existingStartDate = new Date(existingExp.StartDate);
         
-        console.log(`?? Comparing dates:`, {
+        console.log(`Comparing dates:`, {
           newStartDate: newStartDate.toISOString().split('T')[0],
           existingStartDate: existingStartDate.toISOString().split('T')[0],
           newIsLater: newStartDate > existingStartDate
@@ -407,7 +407,7 @@ export class WorkExperienceService {
           const newEndDate = new Date(newStartDate);
           newEndDate.setDate(newEndDate.getDate() - 1);
           
-          console.log(`?? Auto-updating previous current work experience:`, {
+          console.log(`Auto-updating previous current work experience:`, {
             workExperienceId: existingExp.WorkExperienceID,
             company: existingExp.CompanyName || 'Unknown',
             jobTitle: existingExp.JobTitle,
@@ -427,9 +427,9 @@ export class WorkExperienceService {
           
           await dbService.executeQuery(updateQuery, [existingExp.WorkExperienceID, newEndDate]);
           
-          console.log(`? Successfully updated previous current work experience ${existingExp.WorkExperienceID}`);
+          console.log(`Successfully updated previous current work experience ${existingExp.WorkExperienceID}`);
         } else {
-          console.log(`?? New start date is NOT greater than existing start date - keeping existing as current:`, {
+          console.log(`New start date is NOT greater than existing start date - keeping existing as current:`, {
             existingCompany: existingExp.CompanyName || 'Unknown',
             existingStartDate: existingStartDate.toISOString().split('T')[0],
             newStartDate: newStartDate.toISOString().split('T')[0]

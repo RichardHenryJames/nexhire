@@ -509,8 +509,8 @@ export class JobService {
     }
 
     // Get jobs by organization
-    static async getJobsByOrganization(organizationId: string, params: PaginationParams): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
-        const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc' } = params;
+    static async getJobsByOrganization(organizationId: string, params: PaginationParams & { status?: string; search?: string; postedByUserId?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
+        const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search, postedByUserId } = params as any;
 
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
@@ -520,37 +520,57 @@ export class JobService {
         };
         const normalizedSort = allowedSort[sortBy] || 'j.CreatedAt';
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-        
-        // Get total count
-        const countQuery = 'SELECT COUNT(*) as total FROM Jobs WHERE OrganizationID = @param0';
-        const countResult = await dbService.executeQuery(countQuery, [organizationId]);
-        const total = countResult.recordset[0].total;
-        const totalPages = Math.ceil(total / pageSize);
 
-        // Get paginated results
+        let whereClause = 'WHERE j.OrganizationID = @param0';
+        const queryParams: any[] = [organizationId];
+        let paramIndex = 1;
+
+        if (status && ['Draft','Published','Closed'].includes(status)) {
+            whereClause += ` AND j.Status = @param${paramIndex}`;
+            queryParams.push(status);
+            paramIndex++;
+        }
+        if (postedByUserId) {
+            whereClause += ` AND j.PostedByUserID = @param${paramIndex}`;
+            queryParams.push(postedByUserId);
+            paramIndex++;
+        }
+        if (search) {
+            const tokens = String(search).trim().split(/\s+/).filter(Boolean);
+            if (tokens.length) {
+                const tokenClauses: string[] = [];
+                tokens.forEach(tok => {
+                    tokenClauses.push(`j.Title LIKE @param${paramIndex}`);
+                    tokenClauses.push(`ISNULL(j.Description,'') LIKE @param${paramIndex+1}`);
+                    tokenClauses.push(`ISNULL(j.Tags,'') LIKE @param${paramIndex+2}`);
+                    const like = `%${tok}%`;
+                    queryParams.push(like, like, like);
+                    paramIndex += 3;
+                });
+                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+            }
+        }
+
+        // Get total count
+        const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
+        const countResult = await dbService.executeQuery(countQuery, queryParams);
+        const total = countResult.recordset[0]?.total || 0;
+        const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
         const offset = (page - 1) * pageSize;
-        
         const dataQuery = `
             SELECT 
-                j.*,
-                jt.Type as JobTypeName,
-                c.Symbol as CurrencySymbol
+                j.*, jt.Type as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-            LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-            WHERE j.OrganizationID = @param0
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            ${whereClause}
             ORDER BY ${normalizedSort} ${normalizedOrder}
-            OFFSET @param1 ROWS
-            FETCH NEXT @param2 ROWS ONLY
-        `;
+            OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex+1} ROWS ONLY`;
+        queryParams.push(offset, pageSize);
 
-        const dataResult = await dbService.executeQuery<Job>(dataQuery, [organizationId, offset, pageSize]);
-
-        return {
-            jobs: dataResult.recordset || [],
-            total,
-            totalPages
-        };
+        const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
+        return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
     // Get job types (reference data)

@@ -194,22 +194,35 @@ export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationC
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
+    
     let validated: PaginationParams;
     try {
         validated = validateRequest<PaginationParams>(paginationSchema, params);
     } catch {
         validated = { page: 1, pageSize: 20, sortBy: undefined, sortOrder: 'desc' };
     }
+
     if (!organizationId) return { status: 400, jsonBody: { success: false, error: 'Organization ID is required' } };
     if (!isValidGuid(organizationId)) return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID format' } };
 
     try {
+        // Verify user has access to this organization
         const accessQuery = `SELECT 1 FROM Employers WHERE UserID = @param0 AND OrganizationID = @param1`;
         const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]);
         if (!accessResult.recordset || accessResult.recordset.length === 0) {
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
-        const result = await JobService.getJobsByOrganization(organizationId, validated);
+
+        // Merge pagination with additional filters
+        const extendedParams = {
+            ...validated,
+            status: params.status,
+            search: params.search,
+            postedByUserId: params.postedByUserId
+        };
+
+        const result = await JobService.getJobsByOrganization(organizationId, extendedParams);
+        
         return {
             status: 200,
             jsonBody: successResponse(result.jobs, 'Organization jobs retrieved successfully', {

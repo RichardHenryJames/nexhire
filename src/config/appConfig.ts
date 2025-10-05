@@ -252,7 +252,7 @@ class ConfigService {
       throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
     }
 
-    console.log(`? Configuration loaded for ${this.config.app.env} environment`);
+    console.log(`Configuration loaded for ${this.config.app.env} environment`);
   }
 
   // Public getters for different service configurations

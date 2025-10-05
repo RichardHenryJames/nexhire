@@ -58,7 +58,7 @@ class BackendEnvironmentLoader {
   }
 
   private loadEnvironment(): void {
-    console.log(`?? Backend loading ${this.currentEnv} environment configuration`);
+    console.log(`Backend loading ${this.currentEnv} environment configuration`);
 
     const envFile = `.env.${this.currentEnv}`;
     const envPath = path.resolve(process.cwd(), envFile);
@@ -76,13 +76,13 @@ class BackendEnvironmentLoader {
           }
         });
 
-        console.log(`? Loaded environment configuration from ${envFile}`);
+        console.log(`Loaded environment configuration from ${envFile}`);
         this.configLoaded = true;
       } else {
-        console.warn(`?? Environment file ${envFile} not found, using process.env defaults`);
+        console.warn(`Environment file ${envFile} not found, using process.env defaults`);
       }
     } catch (error) {
-      console.error(`? Error loading environment file ${envFile}:`, error);
+      console.error(`Error loading environment file ${envFile}:`, error);
     }
 
     this.validateConfiguration();
@@ -127,12 +127,12 @@ class BackendEnvironmentLoader {
     const missing = requiredVars.filter(key => !process.env[key]);
     
     if (missing.length > 0) {
-      console.error(`? Missing required environment variables: ${missing.join(', ')}`);
+      console.error(`Missing required environment variables: ${missing.join(', ')}`);
       if (this.isProduction()) {
         throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
       }
     } else {
-      console.log(`? Backend environment configuration validated for ${this.currentEnv}`);
+      console.log(`Backend environment configuration validated for ${this.currentEnv}`);
     }
 
     // Warn about placeholder values in production
@@ -143,7 +143,7 @@ class BackendEnvironmentLoader {
       });
 
       if (placeholderKeys.length > 0) {
-        console.error(`? Production environment has placeholder values: ${placeholderKeys.join(', ')}`);
+        console.error(`Production environment has placeholder values: ${placeholderKeys.join(', ')}`);
       }
     }
   }

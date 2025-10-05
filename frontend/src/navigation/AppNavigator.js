@@ -27,6 +27,7 @@ import EmployerAccountScreen from '../screens/auth/registration/employer/Employe
 // Main App Screens
 import HomeScreen from '../screens/HomeScreen';
 import JobsScreen from '../screens/jobs/JobsScreen';
+import EmployerJobsScreen from '../screens/employer/EmployerJobsScreen'; // NEW: Employer jobs screen
 import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
@@ -83,11 +84,13 @@ const linking = {
       },
       
       // Main App - simplified structure
+      // ? FIXED: Only define the paths that actually exist in the tab navigator
+      // Since Jobs/EmployerJobs are conditionally rendered, we don't need to define both
       MainTabs: {
         path: '',
         screens: {
           Home: '',
-          Jobs: 'jobs',
+          Jobs: 'jobs', // This will match whichever screen is actually rendered (Jobs or EmployerJobs)
           CreateJob: 'create-job',
           Applications: 'applications',
           Referrals: 'referrals',
@@ -194,7 +197,7 @@ function AuthStack() {
 
 // Main App Tab Navigator
 function MainTabNavigator() {
-  const { userType, isEmployer } = useAuth();
+  const { userType, isEmployer, isJobSeeker } = useAuth();
 
   return (
     <Tab.Navigator
@@ -240,11 +243,14 @@ function MainTabNavigator() {
         component={HomeScreen}
         options={{ title: 'Home' }}
       />
+      
+      {/* ? FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
       <Tab.Screen 
         name="Jobs" 
-        component={JobsScreen}
+        component={isEmployer ? EmployerJobsScreen : JobsScreen}
         options={{ title: 'Jobs' }}
       />
+
       {isEmployer && (
         <Tab.Screen 
           name="CreateJob" 
@@ -252,16 +258,22 @@ function MainTabNavigator() {
           options={{ title: 'Post Job' }}
         />
       )}
+      
       <Tab.Screen 
         name="Applications" 
         component={ApplicationsScreen}
         options={{ title: 'Applications' }}
       />
-      <Tab.Screen 
-        name="Referrals" 
-        component={ReferralScreen}
-        options={{ title: 'Referrals' }}
-      />
+      
+      {/* ? CONDITIONAL: Only show Referrals tab for job seekers */}
+      {isJobSeeker && (
+        <Tab.Screen 
+          name="Referrals" 
+          component={ReferralScreen}
+          options={{ title: 'Referrals' }}
+        />
+      )}
+      
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}

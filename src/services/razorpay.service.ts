@@ -105,7 +105,7 @@ export class RazorpayService {
       ]);
 
       if (config.isDevelopment()) {
-        console.log(`?? Razorpay order created: ${order.id} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} mode)`);
+        console.log(`Razorpay order created: ${order.id} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} mode)`);
       }
 
       return {
@@ -268,7 +268,7 @@ export class RazorpayService {
         'INR'
       ]);
 
-      console.log(`?? Subscription activated for user ${userId}, plan ${plan.Name} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} payment)`);
+      console.log(`Subscription activated for user ${userId}, plan ${plan.Name} (${config.razorpay.isProduction ? 'LIVE' : 'TEST'} payment)`);
 
       return {
         success: true,

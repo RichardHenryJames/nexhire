@@ -561,7 +561,7 @@ export class ReferralService {
             let baseProofPoints = 15; // Base points for submitting proof
             
             // Award base proof submission points first
-            console.log(`?? Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
+            console.log(`Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
             
             // Calculate and award quick response bonus separately for better tracking  
@@ -572,7 +572,7 @@ export class ReferralService {
             
             if (hoursFromClaim <= 24) {
                 const quickBonusPoints = 10; // Quick response bonus
-                console.log(`? Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
+                console.log(`Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
 
@@ -584,7 +584,7 @@ export class ReferralService {
             `;
             const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
             
-            console.log(`?? Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
+            console.log(`Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
             
             // TODO: Notify seeker that proof was submitted
             // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
@@ -818,7 +818,7 @@ export class ReferralService {
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
             
-            console.log(`? Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
+            console.log(`Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
             // Don't rethrow - we don't want to break the main referral flow if points can't be awarded

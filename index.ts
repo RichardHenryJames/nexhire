@@ -431,6 +431,14 @@ app.http('jobs-close', {
     handler: withErrorHandling(closeJob)
 });
 
+// NEW: Organization jobs endpoint for employers
+app.http('organization-jobs', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'organizations/{organizationId}/jobs',
+    handler: withErrorHandling(getJobsByOrganization)
+});
+
 // ========================================================================
 // JOB APPLICATION ENDPOINTS
 // ========================================================================

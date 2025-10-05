@@ -78,7 +78,7 @@ export class UserService {
             }
             // ? NEW: Handle Admin user registration (no additional profile needed)
             else if (validatedData.userType === 'Admin') {
-                console.log(`? Admin user created: ${userId} (${validatedData.email})`);
+                console.log(`Admin user created: ${userId} (${validatedData.email})`);
                 // Admin users don't need additional profiles like Applicants or Employers
                 // They have full system access through their userType
             }
@@ -114,7 +114,7 @@ export class UserService {
         if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
             // Organization exists, use existing OrganizationID
             organizationId = existingOrgResult.recordset[0].OrganizationID;
-            console.log(`? Using existing organization: ${organizationName} (ID: ${organizationId})`);
+            console.log(`Using existing organization: ${organizationName} (ID: ${organizationId})`);
         } else {
             // Organization doesn't exist, create new one
             const orgQuery = `
@@ -147,7 +147,7 @@ export class UserService {
                 throw new Error('Failed to create organization - no ID returned');
             }
             organizationId = orgResult.recordset[0].OrganizationID;
-            console.log(`? Created new organization: ${organizationName} (ID: ${organizationId})`);
+            console.log(`Created new organization: ${organizationName} (ID: ${organizationId})`);
         }
         
         // Employer profile creation with the OrganizationID (existing or new)
@@ -162,7 +162,7 @@ export class UserService {
 
         await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
         
-        console.log(`? Created employer profile ${employerId} for user ${userId} with organization ${organizationId}`);
+        console.log(`Created employer profile ${employerId} for user ${userId} with organization ${organizationId}`);
         return { organizationId: organizationId.toString(), employerId };
     }
 
@@ -542,7 +542,7 @@ export class UserService {
             let profileCompleteness = 0;
             try {
                 profileCompleteness = await this.recalculateApplicantProfileCompleteness(applicantId);
-                console.log(`? Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
+                console.log(`Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
             } catch (error) {
                 console.error('Failed to recalculate profile completeness:', error);
             }
@@ -631,11 +631,11 @@ export class UserService {
 
             // Get referral statistics
             const referralStats = await this.getReferralStats(applicantId);
-            console.log(`?? Referral stats for applicant ${applicantId}:`, referralStats);
+            console.log(`Referral stats for applicant ${applicantId}:`, referralStats);
             
             // Get resume statistics
             const resumeStats = await this.getResumeStats(applicantId);
-            console.log(`?? Resume stats for applicant ${applicantId}:`, resumeStats);
+            console.log(`Resume stats for applicant ${applicantId}:`, resumeStats);
 
             // Get recent applications breakdown
             const recentActivityStats = await this.getRecentActivityStats(userId);
@@ -853,7 +853,7 @@ export class UserService {
 
     private static async getReferralStats(applicantId: string): Promise<any> {
         try {
-            console.log(`?? Getting referral stats for applicant: ${applicantId}`);
+            console.log(`Getting referral stats for applicant: ${applicantId}`);
             
             // Use the EXACT same query structure as the working profile service
             const query = `
@@ -870,7 +870,7 @@ export class UserService {
             const result = await dbService.executeQuery(query, [applicantId]);
             const stats = result.recordset[0] || {};
             
-            console.log(`?? Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
+            console.log(`Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
             
             // Map the results exactly as the profile service does
             const mappedStats = {
@@ -881,7 +881,7 @@ export class UserService {
                 referralSuccessRate: stats.TotalReferralsMade > 0 ? Math.round((stats.VerifiedReferrals / stats.TotalReferralsMade) * 100) : 0
             };
             
-            console.log(`?? Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            console.log(`Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
@@ -898,7 +898,7 @@ export class UserService {
 
     private static async getResumeStats(applicantId: string): Promise<any> {
         try {
-            console.log(`?? Getting resume stats for applicant: ${applicantId}`);
+            console.log(`Getting resume stats for applicant: ${applicantId}`);
             
             const query = `
                 SELECT 
@@ -912,14 +912,14 @@ export class UserService {
             const result = await dbService.executeQuery(query, [applicantId]);
             const resumeData = result.recordset[0] || { TotalResumes: 0, PrimaryResumeSet: 0 };
             
-            console.log(`?? Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
+            console.log(`Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
             
             const mappedStats = { 
                 totalResumes: resumeData.TotalResumes || 0, 
                 primaryResumeSet: resumeData.PrimaryResumeSet === 1 || resumeData.PrimaryResumeSet === true
             };
             
-            console.log(`?? Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            console.log(`Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
@@ -1287,7 +1287,7 @@ export class UserService {
             const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
-            console.log(`?? Profile data for ${applicantId}:`, {
+            console.log(`Profile data for ${applicantId}:`, {
                 Institution: row.Institution,
                 HighestEducation: row.HighestEducation,
                 FieldOfStudy: row.FieldOfStudy,
@@ -1319,7 +1319,7 @@ export class UserService {
             const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
             const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
 
-            console.log(`?? Profile completeness calculation for ${applicantId}:`, {
+            console.log(`Profile completeness calculation for ${applicantId}:`, {
                 educationComplete,
                 primarySkills,
                 secondarySkills,

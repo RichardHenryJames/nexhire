@@ -36,7 +36,7 @@ export class SchedulerService {
       return;
     }
 
-    console.log(`?? Starting NexHire job scraping scheduler (every ${this.config.intervalHours}h)`);
+    console.log(`Starting NexHire job scraping scheduler (every ${this.config.intervalHours}h)`);
     
     // Run immediately on start
     this.runJobScraping();
@@ -102,7 +102,7 @@ export class SchedulerService {
       const duration = Date.now() - startTime;
       
       if (result.success) {
-        console.log(`? Scheduled scraping completed successfully:`);
+        console.log(`Scheduled scraping completed successfully:`);
         console.log(`   - Jobs added: ${result.jobsAdded}`);
         console.log(`   - India jobs: ${result.summary.indiaJobsAdded}`);
         console.log(`   - Sources: ${Object.keys(result.summary.sourceBreakdown).join(', ')}`);

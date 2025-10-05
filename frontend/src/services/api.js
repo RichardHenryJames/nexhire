@@ -1980,6 +1980,60 @@ class NexHireAPI {
       };
     }
   }
+
+  // ========================================================================
+  // EMPLOYER JOB MANAGEMENT APIs
+  // ========================================================================
+
+  // Get jobs by organization (for employers)
+  async getOrganizationJobs(params = {}, fetchOptions = {}) {
+    if (!this.token) {
+      console.error('❌ getOrganizationJobs: No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+
+    // First get employer profile to get organizationId
+    const userId = this.getUserIdFromToken();
+    if (!userId) {
+      return { success: false, error: 'Unable to identify user' };
+    }
+
+    try {
+      // Get employer profile to get organizationId
+      const profileResult = await this.getEmployerProfile(userId);
+      if (!profileResult.success || !profileResult.data.OrganizationID) {
+        return { success: false, error: 'Employer organization not found' };
+      }
+
+      const organizationId = profileResult.data.OrganizationID;
+      
+      // Build query parameters
+      const queryParams = {
+        page: params.page || 1,
+        pageSize: params.pageSize || 50,
+        sortBy: params.sortBy || 'CreatedAt',
+        sortOrder: params.sortOrder || 'desc',
+        ...params
+      };
+
+      // Clean undefined/null values
+      const cleaned = {};
+      for (const [k, v] of Object.entries(queryParams)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleaned[k] = v;
+        }
+      }
+
+      const queryString = new URLSearchParams(cleaned).toString();
+      const endpoint = `/organizations/${organizationId}/jobs${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('🏢 Fetching organization jobs:', endpoint);
+      return await this.apiCall(endpoint, fetchOptions);
+    } catch (error) {
+      console.error('❌ getOrganizationJobs error:', error);
+      return { success: false, error: error.message || 'Failed to fetch organization jobs' };
+    }
+  }
 }
 
 export default new NexHireAPI();
