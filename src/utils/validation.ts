@@ -265,6 +265,8 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         sortOrder: (query.get('sortOrder') as 'asc' | 'desc') || 'desc',
         search: searchParam,
         q: searchParam,
+        // NEW: include plain status param (Draft/Published/Closed)
+        status: query.get('status') || undefined,
         filters: (() => { try { const filtersParam = query.get('filters'); return filtersParam ? JSON.parse(filtersParam) : {}; } catch { return {}; } })(),
         location: query.get('location') || undefined,
         jobTypeIds: (query.get('jobTypeIds') || undefined) as any,

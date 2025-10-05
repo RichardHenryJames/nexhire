@@ -512,19 +512,6 @@ export class JobService {
     static async getJobsByOrganization(organizationId: string, params: PaginationParams & { status?: string; search?: string; postedByUserId?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search, postedByUserId } = params as any;
 
-        // ?? DEBUG: Log incoming params
-        console.log('?? JobService.getJobsByOrganization params:', {
-            organizationId,
-            page,
-            pageSize,
-            sortBy,
-            sortOrder,
-            status,
-            statusType: typeof status,
-            search,
-            postedByUserId
-        });
-
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
             UpdatedAt: 'j.UpdatedAt',
@@ -538,35 +525,19 @@ export class JobService {
         const queryParams: any[] = [organizationId];
         let paramIndex = 1;
 
-        // ?? CRITICAL FIX: More explicit status handling with detailed logging
-        console.log('?? Status filter check:', {
-            statusValue: status,
-            statusType: typeof status,
-            statusLength: status ? String(status).length : 0,
-            isValidValue: status && ['Draft','Published','Closed'].includes(status),
-            validValues: ['Draft','Published','Closed']
-        });
-        
         if (status) {
             const normalizedStatus = String(status).trim();
-            console.log('?? Normalized status value:', normalizedStatus);
-            
-            if (['Draft','Published','Closed'].includes(normalizedStatus)) {
-                whereClause += ` AND j.Status = @param${paramIndex}`;
+            if (['Draft', 'Published', 'Closed'].includes(normalizedStatus)) {
+                // Case / whitespace insensitive comparison
+                whereClause += ` AND UPPER(RTRIM(LTRIM(j.Status))) = UPPER(@param${paramIndex})`;
                 queryParams.push(normalizedStatus);
-                console.log(`? Added status filter: j.Status = @param${paramIndex} (value: '${normalizedStatus}')`);
                 paramIndex++;
-            } else {
-                console.log(`? Status value '${normalizedStatus}' is NOT in valid list ['Draft','Published','Closed']`);
             }
-        } else {
-            console.log('? Status is undefined/null/empty - no filter added');
         }
         
         if (postedByUserId) {
             whereClause += ` AND j.PostedByUserID = @param${paramIndex}`;
             queryParams.push(postedByUserId);
-            console.log(`? Added postedByUserId filter: @param${paramIndex} (value: ${postedByUserId})`);
             paramIndex++;
         }
         
@@ -586,19 +557,10 @@ export class JobService {
             }
         }
 
-        // ?? DEBUG: Log final WHERE clause and params
-        console.log('?? Final WHERE clause:', whereClause);
-        console.log('?? Final query params:', queryParams);
-
-        // Get total count
         const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
-        console.log('?? Count query:', countQuery);
-        
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset[0]?.total || 0;
         const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-
-        console.log('?? Count result:', { total, totalPages });
 
         const offset = (page - 1) * pageSize;
         const dataQuery = `
@@ -612,17 +574,7 @@ export class JobService {
             OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex+1} ROWS ONLY`;
         queryParams.push(offset, pageSize);
 
-        console.log('?? Data query:', dataQuery);
-        console.log('?? Data query params:', queryParams);
-
         const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
-        
-        console.log('?? Query result:', {
-            jobsCount: dataResult.recordset?.length || 0,
-            firstJobStatus: dataResult.recordset?.[0]?.Status,
-            allStatuses: dataResult.recordset?.map(j => j.Status)
-        });
-
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
