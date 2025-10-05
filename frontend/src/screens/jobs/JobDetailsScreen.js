@@ -29,6 +29,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false); // ✅ NEW: Publishing state
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
@@ -38,7 +39,6 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
-  const [publishing, setPublishing] = useState(false); // ✅ NEW: Publishing state
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // ✅ UPDATED: Navigation header - hide save button for employers
+  // ✅ UPDATED: Navigation header - remove save button for employers
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
@@ -67,14 +67,14 @@ export default function JobDetailsScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      // ✅ FIXED: Only show save button for job seekers (not employers, and not if already applied)
-      headerRight: (isJobSeeker && !hasApplied) ? () => (
+      // ✅ FIXED: Only show save button for job seekers (not employers)
+      headerRight: (hasApplied || isEmployer) ? undefined : () => (
         <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
         </TouchableOpacity>
-      ) : undefined
+      )
     });
-  }, [navigation, isSaved, hasApplied, isJobSeeker]);
+  }, [navigation, isSaved, hasApplied, isEmployer]);
 
   // Load job details and referral status
   useEffect(() => {
@@ -582,33 +582,39 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   // ✅ NEW: Handle publish job for employers
   const handlePublishJob = async () => {
-    if (!job || job.Status !== 'Draft') return;
+    if (!job?.JobID) return;
     
-    try {
-      setPublishing(true);
-      const result = await nexhireAPI.publishJob(jobId);
-      
-      if (result.success) {
-        showToast('Job published successfully!', 'success');
-        // Update local job state
-        setJob(prev => ({ ...prev, Status: 'Published', PublishedAt: new Date().toISOString() }));
-        
-        // Redirect to employer Jobs screen
-        setTimeout(() => {
-          navigation.navigate('Jobs', {
-            successMessage: `${job.Title} has been published`,
-            activeTab: 'published'
-          });
-        }, 1500);
-      } else {
-        Alert.alert('Error', result.error || result.message || 'Failed to publish job');
-      }
-    } catch (error) {
-      console.error('Publish error:', error);
-      Alert.alert('Error', error.message || 'Failed to publish job');
-    } finally {
-      setPublishing(false);
-    }
+    Alert.alert(
+      'Publish Job',
+      'Are you sure you want to publish this job? It will become visible to job seekers.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Publish', 
+          onPress: async () => {
+            try {
+              setPublishing(true);
+              const result = await nexhireAPI.publishJob(job.JobID);
+              
+              if (result.success) {
+                showToast('Job published successfully!', 'success');
+                // Redirect to Jobs screen
+                setTimeout(() => {
+                  navigation.navigate('Jobs');
+                }, 1500);
+              } else {
+                Alert.alert('Error', result.error || 'Failed to publish job');
+              }
+            } catch (error) {
+              console.error('Publish job error:', error);
+              Alert.alert('Error', error.message || 'Failed to publish job');
+            } finally {
+              setPublishing(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const formatSalary = () => {
@@ -1200,21 +1206,24 @@ Highlight your relevant experience, skills, and why you're excited about this sp
           </TouchableOpacity>
         )}
         
-        {/* ✅ NEW: Publish button for employers */}
+        {/* ✅ NEW: Publish button for employers viewing draft jobs */}
         {isEmployer && job.Status === 'Draft' && (
-          <TouchableOpacity 
-            style={styles.publishButton}
+          <TouchableOpacity
+            style={[
+              styles.publishButton,
+              publishing && styles.publishButtonDisabled
+            ]}
             onPress={handlePublishJob}
             disabled={publishing}
           >
             {publishing ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <>
-                <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
-                <Text style={styles.publishButtonText}>Publish Job</Text>
-              </>
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
             )}
+            <Text style={styles.publishButtonText}>
+              {publishing ? 'Publishing...' : 'Publish Job'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1655,7 +1664,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 8,
-    backgroundColor: colors.green500,
+    backgroundColor: colors.success,
+  },
+  publishButtonDisabled: {
+    backgroundColor: colors.gray400,
   },
   publishButtonText: {
     color: colors.white,
