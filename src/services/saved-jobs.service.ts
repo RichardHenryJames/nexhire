@@ -33,7 +33,7 @@ export class SavedJobsService {
       SELECT 
         j.*, 
         o.Name as OrganizationName, 
-        o.Logo as OrganizationLogo,
+        o.LogoURL as OrganizationLogo,
         jt.Type as JobTypeName, 
         wt.Type as WorkplaceTypeName
       FROM SavedJobs sj
@@ -64,7 +64,7 @@ export class SavedJobsService {
       SELECT 
         j.*, 
         o.Name as OrganizationName, 
-        o.Logo as OrganizationLogo,
+        o.LogoURL as OrganizationLogo,
         jt.Type as JobTypeName, 
         wt.Type as WorkplaceTypeName
       FROM SavedJobs sj

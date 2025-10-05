@@ -22,7 +22,7 @@ import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
   const { jobId } = route.params || {};
-  const { user, isJobSeeker } = useAuth();
+  const { user, isJobSeeker, isEmployer } = useAuth();
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +38,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
+  const [publishing, setPublishing] = useState(false); // ✅ NEW: Publishing state
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // Navigation header (remove save button if already applied)
+  // ✅ UPDATED: Navigation header - hide save button for employers
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
@@ -66,13 +67,14 @@ export default function JobDetailsScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      headerRight: hasApplied ? undefined : () => (
+      // ✅ FIXED: Only show save button for job seekers (not employers, and not if already applied)
+      headerRight: (isJobSeeker && !hasApplied) ? () => (
         <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
         </TouchableOpacity>
-      )
+      ) : undefined
     });
-  }, [navigation, isSaved, hasApplied]);
+  }, [navigation, isSaved, hasApplied, isJobSeeker]);
 
   // Load job details and referral status
   useEffect(() => {
@@ -575,6 +577,37 @@ export default function JobDetailsScreen({ route, navigation }) {
     } catch (error) {
       console.error('Save/Unsave error:', error);
       Alert.alert('Error', error.message || 'Failed to update saved status');
+    }
+  };
+
+  // ✅ NEW: Handle publish job for employers
+  const handlePublishJob = async () => {
+    if (!job || job.Status !== 'Draft') return;
+    
+    try {
+      setPublishing(true);
+      const result = await nexhireAPI.publishJob(jobId);
+      
+      if (result.success) {
+        showToast('Job published successfully!', 'success');
+        // Update local job state
+        setJob(prev => ({ ...prev, Status: 'Published', PublishedAt: new Date().toISOString() }));
+        
+        // Redirect to employer Jobs screen
+        setTimeout(() => {
+          navigation.navigate('Jobs', {
+            successMessage: `${job.Title} has been published`,
+            activeTab: 'published'
+          });
+        }, 1500);
+      } else {
+        Alert.alert('Error', result.error || result.message || 'Failed to publish job');
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      Alert.alert('Error', error.message || 'Failed to publish job');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -1166,6 +1199,24 @@ Highlight your relevant experience, skills, and why you're excited about this sp
             </Text>
           </TouchableOpacity>
         )}
+        
+        {/* ✅ NEW: Publish button for employers */}
+        {isEmployer && job.Status === 'Draft' && (
+          <TouchableOpacity 
+            style={styles.publishButton}
+            onPress={handlePublishJob}
+            disabled={publishing}
+          >
+            {publishing ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
+                <Text style={styles.publishButtonText}>Publish Job</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
       
       {/* Resume Upload Modal */}
@@ -1595,5 +1646,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+  },
+  // ✅ NEW: Publish button styles
+  publishButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: colors.green500,
+  },
+  publishButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    marginLeft: 8,
   },
 });

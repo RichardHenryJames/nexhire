@@ -148,8 +148,14 @@ export default function CreateJobScreen({ navigation }) {
       console.log('Create Job Payload:', payload);
       const result = await nexhireAPI.createJob(payload);
       if (result.success) {
-        try { navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); }
-        catch { navigation.navigate('Home'); }
+        showToast('Job created successfully!', 'success');
+        // ✅ FIXED: Redirect to Jobs (employer jobs screen) instead of Home
+        try { 
+          navigation.reset({ index: 0, routes: [{ name: 'Jobs' }] }); 
+        }
+        catch { 
+          navigation.navigate('Jobs'); 
+        }
         return;
       } else {
         Alert.alert('Error', result.error || result.message || 'Creation failed');

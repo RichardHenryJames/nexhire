@@ -194,6 +194,7 @@ export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationC
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
+    const postedByUserId = user.userId; // Always use the authenticated user's ID
     
     // ?? DEBUG: Log received params
     console.log('?? Backend getJobsByOrganization params:', {
@@ -201,7 +202,7 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
         status: params.status,
         page: params.page,
         search: params.search,
-        postedByUserId: params.postedByUserId
+        postedByUserId // This will always be the authenticated user
     });
     
     let validated: PaginationParams;
@@ -227,12 +228,12 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
 
-        // Merge pagination with additional filters
+        // ? SECURITY: Always filter by authenticated user's ID
         const extendedParams = {
             ...validated,
             status: params.status, // ? Pass status filter from query params
             search: params.search,
-            postedByUserId: params.postedByUserId
+            postedByUserId // ? Always use authenticated user's ID
         };
         
         // ?? DEBUG: Log params being sent to service
