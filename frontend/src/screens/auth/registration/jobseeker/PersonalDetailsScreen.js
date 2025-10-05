@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
+import DatePicker from '../../../../components/DatePicker';
 
 // Debounce hook for search
 const useDebounce = (value, delay = 300) => {
@@ -566,7 +567,22 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             )}
             
             {renderInput('phone', 'Phone Number', false, 'phone-pad')}
-            {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
+            
+            {/* ✅ REPLACED: DatePicker instead of manual input */}
+            <DatePicker
+              label="Date of Birth"
+              value={formData.dateOfBirth}
+              onChange={(date) => {
+                setFormData({ ...formData, dateOfBirth: date });
+                if (errors.dateOfBirth) {
+                  setErrors({ ...errors, dateOfBirth: null });
+                }
+              }}
+              placeholder="Select your date of birth"
+              maximumDate={new Date()} // Can't be born in the future
+              error={errors.dateOfBirth}
+            />
+            
             {renderInput('location', 'Current Location', false, 'default')}
 
             {/* NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
@@ -583,7 +599,22 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                 </View>
                 
                 {renderInput('jobTitle', 'Job Title', false, 'default', true)}
-                {renderInput('startDate', 'Start Date (YYYY-MM-DD)', false, 'default', true)}
+                
+                {/* ✅ REPLACED: DatePicker for start date */}
+                <DatePicker
+                  label="Start Date"
+                  value={formData.startDate}
+                  onChange={(date) => {
+                    setFormData({ ...formData, startDate: date });
+                    if (errors.startDate) {
+                      setErrors({ ...errors, startDate: null });
+                    }
+                  }}
+                  placeholder="Select start date"
+                  maximumDate={new Date()} // Can't start in the future
+                  required={true}
+                  error={errors.startDate}
+                />
               </>
             )}
 

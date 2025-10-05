@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
+import DatePicker from '../../../../components/DatePicker';
 
 export default function EmployerAccountScreen({ navigation, route }) {
   const { 
@@ -276,14 +277,16 @@ export default function EmployerAccountScreen({ navigation, route }) {
           />
         </View>
 
+        {/* ✅ Wrapped in field container with matching button style */}
         <View style={styles.field}> 
           <Text style={styles.label}>Date of Birth (Optional)</Text>
-          <TextInput 
-            style={styles.input} 
-            value={dateOfBirth} 
-            onChangeText={setDateOfBirth} 
-            placeholder="YYYY-MM-DD"
-            keyboardType="numeric"
+          <DatePicker
+            value={dateOfBirth}
+            onChange={(date) => setDateOfBirth(date)}
+            placeholder="Select your date of birth"
+            maximumDate={new Date()}
+            noMargin={true}
+            buttonStyle={{ padding: 12 }} // ✅ Match input padding to make same height
           />
         </View>
 
@@ -480,6 +483,30 @@ const styles = StyleSheet.create({
   primaryBtnText: { 
     color: colors.white, 
     fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
+  },
+  // DatePicker styles
+  datePicker: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInput: {
+    flex: 1,
+    padding: 0,
+    borderWidth: 0,
+    alignItems: 'flex-start',
+  },
+  dateText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  placeholderText: {
+    color: colors.gray500,
     fontSize: typography.sizes.md,
   },
 });

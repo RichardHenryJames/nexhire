@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import nexhireAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 import { useEditing } from './ProfileSection';
+import DatePicker from '../DatePicker';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
@@ -530,16 +531,19 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
-            <Text style={styles.label}>Start Date (YYYY-MM-DD) *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.startDate && styles.errorInput]}
+            {/* ? REPLACED: DatePicker for Start Date */}
+            <DatePicker
+              label="Start Date"
               value={form.startDate}
-              onChangeText={(t) => { handleStartDateChange(t); if (validationErrors.startDate) setValidationErrors(v => ({ ...v, startDate: undefined })); }}
-              placeholder="YYYY-MM-DD"
-              keyboardType="numbers-and-punctuation"
-              autoCapitalize="none"
+              onChange={(date) => {
+                handleStartDateChange(date);
+                if (validationErrors.startDate) setValidationErrors(v => ({ ...v, startDate: undefined }));
+              }}
+              placeholder="Select start date"
+              required
+              maximumDate={new Date()} // Can't start in the future
+              error={validationErrors.startDate}
             />
-            {validationErrors.startDate ? <Text style={styles.validationText}>{validationErrors.startDate}</Text> : null}
 
             {/* ? SMART CURRENTLY WORKING TOGGLE - Hide when start date is older */}
             {!hideCurrentToggle && (
@@ -562,22 +566,20 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             {/* FIXED: Only show End Date field when NOT currently working */}
             {!form.isCurrent && (
               <>
-                <Text style={styles.label}>End Date (YYYY-MM-DD){endDateRequired ? ' *' : ''}</Text>
-                <TextInput 
-                  style={[
-                    styles.input,
-                    (validationErrors.endDate) ? styles.errorInput : {}
-                  ]} 
-                  value={form.endDate} 
-                  onChangeText={(t) => { 
-                    setForm({ ...form, endDate: t }); 
+                {/* ? REPLACED: DatePicker for End Date */}
+                <DatePicker
+                  label={`End Date${endDateRequired ? ' *' : ''}`}
+                  value={form.endDate}
+                  onChange={(date) => {
+                    setForm({ ...form, endDate: date }); 
                     if (validationErrors.endDate) setValidationErrors(v => ({ ...v, endDate: undefined })); 
-                  }} 
-                  placeholder={endDateRequired ? "Required - Select end date" : "YYYY-MM-DD"}
-                  keyboardType="numbers-and-punctuation" 
-                  autoCapitalize="none" 
+                  }}
+                  placeholder={endDateRequired ? "Required - Select end date" : "Select end date"}
+                  required={endDateRequired}
+                  minimumDate={form.startDate ? new Date(form.startDate) : undefined} // End must be after start
+                  maximumDate={new Date()} // Can't end in the future
+                  error={validationErrors.endDate}
                 />
-                {validationErrors.endDate ? <Text style={styles.validationText}>{validationErrors.endDate}</Text> : null}
               </>
             )}
 

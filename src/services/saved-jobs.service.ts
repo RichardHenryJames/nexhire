@@ -31,7 +31,11 @@ export class SavedJobsService {
       END;
 
       SELECT 
-        j.*, o.Name as OrganizationName, jt.Type as JobTypeName, wt.Type as WorkplaceTypeName
+        j.*, 
+        o.Name as OrganizationName, 
+        o.Logo as OrganizationLogo,
+        jt.Type as JobTypeName, 
+        wt.Type as WorkplaceTypeName
       FROM SavedJobs sj
       INNER JOIN Jobs j ON sj.JobID = j.JobID
       INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -58,7 +62,11 @@ export class SavedJobsService {
     const offset = (page - 1) * pageSize;
     const q = `
       SELECT 
-        j.*, o.Name as OrganizationName, jt.Type as JobTypeName, wt.Type as WorkplaceTypeName
+        j.*, 
+        o.Name as OrganizationName, 
+        o.Logo as OrganizationLogo,
+        jt.Type as JobTypeName, 
+        wt.Type as WorkplaceTypeName
       FROM SavedJobs sj
       INNER JOIN Jobs j ON sj.JobID = j.JobID
       INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID

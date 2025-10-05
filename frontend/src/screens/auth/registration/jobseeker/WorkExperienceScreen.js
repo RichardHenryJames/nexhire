@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
+import DatePicker from '../../../../components/DatePicker';
 
 // Debounce like college picker
 const useDebounce = (value, delay = 300) => {
@@ -376,25 +377,26 @@ export default function WorkExperienceScreen({ navigation, route }) {
             {/* Company (Org Picker + manual) */}
             <OrgPickerButton />
 
-            {/* Start/End Dates */}
-            <InputField
+            {/* Start/End Dates - ? REPLACED with DatePicker */}
+            <DatePicker
               label="Start Date"
               value={formData.startDate}
-              onChangeText={(text) => updateField('startDate', text)}
-              placeholder="YYYY-MM-DD"
+              onChange={(date) => updateField('startDate', date)}
+              placeholder="Select start date"
               required
-              keyboardType="numbers-and-punctuation"
+              maximumDate={new Date()} // Can't start in the future
             />
             
             {/* FIXED: Only show End Date field when on "Previously Worked" tab */}
             {activeTab === 'previous' && (
-              <InputField
+              <DatePicker
                 label="End Date"
                 value={formData.endDate}
-                onChangeText={(text) => updateField('endDate', text)}
-                placeholder="YYYY-MM-DD"
+                onChange={(date) => updateField('endDate', date)}
+                placeholder="Select end date"
                 required
-                keyboardType="numbers-and-punctuation"
+                minimumDate={formData.startDate ? new Date(formData.startDate) : undefined} // End date must be after start date
+                maximumDate={new Date()} // Can't end in the future
               />
             )}
 

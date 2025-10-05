@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 import nexhireAPI from '../../services/api';
+import DatePicker from '../../components/DatePicker';
+import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
 
 export default function CreateJobScreen({ navigation }) {
@@ -10,6 +13,11 @@ export default function CreateJobScreen({ navigation }) {
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [errors, setErrors] = useState({});
+  const [applicationDeadline, setApplicationDeadline] = useState('');
+  const [targetHiringDate, setTargetHiringDate] = useState('');
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState('');
+  const [selectedDateKey, setSelectedDateKey] = useState('');
 
   const [jobData, setJobData] = useState({
     title: '',
@@ -152,6 +160,18 @@ export default function CreateJobScreen({ navigation }) {
     } finally { setLoading(false); }
   };
 
+  const onDateSelect = (date) => {
+    setDatePickerVisible(false);
+    const formattedDate = date ? date.toISOString().split('T')[0] : '';
+    if (selectedDateKey === 'applicationDeadline') {
+      setApplicationDeadline(formattedDate);
+      setJobData(prev => ({ ...prev, applicationDeadline: formattedDate }));
+    } else if (selectedDateKey === 'targetHiringDate') {
+      setTargetHiringDate(formattedDate);
+      setJobData(prev => ({ ...prev, targetHiringDate: formattedDate }));
+    }
+  };
+
   const renderInput = (key, label, placeholder, opts = {}) => {
     const { required=false, multiline=false, keyboardType='default', maxLength } = opts;
     return (
@@ -206,7 +226,7 @@ export default function CreateJobScreen({ navigation }) {
   );
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={styles.container}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={styles.title}>Post a New Job</Text>
@@ -290,8 +310,24 @@ export default function CreateJobScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Settings</Text>
             {renderSimpleChips('priority','Priority',['Normal','High','Urgent'])}
             {renderSimpleChips('visibility','Visibility',['Public','Private','Internal'])}
-            {renderInput('applicationDeadline','Application Deadline','YYYY-MM-DD',{keyboardType:'numeric'})}
-            {renderInput('targetHiringDate','Target Hiring Date','YYYY-MM-DD',{keyboardType:'numeric'})}
+            
+            {/* ✅ REPLACED: Use DatePicker component instead of manual input */}
+            <DatePicker
+              label="Application Deadline"
+              value={jobData.applicationDeadline}
+              onChange={(date) => setJobData(prev => ({ ...prev, applicationDeadline: date }))}
+              placeholder="Select deadline date"
+              minimumDate={new Date()} // Can't set deadline in the past
+            />
+            
+            <DatePicker
+              label="Target Hiring Date"
+              value={jobData.targetHiringDate}
+              onChange={(date) => setJobData(prev => ({ ...prev, targetHiringDate: date }))}
+              placeholder="Select target date"
+              minimumDate={new Date()} // Can't set target date in the past
+            />
+            
             {renderInput('maxApplications','Max Applications','100',{keyboardType:'numeric'})}
             <TouchableOpacity style={styles.toggleContainer} onPress={() => setJobData(prev => ({ ...prev, assessmentRequired: !prev.assessmentRequired }))}>
               <View style={styles.toggleLeft}>
@@ -314,7 +350,15 @@ export default function CreateJobScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      {datePickerVisible && (
+        <DatePicker
+          mode={datePickerMode}
+          date={datePickerMode === 'date' ? new Date(selectedDateKey) : new Date()}
+          onConfirm={onDateSelect}
+          onCancel={() => setDatePickerVisible(false)}
+        />
+      )}
+    </View>
   );
 }
 
@@ -349,4 +393,8 @@ const styles = StyleSheet.create({
   publishButton:{flex:1,backgroundColor:colors.primary,padding:16,borderRadius:8,alignItems:'center'},
   publishButtonText:{fontSize:typography.sizes.md,fontWeight:typography.weights.bold,color:colors.white},
   buttonDisabled:{backgroundColor:colors.gray400},
+  datePickerContainer:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',padding:16,borderWidth:1,borderColor:colors.border,borderRadius:8,marginBottom:12,backgroundColor:colors.background},
+  datePickerLabel:{fontSize:typography.sizes.md,color:colors.text},
+  datePickerText:{fontSize:typography.sizes.md,color:colors.text},
+  datePickerIcon:{marginLeft:8},
 });
