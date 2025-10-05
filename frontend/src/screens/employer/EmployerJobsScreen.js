@@ -16,7 +16,7 @@ EmployerJobsScreen
 
 const TABS = [ 'draft', 'published' ];
 
-export default function EmployerJobsScreen({ navigation }) {
+export default function EmployerJobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const [activeTab, setActiveTab] = useState('draft');
   const [jobs, setJobs] = useState([]);
@@ -29,6 +29,35 @@ export default function EmployerJobsScreen({ navigation }) {
 
   // Redirect job seekers
   useEffect(()=>{ if (isJobSeeker) { navigation.replace('Jobs'); } }, [isJobSeeker]);
+
+  // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
+  useEffect(() => {
+    if (route.params?.switchToTab) {
+      console.log('?? Switching to tab:', route.params.switchToTab);
+      const publishedJobId = route.params.publishedJobId;
+      
+      // Proactively remove the job from the draft list
+      if (publishedJobId) {
+        console.log('??? Removing job from draft list:', publishedJobId);
+        setJobs(prevJobs => prevJobs.filter(j => j.JobID !== publishedJobId));
+      }
+      
+      // Switch to the published tab
+      setActiveTab(route.params.switchToTab);
+      
+      // Show success message if provided
+      if (route.params?.successMessage) {
+        showToast(route.params.successMessage, 'success');
+      }
+      
+      // Clear the params after processing
+      navigation.setParams({ 
+        switchToTab: undefined, 
+        publishedJobId: undefined,
+        successMessage: undefined 
+      });
+    }
+  }, [route.params]);
 
   const load = useCallback(async (page=1)=>{
     if (!user || isJobSeeker) return;
@@ -183,8 +212,43 @@ export default function EmployerJobsScreen({ navigation }) {
           <View style={jobStyles.loadingContainer}><Text style={jobStyles.loadingText}>Loading...</Text></View>
         ) : jobs.length===0 ? (
           <View style={jobStyles.emptyContainer}>
-            <Text style={jobStyles.emptyTitle}>No jobs</Text>
-            <Text style={jobStyles.emptyMessage}>No {activeTab} jobs found.</Text>
+            <Ionicons 
+              name={activeTab === 'draft' ? 'document-text-outline' : 'briefcase-outline'} 
+              size={80} 
+              color="#d1d5db" 
+              style={{ marginBottom: 20 }}
+            />
+            <Text style={jobStyles.emptyTitle}>
+              {activeTab === 'draft' ? 'No Draft Jobs' : 'No Published Jobs'}
+            </Text>
+            <Text style={jobStyles.emptyMessage}>
+              {activeTab === 'draft' 
+                ? onlyMine 
+                  ? "You haven't created any draft jobs yet. Start by creating a new job posting!"
+                  : "Your organization has no draft jobs at the moment."
+                : onlyMine
+                  ? "You haven't published any jobs yet. Publish your draft jobs to start receiving applications!"
+                  : "Your organization has no published jobs at the moment."
+              }
+            </Text>
+            {activeTab === 'draft' && (
+              <TouchableOpacity 
+                style={localStyles.createJobButton}
+                onPress={() => navigation.navigate('CreateJob')}
+              >
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Text style={localStyles.createJobButtonText}>Create New Job</Text>
+              </TouchableOpacity>
+            )}
+            {activeTab === 'published' && jobs.length === 0 && (
+              <TouchableOpacity 
+                style={localStyles.viewDraftsButton}
+                onPress={() => setActiveTab('draft')}
+              >
+                <Ionicons name="document-text" size={20} color="#0066cc" />
+                <Text style={localStyles.viewDraftsButtonText}>View Draft Jobs</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           // ? FIXED: Filter out null values from renderJob (when job doesn't match active tab)
@@ -223,5 +287,39 @@ const localStyles = {
     color:'#fff',
     fontSize:14,
     fontWeight:'600'
+  },
+  createJobButton: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0066cc',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  createJobButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  viewDraftsButton: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0066cc',
+  },
+  viewDraftsButtonText: {
+    color: '#0066cc',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   }
 };

@@ -351,7 +351,7 @@ export default function CreateJobScreen({ navigation }) {
               <Text style={styles.draftButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.publishButton, loading && styles.buttonDisabled]} onPress={handleCreateJob} disabled={loading}>
-              <Text style={styles.publishButtonText}>{loading ? 'Publishing...' : 'Publish Job'}</Text>
+              <Text style={styles.publishButtonText}>{loading ? 'Creating...' : 'Create Job'}</Text>
             </TouchableOpacity>
           </View>
         </View>

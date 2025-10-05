@@ -582,39 +582,52 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   // ✅ NEW: Handle publish job for employers
   const handlePublishJob = async () => {
-    if (!job?.JobID) return;
+    console.log('🚀 handlePublishJob called!');
+    console.log('🚀 Job ID:', job?.JobID);
+    console.log('🚀 Job Status:', job?.Status);
+    console.log('🚀 Is Employer:', isEmployer);
     
-    Alert.alert(
-      'Publish Job',
-      'Are you sure you want to publish this job? It will become visible to job seekers.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Publish', 
-          onPress: async () => {
-            try {
-              setPublishing(true);
-              const result = await nexhireAPI.publishJob(job.JobID);
-              
-              if (result.success) {
-                showToast('Job published successfully!', 'success');
-                // Redirect to Jobs screen
-                setTimeout(() => {
-                  navigation.navigate('Jobs');
-                }, 1500);
-              } else {
-                Alert.alert('Error', result.error || 'Failed to publish job');
-              }
-            } catch (error) {
-              console.error('Publish job error:', error);
-              Alert.alert('Error', error.message || 'Failed to publish job');
-            } finally {
-              setPublishing(false);
+    if (!job?.JobID) {
+      console.error('❌ No job ID found');
+      return;
+    }
+    
+    try {
+      setPublishing(true);
+      console.log('📡 Calling publishJob API with JobID:', job.JobID);
+      
+      const result = await nexhireAPI.publishJob(job.JobID);
+      
+      console.log('📡 API Response:', result);
+      
+      if (result.success) {
+        console.log('✅ Publish successful!');
+        showToast('Job published successfully!', 'success');
+        // Update job status locally to reflect the change
+        setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
+        // Navigate back with parameters to switch to Published tab
+        setTimeout(() => {
+          console.log('🔄 Navigating to MainTabs/Jobs with Published tab...');
+          // Navigate to MainTabs and then to Jobs screen with parameters
+          navigation.navigate('MainTabs', {
+            screen: 'Jobs',
+            params: { 
+              switchToTab: 'published',
+              publishedJobId: job.JobID,
+              successMessage: `${job.Title} has been published successfully!`
             }
-          }
-        }
-      ]
-    );
+          });
+        }, 1500);
+      } else {
+        console.error('❌ Publish failed:', result.error);
+        Alert.alert('Error', result.error || 'Failed to publish job');
+      }
+    } catch (error) {
+      console.error('❌ Publish job error:', error);
+      Alert.alert('Error', error.message || 'Failed to publish job');
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const formatSalary = () => {
@@ -1170,6 +1183,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
+
               styles.referralButton,
               hasReferred && styles.referralButtonDisabled
             ]}
@@ -1182,6 +1196,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
               color={hasReferred ? "#10b981" : colors.warning} 
             />
             <Text style={[
+
               styles.referralButtonText, 
               hasReferred && { color: "#10b981" }
             ]}>
@@ -1193,6 +1208,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
+
               styles.applyButton, 
               (hasApplied || applying) && styles.applyButtonDisabled
             ]} 
@@ -1210,6 +1226,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         {isEmployer && job.Status === 'Draft' && (
           <TouchableOpacity
             style={[
+
               styles.publishButton,
               publishing && styles.publishButtonDisabled
             ]}
