@@ -39,6 +39,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
+  const [referralRequesting, setReferralRequesting] = useState(false); // NEW
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -386,12 +387,12 @@ export default function JobDetailsScreen({ route, navigation }) {
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
-        // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+        setReferralRequesting(true);
         const res = await nexhireAPI.createReferralRequest({
-          jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
-          extJobID: null, // Explicitly null for internal referrals
+          jobID: jobId,
+          extJobID: null,
           resumeID: resumeData.ResumeID,
-          referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+          referralMessage: referralMessage.trim() || undefined
         });
         if (res.success) {
           setHasReferred(true);
@@ -400,13 +401,9 @@ export default function JobDetailsScreen({ route, navigation }) {
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          
           showToast('Referral request sent', 'success');
-          // 🆕 NEW: Clear and collapse message section after successful submission
           setReferralMessage('');
           setShowReferralMessageInput(false);
-          
-          // 🔧 REQUIREMENT 2: Reload primary resume after submission
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -416,6 +413,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       } finally {
         setReferralMode(false);
         setShowResumeModal(false);
+        setReferralRequesting(false);
       }
       return;
     }
@@ -522,18 +520,17 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   const quickReferral = async (resumeId) => {
     try {
-      // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+      setReferralRequesting(true); // NEW
       const res = await nexhireAPI.createReferralRequest({
-        jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
-        extJobID: null, // Explicitly null for internal referrals
+        jobID: jobId,
+        extJobID: null,
         resumeID: resumeId,
-        referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+        referralMessage: referralMessage.trim() || undefined
       });
       if (res?.success) {
         setHasReferred(true);
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
         showToast('Referral request sent', 'success');
-        // 🆕 NEW: Clear and collapse message section after successful submission
         setReferralMessage('');
         setShowReferralMessageInput(false);
       } else {
@@ -541,6 +538,8 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
+    } finally {
+      setReferralRequesting(false); // NEW
     }
   };
 
@@ -1183,24 +1182,22 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
-
               styles.referralButton,
-              hasReferred && styles.referralButtonDisabled
+              (hasReferred || referralRequesting) && styles.referralButtonDisabled
             ]}
-            onPress={hasReferred ? null : handleAskReferral}
-            disabled={hasReferred}
+            onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
+            disabled={hasReferred || referralRequesting}
           >
             <Ionicons 
-              name={hasReferred ? "checkmark-circle" : "people-outline"} 
+              name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
               size={20} 
-              color={hasReferred ? "#10b981" : colors.warning} 
+              color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
             />
             <Text style={[
-
               styles.referralButtonText, 
               hasReferred && { color: "#10b981" }
             ]}>
-              {hasReferred ? "Referred" : "Ask Referral"}
+              {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
             </Text>
           </TouchableOpacity>
         )}

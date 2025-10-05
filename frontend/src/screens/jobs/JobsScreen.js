@@ -90,6 +90,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // ✅ NEW: Referral tracking state
   const [referredJobIds, setReferredJobIds] = useState(new Set());
+  const [referralRequestingIds, setReferralRequestingIds] = useState(new Set()); // NEW
   const [referralEligibility, setReferralEligibility] = useState({
     isEligible: true,
     dailyQuotaRemaining: 5,
@@ -764,8 +765,10 @@ export default function JobsScreen({ navigation, route }) {
     // Simple job cards without animations
     return data.map((job, index) => {
       const id = job.JobID || index;
-      const isReferred = referredJobIds.has(job.JobID || job.id);
-      const isSaved = savedIds.has(job.JobID || job.id);
+      const jobKey = job.JobID || job.id;
+      const isReferred = referredJobIds.has(jobKey);
+      const isSaved = savedIds.has(jobKey);
+      const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
 
       return (
         <View key={id} style={{ marginBottom: 12 }}>
@@ -775,12 +778,13 @@ export default function JobsScreen({ navigation, route }) {
             workplaceTypes={workplaceTypes}
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
-            onAskReferral={isReferred ? null : () => handleAskReferral(job)}
+            onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
             onSave={() => handleSave(job)}
             onUnsave={() => handleUnsave(job)}
             savedContext={activeTab === 'saved'}
             isReferred={isReferred}
             isSaved={isSaved}
+            isReferralRequesting={isReferralRequesting}
           />
         </View>
       );
@@ -920,10 +924,11 @@ export default function JobsScreen({ navigation, route }) {
 
     // If user already has a primary resume, skip modal and create referral directly
     if (primaryResume?.ResumeID) {
+      setReferralRequestingIds(prev => new Set([...prev, jobId]));
       await quickReferral(job, primaryResume.ResumeID);
+      setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(jobId); return n; });
       return;
     }
-    // Else open modal to pick/upload
     setReferralMode(true); setPendingJobForApplication(job); setShowResumeModal(true);
   }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal, primaryResume, loadPrimaryResume]);
 
@@ -1138,10 +1143,10 @@ export default function JobsScreen({ navigation, route }) {
   const quickReferral = useCallback(async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
-      // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+      setReferralRequestingIds(prev => new Set([...prev, id])); // mark requesting
       const res = await nexhireAPI.createReferralRequest({
-        jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
-        extJobID: null, // Explicitly null for internal referrals
+        jobID: id,
+        extJobID: null,
         resumeID: resumeId
       });
       if (res?.success) {
@@ -1153,6 +1158,8 @@ export default function JobsScreen({ navigation, route }) {
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
+    } finally {
+      setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
     }
   }, []);
 

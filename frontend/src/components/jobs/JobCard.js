@@ -20,6 +20,8 @@ const JobCard = ({
   savedContext = false, 
   isReferred = false, 
   isSaved = false,
+  // NEW: show requesting state while API pending
+  isReferralRequesting = false,
   // Props to hide action buttons for employer context
   hideApply = false,
   hideSave = false,
@@ -132,12 +134,17 @@ const JobCard = ({
             )
           )}
 
-          {/* Referral button - only show if not hidden */}
+          {/* Referral button / states */}
           {!hideReferral && (
-            isReferred ? (
+            isReferralRequesting ? (
+              <View style={styles.requestingPill} accessibilityRole="text">
+                <Ionicons name="time-outline" size={18} color="#f59e0b" />
+                <Text style={styles.requestingText}>Requesting</Text>
+              </View>
+            ) : isReferred ? (
               <View style={styles.referredPill} accessibilityRole="text">
                 <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-                <Text style={styles.referredText}>Referred</Text>
+                <Text style={styles.referredText}>Ref. Asked</Text>
               </View>
             ) : onAskReferral ? (
               <TouchableOpacity 
@@ -310,7 +317,18 @@ const styles = StyleSheet.create({
     borderColor: '#10b981',
   },
   referredText: { color: '#10b981', marginLeft: 6, fontWeight: '600', fontSize: 13 },
-  // ✅ NEW: Publish button styles (for employers)
+  requestingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#f59e0b'
+  },
+  requestingText: { color: '#f59e0b', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  // RESTORED: Publish button styles
   publishBtn: {
     flexDirection: 'row',
     alignItems: 'center',
