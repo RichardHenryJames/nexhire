@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
@@ -79,6 +80,9 @@ export default function WorkExperienceScreen({ navigation, route }) {
     secondarySkills: '',
     summary: '',
   });
+
+  // NEW: Store selected organization objects to preserve logo URLs
+  const [selectedOrganization, setSelectedOrganization] = useState(null);
 
   // Track which tab is active
   const [activeTab, setActiveTab] = useState('current'); // 'current' or 'previous'
@@ -159,6 +163,13 @@ export default function WorkExperienceScreen({ navigation, route }) {
               ]}
               onPress={() => onSelect(item)}
             >
+              {/* NEW: Show company logo if available */}
+              {item.logoUrl ? (
+                <Image source={{ uri: item.logoUrl }} style={styles.logoImage} />
+              ) : (
+                <Ionicons name="business" size={24} color={colors.gray400} />
+              )}
+              
               <Text style={[
                 styles.modalItemText,
                 currentValue === item && styles.modalItemTextSelected
@@ -218,9 +229,11 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const handleSelectOrganization = (org) => {
     if (org.id === 999999) {
       updateField('organizationId', null);
+      setSelectedOrganization(null);
     } else {
       updateField('organizationId', org.id);
       updateField('currentCompany', org.name);
+      setSelectedOrganization(org); // Store the complete org object for logo access
     }
     closeOrgModal();
   };
@@ -304,17 +317,36 @@ export default function WorkExperienceScreen({ navigation, route }) {
     });
   };
 
-  const OrgPickerButton = () => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Company</Text>
-      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
-        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
-          {formData.currentCompany || 'Select or search company'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color={colors.gray500} />
-      </TouchableOpacity>
-    </View>
-  );
+  const OrgPickerButton = () => {
+    return (
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Company</Text>
+        <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
+          {formData.currentCompany ? (
+            <View style={styles.companySelectorContent}>
+              {selectedOrganization?.logoURL ? (
+                <Image
+                  source={{ uri: selectedOrganization.logoURL }}
+                  style={styles.companySelectorLogo}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.companySelectorLogoPlaceholder}>
+                  <Ionicons name="business" size={16} color={colors.gray400} />
+                </View>
+              )}
+              <Text style={styles.selectionValue}>{formData.currentCompany}</Text>
+            </View>
+          ) : (
+            <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
+              Select or search company
+            </Text>
+          )}
+          <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -521,9 +553,31 @@ export default function WorkExperienceScreen({ navigation, route }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                  <View>
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
+                  <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                    {item.website && (
+                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}>
+                        {item.website}
+                      </Text>
+                    )}
+                    {item.industry && (
+                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
+                        {item.industry}
+                      </Text>
+                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -733,5 +787,50 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     marginLeft: 4,
     marginTop: 8,
+  },
+  // Company selector styles with logo support
+  companySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companySelectorLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.white,
+  },
+  companySelectorLogoPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyInfo: {
+    flex: 1,
   },
 });
