@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const resolveNameById = (list, id, idKey, nameKey) => {
@@ -8,10 +8,33 @@ const resolveNameById = (list, id, idKey, nameKey) => {
   return row ? (row[nameKey] || '') : '';
 };
 
-const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, onSave, onUnsave, onAskReferral, savedContext = false, isReferred = false, isSaved = false }) => {
+const JobCard = ({ 
+  job, 
+  onPress, 
+  jobTypes = [], 
+  workplaceTypes = [], 
+  onApply, 
+  onSave, 
+  onUnsave, 
+  onAskReferral, 
+  savedContext = false, 
+  isReferred = false, 
+  isSaved = false,
+  // NEW: show requesting state while API pending
+  isReferralRequesting = false,
+  // Props to hide action buttons for employer context
+  hideApply = false,
+  hideSave = false,
+  hideReferral = false,
+  // ✅ NEW: Props for employer publish action
+  onPublish = null,
+  showPublish = false
+}) => {
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
+  const logo = job.OrganizationLogo || job.organizationLogo || '';
+  
   const parts = [];
   if (job.City) parts.push(job.City);
   if (job.State) parts.push(job.State);
@@ -38,12 +61,36 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
     ? `$${Number(job.SalaryRangeMin).toLocaleString()} - $${Number(job.SalaryRangeMax).toLocaleString()} ${job.SalaryPeriod || 'Annual'}`
     : '';
 
+  // ✅ NEW: Check if we should show any actions row
+  const showActions = !hideApply || !hideSave || !hideReferral || showPublish;
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        <Text style={styles.company} numberOfLines={1}>{org}</Text>
+        <View style={styles.titleRow}>
+          {/* 🏢 Company Logo */}
+          <View style={styles.logoContainer}>
+            {logo ? (
+              <Image 
+                source={{ uri: logo }} 
+                style={styles.logo}
+                onError={() => console.log('Logo load error for:', org)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={20} color="#666" />
+              </View>
+            )}
+          </View>
+          
+          {/* Job Title and Company */}
+          <View style={styles.titleContent}>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            <Text style={styles.company} numberOfLines={1}>{org}</Text>
+          </View>
+        </View>
       </View>
+      
       <View style={styles.metaRow}>
         <Text style={styles.meta}>{loc}</Text>
         <Text style={styles.dot}> • </Text>
@@ -64,51 +111,70 @@ const JobCard = ({ job, onPress, jobTypes = [], workplaceTypes = [], onApply, on
         </View>
       )}
 
-      {/* Actions row - moved to separate line */}
-      <View style={styles.actionsRow}>
-        {/* 🔧 FIXED: Dynamic save/unsave button based on saved state */}
-        {savedContext ? (
-          // In saved tab context, always show "Saved" pill with unsave functionality
-          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-            <Ionicons name="bookmark" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Saved</Text>
-          </TouchableOpacity>
-        ) : isSaved ? (
-          // In openings tab, if already saved, show "Saved" pill with unsave functionality
-          <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-            <Ionicons name="bookmark" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Saved</Text>
-          </TouchableOpacity>
-        ) : (
-          // In openings tab, if not saved, show "Save" button
-          <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-            <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
-            <Text style={styles.saveText}>Save</Text>
-          </TouchableOpacity>
-        )}
+      {/* ✅ UPDATED: Show actions row if any action is visible OR if publish button should show */}
+      {showActions && (
+        <View style={styles.actionsRow}>
+          {/* Save button - only show if not hidden */}
+          {!hideSave && (
+            savedContext ? (
+              <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+                <Ionicons name="bookmark" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Saved</Text>
+              </TouchableOpacity>
+            ) : isSaved ? (
+              <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
+                <Ionicons name="bookmark" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Saved</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
+                <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+            )
+          )}
 
-          {/* Always show "Ask Referral" or "Referred" - quota check happens on click */}
-          {isReferred ? (
-            <View style={styles.referredPill} accessibilityRole="text">
-              <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-              <Text style={styles.referredText}>Referred</Text>
-            </View>
-          ) : onAskReferral ? (
-            <TouchableOpacity 
-              style={styles.referralBtn} 
-              onPress={onAskReferral} 
-              accessibilityLabel="Ask for referral"
-            >
-              <Ionicons name="people-outline" size={18} color="#ff6600" />
-              <Text style={styles.referralText}>Ask Referral</Text>
+          {/* Referral button / states */}
+          {!hideReferral && (
+            isReferralRequesting ? (
+              <View style={styles.requestingPill} accessibilityRole="text">
+                <Ionicons name="time-outline" size={18} color="#f59e0b" />
+                <Text style={styles.requestingText}>Requesting</Text>
+              </View>
+            ) : isReferred ? (
+              <View style={styles.referredPill} accessibilityRole="text">
+                <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                <Text style={styles.referredText}>Ref. Asked</Text>
+              </View>
+            ) : onAskReferral ? (
+              <TouchableOpacity 
+                style={styles.referralBtn} 
+                onPress={onAskReferral} 
+                accessibilityLabel="Ask for referral"
+              >
+                <Ionicons name="people-outline" size={18} color="#ff6600" />
+                <Text style={styles.referralText}>Ask Referral</Text>
+              </TouchableOpacity>
+            ) : null
+          )}
+
+          {/* ✅ NEW: Publish button for employers (draft jobs only) */}
+          {showPublish && onPublish && (
+            <TouchableOpacity style={styles.publishBtn} onPress={onPublish} accessibilityLabel="Publish job">
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Text style={styles.publishText}>Publish</Text>
             </TouchableOpacity>
-          ) : null}
+          )}
 
-           <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-             <Ionicons name="paper-plane-outline" size={18} color="#fff" />
-             <Text style={styles.applyText}>Apply</Text>
-           </TouchableOpacity>
-       </View>
+          {/* Apply button - only show if not hidden */}
+          {!hideApply && onApply && (
+            <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+              <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -129,15 +195,44 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 6,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  logoContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  logoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  titleContent: {
+    flex: 1,
+  },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111',
+    marginBottom: 2,
   },
   company: {
     fontSize: 14,
     color: '#444',
-    marginTop: 2,
+    fontWeight: '500',
   },
   metaRow: {
     flexDirection: 'row',
@@ -222,6 +317,27 @@ const styles = StyleSheet.create({
     borderColor: '#10b981',
   },
   referredText: { color: '#10b981', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  requestingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#f59e0b'
+  },
+  requestingText: { color: '#f59e0b', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  // RESTORED: Publish button styles
+  publishBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#0066cc',
+  },
+  publishText: { color: '#fff', marginLeft: 6, fontWeight: '700', fontSize: 13 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',

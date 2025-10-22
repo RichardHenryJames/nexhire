@@ -70,7 +70,7 @@ export default function JobsScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 100, total: 0, totalPages: 0, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -90,6 +90,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // ✅ NEW: Referral tracking state
   const [referredJobIds, setReferredJobIds] = useState(new Set());
+  const [referralRequestingIds, setReferralRequestingIds] = useState(new Set()); // NEW
   const [referralEligibility, setReferralEligibility] = useState({
     isEligible: true,
     dailyQuotaRemaining: 5,
@@ -467,19 +468,19 @@ export default function JobsScreen({ navigation, route }) {
     if (loading || loadingMore) return;
     if (isLoadingMoreRef.current) return;
     if (!pagination.hasMore) {
-      console.log('?? Load more skipped - no more jobs available');
+      console.log('Load more skipped - no more jobs available');
       return;
     }
 
     const nextPage = (pagination.page || 1) + 1;
     if (pagination.totalPages && nextPage > pagination.totalPages) {
-      console.log(`?? Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
+      console.log(`Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     if (lastAutoLoadPageRef.current === nextPage) {
-      console.log(`?? Skipping duplicate auto-load for page ${nextPage}`);
+      console.log(`Skipping duplicate auto-load for page ${nextPage}`);
       return;
     }
 
@@ -560,7 +561,7 @@ export default function JobsScreen({ navigation, route }) {
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5;
 
-    console.log(`?? Smart Pagination Check:`, {
+    console.log(`Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -570,25 +571,25 @@ export default function JobsScreen({ navigation, route }) {
     });
 
     if (!backendHasMore) {
-      console.log('?? Smart pagination skipped - backend says no more jobs available');
+      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
+      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -748,7 +749,7 @@ export default function JobsScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
               onPress={() => {
-                console.log('?? Manual Load More triggered');
+                console.log('Manual Load More triggered');
                 setSmartPaginating(true);
                 loadMoreJobs();
                 setTimeout(() => setSmartPaginating(false), 2000);
@@ -764,8 +765,10 @@ export default function JobsScreen({ navigation, route }) {
     // Simple job cards without animations
     return data.map((job, index) => {
       const id = job.JobID || index;
-      const isReferred = referredJobIds.has(job.JobID || job.id);
-      const isSaved = savedIds.has(job.JobID || job.id);
+      const jobKey = job.JobID || job.id;
+      const isReferred = referredJobIds.has(jobKey);
+      const isSaved = savedIds.has(jobKey);
+      const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
 
       return (
         <View key={id} style={{ marginBottom: 12 }}>
@@ -775,12 +778,13 @@ export default function JobsScreen({ navigation, route }) {
             workplaceTypes={workplaceTypes}
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
-            onAskReferral={isReferred ? null : () => handleAskReferral(job)}
+            onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
             onSave={() => handleSave(job)}
             onUnsave={() => handleUnsave(job)}
             savedContext={activeTab === 'saved'}
             isReferred={isReferred}
             isSaved={isSaved}
+            isReferralRequesting={isReferralRequesting}
           />
         </View>
       );
@@ -843,7 +847,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-    console.log('?? handleAskReferral called in JobsScreen for job:', job?.Title);
+    console.log('handleAskReferral called in JobsScreen for job:', job?.Title);
 
     if (!job) return;
     if (!user) {
@@ -871,13 +875,13 @@ export default function JobsScreen({ navigation, route }) {
 
     // ? CRITICAL FIX: Always check real-time quota before proceeding
     try {
-      console.log('?? Checking referral eligibility...');
+      console.log('Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('?? Eligibility result:', freshEligibility);
+      console.log('Eligibility result:', freshEligibility);
 
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('?? Eligibility data:', eligibilityData);
+        console.log('Eligibility data:', eligibilityData);
 
         if (!eligibilityData.isEligible) {
           console.log('❌ User not eligible, checking subscription status...');
@@ -896,7 +900,7 @@ export default function JobsScreen({ navigation, route }) {
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('?? Failed to check referral eligibility:', e);
+      console.error('Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
@@ -920,14 +924,15 @@ export default function JobsScreen({ navigation, route }) {
 
     // If user already has a primary resume, skip modal and create referral directly
     if (primaryResume?.ResumeID) {
+      setReferralRequestingIds(prev => new Set([...prev, jobId]));
       await quickReferral(job, primaryResume.ResumeID);
+      setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(jobId); return n; });
       return;
     }
-    // Else open modal to pick/upload
     setReferralMode(true); setPendingJobForApplication(job); setShowResumeModal(true);
   }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal, primaryResume, loadPrimaryResume]);
 
-  // ?? NEW: Subscription modal for quota exhausted users
+  // NEW: Subscription modal for quota exhausted users
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
      console.log('💳 showSubscriptionModal called in JobsScreen');
      console.log('💳 Navigation object:', navigation);
@@ -987,7 +992,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // ? NEW: Handle plan selection and purchase
   const handlePlanSelection = useCallback(async (plan) => {
-    console.log('?? Plan selected in JobsScreen:', plan);
+    console.log('Plan selected in JobsScreen:', plan);
 
     Alert.alert(
       'Confirm Subscription',
@@ -1000,7 +1005,7 @@ export default function JobsScreen({ navigation, route }) {
             try {
               // For demo - simulate successful purchase
               Alert.alert(
-                '?? Subscription Successful!',
+                'Subscription Successful!',
                 `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
                 [
                   {
@@ -1050,6 +1055,9 @@ export default function JobsScreen({ navigation, route }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           showToast('Referral request sent successfully', 'success');
+          
+          // 🔧 FIXED: Reload primary resume after successful referral
+          await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -1075,6 +1083,13 @@ export default function JobsScreen({ navigation, route }) {
           }
           setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
           showToast('Application submitted successfully', 'success');
+          
+          // 🔧 FIXED: Reload primary resume after successful application
+          console.log('🔄 Reloading primary resume after successful application...');
+          primaryResumeLoadedRef.current = false; // Reset the loaded flag
+          await loadPrimaryResume(); // Reload primary resume
+          console.log('✅ Primary resume reloaded, next applications will auto-apply');
+          
           // Only refresh applied count (lightweight)
           try {
             const appliedRes = await nexhireAPI.getMyApplications(1, 1);
@@ -1091,7 +1106,7 @@ export default function JobsScreen({ navigation, route }) {
       setPendingJobForApplication(null);
       setReferralMode(false);
     }
-  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally]);
+  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally, loadPrimaryResume]);
 
   // NEW: Auto apply with known resume (no modal)
   const quickApply = useCallback(async (job, resumeId) => {
@@ -1128,10 +1143,10 @@ export default function JobsScreen({ navigation, route }) {
   const quickReferral = useCallback(async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
-      // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+      setReferralRequestingIds(prev => new Set([...prev, id])); // mark requesting
       const res = await nexhireAPI.createReferralRequest({
-        jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
-        extJobID: null, // Explicitly null for internal referrals
+        jobID: id,
+        extJobID: null,
         resumeID: resumeId
       });
       if (res?.success) {
@@ -1143,6 +1158,8 @@ export default function JobsScreen({ navigation, route }) {
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
+    } finally {
+      setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
     }
   }, []);
 
@@ -1222,7 +1239,7 @@ export default function JobsScreen({ navigation, route }) {
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5; // Trigger when only 5 jobs left
 
-    console.log(`?? Smart Pagination Check:`, {
+    console.log(`Smart Pagination Check:`, {
       jobsLength: jobs.length,
       lowThreshold,
       backendHasMore,
@@ -1233,26 +1250,26 @@ export default function JobsScreen({ navigation, route }) {
 
     // Don't trigger if backend says no more
     if (!backendHasMore) {
-      console.log('?? Smart pagination skipped - backend says no more jobs available');
+      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     // FIXED: Additional guard - don't trigger if current page >= totalPages
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`?? Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
+      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`?? Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
+      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('?? Emergency pagination: No jobs visible but backend has more available, loading immediately...');
+      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();

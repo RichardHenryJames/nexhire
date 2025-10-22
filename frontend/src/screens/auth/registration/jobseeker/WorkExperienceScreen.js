@@ -12,10 +12,12 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
 import nexhireAPI from '../../../../services/api';
+import DatePicker from '../../../../components/DatePicker';
 
 // Debounce like college picker
 const useDebounce = (value, delay = 300) => {
@@ -51,23 +53,43 @@ const WORK_ARRANGEMENTS = [
 ];
 
 export default function WorkExperienceScreen({ navigation, route }) {
-  const [formData, setFormData] = useState({
-    isCurrentlyWorking: true,
+  // NEW: Separate state for current and previous work experiences
+  const [currentWorkData, setCurrentWorkData] = useState({
     currentJobTitle: '',
     organizationId: null,
     currentCompany: '',
     startDate: '',
-    endDate: '',
-
     yearsOfExperience: '',
     workArrangement: '',
     jobType: '',
     primarySkills: '',
     secondarySkills: '',
-    previousJobTitle: '',
-    previousCompany: '',
     summary: '',
   });
+
+  const [previousWorkData, setPreviousWorkData] = useState({
+    currentJobTitle: '',
+    organizationId: null,
+    currentCompany: '',
+    startDate: '',
+    endDate: '',
+    yearsOfExperience: '',
+    workArrangement: '',
+    jobType: '',
+    primarySkills: '',
+    secondarySkills: '',
+    summary: '',
+  });
+
+  // NEW: Store selected organization objects to preserve logo URLs
+  const [selectedOrganization, setSelectedOrganization] = useState(null);
+
+  // Track which tab is active
+  const [activeTab, setActiveTab] = useState('current'); // 'current' or 'previous'
+
+  // NEW: Computed formData based on active tab
+  const formData = activeTab === 'current' ? currentWorkData : previousWorkData;
+  const setFormData = activeTab === 'current' ? setCurrentWorkData : setPreviousWorkData;
 
   // Modals
   const [showExperienceModal, setShowExperienceModal] = useState(false);
@@ -89,7 +111,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       ...prevData,
       [field]: value
     }));
-  }, []);
+  }, [setFormData]);
 
   const InputField = useMemo(() => React.memo(({ label, value, onChangeText, placeholder, multiline = false, required = false, keyboardType = 'default' }) => (
     <View style={styles.inputContainer}>
@@ -141,6 +163,13 @@ export default function WorkExperienceScreen({ navigation, route }) {
               ]}
               onPress={() => onSelect(item)}
             >
+              {/* NEW: Show company logo if available */}
+              {item.logoUrl ? (
+                <Image source={{ uri: item.logoUrl }} style={styles.logoImage} />
+              ) : (
+                <Ionicons name="business" size={24} color={colors.gray400} />
+              )}
+              
               <Text style={[
                 styles.modalItemText,
                 currentValue === item && styles.modalItemTextSelected
@@ -200,52 +229,124 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const handleSelectOrganization = (org) => {
     if (org.id === 999999) {
       updateField('organizationId', null);
+      setSelectedOrganization(null);
     } else {
       updateField('organizationId', org.id);
       updateField('currentCompany', org.name);
+      setSelectedOrganization(org); // Store the complete org object for logo access
     }
     closeOrgModal();
   };
 
+  // NEW: Validate and prepare work experience data
+  const prepareWorkExperienceData = () => {
+    const workExperiences = [];
+
+    // Add current work if filled
+    if (currentWorkData.currentJobTitle?.trim()) {
+      workExperiences.push({
+        jobTitle: currentWorkData.currentJobTitle.trim(),
+        companyName: currentWorkData.currentCompany?.trim() || null,
+        organizationId: currentWorkData.organizationId || null,
+        startDate: currentWorkData.startDate?.trim() || null,
+        endDate: null, // Current work has no end date
+        isCurrentPosition: true,
+        workArrangement: currentWorkData.workArrangement || null,
+        jobType: currentWorkData.jobType || null,
+        primarySkills: currentWorkData.primarySkills?.trim() || null,
+        secondarySkills: currentWorkData.secondarySkills?.trim() || null,
+        summary: currentWorkData.summary?.trim() || null,
+      });
+    }
+
+    // Add previous work if filled
+    if (previousWorkData.currentJobTitle?.trim()) {
+      workExperiences.push({
+        jobTitle: previousWorkData.currentJobTitle.trim(),
+        companyName: previousWorkData.currentCompany?.trim() || null,
+        organizationId: previousWorkData.organizationId || null,
+        startDate: previousWorkData.startDate?.trim() || null,
+        endDate: previousWorkData.endDate?.trim() || null,
+        isCurrentPosition: false,
+        workArrangement: previousWorkData.workArrangement || null,
+        jobType: previousWorkData.jobType || null,
+        primarySkills: previousWorkData.primarySkills?.trim() || null,
+        secondarySkills: previousWorkData.secondarySkills?.trim() || null,
+        summary: previousWorkData.summary?.trim() || null,
+      });
+    }
+
+    return workExperiences;
+  };
+
   const handleContinue = () => {
-    if (!formData.currentJobTitle.trim()) {
-      Alert.alert('Required Field', 'Please enter your current or most recent job title');
+    // Validate at least current OR previous is filled
+    const hasCurrentWork = currentWorkData.currentJobTitle?.trim();
+    const hasPreviousWork = previousWorkData.currentJobTitle?.trim();
+
+    if (!hasCurrentWork && !hasPreviousWork) {
+      Alert.alert('Required Field', 'Please enter at least one work experience (current or previous)');
       return;
     }
-    if (!formData.startDate.trim()) {
-      Alert.alert('Required Field', 'Please enter your start date (YYYY-MM-DD)');
+
+    // Validate current work if filled
+    if (hasCurrentWork && !currentWorkData.startDate?.trim()) {
+      Alert.alert('Required Field', 'Please enter start date for your current position');
       return;
     }
+
+    // Validate previous work if filled
+    if (hasPreviousWork) {
+      if (!previousWorkData.startDate?.trim()) {
+        Alert.alert('Required Field', 'Please enter start date for your previous position');
+        return;
+      }
+      if (!previousWorkData.endDate?.trim()) {
+        Alert.alert('Required Field', 'Please enter end date for your previous position');
+        return;
+      }
+    }
+
+    // NEW: Pass array of work experiences
+    const workExperiences = prepareWorkExperienceData();
 
     navigation.navigate('EducationDetailsScreen', { 
       userType, 
       experienceType,
-      workExperienceData: {
-        jobTitle: formData.currentJobTitle?.trim(),
-        companyName: formData.currentCompany?.trim() || null,
-        organizationId: formData.organizationId || null,
-        startDate: formData.startDate?.trim(),
-        endDate: formData.endDate?.trim() || null,
-        workArrangement: formData.workArrangement,
-        jobType: formData.jobType,
-        primarySkills: formData.primarySkills,
-        secondarySkills: formData.secondarySkills,
-        summary: formData.summary,
-      }
+      workExperienceData: workExperiences, // Now an array!
     });
   };
 
-  const OrgPickerButton = () => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Company</Text>
-      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
-        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
-          {formData.currentCompany || 'Select or search company'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color={colors.gray500} />
-      </TouchableOpacity>
-    </View>
-  );
+  const OrgPickerButton = () => {
+    return (
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Company</Text>
+        <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
+          {formData.currentCompany ? (
+            <View style={styles.companySelectorContent}>
+              {selectedOrganization?.logoURL ? (
+                <Image
+                  source={{ uri: selectedOrganization.logoURL }}
+                  style={styles.companySelectorLogo}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.companySelectorLogoPlaceholder}>
+                  <Ionicons name="business" size={16} color={colors.gray400} />
+                </View>
+              )}
+              <Text style={styles.selectionValue}>{formData.currentCompany}</Text>
+            </View>
+          ) : (
+            <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
+              Select or search company
+            </Text>
+          )}
+          <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -278,18 +379,18 @@ export default function WorkExperienceScreen({ navigation, route }) {
               <Text style={styles.inputLabel}>Employment Status</Text>
               <View style={styles.toggleContainer}>
                 <TouchableOpacity
-                  style={[styles.toggleOption, formData.isCurrentlyWorking === true && styles.toggleOptionSelected]}
-                  onPress={() => updateField('isCurrentlyWorking', true)}
+                  style={[styles.toggleOption, activeTab === 'current' && styles.toggleOptionSelected]}
+                  onPress={() => setActiveTab('current')}
                 >
-                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === true && styles.toggleTextSelected]}>
+                  <Text style={[styles.toggleText, activeTab === 'current' && styles.toggleTextSelected]}>
                     Currently Working
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.toggleOption, formData.isCurrentlyWorking === false && styles.toggleOptionSelected]}
-                  onPress={() => updateField('isCurrentlyWorking', false)}
+                  style={[styles.toggleOption, activeTab === 'previous' && styles.toggleOptionSelected]}
+                  onPress={() => setActiveTab('previous')}
                 >
-                  <Text style={[styles.toggleText, formData.isCurrentlyWorking === false && styles.toggleTextSelected]}>
+                  <Text style={[styles.toggleText, activeTab === 'previous' && styles.toggleTextSelected]}>
                     Previously Worked
                   </Text>
                 </TouchableOpacity>
@@ -298,7 +399,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
             {/* Job Title (required) */}
             <InputField
-              label={formData.isCurrentlyWorking ? "Current Job Title" : "Most Recent Job Title"}
+              label={activeTab === 'current' ? "Current Job Title" : "Most Recent Job Title"}
               value={formData.currentJobTitle}
               onChangeText={(text) => updateField('currentJobTitle', text)}
               placeholder="e.g. Software Engineer, Marketing Manager"
@@ -308,22 +409,28 @@ export default function WorkExperienceScreen({ navigation, route }) {
             {/* Company (Org Picker + manual) */}
             <OrgPickerButton />
 
-            {/* Start/End Dates */}
-            <InputField
+            {/* Start/End Dates - ? REPLACED with DatePicker */}
+            <DatePicker
               label="Start Date"
               value={formData.startDate}
-              onChangeText={(text) => updateField('startDate', text)}
-              placeholder="YYYY-MM-DD"
+              onChange={(date) => updateField('startDate', date)}
+              placeholder="Select start date"
               required
-              keyboardType="numbers-and-punctuation"
+              maximumDate={new Date()} // Can't start in the future
             />
-            <InputField
-              label="End Date"
-              value={formData.endDate}
-              onChangeText={(text) => updateField('endDate', text)}
-              placeholder={formData.isCurrentlyWorking ? 'Leave empty if current' : 'YYYY-MM-DD'}
-              keyboardType="numbers-and-punctuation"
-            />
+            
+            {/* FIXED: Only show End Date field when on "Previously Worked" tab */}
+            {activeTab === 'previous' && (
+              <DatePicker
+                label="End Date"
+                value={formData.endDate}
+                onChange={(date) => updateField('endDate', date)}
+                placeholder="Select end date"
+                required
+                minimumDate={formData.startDate ? new Date(formData.startDate) : undefined} // End date must be after start date
+                maximumDate={new Date()} // Can't end in the future
+              />
+            )}
 
             {/* Optional older fields */}
             <View style={{ height: 8 }} />
@@ -446,9 +553,31 @@ export default function WorkExperienceScreen({ navigation, route }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                  <View>
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
+                  <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                    {item.website && (
+                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}>
+                        {item.website}
+                      </Text>
+                    )}
+                    {item.industry && (
+                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
+                        {item.industry}
+                      </Text>
+                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -658,5 +787,50 @@ const styles = StyleSheet.create({
     color: colors.gray600,
     marginLeft: 4,
     marginTop: 8,
+  },
+  // Company selector styles with logo support
+  companySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companySelectorLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.white,
+  },
+  companySelectorLogoPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyInfo: {
+    flex: 1,
   },
 });

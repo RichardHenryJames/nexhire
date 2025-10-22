@@ -8,9 +8,12 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  TextInput // 🆕 NEW: Import TextInput
+  TextInput,
+  Image,
+  useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import RenderHtml from 'react-native-render-html';
 import nexhireAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
@@ -19,72 +22,67 @@ import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
   const { jobId } = route.params || {};
-  const { user, isJobSeeker } = useAuth();
+  const { user, isJobSeeker, isEmployer } = useAuth();
+  const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
-  const [isSaved, setIsSaved] = useState(false); // Track saved state
+  const [isSaved, setIsSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false); // ✅ NEW: Publishing state
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null
-  });
+  const [referralEligibility, setReferralEligibility] = useState({ isEligible: true, dailyQuotaRemaining: 5, hasActiveSubscription: false, reason: null });
   const [primaryResume, setPrimaryResume] = useState(null);
-  const [referralMessage, setReferralMessage] = useState(''); // 🆕 NEW: Add referral message state
-  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false); // 🆕 NEW: Control message input visibility
+  const [referralMessage, setReferralMessage] = useState('');
+  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
+  const [referralRequesting, setReferralRequesting] = useState(false); // NEW
 
-  // ?? Add navigation header with back button
+  // Initialize default cover letter when job loads (only once)
+  useEffect(() => {
+    if (job?.Title && !coverLetter) {
+      setCoverLetter(`I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`);
+    }
+  }, [job?.Title]);
+
+  // Helper builder for cover letter
+  const buildCoverLetter = useCallback(() => {
+    const fallback = job?.Title
+      ? `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`
+      : 'I am very interested in this position and believe my skills and experience make me a great candidate.';
+    const custom = coverLetter.trim();
+    return custom.length ? custom : fallback;
+  }, [coverLetter, job?.Title]);
+
+  // ✅ UPDATED: Navigation header - remove save button for employers
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
-      headerStyle: {
-        backgroundColor: colors.surface,
-        elevation: 0,
-        shadowOpacity: 0,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      },
-      headerTitleStyle: {
-        fontSize: typography.sizes.lg,
-        fontWeight: typography.weights.bold,
-        color: colors.text,
-      },
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerLeft: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      headerRight: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={handleSaveJob}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons 
-            name={isSaved ? "bookmark" : "bookmark-outline"} 
-            size={24} 
-            color={isSaved ? colors.primary : colors.text} 
-          />
+      // ✅ FIXED: Only show save button for job seekers (not employers)
+      headerRight: (hasApplied || isEmployer) ? undefined : () => (
+        <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
         </TouchableOpacity>
-      ),
+      )
     });
-  }, [navigation, isSaved]);
+  }, [navigation, isSaved, hasApplied, isEmployer]);
 
   // Load job details and referral status
   useEffect(() => {
     if (jobId) {
       fetchJobDetails();
       loadReferralStatus();
-      checkSavedStatus(); // Check if job is saved
+      checkSavedStatus();
     } else {
       setLoading(false);
     }
@@ -180,7 +178,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleApply = async () => {
-    console.log('?? NEW handleApply called - code is updated!');
+    console.log('NEW handleApply called - code is updated!');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -210,7 +208,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleAskReferral = async () => {
-    console.log('?? handleAskReferral called in JobDetailsScreen');
+    console.log('handleAskReferral called in JobDetailsScreen');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to ask for referrals', [
@@ -232,15 +230,15 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // ?? REQUIREMENT 3: Check real-time eligibility and show subscription modal
+    // REQUIREMENT 3: Check real-time eligibility and show subscription modal
     try {
-      console.log('?? Checking referral eligibility...');
+      console.log('Checking referral eligibility...');
       const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('?? Eligibility result:', freshEligibility);
+      console.log('Eligibility result:', freshEligibility);
       
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
-        console.log('?? Eligibility data:', eligibilityData);
+        console.log('Eligibility data:', eligibilityData);
         
         if (!eligibilityData.isEligible) {
           console.log('? User not eligible, checking subscription status...');
@@ -258,7 +256,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         setReferralEligibility(eligibilityData);
       }
     } catch (e) {
-      console.error('?? Failed to check referral eligibility:', e);
+      console.error('Failed to check referral eligibility:', e);
       Alert.alert('Error', 'Unable to check referral quota. Please try again.');
       return;
     }
@@ -285,11 +283,11 @@ export default function JobDetailsScreen({ route, navigation }) {
     setReferralMode(true); setShowResumeModal(true);
   };
 
-  // ?? REQUIREMENT 3: Improved subscription modal with better logic
+  // REQUIREMENT 3: Improved subscription modal with better logic
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-    console.log('?? showSubscriptionModal called in JobDetailsScreen');
-    console.log('?? Navigation object:', navigation);
-    console.log('?? Available routes:', navigation.getState?.());
+    console.log('showSubscriptionModal called in JobDetailsScreen');
+    console.log('Navigation object:', navigation);
+    console.log('Available routes:', navigation.getState?.());
     
     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
@@ -298,30 +296,30 @@ export default function JobDetailsScreen({ route, navigation }) {
       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
     if (Platform.OS === 'web') {
-      console.log('?? Web platform detected - navigating directly to ReferralPlans');
+      console.log('Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
       return;
     }
     
     try {
       Alert.alert(
-        '?? Upgrade Required',
+        'Upgrade Required',
         body,
         [
           { 
             text: 'Maybe Later', 
             style: 'cancel',
-            onPress: () => console.log('?? User selected Maybe Later')
+            onPress: () => console.log('User selected Maybe Later')
           },
           { 
             text: 'View Plans', 
             onPress: () => {
-              console.log('?? User selected View Plans - attempting navigation...');
+              console.log('User selected View Plans - attempting navigation...');
               try {
                 navigation.navigate('ReferralPlans');
-                console.log('?? Navigation successful!');
+                console.log('Navigation successful!');
               } catch (navError) {
-                console.error('?? Navigation error:', navError);
+                console.error('Navigation error:', navError);
                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
               }
             }
@@ -333,18 +331,18 @@ export default function JobDetailsScreen({ route, navigation }) {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-          console.log('?? Fallback navigation to ReferralPlans after Alert timeout');
+          console.log('Fallback navigation to ReferralPlans after Alert timeout');
             try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
         }
       }, 3000);
     } catch (error) {
-      console.error('?? Error showing subscription modal:', error);
+      console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
   }, [navigation, referralEligibility]);
 
   const handlePlanSelection = async (plan) => {
-    console.log('?? Plan selected:', plan);
+    console.log('Plan selected:', plan);
     
     Alert.alert(
       'Confirm Subscription',
@@ -357,7 +355,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             try {
               // For demo - simulate successful purchase
               Alert.alert(
-                '?? Subscription Successful!',
+                'Subscription Successful!',
                 `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
                 [
                   { 
@@ -385,16 +383,16 @@ export default function JobDetailsScreen({ route, navigation }) {
     );
   };
 
-  // ?? REQUIREMENT 2: Refresh page after resume submission to reload primary resume
+  // REQUIREMENT 2: Refresh page after resume submission to reload primary resume
   const handleResumeSelected = async (resumeData) => {
     if (referralMode) {
       try {
-        // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+        setReferralRequesting(true);
         const res = await nexhireAPI.createReferralRequest({
-          jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
-          extJobID: null, // Explicitly null for internal referrals
+          jobID: jobId,
+          extJobID: null,
           resumeID: resumeData.ResumeID,
-          referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+          referralMessage: referralMessage.trim() || undefined
         });
         if (res.success) {
           setHasReferred(true);
@@ -403,13 +401,9 @@ export default function JobDetailsScreen({ route, navigation }) {
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          
           showToast('Referral request sent', 'success');
-          // 🆕 NEW: Clear and collapse message section after successful submission
           setReferralMessage('');
           setShowReferralMessageInput(false);
-          
-          // 🔧 REQUIREMENT 2: Reload primary resume after submission
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -419,6 +413,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       } finally {
         setReferralMode(false);
         setShowResumeModal(false);
+        setReferralRequesting(false);
       }
       return;
     }
@@ -433,7 +428,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       const applicationData = {
         jobID: jobId,
-        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        coverLetter: buildCoverLetter(), // 🆕 NEW: Use custom cover letter
         expectedSalary: job.SalaryRangeMax || null,
         expectedCurrencyID: job.CurrencyID || null,
         availableFromDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -498,7 +493,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       const applicationData = {
         jobID: jobId,
-        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
+        coverLetter: buildCoverLetter(), // 🆕 NEW: Use custom cover letter
         resumeId
       };
       const res = await nexhireAPI.applyForJob(applicationData);
@@ -525,18 +520,17 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   const quickReferral = async (resumeId) => {
     try {
-      // ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
+      setReferralRequesting(true); // NEW
       const res = await nexhireAPI.createReferralRequest({
-        jobID: jobId,  // Internal job ID (UNIQUEIDENTIFIER)
-        extJobID: null, // Explicitly null for internal referrals
+        jobID: jobId,
+        extJobID: null,
         resumeID: resumeId,
-        referralMessage: referralMessage.trim() || undefined // 🆕 NEW: Include referral message
+        referralMessage: referralMessage.trim() || undefined
       });
       if (res?.success) {
         setHasReferred(true);
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
         showToast('Referral request sent', 'success');
-        // 🆕 NEW: Clear and collapse message section after successful submission
         setReferralMessage('');
         setShowReferralMessageInput(false);
       } else {
@@ -544,10 +538,12 @@ export default function JobDetailsScreen({ route, navigation }) {
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
+    } finally {
+      setReferralRequesting(false); // NEW
     }
   };
 
-  // ?? REQUIREMENT 4: Implement save/unsave functionality
+  // REQUIREMENT 4: Implement save/unsave functionality
   const handleSaveJob = async () => {
     if (!user || !isJobSeeker) {
       Alert.alert('Login Required', 'Please login to save jobs', [
@@ -583,6 +579,56 @@ export default function JobDetailsScreen({ route, navigation }) {
     }
   };
 
+  // ✅ NEW: Handle publish job for employers
+  const handlePublishJob = async () => {
+    console.log('🚀 handlePublishJob called!');
+    console.log('🚀 Job ID:', job?.JobID);
+    console.log('🚀 Job Status:', job?.Status);
+    console.log('🚀 Is Employer:', isEmployer);
+    
+    if (!job?.JobID) {
+      console.error('❌ No job ID found');
+      return;
+    }
+    
+    try {
+      setPublishing(true);
+      console.log('📡 Calling publishJob API with JobID:', job.JobID);
+      
+      const result = await nexhireAPI.publishJob(job.JobID);
+      
+      console.log('📡 API Response:', result);
+      
+      if (result.success) {
+        console.log('✅ Publish successful!');
+        showToast('Job published successfully!', 'success');
+        // Update job status locally to reflect the change
+        setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
+        // Navigate back with parameters to switch to Published tab
+        setTimeout(() => {
+          console.log('🔄 Navigating to MainTabs/Jobs with Published tab...');
+          // Navigate to MainTabs and then to Jobs screen with parameters
+          navigation.navigate('MainTabs', {
+            screen: 'Jobs',
+            params: { 
+              switchToTab: 'published',
+              publishedJobId: job.JobID,
+              successMessage: `${job.Title} has been published successfully!`
+            }
+          });
+        }, 1500);
+      } else {
+        console.error('❌ Publish failed:', result.error);
+        Alert.alert('Error', result.error || 'Failed to publish job');
+      }
+    } catch (error) {
+      console.error('❌ Publish job error:', error);
+      Alert.alert('Error', error.message || 'Failed to publish job');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const formatSalary = () => {
     if (job.SalaryRangeMin && job.SalaryRangeMax) {
       const currency = job.CurrencyCode || 'USD';
@@ -614,6 +660,54 @@ export default function JobDetailsScreen({ route, navigation }) {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // ✅ NEW: Helper functions for external job information
+  const getJobSourceInfo = () => {
+    if (!job.ExternalJobID) return 'NexHire';
+    
+    const source = job.ExternalJobID.split('_')[0];
+    const sourceMap = {
+      'remoteok': 'RemoteOK',
+      'adzuna': 'Adzuna',
+      'weworkremotely': 'WeWorkRemotely',
+      'hackernews': 'Hacker News',
+      'naukri': 'Naukri.com'
+    };
+    
+    return sourceMap[source.toLowerCase()] || 'External Job Board';
+  };
+
+  const getJobSourceName = () => {
+    if (!job.ExternalJobID) return 'Job Board';
+    return getJobSourceInfo();
+  };
+
+  const parseJobTags = () => {
+    if (!job.Tags) return [];
+    
+    // Split by comma and clean up tags
+    return job.Tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+      .filter(tag => !['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid'].includes(tag))
+      .slice(0, 10); // Limit to 10 tags
+  };
+
+  const openExternalApplication = () => {
+    if (!job.ApplicationURL) return;
+    
+    // For React Native, you'd use Linking.openURL
+    // For web, we can use window.open
+    if (Platform.OS === 'web') {
+      window.open(job.ApplicationURL, '_blank');
+    } else {
+      // For mobile
+      import('react-native').then(({ Linking }) => {
+        Linking.openURL(job.ApplicationURL);
+      });
+    }
+  };
+
   const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={20} color={colors.primary} />
@@ -636,6 +730,27 @@ export default function JobDetailsScreen({ route, navigation }) {
       ))}
     </View>
   );
+
+  // Custom renderer for list items to add bullet points
+  const customRenderers = {
+    li: ({ TDefaultRenderer, ...props }) => {
+      return (
+        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+          <Text style={{ 
+            fontSize: typography.sizes.md, 
+            color: colors.text,
+            marginRight: 8,
+            lineHeight: 22,
+          }}>
+            •
+          </Text>
+          <View style={{ flex: 1 }}>
+            <TDefaultRenderer {...props} />
+          </View>
+        </View>
+      );
+    },
+  };
 
   if (loading) {
     return (
@@ -677,8 +792,69 @@ export default function JobDetailsScreen({ route, navigation }) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{job.Title}</Text>
-        <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+        <View style={styles.companyHeader}>
+          {/* 🏢 Company Logo and Details */}
+          <View style={styles.companyInfo}>
+            {job.OrganizationLogo ? (
+              <Image 
+                source={{ uri: job.OrganizationLogo }} 
+                style={styles.companyLogo}
+                onError={() => console.log('Company logo load error for:', job.OrganizationName)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={32} color="#666" />
+              </View>
+            )}
+            
+            <View style={styles.companyDetails}>
+              <Text style={styles.title}>{job.Title}</Text>
+              <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+              
+              {/* Company Links Container */}
+              <View style={styles.companyLinksContainer}>
+                {/* 🌐 Website URL Link */}
+                {job.OrganizationWebsite && (
+                  <TouchableOpacity 
+                    style={styles.websiteButton}
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(job.OrganizationWebsite, '_blank');
+                      } else {
+                        import('react-native').then(({ Linking }) => {
+                          Linking.openURL(job.OrganizationWebsite);
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons name="globe-outline" size={16} color="#0066cc" />
+                    <Text style={styles.websiteText}>Visit Website</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* 💼 LinkedIn Profile Link */}
+                {job.OrganizationLinkedIn && (
+                  <TouchableOpacity 
+                    style={styles.linkedinButton}
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(job.OrganizationLinkedIn, '_blank');
+                      } else {
+                        import('react-native').then(({ Linking }) => {
+                          Linking.openURL(job.OrganizationLinkedIn);
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
+                    <Text style={styles.linkedinText}>LinkedIn Profile</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+        
         <Text style={styles.salary}>{formatSalary()}</Text>
         
         {/* Status tags */}
@@ -724,14 +900,125 @@ export default function JobDetailsScreen({ route, navigation }) {
             value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
           />
         ) : null}
+        {/* ✅ NEW: Show job source information */}
+        {job.ExternalJobID && (
+          <InfoRow
+            icon="globe-outline"
+            label="Job Source"
+            value={getJobSourceInfo()}
+          />
+        )}
       </View>
 
-      {/* Job Description */}
+      {/* ✅ NEW: External Application Section */}
+      {job.ApplicationURL && (
+        <View style={styles.externalApplicationSection}>
+          <View style={styles.externalApplicationHeader}>
+            <Ionicons name="link" size={20} color={colors.primary} />
+            <Text style={styles.externalApplicationTitle}>
+              Apply Directly on {getJobSourceName()}
+            </Text>
+          </View>
+          <Text style={styles.externalApplicationDescription}>
+            This job was posted on {getJobSourceName()}. You can apply directly on their platform for the most up-to-date application process.
+          </Text>
+          <TouchableOpacity
+            style={styles.externalApplicationButton}
+            onPress={() => openExternalApplication()}
+          >
+            <Ionicons name="open-outline" size={20} color={colors.white} />
+            <Text style={styles.externalApplicationButtonText}>
+              Apply on {getJobSourceName()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ✅ NEW: Job Tags Section */}
+      {job.Tags && (
+        <View style={styles.jobTagsSection}>
+          <Text style={styles.jobTagsSectionTitle}>Skills & Technologies</Text>
+          <View style={styles.jobTagsContainer}>
+            {parseJobTags().map((tag, index) => (
+              <View key={index} style={styles.jobTag}>
+                <Text style={styles.jobTagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Job Description - FIXED HTML RENDERING */}
       {job.Description && (
-        <Section
-          title="Job Description"
-          content={job.Description}
-        />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Job Description</Text>
+          <RenderHtml
+            contentWidth={width}
+            source={{ html: job.Description }}
+            renderers={customRenderers}
+            tagsStyles={{
+              body: {
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              p: {
+                marginBottom: 8,
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              h1: {
+                fontSize: typography.sizes.xl,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 8,
+                marginTop: 4,
+              },
+              h2: {
+                fontSize: typography.sizes.lg,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 6,
+                marginTop: 4,
+              },
+              h3: {
+                fontSize: typography.sizes.md,
+                fontWeight: typography.weights.bold,
+                color: colors.text,
+                marginBottom: 6,
+                marginTop: 4,
+              },
+              ul: {
+                marginBottom: 8,
+                marginTop: 4,
+                paddingLeft: 0,
+              },
+              ol: {
+                marginBottom: 8,
+                marginTop: 4,
+              },
+              li: {
+                fontSize: typography.sizes.md,
+                color: colors.text,
+                lineHeight: 22,
+              },
+              strong: {
+                fontWeight: typography.weights.bold,
+              },
+              em: {
+                fontStyle: 'italic',
+              },
+              a: {
+                color: colors.primary,
+                textDecorationLine: 'underline',
+              },
+            }}
+            defaultTextProps={{
+              selectable: true,
+            }}
+          />
+        </View>
       )}
 
       {/* Responsibilities */}
@@ -838,27 +1125,79 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         </View>
       )}
 
+      {/* 🆕 NEW: Cover Letter Section - appears before action buttons */}
+      {isJobSeeker && !hasApplied && (
+        <View style={styles.coverLetterSection}>
+          {!showCoverLetterMessageInput ? (
+            // Collapsed state - show button to expand
+            <TouchableOpacity
+              style={styles.addMessageButton}
+              onPress={() => setShowCoverLetterMessageInput(true)}
+            >
+              <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+              <Text style={styles.addMessageButtonText}>
+                {coverLetter ? 'Edit cover letter' : 'Add cover letter (optional)'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.gray500} />
+            </TouchableOpacity>
+          ) : (
+            // Expanded state - show input and collapse button
+            <>
+              <View style={styles.messageHeader}>
+                <Text style={styles.referralMessageLabel}>Cover Letter</Text>
+                <TouchableOpacity
+                  style={styles.collapseButton}
+                  onPress={() => setShowCoverLetterMessageInput(false)}
+                >
+                  <Ionicons name="chevron-up" size={16} color={colors.gray500} />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.coverLetterInput}
+                placeholder="Write a personalized cover letter to stand out...
+
+Highlight your relevant experience, skills, and why you're excited about this specific role and company."
+                value={coverLetter}
+                onChangeText={setCoverLetter}
+                multiline
+                numberOfLines={8}
+                maxLength={2000}
+                textAlignVertical="top"
+              />
+              <View style={styles.messageFooter}>
+                <Text style={styles.referralMessageHint}>
+                  Personalize to highlight relevant achievements
+                </Text>
+                <Text style={styles.characterCount}>
+                  {coverLetter.length}/2000
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+      )}
+
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
       <View style={styles.actionContainer}>        
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
               styles.referralButton,
-              hasReferred && styles.referralButtonDisabled
+              (hasReferred || referralRequesting) && styles.referralButtonDisabled
             ]}
-            onPress={hasReferred ? null : handleAskReferral}
-            disabled={hasReferred}
+            onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
+            disabled={hasReferred || referralRequesting}
           >
             <Ionicons 
-              name={hasReferred ? "checkmark-circle" : "people-outline"} 
+              name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
               size={20} 
-              color={hasReferred ? "#10b981" : colors.warning} 
+              color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
             />
             <Text style={[
               styles.referralButtonText, 
               hasReferred && { color: "#10b981" }
             ]}>
-              {hasReferred ? "Referred" : "Ask Referral"}
+              {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
             </Text>
           </TouchableOpacity>
         )}
@@ -866,6 +1205,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         {isJobSeeker && (
           <TouchableOpacity 
             style={[
+
               styles.applyButton, 
               (hasApplied || applying) && styles.applyButtonDisabled
             ]} 
@@ -878,9 +1218,31 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
             </Text>
           </TouchableOpacity>
         )}
+        
+        {/* ✅ NEW: Publish button for employers viewing draft jobs */}
+        {isEmployer && job.Status === 'Draft' && (
+          <TouchableOpacity
+            style={[
+
+              styles.publishButton,
+              publishing && styles.publishButtonDisabled
+            ]}
+            onPress={handlePublishJob}
+            disabled={publishing}
+          >
+            {publishing ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
+            )}
+            <Text style={styles.publishButtonText}>
+              {publishing ? 'Publishing...' : 'Publish Job'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       
-      {/* ?? Resume Upload Modal */}
+      {/* Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
         onClose={() => { setShowResumeModal(false); setReferralMode(false); }}
@@ -945,17 +1307,68 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 8,
+  companyHeader: {
+    marginBottom: 16,
   },
-  company: {
-    fontSize: typography.sizes.lg,
+  companyInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  companyLogo: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+    marginRight: 16,
+  },
+  logoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyDetails: {
+    flex: 1,
+  },
+  companyLinksContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#e8f4fd',
+    borderRadius: 16,
+  },
+  websiteText: {
+    fontSize: typography.sizes.sm,
+    color: '#0066cc',
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
-    marginBottom: 4,
+    marginLeft: 6,
+  },
+  linkedinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 16,
+  },
+  linkedinText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+    marginLeft: 6,
   },
   salary: {
     fontSize: typography.sizes.lg,
@@ -1153,6 +1566,24 @@ const styles = StyleSheet.create({
     maxHeight: 160,
     textAlignVertical: 'top',
   },
+  // 🆕 NEW: Cover letter section styles
+  coverLetterSection: {
+    margin: 20,
+    marginTop: 0,
+    marginBottom: 8,
+  },
+  coverLetterInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    backgroundColor: colors.surface,
+    minHeight: 160,
+    maxHeight: 260,
+    textAlignVertical: 'top',
+  },
   messageFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1169,5 +1600,93 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray400,
     fontWeight: typography.weights.medium,
+  },
+  // ✅ NEW: External application styles
+  externalApplicationSection: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    marginTop: 8,
+  },
+  externalApplicationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  externalApplicationTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginLeft: 8,
+  },
+  externalApplicationDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 12,
+  },
+  externalApplicationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  externalApplicationButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    marginLeft: 8,
+  },
+  // ✅ NEW: Job tags styles
+  jobTagsSection: {
+    padding: 20,
+    backgroundColor: colors.surface,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  jobTagsSectionTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 12,
+  },
+  jobTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  jobTag: {
+    backgroundColor: colors.primary + '10',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  jobTagText: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+  },
+  // ✅ NEW: Publish button styles
+  publishButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: colors.success,
+  },
+  publishButtonDisabled: {
+    backgroundColor: colors.gray400,
+  },
+  publishButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    marginLeft: 8,
   },
 });

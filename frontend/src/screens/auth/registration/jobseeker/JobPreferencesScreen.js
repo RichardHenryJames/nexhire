@@ -142,7 +142,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
   }, []);
 
   const clearAllJobTypes = useCallback(() => {
-    console.log('??? Clearing all job types');
+    console.log('?Clearing all job types');
     setFormData(prevData => ({
       ...prevData,
       preferredJobTypes: []

@@ -158,7 +158,7 @@ app.http('referral-stats', {
     handler: withErrorHandling(getReferrerStats)
 });
 
-console.log('?? Referral System API endpoints registered:');
+console.log('Referral System API endpoints registered:');
 console.log('   GET  /api/referral/plans');
 console.log('   POST /api/referral/plans/purchase');
 console.log('   GET  /api/referral/subscription');

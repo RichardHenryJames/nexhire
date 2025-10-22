@@ -178,12 +178,15 @@ export class ReferralService {
                 if (existingResult.recordset?.length) {
                     throw new ConflictError('You have already requested a referral for this job');
                 }
-                
-                // Verify job exists and is active
-                const jobQuery = `SELECT JobID FROM Jobs WHERE JobID = @param0 AND Status = 'Published'`;
-                const jobResult = await dbService.executeQuery(jobQuery, [dto.jobID]);
-                if (!jobResult.recordset?.length) {
-                    throw new NotFoundError('Job not found or not available');
+                // Verify job exists first (any status)
+                const jobExistsQuery = `SELECT JobID, Status FROM Jobs WHERE JobID = @param0`;
+                const jobExistsResult = await dbService.executeQuery(jobExistsQuery, [dto.jobID]);
+                if (!jobExistsResult.recordset?.length) {
+                    throw new NotFoundError('Job not found');
+                }
+                // If not published block with ValidationError as requested
+                if (jobExistsResult.recordset[0].Status !== 'Published') {
+                    throw new ValidationError('Job not open for referrals');
                 }
             }
 
@@ -558,7 +561,7 @@ export class ReferralService {
             let baseProofPoints = 15; // Base points for submitting proof
             
             // Award base proof submission points first
-            console.log(`?? Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
+            console.log(`Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
             
             // Calculate and award quick response bonus separately for better tracking  
@@ -569,7 +572,7 @@ export class ReferralService {
             
             if (hoursFromClaim <= 24) {
                 const quickBonusPoints = 10; // Quick response bonus
-                console.log(`? Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
+                console.log(`Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
 
@@ -581,7 +584,7 @@ export class ReferralService {
             `;
             const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
             
-            console.log(`?? Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
+            console.log(`Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
             
             // TODO: Notify seeker that proof was submitted
             // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
@@ -729,14 +732,24 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
 
-            // Get paginated data - ? FIX: Convert to integers before using in SQL
+            // Get paginated data - ✅ FIXED: Support both internal and external referrals
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
-                    rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    j.Title as JobTitle,
-                    o.Name as CompanyName,
+                    rr.OrganizationID,
+                    -- For INTERNAL referrals (JobID not null)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    jo.LogoURL as InternalLogoURL,
+                    -- For EXTERNAL referrals (ExtJobID not null)
+                    eo.Name as ExternalCompanyName,
+                    eo.LogoURL as ExternalLogoURL,
+                    -- Use COALESCE to get the appropriate values
+                    COALESCE(j.Title, 'External Job') as JobTitle,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
@@ -744,8 +757,11 @@ export class ReferralService {
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription
                 FROM ReferralRequests rr
-                INNER JOIN Jobs j ON rr.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                -- ✅ NEW: JOIN for external organization data
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
                 LEFT JOIN Applicants a_ref ON rr.AssignedReferrerID = a_ref.ApplicantID
                 LEFT JOIN Users ur ON a_ref.UserID = ur.UserID
@@ -814,7 +830,7 @@ export class ReferralService {
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
             
-            console.log(`? Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
+            console.log(`Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
             // Don't rethrow - we don't want to break the main referral flow if points can't be awarded
@@ -1052,6 +1068,7 @@ export class ReferralService {
                     rw.AwardedAt,
                     rr.JobID,
                     j.Title as JobTitle,
+                    o.LogoURL as OrganizationLogo,
                     o.Name as CompanyName,
                     CASE 
                         WHEN rw.PointsType = 'proof_submission' THEN 'Base referral proof submitted'

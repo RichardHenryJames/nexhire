@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { frontendConfig } from '../config/appConfig';
 
 // FIXED: Use environment variable or fallback to production API
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nexhire-api-func.azurewebsites.net/api';
@@ -9,31 +10,150 @@ class NexHireAPI {
   constructor() {
     this.token = null;
     this.refreshToken = null;
-    this.init();
+    this.baseURL = frontendConfig.api.baseUrl;
+    this.timeout = frontendConfig.api.timeout;
+    
+    // Log configuration on initialization
+    if (frontendConfig.shouldLog('debug')) {
+      console.log('🌐 API Service initialized');
+      this.logConfigStatus();
+    }
   }
 
-  // Universal storage for tokens (works on web, iOS, Android)
-  async storeToken(key, value) {
+  logConfigStatus() {
+    const config = {
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      debug: frontendConfig.api.debug,
+      environment: frontendConfig.app.env,
+      version: frontendConfig.app.version,
+    };
+    console.log('🌐 API Configuration:', config);
+  }
+
+  // Helper method to log API calls in debug mode
+  logApiCall(method, endpoint, data = null) {
+    if (frontendConfig.shouldLog('debug') && frontendConfig.api.debug) {
+      console.log(`🌐 API ${method.toUpperCase()} ${endpoint}`, data ? { payload: data } : '');
+    }
+  }
+
+  // Helper method to log API responses in debug mode
+  logApiResponse(method, endpoint, response, duration) {
+    if (frontendConfig.shouldLog('debug') && frontendConfig.api.debug) {
+      console.log(`🌐 API ${method.toUpperCase()} ${endpoint} → ${response.status} (${duration}ms)`);
+    }
+  }
+
+  async apiCall(endpoint, options = {}) {
+    const startTime = Date.now();
+    
     try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem(key, value);
+      // Get stored token
+      const token = await this.getToken('nexhire_token');
+      
+      // Default headers with config values
+      const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'X-App-Version': frontendConfig.app.version,
+        'X-App-Environment': frontendConfig.app.env,
+        ...frontendConfig.getApiConfig().headers,
+      };
+
+      // Add authorization header if token exists
+      if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Merge with provided headers
+      const headers = {
+        ...defaultHeaders,
+        ...options.headers,
+      };
+
+      const config = {
+        method: options.method || 'GET',
+        headers,
+        ...options,
+      };
+
+      // Log the API call
+      this.logApiCall(config.method, endpoint, options.body ? JSON.parse(options.body) : null);
+
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...config,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      
+      const duration = Date.now() - startTime;
+      this.logApiResponse(config.method, endpoint, response, duration);
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
       } else {
-        await SecureStore.setItemAsync(key, value);
+        data = { message: await response.text() };
+      }
+
+      if (!response.ok) {
+        const error = new Error(data.message || data.error || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      if (error.name === 'AbortError') {
+        console.error(`❌ API timeout (${this.timeout}ms): ${endpoint}`);
+        throw new Error(`Request timeout (${this.timeout}ms)`);
+      }
+
+      if (frontendConfig.shouldLog('error')) {
+        console.error(`❌ API Error (${duration}ms): ${endpoint}`, {
+          message: error.message,
+          status: error.status,
+          data: error.data,
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  // Token management
+  async setTokens(accessToken, refreshToken) {
+    try {
+      await AsyncStorage.multiSet([
+        ['nexhire_token', accessToken],
+        ['nexhire_refresh_token', refreshToken]
+      ]);
+      
+      if (frontendConfig.shouldLog('debug')) {
+        console.log('✅ Tokens stored successfully');
       }
     } catch (error) {
-      console.error('Error storing token:', error);
+      console.error('❌ Failed to store tokens:', error);
+      throw error;
     }
   }
 
   async getToken(key) {
     try {
-      if (Platform.OS === 'web') {
-        return localStorage.getItem(key);
-      } else {
-        return await SecureStore.getItemAsync(key);
-      }
+      return await AsyncStorage.getItem(key);
     } catch (error) {
-      console.error('Error getting token:', error);
+      console.error(`❌ Failed to get token ${key}:`, error);
       return null;
     }
   }
@@ -53,27 +173,22 @@ class NexHireAPI {
   // Initialize API with stored tokens
   async init() {
     try {
+      console.log('🔧 API.init() called - loading tokens from storage...');
       this.token = await this.getToken('nexhire_token');
       this.refreshToken = await this.getToken('nexhire_refresh_token');
       
       if (this.token) {
-        console.log('Found stored auth token');
+        console.log('✅ API.init() - Token loaded successfully');
+        console.log('🔧 Token preview:', this.token.substring(0, 20) + '...');
+        return true;
       } else {
-        console.log('No stored auth token found');
+        console.log('⚠️ API.init() - No stored auth token found');
+        return false;
       }
     } catch (error) {
-      console.error('Error initializing API:', error);
+      console.error('❌ API.init() - Error initializing API:', error);
+      return false;
     }
-  }
-
-  // Set authentication tokens
-  async setTokens(accessToken, refreshToken) {
-    this.token = accessToken;
-    this.refreshToken = refreshToken;
-    
-    await this.storeToken('nexhire_token', accessToken);
-    await this.storeToken('nexhire_refresh_token', refreshToken);
-    console.log('Tokens stored successfully');
   }
 
   // Clear tokens (logout)
@@ -100,83 +215,112 @@ class NexHireAPI {
     return headers;
   }
 
-  // Generic API call with better error handling and CORS support
-  async apiCall(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...options.headers,
-    };
-
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
-
-    try {
-      console.log(`API Call: ${options.method || 'GET'} ${url}`);
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        mode: 'cors',
-        credentials: 'omit',
-      });
-
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        console.warn(`Non-JSON response for ${endpoint}:`, text);
-        throw new Error(`Invalid response format: ${response.status}`);
-      }
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          await this.clearTokens();
-          throw new Error('Authentication expired. Please login again.');
-        }
-        throw new Error(data.message || data.error || `HTTP ${response.status}`);
-      }
-
-      console.log(`✅ API Success [${endpoint}]:`, response.status);
-      return data;
-    } catch (error) {
-      // Normalize AbortError and avoid noisy logs
-      const msg = (error?.message || '').toLowerCase();
-      if (error?.name === 'AbortError' || msg.includes('aborted') || msg.includes('user aborted a request')) {
-        if (error && !error.name) error.name = 'AbortError';
-        console.debug(`Request aborted [${endpoint}]`);
-        throw error; // callers already ignore AbortError
-      }
-
-      console.error(`? API Error [${endpoint}]:`, error.message);
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        throw new Error('Network error. Please check your connection.');
-      }
-      throw error;
-    }
-  }
-
   // Authentication APIs
   async register(userData) {
-    try {
-      return await this.apiCall('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-    } catch (error) {
-      console.error('Registration failed:', error.message);
-      throw error;
+    const result = await this.apiCall('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    if (result.success && result.data?.tokens) {
+      await this.setTokens(
+        result.data.tokens.accessToken,
+        result.data.tokens.refreshToken
+      );
     }
+
+    return result;
   }
 
   async login(email, password) {
+    const result = await this.apiCall('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (result.success && result.data?.tokens) {
+      // 🔧 FIXED: Properly set tokens and sync API state
+      await this.setTokens(
+        result.data.tokens.accessToken,
+        result.data.tokens.refreshToken
+      );
+      
+      // 🔧 CRITICAL: Update instance token immediately
+      this.token = result.data.tokens.accessToken;
+      this.refreshToken = result.data.tokens.refreshToken;
+      
+      console.log('✅ Login successful, token set and synchronized');
+    }
+
+    return result;
+  }
+
+  // 🆕 NEW: Google OAuth login for existing users
+  async loginWithGoogle(googleTokenData) {
     try {
-      const result = await this.apiCall('/auth/login', {
+      console.log('🔐 Attempting Google login with backend...');
+      console.log('📧 Email:', googleTokenData.user.email);
+      console.log('👤 Name:', googleTokenData.user.name);
+
+      const result = await this.apiCall('/auth/google', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          accessToken: googleTokenData.accessToken,
+          idToken: googleTokenData.idToken,
+          user: googleTokenData.user,
+        }),
+      });
+
+      if (result.success && result.data?.tokens) {
+        // 🔧 FIXED: Properly set tokens and sync API state
+        await this.setTokens(
+          result.data.tokens.accessToken,
+          result.data.tokens.refreshToken
+        );
+        
+        // 🔧 CRITICAL: Update instance token immediately
+        this.token = result.data.tokens.accessToken;
+        this.refreshToken = result.data.tokens.refreshToken;
+        
+        console.log('✅ Google login successful for:', googleTokenData.user.email);
+        console.log('✅ Token set and synchronized');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('❌ Google login failed:', error.message);
+      
+      // If user doesn't exist, return specific error for registration flow
+      if (error.message.includes('not found') || error.message.includes('User not found')) {
+        return { 
+          success: false, 
+          error: 'USER_NOT_FOUND',
+          needsRegistration: true,
+          message: 'Account not found. Please complete registration.'
+        };
+      }
+      
+      throw error;
+    }
+  }
+
+  // 🆕 NEW: Register with Google for new users
+  async registerWithGoogle(googleTokenData, additionalUserData) {
+    try {
+      console.log('🔐 Attempting Google registration with backend...');
+      console.log('📧 Email:', googleTokenData.user.email);
+      console.log('🏷️ User Type:', additionalUserData.userType);
+
+      const result = await this.apiCall('/auth/google-register', {
+        method: 'POST',
+        body: JSON.stringify({
+          // Google OAuth data
+          accessToken: googleTokenData.accessToken,
+          idToken: googleTokenData.idToken,
+          user: googleTokenData.user,
+          // Additional registration data
+          ...additionalUserData, // userType, experienceType, etc.
+        }),
       });
 
       if (result.success && result.data?.tokens) {
@@ -184,45 +328,45 @@ class NexHireAPI {
           result.data.tokens.accessToken,
           result.data.tokens.refreshToken
         );
-        console.log('Login successful for:', email);
+        console.log('✅ Google registration successful for:', googleTokenData.user.email);
       }
 
       return result;
     } catch (error) {
-      console.error('Login failed:', error.message);
+      console.error('❌ Google registration failed:', error.message);
       throw error;
     }
   }
 
   async logout() {
     try {
-      // FIXED: Call backend logout endpoint first
-      console.log('Calling backend logout endpoint...');
-      
-      // Make backend call to log the logout activity
       const result = await this.apiCall('/auth/logout', {
         method: 'POST',
       });
       
-      console.log('Backend logout successful:', result.message);
-      
-      // Clear local tokens after successful backend call
       await this.clearTokens();
-      
-      return { success: true, message: 'Logout successful' };
+      return result;
     } catch (error) {
-      console.error('Backend logout failed:', error.message);
-      
-      // Even if backend call fails, still clear local tokens for security
+      // Clear tokens even if API call fails
       await this.clearTokens();
-      
-      // Return success anyway since tokens are cleared
-      return { success: true, message: 'Logout completed (tokens cleared)' };
+      return { success: true, message: 'Logged out locally' };
     }
   }
 
   // User Profile APIs
   async getProfile() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 getProfile: Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ getProfile: No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    console.log('🔧 getProfile: Token present:', !!this.token);
     return this.apiCall('/users/profile');
   }
 
@@ -238,7 +382,7 @@ class NexHireAPI {
     console.log('🔍 === API UPDATE EDUCATION DEBUG ===');
     console.log('🎓 Input education data:', JSON.stringify(educationData, null, 2));
     
-    // If not authenticated yet, don't call the API; allow flow to continue
+    // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
       console.warn('⚠️ updateEducation called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
@@ -256,13 +400,22 @@ class NexHireAPI {
 
   // WORK EXPERIENCES: New CRUD endpoints
   async createWorkExperience(workExp) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
     // Require minimum fields as backend: jobTitle + startDate
     if (!workExp || !workExp.jobTitle || !workExp.startDate) {
       return { success: false, error: 'jobTitle and startDate are required' };
     }
+    
     const payload = {
       jobTitle: workExp.jobTitle,
       startDate: workExp.startDate,
@@ -287,6 +440,7 @@ class NexHireAPI {
     };
     
     console.log('🔧 Creating work experience with payload:', JSON.stringify(payload, null, 2));
+    console.log('🔧 Token present:', !!this.token);
     
     return this.apiCall('/work-experiences', {
       method: 'POST',
@@ -295,16 +449,34 @@ class NexHireAPI {
   }
 
   async getMyWorkExperiences() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 getMyWorkExperiences - Token present:', !!this.token);
     return this.apiCall('/work-experiences/my');
   }
 
   async updateWorkExperienceById(id, data) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 updateWorkExperienceById - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
@@ -312,9 +484,18 @@ class NexHireAPI {
   }
 
   async deleteWorkExperience(id) {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
       return { success: false, error: 'Authentication required' };
     }
+    
+    console.log('🔧 deleteWorkExperience - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'DELETE'
     });
@@ -325,6 +506,7 @@ class NexHireAPI {
     console.log('🔍 === API UPDATE JOB PREFERENCES DEBUG ===');
     console.log('🎯 Input job preferences data:', JSON.stringify(jobPreferencesData, null, 2));
     
+    // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
       console.warn('⚠️ updateJobPreferences called without auth token. Deferring until after login.');
       return { success: true, data: null, message: 'Deferred until login' };
@@ -964,7 +1146,7 @@ class NexHireAPI {
     }
     
     try {
-      console.log('💰 Making API call to:', `${API_BASE_URL}/applicants/${userId}/profile`);
+      console.log('💰 Making API call to:', `/applicants/${userId}/profile`);
       
       const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
@@ -1644,9 +1826,20 @@ class NexHireAPI {
 
   // ✅ NEW: Get detailed points history for breakdown
   async getReferralPointsHistory() {
-    if (!this.token) return { success: false, error: 'Authentication required' };
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init(); // Re-initialize to load token
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available after init');
+      return { success: false, error: 'Authentication required' };
+    }
+    
     try {
       console.log('🏆 Loading referral points history...');
+      console.log('🔧 Token present:', !!this.token);
       
       // This endpoint should return detailed points history with breakdown by type
       const result = await this.apiCall('/referral/points-history');
@@ -1716,6 +1909,35 @@ class NexHireAPI {
     return this.apiCall('/referral/subscription');
   }
 
+  // ✅ NEW: Cancel a referral request (by seeker)
+  async cancelReferralRequest(requestId) {
+    console.log('🚫 API: Cancelling referral request:', requestId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!requestId) {
+      console.error('❌ No request ID provided');
+      return { success: false, error: 'Request ID is required' };
+    }
+    
+    try {
+      console.log('🚫 Making POST request to:', `/referral/requests/${requestId}/cancel`);
+      
+      const result = await this.apiCall(`/referral/requests/${requestId}/cancel`, {
+        method: 'POST',
+      });
+      
+      console.log('✅ Cancel request successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Cancel request failed:', error.message);
+      throw error;
+    }
+  }
+
   // ✅ NEW: Razorpay payment integration
   async createRazorpayOrder(orderData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
@@ -1733,126 +1955,172 @@ class NexHireAPI {
     });
   }
 
-  // NEW: Upload file to storage (generic file upload)
-  async uploadFile(fileUri, containerName = 'referral-proofs') {
+  // Development and diagnostics
+  getDiagnostics() {
+    return {
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      environment: frontendConfig.app.env,
+      version: frontendConfig.app.version,
+      features: frontendConfig.features,
+      config: frontendConfig.getConfigSummary(),
+    };
+  }
+
+  // Health check
+  async healthCheck() {
     try {
-      console.log('📎 === FILE UPLOAD START ===');
-      console.log('📎 File URI (truncated):', (fileUri || '').substring(0, 60));
-      console.log('📎 Container:', containerName);
-      console.log('📎 Platform:', Platform.OS);
-
-      let fileData;
-      let fileName;
-      let mimeType;
-
-      if (Platform.OS === 'web') {
-        // Web: Expo image picker can return either a blob: URI or a data URI (data:image/jpeg;base64,...)
-        if (fileUri.startsWith('data:')) {
-          // Handle data URI directly
-            // Format: data:<mimeType>;base64,<data>
-            const firstComma = fileUri.indexOf(',');
-            const header = fileUri.substring(5, firstComma); // strip 'data:'
-            const b64 = fileUri.substring(firstComma + 1);
-            // header example: image/jpeg;base64
-            mimeType = header.split(';')[0] || 'image/jpeg';
-            fileData = b64; // already base64 without prefix
-            const extFromMime = mimeType.split('/')[1] || 'jpg';
-            fileName = `proof_${Date.now()}.${extFromMime}`;
-            console.log('📎 Parsed data URI:', { mimeType, size: fileData.length });
-        } else if (fileUri.startsWith('blob:')) {
-          // blob: URL case
-          const response = await fetch(fileUri);
-          const blob = await response.blob();
-          mimeType = blob.type || 'image/jpeg';
-          fileData = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              try {
-                const result = reader.result; // data:<mime>;base64,XXXX
-                const base64 = result.split(',')[1];
-                resolve(base64);
-              } catch (e) { reject(e); }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          const extFromMime = mimeType.split('/')[1] || 'jpg';
-          fileName = `proof_${Date.now()}.${extFromMime}`;
-          console.log('📎 Converted blob to base64:', { mimeType, size: fileData.length });
-        } else {
-          // Attempt generic fetch (in case a normal URL was provided)
-          console.log('📎 Attempting generic fetch for URI (not data:/blob:):', fileUri.substring(0, 40));
-          try {
-            const response = await fetch(fileUri);
-            const blob = await response.blob();
-            mimeType = blob.type || 'image/jpeg';
-            fileData = await new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                try { const base64 = reader.result.split(',')[1]; resolve(base64); } catch (e) { reject(e); }
-              };
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-            const extFromMime = mimeType.split('/')[1] || 'jpg';
-            fileName = `proof_${Date.now()}.${extFromMime}`;
-          } catch (genericErr) {
-            console.error('❌ Generic fetch failed for fileUri:', genericErr);
-            throw new Error('Invalid file URI for web platform');
-          }
-        }
-      } else {
-        // React Native implementation
-        const { FileSystem } = require('expo-file-system');
-        const fileInfo = await FileSystem.getInfoAsync(fileUri);
-        if (!fileInfo.exists) {
-          throw new Error('File does not exist');
-        }
-        fileData = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-        mimeType = 'image/jpeg';
-        fileName = `proof_${Date.now()}.jpg`;
-      }
-
-      if (!fileData) {
-        throw new Error('Failed to read file data');
-      }
-
-      console.log('📎 File processed (pre-upload):', {
-        fileName,
-        mimeType,
-        dataLength: fileData.length
-      });
-
-      // Upload to storage using generic file upload endpoint
-      const uploadPayload = {
-        fileName,
-        fileData,
-        mimeType,
-        containerName,
-        userId: this.getUserIdFromToken()
-      };
-
-      const result = await this.apiCall('/storage/upload', {
-        method: 'POST',
-        body: JSON.stringify(uploadPayload),
-      });
-
-      console.log('✅ File upload successful:', result.data?.fileUrl);
-      console.log('📎 === FILE UPLOAD END ===');
-
-      return result;
+      const result = await this.apiCall('/health');
+      return { success: true, ...result };
     } catch (error) {
-      console.error('❌ === FILE UPLOAD ERROR ===');
-      console.error('❌ Error:', error.message);
-      console.error('❌ Stack (if any):', error.stack);
-      console.error('❌ === END ERROR ===');
-      throw error;
+      return { 
+        success: false, 
+        error: error.message,
+        baseURL: this.baseURL,
+      };
     }
   }
 
-  async cancelReferralRequest(requestId) {
-    if (!this.token) return { success: false, error: 'Authentication required' }; 
-    return this.apiCall(`/referral/requests/${requestId}/cancel`, { method: 'POST' });
+  // ========================================================================
+  // EMPLOYER JOB MANAGEMENT APIs
+  // ========================================================================
+
+  // Get jobs by organization (for employers)
+  async getOrganizationJobs(params = {}, fetchOptions = {}) {
+    if (!this.token) {
+      console.error('❌ getOrganizationJobs: No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+
+    // First get employer profile to get organizationId
+    const userId = this.getUserIdFromToken();
+    if (!userId) {
+      return { success: false, error: 'Unable to identify user' };
+    }
+
+    try {
+      // Get employer profile to get organizationId
+      const profileResult = await this.getEmployerProfile(userId);
+      if (!profileResult.success || !profileResult.data.OrganizationID) {
+        return { success: false, error: 'Employer organization not found' };
+      }
+
+      const organizationId = profileResult.data.OrganizationID;
+      
+      // Build query parameters
+      const queryParams = {
+        page: params.page || 1,
+        pageSize: params.pageSize || 50,
+        sortBy: params.sortBy || 'CreatedAt',
+        sortOrder: params.sortOrder || 'desc',
+        ...params
+      };
+
+      // Clean undefined/null values
+      const cleaned = {};
+      for (const [k, v] of Object.entries(queryParams)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleaned[k] = v;
+        }
+      }
+
+      const queryString = new URLSearchParams(cleaned).toString();
+      const endpoint = `/organizations/${organizationId}/jobs${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('🏢 Fetching organization jobs:', endpoint);
+      return await this.apiCall(endpoint, fetchOptions);
+    } catch (error) {
+      console.error('❌ getOrganizationJobs error:', error);
+      return { success: false, error: error.message || 'Failed to fetch organization jobs' };
+    }
+  }
+
+  // ✅ NEW: Publish a draft job
+  async publishJob(jobId) {
+    console.log('📢 API: Publishing job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('📢 Making POST request to:', `/jobs/${jobId}/publish`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}/publish`, {
+        method: 'POST',
+      });
+      
+      console.log('✅ Publish job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Publish job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to publish job' };
+    }
+  }
+
+  // ✅ NEW: Update a job
+  async updateJob(jobId, jobData) {
+    console.log('📝 API: Updating job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('📝 Making PUT request to:', `/jobs/${jobId}`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}`, {
+        method: 'PUT',
+        body: JSON.stringify(jobData),
+      });
+      
+      console.log('✅ Update job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Update job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to update job' };
+    }
+  }
+
+  // ✅ NEW: Delete a job
+  async deleteJob(jobId) {
+    console.log('🗑️ API: Deleting job:', jobId);
+    
+    if (!this.token) {
+      console.error('❌ No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!jobId) {
+      console.error('❌ No job ID provided');
+      return { success: false, error: 'Job ID is required' };
+    }
+    
+    try {
+      console.log('🗑️ Making DELETE request to:', `/jobs/${jobId}`);
+      
+      const result = await this.apiCall(`/jobs/${jobId}`, {
+        method: 'DELETE',
+      });
+      
+      console.log('✅ Delete job successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Delete job failed:', error.message);
+      return { success: false, error: error.message || 'Failed to delete job' };
+    }
   }
 }
 

@@ -194,22 +194,65 @@ export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationC
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
+    const postedByUserId = user.userId; // Always use the authenticated user's ID
+    
+    // ?? DEBUG: Log received params
+    console.log('?? Backend getJobsByOrganization params:', {
+        organizationId,
+        status: params.status,
+        page: params.page,
+        search: params.search,
+        postedByUserId // This will always be the authenticated user
+    });
+    
     let validated: PaginationParams;
     try {
         validated = validateRequest<PaginationParams>(paginationSchema, params);
     } catch {
         validated = { page: 1, pageSize: 20, sortBy: undefined, sortOrder: 'desc' };
     }
+
     if (!organizationId) return { status: 400, jsonBody: { success: false, error: 'Organization ID is required' } };
-    if (!isValidGuid(organizationId)) return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID format' } };
+    
+    // ? FIXED: Validate it's a valid integer, but keep as string for service method
+    const orgIdNum = parseInt(organizationId);
+    if (isNaN(orgIdNum) || orgIdNum <= 0) {
+        return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID - must be a positive integer' } };
+    }
 
     try {
+        // Verify user has access to this organization
         const accessQuery = `SELECT 1 FROM Employers WHERE UserID = @param0 AND OrganizationID = @param1`;
-        const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]);
+        const accessResult = await dbService.executeQuery(accessQuery, [user.userId, organizationId]); // Pass as string
         if (!accessResult.recordset || accessResult.recordset.length === 0) {
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
-        const result = await JobService.getJobsByOrganization(organizationId, validated);
+
+        // ?? CRITICAL FIX: Normalize and explicitly pass status
+        const normalizedStatus = params.status ? String(params.status).trim() : undefined;
+        console.log('?? Normalized status:', normalizedStatus);
+        
+        // ? SECURITY: Always filter by authenticated user's ID
+        const extendedParams = {
+            ...validated,
+            status: normalizedStatus, // ?? Explicitly pass normalized status
+            search: params.search,
+            postedByUserId // ? Always use authenticated user's ID
+        };
+        
+        // ?? DEBUG: Log params being sent to service
+        console.log('?? Backend calling JobService with params:', extendedParams);
+
+        // Pass organizationId as string - SQL Server handles conversion to INT
+        const result = await JobService.getJobsByOrganization(organizationId, extendedParams);
+        
+        // ?? DEBUG: Log service result
+        console.log('?? Backend JobService result:', {
+            jobsCount: result.jobs.length,
+            firstJobStatus: result.jobs[0]?.Status,
+            allStatuses: result.jobs.map(j => j.Status)
+        });
+        
         return {
             status: 200,
             jsonBody: successResponse(result.jobs, 'Organization jobs retrieved successfully', {

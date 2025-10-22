@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
 import nexhireAPI from '../../services/api';
 
-// ?? CROSS-PLATFORM FILE SYSTEM HANDLER
+// CROSS-PLATFORM FILE SYSTEM HANDLER
 class CrossPlatformFileHandler {
   static async readAsBase64(uri, options = {}) {
     if (Platform.OS === 'web') {
@@ -85,7 +85,7 @@ export default function UserProfileHeader({
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
-  // ?? CALCULATE PROFILE COMPLETENESS BASED ON ACTUAL PROFILE FIELDS
+  // CALCULATE PROFILE COMPLETENESS BASED ON ACTUAL PROFILE FIELDS
   useEffect(() => {
     calculateProfileCompleteness();
   }, [profile, jobSeekerProfile, employerProfile, userType]);
@@ -171,7 +171,7 @@ export default function UserProfileHeader({
     setProfileCompleteness(Math.min(completeness, 100));
   };
 
-  // ?? FIXED PROGRESS RING (Guaranteed 12 o'clock start)
+  // FIXED PROGRESS RING (Guaranteed 12 o'clock start)
   const CircularProgress = ({ percentage, size = 100 }) => {
     // Color based on completion percentage
     let progressColor = '#EF4444'; // Red for < 15%
@@ -256,7 +256,7 @@ export default function UserProfileHeader({
     );
   };
 
-  // ?? IMAGE PICKER FUNCTIONS
+  // IMAGE PICKER FUNCTIONS
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -271,7 +271,7 @@ export default function UserProfileHeader({
     return true;
   };
 
-  // ?? CROSS-PLATFORM IMAGE PICKER
+  // CROSS-PLATFORM IMAGE PICKER
   const showImagePicker = () => {
     const options = [
       {
@@ -364,7 +364,7 @@ export default function UserProfileHeader({
     }
   };
 
-  // ?? CLEAN AZURE STORAGE UPLOAD
+  // CLEAN AZURE STORAGE UPLOAD
   const uploadImage = async (imageAsset) => {
     try {
       setUploading(true);
@@ -515,7 +515,7 @@ export default function UserProfileHeader({
     }
   };
 
-  // ?? GET PROFILE PICTURE OR INITIALS
+  // GET PROFILE PICTURE OR INITIALS
   const getProfileImage = () => {
     if (profile?.profilePictureURL) {
       return { uri: profile.profilePictureURL };
@@ -531,7 +531,7 @@ export default function UserProfileHeader({
     return `${firstInitial}${lastInitial}`;
   };
 
-  // ?? GET STATUS BADGE
+  // GET STATUS BADGE
   const getStatusBadge = () => {
     if (userType === 'JobSeeker') {
       if (jobSeekerProfile?.isOpenToWork) {
@@ -543,7 +543,7 @@ export default function UserProfileHeader({
     }
   };
 
-  // ??? STATUS BADGE RENDERER
+  // ?STATUS BADGE RENDERER
   const renderStatusBadge = () => {
     let badgeText = '';
     let badgeColor = colors.gray600;
@@ -798,7 +798,7 @@ export default function UserProfileHeader({
         )}
       </View>
 
-      {/* ?? IMAGE PICKER MODAL */}
+      {/* IMAGE PICKER MODAL */}
       <Modal
         visible={showImagePickerModal}
         transparent={true}
@@ -845,7 +845,7 @@ export default function UserProfileHeader({
 }
 
 const styles = StyleSheet.create({
-  // ?? Main Header Card
+  // Main Header Card
   headerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // ?? IMAGE PICKER MODAL
+  // IMAGE PICKER MODAL
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

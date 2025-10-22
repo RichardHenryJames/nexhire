@@ -27,6 +27,7 @@ import EmployerAccountScreen from '../screens/auth/registration/employer/Employe
 // Main App Screens
 import HomeScreen from '../screens/HomeScreen';
 import JobsScreen from '../screens/jobs/JobsScreen';
+import EmployerJobsScreen from '../screens/employer/EmployerJobsScreen'; // NEW: Employer jobs screen
 import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
@@ -41,7 +42,7 @@ import { colors } from '../styles/theme';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ?? FIXED: Deep Linking Configuration with unique paths
+// FIXED: Deep Linking Configuration with unique paths
 const linking = {
   prefixes: [
     'nexhire://',
@@ -54,6 +55,10 @@ const linking = {
       Login: 'login',
       Register: 'register', 
       UserTypeSelection: 'register/select-type',
+      
+      // NEW: Direct skip screens for web navigation
+      PersonalDetailsScreenDirect: 'register/complete-profile',
+      EmployerAccountScreenDirect: 'register/complete-employer',
       
       // Job Seeker Registration Flow - unique paths
       JobSeekerFlow: {
@@ -79,11 +84,13 @@ const linking = {
       },
       
       // Main App - simplified structure
+      // ? FIXED: Only define the paths that actually exist in the tab navigator
+      // Since Jobs/EmployerJobs are conditionally rendered, we don't need to define both
       MainTabs: {
         path: '',
         screens: {
           Home: '',
-          Jobs: 'jobs',
+          Jobs: 'jobs', // This will match whichever screen is actually rendered (Jobs or EmployerJobs)
           CreateJob: 'create-job',
           Applications: 'applications',
           Referrals: 'referrals',
@@ -135,24 +142,62 @@ function EmployerFlow() {
 
 // Auth Stack Navigator with complete registration flows
 function AuthStack() {
+  const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
+
+  console.log('AuthStack state:', {
+    hasPendingGoogleAuth,
+    googleUserEmail: pendingGoogleAuth?.user?.email
+  });
+
+  // FIXED: Better initial route logic
+  const getInitialRoute = () => {
+    if (hasPendingGoogleAuth) {
+      console.log('Google auth pending - starting at UserTypeSelection');
+      return "UserTypeSelection";
+    }
+    console.log('No pending auth - starting at Login');
+    return "Login";
+  };
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
       }}
+      initialRouteName={getInitialRoute()}
     >
-      <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
-      <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
-      <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen 
+        name="UserTypeSelection" 
+        component={UserTypeSelectionScreen}
+        // Pass Google user data automatically when coming from Google auth
+        initialParams={hasPendingGoogleAuth ? {
+          googleUser: pendingGoogleAuth?.user,
+          fromGoogleAuth: true
+        } : undefined}
+      />
+      <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
+      <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
+      
+      {/* NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
+      <Stack.Screen 
+        name="PersonalDetailsScreenDirect" 
+        component={PersonalDetailsScreen}
+        options={{ title: 'Complete Your Profile' }}
+      />
+      <Stack.Screen 
+        name="EmployerAccountScreenDirect" 
+        component={EmployerAccountScreen}
+        options={{ title: 'Complete Your Profile' }}
+      />
     </Stack.Navigator>
   );
 }
 
 // Main App Tab Navigator
 function MainTabNavigator() {
-  const { userType, isEmployer } = useAuth();
+  const { userType, isEmployer, isJobSeeker } = useAuth();
 
   return (
     <Tab.Navigator
@@ -198,11 +243,14 @@ function MainTabNavigator() {
         component={HomeScreen}
         options={{ title: 'Home' }}
       />
+      
+      {/* ? FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
       <Tab.Screen 
         name="Jobs" 
-        component={JobsScreen}
+        component={isEmployer ? EmployerJobsScreen : JobsScreen}
         options={{ title: 'Jobs' }}
       />
+
       {isEmployer && (
         <Tab.Screen 
           name="CreateJob" 
@@ -210,16 +258,22 @@ function MainTabNavigator() {
           options={{ title: 'Post Job' }}
         />
       )}
+      
       <Tab.Screen 
         name="Applications" 
         component={ApplicationsScreen}
         options={{ title: 'Applications' }}
       />
-      <Tab.Screen 
-        name="Referrals" 
-        component={ReferralScreen}
-        options={{ title: 'Referrals' }}
-      />
+      
+      {/* ? CONDITIONAL: Only show Referrals tab for job seekers */}
+      {isJobSeeker && (
+        <Tab.Screen 
+          name="Referrals" 
+          component={ReferralScreen}
+          options={{ title: 'Referrals' }}
+        />
+      )}
+      
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
@@ -289,15 +343,37 @@ function MainStack() {
 
 // Root Navigator
 export default function AppNavigator() {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
+
+  console.log('AppNavigator state check:', {
+    loading,
+    isAuthenticated,
+    hasPendingGoogleAuth
+  });
 
   // Show loading screen while checking authentication state
   if (loading) {
     return <LoadingScreen />;
   }
 
-  // Show appropriate stack based on authentication state
-  return isAuthenticated ? <MainStack /> : <AuthStack />;
+  // FIXED: Better logic for handling Google registration flow
+  // Priority:
+  // 1. If user has pending Google auth (new Google user) -> show AuthStack to complete registration
+  // 2. If user is authenticated and no pending Google auth -> show MainStack 
+  // 3. Otherwise -> show AuthStack for login/registration
+
+  if (hasPendingGoogleAuth) {
+    console.log('Pending Google auth detected - showing registration flow');
+    return <AuthStack />;
+  }
+
+  if (isAuthenticated) {
+    console.log('? User authenticated - showing main app');
+    return <MainStack />;
+  }
+
+  console.log('User not authenticated - showing auth flow');
+  return <AuthStack />;
 }
 
 // Export linking config for use in App.js

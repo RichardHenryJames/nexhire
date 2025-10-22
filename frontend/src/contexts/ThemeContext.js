@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Appearance } from 'react-native';
 
-// ?? THEME CONFIGURATION
+// THEME CONFIGURATION
 const lightTheme = {
   // Primary colors
   primary: '#3B82F6',
@@ -98,7 +98,7 @@ const darkTheme = {
   overlayLight: 'rgba(0, 0, 0, 0.5)',
 };
 
-// ?? THEME CONTEXT
+// THEME CONTEXT
 const ThemeContext = createContext({
   theme: 'light',
   colors: lightTheme,
@@ -106,7 +106,7 @@ const ThemeContext = createContext({
   isDark: false,
 });
 
-// ?? THEME PROVIDER
+// THEME PROVIDER
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
 
@@ -142,7 +142,7 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-// ?? THEME HOOK
+// THEME HOOK
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {

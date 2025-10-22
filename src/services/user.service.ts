@@ -76,6 +76,12 @@ export class UserService {
             else if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
                 await this.createApplicantProfileTx(tx, userId);
             }
+            // ? NEW: Handle Admin user registration (no additional profile needed)
+            else if (validatedData.userType === 'Admin') {
+                console.log(`Admin user created: ${userId} (${validatedData.email})`);
+                // Admin users don't need additional profiles like Applicants or Employers
+                // They have full system access through their userType
+            }
 
             await tx.commit();
             return user;
@@ -89,49 +95,75 @@ export class UserService {
 
     // FIXED: Create employer profile with organization during registration (transactional)
     private static async createEmployerProfileWithOrganizationTx(tx: any, userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
-        // Generate IDs
-        const organizationId = AuthService.generateUniqueId();
+        // Generate only EmployerID (OrganizationID is auto-increment in database)
         const employerId = AuthService.generateUniqueId();
         
-        // Updated organization creation to match actual database schema
-        const orgQuery = `
-            INSERT INTO Organizations (
-                OrganizationID, Name, Description, Industry, Size, Location, 
-                Website, Type, EstablishedDate, CreatedAt, UpdatedAt
-            ) VALUES (
-                @param0, @param1, @param2, @param3, @param4, @param5,
-                @param6, @param7, @param8, GETUTCDATE(), GETUTCDATE()
-            )
-        `;
-
-        const orgParameters = [
-            organizationId,
-            userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`,
-            userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
-            userData.organizationIndustry || 'Technology',
-            userData.organizationSize || 'Small',
-            userData.organizationLocation || 'Remote',
-            userData.organizationWebsite || '',
-            userData.organizationType || 'Company',
-            userData.establishedDate || null
-        ];
-
-        await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
+        const organizationName = userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`;
         
-        // Employer profile creation
+        // FIXED: Check if organization already exists
+        const existingOrgQuery = `
+            SELECT OrganizationID 
+            FROM Organizations 
+            WHERE Name = @param0
+        `;
+        
+        const existingOrgResult = await dbService.executeTransactionQuery(tx, existingOrgQuery, [organizationName]);
+        
+        let organizationId: number;
+        
+        if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
+            // Organization exists, use existing OrganizationID
+            organizationId = existingOrgResult.recordset[0].OrganizationID;
+            console.log(`Using existing organization: ${organizationName} (ID: ${organizationId})`);
+        } else {
+            // Organization doesn't exist, create new one
+            const orgQuery = `
+                INSERT INTO Organizations (
+                    Name, Description, Industry, Size, Headquarters, 
+                    Website, Type, EstablishedDate, CreatedAt, UpdatedAt
+                ) 
+                OUTPUT INSERTED.OrganizationID
+                VALUES (
+                    @param0, @param1, @param2, @param3, @param4,
+                    @param5, @param6, @param7, GETUTCDATE(), GETUTCDATE()
+                )
+            `;
+
+            const orgParameters = [
+                organizationName,
+                userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
+                userData.organizationIndustry || 'Technology',
+                userData.organizationSize || 'Small',
+                userData.organizationLocation || 'Remote',  // Maps to Headquarters column
+                userData.organizationWebsite || '',
+                userData.organizationType || 'Company',
+                userData.establishedDate || null
+            ];
+
+            const orgResult = await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
+            
+            // Get the auto-generated OrganizationID
+            if (!orgResult.recordset || orgResult.recordset.length === 0) {
+                throw new Error('Failed to create organization - no ID returned');
+            }
+            organizationId = orgResult.recordset[0].OrganizationID;
+            console.log(`Created new organization: ${organizationName} (ID: ${organizationId})`);
+        }
+        
+        // Employer profile creation with the OrganizationID (existing or new)
+        // FIXED: Use only columns that exist in the database schema
         const employerQuery = `
             INSERT INTO Employers (
-                EmployerID, UserID, OrganizationID, CanPostJobs, CanViewApplications,
-                CanScheduleInterviews, CanSendMessages, JoinedAt
+                EmployerID, UserID, OrganizationID, Role, IsVerified, JoinedAt
             ) VALUES (
-                @param0, @param1, @param2, 1, 1, 1, 1, GETUTCDATE()
+                @param0, @param1, @param2, 'Recruiter', 0, GETUTCDATE()
             )
         `;
 
         await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
         
-        console.log(`? (TX) Created organization ${organizationId} and employer profile ${employerId} for user ${userId}`);
-        return { organizationId, employerId };
+        console.log(`Created employer profile ${employerId} for user ${userId} with organization ${organizationId}`);
+        return { organizationId: organizationId.toString(), employerId };
     }
 
     // Legacy non-transactional helper (kept for backward compatibility; prefer the TX version)
@@ -510,9 +542,9 @@ export class UserService {
             let profileCompleteness = 0;
             try {
                 profileCompleteness = await this.recalculateApplicantProfileCompleteness(applicantId);
-                console.log(`? Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
+                console.log(`Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
             } catch (error) {
-                console.error('? Failed to recalculate profile completeness:', error);
+                console.error('Failed to recalculate profile completeness:', error);
             }
 
             const statsQuery = `
@@ -599,11 +631,11 @@ export class UserService {
 
             // Get referral statistics
             const referralStats = await this.getReferralStats(applicantId);
-            console.log(`?? Referral stats for applicant ${applicantId}:`, referralStats);
+            console.log(`Referral stats for applicant ${applicantId}:`, referralStats);
             
             // Get resume statistics
             const resumeStats = await this.getResumeStats(applicantId);
-            console.log(`?? Resume stats for applicant ${applicantId}:`, resumeStats);
+            console.log(`Resume stats for applicant ${applicantId}:`, resumeStats);
 
             // Get recent applications breakdown
             const recentActivityStats = await this.getRecentActivityStats(userId);
@@ -821,7 +853,7 @@ export class UserService {
 
     private static async getReferralStats(applicantId: string): Promise<any> {
         try {
-            console.log(`?? Getting referral stats for applicant: ${applicantId}`);
+            console.log(`Getting referral stats for applicant: ${applicantId}`);
             
             // Use the EXACT same query structure as the working profile service
             const query = `
@@ -838,7 +870,7 @@ export class UserService {
             const result = await dbService.executeQuery(query, [applicantId]);
             const stats = result.recordset[0] || {};
             
-            console.log(`?? Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
+            console.log(`Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
             
             // Map the results exactly as the profile service does
             const mappedStats = {
@@ -849,11 +881,11 @@ export class UserService {
                 referralSuccessRate: stats.TotalReferralsMade > 0 ? Math.round((stats.VerifiedReferrals / stats.TotalReferralsMade) * 100) : 0
             };
             
-            console.log(`?? Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            console.log(`Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
-            console.error('? Error getting referral stats:', error);
+            console.error('Error getting referral stats:', error);
             return {
                 referralRequestsMade: 0,
                 referralRequestsReceived: 0,
@@ -866,7 +898,7 @@ export class UserService {
 
     private static async getResumeStats(applicantId: string): Promise<any> {
         try {
-            console.log(`?? Getting resume stats for applicant: ${applicantId}`);
+            console.log(`Getting resume stats for applicant: ${applicantId}`);
             
             const query = `
                 SELECT 
@@ -880,18 +912,18 @@ export class UserService {
             const result = await dbService.executeQuery(query, [applicantId]);
             const resumeData = result.recordset[0] || { TotalResumes: 0, PrimaryResumeSet: 0 };
             
-            console.log(`?? Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
+            console.log(`Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
             
             const mappedStats = { 
                 totalResumes: resumeData.TotalResumes || 0, 
                 primaryResumeSet: resumeData.PrimaryResumeSet === 1 || resumeData.PrimaryResumeSet === true
             };
             
-            console.log(`?? Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
+            console.log(`Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
-            console.error('? Error getting resume stats:', error);
+            console.error('Error getting resume stats:', error);
             return { totalResumes: 0, primaryResumeSet: false };
         }
     }
@@ -1255,7 +1287,7 @@ export class UserService {
             const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
-            console.log(`?? Profile data for ${applicantId}:`, {
+            console.log(`Profile data for ${applicantId}:`, {
                 Institution: row.Institution,
                 HighestEducation: row.HighestEducation,
                 FieldOfStudy: row.FieldOfStudy,
@@ -1287,7 +1319,7 @@ export class UserService {
             const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
             const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
 
-            console.log(`?? Profile completeness calculation for ${applicantId}:`, {
+            console.log(`Profile completeness calculation for ${applicantId}:`, {
                 educationComplete,
                 primarySkills,
                 secondarySkills,
@@ -1362,5 +1394,218 @@ export class UserService {
             `UPDATE Users SET LastLoginAt = GETUTCDATE(), LoginAttempts = 0, AccountLockoutEnd = NULL WHERE UserID = @param0`,
             [userId]
         );
+    }
+
+    // ?? NEW: Google OAuth Login
+    static async loginWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const { googleUser } = googleData;
+        
+        console.log('UserService: Google login attempt for:', googleUser?.email);
+        
+        if (!googleUser?.email) {
+            throw new ValidationError('Google user email is required');
+        }
+
+        // Find existing user by email
+        const existingUser = await this.findByEmail(googleUser.email);
+        
+        if (!existingUser) {
+            console.log('Google login: User not found for email:', googleUser.email);
+            throw new NotFoundError('User not found with email: ' + googleUser.email);
+        }
+
+        console.log('Google login: Found existing user:', existingUser.Email, 'Type:', existingUser.UserType);
+
+        // Check if account is active
+        if (!existingUser.IsActive) {
+            throw new ValidationError('Account is deactivated');
+        }
+
+        // Update user with Google information if not already set
+        const updateData: any = {};
+        if (!existingUser.GoogleId && googleUser.id) {
+            updateData.GoogleId = googleUser.id;
+        }
+        if (!existingUser.ProfilePictureURL && googleUser.picture) {
+            updateData.ProfilePictureURL = googleUser.picture;
+        }
+        if (!existingUser.EmailVerified && googleUser.verified_email) {
+            updateData.EmailVerified = 1;
+        }
+        
+        // Update login method to indicate Google sign-in
+        updateData.LoginMethod = 'Google';
+        updateData.LastLoginAt = new Date().toISOString();
+
+        // Apply updates if any
+        if (Object.keys(updateData).length > 0) {
+            console.log('Updating user with Google data:', Object.keys(updateData));
+            
+            const updateFields = Object.keys(updateData)
+                .map((key, index) => `${key} = @param${index + 1}`)
+                .join(', ');
+
+            const values = Object.values(updateData);
+            const query = `
+                UPDATE Users 
+                SET ${updateFields}, UpdatedAt = GETUTCDATE()
+                WHERE UserID = @param0
+            `;
+
+            await dbService.executeQuery(query, [existingUser.UserID, ...values]);
+            
+            // Refresh user data
+            const updatedUser = await this.findById(existingUser.UserID);
+            if (updatedUser) {
+                Object.assign(existingUser, updatedUser);
+            }
+        }
+
+        // Reset login attempts and update last login
+        await this.updateLastLogin(existingUser.UserID);
+
+        // Generate tokens
+        const tokens = AuthService.generateAuthTokens(existingUser);
+
+        // Remove password from response
+        const { Password, ...userWithoutPassword } = existingUser;
+
+        console.log('Google login successful for:', userWithoutPassword.Email);
+
+        return {
+            user: userWithoutPassword,
+            tokens
+        };
+    }
+
+    // ?? NEW: Google OAuth Registration
+    static async registerWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const { googleUser, userType, ...additionalData } = googleData;
+        
+        console.log('UserService: Google registration attempt for:', googleUser?.email, 'as', userType);
+        
+        if (!googleUser?.email) {
+            throw new ValidationError('Google user email is required');
+        }
+        
+        if (!userType) {
+            throw new ValidationError('User type is required');
+        }
+
+        // Check if user already exists
+        const existingUser = await this.findByEmail(googleUser.email);
+        if (existingUser) {
+            console.log('Google registration: User already exists:', googleUser.email);
+            throw new ConflictError('User with this email already exists. Please sign in instead.');
+        }
+
+        // Extract names from Google user data
+        const firstName = googleUser.given_name || googleUser.name?.split(' ')[0] || 'User';
+        const lastName = googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '';
+
+        // Generate user ID
+        const userId = AuthService.generateUniqueId();
+        
+        console.log('Creating new user with Google data...');
+
+        // Start transaction for user and profile creation
+        const tx = await dbService.beginTransaction();
+        try {
+            // Insert user into database with Google data
+            const userQuery = `
+                INSERT INTO Users (
+                    UserID, Email, Password, UserType, FirstName, LastName, 
+                    Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                    ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
+                    TwoFactorEnabled, LoginAttempts, GoogleId, ProfilePictureURL,
+                    LoginMethod
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5,
+                    @param6, @param7, @param8, @param9, 0,
+                    'Public', GETUTCDATE(), GETUTCDATE(), 1,
+                    0, 0, @param10, @param11, 'Google'
+                );
+                
+                SELECT * FROM Users WHERE UserID = @param0;
+            `;
+
+            const userParameters = [
+                userId,
+                googleUser.email,
+                '', // No password for Google users
+                userType,
+                firstName,
+                lastName,
+                additionalData.phone || null,
+                additionalData.dateOfBirth || null,
+                additionalData.gender || null,
+                googleUser.verified_email ? 1 : 0, // EmailVerified
+                googleUser.id, // GoogleId
+                googleUser.picture || null // ProfilePictureURL
+            ];
+
+            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
+            
+            if (!userResult.recordset || userResult.recordset.length === 0) {
+                throw new Error('Failed to create user');
+            }
+
+            const user = userResult.recordset[0];
+            console.log('User created successfully:', user.Email);
+            
+            // Create organization and employer profile if user is an employer
+            if (userType === appConstants.userTypes.EMPLOYER) {
+                console.log('Creating employer profile...');
+                await this.createEmployerProfileWithOrganizationTx(tx, userId, {
+                    organizationName: additionalData.organizationName || `${firstName} ${lastName}'s Company`,
+                    organizationIndustry: additionalData.organizationIndustry || 'Technology',
+                    organizationSize: additionalData.organizationSize || 'Small',
+                    ...additionalData
+                });
+            }
+            // Create applicant profile if user is a job seeker
+            else if (userType === appConstants.userTypes.JOB_SEEKER) {
+                console.log('Creating applicant profile...');
+                await this.createApplicantProfileTx(tx, userId);
+            }
+
+            await tx.commit();
+            console.log('Transaction committed successfully');
+
+            // Generate tokens
+            const tokens = AuthService.generateAuthTokens(user);
+
+            // Remove password from response
+            const { Password, ...userWithoutPassword } = user;
+
+            console.log('Google registration successful for:', userWithoutPassword.Email);
+
+            return {
+                user: userWithoutPassword,
+                tokens
+            };
+
+        } catch (error) {
+            try { await tx.rollback(); } catch {}
+            console.error('Error during Google registration (rolled back):', error);
+            
+            if (error instanceof ConflictError) throw error;
+            if (error instanceof ValidationError) throw error;
+            
+            throw new Error('Google registration failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    }
+
+    // ?? NEW: Helper method to verify Google token (optional - for extra security)
+    private static async verifyGoogleToken(idToken: string): Promise<any> {
+        try {
+            // In production, you would verify the Google ID token here
+            // For now, we'll trust the frontend verification
+            console.log('Google token verification skipped (trusting frontend)');
+            return { verified: true };
+        } catch (error) {
+            console.error('Google token verification failed:', error);
+            throw new ValidationError('Invalid Google token');
+        }
     }
 }

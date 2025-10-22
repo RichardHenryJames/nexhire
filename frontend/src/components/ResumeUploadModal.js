@@ -34,12 +34,12 @@ const ResumeUploadModal = ({
   const [existingResumes, setExistingResumes] = useState([]);
   const [hasCheckedResumes, setHasCheckedResumes] = useState(false);
 
-  // ?? DEBUG: Log when component is rendered
-  console.log('?? ResumeUploadModal rendered with visible:', visible);
+  // DEBUG: Log when component is rendered
+  console.log('ResumeUploadModal rendered with visible:', visible);
 
   useEffect(() => {
     if (visible && !hasCheckedResumes) {
-      console.log('?? Modal is visible, checking existing resumes...');
+      console.log('Modal is visible, checking existing resumes...');
       checkExistingResumes();
     }
   }, [visible]);
@@ -64,7 +64,7 @@ const ResumeUploadModal = ({
     try {
       // WEB FALLBACK: use native file input because DocumentPicker can silently fail on web
       if (Platform.OS === 'web') {
-        console.log('?? Web platform detected, using <input type=file> fallback');
+        console.log('Web platform detected, using <input type=file> fallback');
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -76,7 +76,7 @@ const ResumeUploadModal = ({
             document.body.removeChild(input);
             return;
           }
-          console.log('?? File selected (web fallback):', file.name, file.type, file.size);
+          console.log('File selected (web fallback):', file.name, file.type, file.size);
           if (file.size > 10 * 1024 * 1024) {
             Alert.alert('File Too Large', 'Please select a file smaller than 10MB');
             document.body.removeChild(input);
@@ -84,15 +84,15 @@ const ResumeUploadModal = ({
           }
           setUploading(true);
           try {
-            console.log('?? Starting upload process...');
+            console.log('Starting upload process...');
             
-            // ?? TEMPORARY: Skip prompt and use default label for testing
-            console.log('?? STEP 1: Using default resume label...');
+            // TEMPORARY: Skip prompt and use default label for testing
+            console.log('STEP 1: Using default resume label...');
             const resumeLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
-            console.log('?? STEP 2: Resume label set to:', resumeLabel);
+            console.log('STEP 2: Resume label set to:', resumeLabel);
             
-            console.log('?? STEP 3: Calling uploadResume API...');
-            console.log('?? API call parameters:', {
+            console.log('STEP 3: Calling uploadResume API...');
+            console.log('API call parameters:', {
               fileName: file.name,
               fileSize: file.size,
               userObject: user,
@@ -100,16 +100,16 @@ const ResumeUploadModal = ({
               resumeLabel: resumeLabel
             });
             
-            // ?? ENSURE we have a valid user ID
+            // ENSURE we have a valid user ID
             const actualUserId = user.userId || user.UserID || user.id || user.sub;
             if (!actualUserId) {
               throw new Error('User ID not found. Please log in again.');
             }
             
-            console.log('?? Using userId:', actualUserId);
+            console.log('Using userId:', actualUserId);
             
             const uploadResult = await nexhireAPI.uploadResume(file, actualUserId, resumeLabel);
-            console.log('?? STEP 4: Upload result received:', uploadResult);
+            console.log('STEP 4: Upload result received:', uploadResult);
             
             if (uploadResult.success) {
               const resumeData = {
@@ -118,15 +118,15 @@ const ResumeUploadModal = ({
                 ResumeLabel: resumeLabel,
                 IsPrimary: existingResumes.length === 0
               };
-              console.log('?? STEP 5: Resume data prepared:', resumeData);
+              console.log('STEP 5: Resume data prepared:', resumeData);
               onResumeSelected(resumeData);
               onClose();
             } else {
-              console.error('?? Upload failed:', uploadResult);
+              console.error('Upload failed:', uploadResult);
               Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
             }
           } catch (err) {
-            console.error('?? Resume upload error (web fallback):', err);
+            console.error('Resume upload error (web fallback):', err);
             Alert.alert('Upload Failed', err.message || 'Failed to upload resume. Please try again.');
           } finally {
             setUploading(false);
@@ -148,7 +148,7 @@ const ResumeUploadModal = ({
         multiple: false
       });
 
-      console.log('?? Document picker result (native):', result);
+      console.log('Document picker result (native):', result);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploading(true);
@@ -178,7 +178,7 @@ const ResumeUploadModal = ({
           Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
         }
       } else {
-        console.log('?? Document picker canceled');
+        console.log('Document picker canceled');
       }
     } catch (error) {
       console.error('Resume upload error:', error);
@@ -192,29 +192,29 @@ const ResumeUploadModal = ({
     return new Promise((resolve) => {
       const defaultLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
       
-      console.log('?? promptForResumeLabel called with jobTitle:', jobTitle);
-      console.log('?? Default label:', defaultLabel);
+      console.log('promptForResumeLabel called with jobTitle:', jobTitle);
+      console.log('Default label:', defaultLabel);
       
-      // ?? WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
+      // WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
       Alert.alert(
         'Resume Label',
         `Give this resume a name. Default: "${defaultLabel}"`,
         [
           { text: 'Use Default', onPress: () => {
-            console.log('?? User selected default label:', defaultLabel);
+            console.log('User selected default label:', defaultLabel);
             resolve(defaultLabel);
           }},
           { text: 'Custom Name', onPress: () => {
-            console.log('?? User wants custom name...');
+            console.log('User wants custom name...');
             // For web, we'll use the default for now
             // In a full implementation, you'd use a custom modal
             try {
               const customName = prompt(`Enter resume name (or leave empty for default):`) || defaultLabel;
-              console.log('?? Custom name received:', customName);
+              console.log('Custom name received:', customName);
               resolve(customName);
             } catch (error) {
-              console.error('?? Error with prompt:', error);
-              console.log('?? Falling back to default label');
+              console.error('Error with prompt:', error);
+              console.log('Falling back to default label');
               resolve(defaultLabel);
             }
           }}
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // ?? WEB FIX: Replace gap with marginLeft
+    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
   },
   resumeOption: {
     flexDirection: 'row',
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // ?? WEB FIX: Replace gap with marginLeft
+    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
   },
   cancelButton: {
     paddingVertical: 12,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, typography, borderRadius, styles } from '../../styles/theme';
+import GoogleSignInButton from '../../components/GoogleSignInButton';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -21,8 +22,23 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   
-  const { login, loading, error } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
+
+  // FIXED: Clear error state when screen mounts or comes into focus
+  useEffect(() => {
+    clearError();
+    
+    // Also clear when screen comes into focus
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      clearError();
+    });
+    
+    return () => {
+      unsubscribeFocus();
+    };
+  }, [navigation, clearError]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -60,6 +76,61 @@ export default function LoginScreen({ navigation }) {
     // If successful, navigation will happen automatically via auth context
   };
 
+  // FIXED: Handle Google Sign-In with automatic navigation for new users
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      
+      console.log('Login screen: Starting Google Sign-In...');
+      
+      const result = await loginWithGoogle();
+      
+      if (result.success) {
+        console.log('? Google login successful');
+        // Navigation handled by auth context automatically
+      } else if (result.cancelled) {
+        console.log('? User cancelled Google Sign-In');
+        // Do nothing - user cancelled
+      } else if (result.dismissed) {
+        console.log('? User dismissed Google Sign-In popup');
+        // Do nothing - user dismissed
+      } else if (result.needsConfig) {
+        Alert.alert(
+          'Google Sign-In Not Available',
+          'Google Sign-In is not configured yet. Please use email and password to sign in.',
+          [{ text: 'OK' }]
+        );
+      } else if (result.needsRegistration) {
+        console.log('New Google user needs registration - navigation will happen automatically');
+        
+        // FIXED: No manual navigation needed!
+        // The AuthContext has set pendingGoogleAuth state
+        // AppNavigator will automatically detect hasPendingGoogleAuth and navigate to UserTypeSelection
+        
+        // Optional: Show a brief success message that registration is starting
+        // But don't block with an Alert - let the automatic navigation happen
+        console.log('? Google authentication successful, starting registration flow...');
+        
+      } else {
+        console.error('? Google Sign-In failed:', result.error);
+        Alert.alert(
+          'Sign-In Failed',
+          result.error || 'Google Sign-In failed. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+      Alert.alert(
+        'Sign-In Error',
+        error.message || 'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleRegisterNavigation = () => {
     navigation.navigate('Register');
   };
@@ -88,6 +159,25 @@ export default function LoginScreen({ navigation }) {
             </Text>
           </View>
 
+          {/* NEW: Google Sign-In Section */}
+          {googleAuthAvailable && (
+            <>
+              <View style={screenStyles.googleSection}>
+                <GoogleSignInButton
+                  onPress={handleGoogleSignIn}
+                  loading={googleLoading}
+                  disabled={formLoading || loading}
+                />
+              </View>
+
+              <View style={screenStyles.divider}>
+                <View style={screenStyles.dividerLine} />
+                <Text style={screenStyles.dividerText}>or</Text>
+                <View style={screenStyles.dividerLine} />
+              </View>
+            </>
+          )}
+
           {/* Login Form */}
           <View style={screenStyles.form}>
             {/* Email Input */}
@@ -106,7 +196,10 @@ export default function LoginScreen({ navigation }) {
                 <TextInput
                   style={screenStyles.input}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    clearError(); // FIXED: Clear error when user starts typing
+                  }}
                   placeholder="Enter your email"
                   placeholderTextColor={colors.gray400}
                   keyboardType="email-address"
@@ -136,7 +229,10 @@ export default function LoginScreen({ navigation }) {
                 <TextInput
                   style={screenStyles.input}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    clearError(); // FIXED: Clear error when user starts typing
+                  }}
                   placeholder="Enter your password"
                   placeholderTextColor={colors.gray400}
                   secureTextEntry={!showPassword}
@@ -180,7 +276,7 @@ export default function LoginScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            {/* Error Message */}
+            {/* Error Message - FIXED: Only show if error exists */}
             {error && (
               <View style={screenStyles.globalErrorContainer}>
                 <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
@@ -249,6 +345,25 @@ const screenStyles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,
+  },
+  // NEW: Google Sign-In styles
+  googleSection: {
+    marginBottom: spacing.lg,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray300,
+  },
+  dividerText: {
+    marginHorizontal: spacing.md,
+    color: colors.gray500,
+    fontSize: typography.sizes.sm,
   },
   form: {
     width: '100%',

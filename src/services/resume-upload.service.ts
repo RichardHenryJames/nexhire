@@ -34,11 +34,11 @@ export class ResumeStorageService {
    */
   async uploadResume(uploadData: ResumeUploadRequest): Promise<string> {
     try {
-      console.log('?? === AZURE STORAGE UPLOAD DEBUG ===');
-      console.log('?? User ID:', uploadData.userId);
-      console.log('?? File name:', uploadData.fileName);
-      console.log('?? MIME type:', uploadData.mimeType);
-      console.log('?? File data length:', uploadData.fileData?.length || 0);
+      console.log('=== AZURE STORAGE UPLOAD DEBUG ===');
+      console.log('User ID:', uploadData.userId);
+      console.log('File name:', uploadData.fileName);
+      console.log('MIME type:', uploadData.mimeType);
+      console.log('File data length:', uploadData.fileData?.length || 0);
 
       // Create container client
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
@@ -54,7 +54,7 @@ export class ResumeStorageService {
 
       // Convert base64 to buffer (same as profile images)
       const buffer = Buffer.from(uploadData.fileData, 'base64');
-      console.log('?? Buffer size:', buffer.length);
+      console.log('Buffer size:', buffer.length);
 
       // Upload with proper content type
       const uploadResult = await blockBlobClient.upload(buffer, buffer.length, {
@@ -73,22 +73,22 @@ export class ResumeStorageService {
 
       // Get the public URL
       const resumeUrl = blockBlobClient.url;
-      console.log('?? Resume uploaded successfully:', resumeUrl);
-      console.log('?? === END AZURE STORAGE UPLOAD DEBUG ===');
+      console.log('Resume uploaded successfully:', resumeUrl);
+      console.log('=== END AZURE STORAGE UPLOAD DEBUG ===');
 
       return resumeUrl;
 
     } catch (error: unknown) {
-      console.error('?? === AZURE STORAGE UPLOAD ERROR ===');
-      console.error('?? Error type:', (error as Error)?.constructor?.name || 'Unknown');
-      console.error('?? Error message:', (error as Error)?.message || 'Unknown error');
-      console.error('?? Upload data:', {
+      console.error('=== AZURE STORAGE UPLOAD ERROR ===');
+      console.error('Error type:', (error as Error)?.constructor?.name || 'Unknown');
+      console.error('Error message:', (error as Error)?.message || 'Unknown error');
+      console.error('Upload data:', {
         userId: uploadData.userId,
         fileName: uploadData.fileName,
         mimeType: uploadData.mimeType,
         fileDataLength: uploadData.fileData?.length || 0
       });
-      console.error('?? === END ERROR DEBUG ===');
+      console.error('=== END ERROR DEBUG ===');
       throw error;
     }
   }
@@ -117,10 +117,10 @@ export class ResumeStorageService {
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       
       await blockBlobClient.deleteIfExists();
-      console.log('?? Old resume deleted successfully');
+      console.log('Old resume deleted successfully');
 
     } catch (error: unknown) {
-      console.error('?? Error deleting old resume:', error);
+      console.error('Error deleting old resume:', error);
       // Don't throw - deletion failure shouldn't prevent upload
     }
   }
@@ -206,9 +206,9 @@ function validateResumeUpload(data: any): ResumeUploadRequest {
  */
 export async function uploadResume(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    console.log('?? === RESUME UPLOAD HANDLER ===');
-    console.log('?? Method:', req.method);
-    console.log('?? Headers:', Object.keys(req.headers));
+    console.log('=== RESUME UPLOAD HANDLER ===');
+    console.log('Method:', req.method);
+    console.log('Headers:', Object.keys(req.headers));
 
     // Handle OPTIONS for CORS (same as profile image)
     if (req.method === 'OPTIONS') {
@@ -235,10 +235,10 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
 
     // Parse and validate request body (same as profile image)
     const requestBody = await req.json() as any;
-    console.log('?? Request body keys:', requestBody ? Object.keys(requestBody) : []);
+    console.log('Request body keys:', requestBody ? Object.keys(requestBody) : []);
     
     const uploadData = validateResumeUpload(requestBody);
-    console.log('?? Validated upload data:', {
+    console.log('Validated upload data:', {
       fileName: uploadData.fileName,
       userId: uploadData.userId,
       mimeType: uploadData.mimeType,
@@ -288,7 +288,7 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
         isPrimary: isPrimaryResume // Only set as primary if it's the first resume
       });
 
-      console.log('?? Resume saved to ApplicantResumes table', {
+      console.log('Resume saved to ApplicantResumes table', {
         resumeId,
         isPrimary: isPrimaryResume,
         totalResumes: existingResumes.length + 1
@@ -300,14 +300,14 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
         await UserService.recomputeProfileCompletenessByApplicantId(applicantId);
       } catch (e) { console.warn('Completeness recalculation failed (resume upload):', (e as any)?.message); }
     } catch (error) {
-      console.error('? Failed to save resume to database:', error);
+      console.error('Failed to save resume to database:', error);
       // Continue anyway - resume is uploaded successfully to storage
     }
 
     // ? FIXED: Don't delete old resume files - let users manage multiple resumes
     // The user can delete specific resumes they don't want through the UI
-    console.log('?? Resume upload completed successfully - keeping existing resumes');
-    console.log('?? === END RESUME UPLOAD HANDLER ===');
+    console.log('Resume upload completed successfully - keeping existing resumes');
+    console.log('=== END RESUME UPLOAD HANDLER ===');
 
     return {
       status: 200,
@@ -328,11 +328,11 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
     };
 
   } catch (error: unknown) {
-    console.error('?? === RESUME UPLOAD ERROR ===');
-    console.error('?? Error type:', (error as Error)?.constructor?.name || 'Unknown');
-    console.error('?? Error message:', (error as Error)?.message || 'Unknown error');
-    console.error('?? Error stack:', (error as Error)?.stack || 'No stack trace');
-    console.error('?? === END ERROR DEBUG ===');
+    console.error('=== RESUME UPLOAD ERROR ===');
+    console.error('Error type:', (error as Error)?.constructor?.name || 'Unknown');
+    console.error('Error message:', (error as Error)?.message || 'Unknown error');
+    console.error('Error stack:', (error as Error)?.stack || 'No stack trace');
+    console.error('=== END ERROR DEBUG ===');
 
     return {
       status: 500,

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
+import DatePicker from '../../components/DatePicker';
 
 export default function RegisterScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -225,7 +226,21 @@ export default function RegisterScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Optional Information</Text>
           
           {renderInput('phone', 'Phone Number', false, 'phone-pad')}
-          {renderInput('dateOfBirth', 'Date of Birth (YYYY-MM-DD)', false, 'numeric')}
+          
+          {/* ? REPLACED: DatePicker instead of manual input */}
+          <DatePicker
+            label="Date of Birth"
+            value={formData.dateOfBirth}
+            onChange={(date) => {
+              setFormData({ ...formData, dateOfBirth: date });
+              if (errors.dateOfBirth) {
+                setErrors({ ...errors, dateOfBirth: null });
+              }
+            }}
+            placeholder="Select your date of birth"
+            maximumDate={new Date()} // Can't be born in the future
+            error={errors.dateOfBirth}
+          />
 
           {/* Gender Selection */}
           <View style={styles.fieldContainer}>
@@ -361,6 +376,27 @@ const styles = StyleSheet.create({
   },
   userTypeButtonTextActive: {
     color: colors.white,
+  },
+  datePicker: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  dateInput: {
+    borderWidth: 0,
+    alignItems: 'flex-start',
+    paddingLeft: 0,
+  },
+  dateText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  placeholderText: {
+    color: colors.gray400,
   },
   genderContainer: {
     flexDirection: 'row',

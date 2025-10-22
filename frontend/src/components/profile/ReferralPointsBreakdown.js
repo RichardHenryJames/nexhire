@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
+import { useNavigation } from '@react-navigation/native';
 
 const ReferralPointsBreakdown = ({ 
   totalPoints = 0, 
   pointsHistory = [], 
-  pointTypeMetadata = {}, // ?? NEW: Dynamic metadata from backend
+  pointTypeMetadata = {}, // NEW: Dynamic metadata from backend
   referralStats = {},
   onClose,
   visible 
 }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const navigation = useNavigation();
 
-  // ?? Debug logging
-  console.log('?? ReferralPointsBreakdown props:', {
+  // Debug logging
+  console.log('ReferralPointsBreakdown props:', {
     totalPoints,
     pointsHistoryLength: pointsHistory?.length || 0,
     pointsHistory,
@@ -188,6 +190,16 @@ const ReferralPointsBreakdown = ({
     }
   };
 
+  const handleNavigateToReferrals = () => {
+    // Close the modal first
+    onClose();
+    
+    // Navigate to Referrals screen using React Navigation
+    setTimeout(() => {
+      navigation.navigate('Referrals');
+    }, 300); // Small delay to let modal close animation complete
+  };
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
@@ -213,15 +225,11 @@ const ReferralPointsBreakdown = ({
             <View style={styles.quickStatsRow}>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referrals Made</Text>
+                <Text style={styles.quickStatLabel}>Referral Made</Text>
               </View>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
-                <Text style={styles.quickStatLabel}>Verified</Text>
-              </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.referralRequestsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Requested</Text>
+                <Text style={styles.quickStatLabel}>Referral Verified</Text>
               </View>
             </View>
           </View>
@@ -267,7 +275,7 @@ const ReferralPointsBreakdown = ({
           ) : (
             <View style={styles.section}>
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateEmoji}>??</Text>
+                <Text style={styles.emptyStateEmoji}>0</Text>
                 <Text style={styles.emptyStateTitle}>No Points Yet</Text>
                 <Text style={styles.emptyStateDescription}>
                   Start earning points by referring candidates for jobs at your company!
@@ -276,7 +284,7 @@ const ReferralPointsBreakdown = ({
             </View>
           )}
 
-          {/* How to Earn More Points - ?? UPDATED: Dynamic tips from metadata */}
+          {/* How to Earn More Points - UPDATED: Dynamic tips from metadata */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>💡 How to Earn More Points</Text>
             <View style={styles.tipsContainer}>
@@ -305,6 +313,24 @@ const ReferralPointsBreakdown = ({
               </View>
             </View>
           </View>
+
+          {/* NEW: Redirect Button to Referrals Page */}
+          <View style={styles.redirectSection}>
+            <TouchableOpacity 
+              style={styles.redirectButton}
+              onPress={handleNavigateToReferrals}
+              activeOpacity={0.7}
+            >
+              <View style={styles.redirectButtonContent}>
+                <Ionicons name="people" size={24} color="#fff" style={styles.redirectIcon} />
+                <View style={styles.redirectTextContainer}>
+                  <Text style={styles.redirectButtonText}>View All Referrals</Text>
+                  <Text style={styles.redirectButtonSubtext}>Manage your referral requests</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </Animated.View>
     </Modal>
@@ -321,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -509,6 +535,45 @@ const styles = StyleSheet.create({
   tipDescription: {
     fontSize: typography.sizes?.sm || 14,
     color: colors.gray600,
+  },
+  redirectSection: {
+    marginTop: 8,
+    marginBottom: 32,
+    paddingHorizontal: 4,
+  },
+  redirectButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  redirectButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  redirectIcon: {
+    marginRight: 12,
+  },
+  redirectTextContainer: {
+    flex: 1,
+  },
+  redirectButtonText: {
+    fontSize: typography.sizes?.lg || 18,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  redirectButtonSubtext: {
+    fontSize: typography.sizes?.sm || 14,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 });
 

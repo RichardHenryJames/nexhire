@@ -29,7 +29,7 @@ export interface User {
     UserID: string;
     Email: string;
     Password: string; // Added missing Password field
-    UserType: 'JobSeeker' | 'Employer' | 'Admin';
+    UserType: 'JobSeeker' | 'Employer' | 'Admin'; // ? UPDATED: Added Admin
     FirstName: string;
     LastName: string;
     Phone?: string;
@@ -47,6 +47,11 @@ export interface User {
     TwoFactorEnabled: boolean;
     LoginAttempts: number; // Added missing field
     AccountLockoutEnd?: Date; // Added missing field
+
+    // ?? NEW: Google OAuth fields
+    GoogleId?: string;
+    LoginMethod?: string; // 'Password', 'Google', etc.
+    GoogleAccessToken?: string; // Optional: store for potential token revocation
 }
 
 export interface Organization {
@@ -126,6 +131,7 @@ export interface Job {
     Tags?: string;
     InternalNotes?: string;
     ExternalJobID?: string;
+    ApplicationURL?: string; // ? NEW: Application URL from scraped sources
     SearchScore?: number;
     FeaturedUntil?: Date;
 }
@@ -212,13 +218,13 @@ export interface ApplicationTracking {
     LastUpdatedAt: Date;
 }
 
-// FIXED: Updated UserRegistrationRequest to include organization fields for employers
+// FIXED: Updated UserRegistrationRequest to include Admin and organization fields for employers
 export interface UserRegistrationRequest {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
-    userType: 'JobSeeker' | 'Employer';
+    userType: 'JobSeeker' | 'Employer' | 'Admin'; // ? UPDATED: Added Admin
     phone?: string;
     dateOfBirth?: Date;
     gender?: string;
@@ -232,6 +238,10 @@ export interface UserRegistrationRequest {
     organizationLocation?: string;
     organizationType?: string;
     establishedDate?: Date;
+    
+    // ? NEW: Admin-specific fields
+    adminLevel?: string;
+    permissions?: string[];
 }
 
 export interface UserLoginRequest {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,60 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
-  const { userType } = route.params;
+  const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
+  
+  const { 
+    userType, 
+    fromGoogleAuth: fromGoogleAuthParam = false, 
+    googleUser: routeGoogleUser = null 
+  } = route.params || {};
+
+  // 🔧 Handle fromGoogleAuth as string from URL params
+  const fromGoogleAuth = fromGoogleAuthParam === true || fromGoogleAuthParam === 'true';
+
+  // 🔧 Use googleUser from route or fallback to context
+  const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
+
+  // 🔧 DEBUG: Log what we have
+  useEffect(() => {
+    console.log('📍 ExperienceTypeSelectionScreen - Google Status:', {
+      fromGoogleAuth,
+      fromGoogleAuthParam,
+      hasGoogleUser: !!googleUser,
+      hasPendingAuth: !!pendingGoogleAuth,
+      googleUserName: googleUser?.name,
+      googleUserEmail: googleUser?.email,
+      googleUserStructure: googleUser,
+      pendingAuthUserStructure: pendingGoogleAuth?.user
+    });
+  }, [fromGoogleAuth, fromGoogleAuthParam, googleUser, pendingGoogleAuth]);
+
+  // 🔧 IMPROVED: Guard against hard refresh with lost Google data
+  useEffect(() => {
+    if (fromGoogleAuth && !googleUser && !pendingGoogleAuth) {
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to user type selection');
+      
+      // 🔧 For web: Use window.location for reliable redirect
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Using window.location redirect for web to UserTypeSelection');
+        window.location.href = '/register';
+        return;
+      }
+      
+      // For native: Use navigation replace to UserTypeSelection
+      setTimeout(() => {
+        navigation.replace('UserTypeSelectionScreen');
+      }, 100);
+    }
+  }, [fromGoogleAuth, googleUser, pendingGoogleAuth, navigation]);
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -25,15 +72,38 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       // Students go directly to education details
       navigation.navigate('EducationDetailsScreen', { 
         userType, 
-        experienceType: selectedType 
+        experienceType: selectedType,
+        fromGoogleAuth,
+        googleUser
       });
     } else {
       // Experienced professionals first provide work experience
       navigation.navigate('WorkExperienceScreen', { 
         userType, 
-        experienceType: selectedType 
+        experienceType: selectedType,
+        fromGoogleAuth,
+        googleUser
       });
     }
+  };
+
+  // FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
+  const handleSkipToFinal = () => {
+    if (!selectedType) {
+      Alert.alert('Selection Required', 'Please select your experience level first');
+      return;
+    }
+
+    console.log('🔧 Skip button clicked, selectedType:', selectedType);
+    
+    // Navigate directly to PersonalDetailsScreenDirect (same route used in UserTypeSelectionScreen)
+    navigation.navigate('PersonalDetailsScreenDirect', {
+      userType,
+      experienceType: selectedType,
+      fromGoogleAuth,
+      googleUser,
+      skippedSteps: true,
+    });
   };
 
   const ExperienceCard = ({ type, title, icon, description, examples }) => (
@@ -80,6 +150,30 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           >
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
+
+          {/* Show Google user info if available */}
+          {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
+            <View style={styles.googleUserInfo}>
+              {(googleUser?.picture || pendingGoogleAuth?.user?.picture) && (
+                <Image 
+                  source={{ uri: googleUser?.picture || pendingGoogleAuth?.user?.picture }} 
+                  style={styles.googleUserAvatar}
+                />
+              )}
+              <View style={styles.googleUserTextContainer}>
+                <Text style={styles.googleUserWelcome}>
+                  ✅ Google Account Connected
+                </Text>
+                <Text style={styles.googleUserName}>
+                  {googleUser?.name || googleUser?.given_name || pendingGoogleAuth?.user?.name || 'Google User'}
+                </Text>
+                <Text style={styles.googleUserEmail}>
+                  {googleUser?.email || pendingGoogleAuth?.user?.email || 'Email'}
+                </Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            </View>
+          )}
           
           <Text style={styles.title}>What's your current situation?</Text>
           <Text style={styles.subtitle}>
@@ -117,7 +211,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             styles.continueButtonText,
             !selectedType && styles.continueButtonTextDisabled
           ]}>
-            Continue
+            Continue with Full Setup
           </Text>
           <Ionicons 
             name="arrow-forward" 
@@ -125,6 +219,34 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             color={!selectedType ? colors.gray400 : colors.white} 
           />
         </TouchableOpacity>
+
+        {/* FIXED: Single "Skip to Profile Register" button - always shown */}
+        <TouchableOpacity
+          style={[
+            styles.skipButton,
+            !selectedType && styles.skipButtonFaded
+          ]}
+          onPress={handleSkipToFinal}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name="flash-outline" 
+            size={20} 
+            color={!selectedType ? colors.gray500 : colors.primary} 
+          />
+          <Text style={[
+            styles.skipButtonText,
+            !selectedType && styles.skipButtonTextFaded
+          ]}>
+            Skip to Profile Register
+          </Text>
+        </TouchableOpacity>
+        
+        {!selectedType && (
+          <Text style={styles.skipHintText}>
+            💡 Select your experience level above to enable skip option
+          </Text>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -158,6 +280,42 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.gray600,
     lineHeight: 22,
+  },
+  // Google user info styles
+  googleUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: colors.success + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  googleUserAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  googleUserTextContainer: {
+    flex: 1,
+  },
+  googleUserWelcome: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+    marginBottom: 2,
+  },
+  googleUserName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 1,
+  },
+  googleUserEmail: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
   },
   cardsContainer: {
     flex: 1,
@@ -215,8 +373,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
+    marginTop: 24, // ADDED: Equal spacing above button
     gap: 8,
-    marginTop: 20,
+    marginBottom: 16,
   },
   continueButtonDisabled: {
     backgroundColor: colors.gray300,
@@ -228,5 +387,39 @@ const styles = StyleSheet.create({
   },
   continueButtonTextDisabled: {
     color: colors.gray400,
+  },
+  // Skip button styles (matching UserTypeSelectionScreen)
+  skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  skipButtonFaded: {
+    borderColor: colors.gray400,
+    backgroundColor: colors.gray50,
+    opacity: 0.6,
+  },
+  skipButtonText: {
+    color: colors.primary,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  skipButtonTextFaded: {
+    color: colors.gray600,
+  },
+  skipHintText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    textAlign: 'center',
+    marginTop: -8,
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
 });
