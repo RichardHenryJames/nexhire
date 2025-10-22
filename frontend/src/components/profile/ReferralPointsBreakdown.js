@@ -225,15 +225,11 @@ const ReferralPointsBreakdown = ({
             <View style={styles.quickStatsRow}>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referrals Made</Text>
+                <Text style={styles.quickStatLabel}>Referral Made</Text>
               </View>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
-                <Text style={styles.quickStatLabel}>Verified</Text>
-              </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.referralRequestsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Requested</Text>
+                <Text style={styles.quickStatLabel}>Referral Verified</Text>
               </View>
             </View>
           </View>
@@ -351,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

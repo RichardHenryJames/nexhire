@@ -42,11 +42,11 @@ export default function HomeScreen({ navigation }) {
       setLoading(true);
 
       // Fetch comprehensive dashboard data
-      const [dashboardRes, recentJobsRes, applicationsRes, referralRes, pointsHistoryRes] = await Promise.all([
+      const [dashboardRes, recentJobsRes, applicationsRes, referralEligibilityRes, pointsHistoryRes] = await Promise.all([
         nexhireAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
         nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
         isJobSeeker ? nexhireAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
-        nexhireAPI.getReferralAnalytics().catch(() => ({ success: false, data: {} })),
+        isJobSeeker ? nexhireAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
         // NEW: Fetch points history for the breakdown modal
         isJobSeeker ? nexhireAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
       ]);
@@ -60,8 +60,8 @@ export default function HomeScreen({ navigation }) {
       // Process recent applications
       const recentApplications = (isJobSeeker && applicationsRes.success) ? applicationsRes.data.slice(0, 3) : [];
       
-      // Process referral analytics
-      const referralStats = referralRes.success ? referralRes.data : {};
+      // Process referral eligibility (contains dailyQuotaRemaining)
+      const referralStats = referralEligibilityRes.success ? referralEligibilityRes.data : {};
 
       // NEW: Process points history data
       if (pointsHistoryRes.success && pointsHistoryRes.data) {
@@ -430,16 +430,16 @@ export default function HomeScreen({ navigation }) {
                   value={referralPointsData.totalPoints || stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
                   icon="star"
                   color={colors.info}
-                  subtitle={`${stats.referralRequestsMade || 0} requested • ${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
+                  subtitle={`${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
                   onPress={handleReferralPointsPress}
                 />
                 <StatCard
-                  title="Interview Rate"
-                  value={`${(stats.applicationSuccessRate || 0).toFixed(1)}%`}
-                  icon="trending-up"
+                  title="Get Referrals"
+                  value={referralStats.dailyQuotaRemaining !== undefined ? referralStats.dailyQuotaRemaining : (stats.referralQuotaRemaining !== undefined ? stats.referralQuotaRemaining : '...')}
+                  icon="people"
                   color={colors.success}
-                  subtitle={`${stats.interviewsScheduled || 0} interviews`}
-                  onPress={() => navigation.navigate('Applications')}
+                  subtitle={`${stats.referralRequestsMade || 0} requests made`}
+                  onPress={() => navigation.navigate('AskReferral')}
                 />
               </>
             )}
@@ -517,14 +517,6 @@ export default function HomeScreen({ navigation }) {
                 badge={stats.profileCompleteness < 80 ? `${stats.profileCompleteness || 0}%` : null}
                 urgent={stats.profileCompleteness < 60}
                 onPress={() => navigation.navigate('Profile')}
-              />
-              <QuickAction
-                title="Get Referrals"
-                description="Ask for job referrals from your network"
-                icon="people"
-                color={colors.info}
-                badge={referralStats.dailyQuotaRemaining > 0 ? `${referralStats.dailyQuotaRemaining} left` : null}
-                onPress={() => navigation.navigate('AskReferral')}
               />
             </>
           )}
