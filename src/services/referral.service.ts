@@ -732,15 +732,24 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
 
-            // Get paginated data - ? FIX: Convert to integers before using in SQL
+            // Get paginated data - ✅ FIXED: Support both internal and external referrals
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
-                    rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    j.Title as JobTitle,
-                    o.LogoURL as OrganizationLogo,
-                    o.Name as CompanyName,
+                    rr.OrganizationID,
+                    -- For INTERNAL referrals (JobID not null)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    jo.LogoURL as InternalLogoURL,
+                    -- For EXTERNAL referrals (ExtJobID not null)
+                    eo.Name as ExternalCompanyName,
+                    eo.LogoURL as ExternalLogoURL,
+                    -- Use COALESCE to get the appropriate values
+                    COALESCE(j.Title, 'External Job') as JobTitle,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
@@ -748,8 +757,11 @@ export class ReferralService {
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription
                 FROM ReferralRequests rr
-                INNER JOIN Jobs j ON rr.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                -- ✅ NEW: JOIN for external organization data
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
                 LEFT JOIN Applicants a_ref ON rr.AssignedReferrerID = a_ref.ApplicantID
                 LEFT JOIN Users ur ON a_ref.UserID = ur.UserID

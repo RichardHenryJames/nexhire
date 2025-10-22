@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -477,12 +478,26 @@ export default function AskReferralScreen({ navigation }) {
               style={[styles.companySelector, errors.company && styles.inputError]}
               onPress={() => setShowCompanyModal(true)}
             >
-              <Text style={[
-                styles.companySelectorText,
-                !selectedCompany && styles.companySelectorPlaceholder
-              ]}>
-                {selectedCompany?.name || 'Select company'}
-              </Text>
+              {selectedCompany ? (
+                <View style={styles.companySelectorContent}>
+                  {selectedCompany.logoURL ? (
+                    <Image
+                      source={{ uri: selectedCompany.logoURL }}
+                      style={styles.companySelectorLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companySelectorLogoPlaceholder}>
+                      <Ionicons name="business" size={16} color={colors.gray400} />
+                    </View>
+                  )}
+                  <Text style={styles.companySelectorText}>{selectedCompany.name}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.companySelectorText, styles.companySelectorPlaceholder]}>
+                  Select company
+                </Text>
+              )}
               <Ionicons name="chevron-down" size={20} color={colors.gray500} />
             </TouchableOpacity>
             {errors.company && (
@@ -727,6 +742,19 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                     }
                   }}
                 >
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
                   <View style={styles.companyInfo}>
                     <Text style={styles.companyName}>{item.name}</Text>
                     {item.industry && (
@@ -1067,6 +1095,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: colors.white,
   },
+  companySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companySelectorLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.white,
+  },
+  companySelectorLogoPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   companySelectorText: {
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
@@ -1132,6 +1181,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   companyInfo: {
     flex: 1,

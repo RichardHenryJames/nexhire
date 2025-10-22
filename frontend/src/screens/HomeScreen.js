@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import nexhireAPI from '../services/api';
 import { colors, typography } from '../styles/theme';
+import ReferralPointsBreakdown from '../components/profile/ReferralPointsBreakdown';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +23,12 @@ export default function HomeScreen({ navigation }) {
   const { user, isEmployer, isJobSeeker } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showReferralBreakdown, setShowReferralBreakdown] = useState(false);
+  const [referralPointsData, setReferralPointsData] = useState({
+    totalPoints: 0,
+    pointsHistory: [],
+    pointTypeMetadata: {}
+  });
   const [dashboardData, setDashboardData] = useState({
     // Enhanced stats from backend
     stats: {},
@@ -35,11 +42,13 @@ export default function HomeScreen({ navigation }) {
       setLoading(true);
 
       // Fetch comprehensive dashboard data
-      const [dashboardRes, recentJobsRes, applicationsRes, referralRes] = await Promise.all([
+      const [dashboardRes, recentJobsRes, applicationsRes, referralRes, pointsHistoryRes] = await Promise.all([
         nexhireAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
         nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
         isJobSeeker ? nexhireAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
         nexhireAPI.getReferralAnalytics().catch(() => ({ success: false, data: {} })),
+        // NEW: Fetch points history for the breakdown modal
+        isJobSeeker ? nexhireAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
       ]);
 
       // Process dashboard stats
@@ -53,6 +62,15 @@ export default function HomeScreen({ navigation }) {
       
       // Process referral analytics
       const referralStats = referralRes.success ? referralRes.data : {};
+
+      // NEW: Process points history data
+      if (pointsHistoryRes.success && pointsHistoryRes.data) {
+        setReferralPointsData({
+          totalPoints: pointsHistoryRes.data.totalPoints || 0,
+          pointsHistory: pointsHistoryRes.data.history || [],
+          pointTypeMetadata: pointsHistoryRes.data.pointTypeMetadata || {}
+        });
+      }
 
       setDashboardData({
         stats,
@@ -85,6 +103,11 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(true);
     await fetchDashboardData();
     setRefreshing(false);
+  };
+
+  const handleReferralPointsPress = () => {
+    console.log('Referral Points card pressed - showing breakdown modal');
+    setShowReferralBreakdown(true);
   };
 
   // Enhanced StatCard with trends and better styling
@@ -313,289 +336,305 @@ export default function HomeScreen({ navigation }) {
   const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Enhanced Header with user context */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>
-          Welcome back, {user?.FirstName || user?.firstName || 'User'}!
-        </Text>
-        <Text style={styles.subGreeting}>
-          {isEmployer ? 'Manage your team and hiring pipeline' : 'Advance your career journey'}
-        </Text>
-        {stats.summary && (
-          <View style={styles.summaryBadge}>
-            <Text style={styles.summaryText}>
-              {isEmployer 
-                ? `Hiring velocity: ${stats.summary.hiringVelocity || 'Unknown'}`
-                : `Profile strength: ${stats.summary.profileStrength || 'Unknown'}`
-              }
-            </Text>
-          </View>
-        )}
-      </View>
+    <>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Enhanced Header with user context */}
+        <View style={styles.header}>
+          <Text style={styles.greeting}>
+            Welcome back, {user?.FirstName || user?.firstName || 'User'}!
+          </Text>
+          <Text style={styles.subGreeting}>
+            {isEmployer ? 'Manage your team and hiring pipeline' : 'Advance your career journey'}
+          </Text>
+          {stats.summary && (
+            <View style={styles.summaryBadge}>
+              <Text style={styles.summaryText}>
+                {isEmployer 
+                  ? `Hiring velocity: ${stats.summary.hiringVelocity || 'Unknown'}`
+                  : `Profile strength: ${stats.summary.profileStrength || 'Unknown'}`
+                }
+              </Text>
+            </View>
+          )}
+        </View>
 
-      {/* Primary Stats Overview - Updated to 2x2 Grid */}
-      <View style={styles.statsContainer}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <View style={styles.statsGrid}>
+        {/* Primary Stats Overview - Updated to 2x2 Grid */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.sectionTitle}>Overview</Text>
+          <View style={styles.statsGrid}>
+            {isEmployer ? (
+              <>
+                <StatCard
+                  title="Active Jobs"
+                  value={stats.activeJobs || 0}
+                  icon="briefcase"
+                  color={colors.primary}
+                  subtitle={`${stats.totalJobsPosted || 0} total • ${stats.draftJobs || 0} drafts`}
+                  trend={stats.jobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.jobsPostedLast30Days}` } : null}
+                  onPress={() => navigation.navigate('Jobs')}
+                />
+                <StatCard
+                  title="Applications"
+                  value={stats.totalApplicationsReceived || 0}
+                  icon="document-text"
+                  color={colors.success}
+                  subtitle={`${stats.pendingApplications || 0} pending review`}
+                  trend={stats.applicationsReceivedLast30Days > 0 ? { positive: true, value: `+${stats.applicationsReceivedLast30Days}` } : null}
+                  onPress={() => navigation.navigate('Applications')}
+                />
+                <StatCard
+                  title="Success Rate"
+                  value={`${(stats.hiringSuccessRate || 0).toFixed(1)}%`}
+                  icon="trophy"
+                  color={colors.warning}
+                  subtitle={`${stats.offersExtended || 0} offers extended`}
+                  onPress={() => navigation.navigate('Analytics')}
+                />
+                <StatCard
+                  title="Pipeline"
+                  value={stats.interviewsInProgress || 0}
+                  icon="people"
+                  color={colors.info}
+                  subtitle={`${stats.shortlistedApplications || 0} shortlisted`}
+                  onPress={() => navigation.navigate('Analytics')}
+                />
+              </>
+            ) : (
+              <>
+                <StatCard
+                  title="Applications"
+                  value={stats.totalApplications || 0}
+                  icon="document-text"
+                  color={colors.primary}
+                  subtitle={`${stats.savedJobs || 0} saved jobs`}
+                  trend={stats.applicationsLast30Days > 0 ? { positive: true, value: `+${stats.applicationsLast30Days}` } : null}
+                  onPress={() => navigation.navigate('Applications')}
+                  size="large"
+                />
+                <StatCard
+                  title="Profile Score"
+                  value={`${stats.profileCompleteness || 0}%`}
+                  icon="person"
+                  color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
+                  subtitle={`${stats.profileViews || 0} profile views`}
+                  onPress={() => navigation.navigate('Profile')}
+                />
+                <StatCard
+                  title="Referral Points"
+                  value={referralPointsData.totalPoints || stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
+                  icon="star"
+                  color={colors.info}
+                  subtitle={`${stats.referralRequestsMade || 0} requested • ${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
+                  onPress={handleReferralPointsPress}
+                />
+                <StatCard
+                  title="Interview Rate"
+                  value={`${(stats.applicationSuccessRate || 0).toFixed(1)}%`}
+                  icon="trending-up"
+                  color={colors.success}
+                  subtitle={`${stats.interviewsScheduled || 0} interviews`}
+                  onPress={() => navigation.navigate('Applications')}
+                />
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Performance Metrics for Job Seekers */}
+        <PerformanceMetrics />
+
+        {/* Attention Items */}
+        <AttentionItems />
+
+        {/* Quick Actions with Enhanced Urgency */}
+        <View style={styles.actionsContainer}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          
           {isEmployer ? (
             <>
-              <StatCard
-                title="Active Jobs"
-                value={stats.activeJobs || 0}
-                icon="briefcase"
+              <QuickAction
+                title="Post a New Job"
+                description="Create and publish a job posting"
+                icon="add-circle"
                 color={colors.primary}
-                subtitle={`${stats.totalJobsPosted || 0} total • ${stats.draftJobs || 0} drafts`}
-                trend={stats.jobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.jobsPostedLast30Days}` } : null}
-                onPress={() => navigation.navigate('Jobs')}
+                onPress={() => navigation.navigate('CreateJob')}
               />
-              <StatCard
-                title="Applications"
-                value={stats.totalApplicationsReceived || 0}
-                icon="document-text"
+              <QuickAction
+                title="Review Applications"
+                description="Manage candidate applications"
+                icon="people"
                 color={colors.success}
-                subtitle={`${stats.pendingApplications || 0} pending review`}
-                trend={stats.applicationsReceivedLast30Days > 0 ? { positive: true, value: `+${stats.applicationsReceivedLast30Days}` } : null}
+                badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
+                urgent={stats.pendingApplications > 10}
                 onPress={() => navigation.navigate('Applications')}
               />
-              <StatCard
-                title="Success Rate"
-                value={`${(stats.hiringSuccessRate || 0).toFixed(1)}%`}
-                icon="trophy"
-                color={colors.warning}
-                subtitle={`${stats.offersExtended || 0} offers extended`}
+              <QuickAction
+                title="Hiring Pipeline"
+                description="Track your recruitment progress"
+                icon="analytics"
+                color={colors.info}
+                badge={stats.interviewsInProgress > 0 ? `${stats.interviewsInProgress} active` : null}
                 onPress={() => navigation.navigate('Analytics')}
               />
-              <StatCard
-                title="Pipeline"
-                value={stats.interviewsInProgress || 0}
-                icon="people"
-                color={colors.info}
-                subtitle={`${stats.shortlistedApplications || 0} shortlisted`}
-                onPress={() => navigation.navigate('Analytics')}
+              <QuickAction
+                title="Referral Network"
+                description="Leverage employee referrals"
+                icon="link"
+                color={colors.warning}
+                badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
+                onPress={() => navigation.navigate('Referrals')}
               />
             </>
           ) : (
             <>
-              <StatCard
-                title="Applications"
-                value={stats.totalApplications || 0}
-                icon="document-text"
+              <QuickAction
+                title="Browse Jobs"
+                description="Discover new opportunities"
+                icon="search"
                 color={colors.primary}
-                subtitle={`${stats.savedJobs || 0} saved jobs`}
-                trend={stats.applicationsLast30Days > 0 ? { positive: true, value: `+${stats.applicationsLast30Days}` } : null}
-                onPress={() => navigation.navigate('Applications')}
-                size="large"
+                onPress={() => navigation.navigate('Jobs')}
               />
-              <StatCard
-                title="Profile Score"
-                value={`${stats.profileCompleteness || 0}%`}
+              <QuickAction
+                title="My Applications"
+                description="Track your job applications"
+                icon="document-text"
+                color={colors.success}
+                badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
+                urgent={stats.pendingApplications > 5}
+                onPress={() => navigation.navigate('Applications')}
+              />
+              <QuickAction
+                title="Complete Profile"
+                description="Improve your profile to stand out"
                 icon="person"
                 color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-                subtitle={`${stats.profileViews || 0} profile views`}
+                badge={stats.profileCompleteness < 80 ? `${stats.profileCompleteness || 0}%` : null}
+                urgent={stats.profileCompleteness < 60}
                 onPress={() => navigation.navigate('Profile')}
               />
-              <StatCard
-                title="Referral Points"
-                value={stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
-                icon="star"
+              <QuickAction
+                title="Get Referrals"
+                description="Ask for job referrals from your network"
+                icon="people"
                 color={colors.info}
-                subtitle={`${stats.referralRequestsMade || 0} requested • ${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
-                onPress={() => navigation.navigate('Referrals')}
-              />
-              <StatCard
-                title="Interview Rate"
-                value={`${(stats.applicationSuccessRate || 0).toFixed(1)}%`}
-                icon="trending-up"
-                color={colors.success}
-                subtitle={`${stats.interviewsScheduled || 0} interviews`}
-                onPress={() => navigation.navigate('Applications')}
+                badge={referralStats.dailyQuotaRemaining > 0 ? `${referralStats.dailyQuotaRemaining} left` : null}
+                onPress={() => navigation.navigate('AskReferral')}
               />
             </>
           )}
         </View>
-      </View>
 
-      {/* Performance Metrics for Job Seekers */}
-      <PerformanceMetrics />
-
-      {/* Attention Items */}
-      <AttentionItems />
-
-      {/* Quick Actions with Enhanced Urgency */}
-      <View style={styles.actionsContainer}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        
-        {isEmployer ? (
-          <>
-            <QuickAction
-              title="Post a New Job"
-              description="Create and publish a job posting"
-              icon="add-circle"
-              color={colors.primary}
-              onPress={() => navigation.navigate('CreateJob')}
-            />
-            <QuickAction
-              title="Review Applications"
-              description="Manage candidate applications"
-              icon="people"
-              color={colors.success}
-              badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-              urgent={stats.pendingApplications > 10}
-              onPress={() => navigation.navigate('Applications')}
-            />
-            <QuickAction
-              title="Hiring Pipeline"
-              description="Track your recruitment progress"
-              icon="analytics"
-              color={colors.info}
-              badge={stats.interviewsInProgress > 0 ? `${stats.interviewsInProgress} active` : null}
-              onPress={() => navigation.navigate('Analytics')}
-            />
-            <QuickAction
-              title="Referral Network"
-              description="Leverage employee referrals"
-              icon="link"
-              color={colors.warning}
-              badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
-              onPress={() => navigation.navigate('Referrals')}
-            />
-          </>
-        ) : (
-          <>
-            <QuickAction
-              title="Browse Jobs"
-              description="Discover new opportunities"
-              icon="search"
-              color={colors.primary}
-              onPress={() => navigation.navigate('Jobs')}
-            />
-            <QuickAction
-              title="My Applications"
-              description="Track your job applications"
-              icon="document-text"
-              color={colors.success}
-              badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-              urgent={stats.pendingApplications > 5}
-              onPress={() => navigation.navigate('Applications')}
-            />
-            <QuickAction
-              title="Complete Profile"
-              description="Improve your profile to stand out"
-              icon="person"
-              color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-              badge={stats.profileCompleteness < 80 ? `${stats.profileCompleteness || 0}%` : null}
-              urgent={stats.profileCompleteness < 60}
-              onPress={() => navigation.navigate('Profile')}
-            />
-            <QuickAction
-              title="Get Referrals"
-              description="Ask for job referrals from your network"
-              icon="people"
-              color={colors.info}
-              badge={referralStats.dailyQuotaRemaining > 0 ? `${referralStats.dailyQuotaRemaining} left` : null}
-              onPress={() => navigation.navigate('AskReferral')}
-            />
-          </>
-        )}
-      </View>
-
-      {/* Recent Jobs Section */}
-      {recentJobs.length > 0 && (
-        <View style={styles.recentContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Jobs</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
-            {recentJobs.map((job, index) => (
-              <JobCard key={job.JobID || index} job={job} />
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Recent Applications (Job Seekers only) */}
-      {isJobSeeker && recentApplications.length > 0 && (
-        <View style={styles.recentContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Applications</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Applications')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          {recentApplications.map((application, index) => (
-            <ApplicationCard key={application.ApplicationID || index} application={application} />
-          ))}
-        </View>
-      )}
-
-      {/* Recent Activity Timeline for Employers */}
-      {isEmployer && stats.topPerformingJobs && stats.topPerformingJobs.length > 0 && (
-        <View style={styles.recentContainer}>
-          <Text style={styles.sectionTitle}>Top Performing Jobs</Text>
-          {stats.topPerformingJobs.slice(0, 3).map((job, index) => (
-            <TouchableOpacity 
-              key={job.JobID || index} 
-              style={styles.performingJobCard}
-              onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+        {/* Recent Jobs Section */}
+        {recentJobs.length > 0 && (
+          <View style={styles.recentContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Jobs</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
             >
-              <View style={styles.performingJobHeader}>
-                <Text style={styles.performingJobTitle}>{job.Title}</Text>
-                <Text style={styles.performingJobApps}>{job.ApplicationCount} apps</Text>
-              </View>
-              <View style={styles.performingJobStats}>
-                <Text style={styles.performingJobStat}>{job.ShortlistedCount} shortlisted</Text>
-                <Text style={styles.performingJobStat}>{job.HiredCount} hired</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+              {recentJobs.map((job, index) => (
+                <JobCard key={job.JobID || index} job={job} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
-      {/* Enhanced Empty State */}
-      {recentJobs.length === 0 && recentApplications.length === 0 && (
-        <View style={styles.emptyState}>
-          <Ionicons 
-            name={isEmployer ? "briefcase-outline" : "search-outline"} 
-            size={64} 
-            color={colors.gray400} 
-          />
-          <Text style={styles.emptyStateTitle}>
-            {isEmployer ? 'Start Building Your Dream Team' : 'Begin Your Career Journey'}
-          </Text>
-          <Text style={styles.emptyStateText}>
-            {isEmployer 
-              ? 'Post your first job to discover talented candidates and grow your team'
-              : 'Explore opportunities that match your skills and career aspirations'
-            }
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => navigation.navigate(isEmployer ? 'CreateJob' : 'Jobs')}
-          >
-            <Text style={styles.emptyStateButtonText}>
-              {isEmployer ? 'Post Your First Job' : 'Explore Jobs'}
+        {/* Recent Applications (Job Seekers only) */}
+        {isJobSeeker && recentApplications.length > 0 && (
+          <View style={styles.recentContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Applications</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Applications')}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            {recentApplications.map((application, index) => (
+              <ApplicationCard key={application.ApplicationID || index} application={application} />
+            ))}
+          </View>
+        )}
+
+        {/* Recent Activity Timeline for Employers */}
+        {isEmployer && stats.topPerformingJobs && stats.topPerformingJobs.length > 0 && (
+          <View style={styles.recentContainer}>
+            <Text style={styles.sectionTitle}>Top Performing Jobs</Text>
+            {stats.topPerformingJobs.slice(0, 3).map((job, index) => (
+              <TouchableOpacity 
+                key={job.JobID || index} 
+                style={styles.performingJobCard}
+                onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+              >
+                <View style={styles.performingJobHeader}>
+                  <Text style={styles.performingJobTitle}>{job.Title}</Text>
+                  <Text style={styles.performingJobApps}>{job.ApplicationCount} apps</Text>
+                </View>
+                <View style={styles.performingJobStats}>
+                  <Text style={styles.performingJobStat}>{job.ShortlistedCount} shortlisted</Text>
+                  <Text style={styles.performingJobStat}>{job.HiredCount} hired</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Enhanced Empty State */}
+        {recentJobs.length === 0 && recentApplications.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons 
+              name={isEmployer ? "briefcase-outline" : "search-outline"} 
+              size={64} 
+              color={colors.gray400} 
+            />
+            <Text style={styles.emptyStateTitle}>
+              {isEmployer ? 'Start Building Your Dream Team' : 'Begin Your Career Journey'}
             </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+            <Text style={styles.emptyStateText}>
+              {isEmployer 
+                ? 'Post your first job to discover talented candidates and grow your team'
+                : 'Explore opportunities that match your skills and career aspirations'
+              }
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => navigation.navigate(isEmployer ? 'CreateJob' : 'Jobs')}
+            >
+              <Text style={styles.emptyStateButtonText}>
+                {isEmployer ? 'Post Your First Job' : 'Explore Jobs'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* Bottom spacing */}
-      <View style={styles.bottomSpacing} />
-    </ScrollView>
+        {/* Bottom spacing */}
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+
+      {/* NEW: Referral Points Breakdown Modal */}
+      <ReferralPointsBreakdown
+        visible={showReferralBreakdown}
+        onClose={() => setShowReferralBreakdown(false)}
+        totalPoints={referralPointsData.totalPoints}
+        pointsHistory={referralPointsData.pointsHistory}
+        pointTypeMetadata={referralPointsData.pointTypeMetadata}
+        referralStats={{
+          totalReferralsMade: stats.referralRequestsReceived || 0,
+          verifiedReferrals: stats.completedReferrals || 0,
+          referralRequestsMade: stats.referralRequestsMade || 0
+        }}
+      />
+    </>
   );
 }
 

@@ -24,7 +24,6 @@ import ProfileSection, { useEditing } from '../../components/profile/ProfileSect
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 import ResumeSection from '../../components/profile/ResumeSection';
-import ReferralPointsHeader from '../../components/profile/ReferralPointsHeader'; // 🆕 NEW COMPONENT
 
 export default function ProfileScreen() {
   const { 
@@ -153,17 +152,17 @@ export default function ProfileScreen() {
   });
 
   const [employerProfile, setEmployerProfile] = useState({
-    jobTitle: '',
-    department: '',
-    organizationName: '',
-    organizationSize: '',
-    industry: '',
-    canPostJobs: true,
-    canManageApplications: true,
-    canViewAnalytics: false,
-    recruitmentFocus: '',
-    linkedInProfile: '',
-    bio: '',
+    jobTitle: ''
+    ,department: ''
+    ,organizationName: ''
+    ,organizationSize: ''
+    ,industry: ''
+    ,canPostJobs: true
+    ,canManageApplications: true
+    ,canViewAnalytics: false
+    ,recruitmentFocus: ''
+    ,linkedInProfile: ''
+    ,bio: ''
   });
 
   // ? FIX: Optimized ProfileField component with proper debounce cleanup
@@ -816,30 +815,6 @@ export default function ProfileScreen() {
         } else {
           console.log('❌ Failed to load JobSeeker profile:', response.error);
         }
-
-        // 🆕 Load points history for detailed breakdown
-        try {
-          console.log('🏆 Loading referral points history...');
-          const pointsHistoryResponse = await nexhireAPI.getReferralPointsHistory();
-          console.log('🏆 Points history API response:', pointsHistoryResponse);
-          
-          if (pointsHistoryResponse.success && pointsHistoryResponse.data) {
-            console.log('🏆 Total points from points history API:', pointsHistoryResponse.data.totalPoints);
-            
-            setJobSeekerProfile(prev => ({
-              ...prev,
-              pointsHistory: pointsHistoryResponse.data.history || [],
-              pointTypeMetadata: pointsHistoryResponse.data.pointTypeMetadata || {}, // 🆕 Store metadata
-              // 🔧 CRITICAL FIX: Update ReferralPoints from points history API if available
-              ReferralPoints: pointsHistoryResponse.data.totalPoints || prev.ReferralPoints || 0
-            }));
-            
-            console.log('✅ Points history loaded:', pointsHistoryResponse.data.history?.length || 0, 'entries');
-            console.log('🏆 Final ReferralPoints value:', pointsHistoryResponse.data.totalPoints || prev.ReferralPoints || 0);
-          }
-        } catch (pointsError) {
-          console.warn('⚠️ Failed to load points history:', pointsError);
-        }
       } else if (userType === 'Employer') {
         console.log('🏢 Loading Employer profile for UserID:', user.UserID);
         
@@ -1154,22 +1129,6 @@ export default function ProfileScreen() {
           }}
           showStats={false}
         />
-        
-        {/* 🆕 REFERRAL POINTS HEADER - Beautifully Integrated Below Profile Header */}
-        {userType === 'JobSeeker' && (
-          <ReferralPointsHeader
-            referralPoints={Number(jobSeekerProfile.ReferralPoints) || 0} // 🔧 FIX: Use actual database value
-            referralStats={{
-              totalReferralsMade: Number(jobSeekerProfile.referralStats?.totalReferralsMade) || 0,
-              verifiedReferrals: Number(jobSeekerProfile.referralStats?.verifiedReferrals) || 0,
-              referralRequestsMade: Number(jobSeekerProfile.referralStats?.referralRequestsMade) || 0,
-              totalPointsFromRewards: Number(jobSeekerProfile.referralStats?.totalPointsFromRewards) || 0
-            }}
-            pointsHistory={jobSeekerProfile.pointsHistory || []} // Pass points history for detailed breakdown
-            pointTypeMetadata={jobSeekerProfile.pointTypeMetadata || {}} // Pass dynamic metadata
-            compact={false}
-          />
-        )}
         
         {userType === 'JobSeeker' ? (
           <>
