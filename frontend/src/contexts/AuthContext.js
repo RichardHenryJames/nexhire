@@ -98,14 +98,20 @@ export const AuthProvider = ({ children }) => {
         } else {
           console.log('Token invalid, clearing stored tokens');
           await nexhireAPI.clearTokens();
+          // FIXED: Don't set error for normal token expiration
+          setError(null);
         }
       } else {
         console.log('No stored token found');
+        // FIXED: This is a normal state, not an error
+        setError(null);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       await nexhireAPI.clearTokens();
-      setError('Authentication check failed');
+      // FIXED: Don't show error to user for normal auth check failures
+      // The user will see the login screen anyway
+      setError(null);
     } finally {
       setLoading(false);
     }

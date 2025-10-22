@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,21 @@ export default function LoginScreen({ navigation }) {
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  const { login, loginWithGoogle, loading, error, googleAuthAvailable } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
+
+  // FIXED: Clear error state when screen mounts or comes into focus
+  useEffect(() => {
+    clearError();
+    
+    // Also clear when screen comes into focus
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      clearError();
+    });
+    
+    return () => {
+      unsubscribeFocus();
+    };
+  }, [navigation, clearError]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -182,7 +196,10 @@ export default function LoginScreen({ navigation }) {
                 <TextInput
                   style={screenStyles.input}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    clearError(); // FIXED: Clear error when user starts typing
+                  }}
                   placeholder="Enter your email"
                   placeholderTextColor={colors.gray400}
                   keyboardType="email-address"
@@ -212,7 +229,10 @@ export default function LoginScreen({ navigation }) {
                 <TextInput
                   style={screenStyles.input}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    clearError(); // FIXED: Clear error when user starts typing
+                  }}
                   placeholder="Enter your password"
                   placeholderTextColor={colors.gray400}
                   secureTextEntry={!showPassword}
@@ -256,7 +276,7 @@ export default function LoginScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            {/* Error Message */}
+            {/* Error Message - FIXED: Only show if error exists */}
             {error && (
               <View style={screenStyles.globalErrorContainer}>
                 <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />

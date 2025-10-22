@@ -267,7 +267,7 @@ const ReferralPointsBreakdown = ({
           ) : (
             <View style={styles.section}>
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateEmoji}>??</Text>
+                <Text style={styles.emptyStateEmoji}>0</Text>
                 <Text style={styles.emptyStateTitle}>No Points Yet</Text>
                 <Text style={styles.emptyStateDescription}>
                   Start earning points by referring candidates for jobs at your company!
