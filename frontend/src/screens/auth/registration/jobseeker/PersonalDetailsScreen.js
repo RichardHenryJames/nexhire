@@ -455,11 +455,90 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           clearPendingGoogleAuth();
         }
       } else {
-        Alert.alert('Registration Failed', result.error || 'Unable to create account. Please try again.');
+        // ✅ NEW: Check if error is "User already exists"
+        const errorMessage = result.error || 'Unable to create account. Please try again.';
+        
+        if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+          console.log('⚠️ User already exists error - clearing auth data and redirecting to login');
+          
+          // Clear any pending Google auth data
+          if (isGoogleUser) {
+            clearPendingGoogleAuth();
+          }
+          
+          Alert.alert(
+            'Account Already Exists', 
+            `An account with ${formData.email} already exists. Would you like to sign in instead?`,
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel'
+              },
+              { 
+                text: 'Sign In', 
+                onPress: () => {
+                  // Navigate to login screen
+                  if (typeof window !== 'undefined') {
+                    // For web
+                    window.location.href = '/login';
+                  } else {
+                    // For native
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'Login' }],
+                    });
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Registration Failed', errorMessage);
+        }
       }
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', error.message || 'Registration failed. Please try again.');
+      
+      // ✅ NEW: Also handle caught errors for "already exists"
+      const errorMessage = error.message || 'Registration failed. Please try again.';
+      
+      if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+        console.log('⚠️ User already exists error (caught) - clearing auth data and redirecting to login');
+        
+        // Clear any pending Google auth data
+        if (isGoogleUser) {
+          clearPendingGoogleAuth();
+        }
+        
+        Alert.alert(
+          'Account Already Exists', 
+          `An account with ${formData.email} already exists. Would you like to sign in instead?`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel'
+            },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                // Navigate to login screen
+                if (typeof window !== 'undefined') {
+                  // For web
+                  window.location.href = '/login';
+                } else {
+                  // For native
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                  });
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
