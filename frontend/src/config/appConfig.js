@@ -52,7 +52,7 @@ class FrontendConfigService {
       },
 
       api: {
-        baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://nexhire-api-func.azurewebsites.net/api'),
+        baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://refopen-api-func.azurewebsites.net/api'),
         timeout: parseInt(getEnvVar('apiTimeout', 'EXPO_PUBLIC_API_TIMEOUT', '30000')),
         debug: shouldForceProd ? false : getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', true, false),
       },
