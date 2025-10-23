@@ -1,7 +1,7 @@
 # NexHire Referral Schema Deployment Script (Extension)
 
 param(
-    [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
 Write-Host "?? Setting up NexHire Database Schema..." -ForegroundColor Green

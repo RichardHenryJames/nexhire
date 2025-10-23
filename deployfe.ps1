@@ -1,13 +1,13 @@
 param(
-    [string]$ResourceGroup = "nexhire-dev-rg",
-    [string]$StaticAppName = "nexhire-frontend-web",
+    [string]$ResourceGroup = "",  # Auto-detected based on environment
+    [string]$StaticAppName = "",  # Auto-detected based on environment
     [string]$Environment = "production",  # dev, staging, production
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb"
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== NexHire Frontend Build & Deploy ===" -ForegroundColor Cyan
+Write-Host "=== RefOpen/NexHire Frontend Build & Deploy ===" -ForegroundColor Cyan
 
 # Normalize environment
 $normalizedEnv = switch ($Environment.ToLower()) {
@@ -18,65 +18,199 @@ $normalizedEnv = switch ($Environment.ToLower()) {
 }
 
 # Env-specific resources
+# PRODUCTION = RefOpen infrastructure
+# DEV/STAGING = NexHire infrastructure
 $azureResources = switch ($normalizedEnv) {
     "dev" {
-        @{ ResourceGroup = "nexhire-dev-rg"; StaticAppName = "nexhire-frontend-dev"; FunctionAppName = "nexhire-api-dev" }
+        @{ 
+            ResourceGroup = "nexhire-dev-rg"
+            StaticAppName = "nexhire-frontend-dev"
+            FunctionAppName = "nexhire-api-dev"
+            Infrastructure = "NexHire"
+        }
     }
     "staging" {
-        @{ ResourceGroup = "nexhire-dev-rg"; StaticAppName = "nexhire-frontend-staging"; FunctionAppName = "nexhire-api-staging" }
+        @{ 
+            ResourceGroup = "nexhire-dev-rg"
+            StaticAppName = "nexhire-frontend-staging"
+            FunctionAppName = "nexhire-api-staging"
+            Infrastructure = "NexHire"
+        }
     }
     "prod" {
-        @{ ResourceGroup = $ResourceGroup; StaticAppName = $StaticAppName; FunctionAppName = "nexhire-api-func" }
+        @{ 
+            ResourceGroup = "refopen-prod-rg"
+            StaticAppName = "refopen-frontend-web"
+            FunctionAppName = "refopen-api-func"
+            Infrastructure = "RefOpen"
+        }
     }
 }
 
-Write-Host "Target Environment: $normalizedEnv" -ForegroundColor Green
+# Override with parameters if provided
+if ($ResourceGroup) { $azureResources.ResourceGroup = $ResourceGroup }
+if ($StaticAppName) { $azureResources.StaticAppName = $StaticAppName }
 
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?         FRONTEND DEPLOYMENT CONFIGURATION              ?" -ForegroundColor Cyan
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "?? Target Environment: $normalizedEnv" -ForegroundColor Green
+Write-Host "?? Infrastructure: $($azureResources.Infrastructure)" -ForegroundColor $(if ($normalizedEnv -eq "prod") { "Magenta" } else { "Yellow" })
+Write-Host "?? Resource Group: $($azureResources.ResourceGroup)" -ForegroundColor White
+Write-Host "?? Static Web App: $($azureResources.StaticAppName)" -ForegroundColor White
+Write-Host "? Function App: $($azureResources.FunctionAppName)" -ForegroundColor White
+Write-Host ""
+
+# Set Azure subscription
+Write-Host "?? Setting Azure subscription..." -ForegroundColor Yellow
 az account set --subscription $SubscriptionId
-
-# Step 1: Switch environment
-Set-Location "frontend"
-$envFile = ".env.$normalizedEnv"
-if (Test-Path $envFile) {
-    Copy-Item $envFile ".env" -Force
-    Write-Host "Environment file switched to $envFile"
-} else {
-    Write-Host "Warning: $envFile not found, using existing .env" -ForegroundColor Yellow
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to set subscription"
+    exit 1
 }
+Write-Host "? Subscription set" -ForegroundColor Green
 
-npm install
-if (Test-Path "web-build") { Remove-Item -Recurse -Force "web-build" }
-
-Write-Host "Building frontend..."
-npx expo export --platform web --output-dir web-build --clear
-
-if (-not (Test-Path "web-build/index.html")) {
-    Write-Error "Build failed! No index.html found."
+# Step 1: Switch to frontend directory
+if (-not (Test-Path "frontend")) {
+    Write-Error "Frontend directory not found!"
     exit 1
 }
 
-# Step 2: Deployment
+Set-Location "frontend"
+Write-Host "`n?? Changed to frontend directory" -ForegroundColor Cyan
+
+# Step 2: Switch environment file
+$envFile = ".env.$normalizedEnv"
+Write-Host "`n?? Switching to $envFile..." -ForegroundColor Yellow
+
+if (Test-Path $envFile) {
+    Copy-Item $envFile ".env" -Force
+    Write-Host "? Environment file switched to $envFile" -ForegroundColor Green
+    
+    # Show key configurations
+    $envContent = Get-Content ".env" -Raw
+    if ($envContent -match "REACT_APP_API_URL=(.+)") {
+        $apiUrl = $matches[1].Trim()
+        Write-Host "   API URL: $apiUrl" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "??  Warning: $envFile not found, using existing .env" -ForegroundColor Yellow
+    if (Test-Path ".env") {
+        Write-Host "   Using existing .env file" -ForegroundColor Gray
+    } else {
+        Write-Error "No .env file found! Please create .env.$normalizedEnv"
+        Set-Location ..
+        exit 1
+    }
+}
+
+# Step 3: Install dependencies
+Write-Host "`n?? Installing dependencies..." -ForegroundColor Yellow
+npm install
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm install failed!"
+    Set-Location ..
+    exit 1
+}
+Write-Host "? Dependencies installed" -ForegroundColor Green
+
+# Step 4: Clean previous build
+if (Test-Path "web-build") {
+    Write-Host "`n?? Cleaning previous build..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force "web-build"
+    Write-Host "? Previous build cleaned" -ForegroundColor Green
+}
+
+# Step 5: Build frontend
+Write-Host "`n?? Building frontend for $normalizedEnv..." -ForegroundColor Yellow
+Write-Host "   Platform: web" -ForegroundColor Gray
+Write-Host "   Output: web-build/" -ForegroundColor Gray
+
+npx expo export --platform web --output-dir web-build --clear
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Build failed!"
+    Set-Location ..
+    exit 1
+}
+
+# Verify build
+if (-not (Test-Path "web-build/index.html")) {
+    Write-Error "Build failed! No index.html found in web-build/"
+    Set-Location ..
+    exit 1
+}
+
+$buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+Write-Host "? Build completed successfully" -ForegroundColor Green
+Write-Host "   Build size: $([math]::Round($buildSize, 2)) MB" -ForegroundColor Gray
+
+# Step 6: Get deployment token
 $targetStaticApp = $azureResources.StaticAppName
 $targetResourceGroup = $azureResources.ResourceGroup
 
+Write-Host "`n?? Fetching deployment token..." -ForegroundColor Yellow
 $deploymentToken = az staticwebapp secrets list `
     --name $targetStaticApp `
     --resource-group $targetResourceGroup `
-    --query "properties.apiKey" -o tsv
+    --query "properties.apiKey" -o tsv 2>$null
 
 if (-not $deploymentToken) {
-    Write-Error "Failed to fetch deployment token for $targetStaticApp"
+    Write-Error "Failed to fetch deployment token for $targetStaticApp in $targetResourceGroup"
+    Write-Host "?? Make sure the Static Web App exists and you have access" -ForegroundColor Yellow
+    Set-Location ..
     exit 1
 }
+Write-Host "? Deployment token retrieved" -ForegroundColor Green
 
-Write-Host "Deploying to Azure Static Web App..."
+# Step 7: Deploy to Azure Static Web App
+Write-Host "`n?? Deploying to Azure Static Web App..." -ForegroundColor Yellow
+Write-Host "   Target: $targetStaticApp" -ForegroundColor Gray
+Write-Host "   Environment: $normalizedEnv" -ForegroundColor Gray
+
 if ($normalizedEnv -eq "prod") {
     swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken --env production
 } else {
     swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken
 }
 
-Write-Host "=== Deployment Completed ===" -ForegroundColor Green
-Write-Host "URL: https://$targetStaticApp.azurestaticapps.net" -ForegroundColor Cyan
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Deployment failed!"
+    Set-Location ..
+    exit 1
+}
+
+# Step 8: Success summary
+$deploymentUrl = "https://$targetStaticApp.azurestaticapps.net"
+
+Write-Host "`n??????????????????????????????????????????????????????????" -ForegroundColor Green
+Write-Host "?     ? FRONTEND DEPLOYMENT COMPLETED SUCCESSFULLY      ?" -ForegroundColor Green
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Green
+
+Write-Host "`n?? Deployment Summary:" -ForegroundColor Cyan
+Write-Host "   Infrastructure: $($azureResources.Infrastructure)" -ForegroundColor White
+Write-Host "   Environment: $normalizedEnv" -ForegroundColor White
+Write-Host "   Static Web App: $targetStaticApp" -ForegroundColor White
+Write-Host "   Resource Group: $targetResourceGroup" -ForegroundColor White
+
+Write-Host "`n?? Access your frontend at:" -ForegroundColor Cyan
+Write-Host "   $deploymentUrl" -ForegroundColor Green
+
+if ($normalizedEnv -eq "prod") {
+    Write-Host "`n?? Custom Domains:" -ForegroundColor Cyan
+    Write-Host "   https://refopen.com (if configured)" -ForegroundColor White
+    Write-Host "   https://www.refopen.com (if configured)" -ForegroundColor White
+}
+
+Write-Host "`n?? Next Steps:" -ForegroundColor Yellow
+Write-Host "   1. Open: $deploymentUrl" -ForegroundColor White
+Write-Host "   2. Test all functionality" -ForegroundColor White
+Write-Host "   3. Check browser console for errors" -ForegroundColor White
+if ($normalizedEnv -eq "prod") {
+    Write-Host "   4. Verify API calls to: https://refopen-api-func.azurewebsites.net/api" -ForegroundColor White
+}
 
 Set-Location ..
+
+Write-Host "`n? Frontend deployment script completed!" -ForegroundColor Green

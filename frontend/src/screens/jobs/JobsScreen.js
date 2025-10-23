@@ -738,7 +738,7 @@ export default function JobsScreen({ navigation, route }) {
             {activeTab === 'openings'
               ? hasMoreToLoad
                 ? 'Checking for more opportunities...'
-                : `You've seen all ${pagination.total || 65} available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
+                : `You've seen all available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
               : activeTab === 'saved' 
                 ? 'Saved jobs will appear here when you bookmark jobs for later.'
                 : 'New opportunities will appear here.'

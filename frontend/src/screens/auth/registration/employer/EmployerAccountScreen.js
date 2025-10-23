@@ -56,8 +56,12 @@ export default function EmployerAccountScreen({ navigation, route }) {
   }, [isGoogleUser, googleUser]);
 
   const validate = () => {
-    if (!firstName.trim() || !lastName.trim()) return 'Name is required';
+    if (!firstName.trim() || !lastName.trim()) return 'First name and last name are required';
     if (!email.trim()) return 'Email is required';
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
     
     // Skip password validation for Google users and already authenticated users
     if (!nexhireAPI.token && !isGoogleUser) {
@@ -225,7 +229,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
-              First Name
+              First Name <Text style={styles.required}>*</Text>
               {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
@@ -234,11 +238,12 @@ export default function EmployerAccountScreen({ navigation, route }) {
               onChangeText={setFirstName}
               editable={true}
               placeholder="Enter first name"
+              placeholderTextColor={colors.gray400}
             />
           </View>
           <View style={[styles.field, { flex: 1, marginLeft: 6 }]}> 
             <Text style={styles.label}>
-              Last Name
+              Last Name <Text style={styles.required}>*</Text>
               {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
@@ -247,13 +252,14 @@ export default function EmployerAccountScreen({ navigation, route }) {
               onChangeText={setLastName}
               editable={true}
               placeholder="Enter last name"
+              placeholderTextColor={colors.gray400}
             />
           </View>
         </View>
 
         <View style={styles.field}> 
           <Text style={styles.label}>
-            Email Address
+            Email Address <Text style={styles.required}>*</Text>
             {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
           </Text>
           <TextInput 
@@ -263,23 +269,25 @@ export default function EmployerAccountScreen({ navigation, route }) {
             autoCapitalize="none"
             editable={true}
             placeholder="Enter email address"
+            placeholderTextColor={colors.gray400}
           />
         </View>
 
         <View style={styles.field}> 
-          <Text style={styles.label}>Phone Number (Optional)</Text>
+          <Text style={styles.label}>Phone Number</Text>
           <TextInput 
             style={styles.input} 
             value={phone} 
             onChangeText={setPhone}
             placeholder="Enter phone number"
+            placeholderTextColor={colors.gray400}
             keyboardType="phone-pad"
           />
         </View>
 
         {/* ✅ Wrapped in field container with matching button style */}
         <View style={styles.field}> 
-          <Text style={styles.label}>Date of Birth (Optional)</Text>
+          <Text style={styles.label}>Date of Birth</Text>
           <DatePicker
             value={dateOfBirth}
             onChange={(date) => setDateOfBirth(date)}
@@ -301,6 +309,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                 onChangeText={setPassword} 
                 secureTextEntry
                 placeholder="Enter password (min 6 characters)"
+                placeholderTextColor={colors.gray400}
               />
             </View>
             <View style={styles.field}> 
@@ -311,6 +320,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                 onChangeText={setConfirmPassword} 
                 secureTextEntry
                 placeholder="Confirm your password"
+                placeholderTextColor={colors.gray400}
               />
             </View>
           </>
@@ -425,6 +435,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+  },
+  required: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
   },
   prefilledLabel: {
     color: colors.success,

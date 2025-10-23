@@ -121,6 +121,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       <TextInput
         style={[styles.textInput, multiline && styles.multilineInput]}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
@@ -513,6 +514,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -640,7 +642,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     marginBottom: 32,

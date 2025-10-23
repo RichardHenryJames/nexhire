@@ -1,16 +1,17 @@
 # ================================================================
-# NexHire Frontend Deployment Script (FIXED - Production & CSP)
+# RefOpen/NexHire Frontend Deployment Script
 # ================================================================
-# Deploys the NexHire Universal React Native Frontend to Azure Static Web Apps
-# Author: NexHire Team
-# Version: 1.0.5 - Fixed Production Deployment & CSP Issues
+# Deploys the Universal React Native Frontend to Azure Static Web Apps
+# - Production: RefOpen infrastructure
+# - Dev/Staging: NexHire infrastructure
+# Version: 2.0 - Multi-infrastructure support
 
 param(
-    [string]$ResourceGroup = "nexhire-dev-rg",
-    [string]$StaticAppName = "nexhire-frontend-web", 
+    [string]$ResourceGroup = "",  # Auto-detected based on environment
+    [string]$StaticAppName = "",  # Auto-detected based on environment
     [string]$Location = "eastus",
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",
-    [string]$Environment = "production",  # NEW: Specify environment
+    [string]$Environment = "production",  # dev, staging, production
     [switch]$SkipInstall,
     [switch]$SkipBuild,
     [switch]$SkipDeploy,
@@ -21,9 +22,62 @@ param(
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "Starting NexHire Frontend Deployment..." -ForegroundColor Cyan
-Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "Target Environment: $Environment" -ForegroundColor Magenta
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?  RefOpen/NexHire Frontend Deployment                  ?" -ForegroundColor Cyan
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
+
+# Normalize environment
+$normalizedEnv = switch ($Environment.ToLower()) {
+    { $_ -in @("dev", "development") } { "dev" }
+    "staging" { "staging" }
+    { $_ -in @("prod", "production") } { "prod" }
+    default { "prod" }
+}
+
+# Auto-detect infrastructure based on environment
+# PRODUCTION = RefOpen infrastructure
+# DEV/STAGING = NexHire infrastructure
+$azureConfig = switch ($normalizedEnv) {
+    "dev" {
+        @{
+            ResourceGroup = "nexhire-dev-rg"
+            StaticAppName = "nexhire-frontend-web"
+            FunctionAppName = "nexhire-api-func"
+            ApiUrl = "https://nexhire-api-func.azurewebsites.net/api"
+            Infrastructure = "NexHire"
+        }
+    }
+    "staging" {
+        @{
+            ResourceGroup = "nexhire-dev-rg"
+            StaticAppName = "nexhire-frontend-staging"
+            FunctionAppName = "nexhire-api-staging"
+            ApiUrl = "https://nexhire-api-staging.azurewebsites.net/api"
+            Infrastructure = "NexHire"
+        }
+    }
+    "prod" {
+        @{
+            ResourceGroup = "refopen-prod-rg"
+            StaticAppName = "refopen-frontend-web"
+            FunctionAppName = "refopen-api-func"
+            ApiUrl = "https://refopen-api-func.azurewebsites.net/api"
+            Infrastructure = "RefOpen"
+        }
+    }
+}
+
+# Override with parameters if provided
+if ($ResourceGroup) { $azureConfig.ResourceGroup = $ResourceGroup }
+if ($StaticAppName) { $azureConfig.StaticAppName = $StaticAppName }
+
+Write-Host ""
+Write-Host "?? Target Environment: $normalizedEnv" -ForegroundColor Green
+Write-Host "?? Infrastructure: $($azureConfig.Infrastructure)" -ForegroundColor $(if ($normalizedEnv -eq "prod") { "Magenta" } else { "Yellow" })
+Write-Host "?? Resource Group: $($azureConfig.ResourceGroup)" -ForegroundColor White
+Write-Host "?? Static Web App: $($azureConfig.StaticAppName)" -ForegroundColor White
+Write-Host "? API Backend: $($azureConfig.ApiUrl)" -ForegroundColor White
+Write-Host ""
 
 # ================================================================
 # STEP 1: Environment Validation
@@ -34,13 +88,13 @@ Write-Host "Step 1: Validating Environment..." -ForegroundColor Yellow
 # Check if running in correct directory
 $currentDir = Get-Location
 if (-not (Test-Path "frontend/package.json")) {
-    Write-Error "ERROR: Must run from NexHire root directory (containing frontend/ folder)"
+    Write-Error "ERROR: Must run from project root directory (containing frontend/ folder)"
 }
 
 # Validate Azure CLI
 try {
     $azVersion = az version --output json | ConvertFrom-Json
-    Write-Host "OK - Azure CLI: $($azVersion.'azure-cli')" -ForegroundColor Green
+    Write-Host "? Azure CLI: $($azVersion.'azure-cli')" -ForegroundColor Green
 }
 catch {
     Write-Error "ERROR: Azure CLI not found. Install from: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli"
@@ -49,22 +103,22 @@ catch {
 # Check Azure login
 try {
     $account = az account show --output json | ConvertFrom-Json
-    Write-Host "OK - Azure Account: $($account.user.name)" -ForegroundColor Green
-    Write-Host "OK - Subscription: $($account.name)" -ForegroundColor Green
+    Write-Host "? Azure Account: $($account.user.name)" -ForegroundColor Green
+    Write-Host "? Subscription: $($account.name)" -ForegroundColor Green
 }
 catch {
-    Write-Host "ERROR: Not logged into Azure. Logging in..." -ForegroundColor Red
+    Write-Host "? Not logged into Azure. Logging in..." -ForegroundColor Red
     az login
 }
 
 # Set subscription
-Write-Host "Setting Azure subscription..." -ForegroundColor Blue
+Write-Host "?? Setting Azure subscription..." -ForegroundColor Blue
 az account set --subscription $SubscriptionId
 
 # Validate Node.js
 try {
     $nodeVersion = node --version
-    Write-Host "OK - Node.js: $nodeVersion" -ForegroundColor Green
+    Write-Host "? Node.js: $nodeVersion" -ForegroundColor Green
     
     # Check if Node.js version is 18+
     $nodeVersionNumber = [System.Version]($nodeVersion -replace 'v', '')
@@ -79,46 +133,48 @@ catch {
 # Check if Expo CLI is available
 try {
     $expoVersion = npx expo --version
-    Write-Host "OK - Expo CLI: $expoVersion" -ForegroundColor Green
+    Write-Host "? Expo CLI: $expoVersion" -ForegroundColor Green
 }
 catch {
-    Write-Host "Installing Expo CLI..." -ForegroundColor Blue
+    Write-Host "?? Installing Expo CLI..." -ForegroundColor Blue
     npm install -g @expo/cli
 }
 
 # Verify Azure Static Web App exists
-Write-Host "Checking Azure Static Web App..." -ForegroundColor Blue
+Write-Host "?? Checking Azure Static Web App..." -ForegroundColor Blue
 try {
-    $staticApp = az staticwebapp show --name $StaticAppName --resource-group $ResourceGroup --output json | ConvertFrom-Json
-    Write-Host "OK - Static Web App: $($staticApp.defaultHostname)" -ForegroundColor Green
+    $staticApp = az staticwebapp show --name $($azureConfig.StaticAppName) --resource-group $($azureConfig.ResourceGroup) --output json | ConvertFrom-Json
+    Write-Host "? Static Web App: $($staticApp.defaultHostname)" -ForegroundColor Green
     $deploymentUrl = "https://$($staticApp.defaultHostname)"
 }
 catch {
-    Write-Error "ERROR: Static Web App '$StaticAppName' not found in resource group '$ResourceGroup'"
+    Write-Error "ERROR: Static Web App '$($azureConfig.StaticAppName)' not found in resource group '$($azureConfig.ResourceGroup)'"
 }
 
 # ================================================================
-# STEP 2: Frontend Dependency Installation (FIXED)
+# STEP 2: Frontend Dependency Installation
 # ================================================================
 
-Write-Host "Step 2: Installing Frontend Dependencies (with dependency fix)..." -ForegroundColor Yellow
+Write-Host "`nStep 2: Installing Frontend Dependencies..." -ForegroundColor Yellow
 
 if (-not $SkipInstall) {
     Set-Location "frontend"
     
     # Clean install for production
-    if (Test-Path "node_modules") {
-        Write-Host "Cleaning existing node_modules..." -ForegroundColor Blue
-        Remove-Item -Recurse -Force "node_modules"
-    }
-    
-    if (Test-Path "package-lock.json") {
-        Write-Host "Cleaning package-lock.json..." -ForegroundColor Blue
-        Remove-Item "package-lock.json"
+    if ($normalizedEnv -eq "prod" -or $Force) {
+        if (Test-Path "node_modules") {
+            Write-Host "?? Cleaning existing node_modules..." -ForegroundColor Blue
+            Remove-Item -Recurse -Force "node_modules"
+        }
+        
+        if (Test-Path "package-lock.json") {
+            Write-Host "?? Cleaning package-lock.json..." -ForegroundColor Blue
+            Remove-Item "package-lock.json"
+        }
     }
     
     # Create .npmrc to handle dependency conflicts
-    Write-Host "Creating .npmrc for dependency resolution..." -ForegroundColor Blue
+    Write-Host "?? Creating .npmrc for dependency resolution..." -ForegroundColor Blue
     $npmrcContent = @"
 legacy-peer-deps=true
 strict-peer-deps=false
@@ -127,65 +183,66 @@ audit=false
 "@
     Set-Content -Path ".npmrc" -Value $npmrcContent
     
-    Write-Host "Installing dependencies with legacy peer deps support..." -ForegroundColor Blue
+    Write-Host "?? Installing dependencies..." -ForegroundColor Blue
     npm install --legacy-peer-deps
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "WARNING: npm install with --legacy-peer-deps failed. Trying with --force..."
+        Write-Warning "?? npm install with --legacy-peer-deps failed. Trying with --force..."
         npm install --force
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "ERROR: npm install failed with both --legacy-peer-deps and --force"
+            Write-Error "? npm install failed"
         }
     }
     
-    Write-Host "OK - Dependencies installed successfully" -ForegroundColor Green
+    Write-Host "? Dependencies installed successfully" -ForegroundColor Green
     Set-Location ".."
 }
 else {
-    Write-Host "SKIP - Dependency installation" -ForegroundColor Gray
+    Write-Host "?? Skipping dependency installation" -ForegroundColor Gray
 }
 
 # ================================================================
 # STEP 3: Environment Configuration
 # ================================================================
 
-Write-Host "Step 3: Configuring Environment..." -ForegroundColor Yellow
+Write-Host "`nStep 3: Configuring Environment..." -ForegroundColor Yellow
 
-# Create/update .env file for production
+# Create/update .env file based on environment
 $envContent = @"
-# NexHire Frontend Production Configuration
-EXPO_PUBLIC_API_URL=https://nexhire-api-func.azurewebsites.net/api
-EXPO_PUBLIC_APP_NAME=NexHire
-EXPO_PUBLIC_ENVIRONMENT=production
+# $($azureConfig.Infrastructure) Frontend $normalizedEnv Configuration
+EXPO_PUBLIC_API_URL=$($azureConfig.ApiUrl)
+EXPO_PUBLIC_APP_NAME=RefOpen
+EXPO_PUBLIC_ENVIRONMENT=$normalizedEnv
 EXPO_PUBLIC_VERSION=1.0.0
 "@
 
 Set-Content -Path "frontend/.env" -Value $envContent
-Write-Host "OK - Environment configuration created" -ForegroundColor Green
+Write-Host "? Environment configuration created" -ForegroundColor Green
+Write-Host "   API URL: $($azureConfig.ApiUrl)" -ForegroundColor Gray
 
 # ================================================================
-# STEP 4: Frontend Build for Web (FIXED - Handle Minimatch Error)
+# STEP 4: Frontend Build for Web
 # ================================================================
 
-Write-Host "Step 4: Building Frontend for Web..." -ForegroundColor Yellow
+Write-Host "`nStep 4: Building Frontend for Web..." -ForegroundColor Yellow
 
 if (-not $SkipBuild) {
     Set-Location "frontend"
     
     # Clear previous build
     if (Test-Path "web-build") {
-        Write-Host "Cleaning previous build..." -ForegroundColor Blue
+        Write-Host "?? Cleaning previous build..." -ForegroundColor Blue
         Remove-Item -Recurse -Force "web-build"
     }
     
     if (Test-Path "dist") {
-        Write-Host "Cleaning dist folder..." -ForegroundColor Blue
+        Write-Host "?? Cleaning dist folder..." -ForegroundColor Blue
         Remove-Item -Recurse -Force "dist"
     }
     
-    # FIXED: Remove problematic assetBundlePatterns to avoid minimatch error
-    Write-Host "Temporarily fixing app.json for build..." -ForegroundColor Blue
+    # Fix app.json for build
+    Write-Host "?? Preparing app.json for build..." -ForegroundColor Blue
     $appJsonPath = "app.json"
     $appJsonBackupPath = "app.json.backup"
     
@@ -197,27 +254,27 @@ if (-not $SkipBuild) {
     if ($appJson.expo.assetBundlePatterns) {
         $appJson.expo.PSObject.Properties.Remove('assetBundlePatterns')
         $appJson | ConvertTo-Json -Depth 10 | Set-Content $appJsonPath
-        Write-Host "Temporarily removed assetBundlePatterns to fix minimatch issue" -ForegroundColor Yellow
+        Write-Host "   Temporarily removed assetBundlePatterns" -ForegroundColor Gray
     }
     
     try {
         # Build for web using Expo
-        Write-Host "Building React Native Web app with Expo..." -ForegroundColor Blue
+        Write-Host "?? Building React Native Web app..." -ForegroundColor Blue
         npx expo export --platform web --output-dir web-build --clear
         
-        # Check if build was successful despite minimatch error
+        # Check if build was successful
         if (Test-Path "web-build/index.html") {
-            Write-Host "OK - Build completed successfully (web-build folder created)" -ForegroundColor Green
+            Write-Host "? Build completed successfully" -ForegroundColor Green
             $buildSuccess = $true
         } else {
-            Write-Host "Build output check: web-build folder missing" -ForegroundColor Red
+            Write-Host "? Build failed: no output" -ForegroundColor Red
             $buildSuccess = $false
         }
     }
     catch {
-        Write-Host "Build encountered an error, but checking if output was created..." -ForegroundColor Yellow
+        Write-Host "?? Build encountered error, checking output..." -ForegroundColor Yellow
         if (Test-Path "web-build/index.html") {
-            Write-Host "OK - Build output exists despite error (minimatch issue ignored)" -ForegroundColor Green
+            Write-Host "? Build output exists despite error" -ForegroundColor Green
             $buildSuccess = $true
         } else {
             $buildSuccess = $false
@@ -228,119 +285,94 @@ if (-not $SkipBuild) {
         if (Test-Path $appJsonBackupPath) {
             Copy-Item $appJsonBackupPath $appJsonPath
             Remove-Item $appJsonBackupPath
-            Write-Host "Restored original app.json" -ForegroundColor Blue
+            Write-Host "   Restored original app.json" -ForegroundColor Gray
         }
     }
     
     if (-not $buildSuccess) {
-        Write-Error "ERROR: Expo web build failed - no output generated"
+        Write-Error "? Expo web build failed"
     }
     
     # Verify build output
     if (Test-Path "web-build") {
         $buildFiles = Get-ChildItem "web-build" -Recurse | Measure-Object
-        Write-Host "OK - Build completed: $($buildFiles.Count) files generated" -ForegroundColor Green
-        
-        # Check for critical files
-        if (Test-Path "web-build/index.html") {
-            Write-Host "OK - index.html found" -ForegroundColor Green
-        } else {
-            Write-Warning "WARNING - index.html not found in build output"
-        }
-    } else {
-        Write-Error "ERROR: Build output directory 'web-build' not found"
+        $buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+        Write-Host "   Files: $($buildFiles.Count)" -ForegroundColor Gray
+        Write-Host "   Size: $([math]::Round($buildSize, 2)) MB" -ForegroundColor Gray
     }
     
     Set-Location ".."
 }
 else {
-    Write-Host "SKIP - Build step" -ForegroundColor Gray
+    Write-Host "?? Skipping build step" -ForegroundColor Gray
 }
 
 # ================================================================
-# STEP 5: Deploy to Azure Static Web App (FIXED - Production)
+# STEP 5: Deploy to Azure Static Web App
 # ================================================================
 
-Write-Host "Step 5: Deploying to Azure Static Web App ($Environment)..." -ForegroundColor Yellow
+Write-Host "`nStep 5: Deploying to Azure Static Web App..." -ForegroundColor Yellow
 
 if (-not $SkipDeploy) {
     Set-Location "frontend"
     
-    # Verify build exists before deployment
+    # Verify build exists
     if (-not (Test-Path "web-build/index.html")) {
-        Write-Error "ERROR: No build output found. Cannot deploy without successful build."
+        Write-Error "? No build output found. Cannot deploy."
     }
     
-    # Get Static Web App deployment token
-    Write-Host "Getting deployment token..." -ForegroundColor Blue
-    $deploymentToken = az staticwebapp secrets list --name $StaticAppName --resource-group $ResourceGroup --query "properties.apiKey" --output tsv
+    # Get deployment token
+    Write-Host "?? Getting deployment token..." -ForegroundColor Blue
+    $deploymentToken = az staticwebapp secrets list --name $($azureConfig.StaticAppName) --resource-group $($azureConfig.ResourceGroup) --query "properties.apiKey" --output tsv
     
     if (-not $deploymentToken) {
-        Write-Error "ERROR: Could not retrieve deployment token"
+        Write-Error "? Could not retrieve deployment token"
     }
     
-    # Deploy using Azure Static Web Apps CLI
-    Write-Host "Deploying to Azure Static Web App..." -ForegroundColor Blue
+    Write-Host "? Deployment token retrieved" -ForegroundColor Green
     
     # Install SWA CLI if not present
     try {
         swa --version | Out-Null
     }
     catch {
-        Write-Host "Installing Azure Static Web Apps CLI..." -ForegroundColor Blue
+        Write-Host "?? Installing Azure Static Web Apps CLI..." -ForegroundColor Blue
         npm install -g @azure/static-web-apps-cli
     }
     
-    # FIXED: Deploy to production environment
+    # Deploy
     try {
-        if ($Environment -eq "production") {
-            Write-Host "Deploying to PRODUCTION environment..." -ForegroundColor Green
+        Write-Host "?? Deploying to $normalizedEnv..." -ForegroundColor Blue
+        
+        if ($normalizedEnv -eq "prod") {
             swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken --env production
         } else {
-            Write-Host "Deploying to PREVIEW environment..." -ForegroundColor Yellow
             swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken
         }
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "OK - Deployment completed successfully" -ForegroundColor Green
+            Write-Host "? Deployment completed successfully" -ForegroundColor Green
         } else {
-            Write-Warning "WARNING - SWA deployment may have encountered issues, but continuing..."
+            Write-Warning "?? Deployment may have issues"
         }
     }
     catch {
-        Write-Warning "WARNING - SWA CLI deployment failed, trying alternative method..."
-        
-        # Alternative: Use Azure CLI directly
-        Write-Host "Trying Azure CLI static app deployment..." -ForegroundColor Blue
-        try {
-            $tempZip = "web-build.zip"
-            if (Test-Path $tempZip) { Remove-Item $tempZip }
-            
-            # Create zip of web-build contents
-            Compress-Archive -Path "web-build/*" -DestinationPath $tempZip
-            
-            Write-Host "OK - Build artifacts ready for deployment" -ForegroundColor Green
-            
-            if (Test-Path $tempZip) { Remove-Item $tempZip }
-        }
-        catch {
-            Write-Warning "Alternative deployment method also failed, but build is ready"
-        }
+        Write-Warning "?? SWA CLI deployment encountered error: $_"
     }
     
     Set-Location ".."
 }
 else {
-    Write-Host "SKIP - Deployment step" -ForegroundColor Gray
+    Write-Host "?? Skipping deployment step" -ForegroundColor Gray
 }
 
 # ================================================================
-# STEP 6: Configure Static Web App Settings (FIXED - CSP)
+# STEP 6: Configure Static Web App Settings
 # ================================================================
 
-Write-Host "Step 6: Configuring Static Web App..." -ForegroundColor Yellow
+Write-Host "`nStep 6: Configuring Static Web App..." -ForegroundColor Yellow
 
-# FIXED: More permissive CSP for React Native Web
+# Configure staticwebapp.config.json
 $staticWebAppConfigContent = @"
 {
   "routes": [
@@ -373,121 +405,65 @@ $staticWebAppConfigContent = @"
 }
 "@
 
-# Only create config if build directory exists
 if (Test-Path "frontend/web-build") {
     Set-Content -Path "frontend/web-build/staticwebapp.config.json" -Value $staticWebAppConfigContent
-    Write-Host "OK - Static Web App configuration applied (Fixed CSP)" -ForegroundColor Green
-}
-else {
-    Write-Host "WARNING - Skipping config creation - build directory not found" -ForegroundColor Yellow
+    Write-Host "? Static Web App configuration applied" -ForegroundColor Green
 }
 
 # ================================================================
-# STEP 7: Verification & Testing
+# STEP 7: Verification
 # ================================================================
 
-Write-Host "Step 7: Verification & Testing..." -ForegroundColor Yellow
+Write-Host "`nStep 7: Verification..." -ForegroundColor Yellow
 
-# Wait a moment for deployment to propagate
-Write-Host "Waiting for deployment to propagate..." -ForegroundColor Blue
-Start-Sleep -Seconds 45  # Increased wait time for production
+# Wait for deployment to propagate
+Write-Host "? Waiting for deployment to propagate (45 seconds)..." -ForegroundColor Blue
+Start-Sleep -Seconds 45
 
 # Test the deployed application
-Write-Host "Testing deployed application..." -ForegroundColor Blue
+Write-Host "?? Testing deployed application..." -ForegroundColor Blue
 
 try {
     $response = Invoke-RestMethod -Uri $deploymentUrl -Method GET -TimeoutSec 30
-    Write-Host "OK - Application is responding" -ForegroundColor Green
+    Write-Host "? Application is responding" -ForegroundColor Green
 }
 catch {
-    Write-Warning "WARNING - Application may still be starting up. Please check manually: $deploymentUrl"
-}
-
-# Test API connectivity from frontend
-try {
-    $apiTestUrl = "$deploymentUrl"
-    Write-Host "Testing from: $apiTestUrl" -ForegroundColor Blue
-    Write-Host "OK - Frontend deployed and accessible" -ForegroundColor Green
-}
-catch {
-    Write-Warning "WARNING - Could not verify API connectivity. Check browser console at: $deploymentUrl"
+    Write-Warning "?? Application may still be starting up"
 }
 
 # ================================================================
 # DEPLOYMENT COMPLETE
 # ================================================================
 
-Write-Host ""
-Write-Host "*** NexHire Frontend Deployment Complete! ***" -ForegroundColor Green
-Write-Host "=============================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Frontend URL: $deploymentUrl" -ForegroundColor Cyan
-Write-Host "API Backend: https://nexhire-api-func.azurewebsites.net/api" -ForegroundColor Cyan
-Write-Host "Environment: $Environment" -ForegroundColor Magenta
-Write-Host ""
-Write-Host "Deployment Summary:" -ForegroundColor White
-Write-Host "  + Universal React Native app deployed" -ForegroundColor Gray
-Write-Host "  + Web build optimized for production" -ForegroundColor Gray
-Write-Host "  + Static Web App configured" -ForegroundColor Gray
-Write-Host "  + API integration ready" -ForegroundColor Gray
-Write-Host "  + Environment variables set" -ForegroundColor Gray
-Write-Host "  + Dependency conflicts resolved" -ForegroundColor Gray
-Write-Host "  + Minimatch build error bypassed" -ForegroundColor Gray
-Write-Host "  + CSP configuration fixed for React Native Web" -ForegroundColor Gray
-Write-Host "  + Production environment deployment" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Next Steps:" -ForegroundColor White
-Write-Host "  1. Test the application: $deploymentUrl" -ForegroundColor Gray
-Write-Host "  2. Verify login functionality" -ForegroundColor Gray
-Write-Host "  3. Check browser console for any errors" -ForegroundColor Gray
-Write-Host "  4. Set up CI/CD pipeline for automatic deployments" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Build Details:" -ForegroundColor White
-if (Test-Path "frontend/web-build") {
-    $buildFiles = Get-ChildItem "frontend/web-build" -Recurse | Measure-Object
-    Write-Host "  + Build files generated: $($buildFiles.Count)" -ForegroundColor Gray
-    if (Test-Path "frontend/web-build/index.html") {
-        Write-Host "  + Main HTML file: ? Present" -ForegroundColor Gray
-    }
-    if (Test-Path "frontend/web-build/bundles") {
-        $jsFiles = Get-ChildItem "frontend/web-build/bundles" -Filter "*.js" | Measure-Object
-        Write-Host "  + JavaScript bundles: $($jsFiles.Count)" -ForegroundColor Gray
-    }
-}
-Write-Host ""
-Write-Host "Useful Commands:" -ForegroundColor White
-Write-Host "  + View logs: az staticwebapp show --name $StaticAppName --resource-group $ResourceGroup" -ForegroundColor Gray
-Write-Host "  + Redeploy: .\deploy-frontend.ps1" -ForegroundColor Gray
-Write-Host "  + Deploy to preview: .\deploy-frontend.ps1 -Environment preview" -ForegroundColor Gray
-Write-Host "  + View in portal: https://portal.azure.com" -ForegroundColor Gray
-Write-Host ""
+Write-Host "`n??????????????????????????????????????????????????????????" -ForegroundColor Green
+Write-Host "?  ? FRONTEND DEPLOYMENT COMPLETED SUCCESSFULLY         ?" -ForegroundColor Green
+Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Green
 
-# Create deployment log
-$deploymentLog = @{
-    timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    deploymentUrl = $deploymentUrl
-    environment = $Environment
-    resourceGroup = $ResourceGroup
-    staticAppName = $StaticAppName
-    status = "success"
-    buildFiles = if (Test-Path "frontend/web-build") { (Get-ChildItem "frontend/web-build" -Recurse | Measure-Object).Count } else { 0 }
-    dependencyFix = "Applied --legacy-peer-deps to resolve React version conflicts"
-    minimatchFix = "Temporarily removed assetBundlePatterns to bypass minimatch error"
-    buildWorkaround = "Build completed successfully despite minimatch CLI error"
-    cspFix = "Applied permissive CSP for React Native Web compatibility"
-    productionDeployment = "Deployed to production environment"
+Write-Host "`n?? Deployment Summary:" -ForegroundColor Cyan
+Write-Host "   Infrastructure: $($azureConfig.Infrastructure)" -ForegroundColor White
+Write-Host "   Environment: $normalizedEnv" -ForegroundColor White
+Write-Host "   Static Web App: $($azureConfig.StaticAppName)" -ForegroundColor White
+Write-Host "   Resource Group: $($azureConfig.ResourceGroup)" -ForegroundColor White
+
+Write-Host "`n?? Access URLs:" -ForegroundColor Cyan
+Write-Host "   Frontend: $deploymentUrl" -ForegroundColor Green
+Write-Host "   API Backend: $($azureConfig.ApiUrl)" -ForegroundColor Green
+
+if ($normalizedEnv -eq "prod") {
+    Write-Host "`n?? Custom Domains (if configured):" -ForegroundColor Cyan
+    Write-Host "   https://refopen.com" -ForegroundColor White
+    Write-Host "   https://www.refopen.com" -ForegroundColor White
 }
 
-$deploymentLog | ConvertTo-Json | Set-Content "deployment-frontend-log.json"
-Write-Host "LOG - Deployment log saved: deployment-frontend-log.json" -ForegroundColor Gray
+Write-Host "`n? Next Steps:" -ForegroundColor Yellow
+Write-Host "   1. Test: $deploymentUrl" -ForegroundColor White
+Write-Host "   2. Verify login functionality" -ForegroundColor White
+Write-Host "   3. Check browser console" -ForegroundColor White
+Write-Host "   4. Verify API calls work" -ForegroundColor White
 
-Write-Host ""
-Write-Host "SUCCESS: Your NexHire frontend is now live!" -ForegroundColor Green
-Write-Host "Note: The minimatch error is a known Expo CLI issue that doesn't affect the actual build output." -ForegroundColor Yellow
-Write-Host "Note: CSP has been configured to be permissive for React Native Web components." -ForegroundColor Yellow
-
-# Clean up the .npmrc file
+# Clean up
 if (Test-Path "frontend/.npmrc") {
     Remove-Item "frontend/.npmrc"
-    Write-Host "LOG - Cleaned up temporary .npmrc file" -ForegroundColor Gray
 }
+
+Write-Host "`n?? Deployment completed successfully!" -ForegroundColor Green

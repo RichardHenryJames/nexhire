@@ -44,7 +44,10 @@ export default function HomeScreen({ navigation }) {
       // Fetch comprehensive dashboard data
       const [dashboardRes, recentJobsRes, applicationsRes, referralEligibilityRes, pointsHistoryRes] = await Promise.all([
         nexhireAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
-        nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
+        // For employers, fetch only their own jobs; for job seekers, fetch recent jobs from all employers
+        isEmployer 
+          ? nexhireAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
+          : nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
         isJobSeeker ? nexhireAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
         isJobSeeker ? nexhireAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
         // NEW: Fetch points history for the breakdown modal
@@ -54,8 +57,17 @@ export default function HomeScreen({ navigation }) {
       // Process dashboard stats
       const stats = dashboardRes.success ? dashboardRes.data : {};
       
-      // Process recent jobs
-      const recentJobs = recentJobsRes.success ? recentJobsRes.data.slice(0, 5) : [];
+      // Process recent jobs - handle different response formats
+      let recentJobs = [];
+      if (recentJobsRes.success) {
+        if (isEmployer) {
+          // For employers using getOrganizationJobs, data is directly in the response
+          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+        } else {
+          // For job seekers using getJobs, data might be nested
+          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+        }
+      }
       
       // Process recent applications
       const recentApplications = (isJobSeeker && applicationsRes.success) ? applicationsRes.data.slice(0, 3) : [];
@@ -85,7 +97,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [isJobSeeker]);
+  }, [isJobSeeker, isEmployer, user]);
 
   useEffect(() => {
     fetchDashboardData();

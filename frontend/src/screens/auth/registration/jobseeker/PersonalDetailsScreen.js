@@ -137,6 +137,30 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     }
   }, [isGoogleUser, googleUser]);
 
+  // NEW: Pre-populate current company from work experience data
+  useEffect(() => {
+    // Only for experienced professionals, NOT students
+    if (experienceType === 'Student') return;
+
+    // Check if we have work experience data with current position
+    const experiences = Array.isArray(workExperienceData) 
+      ? workExperienceData 
+      : (workExperienceData ? [workExperienceData] : []);
+
+    const currentExp = experiences.find(exp => exp.isCurrentPosition);
+    
+    if (currentExp && currentExp.companyName) {
+      console.log('🔧 Pre-filling current company from work experience:', currentExp);
+      setFormData(prev => ({
+        ...prev,
+        currentCompany: currentExp.companyName || '',
+        organizationId: currentExp.organizationId || null,
+        jobTitle: currentExp.jobTitle || '',
+        startDate: currentExp.startDate || '',
+      }));
+    }
+  }, [workExperienceData, experienceType]);
+
   // NEW: Debounced organization search
   useEffect(() => {
     const search = async () => {
@@ -451,7 +475,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
-        {placeholder} {required && '*'}
+        {placeholder} {required && <Text style={styles.requiredAsterisk}>*</Text>}
         {prefilled && (
           <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>
         )}
@@ -462,6 +486,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           errors[key] && styles.inputError,
           prefilled && styles.inputPrefilled
         ]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={formData[key]}
         onChangeText={(text) => {
           setFormData({ ...formData, [key]: text });
@@ -489,9 +515,22 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         Current Company {skippedSteps && '(for referrals)'}
       </Text>
       <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
-        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
-          {formData.currentCompany || 'Select or search company'}
-        </Text>
+        {formData.currentCompany ? (
+          <View style={styles.companySelectorContent}>
+            {formData.organizationId && (
+              <View style={styles.companySelectorLogoPlaceholder}>
+                <Ionicons name="business" size={16} color={colors.gray400} />
+              </View>
+            )}
+            <Text style={styles.selectionValue}>
+              {formData.currentCompany}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
+            Select or search company
+          </Text>
+        )}
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
     </View>
@@ -585,8 +624,25 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
-            {userType === 'JobSeeker' && experienceType !== 'Student' && <OrgPickerButton />}
+            {/* NEW: Current Company Dropdown - ONLY show if NOT already captured AND for experienced professionals */}
+            {(() => {
+              // Don't show for students
+              if (userType !== 'JobSeeker' || experienceType === 'Student') return null;
+
+              // Check if current company already captured from work experience flow
+              const experiences = Array.isArray(workExperienceData) 
+                ? workExperienceData 
+                : (workExperienceData ? [workExperienceData] : []);
+              
+              const hasCurrentCompany = experiences.some(exp => exp.isCurrentPosition && exp.companyName);
+
+              // Only show for skip flow users (no work experience data) OR if company field is being filled
+              if (!hasCurrentCompany || formData.currentCompany) {
+                return <OrgPickerButton />;
+              }
+
+              return null;
+            })()}
 
             {/* NEW: Show jobTitle and startDate fields only when company is selected */}
             {userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
@@ -850,9 +906,32 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                  <View>
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
+                  <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                    {item.website && (
+                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}
+                      >
+                        {item.website}
+                      </Text>
+                    )}
+                    {item.industry && (
+                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
+                        {item.industry}
+                      </Text>
+                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -878,7 +957,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     marginBottom: 24, // CHANGED: Reduced from 32 to 24
@@ -975,6 +1054,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.gray600,
+  },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
   },
   prefilledLabel: {
     color: colors.success,
@@ -1145,9 +1228,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalItemText: {
     fontSize: typography.sizes.md,
     color: colors.text,
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyInfo: {
+    flex: 1,
+  },
+  companySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companySelectorLogoPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -141,15 +141,21 @@ export default function RegisterScreen({ navigation }) {
 
   const renderInput = (
     key,
+    label,
     placeholder,
     secureTextEntry = false,
     keyboardType = 'default',
-    multiline = false
+    multiline = false,
+    required = false
   ) => (
     <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>
+        {label} {required && <Text style={styles.required}>*</Text>}
+      </Text>
       <TextInput
         style={[styles.input, errors[key] && styles.inputError]}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={formData[key]}
         onChangeText={(text) => {
           setFormData({ ...formData, [key]: text });
@@ -180,15 +186,17 @@ export default function RegisterScreen({ navigation }) {
           <Text style={styles.subtitle}>Join NexHire to find your dream job or hire top talent</Text>
 
           {/* Required Fields */}
-          {renderInput('firstName', 'First Name *')}
-          {renderInput('lastName', 'Last Name *')}
-          {renderInput('email', 'Email Address *', false, 'email-address')}
-          {renderInput('password', 'Password (8+ characters) *', true)}
-          {renderInput('confirmPassword', 'Confirm Password *', true)}
+          {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}
+          {renderInput('lastName', 'Last Name', 'e.g., Doe', false, 'default', false, true)}
+          {renderInput('email', 'Email Address', 'e.g., john.doe@example.com', false, 'email-address', false, true)}
+          {renderInput('password', 'Password', 'Minimum 8 characters', true, 'default', false, true)}
+          {renderInput('confirmPassword', 'Confirm Password', 'Re-enter your password', true, 'default', false, true)}
 
           {/* User Type Selection */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>I am a: *</Text>
+            <Text style={styles.fieldLabel}>
+              I am a: <Text style={styles.required}>*</Text>
+            </Text>
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
                 style={[
@@ -225,8 +233,8 @@ export default function RegisterScreen({ navigation }) {
           {/* Optional Fields */}
           <Text style={styles.sectionTitle}>Optional Information</Text>
           
-          {renderInput('phone', 'Phone Number', false, 'phone-pad')}
-          
+          {renderInput('phone', 'Phone Number', 'e.g., +1234567890', false, 'phone-pad', false, false)}
+
           {/* ? REPLACED: DatePicker instead of manual input */}
           <DatePicker
             label="Date of Birth"
@@ -324,6 +332,15 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.gray700,
+    marginBottom: 8,
+  },
+  required: {
+    color: colors.danger,
   },
   input: {
     backgroundColor: colors.surface,
