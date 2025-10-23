@@ -310,7 +310,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flex: 1 },
-  content: { padding: 20, paddingTop: 60 },
+  content: { padding: 20, paddingTop: 20 },
   header: { marginBottom: 32 },
   backButton: { alignSelf: 'flex-start', padding: 8, marginBottom: 16 },
   title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginBottom: 8 },

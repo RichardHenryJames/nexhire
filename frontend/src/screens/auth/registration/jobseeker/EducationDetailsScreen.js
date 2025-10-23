@@ -828,7 +828,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     );
   };
 
-  const SelectionButton = ({ label, value, onPress, placeholder, disabled = false }) => (
+  const SelectionButton = ({ label, value, onPress, placeholder, disabled = false, required = false }) => (
     <TouchableOpacity 
       style={[
         styles.selectionButton,
@@ -841,7 +841,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         styles.selectionLabel,
         disabled && styles.selectionLabelDisabled
       ]}>
-        {label}
+        {label} {required && <Text style={styles.requiredAsterisk}>*</Text>}
       </Text>
       <View style={styles.selectionValueContainer}>
         <Text style={[
@@ -918,7 +918,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             >
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
             </TouchableOpacity>
-            
+
             <Text style={styles.title}>Tell us about your education</Text>
             <Text style={styles.subtitle}>
               Search from thousands of universities worldwide using our real-time database
@@ -931,24 +931,27 @@ export default function EducationDetailsScreen({ navigation, route }) {
               value={getSelectedCountryDisplay()}
               placeholder="Select country"
               onPress={() => openModal('country')}
+              required={false}
             />
 
             <SelectionButton
-              label="College/University *"
+              label="College/University"
               value={getCollegeDisplayText()}
               placeholder="Search and select your institution"
               onPress={() => openModal('college')}
+              required={true}
             />
 
             <SelectionButton
-              label="Degree Type *"
+              label="Degree Type"
               value={formData.degreeType}
               placeholder="Select degree type"
               onPress={() => openModal('degree')}
+              required={true}
             />
 
             <SelectionButton
-              label="Field of Study *"
+              label="Field of Study"
               value={formData.fieldOfStudy}
               placeholder={
                 formData.degreeType 
@@ -963,25 +966,28 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 openModal('field');
               }}
               disabled={!formData.degreeType}
+              required={true}
             />
 
             {experienceType === 'Student' && (
               <SelectionButton
-                label="Current Year *"
+                label="Current Year"
                 value={formData.yearInCollege}
                 placeholder="Select your current year"
                 onPress={() => openModal('year')}
+                required={true}
               />
             )}
 
             {/* Enhanced: Graduation Year and GPA fields for BOTH Students and Experienced */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
-                Graduation Year {experienceType === 'Student' ? '(Expected)' : '(Optional)'}
+                Graduation Year {experienceType === 'Student' && <Text style={styles.required}>*</Text>}
               </Text>
               <TextInput
                 style={styles.textInput}
                 placeholder={experienceType === 'Student' ? "e.g., 2025 (expected)" : "e.g., 2022"}
+                placeholderTextColor={colors.gray400}
                 value={formData.graduationYear}
                 onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
                 keyboardType="numeric"
@@ -991,11 +997,12 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
-                GPA/Grade {experienceType === 'Student' ? '(Current)' : '(Optional)'}
+                GPA/Grade
               </Text>
               <TextInput
                 style={styles.textInput}
                 placeholder="e.g., 3.8/4.0, 85%, First Class"
+                placeholderTextColor={colors.gray400}
                 value={formData.gpa}
                 onChangeText={(text) => setFormData({ ...formData, gpa: text })}
               />
@@ -1003,10 +1010,13 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
             {formData.college?.name === 'Other' && (
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>College/School Name *</Text>
+                <Text style={styles.inputLabel}>
+                  College/School Name <Text style={styles.required}>*</Text>
+                </Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="Enter your college/school name"
+                  placeholderTextColor={colors.gray400}
                   value={formData.customCollege}
                   onChangeText={(text) => setFormData({ ...formData, customCollege: text })}
                 />
@@ -1066,6 +1076,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               <TextInput
                 style={styles.searchInput}
                 placeholder={getSearchPlaceholder()}
+                placeholderTextColor={colors.gray400}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 autoCorrect={false}
@@ -1153,7 +1164,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     marginBottom: 32,
@@ -1198,6 +1209,10 @@ const styles = StyleSheet.create({
   selectionLabelDisabled: {
     color: colors.gray400,
   },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
+  },
   selectionValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1221,6 +1236,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.gray600,
+  },
+  required: {
+    color: colors.danger,
   },
   textInput: {
     backgroundColor: colors.surface,
@@ -1402,5 +1420,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     textAlign: 'center',
+  },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
   },
 });
