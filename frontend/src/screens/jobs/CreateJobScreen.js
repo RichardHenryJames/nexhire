@@ -187,7 +187,8 @@ export default function CreateJobScreen({ navigation }) {
           style={[styles.input, multiline && styles.textArea, errors[key] && styles.inputError]}
           value={jobData[key] ? String(jobData[key]) : ''}
           placeholder={placeholder}
-            onChangeText={t => { setJobData(prev => ({ ...prev, [key]: t })); if (errors[key]) setErrors(prev => ({ ...prev, [key]: null })); }}
+          placeholderTextColor={colors.gray400}
+          onChangeText={t => { setJobData(prev => ({ ...prev, [key]: t })); if (errors[key]) setErrors(prev => ({ ...prev, [key]: null })); }}
           multiline={multiline}
           numberOfLines={multiline ? 4 : 1}
           keyboardType={keyboardType}

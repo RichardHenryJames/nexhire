@@ -12,6 +12,7 @@ import {
   FlatList,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
@@ -281,9 +282,26 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                  <View>
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
+                  <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                    {item.website ? (
+                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}>
+                        {item.website}
+                      </Text>
+                    ) : null}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -336,6 +354,9 @@ const styles = StyleSheet.create({
   textInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 16, fontSize: typography.sizes.md, color: colors.text },
   modalItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalItemText: { fontSize: typography.sizes.md, color: colors.text },
+  companyLogo: { width: 40, height: 40, borderRadius: 8, marginRight: 12 },
+  companyLogoPlaceholder: { width: 40, height: 40, borderRadius: 8, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  companyInfo: { flex: 1 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, marginTop: 40 },
   emptyText: { fontSize: typography.sizes.md, color: colors.gray600, textAlign: 'center', marginTop: 16 },
 });
