@@ -145,25 +145,24 @@ export class JobScraperService {
     return this.userAgents[this.sessionState.userAgentIndex];
   }
 
-  // 🧠 INTELLIGENT HUMAN-LIKE DELAYS
-  private static async intelligentDelay(baseMs: number = 2000): Promise<void> {
+  // 🧠 INTELLIGENT HUMAN-LIKE DELAYS - OPTIMIZED FOR AZURE FUNCTIONS
+  private static async intelligentDelay(baseMs: number = 1000): Promise<void> {
     this.sessionState.requestCount++;
     
-    // Gradually increase delays as session progresses (human fatigue simulation)
-    const fatigueMultiplier = Math.min(1 + (this.sessionState.requestCount * 0.05), 2);
+    // Reduced fatigue multiplier for faster execution
+    const fatigueMultiplier = Math.min(1 + (this.sessionState.requestCount * 0.02), 1.3);
     
     // Add random variation (human unpredictability)
-    const variation = 0.3 + (Math.random() * 0.7); // 30-100% of base
+    const variation = 0.5 + (Math.random() * 0.5); // 50-100% of base
     
     // Calculate final delay
     const finalDelay = Math.floor(baseMs * fatigueMultiplier * variation);
     
-    // Ensure minimum gap between requests
+    // Ensure minimum gap between requests (reduced from 1000ms to 500ms)
     const timeSinceLastRequest = Date.now() - this.sessionState.lastRequestTime;
-    const additionalWait = Math.max(0, 1000 - timeSinceLastRequest);
+    const additionalWait = Math.max(0, 500 - timeSinceLastRequest);
     
     const totalWait = finalDelay + additionalWait;
-    console.log(`🤔 Human-like delay: ${totalWait}ms (request #${this.sessionState.requestCount})`);
     
     await new Promise(resolve => setTimeout(resolve, totalWait));
     this.sessionState.lastRequestTime = Date.now();
@@ -257,15 +256,15 @@ export class JobScraperService {
     }
   }
 
-  // 🚀 ENHANCED RemoteOK - GET ALL AVAILABLE JOBS WITH LOGOS
+  // 🚀 ENHANCED RemoteOK - GET ALL AVAILABLE JOBS WITH LOGOS (OPTIMIZED)
   private static async scrapeRemoteOK(): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
     
     try {
-      console.log('🌐 Scraping RemoteOK API (Enhanced 10x mode with logos)...');
+      console.log('🌐 Scraping RemoteOK API (Optimized mode)...');
       const response = await this.makeStealthRequest('https://remoteok.io/api', { 
         json: true,
-        baseDelay: 3000 
+        baseDelay: 1000  // Reduced from 3000ms
       });
       
       if (response.status !== 200) {
@@ -303,14 +302,11 @@ export class JobScraperService {
         const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
         if (postedDate > now) postedDate = now;
         if (postedDate < sixtyDaysAgo) {
-          console.log(`📅 Old job: ${job.position} (${Math.floor((now.getTime() - postedDate.getTime()) / (24 * 60 * 60 * 1000))} days old)`);
+          continue; // Skip very old jobs
         }
 
         // 🎨 Extract logo URL from RemoteOK API
         const logoUrl = job.logo || job.company_logo || null;
-        if (logoUrl) {
-          console.log(`🎨 Found logo for ${job.company}: ${logoUrl}`);
-        }
 
         // Create enhanced scraped job with logo data
         const scrapedJob: ScrapedJob & { logoUrl?: string } = {
@@ -327,7 +323,6 @@ export class JobScraperService {
           applicationUrl: job.url,
           source: 'RemoteOK',
           postedDate: postedDate,
-          // 🎨 Add logo URL for organization enhancement
           logoUrl: logoUrl
         };
 
@@ -335,7 +330,7 @@ export class JobScraperService {
         processed++;
       }
 
-      console.log(`✅ RemoteOK: Successfully processed ${processed} jobs (${jobs.filter(j => (j as any).logoUrl).length} with logos)`);
+      console.log(`✅ RemoteOK: Successfully processed ${processed} jobs`);
       
     } catch (error: any) {
       console.error(`❌ RemoteOK scraping failed: ${error.message}`);
@@ -345,12 +340,12 @@ export class JobScraperService {
     return jobs;
   }
 
-  // 🌍 MASSIVELY ENHANCED ADZUNA - GLOBAL COUNTRY-WIDE SEARCHES WITH COMPANY DATA
+  // 🌍 OPTIMIZED ADZUNA - FOCUSED ON HIGH-VALUE COUNTRIES
   private static async scrapeAdzunaGlobal(): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
     
     try {
-      console.log('🌍 Scraping Adzuna API (Global 10x mode with company data)...');
+      console.log('🌍 Scraping Adzuna API (Optimized mode)...');
       
       const apiKeys = this.loadAdzunaApiKeys();
       if (!apiKeys) {
@@ -361,18 +356,19 @@ export class JobScraperService {
       const { appId, appKey } = apiKeys;
       let totalProcessed = 0;
       
-      // 🎯 SMART SEARCH TERM SELECTION - Rotate through high-value terms
-      const prioritySearchTerms = this.searchTerms.slice(0, 8); // Use top 8 terms to stay within limits
+      // 🎯 OPTIMIZED: Focus on top 2 search terms for speed
+      const prioritySearchTerms = ['software engineer', 'developer'];
       
-      for (const config of this.adzunaConfigs) {
+      // 🎯 OPTIMIZED: Focus on high-priority countries only (US, India)
+      const priorityConfigs = this.adzunaConfigs.filter(c => c.priority === 'high');
+      
+      for (const config of priorityConfigs) {
         if (totalProcessed >= this.config.sources.adzuna.maxTotalJobs) {
           console.log(`🏁 Reached Adzuna total job limit: ${this.config.sources.adzuna.maxTotalJobs}`);
           break;
         }
 
-        // Determine how many search terms to use based on priority
-        const searchTermsToUse = config.priority === 'high' ? 4 : 
-                                config.priority === 'medium' ? 2 : 1;
+        const searchTermsToUse = config.priority === 'high' ? 2 : 1;
         
         for (let i = 0; i < searchTermsToUse && totalProcessed < this.config.sources.adzuna.maxTotalJobs; i++) {
           const searchTerm = prioritySearchTerms[i % prioritySearchTerms.length];
@@ -383,18 +379,17 @@ export class JobScraperService {
               app_id: appId,
               app_key: appKey,
               what: searchTerm,
-              results_per_page: this.config.sources.adzuna.maxJobsPerConfig, // 50 instead of 8!
+              results_per_page: this.config.sources.adzuna.maxJobsPerConfig,
               sort_by: 'date',
-              // No 'where' parameter for country-wide search!
             };
 
-            console.log(`🔍 Adzuna: ${config.country.toUpperCase()}/${searchTerm} (${this.config.sources.adzuna.maxJobsPerConfig} jobs)`);
+            console.log(`🔍 Adzuna: ${config.country.toUpperCase()}/${searchTerm}`);
             
             const response = await this.makeStealthRequest(apiUrl, { 
               params,
               json: true,
-              timeout: 25000,
-              baseDelay: 4000 // Longer delay for API respect
+              timeout: 20000,
+              baseDelay: 2000  // Reduced from 4000ms
             });
             
             if (response.status !== 200) {
@@ -408,13 +403,12 @@ export class JobScraperService {
               continue;
             }
 
-            console.log(`📈 Adzuna ${config.country}: ${data.results.length} jobs (${data.count || 0} total available)`);
+            console.log(`📈 Adzuna ${config.country}: ${data.results.length} jobs`);
             
             for (const job of data.results) {
               if (!job.id || !job.title || !job.company?.display_name) continue;
               if (totalProcessed >= this.config.sources.adzuna.maxTotalJobs) break;
 
-              // Enhanced posted date handling
               let postedDate = new Date();
               if (job.created) {
                 const createdDate = new Date(job.created);
@@ -423,8 +417,6 @@ export class JobScraperService {
                 }
               }
 
-              // 🏢 Extract additional company data from Adzuna if available
-              const companyData = job.company || {};
               const companyIndustry = job.category?.label || 'Technology';
 
               jobs.push({
@@ -440,28 +432,26 @@ export class JobScraperService {
                 applicationUrl: job.redirect_url,
                 postedDate: postedDate,
                 source: `Adzuna_${config.country.toUpperCase()}`,
-                // 🏢 Enhanced company data from Adzuna
                 companyIndustry: companyIndustry
               });
               totalProcessed++;
             }
             
-            // Enhanced delay between requests
-            await this.intelligentDelay(5000);
+            // Reduced delay between requests
+            await this.intelligentDelay(2000);  // Reduced from 5000ms
             
           } catch (error: any) {
             console.log(`❌ Adzuna ${config.country}/${searchTerm}: ${error.message}`);
             
-            // Handle rate limiting with exponential backoff
             if (error.response?.status === 429) {
-              console.log('🚦 Adzuna rate limit hit - waiting 60 seconds...');
-              await new Promise(resolve => setTimeout(resolve, 60000));
+              console.log('🚦 Adzuna rate limit - skipping remaining countries');
+              return jobs;  // Return what we have instead of waiting
             }
           }
         }
       }
       
-      console.log(`✅ Adzuna: Collected ${jobs.length} jobs globally with enhanced company data`);
+      console.log(`✅ Adzuna: Collected ${jobs.length} jobs`);
       
     } catch (error: any) {
       console.error(`❌ Adzuna scraping failed: ${error.message}`);
@@ -471,30 +461,27 @@ export class JobScraperService {
     return jobs;
   }
 
-  // 🚀 ENHANCED WeWorkRemotely RSS - MORE CATEGORIES & JOBS
+  // 🚀 OPTIMIZED WeWorkRemotely RSS
   private static async scrapeWeWorkRemotelyRSS(): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
     
     try {
-      console.log('📡 Scraping WeWorkRemotely RSS (Enhanced categories)...');
+      console.log('📡 Scraping WeWorkRemotely RSS (Optimized)...');
       
-      // 🎯 EXPANDED CATEGORIES
+      // 🎯 OPTIMIZED: Focus on top 3 categories for speed
       const rssFeeds = [
         { category: 'programming', url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss' },
         { category: 'product', url: 'https://weworkremotely.com/categories/remote-product-jobs.rss' },
         { category: 'design', url: 'https://weworkremotely.com/categories/remote-design-jobs.rss' },
-        { category: 'marketing', url: 'https://weworkremotely.com/categories/remote-marketing-jobs.rss' },
-        { category: 'sales', url: 'https://weworkremotely.com/categories/remote-sales-jobs.rss' },
-        { category: 'customer-support', url: 'https://weworkremotely.com/categories/remote-customer-support-jobs.rss' }
       ];
       
       for (const feed of rssFeeds) {
         try {
-          console.log(`📥 Fetching ${feed.category} jobs from RSS...`);
+          console.log(`📥 Fetching ${feed.category} jobs...`);
           
           const response = await this.makeStealthRequest(feed.url, { 
-            timeout: 20000,
-            baseDelay: 3000,
+            timeout: 15000,  // Reduced from 20000ms
+            baseDelay: 1000,  // Reduced from 3000ms
             headers: {
               'Accept': 'application/rss+xml, application/xml, text/xml, */*'
             }
@@ -510,7 +497,6 @@ export class JobScraperService {
           let match;
           let itemCount = 0;
           
-          // 🎯 INCREASED FROM 10 TO 25 JOBS PER CATEGORY
           while ((match = itemsRegex.exec(xmlContent)) !== null && itemCount < this.config.sources.weworkremotely.maxJobsPerCategory) {
             const itemContent = match[1];
             
@@ -524,7 +510,6 @@ export class JobScraperService {
               const company = titleParts[0] || 'Remote Company';
               const jobTitle = titleParts[1] || title;
               
-              // Enhanced description cleaning
               const cleanDescription = description
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
@@ -533,7 +518,7 @@ export class JobScraperService {
                 .replace(/<[^>]+>/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim()
-                .substring(0, 3000); // Longer descriptions
+                .substring(0, 3000);
               
               jobs.push({
                 externalJobId: `weworkremotely_${Date.now()}_${itemCount}_${Math.random().toString(36).substr(2, 5)}`,
@@ -559,7 +544,7 @@ export class JobScraperService {
         }
       }
       
-      console.log(`🎉 WeWorkRemotely total: ${jobs.length} remote jobs with full descriptions`);
+      console.log(`🎉 WeWorkRemotely total: ${jobs.length} jobs`);
       
     } catch (error: any) {
       console.error('❌ WeWorkRemotely RSS scraping failed:', error.message);
@@ -568,17 +553,17 @@ export class JobScraperService {
     return jobs;
   }
 
-  // 🚀 ENHANCED HackerNews - MORE STARTUP JOBS
+  // 🚀 OPTIMIZED HackerNews
   private static async scrapeHackerNewsJobs(): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
     
     try {
-      console.log('🦄 Scraping HackerNews Jobs (YC ecosystem - enhanced)...');
+      console.log('🦄 Scraping HackerNews Jobs (Optimized)...');
       
       const jobStoriesResponse = await this.makeStealthRequest('https://hacker-news.firebaseio.com/v0/jobstories.json', { 
         json: true,
-        timeout: 15000,
-        baseDelay: 1500
+        timeout: 10000,  // Reduced from 15000ms
+        baseDelay: 500  // Reduced from 1500ms
       });
       
       if (jobStoriesResponse.status !== 200 || !Array.isArray(jobStoriesResponse.data)) {
@@ -586,15 +571,15 @@ export class JobScraperService {
       }
       
       const jobIds = jobStoriesResponse.data.slice(0, this.config.sources.hackernews.maxJobs);
-      console.log(`📋 HackerNews: Found ${jobIds.length} job stories to process`);
+      console.log(`📋 HackerNews: Processing ${jobIds.length} job stories`);
       
       let processed = 0;
       for (const jobId of jobIds) {
         try {
           const jobResponse = await this.makeStealthRequest(`https://hacker-news.firebaseio.com/v0/item/${jobId}.json`, { 
             json: true,
-            timeout: 10000,
-            baseDelay: 1200
+            timeout: 8000,  // Reduced from 10000ms
+            baseDelay: 500  // Reduced from 1200ms
           });
           
           if (jobResponse.status !== 200 || !jobResponse.data) {
@@ -607,7 +592,6 @@ export class JobScraperService {
             continue;
           }
           
-          // Enhanced company and title extraction
           let company = 'Startup Company';
           let jobTitle = job.title;
           
@@ -621,14 +605,13 @@ export class JobScraperService {
           const applicationUrl = job.url || `https://news.ycombinator.com/item?id=${job.id}`;
           const postedDate = job.time ? new Date(job.time * 1000) : new Date();
           
-          // Enhanced startup description
           const description = this.createEnhancedStartupDescription(job.title, company, applicationUrl);
           
           jobs.push({
             externalJobId: `hackernews_${job.id}`,
             title: jobTitle.substring(0, 200),
             company: company.substring(0, 100),
-            location: 'Remote / San Francisco', // Most YC companies are SF-based or remote
+            location: 'Remote / San Francisco',
             description: description,
             jobType: 'Full-time',
             workplaceType: 'Hybrid',
@@ -640,11 +623,11 @@ export class JobScraperService {
           processed++;
           
         } catch (error: any) {
-          console.log(`⚠️ HackerNews job ${jobId} failed: ${error.message}`);
+          // Silently skip failed jobs to save time
         }
       }
       
-      console.log(`🦄 HackerNews: Successfully processed ${processed} startup jobs`);
+      console.log(`🦄 HackerNews: Successfully processed ${processed} jobs`);
       
     } catch (error: any) {
       console.error('❌ HackerNews scraping failed:', error.message);
@@ -1377,7 +1360,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 🚀 MAIN SCRAPING ORCHESTRATOR - ENHANCED 10X VERSION WITH LOGO ENRICHMENT
+  // 🚀 MAIN SCRAPING ORCHESTRATOR - OPTIMIZED FOR AZURE FUNCTIONS TIMEOUT
   static async scrapeAndPopulateJobs(): Promise<ScrapingResult> {
     const startTime = Date.now();
     this.sessionState.sessionStartTime = startTime;
@@ -1399,37 +1382,76 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return result;
     }
 
-    console.log('🚀 RefOpen Enhanced Job Scraping Started (10x Mode + Organization Enrichment)...');
+    console.log('🚀 RefOpen Enhanced Job Scraping Started (Parallel Mode)...');
     console.log(`🎯 Target: ${this.config.maxJobsPerRun} jobs with company logos and data enhancement`);
 
     try {
       const existingJobs = await this.getExistingExternalJobIds();
       console.log(`📊 Found ${existingJobs.size} existing external jobs in database`);
 
-      const allScrapedJobs: ScrapedJob[] = [];
+      // ⚡ OPTIMIZATION: Scrape all sources in PARALLEL instead of sequential
+      const scrapingPromises: Promise<{ source: string; jobs: ScrapedJob[] }>[] = [];
 
-      // 🌐 Scrape RemoteOK (200 jobs with logos)
       if (this.config.sources.remoteok.enabled) {
-        try {
-          const remoteOkJobs = await this.scrapeRemoteOK();
-          allScrapedJobs.push(...remoteOkJobs);
-          result.summary.sourceBreakdown['RemoteOK'] = remoteOkJobs.length;
-          console.log(`✅ RemoteOK: ${remoteOkJobs.length} jobs scraped with logo enhancement`);
-        } catch (error: any) {
-          console.error('❌ RemoteOK failed:', error.message);
-          result.errors.push(`RemoteOK: ${error.message}`);
-          result.summary.sourceBreakdown['RemoteOK'] = 0;
-        }
+        scrapingPromises.push(
+          this.scrapeRemoteOK()
+            .then(jobs => ({ source: 'RemoteOK', jobs }))
+            .catch(error => {
+              console.error('❌ RemoteOK failed:', error.message);
+              result.errors.push(`RemoteOK: ${error.message}`);
+              return { source: 'RemoteOK', jobs: [] };
+            })
+        );
       }
 
-      // 🌍 Scrape Adzuna Global (400 jobs from 9 countries with industry data)
       if (this.config.sources.adzuna.enabled) {
-        try {
-          const adzunaJobs = await this.scrapeAdzunaGlobal();
-          allScrapedJobs.push(...adzunaJobs);
-          
-          // Enhanced India job counting
-          const indiaJobs = adzunaJobs.filter(job => 
+        scrapingPromises.push(
+          this.scrapeAdzunaGlobal()
+            .then(jobs => ({ source: 'Adzuna', jobs }))
+            .catch(error => {
+              console.error('❌ Adzuna failed:', error.message);
+              result.errors.push(`Adzuna: ${error.message}`);
+              return { source: 'Adzuna', jobs: [] };
+            })
+        );
+      }
+
+      if (this.config.sources.weworkremotely.enabled) {
+        scrapingPromises.push(
+          this.scrapeWeWorkRemotelyRSS()
+            .then(jobs => ({ source: 'WeWorkRemotely', jobs }))
+            .catch(error => {
+              console.error('❌ WeWorkRemotely failed:', error.message);
+              result.errors.push(`WeWorkRemotely: ${error.message}`);
+              return { source: 'WeWorkRemotely', jobs: [] };
+            })
+        );
+      }
+
+      if (this.config.sources.hackernews.enabled) {
+        scrapingPromises.push(
+          this.scrapeHackerNewsJobs()
+            .then(jobs => ({ source: 'HackerNews', jobs }))
+            .catch(error => {
+              console.error('❌ HackerNews failed:', error.message);
+              result.errors.push(`HackerNews: ${error.message}`);
+              return { source: 'HackerNews', jobs: [] };
+            })
+        );
+      }
+
+      // ⚡ Wait for all sources to complete (in parallel)
+      console.log(`⚡ Starting parallel scraping from ${scrapingPromises.length} sources...`);
+      const scrapingResults = await Promise.all(scrapingPromises);
+
+      // Collect all jobs
+      const allScrapedJobs: ScrapedJob[] = [];
+      for (const { source, jobs } of scrapingResults) {
+        result.summary.sourceBreakdown[source] = jobs.length;
+        
+        // Enhanced India job counting for Adzuna
+        if (source === 'Adzuna') {
+          const indiaJobs = jobs.filter(job => 
             job.source.includes('IN') || 
             job.location.toLowerCase().includes('india') ||
             job.location.toLowerCase().includes('bangalore') ||
@@ -1438,56 +1460,26 @@ Apply now to join a dynamic team that's building the future! 🌟`;
             job.location.toLowerCase().includes('chennai') ||
             job.location.toLowerCase().includes('hyderabad')
           );
-          
-          result.summary.sourceBreakdown['Adzuna'] = adzunaJobs.length;
           result.summary.sourceBreakdown['Adzuna_India'] = indiaJobs.length;
-          console.log(`✅ Adzuna: ${adzunaJobs.length} jobs scraped with industry data (${indiaJobs.length} from India)`);
-        } catch (error: any) {
-          console.error('❌ Adzuna failed:', error.message);
-          result.errors.push(`Adzuna: ${error.message}`);
-          result.summary.sourceBreakdown['Adzuna'] = 0;
+          console.log(`✅ ${source}: ${jobs.length} jobs (${indiaJobs.length} from India)`);
+        } else {
+          console.log(`✅ ${source}: ${jobs.length} jobs`);
         }
-      }
-
-      // 📡 Scrape WeWorkRemotely RSS (150+ jobs from 6 categories)
-      if (this.config.sources.weworkremotely.enabled) {
-        try {
-          const weworkRemotelyJobs = await this.scrapeWeWorkRemotelyRSS();
-          allScrapedJobs.push(...weworkRemotelyJobs);
-          result.summary.sourceBreakdown['WeWorkRemotely'] = weworkRemotelyJobs.length;
-          console.log(`✅ WeWorkRemotely: ${weworkRemotelyJobs.length} jobs with company enrichment`);
-        } catch (error: any) {
-          console.error('❌ WeWorkRemotely failed:', error.message);
-          result.errors.push(`WeWorkRemotely: ${error.message}`);
-          result.summary.sourceBreakdown['WeWorkRemotely'] = 0;
-        }
-      }
-
-      // 🦄 Scrape HackerNews Jobs (30 startup jobs)
-      if (this.config.sources.hackernews.enabled) {
-        try {
-          const hackerNewsJobs = await this.scrapeHackerNewsJobs();
-          allScrapedJobs.push(...hackerNewsJobs);
-          result.summary.sourceBreakdown['HackerNews'] = hackerNewsJobs.length;
-          console.log(`✅ HackerNews: ${hackerNewsJobs.length} startup jobs with enhanced profiles`);
-        } catch (error: any) {
-          console.error('❌ HackerNews failed:', error.message);
-          result.errors.push(`HackerNews: ${error.message}`);
-          result.summary.sourceBreakdown['HackerNews'] = 0;
-        }
+        
+        allScrapedJobs.push(...jobs);
       }
 
       result.summary.totalJobsScraped = allScrapedJobs.length;
-      console.log(`🎉 Total jobs scraped: ${allScrapedJobs.length} with enhanced organization data`);
+      console.log(`🎉 Total jobs scraped: ${allScrapedJobs.length} from all sources`);
 
       // Enhanced filtering
       const filteredJobs = this.filterJobs(allScrapedJobs, existingJobs);
-      console.log(`🔍 Jobs after filtering: ${filteredJobs.length}`);
+      console.log(`🔍 Jobs after filtering: ${filteredJobs.length} (removed ${allScrapedJobs.length - filteredJobs.length} duplicates)`);
 
       const jobsToInsert = filteredJobs.slice(0, this.config.maxJobsPerRun);
-      console.log(`💾 Jobs to insert with organization enhancement: ${jobsToInsert.length}`);
+      console.log(`💾 Jobs to insert: ${jobsToInsert.length}`);
 
-      // Database insertion with organization enhancement progress tracking
+      // Database insertion with progress tracking
       let insertedCount = 0;
       let indiaJobsCount = 0;
       let organizationsEnhanced = 0;
@@ -1501,13 +1493,12 @@ Apply now to join a dynamic team that's building the future! 🌟`;
             organizationsEnhanced++;
           }
           
-          // Enhanced India job counting
           if (this.isIndiaJob(job)) {
             indiaJobsCount++;
           }
           
           if ((index + 1) % 50 === 0) {
-            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted, ${organizationsEnhanced} orgs enhanced`);
+            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted`);
           }
         } catch (error: any) {
           console.error(`❌ Failed to insert "${job.title}": ${error.message}`);
@@ -1519,11 +1510,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       result.summary.indiaJobsAdded = indiaJobsCount;
       result.summary.executionTime = Date.now() - startTime;
 
-      console.log(`🎊 Enhanced job scraping with organization enrichment completed!`);
+      console.log(`🎊 Job scraping completed!`);
       console.log(`📊 Results: ${insertedCount} jobs added (${indiaJobsCount} from India)`);
-      console.log(`🏢 Organization enhancements: ${organizationsEnhanced} companies enhanced with logos/data`);
+      console.log(`🏢 Organizations enhanced: ${organizationsEnhanced} with logos/data`);
       console.log(`⏱️ Execution time: ${Math.round(result.summary.executionTime / 1000)}s`);
-      console.log(`🚀 10X Improvement: ${Math.round(insertedCount / 150 * 100)}% more jobs + organization data!`);
 
     } catch (error: any) {
       console.error('💥 Job scraping process failed:', error);
