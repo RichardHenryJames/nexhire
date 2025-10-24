@@ -1,4 +1,4 @@
-# NexHire Frontend - Universal React Native App
+# RefOpen Frontend - Universal React Native App
 
  **Fast, lightweight job platform frontend** that works on **Web, iOS, and Android** with 80%+ shared code.
 
@@ -13,7 +13,7 @@
 - ? **Loading States** - Professional loading screens
 
 ###  **Backend Integration**
-- ? **API Endpoint**: `https://nexhire-api-func.azurewebsites.net/api`
+- ? **API Endpoint**: `https://refopen-api-func.azurewebsites.net/api`
 - ? **Authentication**: JWT token management
 - ? **User Management**: Login, registration, profile
 - ? **Job APIs**: Browse, search, details, create
@@ -150,15 +150,15 @@ npm run build:android
 
 ### **API Integration**
 Your backend is already configured and working:
-- **Base URL**: `https://nexhire-api-func.azurewebsites.net/api`
+- **Base URL**: `https://refopen-api-func.azurewebsites.net/api`
 - **Authentication**: JWT tokens
 - **CORS**: Configured for `http://localhost:3000` and your frontend URL
 
 ### **Environment Variables** (Optional)
 Create `.env` file for custom configuration:
 ```env
-EXPO_PUBLIC_API_URL=https://nexhire-api-func.azurewebsites.net/api
-EXPO_PUBLIC_APP_NAME=NexHire
+EXPO_PUBLIC_API_URL=https://refopen-api-func.azurewebsites.net/api
+EXPO_PUBLIC_APP_NAME=RefOpen
 ```
 
 ##  **Features Working**
@@ -213,4 +213,4 @@ The foundation is complete! Your app can:
 - **Jobs Screen** (job browsing - 1 hour)
 - **Job Details** (job viewing - 30 minutes)
 
-Your **NexHire frontend is ready for development!** 
+Your **RefOpen frontend is ready for development!** 

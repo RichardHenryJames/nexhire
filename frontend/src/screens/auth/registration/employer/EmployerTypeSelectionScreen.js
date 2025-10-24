@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
 const useDebounce = (value, delay = 300) => {
@@ -65,7 +65,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return; // skip when manual entry mode or closed
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
         setOrgResults(filtered);

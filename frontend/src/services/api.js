@@ -4,9 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
 
 // FIXED: Use environment variable or fallback to production API
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nexhire-api-func.azurewebsites.net/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
 
-class NexHireAPI {
+class RefOpenAPI {
   constructor() {
     this.token = null;
     this.refreshToken = null;
@@ -50,7 +50,7 @@ class NexHireAPI {
     
     try {
       // Get stored token
-      const token = await this.getToken('nexhire_token');
+      const token = await this.getToken('refopen_token');
       
       // Default headers with config values
       const defaultHeaders = {
@@ -136,8 +136,8 @@ class NexHireAPI {
   async setTokens(accessToken, refreshToken) {
     try {
       await AsyncStorage.multiSet([
-        ['nexhire_token', accessToken],
-        ['nexhire_refresh_token', refreshToken]
+        ['refopen_token', accessToken],
+        ['refopen_refresh_token', refreshToken]
       ]);
       
       if (frontendConfig.shouldLog('debug')) {
@@ -174,8 +174,8 @@ class NexHireAPI {
   async init() {
     try {
       console.log('🔧 API.init() called - loading tokens from storage...');
-      this.token = await this.getToken('nexhire_token');
-      this.refreshToken = await this.getToken('nexhire_refresh_token');
+      this.token = await this.getToken('refopen_token');
+      this.refreshToken = await this.getToken('refopen_refresh_token');
       
       if (this.token) {
         console.log('✅ API.init() - Token loaded successfully');
@@ -196,8 +196,8 @@ class NexHireAPI {
     this.token = null;
     this.refreshToken = null;
     
-    await this.removeToken('nexhire_token');
-    await this.removeToken('nexhire_refresh_token');
+    await this.removeToken('refopen_token');
+    await this.removeToken('refopen_refresh_token');
     console.log('Tokens cleared');
   }
 
@@ -2124,4 +2124,4 @@ class NexHireAPI {
   }
 }
 
-export default new NexHireAPI();
+export default new RefOpenAPI();

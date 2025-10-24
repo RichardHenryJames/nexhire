@@ -6,7 +6,7 @@
  * This service automatically routes profile fields to the correct backend
  * endpoints based on which database table they belong to.
  * 
- * Integrates seamlessly with your existing NexHire React Native app.
+ * Integrates seamlessly with your existing RefOpen React Native app.
  * ========================================================================
  */
 
@@ -248,8 +248,8 @@ class SmartProfileUpdateService {
 /**
  * Enhanced AuthContext methods that use smart routing
  */
-export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
-  const smartProfileService = new SmartProfileUpdateService(nexhireAPI);
+export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
+  const smartProfileService = new SmartProfileUpdateService(refopenAPI);
 
   // Create bound methods to avoid context issues
   const updateProfileSmart = async (profileData) => {
@@ -257,7 +257,7 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
       setError(null);
       console.log('Starting smart profile update...');
       
-      const userId = nexhireAPI.getUserIdFromToken();
+      const userId = refopenAPI.getUserIdFromToken();
       if (!userId) {
         throw new Error('User ID not found. Please login again.');
       }
@@ -334,9 +334,9 @@ export const createSmartAuthMethods = (nexhireAPI, setUser, setError) => {
 /**
  * React Native hook for smart profile updates
  */
-export const useSmartProfile = (nexhireAPI, user, setUser, setError) => {
+export const useSmartProfile = (refopenAPI, user, setUser, setError) => {
   // Get the bound smart methods
-  const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
+  const smartMethods = createSmartAuthMethods(refopenAPI, setUser, setError);
 
   // Return properly bound methods
   return {
@@ -353,8 +353,8 @@ export const useSmartProfile = (nexhireAPI, user, setUser, setError) => {
 /**
  * Convenience function for direct use
  */
-export const updateUserProfileSmart = async (nexhireAPI, userId, profileData) => {
-  const service = new SmartProfileUpdateService(nexhireAPI);
+export const updateUserProfileSmart = async (refopenAPI, userId, profileData) => {
+  const service = new SmartProfileUpdateService(refopenAPI);
   return service.updateProfile(userId, profileData);
 };
 

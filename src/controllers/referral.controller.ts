@@ -1,6 +1,6 @@
 /**
  * Referral Controllers - HTTP Request Handlers
- * NexHire Referral System API Endpoints
+ * RefOpen Referral System API Endpoints
  * ? ALL USING WORKING AUTHENTICATION PATTERN
  */
 

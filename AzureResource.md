@@ -1,4 +1,4 @@
-# Azure Resource Deployment for NexHire
+# Azure Resource Deployment for RefOpen
 
 ## Prerequisites
 - Azure CLI installed
@@ -15,19 +15,19 @@ az login
 az account set --subscription "44027c71-593a-4d51-977b-ab0604cb76eb"
 
 # Create Resource Group
-$RG_NAME="nexhire-dev-rg"
+$RG_NAME="refopen-dev-rg"
 $LOCATION="eastus"
 az group create --name $RG_NAME --location $LOCATION
 
 # 1. Create Static Web App (Free tier)
 az staticwebapp create \
-  --name "nexhire-frontend-web" \
+  --name "refopen-frontend-web" \
   --resource-group $RG_NAME \
   --location $LOCATION \
   --sku "Free"
 
 # 2. Create Storage Account for Function App and Blob
-$STORAGE_NAME="nexhirefuncdevst"
+$STORAGE_NAME="refopenfuncdevst"
 az storage account create \
   --name $STORAGE_NAME \
   --resource-group $RG_NAME \
@@ -36,7 +36,7 @@ az storage account create \
 
 # 3. Create Function App (Consumption Plan)
 az functionapp create \
-  --name "nexhire-api-func" \
+  --name "refopen-api-func" \
   --resource-group $RG_NAME \
   --storage-account $STORAGE_NAME \
   --consumption-plan-location $LOCATION \
@@ -46,7 +46,7 @@ az functionapp create \
 
 # 4. Create SQL Server
 az sql server create \
-  --name "nexhire-sql-srv" \
+  --name "refopen-sql-srv" \
   --resource-group $RG_NAME \
   --location $LOCATION \
   --admin-user "sqladmin" \
@@ -54,13 +54,13 @@ az sql server create \
 
 # 5. Create SQL Database (Basic tier)
 az sql db create \
-  --name "nexhire-sql-db" \
+  --name "refopen-sql-db" \
   --resource-group $RG_NAME \
-  --server "nexhire-sql-srv" \
+  --server "refopen-sql-srv" \
   --service-objective "Basic"
 
 # 6. Create Blob Storage
-$BLOB_STORAGE="nexhireblobdev"
+$BLOB_STORAGE="refopenblobdev"
 az storage account create \
   --name $BLOB_STORAGE \
   --resource-group $RG_NAME \
@@ -70,14 +70,14 @@ az storage account create \
 
 # 7. Create Cognitive Search (Free tier)
 az search service create \
-  --name "nexhire-search" \
+  --name "refopen-search" \
   --resource-group $RG_NAME \
   --location $LOCATION \
   --sku "free"
 
 # 8. Create Application Insights
 az monitor app-insights component create \
-  --app "nexhire-monitor" \
+  --app "refopen-monitor" \
   --location $LOCATION \
   --resource-group $RG_NAME \
   --application-type "web"

@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
 // Debounce hook for search
@@ -167,7 +167,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return;
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
@@ -434,8 +434,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         Alert.alert(
           'Success', 
           isGoogleUser 
-            ? 'Your Google account has been linked successfully! Welcome to NexHire!' 
-            : 'Account created successfully! Welcome to NexHire!', 
+            ? 'Your Google account has been linked successfully! Welcome to RefOpen!'
+            : 'Account created successfully! Welcome to RefOpen!',
           [
             { 
               text: 'Get Started', 

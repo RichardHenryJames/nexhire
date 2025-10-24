@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
@@ -108,7 +108,7 @@ export default function AskReferralScreen({ navigation }) {
     setLoading(true);
     try {
       // Load user's resumes
-      const resumesRes = await nexhireAPI.getUserResumes();
+      const resumesRes = await refopenAPI.getUserResumes();
       if (resumesRes?.success && resumesRes.data) {
         const resumeList = resumesRes.data || [];
         setResumes(resumeList);
@@ -133,7 +133,7 @@ export default function AskReferralScreen({ navigation }) {
   const loadCompanies = async () => {
     try {
       // Use the same method that works in profile screen
-      const result = await nexhireAPI.getOrganizations(''); // Empty string for no search filter
+      const result = await refopenAPI.getOrganizations(''); // Empty string for no search filter
       console.log('Organizations API response:', result);
       
       if (result?.success && result.data && Array.isArray(result.data)) {
@@ -153,7 +153,7 @@ export default function AskReferralScreen({ navigation }) {
   // NEW: Load referral eligibility
   const loadReferralEligibility = async () => {
     try {
-      const result = await nexhireAPI.checkReferralEligibility();
+      const result = await refopenAPI.checkReferralEligibility();
       if (result?.success) {
         // ? ENHANCED: Include current plan information
         const eligibilityData = {
@@ -267,7 +267,7 @@ export default function AskReferralScreen({ navigation }) {
 
       console.log('Submitting external referral request:', requestData);
 
-      const result = await nexhireAPI.createReferralRequest(requestData);
+      const result = await refopenAPI.createReferralRequest(requestData);
       console.log('API Response:', result);
 
       if (result?.success) {

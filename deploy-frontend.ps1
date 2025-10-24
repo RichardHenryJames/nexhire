@@ -1,9 +1,9 @@
 # ================================================================
-# RefOpen/NexHire Frontend Deployment Script
+# RefOpen/RefOpen Frontend Deployment Script
 # ================================================================
 # Deploys the Universal React Native Frontend to Azure Static Web Apps
 # - Production: RefOpen infrastructure
-# - Dev/Staging: NexHire infrastructure
+# - Dev/Staging: RefOpen infrastructure
 # Version: 2.0 - Multi-infrastructure support
 
 param(
@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  RefOpen/NexHire Frontend Deployment                  ?" -ForegroundColor Cyan
+Write-Host "?  RefOpen/RefOpen Frontend Deployment                  ?" -ForegroundColor Cyan
 Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
 
 # Normalize environment
@@ -36,24 +36,24 @@ $normalizedEnv = switch ($Environment.ToLower()) {
 
 # Auto-detect infrastructure based on environment
 # PRODUCTION = RefOpen infrastructure
-# DEV/STAGING = NexHire infrastructure
+# DEV/STAGING = RefOpen infrastructure
 $azureConfig = switch ($normalizedEnv) {
     "dev" {
         @{
-            ResourceGroup = "nexhire-dev-rg"
-            StaticAppName = "nexhire-frontend-web"
-            FunctionAppName = "nexhire-api-func"
-            ApiUrl = "https://nexhire-api-func.azurewebsites.net/api"
-            Infrastructure = "NexHire"
+            ResourceGroup = "refopen-dev-rg"
+            StaticAppName = "refopen-frontend-web"
+            FunctionAppName = "refopen-api-func"
+            ApiUrl = "https://refopen-api-func.azurewebsites.net/api"
+            Infrastructure = "RefOpen"
         }
     }
     "staging" {
         @{
-            ResourceGroup = "nexhire-dev-rg"
-            StaticAppName = "nexhire-frontend-staging"
-            FunctionAppName = "nexhire-api-staging"
-            ApiUrl = "https://nexhire-api-staging.azurewebsites.net/api"
-            Infrastructure = "NexHire"
+            ResourceGroup = "refopen-dev-rg"
+            StaticAppName = "refopen-frontend-staging"
+            FunctionAppName = "refopen-api-staging"
+            ApiUrl = "https://refopen-api-staging.azurewebsites.net/api"
+            Infrastructure = "RefOpen"
         }
     }
     "prod" {

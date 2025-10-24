@@ -84,7 +84,7 @@ export default function LoadingScreen() {
         </Animated.View>
 
         {/* Brand Name */}
-        <Text style={styles.brandName}>NexHire</Text>
+        <Text style={styles.brandName}>RefOpen</Text>
         <Text style={styles.tagline}>Your next career opportunity awaits</Text>
 
         {/* Loading Indicator */}

@@ -1,11 +1,11 @@
 # ================================================================
-# Data Migration Script: NexHire ? RefOpen Organizations
+# Data Migration Script: RefOpen ? RefOpen Organizations
 # ================================================================
-# Migrates organization data from NexHire database to RefOpen database
+# Migrates organization data from RefOpen database to RefOpen database
 # ================================================================
 
 param(
-    [string]$SourceConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    [string]$SourceConnectionString = "Server=refopen-sql-srv.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
     [string]$TargetConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
     [switch]$DryRun,
     [switch]$SkipDuplicates
@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "??????????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  DATA MIGRATION: NexHire ? RefOpen Organizations              ?" -ForegroundColor Cyan
+Write-Host "?  DATA MIGRATION: RefOpen ? RefOpen Organizations              ?" -ForegroundColor Cyan
 Write-Host "??????????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 Write-Host ""
 
@@ -34,12 +34,12 @@ Import-Module SqlServer -Force
 # ================================================================
 # Step 1: Verify Source Database
 # ================================================================
-Write-Host "?? Step 1: Checking Source Database (NexHire)" -ForegroundColor Cyan
+Write-Host "?? Step 1: Checking Source Database (RefOpen)" -ForegroundColor Cyan
 
 try {
     $sourceCheck = Invoke-Sqlcmd -ConnectionString $SourceConnectionString -Query "SELECT COUNT(*) as OrgCount FROM Organizations WHERE IsActive = 1" -QueryTimeout 30
     Write-Host "   ? Source database accessible" -ForegroundColor Green
-    Write-Host "   ?? Found $($sourceCheck.OrgCount) active organizations in NexHire" -ForegroundColor White
+    Write-Host "   ?? Found $($sourceCheck.OrgCount) active organizations in RefOpen" -ForegroundColor White
 } catch {
     Write-Error "? Cannot connect to source database: $($_.Exception.Message)"
     exit 1
@@ -64,7 +64,7 @@ try {
 # Step 3: Extract Organizations from Source
 # ================================================================
 Write-Host ""
-Write-Host "?? Step 3: Extracting Organizations from NexHire" -ForegroundColor Cyan
+Write-Host "?? Step 3: Extracting Organizations from RefOpen" -ForegroundColor Cyan
 
 $extractQuery = @"
 SELECT 
@@ -137,7 +137,7 @@ try {
         }
         
         $duplicates | ForEach-Object {
-            Write-Host "      • $($_.Name)" -ForegroundColor Gray
+            Write-Host "      ï¿½ $($_.Name)" -ForegroundColor Gray
         }
     } else {
         Write-Host "   ? No duplicates found" -ForegroundColor Green
@@ -157,7 +157,7 @@ if ($DryRun) {
     Write-Host ""
     
     $sourceOrganizations | Select-Object -First 5 | ForEach-Object {
-        Write-Host "      • $($_.Name) (Type: $($_.Type), Industry: $($_.Industry))" -ForegroundColor Gray
+        Write-Host "      ï¿½ $($_.Name) (Type: $($_.Type), Industry: $($_.Industry))" -ForegroundColor Gray
     }
     
     if ($sourceOrganizations.Count -gt 5) {
@@ -285,7 +285,7 @@ if ($errors.Count -gt 0) {
     Write-Host ""
     Write-Host "? Errors encountered:" -ForegroundColor Red
     foreach ($err in $errors) {
-        Write-Host "   • $($err.Organization): $($err.Error)" -ForegroundColor Red
+        Write-Host "   ï¿½ $($err.Organization): $($err.Error)" -ForegroundColor Red
     }
 }
 

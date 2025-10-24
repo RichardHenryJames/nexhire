@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 import { showToast } from './Toast';
 import { colors, typography } from '../styles/theme';
 
@@ -109,7 +109,7 @@ export default function ReferralProofModal({
 
       // Upload image to storage
       console.log('Uploading image:', proofImage.uri);
-      const uploadResponse = await nexhireAPI.uploadFile(proofImage.uri, 'referral-proofs');
+      const uploadResponse = await refopenAPI.uploadFile(proofImage.uri, 'referral-proofs');
       console.log('Upload response:', uploadResponse);
       
       if (!uploadResponse.success) {

@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
 // Debounce like college picker
@@ -206,7 +206,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return; // skip fetching when manual mode
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX and to support partial matches
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);

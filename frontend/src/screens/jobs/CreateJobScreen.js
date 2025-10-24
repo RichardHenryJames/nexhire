@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
@@ -60,9 +60,9 @@ export default function CreateJobScreen({ navigation }) {
   const loadReferenceData = async () => {
     try {
       const [jt, wt, cur] = await Promise.all([
-        nexhireAPI.getJobTypes(),
-        nexhireAPI.getWorkplaceTypes(),
-        nexhireAPI.getCurrencies()
+        refopenAPI.getJobTypes(),
+        refopenAPI.getWorkplaceTypes(),
+        refopenAPI.getCurrencies()
       ]);
 
       if (jt?.success) {
@@ -146,7 +146,7 @@ export default function CreateJobScreen({ navigation }) {
       };
 
       console.log('Create Job Payload:', payload);
-      const result = await nexhireAPI.createJob(payload);
+      const result = await refopenAPI.createJob(payload);
       if (result.success) {
         showToast('Job created successfully!', 'success');
         // ✅ FIXED: Redirect to Jobs (employer jobs screen) instead of Home

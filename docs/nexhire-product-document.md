@@ -1,4 +1,4 @@
-# 📄 NexHire Product Document
+# 📄 RefOpen Product Document
 
 *Comprehensive Product Strategy & Business Overview*
 
@@ -22,9 +22,9 @@
 
 ## 📝 Executive Summary
 
-**NexHire** is a modern, serverless multi-sided job platform...
+**RefOpen** is a modern, serverless multi-sided job platform...
 
-### 🌟 What Makes NexHire Special
+### 🌟 What Makes RefOpen Special
 
 - **🤝 Intelligent Referral System**
 - **📈 Smart Profile Scoring**
@@ -164,13 +164,13 @@ Key Needs:
 ## 📞 Contact & Team
 
 **Product Team:**
-- 🎯 Strategy → product@nexhire.com
-- 🔍 Research → research@nexhire.com
-- 📊 Analytics → analytics@nexhire.com
+- 🎯 Strategy → product@refopen.com
+- 🔍 Research → research@refopen.com
+- 📊 Analytics → analytics@refopen.com
 
 **Development Team:**
-- 💻 Engineering → engineering@nexhire.com
-- 🔐 Security → security@nexhire.com
-- ⚙️ Infrastructure → ops@nexhire.com
+- 💻 Engineering → engineering@refopen.com
+- 🔐 Security → security@refopen.com
+- ⚙️ Infrastructure → ops@refopen.com
 
 ---

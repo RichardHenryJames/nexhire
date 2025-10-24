@@ -1,5 +1,5 @@
 /**
- * Production-Ready Job Scraper Service for NexHire - ENHANCED 10X VERSION
+ * Production-Ready Job Scraper Service for RefOpen - ENHANCED 10X VERSION
  * Features: 10x more jobs, Human-like scraping, Global coverage, Broad search terms
  * Anti-blocking: Rotating headers, intelligent delays, session management
  */
@@ -699,7 +699,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   }
 
   // 💾 Enhanced database insertion with organization logo updates
-  private static async insertJobIntoNexHireDB(job: ScrapedJob): Promise<void> {
+  private static async insertJobIntoRefOpenDB(job: ScrapedJob): Promise<void> {
     try {
       // Get or create organization WITH enhanced data
       const organizationId = await this.getOrCreateOrganizationWithEnhancements(job.company, job.source, job);
@@ -1091,7 +1091,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       const response = await this.makeStealthRequest(apiUrl, { 
         timeout: 5000,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; NexHire/1.0)'
+          'User-Agent': 'Mozilla/5.0 (compatible; RefOpen/1.0)'
         }
       });
       
@@ -1399,7 +1399,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return result;
     }
 
-    console.log('🚀 NexHire Enhanced Job Scraping Started (10x Mode + Organization Enrichment)...');
+    console.log('🚀 RefOpen Enhanced Job Scraping Started (10x Mode + Organization Enrichment)...');
     console.log(`🎯 Target: ${this.config.maxJobsPerRun} jobs with company logos and data enhancement`);
 
     try {
@@ -1494,7 +1494,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       
       for (const [index, job] of jobsToInsert.entries()) {
         try {
-          await this.insertJobIntoNexHireDB(job);
+          await this.insertJobIntoRefOpenDB(job);
           insertedCount++;
           
           if ((job as any).logoUrl || (job as any).companyIndustry) {

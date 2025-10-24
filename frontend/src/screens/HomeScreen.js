@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 import { colors, typography } from '../styles/theme';
 import ReferralPointsBreakdown from '../components/profile/ReferralPointsBreakdown';
 
@@ -43,15 +43,15 @@ export default function HomeScreen({ navigation }) {
 
       // Fetch comprehensive dashboard data
       const [dashboardRes, recentJobsRes, applicationsRes, referralEligibilityRes, pointsHistoryRes] = await Promise.all([
-        nexhireAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
+        refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
         // For employers, fetch only their own jobs; for job seekers, fetch recent jobs from all employers
         isEmployer 
-          ? nexhireAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
-          : nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
-        isJobSeeker ? nexhireAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
-        isJobSeeker ? nexhireAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
+          ? refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
+          : refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
+        isJobSeeker ? refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
+        isJobSeeker ? refopenAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
         // NEW: Fetch points history for the breakdown modal
-        isJobSeeker ? nexhireAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
+        isJobSeeker ? refopenAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
       ]);
 
       // Process dashboard stats

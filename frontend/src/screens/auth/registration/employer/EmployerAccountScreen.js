@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -64,7 +64,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
     if (!emailRegex.test(email)) return 'Please enter a valid email address';
     
     // Skip password validation for Google users and already authenticated users
-    if (!nexhireAPI.token && !isGoogleUser) {
+    if (!refopenAPI.token && !isGoogleUser) {
       if (!password || password.length < 6) return 'Password must be at least 6 characters';
       if (password !== confirmPassword) return 'Passwords do not match';
     }
@@ -182,7 +182,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
       }
 
       // Original flow for non-Google users
-      if (!nexhireAPI.token) {
+      if (!refopenAPI.token) {
         const payload = {
           email: email.trim().toLowerCase(),
           password,
@@ -194,7 +194,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...organizationPayload,
         };
 
-        const reg = await nexhireAPI.register(payload);
+        const reg = await refopenAPI.register(payload);
         if (!reg?.success) {
           // ✅ NEW: Check if error is "User already exists"
           const errorMessage = reg?.error || 'Registration failed';
@@ -235,7 +235,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         }
 
         // Auto-login
-        const login = await nexhireAPI.login(email.trim().toLowerCase(), password);
+        const login = await refopenAPI.login(email.trim().toLowerCase(), password);
         if (!login?.success) throw new Error(login?.error || 'Login failed');
 
         Alert.alert('Welcome', 'Your employer account is ready.', [
@@ -246,11 +246,11 @@ export default function EmployerAccountScreen({ navigation, route }) {
 
       // If already authenticated, best-effort: initialize employer profile if backend supports it, fallback to profile update
       try {
-        const res = await nexhireAPI.initializeEmployerProfile(organizationPayload);
+        const res = await refopenAPI.initializeEmployerProfile(organizationPayload);
         if (!res?.success) throw new Error(res?.error || 'Init failed');
       } catch (_) {
         // Fallback: at least update basic profile
-        await nexhireAPI.updateProfile({ firstName, lastName, phone });
+        await refopenAPI.updateProfile({ firstName, lastName, phone });
       }
 
       Alert.alert('All set!', 'Employer onboarding steps completed.', [
@@ -412,7 +412,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         </View>
 
         {/* Only show password fields for non-Google users and unauthenticated users */}
-        {!nexhireAPI.token && !isGoogleUser && (
+        {!refopenAPI.token && !isGoogleUser && (
           <>
             <View style={styles.field}> 
               <Text style={styles.label}>Password</Text>

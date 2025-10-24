@@ -1,4 +1,4 @@
-# ?? NexHire Deployment Manager
+# ?? RefOpen Deployment Manager
 # Unified deployment script for both frontend and backend
 
 param(
@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "?? NexHire Deployment Manager" -ForegroundColor Cyan
+Write-Host "?? RefOpen Deployment Manager" -ForegroundColor Cyan
 Write-Host "=============================" -ForegroundColor Cyan
 
 function Show-Usage {
@@ -47,7 +47,7 @@ function Show-DeploymentStatus {
     
     $backendEnv = if (Test-Path ".env") {
         $content = Get-Content ".env" -Raw  
-        if ($content -match "NEXHIRE_ENV=(.+)") { $matches[1].Trim() } else { "unknown" }
+        if ($content -match "RefOpen_ENV=(.+)") { $matches[1].Trim() } else { "unknown" }
     } else { "no .env file" }
     
     Write-Host "  Frontend: $frontendEnv" -ForegroundColor White
@@ -59,7 +59,7 @@ function Show-DeploymentStatus {
     
     # Test backend health
     try {
-        $healthResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/health" -Method Get -TimeoutSec 15
+        $healthResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/health" -Method Get -TimeoutSec 15
         if ($healthResponse.success) {
             Write-Host "  ? Backend API: $($healthResponse.environment) environment" -ForegroundColor Green
         }
@@ -69,7 +69,7 @@ function Show-DeploymentStatus {
     
     # Test frontend
     try {
-        $frontendResponse = Invoke-WebRequest -Uri "https://nexhire-frontend-web.azurestaticapps.net" -Method Get -TimeoutSec 15 -UseBasicParsing
+        $frontendResponse = Invoke-WebRequest -Uri "https://refopen-frontend-web.azurestaticapps.net" -Method Get -TimeoutSec 15 -UseBasicParsing
         if ($frontendResponse.StatusCode -eq 200) {
             Write-Host "  ? Frontend App: Live and responding" -ForegroundColor Green
         }
@@ -79,8 +79,8 @@ function Show-DeploymentStatus {
     
     Write-Host ""
     Write-Host "?? Live URLs:" -ForegroundColor Cyan
-    Write-Host "  Frontend: https://nexhire-frontend-web.azurestaticapps.net" -ForegroundColor White
-    Write-Host "  Backend API: https://nexhire-api-func.azurewebsites.net/api" -ForegroundColor White
+    Write-Host "  Frontend: https://refopen-frontend-web.azurestaticapps.net" -ForegroundColor White
+    Write-Host "  Backend API: https://refopen-api-func.azurewebsites.net/api" -ForegroundColor White
 }
 
 function Deploy-Component {
@@ -153,20 +153,20 @@ function Deploy-Component {
 az extension add --name application-insights --yes --only-show-errors
 
 # Create Resource Group
-$RG_NAME="nexhire-dev-rg"
+$RG_NAME="refopen-dev-rg"
 # Changed to West US 2 which supports all services we need
 $LOCATION="westus2"
 az group create --name $RG_NAME --location $LOCATION
 
 # 1. Create Static Web App (Free tier)
 az staticwebapp create `
-  --name "nexhire-frontend-web" `
+  --name "refopen-frontend-web" `
   --resource-group $RG_NAME ``
   --location $LOCATION ``
   --sku "Free"
 
 # 2. Create Storage Account for Function App and Blob
-$STORAGE_NAME="nexhirefuncdevst"
+$STORAGE_NAME="refopenfuncdevst"
 az storage account create ``
   --name $STORAGE_NAME ``
   --resource-group $RG_NAME ``
@@ -179,7 +179,7 @@ Start-Sleep -Seconds 30
 
 # 3. Create Function App (Consumption Plan)
 az functionapp create ``
-  --name "nexhire-api-func" ``
+  --name "refopen-api-func" ``
   --resource-group $RG_NAME ``
   --storage-account $STORAGE_NAME ``
   --consumption-plan-location $LOCATION ``
@@ -189,7 +189,7 @@ az functionapp create ``
 
 # 4. Create SQL Server
 az sql server create ``
-  --name "nexhire-sql-srv" ``
+  --name "refopen-sql-srv" ``
   --resource-group $RG_NAME ``
   --location $LOCATION ``
   --admin-user "sqladmin" ``
@@ -201,13 +201,13 @@ Start-Sleep -Seconds 30
 
 # 5. Create SQL Database (Basic tier)
 az sql db create ``
-  --name "nexhire-sql-db" ``
+  --name "refopen-sql-db" ``
   --resource-group $RG_NAME ``
-  --server "nexhire-sql-srv" ``
+  --server "refopen-sql-srv" ``
   --service-objective "Basic"
 
 # 6. Create Blob Storage
-$BLOB_STORAGE="nexhireblobdev"
+$BLOB_STORAGE="refopenblobdev"
 az storage account create ``
   --name $BLOB_STORAGE ``
   --resource-group $RG_NAME ``
@@ -217,7 +217,7 @@ az storage account create ``
 
 # 7. Create Cognitive Search (Free tier)
 az search service create ``
-  --name "nexhire-search" ``
+  --name "refopen-search" ``
   --resource-group $RG_NAME ``
   --location $LOCATION ``
   --sku "free"
@@ -225,7 +225,7 @@ az search service create ``
 # 8. Create Application Insights
 az config set extension.dynamic_install_allow_preview=true
 az monitor app-insights component create ``
-  --app "nexhire-monitor" ``
+  --app "refopen-monitor" ``
   --location $LOCATION ``
   --resource-group $RG_NAME ``
   --application-type "web"

@@ -55,7 +55,7 @@ Write-Host "✅ Switched to $normalizedEnv environment" -ForegroundColor Green
 
 # Show current configuration
 $envContent = Get-Content ".env" -Raw
-$nexhireEnv = if ($envContent -match "NEXHIRE_ENV=(.+)") { $matches[1].Trim() } else { "unknown" }
+$refopenEnv = if ($envContent -match "RefOpen_ENV=(.+)") { $matches[1].Trim() } else { "unknown" }
 $dbServer = if ($envContent -match "DB_SERVER=(.+)") { $matches[1].Trim() } else { "not configured" }
 $razorpayMode = if ($envContent -match "RAZORPAY_KEY_ID=(rzp_live_.+)") { "LIVE" } else { "TEST" }
 $googleConfigured = if ($envContent -match "GOOGLE_CLIENT_ID_WEB=(.+)") { 
@@ -64,7 +64,7 @@ $googleConfigured = if ($envContent -match "GOOGLE_CLIENT_ID_WEB=(.+)") {
 } else { "❌ MISSING" }
 
 Write-Host "📋 Backend Configuration:" -ForegroundColor Cyan
-Write-Host "   Environment: $nexhireEnv" -ForegroundColor White
+Write-Host "   Environment: $refopenEnv" -ForegroundColor White
 Write-Host "   Database: $($dbServer.Substring(0, [Math]::Min(50, $dbServer.Length)))..." -ForegroundColor White
 Write-Host "   Razorpay Mode: $razorpayMode" -ForegroundColor $(if ($razorpayMode -eq "LIVE") { "Red" } else { "Yellow" })
 Write-Host "   Google OAuth: $googleConfigured" -ForegroundColor $(if ($googleConfigured -eq "✅ CONFIGURED") { "Green" } else { "Red" })
@@ -261,7 +261,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "📦 Deployment Details:" -ForegroundColor Cyan
-    Write-Host "   Environment: $normalizedEnv ($nexhireEnv)" -ForegroundColor White
+    Write-Host "   Environment: $normalizedEnv ($refopenEnv)" -ForegroundColor White
     Write-Host "   Function App: $targetFunctionApp" -ForegroundColor White
     Write-Host "   Resource Group: refopen-prod-rg" -ForegroundColor White
     Write-Host "   Region: Central India" -ForegroundColor White

@@ -3,7 +3,7 @@
 # ================================================================
 # Syncs environment variables from .env file to Azure Function App
 # - Production: Uses RefOpen infrastructure (refopen-api-func, refopen-prod-rg)
-# - Dev/Staging: Uses NexHire infrastructure (nexhire-api-func, nexhire-dev-rg)
+# - Dev/Staging: Uses RefOpen infrastructure (refopen-api-func, refopen-dev-rg)
 # ================================================================
 
 param(
@@ -16,7 +16,7 @@ param(
     [switch]$Restart = $true  # Default: restart after sync
 )
 
-Write-Host "🚀 Environment Variables Sync - RefOpen/NexHire" -ForegroundColor Cyan
+Write-Host "🚀 Environment Variables Sync - RefOpen/RefOpen" -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 # -------------------------
@@ -40,7 +40,7 @@ if ($normalizedEnv -notin @("dev", "staging", "prod")) {
 # Auto-detect infrastructure based on environment
 # -------------------------
 # PRODUCTION = RefOpen infrastructure
-# DEV/STAGING = NexHire infrastructure
+# DEV/STAGING = RefOpen infrastructure
 if ([string]::IsNullOrEmpty($FunctionAppName) -or [string]::IsNullOrEmpty($ResourceGroup)) {
     switch ($normalizedEnv) {
         "prod" {
@@ -51,18 +51,18 @@ if ([string]::IsNullOrEmpty($FunctionAppName) -or [string]::IsNullOrEmpty($Resou
             Write-Host "🎯 Using RefOpen Production Infrastructure" -ForegroundColor Magenta
         }
         "staging" {
-            # NexHire Staging Infrastructure
-            $FunctionAppName = "nexhire-api-staging"
-            $ResourceGroup = "nexhire-dev-rg"
-            $InfrastructureName = "NexHire"
-            Write-Host "🎯 Using NexHire Staging Infrastructure" -ForegroundColor Yellow
+            # RefOpen Staging Infrastructure
+            $FunctionAppName = "refopen-api-staging"
+            $ResourceGroup = "refopen-dev-rg"
+            $InfrastructureName = "RefOpen"
+            Write-Host "🎯 Using RefOpen Staging Infrastructure" -ForegroundColor Yellow
         }
         "dev" {
-            # NexHire Development Infrastructure
-            $FunctionAppName = "nexhire-api-func"
-            $ResourceGroup = "nexhire-dev-rg"
-            $InfrastructureName = "NexHire"
-            Write-Host "🎯 Using NexHire Development Infrastructure" -ForegroundColor Cyan
+            # RefOpen Development Infrastructure
+            $FunctionAppName = "refopen-api-func"
+            $ResourceGroup = "refopen-dev-rg"
+            $InfrastructureName = "RefOpen"
+            Write-Host "🎯 Using RefOpen Development Infrastructure" -ForegroundColor Cyan
         }
     }
 }
@@ -244,7 +244,7 @@ $categories = @{
     "Features" = @("FEATURE_FLAG_REFERRAL_SYSTEM", "FEATURE_FLAG_GOOGLE_SIGNIN", "FEATURE_FLAG_PAYMENT_SYSTEM", "FEATURE_FLAG_JOB_SCRAPING")
     "API" = @("CORS_ORIGINS", "CORS_ALLOWED_ORIGINS", "RATE_LIMIT_MAX_REQUESTS", "RATE_LIMIT_WINDOW_MS")
     "Logging" = @("DEBUG_LEVEL", "LOG_LEVEL", "DETAILED_LOGGING")
-    "Environment" = @("NODE_ENV", "NEXHIRE_ENV", "NEXHIRE_VERSION", "NEXHIRE_DEBUG")
+    "Environment" = @("NODE_ENV", "RefOpen_ENV", "RefOpen_VERSION", "RefOpen_DEBUG")
     "Functions" = @("FUNCTIONS_WORKER_RUNTIME", "FUNCTIONS_EXTENSION_VERSION", "ENABLE_ARYX_BUILD")
 }
 

@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 import { colors, typography } from '../styles/theme';
 
 const ResumeUploadModal = ({ 
@@ -47,7 +47,7 @@ const ResumeUploadModal = ({
   const checkExistingResumes = async () => {
     try {
       setHasCheckedResumes(true);
-      const response = await nexhireAPI.getMyResumes();
+      const response = await refopenAPI.getMyResumes();
       
       if (response && response.success && Array.isArray(response.data)) {
         setExistingResumes(response.data);
@@ -108,7 +108,7 @@ const ResumeUploadModal = ({
             
             console.log('Using userId:', actualUserId);
             
-            const uploadResult = await nexhireAPI.uploadResume(file, actualUserId, resumeLabel);
+            const uploadResult = await refopenAPI.uploadResume(file, actualUserId, resumeLabel);
             console.log('STEP 4: Upload result received:', uploadResult);
             
             if (uploadResult.success) {
@@ -159,7 +159,7 @@ const ResumeUploadModal = ({
           return;
         }
         const resumeLabel = await promptForResumeLabel(jobTitle);
-        const uploadResult = await nexhireAPI.uploadResume({
+        const uploadResult = await refopenAPI.uploadResume({
           name: file.name,
           size: file.size,
           uri: file.uri,

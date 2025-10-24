@@ -2,12 +2,12 @@
 
 ## ?? **Overview**
 
-NexHire now supports clean, simple multi-environment configuration with separate files for each environment that are automatically switched at runtime.
+RefOpen now supports clean, simple multi-environment configuration with separate files for each environment that are automatically switched at runtime.
 
 ## ??? **Environment Files Structure**
 
 ```
-nexhire/
+refopen/
 ??? ?? Frontend Environments
 ?   ??? frontend/.env.dev        # Development environment
 ?   ??? frontend/.env.staging    # Staging environment  
@@ -92,14 +92,14 @@ cp .env.prod .env       # Production
 - **Features**: All enabled for testing
 
 ### **Staging Environment**  
-- **API URL**: `https://nexhire-api-staging.azurewebsites.net/api`
+- **API URL**: `https://refopen-api-staging.azurewebsites.net/api`
 - **Debug**: `true` (for debugging staging issues)
 - **Razorpay**: Test keys
 - **Database**: Staging database
 - **Features**: All enabled (production-like testing)
 
 ### **Production Environment**
-- **API URL**: `https://nexhire-api-func.azurewebsites.net/api`
+- **API URL**: `https://refopen-api-func.azurewebsites.net/api`
 - **Debug**: `false`
 - **Razorpay**: Live keys 
 - **Database**: Production database
@@ -161,7 +161,7 @@ The environment loaders automatically detect the current environment:
 
 ### **Backend Detection (envLoader.ts):**
 1. `NODE_ENV` environment variable
-2. `NEXHIRE_ENV` environment variable
+2. `RefOpen_ENV` environment variable
 3. Azure Functions environment
 4. Azure App Service detection
 5. Command line arguments

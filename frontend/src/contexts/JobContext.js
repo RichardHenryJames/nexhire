@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 
 const JobContext = createContext();
 
@@ -32,8 +32,8 @@ export const JobProvider = ({ children }) => {
   const loadReferenceData = async () => {
     try {
       const [jobTypesResult, currenciesResult] = await Promise.all([
-        nexhireAPI.getJobTypes(),
-        nexhireAPI.getCurrencies(),
+        refopenAPI.getJobTypes(),
+        refopenAPI.getCurrencies(),
       ]);
 
       if (jobTypesResult.success) {
@@ -53,7 +53,7 @@ export const JobProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const result = await nexhireAPI.getJobs(page, pageSize, filters);
+      const result = await refopenAPI.getJobs(page, pageSize, filters);
 
       if (result.success) {
         if (page === 1) {
@@ -84,7 +84,7 @@ export const JobProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const result = await nexhireAPI.searchJobs(query, filters);
+      const result = await refopenAPI.searchJobs(query, filters);
 
       if (result.success) {
         setJobs(result.data);
@@ -107,7 +107,7 @@ export const JobProvider = ({ children }) => {
 
   const getJobById = async (jobId) => {
     try {
-      const result = await nexhireAPI.getJobById(jobId);
+      const result = await refopenAPI.getJobById(jobId);
       if (result.success) {
         return result.data;
       } else {
@@ -121,7 +121,7 @@ export const JobProvider = ({ children }) => {
 
   const applyForJob = async (applicationData) => {
     try {
-      const result = await nexhireAPI.applyForJob(applicationData);
+      const result = await refopenAPI.applyForJob(applicationData);
       if (result.success) {
         return result;
       } else {
@@ -135,7 +135,7 @@ export const JobProvider = ({ children }) => {
 
   const createJob = async (jobData) => {
     try {
-      const result = await nexhireAPI.createJob(jobData);
+      const result = await refopenAPI.createJob(jobData);
       if (result.success) {
         // Refresh jobs list
         await loadJobs(1);

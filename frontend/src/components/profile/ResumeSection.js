@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { colors, typography } from '../../styles/theme';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection'; // ? Import the editing context
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -92,12 +92,12 @@ const ResumeSection = ({
       setLoading(true);
       
       // Check authentication before making API call
-      if (!nexhireAPI.token) {
+      if (!refopenAPI.token) {
         setResumes([]);
         return;
       }
       
-      const response = await nexhireAPI.getMyResumes();
+      const response = await refopenAPI.getMyResumes();
       
       if (response && response.success && Array.isArray(response.data)) {
         setResumes(response.data);
@@ -193,7 +193,7 @@ const ResumeSection = ({
 
   const performUpload = async () => {
     try {
-      const response = await nexhireAPI.uploadResume(
+      const response = await refopenAPI.uploadResume(
         selectedFile, 
         profile.UserID, 
         resumeLabel.trim()
@@ -220,7 +220,7 @@ const ResumeSection = ({
     try {
       console.log('Setting primary resume:', resumeId);
       setLoading(true);
-      const response = await nexhireAPI.setPrimaryResume(resumeId);
+      const response = await refopenAPI.setPrimaryResume(resumeId);
       console.log('Set primary response:', response);
       if (response.success) {
         Alert.alert('Success!', 'Primary resume updated successfully');
@@ -275,14 +275,14 @@ const ResumeSection = ({
       setDeleting(true);
       
       // ? FIXED: Ensure we have proper authentication
-      if (!nexhireAPI.token) {
+      if (!refopenAPI.token) {
         console.error('?No auth token available');
         Alert.alert('Authentication Error', 'Please login again to delete resumes');
         return;
       }
       
       console.log('?Auth token verified, making API call...');
-      const response = await nexhireAPI.deleteResume(resumeId);
+      const response = await refopenAPI.deleteResume(resumeId);
       console.log('?API response received:', response);
       
       if (response && response.success) {

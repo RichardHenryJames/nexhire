@@ -1,4 +1,4 @@
-# NexHire Applicant Profile Views Tracking Script (Option 3 - On-Demand Aggregation)
+# RefOpen Applicant Profile Views Tracking Script (Option 3 - On-Demand Aggregation)
 # Creates ApplicantProfileViews table, supporting indexes, and aggregation view (no cached column on Applicants)
 
 param(

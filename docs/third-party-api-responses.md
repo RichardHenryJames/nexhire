@@ -1,6 +1,6 @@
 # Third-Party API Response Documentation
 
-This document contains actual API responses from all integrated third-party job APIs for NexHire job scraping system.
+This document contains actual API responses from all integrated third-party job APIs for RefOpen job scraping system.
 
 Generated: 2025-09-21T17:14:49.652Z
 
@@ -174,7 +174,7 @@ Source = 'Adzuna_IN'
   "redirect_url": "https://www.adzuna.com/details/5409676693?utm_medium=api&utm_source=f88adc65",
   "created": "2025-09-21T11:33:48Z",
   "salary_is_predicted": "1",
-  "description": "Job Description Job Description Title: Senior Technical Analyst Client: Judicial Council of California Duration: 12 Months Location: San Francisco, CA Note: Hybrid role Interview Location: Initial phone interviews may be conducted via Skype, Teams, etc.Final interviews may be conducted via Skype, Teams, etc. or will be on-site at the Judicial Council of California in Sacramento, CA. Specific Skills/Qualifications Required: Master's degree in computer science, engineering, Information Technology…",
+  "description": "Job Description Job Description Title: Senior Technical Analyst Client: Judicial Council of California Duration: 12 Months Location: San Francisco, CA Note: Hybrid role Interview Location: Initial phone interviews may be conducted via Skype, Teams, etc.Final interviews may be conducted via Skype, Teams, etc. or will be on-site at the Judicial Council of California in Sacramento, CA. Specific Skills/Qualifications Required: Master's degree in computer science, engineering, Information Technologyï¿½",
   "category": {
     "tag": "it-jobs",
     "__CLASS__": "Adzuna::API::Response::Category",

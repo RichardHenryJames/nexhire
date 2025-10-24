@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 
 // Add debounce hook for smooth search
 const useDebounce = (value, delay) => {
@@ -549,7 +549,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       setLoadingCountries(true);
       console.log('Loading countries from API...');
       
-      const response = await nexhireAPI.getCountries();
+      const response = await refopenAPI.getCountries();
       
       if (response.success && response.data.countries) {
         const transformedCountries = response.data.countries.map(country => ({
@@ -593,7 +593,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       
       console.log(`Loading colleges for country: ${formData.selectedCountry}`);
       
-      const response = await nexhireAPI.getColleges(formData.selectedCountry);
+      const response = await refopenAPI.getColleges(formData.selectedCountry);
       
       if (response.success) {
         const transformedColleges = response.data.map(institution => ({

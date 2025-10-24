@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 import { useEditing } from './ProfileSection';
 import DatePicker from '../DatePicker';
@@ -172,8 +172,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     try {
       setLoading(true);
       const [expRes, curRes] = await Promise.all([
-        nexhireAPI.getMyWorkExperiences(),
-        nexhireAPI.getCurrencies().catch(() => ({ success: false }))
+        refopenAPI.getMyWorkExperiences(),
+        refopenAPI.getCurrencies().catch(() => ({ success: false }))
       ]);
       if (expRes && expRes.success) {
         setExperiences(Array.isArray(expRes.data) ? expRes.data : []);
@@ -212,7 +212,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {
@@ -277,7 +277,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     if (!id) { setShowDeleteModal(false); setPendingDelete(null); Alert.alert('Error', 'Invalid experience id'); return; }
     try {
       setDeleting(true);
-      const res = await nexhireAPI.deleteWorkExperience(id);
+      const res = await refopenAPI.deleteWorkExperience(id);
       if (!res?.success) throw new Error(res?.error || 'Delete failed');
       setShowDeleteModal(false); setPendingDelete(null);
       await loadData();
@@ -358,11 +358,11 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       if (editingItem) {
         const id = getId(editingItem);
         if (!id) throw new Error('Invalid experience id');
-        const res = await nexhireAPI.updateWorkExperienceById(id, payload);
+        const res = await refopenAPI.updateWorkExperienceById(id, payload);
         console.log('[WorkExp] Update response:', res);
         if (!res?.success) throw new Error(res?.error || 'Update failed');
       } else {
-        const res = await nexhireAPI.createWorkExperience(payload);
+        const res = await refopenAPI.createWorkExperience(payload);
         console.log('[WorkExp] Create response:', res);
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }

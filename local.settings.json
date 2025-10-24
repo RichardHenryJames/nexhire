@@ -20,7 +20,7 @@
     
     "AZURE_STORAGE_ACCOUNT_NAME": "refopenstoragesi",
     "AZURE_STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=https;AccountName=refopenstoragesi;AccountKey=YOUR_KEY_HERE;EndpointSuffix=core.windows.net",
-    "AZURE_STORAGE_CONTAINER_NAME": "nexhire-files",
+    "AZURE_STORAGE_CONTAINER_NAME": "refopen-files",
     "AZURE_STORAGE_CONTAINER_DOCUMENTS": "documents",
     "AZURE_STORAGE_CONTAINER_PROFILE_IMAGES": "profile-images",
     "AZURE_STORAGE_CONTAINER_RESUMES": "resumes",
@@ -40,7 +40,7 @@
     "FEATURE_FLAG_JOB_SCRAPING": "true",
     
     "NODE_ENV": "development",
-    "NEXHIRE_ENV": "development"
+    "RefOpen_ENV": "development"
   },
   "Host": {
     "CORS": "*",

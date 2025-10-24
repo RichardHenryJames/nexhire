@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -106,7 +106,7 @@ export default function JobsScreen({ navigation, route }) {
     if (!user || !isJobSeeker) return;
     if (primaryResumeLoadedRef.current && primaryResume) return;
     try {
-      const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -232,7 +232,7 @@ export default function JobsScreen({ navigation, route }) {
   const refreshApplicationsData = useCallback(async () => {
     try {
       console.log('🔄 Refreshing applications data...');
-      const r = await nexhireAPI.getMyApplications(1, 500);
+      const r = await refopenAPI.getMyApplications(1, 500);
       if (r?.success) {
         const ids = new Set((r.data || []).map(a => a.JobID));
         setAppliedIds(ids);
@@ -258,7 +258,7 @@ export default function JobsScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const r = await nexhireAPI.getMyApplications(1, 500);
+        const r = await refopenAPI.getMyApplications(1, 500);
         if (r?.success) {
           const ids = new Set((r.data || []).map(a => a.JobID));
           setAppliedIds(ids);
@@ -294,8 +294,8 @@ export default function JobsScreen({ navigation, route }) {
       if (!user || !isJobSeeker) return;
       try {
         const [referralRes, eligibilityRes] = await Promise.all([
-          nexhireAPI.getMyReferralRequests(1, 500),
-          nexhireAPI.checkReferralEligibility()
+          refopenAPI.getMyReferralRequests(1, 500),
+          refopenAPI.checkReferralEligibility()
         ]);
 
         if (referralRes?.success && referralRes.data?.requests) {
@@ -316,8 +316,8 @@ export default function JobsScreen({ navigation, route }) {
   const refreshCounts = useCallback(async () => {
     try {
       const [appliedRes, savedRes] = await Promise.all([
-        nexhireAPI.getMyApplications(1, 1),
-        nexhireAPI.getMySavedJobs(1, 1)
+        refopenAPI.getMyApplications(1, 1),
+        refopenAPI.getMySavedJobs(1, 1)
       ]);
       if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
       if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
@@ -330,7 +330,7 @@ export default function JobsScreen({ navigation, route }) {
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
-      const profRes = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profRes = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
       if (profRes?.success) {
         const profile = profRes.data;
         const years = monthsToYears(profile.TotalExperienceMonths);
@@ -372,9 +372,9 @@ export default function JobsScreen({ navigation, route }) {
     (async () => {
       try {
         const [jt, wt, cur] = await Promise.all([
-          nexhireAPI.getJobTypes(),
-          nexhireAPI.getWorkplaceTypes(),
-          nexhireAPI.getCurrencies()
+          refopenAPI.getJobTypes(),
+          refopenAPI.getWorkplaceTypes(),
+          refopenAPI.getCurrencies()
         ]);
         if (jt?.success) setJobTypes(jt.data);
         if (wt?.success) setWorkplaceTypes(wt.data);
@@ -429,9 +429,9 @@ export default function JobsScreen({ navigation, route }) {
         let result;
         if (shouldUseSearch) {
           const params = { page: 1, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
-          result = await nexhireAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
+          result = await refopenAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
         } else {
-          result = await nexhireAPI.getJobs(1, pagination.pageSize, apiFilters, { signal: controller.signal });
+          result = await refopenAPI.getJobs(1, pagination.pageSize, apiFilters, { signal: controller.signal });
         }
         if (controller.signal.aborted) return;
 
@@ -505,9 +505,9 @@ export default function JobsScreen({ navigation, route }) {
 
       let result;
       if (debouncedQuery.trim().length > 0 || hasBoosts) {
-        result = await nexhireAPI.searchJobs(debouncedQuery.trim(), { ...apiFilters, page: nextPage, pageSize: pagination.pageSize }, { signal: controller.signal });
+        result = await refopenAPI.searchJobs(debouncedQuery.trim(), { ...apiFilters, page: nextPage, pageSize: pagination.pageSize }, { signal: controller.signal });
       } else {
-        result = await nexhireAPI.getJobs(nextPage, pagination.pageSize, apiFilters, { signal: controller.signal });
+        result = await refopenAPI.getJobs(nextPage, pagination.pageSize, apiFilters, { signal: controller.signal });
       }
       if (controller.signal.aborted) return;
 
@@ -797,7 +797,7 @@ export default function JobsScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const r = await nexhireAPI.getMySavedJobs(1, 500);
+        const r = await refopenAPI.getMySavedJobs(1, 500);
         if (r?.success) {
           const ids = new Set((r.data || []).map(s => s.JobID));
           setSavedIds(ids);
@@ -876,7 +876,7 @@ export default function JobsScreen({ navigation, route }) {
     // ? CRITICAL FIX: Always check real-time quota before proceeding
     try {
       console.log('Checking referral eligibility...');
-      const freshEligibility = await nexhireAPI.checkReferralEligibility();
+      const freshEligibility = await refopenAPI.checkReferralEligibility();
       console.log('Eligibility result:', freshEligibility);
 
       if (freshEligibility?.success) {
@@ -907,7 +907,7 @@ export default function JobsScreen({ navigation, route }) {
 
     // Double-check no existing request (in case of race conditions)
     try {
-      const existing = await nexhireAPI.getMyReferralRequests(1, 100);
+      const existing = await refopenAPI.getMyReferralRequests(1, 100);
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId);
         if (already) {
@@ -1012,7 +1012,7 @@ export default function JobsScreen({ navigation, route }) {
                     text: 'Start Referring!',
                     onPress: async () => {
                       // Refresh eligibility after "purchase"
-                      const eligibilityRes = await nexhireAPI.checkReferralEligibility();
+                      const eligibilityRes = await refopenAPI.checkReferralEligibility();
                       if (eligibilityRes?.success) {
                         setReferralEligibility(eligibilityRes.data);
                       }
@@ -1022,7 +1022,7 @@ export default function JobsScreen({ navigation, route }) {
               );
 
               // TODO: Implement real payment processing
-              // const purchaseResult = await nexhireAPI.purchaseReferralPlan(plan.PlanID);
+              // const purchaseResult = await refopenAPI.purchaseReferralPlan(plan.PlanID);
 
             } catch (error) {
               Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
@@ -1042,7 +1042,7 @@ export default function JobsScreen({ navigation, route }) {
       setShowResumeModal(false);
       if (referralMode) {
         // Create referral request - ✅ NEW SCHEMA: Send jobID (internal) with extJobID as null
-        const res = await nexhireAPI.createReferralRequest({
+        const res = await refopenAPI.createReferralRequest({
           jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
           extJobID: null, // Explicitly null for internal referrals
           resumeID: resumeData.ResumeID
@@ -1067,7 +1067,7 @@ export default function JobsScreen({ navigation, route }) {
           coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`,
           resumeId: resumeData.ResumeID
         };
-        const res = await nexhireAPI.applyForJob(applicationData);
+        const res = await refopenAPI.applyForJob(applicationData);
         if (res?.success) {
           setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
           setAppliedCount(c => (Number(c) || 0) + 1);
@@ -1092,7 +1092,7 @@ export default function JobsScreen({ navigation, route }) {
           
           // Only refresh applied count (lightweight)
           try {
-            const appliedRes = await nexhireAPI.getMyApplications(1, 1);
+            const appliedRes = await refopenAPI.getMyApplications(1, 1);
             if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
           } catch {}
         } else {
@@ -1113,7 +1113,7 @@ export default function JobsScreen({ navigation, route }) {
     const id = job.JobID || job.id;
     try {
       const applicationData = { jobID: id, coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`, resumeId };
-      const res = await nexhireAPI.applyForJob(applicationData);
+      const res = await refopenAPI.applyForJob(applicationData);
       if (res?.success) {
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAppliedCount(c => (Number(c) || 0) + 1);
@@ -1128,7 +1128,7 @@ export default function JobsScreen({ navigation, route }) {
         }
         showToast('Application submitted', 'success');
         try {
-          const appliedRes = await nexhireAPI.getMyApplications(1, 1);
+          const appliedRes = await refopenAPI.getMyApplications(1, 1);
           if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
         } catch {}
       } else {
@@ -1144,7 +1144,7 @@ export default function JobsScreen({ navigation, route }) {
     const id = job.JobID || job.id;
     try {
       setReferralRequestingIds(prev => new Set([...prev, id])); // mark requesting
-      const res = await nexhireAPI.createReferralRequest({
+      const res = await refopenAPI.createReferralRequest({
         jobID: id,
         extJobID: null,
         resumeID: resumeId
@@ -1168,7 +1168,7 @@ export default function JobsScreen({ navigation, route }) {
     const id = job.JobID || job.id;
 
     try {
-      const res = await nexhireAPI.saveJob(id);
+      const res = await refopenAPI.saveJob(id);
       if (res?.success) {
         setSavedCount(c => (Number(c) || 0) + 1);
         setSavedIds(prev => {
@@ -1191,7 +1191,7 @@ export default function JobsScreen({ navigation, route }) {
       refreshCounts();
       if (activeTab === 'saved') {
         try {
-          const r = await nexhireAPI.getMySavedJobs(1, 50);
+          const r = await refopenAPI.getMySavedJobs(1, 50);
           if (r?.success) setSavedJobs(r.data || []);
         } catch {}
       }
@@ -1203,7 +1203,7 @@ export default function JobsScreen({ navigation, route }) {
     if (!job) return;
     const id = job.JobID || job.id;
     try {
-      const res = await nexhireAPI.unsaveJob(id);
+      const res = await refopenAPI.unsaveJob(id);
       if (res?.success) {
         removeSavedJobLocally(id);
         showToast('Job removed from saved', 'success');
@@ -1222,7 +1222,7 @@ export default function JobsScreen({ navigation, route }) {
       if (activeTab === 'saved') {
         try {
           console.log('🔄 Refreshing saved jobs data...');
-          const r = await nexhireAPI.getMySavedJobs(1, 50);
+          const r = await refopenAPI.getMySavedJobs(1, 50);
           if (r?.success) setSavedJobs(r.data || []);
         } catch {}
       } else if (activeTab === 'applied') {

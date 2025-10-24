@@ -1,6 +1,6 @@
 /**
  * Referral System Types and Interfaces
- * NexHire Referral System Implementation
+ * RefOpen Referral System Implementation
  */
 
 export interface ReferralPlan {
