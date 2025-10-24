@@ -856,35 +856,42 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     let size = 'Unknown';
     let linkedInProfile: string | null = null;
     
+    // ⚡ CRITICAL FIX: Disable logo enrichment to prevent 5-minute timeout
+    // Logo API calls take 5-15 seconds per company causing function to timeout
+    // before other sources (Adzuna, WeWorkRemotely, HackerNews) can be inserted
+    const ENABLE_LOGO_ENRICHMENT = false;
+    
     // 1. Get data from RemoteOK API if source is RemoteOK
-    if (source === 'RemoteOK') {
+    if (source === 'RemoteOK' && ENABLE_LOGO_ENRICHMENT) {
       logoUrl = await this.getRemoteOKLogo(job);
       // RemoteOK doesn't provide website/other info directly in job data
     }
     
     // 2. Try to get additional company data from external APIs
-    try {
-      const companyData = await this.fetchCompanyDataFromAPIs(companyName);
-      if (companyData) {
-        website = website || companyData.website || null;
-        industry = companyData.industry || industry;
-        size = companyData.size || size;
-        linkedInProfile = companyData.linkedInProfile || null;
-        // Don't override RemoteOK logo with generic ones
-        if (!logoUrl) {
-          logoUrl = companyData.logoUrl || null;
+    if (ENABLE_LOGO_ENRICHMENT) {
+      try {
+        const companyData = await this.fetchCompanyDataFromAPIs(companyName);
+        if (companyData) {
+          website = website || companyData.website || null;
+          industry = companyData.industry || industry;
+          size = companyData.size || size;
+          linkedInProfile = companyData.linkedInProfile || null;
+          // Don't override RemoteOK logo with generic ones
+          if (!logoUrl) {
+            logoUrl = companyData.logoUrl || null;
+          }
         }
+      } catch (error) {
+        console.warn(`⚠️ Failed to fetch external company data for ${companyName}`);
       }
-    } catch (error) {
-      console.warn(`⚠️ Failed to fetch external company data for ${companyName}`);
+    
+      // 3. Try Clearbit Logo API as fallback
+      if (!logoUrl) {
+        logoUrl = await this.getClearbitLogo(companyName, website);
+      }
     }
     
-    // 3. Try Clearbit Logo API as fallback
-    if (!logoUrl) {
-      logoUrl = await this.getClearbitLogo(companyName, website);
-    }
-    
-    // 4. Enhance industry based on job title/description
+    // 4. Enhance industry based on job title/description (fast, no API calls)
     industry = this.enhanceIndustryFromJob(job.title, job.description, industry);
     
     return {
