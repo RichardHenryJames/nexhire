@@ -6,6 +6,7 @@ import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { styles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 
@@ -851,6 +852,13 @@ export default function JobsScreen({ navigation, route }) {
 
     if (!job) return;
     if (!user) {
+      // Web-compatible alert
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
       Alert.alert('Login Required', 'Please login to ask for referrals', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Login', onPress: () => navigation.navigate('Auth') }
@@ -866,6 +874,12 @@ export default function JobsScreen({ navigation, route }) {
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+          navigation.navigate('Referrals');
+        }
+        return;
+      }
       Alert.alert('Already Requested', 'You have already requested a referral for this job', [
         { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
         { text: 'OK' }
@@ -886,6 +900,28 @@ export default function JobsScreen({ navigation, route }) {
         // Check if balance >= ₹50
         if (balance < 50) {
           console.log('Insufficient wallet balance:', balance);
+          
+          // Use window.confirm for web
+          if (Platform.OS === 'web') {
+            const message =
+              `💰 Wallet Recharge Required\n\n` +
+              `To request a referral, you need ₹50 in your wallet.\n\n` +
+              `📊 Current Balance: ₹${balance.toFixed(2)}\n` +
+              `💵 Required Amount: ₹50.00\n` +
+              `➕ Add at least: ₹${(50 - balance).toFixed(2)}\n\n` +
+              `Why is this needed?\n` +
+              `• Referral requests require a small fee to maintain quality\n` +
+              `• This ensures serious job seekers and fair compensation for referrers\n` +
+              `• Your wallet balance can be used for multiple referral requests\n\n` +
+              `Would you like to add money to your wallet now?`;
+            
+            if (window.confirm(message)) {
+              navigation.navigate('WalletRecharge');
+            }
+            return;
+          }
+          
+          // Native Alert
           Alert.alert(
             'Insufficient Wallet Balance',
             `Your current wallet balance is ₹${balance.toFixed(2)}.\n\nYou need ₹50.00 to request a referral.\n\nPlease add ₹${(50 - balance).toFixed(2)} or more to continue.`,
@@ -918,6 +954,12 @@ export default function JobsScreen({ navigation, route }) {
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId);
         if (already) {
+          if (Platform.OS === 'web') {
+            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+              navigation.navigate('Referrals');
+            }
+            return;
+          }
           Alert.alert('Already Requested', 'You have already requested a referral for this job', [
             { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
             { text: 'OK' }
@@ -1176,17 +1218,31 @@ export default function JobsScreen({ navigation, route }) {
           const currentBalance = res.data?.currentBalance || 0;
           const requiredAmount = res.data?.requiredAmount || 50;
           
-          Alert.alert(
-            'Insufficient Wallet Balance',
-            `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Add Money to Wallet', 
-                onPress: () => navigation.navigate('WalletRecharge')
-              }
-            ]
-          );
+          // Use window.confirm for web
+          if (Platform.OS === 'web') {
+            const message =
+              `Insufficient Wallet Balance\n\n` +
+              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\n` +
+              `You need ₹${requiredAmount.toFixed(2)} to request a referral.\n\n` +
+              `Please add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.\n\n` +
+              `Would you like to add money to your wallet now?`;
+            
+            if (window.confirm(message)) {
+              navigation.navigate('WalletRecharge');
+            }
+          } else {
+            Alert.alert(
+              'Insufficient Wallet Balance',
+              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Add Money to Wallet', 
+                  onPress: () => navigation.navigate('WalletRecharge')
+                }
+              ]
+            );
+          }
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }

@@ -706,7 +706,7 @@ export class WalletService {
         userId,
         WELCOME_BONUS_AMOUNT,
         'NEW_USER_BONUS',
-        `Welcome bonus - ?${WELCOME_BONUS_AMOUNT} credited to your wallet`
+        `Welcome bonus - ₹${WELCOME_BONUS_AMOUNT} credited to your wallet`
       );
 
       // Mark bonus as given
