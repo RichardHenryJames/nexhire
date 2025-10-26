@@ -89,7 +89,7 @@ export const createWalletRechargeOrder = withErrorHandling(async (req: HttpReque
         }
 
         if (amount > 100000) {
-            throw new ValidationError('Maximum recharge amount is ?1,00,000');
+            throw new ValidationError('Maximum recharge amount is ₹1,00,000');
         }
 
         const order = await WalletService.createRechargeOrder(amount, user.userId);

@@ -123,7 +123,7 @@ export class WalletService {
 
       // Check maximum limit (₹100,000)
       if (amount > 100000) {
-        throw new ValidationError('Maximum recharge amount is ?1,00,000');
+        throw new ValidationError('Maximum recharge amount is ₹1,00,000');
       }
 
       // Get or create wallet

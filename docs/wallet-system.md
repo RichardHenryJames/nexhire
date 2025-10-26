@@ -185,7 +185,7 @@ Content-Type: application/json
 
 **Validation:**
 - ? Minimum: ?1
-- ? Maximum: ?1,00,000
+- ? Maximum: ₹1,00,000
 
 ---
 

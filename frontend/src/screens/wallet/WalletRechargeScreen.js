@@ -38,7 +38,7 @@ export default function WalletRechargeScreen({ navigation }) {
     }
 
     if (rechargeAmount > 100000) {
-      Alert.alert('Maximum Amount', 'Maximum recharge amount is ?1,00,000');
+      Alert.alert('Maximum Amount', 'Maximum recharge amount is ₹1,00,000');
       return false;
     }
 
@@ -261,7 +261,7 @@ export default function WalletRechargeScreen({ navigation }) {
           <Text style={styles.warningText}>Minimum recharge: ₹100</Text>
         )}
         {amount && parseInt(amount) > 100000 && (
-          <Text style={styles.errorText}>Maximum recharge: ?1,00,000</Text>
+          <Text style={styles.errorText}>Maximum recharge: ₹1,00,000</Text>
         )}
       </View>
 
@@ -270,7 +270,7 @@ export default function WalletRechargeScreen({ navigation }) {
         <Ionicons name="information-circle" size={20} color="#007AFF" />
         <Text style={styles.infoText}>
           Minimum recharge: ₹100{'\n'}
-          Maximum recharge: ?1,00,000{'\n'}
+          Maximum recharge: ₹1,00,000{'\n'}
           Instant credit after payment
         </Text>
       </View>
