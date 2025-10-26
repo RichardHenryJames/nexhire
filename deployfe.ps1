@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== RefOpen/NexHire Frontend Build & Deploy ===" -ForegroundColor Cyan
+Write-Host "=== RefOpen/RefOpen Frontend Build & Deploy ===" -ForegroundColor Cyan
 
 # Normalize environment
 $normalizedEnv = switch ($Environment.ToLower()) {
@@ -19,22 +19,22 @@ $normalizedEnv = switch ($Environment.ToLower()) {
 
 # Env-specific resources
 # PRODUCTION = RefOpen infrastructure
-# DEV/STAGING = NexHire infrastructure
+# DEV/STAGING = RefOpen infrastructure
 $azureResources = switch ($normalizedEnv) {
     "dev" {
         @{ 
-            ResourceGroup = "nexhire-dev-rg"
-            StaticAppName = "nexhire-frontend-dev"
-            FunctionAppName = "nexhire-api-dev"
-            Infrastructure = "NexHire"
+            ResourceGroup = "refopen-dev-rg"
+            StaticAppName = "refopen-frontend-dev"
+            FunctionAppName = "refopen-api-dev"
+            Infrastructure = "RefOpen"
         }
     }
     "staging" {
         @{ 
-            ResourceGroup = "nexhire-dev-rg"
-            StaticAppName = "nexhire-frontend-staging"
-            FunctionAppName = "nexhire-api-staging"
-            Infrastructure = "NexHire"
+            ResourceGroup = "refopen-dev-rg"
+            StaticAppName = "refopen-frontend-staging"
+            FunctionAppName = "refopen-api-staging"
+            Infrastructure = "RefOpen"
         }
     }
     "prod" {

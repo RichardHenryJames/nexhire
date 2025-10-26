@@ -18,7 +18,7 @@ class BackendEnvironmentLoader {
   private determineEnvironment(): string {
     // Priority order:
     // 1. NODE_ENV environment variable
-    // 2. NEXHIRE_ENV environment variable  
+    // 2. RefOpen_ENV environment variable
     // 3. Command line arguments
     // 4. Azure Functions environment detection
     // 5. Default to development
@@ -27,8 +27,8 @@ class BackendEnvironmentLoader {
       return process.env.NODE_ENV;
     }
 
-    if (process.env.NEXHIRE_ENV) {
-      return process.env.NEXHIRE_ENV;
+    if (process.env.RefOpen_ENV) {
+      return process.env.RefOpen_ENV;
     }
 
     // Azure Functions detection

@@ -27,7 +27,7 @@ class EnvironmentLoader {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       
-      if (hostname.includes('nexhire.com') || hostname.includes('nexhire.app')) {
+      if (hostname.includes('refopen.com') || hostname.includes('refopen.app')) {
         return 'production';
       }
       
@@ -68,29 +68,29 @@ class EnvironmentLoader {
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com',
         EXPO_PUBLIC_RAZORPAY_KEY_ID: 'rzp_test_RHBUKjg4k9qx4J',
-        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'nexhire-123',
+        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'refopen-123',
       },
       
       staging: {
         EXPO_PUBLIC_APP_ENV: 'staging',
-        EXPO_PUBLIC_API_URL: 'https://nexhire-api-staging.azurewebsites.net/api',
+        EXPO_PUBLIC_API_URL: 'https://refopen-api-staging.azurewebsites.net/api',
         EXPO_PUBLIC_DEBUG: 'true',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com',
         EXPO_PUBLIC_RAZORPAY_KEY_ID: 'rzp_test_RHBUKjg4k9qx4J',
-        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'nexhire-123',
+        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'refopen-123',
       },
       
       production: {
         EXPO_PUBLIC_APP_ENV: 'production',
-        EXPO_PUBLIC_API_URL: 'https://nexhire-api-func.azurewebsites.net/api',
+        EXPO_PUBLIC_API_URL: 'https://refopen-api-func.azurewebsites.net/api',
         EXPO_PUBLIC_DEBUG: 'false',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com',
-        EXPO_PUBLIC_RAZORPAY_KEY_ID: 'rzp_live_YOUR_LIVE_KEY_HERE',
-        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'nexhire-123',
+        EXPO_PUBLIC_RAZORPAY_KEY_ID: 'rzp_live_RHBIO2dq7CFGiW',
+        EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'refopen-123',
       }
     };
 

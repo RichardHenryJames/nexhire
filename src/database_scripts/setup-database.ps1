@@ -1,11 +1,11 @@
-# NexHire Database Schema Deployment Script
+# RefOpen Database Schema Deployment Script
 # This script creates all required database tables and populates reference data
 
 param(
     [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host " Setting up NexHire Database Schema..." -ForegroundColor Green
+Write-Host " Setting up RefOpen Database Schema..." -ForegroundColor Green
 
 # Install SqlServer module if not present
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
@@ -655,5 +655,5 @@ try {
 }
 
 Write-Host ""
-Write-Host " Database is ready for NexHire APIs!" -ForegroundColor Green
-Write-Host "Now test your APIs: .\test-api.ps1 -BaseUrl 'https://nexhire-api-func.azurewebsites.net/api'" -ForegroundColor Cyan
+Write-Host " Database is ready for RefOpen APIs!" -ForegroundColor Green
+Write-Host "Now test your APIs: .\test-api.ps1 -BaseUrl 'https://refopen-api-func.azurewebsites.net/api'" -ForegroundColor Cyan

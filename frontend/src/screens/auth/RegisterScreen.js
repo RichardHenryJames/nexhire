@@ -183,7 +183,7 @@ export default function RegisterScreen({ navigation }) {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join NexHire to find your dream job or hire top talent</Text>
+          <Text style={styles.subtitle}>Join RefOpen to find your dream job or hire top talent</Text>
 
           {/* Required Fields */}
           {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}

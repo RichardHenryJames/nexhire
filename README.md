@@ -1,4 +1,4 @@
-# 🚀 NexHire - Next-Generation Job Platform
+# 🚀 RefOpen - Next-Generation Job Platform
 
 > **A comprehensive, production-ready job platform built with cutting-edge serverless technology and designed for global scale.**
 
@@ -7,10 +7,10 @@
 [![Azure Functions](https://img.shields.io/badge/Azure_Functions-0062AD?style=for-the-badge&logo=azure-functions&logoColor=white)](https://azure.microsoft.com/en-us/services/functions/)
 [![Azure SQL](https://img.shields.io/badge/Azure_SQL-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)](https://azure.microsoft.com/en-us/products/azure-sql/)
 
-[![Build Status](https://img.shields.io/badge/Build-Passing-success?style=flat-square)](https://github.com/RichardHenryJames/nexhire)
-[![Test Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen?style=flat-square)](https://github.com/RichardHenryJames/nexhire)
+[![Build Status](https://img.shields.io/badge/Build-Passing-success?style=flat-square)](https://github.com/RichardHenryJames/refopen)
+[![Test Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen?style=flat-square)](https://github.com/RichardHenryJames/refopen)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Demo-Live-success?style=flat-square)](https://nexhire-frontend-web.azurestaticapps.net)
+[![Live Demo](https://img.shields.io/badge/Demo-Live-success?style=flat-square)](https://refopen-frontend-web.azurestaticapps.net)
 
 ---
 
@@ -34,9 +34,9 @@
 
 ## 🎯 Project Overview
 
-**NexHire** is a revolutionary job platform that transforms how job seekers and employers connect. Built with modern serverless architecture on Microsoft Azure, it combines intelligent profile management, innovative referral systems, and comprehensive analytics to create unprecedented value for all stakeholders.
+**RefOpen** is a revolutionary job platform that transforms how job seekers and employers connect. Built with modern serverless architecture on Microsoft Azure, it combines intelligent profile management, innovative referral systems, and comprehensive analytics to create unprecedented value for all stakeholders.
 
-### 🌟 What Sets NexHire Apart
+### 🌟 What Sets RefOpen Apart
 
 - **🔄 Universal Platform**: Single React Native codebase powering Web, iOS, and Android
 - **⚡ Serverless Excellence**: Azure Functions with automatic scaling and cost optimization
@@ -180,7 +180,7 @@ graph TB
 
 ### 🏛️ **Serverless Architecture Benefits**
 
-| Aspect | Traditional Server | NexHire Serverless |
+| Aspect | Traditional Server | RefOpen Serverless |
 |--------|-------------------|-------------------|
 | **💰 Cost Model** | Fixed monthly costs | Pay-per-execution only |
 | **📈 Scaling** | Manual server provisioning | Automatic 0-to-thousands scaling |
@@ -229,7 +229,7 @@ graph TB
 
 ### 💡 **How It Works**
 
-The NexHire referral system creates a **win-win-win ecosystem**:
+The RefOpen referral system creates a **win-win-win ecosystem**:
 
 1. **👤 Job Seekers** get insider referrals to increase application success rates
 2. **🤝 Referrers** earn money by leveraging their professional networks
@@ -374,8 +374,8 @@ Postman or Insomnia           # API testing and development
 #### **1. Repository Setup**
 ```bash
 # Clone the repository
-git clone https://github.com/RichardHenryJames/nexhire.git
-cd nexhire
+git clone https://github.com/RichardHenryJames/refopen.git
+cd refopen
 
 # Switch to development branch
 git checkout develop
@@ -422,7 +422,7 @@ npm run ios      # iOS development (requires Xcode on macOS)
 #### **4. Database Setup**
 ```powershell
 # Configure your Azure SQL Database connection
-$connectionString = "Server=your-server.database.windows.net;Database=nexhire-db;User ID=your-user;Password=your-password;Encrypt=True;"
+$connectionString = "Server=your-server.database.windows.net;Database=refopen-db;User ID=your-user;Password=your-password;Encrypt=True;"
 
 # Run main database schema
 .\src\database_scripts\setup-database.ps1 -ConnectionString $connectionString
@@ -467,53 +467,53 @@ cd frontend && npx tsc --noEmit && echo "✅ Frontend types validated"
 #### **Azure Resource Provisioning**
 ```powershell
 # Complete infrastructure setup (Production)
-.\scripts\deploy-infrastructure.ps1 -Environment "production" -ResourceGroup "nexhire-prod-rg"
+.\scripts\deploy-infrastructure.ps1 -Environment "production" -ResourceGroup "refopen-prod-rg"
 
 # Development environment setup
-.\scripts\deploy-infrastructure.ps1 -Environment "development" -ResourceGroup "nexhire-dev-rg"
+.\scripts\deploy-infrastructure.ps1 -Environment "development" -ResourceGroup "refopen-dev-rg"
 
 # Staging environment
-.\scripts\deploy-infrastructure.ps1 -Environment "staging" -ResourceGroup "nexhire-staging-rg"
+.\scripts\deploy-infrastructure.ps1 -Environment "staging" -ResourceGroup "refopen-staging-rg"
 ```
 
 #### **Azure Resources Created**
 ```yaml
-Resource Group: nexhire-{environment}-rg
+Resource Group: refopen-{environment}-rg
 │
 ├── 💻 Compute Resources
-│   ├── Function App: nexhire-api-func-{env}
+│   ├── Function App: refopen-api-func-{env}
 │   │   ├── Runtime: Node.js 20 LTS
 │   │   ├── Plan: Consumption (Auto-scaling)
 │   │   ├── Functions: 31 HTTP-triggered endpoints
 │   │   └── Configuration: Environment variables, CORS, SSL
 │   │
-│   └── Static Web App: nexhire-frontend-{env}
+│   └── Static Web App: refopen-frontend-{env}
 │       ├── Tier: Standard (Custom domains, SSL)
 │       ├── CDN: Global edge locations
 │       ├── Build: Automatic deployment from GitHub
 │       └── Features: SPA fallback, API integration
 │
 ├── 🗄️ Data Storage
-│   ├── SQL Database: nexhire-sql-db-{env}
-│   │   ├── Server: nexhire-sql-srv-{env}
+│   ├── SQL Database: refopen-sql-db-{env}
+│   │   ├── Server: refopen-sql-srv-{env}
 │   │   ├── Tier: Basic → Standard (Auto-scaling)
 │   │   ├── Backup: Automated daily backups
 │   │   └── Security: Firewall rules, SSL enforcement
 │   │
-│   └── Storage Account: nexhirestorage{env}
+│   └── Storage Account: refopenstorage{env}
 │       ├── Blob Storage: Document and image storage
 │       ├── Performance: Standard with LRS replication
 │       ├── CDN: Integration for fast file delivery
 │       └── Security: SAS tokens, encryption at rest
 │
 └── 📊 Monitoring & Security
-    ├── Application Insights: nexhire-monitor-{env}
+    ├── Application Insights: refopen-monitor-{env}
     │   ├── Performance: APM with distributed tracing
     │   ├── Logging: Centralized log aggregation
     │   ├── Alerts: Proactive issue detection
     │   └── Dashboards: Real-time operational metrics
     │
-    └── Key Vault: nexhire-secrets-{env}
+    └── Key Vault: refopen-secrets-{env}
         ├── Secrets: Database connections, JWT keys
         ├── Certificates: SSL certificates management
         └── Access Policies: Secure secret access
@@ -523,7 +523,7 @@ Resource Group: nexhire-{environment}-rg
 
 ```yaml
 # .github/workflows/deploy.yml
-name: Deploy NexHire Platform
+name: Deploy RefOpen Platform
 
 on:
   push:
@@ -561,7 +561,7 @@ jobs:
       - name: Deploy Azure Functions
         uses: azure/functions-action@v1
         with:
-          app-name: nexhire-api-func-prod
+          app-name: refopen-api-func-prod
           package: .
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           
@@ -593,10 +593,10 @@ jobs:
       - name: Health Check & Smoke Tests
         run: |
           # API health check
-          curl -f https://nexhire-api-func-prod.azurewebsites.net/api/health
+          curl -f https://refopen-api-func-prod.azurewebsites.net/api/health
           
           # Frontend availability check
-          curl -f https://nexhire-frontend-prod.azurestaticapps.net
+          curl -f https://refopen-frontend-prod.azurestaticapps.net
           
           # Run smoke tests
           npm run test:smoke-production
@@ -607,8 +607,8 @@ jobs:
 | Environment | URL | Purpose | Configuration |
 |-------------|-----|---------|---------------|
 | **🔧 Development** | `http://localhost:*` | Local development | SQLite, mocked services |
-| **🧪 Staging** | `https://staging.nexhire.app` | Pre-production testing | Azure SQL Basic, limited resources |
-| **🚀 Production** | `https://nexhire.app` | Live platform | Azure SQL Standard, full monitoring |
+| **🧪 Staging** | `https://staging.refopen.app` | Pre-production testing | Azure SQL Basic, limited resources |
+| **🚀 Production** | `https://refopen.app` | Live platform | Azure SQL Standard, full monitoring |
 
 ---
 
@@ -757,7 +757,7 @@ describe('Job Application E2E Flow', () => {
 ### ⚡ **Performance Testing**
 ```bash
 # Load Testing (Apache Bench)
-ab -n 1000 -c 50 https://nexhire-api-func.azurewebsites.net/api/jobs
+ab -n 1000 -c 50 https://refopen-api-func.azurewebsites.net/api/jobs
 
 # API Response Time Testing
 npm run test:performance:api
@@ -777,9 +777,9 @@ npm run test:performance:frontend
 
 | Document | Purpose | Audience | Status |
 |----------|---------|----------|---------|
-| **[📋 Product Document](./docs/nexhire-product-document.md)** | Business strategy, features, roadmap | Stakeholders, Product Team | ✅ Complete |
-| **[🏗️ Technical Architecture](./docs/nexhire-technical-architecture.md)** | System design, patterns, deployment | Engineering Team | ✅ Complete |
-| **[🗄️ Database Schema](./docs/nexhire-database-schema.md)** | Data model, relationships, indexes | Developers, DBAs | ✅ Complete |
+| **[📋 Product Document](./docs/refopen-product-document.md)** | Business strategy, features, roadmap | Stakeholders, Product Team | ✅ Complete |
+| **[🏗️ Technical Architecture](./docs/refopen-technical-architecture.md)** | System design, patterns, deployment | Engineering Team | ✅ Complete |
+| **[🗄️ Database Schema](./docs/refopen-database-schema.md)** | Data model, relationships, indexes | Developers, DBAs | ✅ Complete |
 | **[🔐 Security Guide](./docs/security-guide.md)** | Security practices, compliance | Security Team | 🔄 In Progress |
 | **[📊 API Reference](./docs/api-reference.md)** | Endpoint documentation | Frontend Developers | 🔄 In Progress |
 | **[🎨 UI Style Guide](./docs/ui-style-guide.md)** | Design system, components | Designers, Frontend | 📋 Planned |
@@ -859,8 +859,8 @@ interface TokenPayload {
   type: 'access' | 'refresh';        // Token type
   iat: number;                       // Issued at timestamp
   exp: number;                       // Expiration timestamp
-  iss: 'nexhire-api';               // Token issuer
-  aud: 'nexhire-app';               // Token audience
+  iss: 'refopen-api';               // Token issuer
+  aud: 'refopen-app';               // Token audience
 }
 
 // Security Configuration
@@ -869,8 +869,8 @@ const securityConfig = {
     accessTokenExpiry: '15m',        // Short-lived access tokens
     refreshTokenExpiry: '7d',        // Longer-lived refresh tokens
     algorithm: 'HS256',              // HMAC SHA-256 signing
-    issuer: 'nexhire-api',
-    audience: 'nexhire-app'
+    issuer: 'refopen-api',
+    audience: 'refopen-app'
   },
   password: {
     minLength: 8,                    // Minimum password length
@@ -1074,11 +1074,11 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 ```bash
 # 1. Fork the repository on GitHub
 # 2. Clone your fork
-git clone https://github.com/YOUR_USERNAME/nexhire.git
-cd nexhire
+git clone https://github.com/YOUR_USERNAME/refopen.git
+cd refopen
 
 # 3. Add upstream remote
-git remote add upstream https://github.com/RichardHenryJames/nexhire.git
+git remote add upstream https://github.com/RichardHenryJames/refopen.git
 
 # 4. Create a development branch
 git checkout -b feature/your-feature-name
@@ -1177,7 +1177,7 @@ test(referral): add comprehensive referral workflow tests
 
 #### **Contribution Rewards**
 - **📜 Certificate of Contribution**: Digital certificate for significant contributions
-- **🎁 Swag Package**: NexHire branded items for active contributors
+- **🎁 Swag Package**: RefOpen branded items for active contributors
 - **💼 Job Opportunities**: Priority consideration for open positions
 - **🎤 Conference Speaking**: Opportunities to present at tech conferences
 
@@ -1199,17 +1199,17 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 | Channel | Purpose | Response Time |
 |---------|---------|---------------|
-| **📧 Email**: [support@nexhire.com](mailto:support@nexhire.com) | General support | 24-48 hours |
-| **🐛 GitHub Issues**: [Issues](https://github.com/RichardHenryJames/nexhire/issues) | Bug reports, feature requests | 1-3 business days |
-| **💬 Discussions**: [GitHub Discussions](https://github.com/RichardHenryJames/nexhire/discussions) | Community Q&A | Community-driven |
+| **📧 Email**: [support@refopen.com](mailto:support@refopen.com) | General support | 24-48 hours |
+| **🐛 GitHub Issues**: [Issues](https://github.com/RichardHenryJames/refopen/issues) | Bug reports, feature requests | 1-3 business days |
+| **💬 Discussions**: [GitHub Discussions](https://github.com/RichardHenryJames/refopen/discussions) | Community Q&A | Community-driven |
 | **📚 Documentation**: [Docs](./docs/) | Technical documentation | Always available |
 
 ### 🏢 **Enterprise Support**
 
 For enterprise customers and large-scale implementations:
-- **🔧 Technical Support**: [enterprise@nexhire.com](mailto:enterprise@nexhire.com)
-- **🏗️ Architecture Consulting**: [architecture@nexhire.com](mailto:architecture@nexhire.com)
-- **🔒 Security Inquiries**: [security@nexhire.com](mailto:security@nexhire.com)
+- **🔧 Technical Support**: [enterprise@refopen.com](mailto:enterprise@refopen.com)
+- **🏗️ Architecture Consulting**: [architecture@refopen.com](mailto:architecture@refopen.com)
+- **🔒 Security Inquiries**: [security@refopen.com](mailto:security@refopen.com)
 
 ---
 
@@ -1252,20 +1252,20 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 🚀 **Ready to Transform Your Career or Hiring Process?**
 
-**[🌐 Try NexHire Live Demo](https://nexhire-frontend-web.azurestaticapps.net)**
+**[🌐 Try RefOpen Live Demo](https://refopen-frontend-web.azurestaticapps.net)**
 
 ---
 
 ### 🔗 **Quick Links**
 
 [![📚 Documentation](https://img.shields.io/badge/📚%20Documentation-Read%20Now-blue?style=for-the-badge)](./docs/)
-[![🐛 Report Bug](https://img.shields.io/badge/🐛%20Report%20Bug-GitHub%20Issues-red?style=for-the-badge)](https://github.com/RichardHenryJames/nexhire/issues)
-[![✨ Request Feature](https://img.shields.io/badge/✨%20Request%20Feature-GitHub%20Issues-green?style=for-the-badge)](https://github.com/RichardHenryJames/nexhire/issues)
-[![💬 Join Discussion](https://img.shields.io/badge/💬%20Join%20Discussion-GitHub%20Discussions-purple?style=for-the-badge)](https://github.com/RichardHenryJames/nexhire/discussions)
+[![🐛 Report Bug](https://img.shields.io/badge/🐛%20Report%20Bug-GitHub%20Issues-red?style=for-the-badge)](https://github.com/RichardHenryJames/refopen/issues)
+[![✨ Request Feature](https://img.shields.io/badge/✨%20Request%20Feature-GitHub%20Issues-green?style=for-the-badge)](https://github.com/RichardHenryJames/refopen/issues)
+[![💬 Join Discussion](https://img.shields.io/badge/💬%20Join%20Discussion-GitHub%20Discussions-purple?style=for-the-badge)](https://github.com/RichardHenryJames/refopen/discussions)
 
 ---
 
-**Built with ❤️ by the NexHire Team**
+**Built with ❤️ by the RefOpen Team**
 
 *Connecting talent with opportunity through intelligent technology*
 

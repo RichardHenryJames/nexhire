@@ -260,7 +260,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
           )}
           
           <Text style={styles.title}>
-            {googleUser ? 'Complete Your Profile' : 'Welcome to NexHire!'}
+            {googleUser ? 'Complete Your Profile' : 'Welcome to RefOpen!'}
           </Text>
           <Text style={styles.subtitle}>
             {googleUser 

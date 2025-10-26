@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ReferralProofModal from '../../components/ReferralProofModal';
@@ -66,7 +66,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadMyRequests = async () => {
     try {
-      const result = await nexhireAPI.getMyReferralRequests(1, 50);
+      const result = await refopenAPI.getMyReferralRequests(1, 50);
       if (result.success) {
         setMyRequests(result.data?.requests || []);
       }
@@ -78,7 +78,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadRequestsToMe = async () => {
     try {
-      const result = await nexhireAPI.getAvailableReferralRequests(1, 50);
+      const result = await refopenAPI.getAvailableReferralRequests(1, 50);
       if (result.success) {
         setRequestsToMe(result.data?.requests || []);
       }
@@ -90,7 +90,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadStats = async () => {
     try {
-      const result = await nexhireAPI.getReferrerStats();
+      const result = await refopenAPI.getReferrerStats();
       if (result.success) {
         setStats(result.data || { pendingCount: 0 });
       }
@@ -136,7 +136,7 @@ export default function ReferralScreen({ navigation }) {
     console.log('User confirmed cancellation for request:', requestId);
     try {
       console.log('Making API call to cancel request...');
-      const res = await nexhireAPI.cancelReferralRequest(requestId);
+      const res = await refopenAPI.cancelReferralRequest(requestId);
       console.log('API response:', res);
       
       if (res.success) {
@@ -177,7 +177,7 @@ export default function ReferralScreen({ navigation }) {
       console.log('Submitting proof with claim:', proofData);
       
       // Use the new enhanced API that combines claim + proof
-      const result = await nexhireAPI.claimReferralRequestWithProof(
+      const result = await refopenAPI.claimReferralRequestWithProof(
         selectedRequest.RequestID,
         proofData
       );
@@ -225,7 +225,7 @@ export default function ReferralScreen({ navigation }) {
   const handleVerifyReferral = async (requestId) => {
     console.log('? Verify pressed for request:', requestId);
     try {
-      const result = await nexhireAPI.verifyReferralCompletion(requestId, true);
+      const result = await refopenAPI.verifyReferralCompletion(requestId, true);
       console.log('? Verify API result:', result);
       if (result.success) {
         showToast('Referral verified', 'success');

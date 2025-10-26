@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 
@@ -31,9 +31,9 @@ export default function ReferralPlansScreen({ navigation }) {
     try {
       setLoading(true);
       const [plansRes, subscriptionRes, eligibilityRes] = await Promise.all([
-        nexhireAPI.getReferralPlans(),
-        nexhireAPI.getCurrentReferralSubscription(),
-        nexhireAPI.checkReferralEligibility()
+        refopenAPI.getReferralPlans(),
+        refopenAPI.getCurrentReferralSubscription(),
+        refopenAPI.checkReferralEligibility()
       ]);
 
       if (plansRes.success) {

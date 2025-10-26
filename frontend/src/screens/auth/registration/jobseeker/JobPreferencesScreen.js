@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 
 // CRITICAL FIX: Move JobTypeItem outside main component to prevent re-renders
 const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => {
@@ -86,7 +86,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
     try {
       setLoading(true);
       console.log('Loading job types from API...');
-      const response = await nexhireAPI.getJobTypes();
+      const response = await refopenAPI.getJobTypes();
       if (response.success) {
         setJobTypes(response.data);
         console.log(`? Loaded ${response.data.length} job types`);

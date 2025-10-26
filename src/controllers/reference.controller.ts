@@ -152,7 +152,7 @@ async function fetchFromOpenCorporates(country: string, limit: number): Promise<
         
         const response = await fetch(apiUrl, {
             headers: {
-                'User-Agent': 'NexHire-Platform/1.0',
+                'User-Agent': 'RefOpen-Platform/1.0',
                 'Accept': 'application/json'
             },
             signal: AbortSignal.timeout(10000)
@@ -368,7 +368,7 @@ export const getColleges = async (req: any): Promise<any> => {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'NexHire-Platform/1.0'
+                'User-Agent': 'RefOpen-Platform/1.0'
             },
             signal: AbortSignal.timeout(10000)
         });
@@ -505,7 +505,7 @@ export const getUniversitiesByCountry = async (req: any): Promise<any> => {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'NexHire-Platform/1.0'
+                'User-Agent': 'RefOpen-Platform/1.0'
             },
             signal: AbortSignal.timeout(10000)
         });
@@ -566,7 +566,7 @@ export const getCountries = async (req: any): Promise<any> => {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'NexHire-Platform/1.0'
+                'User-Agent': 'RefOpen-Platform/1.0'
             },
             signal: AbortSignal.timeout(15000)
         });

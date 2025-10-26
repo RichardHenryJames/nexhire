@@ -21,9 +21,9 @@ export class JobService {
         const validated = validateRequest<JobCreateRequest>(jobCreateSchema, jobData);
         
         // 2. Resolve / derive required DB columns that are NOT part of request
-        // Department NOT NULL in DB – fallback if not provided
+        // Department NOT NULL in DB ï¿½ fallback if not provided
         const department = validated.department?.trim() || 'General';
-        // Location NOT NULL – fallback if missing (prefer explicit location else remote marker)
+        // Location NOT NULL ï¿½ fallback if missing (prefer explicit location else remote marker)
         const location = validated.location?.trim() || (validated.isRemote ? 'Remote' : 'Unspecified');
         // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to 1 (Onsite) if not found
         let workplaceTypeId: number = 1;
@@ -288,7 +288,7 @@ export class JobService {
               ISNULL(c.Symbol, '$') as CurrencySymbol,
               CASE 
                   WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                  WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                  WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                   ELSE 'External Recruiter'
               END as PostedByName
           FROM Jobs j
@@ -334,7 +334,7 @@ export class JobService {
                 c.Symbol as CurrencySymbol,
                 CASE 
                     WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                    WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                    WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                     ELSE 'External Recruiter'
                 END as PostedByName
             FROM Jobs j
@@ -745,7 +745,7 @@ export class JobService {
                   ISNULL(c.Symbol, '$') as CurrencySymbol,
                   CASE 
                       WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                      WHEN j.PostedByType = 0 THEN 'NexHire Job Board'
+                      WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                       ELSE 'External Recruiter'
                   END as PostedByName
                 FROM Jobs j

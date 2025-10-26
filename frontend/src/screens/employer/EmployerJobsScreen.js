@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import { styles as jobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
@@ -85,7 +85,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
         search: params.search
       });
       
-      const res = await nexhireAPI.getOrganizationJobs(params, { signal: controller.signal });
+      const res = await refopenAPI.getOrganizationJobs(params, { signal: controller.signal });
       
       // ?? DEBUG: Log the response
       console.log('?? API response:', {
@@ -114,7 +114,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const publishJob = async (jobId) => {
     try {
       console.log('?? Publishing job:', jobId);
-      const res = await nexhireAPI.publishJob(jobId);
+      const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
         showToast('Job published', 'success');
         
