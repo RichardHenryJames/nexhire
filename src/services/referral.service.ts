@@ -5,6 +5,7 @@
 
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
+import { WalletService } from './wallet.service'; // ✅ NEW: Import wallet service
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -24,6 +25,9 @@ import {
     ReferralRequestsFilter,
     PaginatedReferralRequests
 } from '../types/referral.types';
+
+// ✅ NEW: Referral cost constant
+const REFERRAL_REQUEST_COST = 50; // ₹50 per referral request
 
 export class ReferralService {
     
@@ -142,9 +146,32 @@ export class ReferralService {
     
     /**
      * Create a new referral request (supports both internal and external)
+     * ✅ NEW: Requires ₹50 wallet balance - deducted before creating request
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
+            // ✅ NEW: Get user ID for wallet operations
+            const userQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
+            const userResult = await dbService.executeQuery(userQuery, [applicantId]);
+            
+            if (!userResult.recordset || userResult.recordset.length === 0) {
+                throw new NotFoundError('Applicant profile not found');
+            }
+            
+            const userId = userResult.recordset[0].UserID;
+
+            // ✅ NEW: Check wallet balance FIRST (before any other validation)
+            const walletBalance = await WalletService.getBalance(userId);
+            
+            if (walletBalance.balance < REFERRAL_REQUEST_COST) {
+                throw new ValidationError('INSUFFICIENT_WALLET_BALANCE', {
+                    currentBalance: walletBalance.balance,
+                    requiredAmount: REFERRAL_REQUEST_COST,
+                    shortfall: REFERRAL_REQUEST_COST - walletBalance.balance,
+                    message: `Insufficient wallet balance. Please recharge your wallet to request referrals.`
+                });
+            }
+
             // Check if user has quota available
             const eligibility = await this.checkReferralEligibility(applicantId);
             if (!eligibility.isEligible) {
@@ -200,6 +227,16 @@ export class ReferralService {
                 throw new ValidationError('Invalid resume selection');
             }
 
+            // ✅ NEW: Debit ₹50 from wallet BEFORE creating the request
+            const debitResult = await WalletService.debitWallet(
+                userId,
+                REFERRAL_REQUEST_COST,
+                'Referral_Request',
+                `Referral request for ${dto.jobTitle || 'job'} at ${dto.companyName || 'company'}`
+            );
+
+            console.log(`💰 Wallet debited: ₹${REFERRAL_REQUEST_COST} for referral request. New balance: ₹${debitResult.BalanceAfter}`);
+
             const requestId = AuthService.generateUniqueId();
 
             if (isExternal) {
@@ -243,7 +280,15 @@ export class ReferralService {
                 if (dto.jobID) await this.updateReferrerStatsForNewRequest(dto.jobID);
             }
 
-            return await this.getReferralRequestById(requestId);
+            const createdRequest = await this.getReferralRequestById(requestId);
+            
+            // ✅ NEW: Add wallet balance info to response
+            return {
+                ...createdRequest,
+                walletBalanceBefore: debitResult.BalanceBefore,
+                walletBalanceAfter: debitResult.BalanceAfter,
+                amountDeducted: REFERRAL_REQUEST_COST
+            } as any;
         } catch (error) {
             console.error('Error creating referral request:', error);
             throw error;

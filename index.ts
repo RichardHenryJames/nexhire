@@ -89,6 +89,18 @@ import {
     getPaymentHistory
 } from './src/controllers/payment.controller';
 
+// NEW: Wallet controllers - Wallet Management
+import {
+    getWallet,
+    getWalletBalance,
+    createWalletRechargeOrder,
+    verifyWalletRecharge,
+    getWalletTransactions,
+    getRechargeHistory,
+    getWalletStats,
+    debitWallet
+} from './src/controllers/wallet.controller';
+
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from './src/controllers/storage.controller';
 
@@ -922,6 +934,66 @@ app.http('payment-history', {
 });
 
 // ========================================================================
+// WALLET SYSTEM ENDPOINTS - ?? Wallet Management
+// ========================================================================
+
+app.http('wallet-get', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet',
+    handler: withErrorHandling(getWallet)
+});
+
+app.http('wallet-balance', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/balance',
+    handler: withErrorHandling(getWalletBalance)
+});
+
+app.http('wallet-recharge-create-order', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/recharge/create-order',
+    handler: withErrorHandling(createWalletRechargeOrder)
+});
+
+app.http('wallet-recharge-verify', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/recharge/verify',
+    handler: withErrorHandling(verifyWalletRecharge)
+});
+
+app.http('wallet-transactions', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/transactions',
+    handler: withErrorHandling(getWalletTransactions)
+});
+
+app.http('wallet-recharge-history', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/recharge/history',
+    handler: withErrorHandling(getRechargeHistory)
+});
+
+app.http('wallet-stats', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/stats',
+    handler: withErrorHandling(getWalletStats)
+});
+
+app.http('wallet-debit', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'wallet/debit',
+    handler: withErrorHandling(debitWallet)
+});
+
+// ========================================================================
 // STORAGE ENDPOINTS - File uploads (import now at top)
 // ========================================================================
 
@@ -1504,7 +1576,7 @@ export {}
 
 /*
  * ========================================================================
- * ?? UPDATED API ENDPOINT LIST (53 total - Added Scheduler Control):
+ * ?? UPDATED API ENDPOINT LIST (61 total - Added Wallet System):
  * ========================================================================
  * 
  * AUTHENTICATION (7 endpoints): ?? +2 Google OAuth
@@ -1555,15 +1627,15 @@ export {}
  * DELETE /applications/{id}           - Withdraw application
  * GET    /applications/{id}           - Get application details
  * 
- * ??? JOB SCRAPING SYSTEM (6 endpoints): ?? AUTOMATED JOB POPULATION
+ * ?? JOB SCRAPING SYSTEM (6 endpoints): ?? AUTOMATED JOB POPULATION
  * POST   /jobs/scrape/trigger           - Manually trigger job scraping
  * GET    /jobs/scrape/config            - Get scraping configuration
  * PUT    /jobs/scrape/config            - Update scraping configuration
  * GET    /jobs/scrape/stats             - Get scraping statistics
  * DELETE /jobs/scrape/cleanup           - Clean up old scraped jobs
- * GET    /health/scraper                      - Scraper service health check
+ * GET    /jobs/scrape/health            - Scraper service health check
  * 
- * REFERRAL SYSTEM (13 endpoints): ?? EXPANDED
+ * REFERRAL SYSTEM (15 endpoints): ?? EXPANDED
  * GET    /referral/plans                           - Get all referral plans
  * POST   /referral/plans/purchase                  - Purchase a referral plan
  * GET    /referral/subscription                    - Get current subscription
@@ -1601,19 +1673,23 @@ export {}
  * POST   /payments/razorpay/verify-and-activate - Verify payment and activate subscription
  * GET    /payments/history                    - Get payment transaction history
  * 
+ * ?? WALLET SYSTEM (8 endpoints): ?? NEW - Wallet Management
+ * GET    /wallet                              - Get wallet details
+ * GET    /wallet/balance                      - Get wallet balance
+ * POST   /wallet/recharge/create-order        - Create recharge order (Razorpay)
+ * POST   /wallet/recharge/verify              - Verify payment and credit wallet
+ * GET    /wallet/transactions                 - Get transaction history (paginated)
+ * GET    /wallet/recharge/history             - Get recharge order history
+ * GET    /wallet/stats                        - Get wallet statistics
+ * POST   /wallet/debit                        - Debit wallet (internal use)
+ * 
  * ?? STORAGE & FILES (2 endpoints): ?? AZURE BLOB STORAGE
  * POST   /storage/upload                      - Upload files to Azure Blob Storage
  * DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
  * 
- * ?? JOB SCRAPING SCHEDULER (9 endpoints): ? AUTOMATED JOB POPULATION
- * POST   /jobs/scrape/trigger           - Manually trigger job scraping
- * GET    /jobs/scrape/config            - Get scraping configuration
- * PUT    /jobs/scrape/config            - Update scraping configuration
- * GET    /jobs/scrape/stats             - Get scraping statistics
- * DELETE /jobs/scrape/cleanup           - Clean up old scraped jobs
- * GET    /jobs/scrape/health            - Scraper service health check
- * GET    /scheduler/status              - ? Get scheduler status
- * POST   /scheduler/start               - ? Start scheduler (admin)
- * POST   /scheduler/stop                - ? Stop scheduler (admin)
+ * ?? JOB SCRAPING SCHEDULER (3 endpoints): ?? AUTOMATED JOB POPULATION
+ * GET    /scheduler/status              - ?? Get scheduler status
+ * POST   /scheduler/start               - ?? Start scheduler (admin)
+ * POST   /scheduler/stop                - ?? Stop scheduler (admin)
  * ========================================================================
  */
