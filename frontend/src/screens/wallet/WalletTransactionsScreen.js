@@ -84,7 +84,7 @@ export default function WalletTransactionsScreen({ navigation }) {
           <View style={styles.transactionHeader}>
             <Text style={styles.transactionType}>{item.TransactionType}</Text>
             <Text style={[styles.transactionAmount, { color: iconColor }]}>
-              {isCredit ? '+' : '-'}?{item.Amount.toFixed(2)}
+              {isCredit ? '+' : '-'}₹{item.Amount.toFixed(2)}
             </Text>
           </View>
 
@@ -108,7 +108,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
             <View style={styles.balanceInfo}>
               <Text style={styles.balanceLabel}>Balance: </Text>
-              <Text style={styles.balanceValue}>?{item.BalanceAfter.toFixed(2)}</Text>
+              <Text style={styles.balanceValue}>₹{item.BalanceAfter.toFixed(2)}</Text>
             </View>
           </View>
 
@@ -129,7 +129,7 @@ export default function WalletTransactionsScreen({ navigation }) {
         <View style={styles.balanceCardHeader}>
           <View>
             <Text style={styles.balanceCardLabel}>Current Balance</Text>
-            <Text style={styles.balanceCardAmount}>?{currentBalance.toFixed(2)}</Text>
+            <Text style={styles.balanceCardAmount}>₹{currentBalance.toFixed(2)}</Text>
           </View>
           {/* ? NEW: Add Money button in balance card */}
           <TouchableOpacity

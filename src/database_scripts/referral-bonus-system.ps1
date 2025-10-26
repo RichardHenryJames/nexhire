@@ -168,7 +168,7 @@ SELECT
     COUNT(DISTINCT r.UserID) as TotalReferrals,
     SUM(CASE WHEN r.CreatedAt >= DATEADD(MONTH, -1, GETUTCDATE()) THEN 1 ELSE 0 END) as ReferralsLast30Days,
     SUM(CASE WHEN r.IsActive = 1 THEN 1 ELSE 0 END) as ActiveReferrals,
-    -- Calculate total bonuses earned (?50 per referral)
+    -- Calculate total bonuses earned (₹50 per referral)
     COUNT(DISTINCT r.UserID) * 50 as TotalBonusEarned,
     -- Get latest referral date
     MAX(r.CreatedAt) as LastReferralDate
@@ -219,7 +219,7 @@ try {
     Write-Host ""
     Write-Host "?? BONUS STRUCTURE:" -ForegroundColor Cyan
     Write-Host "- New user welcome bonus: ?100" -ForegroundColor White
-    Write-Host "- Referral bonus (both parties): ?50 each" -ForegroundColor White
+    Write-Host "- Referral bonus (both parties): ₹50 each" -ForegroundColor White
     Write-Host "- Transaction sources: 'NEW_USER_BONUS' and 'REFERRAL_BONUS'" -ForegroundColor White
     Write-Host ""
     Write-Host "?? NEXT STEPS:" -ForegroundColor Cyan

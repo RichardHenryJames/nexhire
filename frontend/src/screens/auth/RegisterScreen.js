@@ -224,7 +224,7 @@ export default function RegisterScreen({ navigation }) {
             <View style={styles.referralCodeHint}>
               <Ionicons name="information-circle-outline" size={14} color={colors.success} />
               <Text style={styles.referralCodeHintText}>
-                Have a referral code? Get ?50 bonus when you sign up!
+                Have a referral code? Get ₹50 bonus when you sign up!
               </Text>
             </View>
           </View>

@@ -1694,13 +1694,18 @@ class RefOpenAPI {
   }
 
   // 💰 NEW: Get wallet transactions
-  async getWalletTransactions(page = 1, pageSize = 20) {
+  async getWalletTransactions(page = 1, pageSize = 20, transactionType) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
       page: page.toString(),
       pageSize: pageSize.toString(),
     });
+    
+    // Add transaction type filter if provided
+    if (transactionType) {
+      params.append('type', transactionType);
+    }
     
     return this.apiCall(`/wallet/transactions?${params}`);
   }

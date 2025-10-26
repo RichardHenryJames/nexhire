@@ -135,7 +135,7 @@ export const getCurrentSubscription = withErrorHandling(async (req: HttpRequest,
 /**
  * Create a new referral request (supports both internal and external)
  * POST /referral/requests
- * ? UPDATED: Checks wallet balance and deducts ?50
+ * ? UPDATED: Checks wallet balance and deducts ₹50
  */
 export const createReferralRequest = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
@@ -188,7 +188,7 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
         
         return {
             status: 201,
-            jsonBody: successResponse(request, `Referral request created successfully. ?50 deducted from wallet.`)
+            jsonBody: successResponse(request, `Referral request created successfully. ₹50 deducted from wallet.`)
         };
     } catch (error: any) {
         // ? NEW: Handle insufficient wallet balance error

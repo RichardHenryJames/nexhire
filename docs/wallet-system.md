@@ -212,7 +212,7 @@ Content-Type: application/json
     "balanceBefore": 1000,
     "balanceAfter": 1500,
     "paymentId": "pay_xxxxx",
-    "message": "?500 added to wallet successfully"
+    "message": "₹500 added to wallet successfully"
   }
 }
 ```
@@ -244,7 +244,7 @@ Authorization: Bearer <JWT_TOKEN>
         "BalanceAfter": 1500,
         "CurrencyCode": "INR",
         "Source": "Razorpay",
-        "Description": "Wallet recharge via Razorpay - ?500",
+        "Description": "Wallet recharge via Razorpay - ₹500",
         "Status": "Completed",
         "CreatedAt": "2024-01-20T15:30:00Z"
       }

@@ -72,7 +72,7 @@ export const getWalletBalance = withErrorHandling(async (req: HttpRequest, conte
 /**
  * Create Razorpay order for wallet recharge
  * POST /wallet/recharge/create-order
- * ? UPDATED: Minimum recharge ?100
+ * ? UPDATED: Minimum recharge ₹100
  */
 export const createWalletRechargeOrder = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
@@ -85,7 +85,7 @@ export const createWalletRechargeOrder = withErrorHandling(async (req: HttpReque
         }
 
         if (amount < 100) {
-            throw new ValidationError('Minimum recharge amount is ?100');
+            throw new ValidationError('Minimum recharge amount is ₹100');
         }
 
         if (amount > 100000) {

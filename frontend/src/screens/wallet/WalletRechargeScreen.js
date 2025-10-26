@@ -33,7 +33,7 @@ export default function WalletRechargeScreen({ navigation }) {
     }
 
     if (rechargeAmount < 100) {
-      Alert.alert('Minimum Amount', 'Minimum recharge amount is ?100');
+      Alert.alert('Minimum Amount', 'Minimum recharge amount is ₹100');
       return false;
     }
 
@@ -64,7 +64,7 @@ export default function WalletRechargeScreen({ navigation }) {
 
       // For web platform, use Razorpay web checkout
       if (Platform.OS === 'web') {
-        openRazorpayWeb(orderResult.data, rechargeAmount);
+        loadRazorpayScript(orderResult.data, rechargeAmount);
       } else {
         // For mobile, you'll need to integrate react-native-razorpay
         Alert.alert(
@@ -72,16 +72,57 @@ export default function WalletRechargeScreen({ navigation }) {
           'Razorpay mobile integration pending. Please use web version for now.',
           [{ text: 'OK' }]
         );
+        setLoading(false);
       }
     } catch (error) {
       console.error('Recharge error:', error);
       Alert.alert('Error', error.message || 'Failed to process recharge');
-    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load Razorpay script dynamically
+  const loadRazorpayScript = (orderData, rechargeAmount) => {
+    if (typeof window !== 'undefined') {
+      if (typeof window.Razorpay === 'undefined') {
+        console.log('Loading Razorpay script...');
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+          console.log('Razorpay script loaded successfully');
+          openRazorpayWeb(orderData, rechargeAmount);
+        };
+        script.onerror = () => {
+          console.error('Failed to load Razorpay script');
+          Alert.alert('Error', 'Failed to load payment gateway script. Please refresh the page and try again.');
+          setLoading(false);
+        };
+        document.head.appendChild(script);
+      } else {
+        console.log('Razorpay script already loaded');
+        openRazorpayWeb(orderData, rechargeAmount);
+      }
+    } else {
+      Alert.alert('Error', 'Payment gateway is only available on web platform');
       setLoading(false);
     }
   };
 
   const openRazorpayWeb = (orderData, rechargeAmount) => {
+    console.log('Opening Razorpay checkout with order:', orderData);
+    
+    if (!orderData.razorpayKeyId) {
+      Alert.alert('Error', 'Payment gateway configuration is missing. Please contact support.');
+      setLoading(false);
+      return;
+    }
+
+    if (!orderData.orderId) {
+      Alert.alert('Error', 'Order ID is missing. Please try again.');
+      setLoading(false);
+      return;
+    }
+
     const options = {
       key: orderData.razorpayKeyId,
       amount: orderData.amount, // amount in paise
@@ -109,9 +150,17 @@ export default function WalletRechargeScreen({ navigation }) {
       },
     };
 
+    console.log('Razorpay options:', { ...options, key: options.key.substring(0, 10) + '...' });
+
     if (typeof window !== 'undefined' && window.Razorpay) {
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      try {
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } catch (error) {
+        console.error('Error opening Razorpay:', error);
+        Alert.alert('Error', 'Failed to open payment gateway. Please try again.');
+        setLoading(false);
+      }
     } else {
       Alert.alert('Error', 'Razorpay is not loaded. Please refresh the page.');
       setLoading(false);
@@ -181,7 +230,7 @@ export default function WalletRechargeScreen({ navigation }) {
                   amount === value.toString() && styles.quickAmountTextSelected,
                 ]}
               >
-                ?{value}
+                ₹{value}
               </Text>
             </TouchableOpacity>
           ))}
@@ -192,7 +241,7 @@ export default function WalletRechargeScreen({ navigation }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Or Enter Amount</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.currencySymbol}>?</Text>
+          <Text style={styles.currencySymbol}>₹</Text>
           <TextInput
             value={amount}
             onChangeText={(text) => {
@@ -209,7 +258,7 @@ export default function WalletRechargeScreen({ navigation }) {
 
         {/* Validation Messages */}
         {amount && parseInt(amount) < 100 && (
-          <Text style={styles.warningText}>Minimum recharge: ?100</Text>
+          <Text style={styles.warningText}>Minimum recharge: ₹100</Text>
         )}
         {amount && parseInt(amount) > 100000 && (
           <Text style={styles.errorText}>Maximum recharge: ?1,00,000</Text>
@@ -220,7 +269,7 @@ export default function WalletRechargeScreen({ navigation }) {
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={20} color="#007AFF" />
         <Text style={styles.infoText}>
-          Minimum recharge: ?100{'\n'}
+          Minimum recharge: ₹100{'\n'}
           Maximum recharge: ?1,00,000{'\n'}
           Instant credit after payment
         </Text>
@@ -241,7 +290,7 @@ export default function WalletRechargeScreen({ navigation }) {
           <>
             <Ionicons name="card" size={24} color="#FFF" />
             <Text style={styles.rechargeButtonText}>
-              Proceed to Pay ?{amount || '0'}
+              Proceed to Pay ₹{amount || '0'}
             </Text>
           </>
         )}

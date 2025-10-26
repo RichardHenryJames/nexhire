@@ -104,10 +104,10 @@ export default function WalletScreen({ navigation }) {
         </View>
         <View style={styles.transactionAmount}>
           <Text style={[styles.amountText, { color: iconColor }]}>
-            {isCredit ? '+' : '-'}?{item.Amount.toFixed(2)}
+            {isCredit ? '+' : '-'}₹{item.Amount.toFixed(2)}
           </Text>
           <Text style={styles.balanceText}>
-            Bal: ?{item.BalanceAfter.toFixed(2)}
+            Bal: ₹{item.BalanceAfter.toFixed(2)}
           </Text>
         </View>
       </View>
@@ -129,7 +129,7 @@ export default function WalletScreen({ navigation }) {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Wallet Balance</Text>
         <Text style={styles.balanceAmount}>
-          ?{wallet?.balance?.toFixed(2) || '0.00'}
+          ₹{wallet?.balance?.toFixed(2) || '0.00'}
         </Text>
         <Text style={styles.balanceCurrency}>{wallet?.currencyCode || 'INR'}</Text>
 

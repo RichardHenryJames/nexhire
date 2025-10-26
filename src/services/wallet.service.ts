@@ -112,16 +112,16 @@ export class WalletService {
 
   /**
    * Create Razorpay order for wallet recharge
-   * ? UPDATED: Minimum recharge amount is ?100
+   * ? UPDATED: Minimum recharge amount is ₹100
    */
   static async createRechargeOrder(amount: number, userId: string) {
     try {
-      // ? UPDATED: Validate amount (minimum ?100, maximum ?100,000)
+      // ? UPDATED: Validate amount (minimum ₹100, maximum ₹100,000)
       if (!amount || amount < 100) {
-        throw new ValidationError('Minimum recharge amount is ?100');
+        throw new ValidationError('Minimum recharge amount is ₹100');
       }
 
-      // Check maximum limit (?100,000)
+      // Check maximum limit (₹100,000)
       if (amount > 100000) {
         throw new ValidationError('Maximum recharge amount is ?1,00,000');
       }
@@ -681,7 +681,7 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give welcome bonus to new user (?100)
+   * ? NEW: Give welcome bonus to new user (₹100)
    * Called automatically during user registration
    */
   static async giveWelcomeBonus(userId: string): Promise<{ success: boolean; amount: number }> {
@@ -727,7 +727,7 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give referral bonuses (?50 to both referrer and referee)
+   * ? NEW: Give referral bonuses (₹50 to both referrer and referee)
    * Called when a new user registers with a referral code
    */
   static async giveReferralBonuses(
@@ -750,7 +750,7 @@ export class WalletService {
         referrerId,
         REFERRAL_BONUS_AMOUNT,
         'REFERRAL_BONUS',
-        `Referral bonus - ?${REFERRAL_BONUS_AMOUNT} for referring a new user`
+        `Referral bonus - ₹${REFERRAL_BONUS_AMOUNT} for referring a new user`
       );
 
       console.log(`?? Referral bonuses credited: ?${REFERRAL_BONUS_AMOUNT} each to ${newUserId} and ${referrerId}`);

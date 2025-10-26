@@ -112,11 +112,11 @@ export class UserService {
             try {
                 const { WalletService } = await import('./wallet.service');
                 
-                // Give ?100 welcome bonus to new user
+                // Give ₹100 welcome bonus to new user
                 console.log(`?? Giving welcome bonus to new user ${userId}`);
                 await WalletService.giveWelcomeBonus(userId);
                 
-                // If referred, give ?50 to both new user and referrer
+                // If referred, give ₹50 to both new user and referrer
                 if (referrerId) {
                     console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
                     await WalletService.giveReferralBonuses(userId, referrerId);
@@ -1641,11 +1641,11 @@ export class UserService {
             try {
                 const { WalletService } = await import('./wallet.service');
                 
-                // Give ?100 welcome bonus to new user
+                // Give ₹100 welcome bonus to new user
                 console.log(`?? Giving welcome bonus to new Google user ${userId}`);
                 await WalletService.giveWelcomeBonus(userId);
                 
-                // If referred, give ?50 to both new user and referrer
+                // If referred, give ₹50 to both new user and referrer
                 if (referrerId) {
                     console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
                     await WalletService.giveReferralBonuses(userId, referrerId);

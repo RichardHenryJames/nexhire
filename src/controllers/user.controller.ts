@@ -323,7 +323,7 @@ export const getMyReferralCode = async (request: HttpRequest, context: Invocatio
         const statsResult = await dbService.executeQuery(statsQuery, [userId]);
         const stats = statsResult.recordset[0] || {};
 
-        // Calculate total bonus earned (?50 per referral)
+        // Calculate total bonus earned (₹50 per referral)
         const totalBonusEarned = (stats.TotalReferrals || 0) * 50;
 
         return {
@@ -343,7 +343,7 @@ export const getMyReferralCode = async (request: HttpRequest, context: Invocatio
                     bonusInfo: {
                         newUserBonus: 100,
                         referralBonus: 50,
-                        description: "Invite friends and both get ?50 when they sign up!"
+                        description: "Invite friends and both get ₹50 when they sign up!"
                     }
                 },
                 message: 'Referral code retrieved successfully'

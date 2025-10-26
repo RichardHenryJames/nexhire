@@ -107,6 +107,11 @@ const linking = {
       AskReferral: 'ask-referral',
       ReferralPlans: 'plans',
       Payment: 'payment',
+      
+      // ?? NEW: Wallet screens
+      Wallet: 'Wallet',
+      WalletTransactions: 'WalletTransactions',
+      WalletRecharge: 'WalletRecharge',
     },
   },
 };
