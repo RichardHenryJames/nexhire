@@ -41,7 +41,7 @@ export default function WalletRechargeModal({
           >
             {/* Header with Icon - Red background, more compact */}
             <View style={styles.header}>
-              <Ionicons name="wallet" size={32} color="#fff" />
+              <Ionicons name="wallet" size={32} color="#fff" style={styles.headerIcon} />
               <Text style={styles.title}>Wallet Recharge Required</Text>
             </View>
 
@@ -152,12 +152,12 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#dc2626', // Red background (red-600)
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
   },
   headerIcon: {
     marginTop: 2,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: '#fff',
     textAlign: 'center',
