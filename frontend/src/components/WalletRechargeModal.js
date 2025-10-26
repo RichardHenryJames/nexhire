@@ -39,31 +39,29 @@ export default function WalletRechargeModal({
             showsVerticalScrollIndicator={true}
             bounces={false}
           >
-            {/* Header with Icon */}
+            {/* Header with Icon - Red background, more compact */}
             <View style={styles.header}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="wallet" size={40} color="#fff" />
-              </View>
-              <Text style={styles.title}>💰 Wallet Recharge Required</Text>
+              <Ionicons name="wallet" size={32} color="#fff" />
+              <Text style={styles.title}>Wallet Recharge Required</Text>
             </View>
 
-            {/* Content */}
+            {/* Content - More compact */}
             <View style={styles.content}>
               <Text style={styles.message}>
-                To request a referral, you need ₹{requiredAmount.toFixed(2)} in your wallet.
+                Insufficient wallet balance
               </Text>
 
-              {/* Balance Info Cards */}
+              {/* Balance Info Cards - More compact */}
               <View style={styles.balanceCards}>
                 <View style={[styles.balanceCard, styles.currentBalanceCard]}>
-                  <Ionicons name="cash-outline" size={18} color="#ef4444" />
-                  <Text style={styles.balanceLabel}>Current Balance</Text>
+                  <Ionicons name="cash-outline" size={16} color="#ef4444" />
+                  <Text style={styles.balanceLabel}>Current</Text>
                   <Text style={styles.balanceAmount}>₹{currentBalance.toFixed(2)}</Text>
                 </View>
 
                 <View style={[styles.balanceCard, styles.requiredBalanceCard]}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#10b981" />
-                  <Text style={styles.balanceLabel}>Required Amount</Text>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+                  <Text style={styles.balanceLabel}>Required</Text>
                   <Text style={styles.balanceAmount}>₹{requiredAmount.toFixed(2)}</Text>
                 </View>
               </View>
@@ -72,19 +70,19 @@ export default function WalletRechargeModal({
               <View style={styles.whySection}>
                 <Text style={styles.whyTitle}>Why is this needed?</Text>
                 <View style={styles.whyItem}>
-                  <Ionicons name="shield-checkmark" size={14} color="#6366f1" />
+                  <Ionicons name="shield-checkmark" size={12} color="#6366f1" />
                   <Text style={styles.whyText}>
                     Maintains quality and serious job seekers
                   </Text>
                 </View>
                 <View style={styles.whyItem}>
-                  <Ionicons name="people" size={14} color="#6366f1" />
+                  <Ionicons name="people" size={12} color="#6366f1" />
                   <Text style={styles.whyText}>
                     Fair compensation for referrers
                   </Text>
                 </View>
                 <View style={styles.whyItem}>
-                  <Ionicons name="repeat" size={14} color="#6366f1" />
+                  <Ionicons name="repeat" size={12} color="#6366f1" />
                   <Text style={styles.whyText}>
                     Reusable for multiple referral requests
                   </Text>
@@ -92,7 +90,7 @@ export default function WalletRechargeModal({
               </View>
             </View>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - More compact */}
             <View style={styles.actions}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -105,7 +103,7 @@ export default function WalletRechargeModal({
                 style={[styles.button, styles.primaryButton]}
                 onPress={onAddMoney}
               >
-                <Ionicons name="card" size={18} color="#fff" />
+                <Ionicons name="card" size={16} color="#fff" />
                 <Text style={styles.primaryButtonText}>Add Money</Text>
               </TouchableOpacity>
             </View>
@@ -128,8 +126,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     width: '100%',
-    maxWidth: 420,
-    maxHeight: '85%',
+    maxWidth: 380,
+    maxHeight: '75%',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -153,47 +151,54 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    backgroundColor: colors.primary,
-    paddingVertical: 20,
+    backgroundColor: '#dc2626', // Red background (red-600)
+    paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  headerIcon: {
+    marginTop: 2,
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   title: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: '#fff',
     textAlign: 'center',
+    flex: 1,
   },
   content: {
-    padding: 20,
+    padding: 16,
   },
   message: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     color: colors.text,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 16,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   balanceCards: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 12,
   },
   balanceCard: {
     flex: 1,
-    padding: 14,
-    borderRadius: 10,
+    padding: 10,
+    borderRadius: 8,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   currentBalanceCard: {
     backgroundColor: '#fef2f2',
@@ -206,23 +211,23 @@ const styles = StyleSheet.create({
     borderColor: '#bbf7d0',
   },
   balanceLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.gray600,
     fontWeight: typography.weights.medium,
   },
   balanceAmount: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.text,
   },
   whySection: {
     backgroundColor: '#f8f9fa',
-    padding: 12,
-    borderRadius: 10,
-    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    gap: 6,
   },
   whyTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 2,
@@ -230,18 +235,18 @@ const styles = StyleSheet.create({
   whyItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
   },
   whyText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.gray600,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    padding: 16,
+    gap: 8,
+    padding: 12,
     paddingTop: 0,
   },
   button: {
@@ -249,10 +254,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 5,
   },
   cancelButton: {
     backgroundColor: '#f3f4f6',
