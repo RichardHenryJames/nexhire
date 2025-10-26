@@ -172,7 +172,7 @@ app.http('users-profile', {
 
 app.http('users-change-password', {
     methods: ['POST', 'OPTIONS'],
-    authLevel: 'anonymous",
+    authLevel: 'anonymous',
     route: 'users/change-password',
     handler: withErrorHandling(changePassword)
 });
