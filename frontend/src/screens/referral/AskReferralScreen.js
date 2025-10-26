@@ -19,13 +19,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 
 export default function AskReferralScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resumes, setResumes] = useState([]);
-  const [eligibility, setEligibility] = useState(null);
 
   // NEW: Company/Organization state
   const [companies, setCompanies] = useState([]);
@@ -36,21 +37,22 @@ export default function AskReferralScreen({ navigation }) {
 
   // Form state
   const [formData, setFormData] = useState({
-    jobId: '', // Add Job ID field
+    jobId: '',
     jobTitle: '',
     jobUrl: '',
-    referralMessage: '', // CHANGED: Replace jobDescription with referralMessage
+    referralMessage: '',
     selectedResumeId: '',
   });
 
   const [errors, setErrors] = useState({});
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null,
-    currentPlan: null // ? NEW: Add current plan info
-  }); // NEW: Add referral eligibility state
+  
+  // Wallet-based eligibility instead of subscription
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  
+  // ✅ NEW: Resume Upload Modal state
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   // ? FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function AskReferralScreen({ navigation }) {
     console.log('AskReferralScreen: Component mounted');
     loadResumes();
     loadCompanies();
-    loadReferralEligibility(); // NEW: Load referral eligibility on mount
+    loadWalletBalance();
   }, []);
 
   // Debug useEffect to log form state changes
@@ -150,21 +152,43 @@ export default function AskReferralScreen({ navigation }) {
     }
   };
 
-  // NEW: Load referral eligibility
-  const loadReferralEligibility = async () => {
+  const loadWalletBalance = async () => {
     try {
-      const result = await refopenAPI.checkReferralEligibility();
+      console.log('Loading wallet balance...');
+      const result = await refopenAPI.getWalletBalance();
+      console.log('Wallet balance result:', result);
+      
       if (result?.success) {
-        // ? ENHANCED: Include current plan information
-        const eligibilityData = {
-          ...result.data,
-          currentPlan: result.data.currentPlan || result.data.planName || (result.data.hasActiveSubscription ? 'Premium Plan' : 'Free Plan')
-        };
-        setReferralEligibility(eligibilityData);
+        const balance = result.data?.balance || 0;
+        console.log('Current wallet balance:', balance);
+        setWalletBalance(balance);
+      } else {
+        console.error('Failed to load wallet balance:', result.error);
       }
     } catch (error) {
-      console.error('Failed to load referral eligibility:', error);
+      console.error('Failed to load wallet balance:', error);
     }
+  };
+
+  // ✅ NEW: Handle resume upload from modal
+  const handleResumeSelected = async (resumeData) => {
+    console.log('Resume selected/uploaded:', resumeData);
+    
+    // Update form with selected resume
+    setFormData(prev => ({ ...prev, selectedResumeId: resumeData.ResumeID }));
+    
+    // Reload resumes to get the updated list
+    await loadResumes();
+    
+    // Close the modal
+    setShowResumeModal(false);
+    
+    // Clear resume error if it was set
+    if (errors.resume) {
+      setErrors(prev => ({ ...prev, resume: null }));
+    }
+    
+    showToast('Resume selected successfully', 'success');
   };
 
   const validateForm = () => {
@@ -173,43 +197,43 @@ export default function AskReferralScreen({ navigation }) {
 
     // Check company selection
     if (!selectedCompany) {
-      console.log('? Company not selected');
+      console.log('❌ Company not selected');
       newErrors.company = 'Company selection is required';
     } else {
-      console.log('? Company selected:', selectedCompany.name);
+      console.log('✅ Company selected:', selectedCompany.name);
     }
 
     // Check job ID
     if (!formData.jobId || !formData.jobId.trim()) {
-      console.log('? Job ID missing');
+      console.log('❌ Job ID missing');
       newErrors.jobId = 'Job ID is required';
     } else {
-      console.log('? Job ID provided:', formData.jobId);
+      console.log('✅ Job ID provided:', formData.jobId);
     }
 
     // Check job title
     if (!formData.jobTitle || !formData.jobTitle.trim()) {
-      console.log('? Job title missing');
+      console.log('❌ Job title missing');
       newErrors.jobTitle = 'Job title is required';
     } else {
-      console.log('? Job title provided:', formData.jobTitle);
+      console.log('✅ Job title provided:', formData.jobTitle);
     }
 
     // Check resume selection
     if (!formData.selectedResumeId) {
-      console.log('? Resume not selected');
+      console.log('❌ Resume not selected');
       newErrors.resume = 'Please select a resume';
     } else {
-      console.log('? Resume selected:', formData.selectedResumeId);
+      console.log('✅ Resume selected:', formData.selectedResumeId);
     }
 
     // Validate URL format if provided
     if (formData.jobUrl && formData.jobUrl.trim()) {
       try {
         new URL(formData.jobUrl);
-        console.log('? Valid URL provided');
+        console.log('✅ Valid URL provided');
       } catch {
-        console.log('? Invalid URL format');
+        console.log('❌ Invalid URL format');
         newErrors.jobUrl = 'Please enter a valid URL';
       }
     }
@@ -217,7 +241,7 @@ export default function AskReferralScreen({ navigation }) {
     const errorCount = Object.keys(newErrors).length;
     console.log(`Validation complete. Errors found: ${errorCount}`);
     if (errorCount > 0) {
-      console.log('? Validation errors:', newErrors);
+      console.log('❌ Validation errors:', newErrors);
     }
 
     setErrors(newErrors);
@@ -230,30 +254,27 @@ export default function AskReferralScreen({ navigation }) {
     try {
       setSubmitting(true);
       
-      // Check quota before validation
-      if (referralEligibility.dailyQuotaRemaining === 0) {
-        Alert.alert(
-          'Quota Exceeded',
-          'You have used all your daily referral requests. Please upgrade your plan to continue.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade', onPress: handleUpgradeClick }
-          ]
-        );
+      // ✅ NEW: Check wallet balance FIRST (before validation)
+      if (walletBalance < 50) {
+        console.log('Insufficient wallet balance:', walletBalance);
+        
+        // Show beautiful wallet modal instead of ugly alert
+        setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
+        setShowWalletModal(true);
         return;
       }
       
       console.log('Starting form validation...');
       // Validate form
       if (!validateForm()) {
-        console.log('? Form validation failed');
+        console.log('❌ Form validation failed');
         return;
       }
-      console.log('? Form validation passed');
+      console.log('✅ Form validation passed');
 
       console.log('Preparing request data...');
 
-      // ? NEW SCHEMA: Send extJobID (external) with jobID as null
+      // ✅ NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
         jobID: null, // Explicitly null for external referrals
         extJobID: formData.jobId, // External job identifier (STRING)
@@ -271,15 +292,25 @@ export default function AskReferralScreen({ navigation }) {
       console.log('API Response:', result);
 
       if (result?.success) {
-        console.log('? Referral request submitted successfully');
-        showToast('Referral request submitted successfully!', 'success');
+        console.log('✅ Referral request submitted successfully');
+        
+        // ✅ NEW: Show wallet deduction info
+        const amountDeducted = result.data?.amountDeducted || 50;
+        const balanceAfter = result.data?.walletBalanceAfter;
+        
+        let message = 'Referral request submitted successfully!';
+        if (balanceAfter !== undefined) {
+          message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+        }
+        
+        showToast(message, 'success');
 
-        // Update eligibility after successful submission
-        setReferralEligibility(prev => ({
-          ...prev,
-          dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-          isEligible: prev.dailyQuotaRemaining > 1
-        }));
+        // Update local wallet balance
+        if (balanceAfter !== undefined) {
+          setWalletBalance(balanceAfter);
+        } else {
+          setWalletBalance(prev => Math.max(0, prev - 50));
+        }
 
         // Reset form
         resetForm();
@@ -287,12 +318,22 @@ export default function AskReferralScreen({ navigation }) {
         // Navigate back or to success screen
         navigation.goBack();
       } else {
-        const errorMessage = result?.error || result?.message || 'Failed to submit referral request';
-        console.error('? API returned error:', errorMessage);
-        Alert.alert('Request Failed', errorMessage);
+        // ✅ NEW: Handle insufficient balance error
+        if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+          const currentBalance = result.data?.currentBalance || 0;
+          const requiredAmount = result.data?.requiredAmount || 50;
+          
+          // Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance, requiredAmount });
+          setShowWalletModal(true);
+        } else {
+          const errorMessage = result?.error || result?.message || 'Failed to submit referral request';
+          console.error('❌ API returned error:', errorMessage);
+          Alert.alert('Request Failed', errorMessage);
+        }
       }
     } catch (error) {
-      console.error('? Error in handleSubmit:', error);
+      console.error('❌ Error in handleSubmit:', error);
       const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
@@ -336,11 +377,6 @@ export default function AskReferralScreen({ navigation }) {
     setErrors({});
   };
 
-  // NEW: Handle upgrade banner click
-  const handleUpgradeClick = () => {
-    navigation.navigate('ReferralPlans');
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -360,92 +396,52 @@ export default function AskReferralScreen({ navigation }) {
     );
   }
 
+  // ✅ NEW: Calculate if wallet balance is sufficient
+  const hasSufficientBalance = walletBalance >= 50;
+
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Eligibility Status */}
-        {eligibility && (
-          <View style={[
-            styles.eligibilityCard,
-            { backgroundColor: eligibility.isEligible ? colors.success + '20' : colors.warning + '20' }
-          ]}>
+        {/* ✅ NEW: Wallet Balance Banner */}
+        <View style={[
+          styles.quotaBanner,
+          hasSufficientBalance ? styles.quotaBannerSuccess : styles.quotaBannerWarning
+        ]}>
+          <View style={styles.quotaBannerContent}>
             <Ionicons 
-              name={eligibility.isEligible ? "checkmark-circle" : "warning"} 
+              name={hasSufficientBalance ? "wallet" : "warning"} 
               size={20} 
-              color={eligibility.isEligible ? colors.success : colors.warning} 
+              color={hasSufficientBalance ? colors.success : colors.warning} 
+              style={styles.quotaBannerIcon}
             />
-            <View style={styles.eligibilityContent}>
-              <Text style={[
-                styles.eligibilityText,
-                { color: eligibility.isEligible ? colors.success : colors.warning }
-              ]}>
-                {eligibility.isEligible 
-                  ? `${eligibility.dailyQuotaRemaining} referral requests remaining today`
-                  : eligibility.reason || 'Not eligible for referrals'
-                }
-              </Text>
-              {eligibility.hasActiveSubscription && (
-                <Text style={styles.subscriptionText}>
-                  {eligibility.hasActiveSubscription ? 'Premium Plan Active' : 'Free Plan (5/day)'}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* ? IMPROVED: Enhanced Quota Status Banner with actual plan name and better spacing */}
-        {referralEligibility.dailyQuotaRemaining !== undefined && (
-          <View style={[
-            styles.quotaBanner,
-            referralEligibility.dailyQuotaRemaining === 0 ? styles.quotaBannerWarning : styles.quotaBannerSuccess
-          ]}>
-            {referralEligibility.dailyQuotaRemaining === 0 ? (
-              <TouchableOpacity 
-                style={styles.quotaBannerContent}
-                onPress={handleUpgradeClick}
-                activeOpacity={0.8}
+            <Text style={[
+              styles.quotaBannerText, 
+              hasSufficientBalance ? styles.quotaBannerSuccessText : styles.quotaBannerWarningText
+            ]}>
+              {hasSufficientBalance 
+                ? `Wallet Balance: ₹${walletBalance.toFixed(2)}`
+                : `Insufficient balance: ₹${walletBalance.toFixed(2)}`
+              }
+            </Text>
+            {!hasSufficientBalance && (
+              <TouchableOpacity
+                style={styles.addMoneyChip}
+                onPress={() => {
+                  setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
+                  setShowWalletModal(true);
+                }}
               >
-                <Ionicons 
-                  name="warning" 
-                  size={20} 
-                  color={colors.warning} 
-                  style={styles.quotaBannerIcon}
-                />
-                <Text style={[styles.quotaBannerText, styles.quotaBannerWarningText]}>
-                  {referralEligibility.currentPlan 
-                    ? `${referralEligibility.currentPlan} daily quota exceeded. Upgrade for more requests.`
-                    : 'Daily free quota (5) exceeded. Upgrade for unlimited requests.'
-                  }
-                </Text>
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={16} 
-                  color={colors.warning} 
-                />
+                <Ionicons name="add-circle" size={16} color={colors.warning} />
+                <Text style={styles.addMoneyText}>Add</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={styles.quotaBannerContent}>
-                <Ionicons 
-                  name="checkmark-circle" 
-                  size={20} 
-                  color={colors.success} 
-                  style={styles.quotaBannerIcon}
-                />
-                <Text style={[styles.quotaBannerText, styles.quotaBannerSuccessText]}>
-                  {referralEligibility.currentPlan 
-                    ? `${referralEligibility.currentPlan}: ${referralEligibility.dailyQuotaRemaining} requests remaining today`
-                    : `${referralEligibility.dailyQuotaRemaining} free referral requests remaining today`
-                  }
-                </Text>
-              </View>
             )}
           </View>
-        )}
+        </View>
 
-        {/* ? IMPROVED: More compelling and catchy description */}
+        {/* ✅ IMPROVED: More compelling and catchy description */}
         <View style={styles.introSection}>
           <Text style={styles.introTitle}>🚀 Boost Your Job Application Success Rate</Text>
           <Text style={styles.introText}>
@@ -581,7 +577,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
             </Text>
           </View>
 
-          {/* Resume Selection */}
+          {/* Resume Selection - ✅ UPDATED: Open modal instead of navigating to Profile */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
               Select Resume <Text style={styles.required}>*</Text>
@@ -593,7 +589,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                 <Text style={styles.noResumeText}>No resumes found</Text>
                 <TouchableOpacity
                   style={styles.uploadResumeButton}
-                  onPress={() => navigation.navigate('Profile')}
+                  onPress={() => setShowResumeModal(true)} // ✅ CHANGED: Open modal instead of navigate
                 >
                   <Text style={styles.uploadResumeText}>Upload Resume</Text>
                 </TouchableOpacity>
@@ -652,7 +648,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>How our referral system works:</Text>
             <Text style={styles.infoText}>
-              1. Submit your request with job details{'\n'}
+              1. Submit your request with job details (₹50 deducted from wallet){'\n'}
               2. Employees get notified and can review your profile{'\n'}
               3. They refer you internally and earn rewards{'\n'}
               4. You get fast-tracked in the hiring process{'\n'}
@@ -667,23 +663,23 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (submitting || referralEligibility.dailyQuotaRemaining === 0) && styles.submitButtonDisabled
+            (submitting || !hasSufficientBalance) && styles.submitButtonDisabled
           ]}
           onPress={() => {
             console.log('Submit button pressed');
             console.log('Submitting state:', submitting);
-            console.log('Quota remaining:', referralEligibility.dailyQuotaRemaining);
+            console.log('Wallet balance:', walletBalance);
             handleSubmit();
           }}
-          disabled={submitting || referralEligibility.dailyQuotaRemaining === 0}
+          disabled={submitting || !hasSufficientBalance}
         >
           <Text style={[
             styles.submitButtonText,
-            (submitting || referralEligibility.dailyQuotaRemaining === 0) && styles.submitButtonTextDisabled
+            (submitting || !hasSufficientBalance) && styles.submitButtonTextDisabled
           ]}>
             {submitting ? 'Submitting...' : 
-             referralEligibility.dailyQuotaRemaining === 0 ? 'Quota Exceeded - Upgrade Required' :
-             'Ask Referral'}
+             !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
+             'Ask Referral (₹50)'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -784,6 +780,27 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           )}
         </View>
       </Modal>
+      
+      {/* ✅ NEW: Resume Upload Modal */}
+      <ResumeUploadModal
+        visible={showResumeModal}
+        onClose={() => setShowResumeModal(false)}
+        onResumeSelected={handleResumeSelected}
+        user={user}
+        jobTitle={formData.jobTitle || 'External Job Application'}
+      />
+      
+      {/* Beautiful Wallet Recharge Modal */}
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -827,18 +844,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   
-  // ? ADDED: Header button style for navigation
+  // ✅ ADDED: Header button style for navigation
   headerButton: {
     padding: 8,
   },
   
-  // ? IMPROVED: Enhanced intro section styles with better spacing and visual appeal
+  // ✅ IMPROVED: Enhanced intro section styles with better spacing and visual appeal
   introSection: {
     paddingHorizontal: 20,
-    paddingTop: 20, // ? INCREASED: Better spacing from header/quota banner
+    paddingTop: 20,
     paddingBottom: 16,
     backgroundColor: colors.surface,
-    marginBottom: 8, // ? ADDED: Space between intro and form
+    marginBottom: 8,
   },
   introTitle: {
     fontSize: typography.sizes.lg,
@@ -855,7 +872,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   
-  // ? NEW: Benefits container styles
+  // ✅ NEW: Benefits container styles
   benefitsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -879,29 +896,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   
-  eligibilityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    marginBottom: 12, // ? REDUCED: Less space to quota banner
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  eligibilityContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  eligibilityText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-  },
-  subscriptionText: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray600,
-    marginTop: 2,
-  },
   form: {
     padding: 16,
   },
@@ -1083,7 +1077,7 @@ const styles = StyleSheet.create({
   submitButtonTextDisabled: {
     color: colors.gray500,
   },
-  // NEW: Company selector styles
+  // Company selector styles
   companySelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1124,7 +1118,7 @@ const styles = StyleSheet.create({
   companySelectorPlaceholder: {
     color: colors.gray500,
   },
-  // NEW: Company modal styles
+  // Company modal styles
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1236,11 +1230,11 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     marginTop: 4,
   },
-  // ? IMPROVED: Enhanced quota banner styles with better spacing
+  // ✅ NEW: Enhanced wallet balance banner styles
   quotaBanner: {
     marginHorizontal: 16,
-    marginTop: 8, // ? REDUCED: Better spacing from header
-    marginBottom: 8, // ? REDUCED: Better spacing to intro section
+    marginTop: 8,
+    marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
@@ -1265,12 +1259,26 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    lineHeight: 18, // ? ADDED: Better line height for readability
+    lineHeight: 18,
   },
   quotaBannerSuccessText: {
     color: colors.success,
   },
   quotaBannerWarningText: {
+    color: colors.warning,
+  },
+  addMoneyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  addMoneyText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
     color: colors.warning,
   },
 });
