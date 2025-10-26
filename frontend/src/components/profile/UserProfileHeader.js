@@ -13,7 +13,7 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 
 // CROSS-PLATFORM FILE SYSTEM HANDLER
 class CrossPlatformFileHandler {
@@ -460,7 +460,7 @@ export default function UserProfileHeader({
 
       // Upload to Azure Storage
       console.log('Uploading to Azure Storage...');
-      const uploadResult = await nexhireAPI.uploadProfileImage({
+      const uploadResult = await refopenAPI.uploadProfileImage({
         fileName,
         fileData: base64,
         mimeType,
@@ -478,7 +478,7 @@ export default function UserProfileHeader({
         
         // Update profile in backend
         try {
-          await nexhireAPI.updateProfile({
+          await refopenAPI.updateProfile({
             profilePictureURL: uploadResult.data.imageUrl,
           });
           console.log('Profile updated successfully');

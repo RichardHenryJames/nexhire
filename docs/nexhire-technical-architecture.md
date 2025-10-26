@@ -1,4 +1,4 @@
-🚀 NexHire Technical Architecture Document
+🚀 RefOpen Technical Architecture Document
 Comprehensive Technical Design & Implementation Guide
 
 📋 Table of Contents
@@ -19,7 +19,7 @@ Comprehensive Technical Design & Implementation Guide
 
 🏛️ Architecture Overview
 🧠 Design Philosophy
-NexHire is built on modern serverless architecture principles, emphasizing:
+RefOpen is built on modern serverless architecture principles, emphasizing:
 
 📈 Scalability: Auto-scaling Azure Functions with pay-per-use model
 🔐 Security: Multi-layered security with JWT authentication and role-based authorization
@@ -83,7 +83,7 @@ end
 
 Aspect
 Traditional
-NexHire Serverless
+RefOpen Serverless
 
 
 
@@ -116,7 +116,7 @@ Always warm
 Frontend Integration
 // API Service Configuration
 export const apiConfig = {
-baseURL: 'https://nexhire-api-func.azurewebsites.net/api',
+baseURL: 'https://refopen-api-func.azurewebsites.net/api',
 timeout: 30000,
 retries: 3,
 retryDelay: 1000
@@ -444,16 +444,16 @@ userType: 'JobSeeker' | 'Employer' | 'Admin';
 type: 'access' | 'refresh';
 iat: number;
 exp: number;
-iss: 'nexhire-api';
-aud: 'nexhire-app';
+iss: 'refopen-api';
+aud: 'refopen-app';
 }
 
 // Token Configuration
 const jwtConfig = {
 accessTokenExpiry: '15m',    // Short-lived access tokens
 refreshTokenExpiry: '7d',    // Longer-lived refresh tokens
-issuer: 'nexhire-api',
-audience: 'nexhire-app'
+issuer: 'refopen-api',
+audience: 'refopen-app'
 };
 
 Permission System
@@ -514,7 +514,7 @@ const securityHeaders = {
 
 const corsPolicy = {
 origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || [
-'https://nexhire-frontend-web.azurestaticapps.net',
+'https://refopen-frontend-web.azurestaticapps.net',
 'http://localhost:3000'
 ],
 credentials: true,
@@ -1085,7 +1085,7 @@ npm --version     # v10.0.0+
 git --version     # Latest
 
 # Backend setup
-cd nexhire/
+cd refopen/
 npm install
 npm run build
 npm start
@@ -1104,8 +1104,8 @@ Environment Configuration
 // Backend environment variables
 export const environmentConfig = {
 // Database
-DB_SERVER: process.env.DB_SERVER || 'nexhire-sql-srv.database.windows.net',
-DB_NAME: process.env.DB_NAME || 'nexhire-sql-db',
+DB_SERVER: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
+DB_NAME: process.env.DB_NAME || 'refopen-sql-db',
 DB_USER: process.env.DB_USER || 'sqladmin',
 DB_PASSWORD: process.env.DB_PASSWORD, // Never use defaults in production!
 
@@ -1116,11 +1116,11 @@ JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
 // Storage
 AZURE_STORAGE_CONNECTION_STRING: process.env.AZURE_STORAGE_CONNECTION_STRING,
-BLOB_CONTAINER_NAME: process.env.BLOB_CONTAINER_NAME || 'nexhire-files',
+BLOB_CONTAINER_NAME: process.env.BLOB_CONTAINER_NAME || 'refopen-files',
 
 // API Configuration
 CORS_ORIGINS: process.env.CORS_ORIGINS?.split(',') || [
-'https://nexhire-frontend-web.azurestaticapps.net'
+'https://refopen-frontend-web.azurestaticapps.net'
 ],
 
 // Monitoring
@@ -1133,12 +1133,12 @@ Infrastructure as Code
 .\deploy-infrastructure.ps1 -Environment "production"
 
 # Resource creation
-$resourceGroup = "nexhire-prod-rg"
+$resourceGroup = "refopen-prod-rg"
 $location = "East US"
-$sqlServerName = "nexhire-sql-srv-prod"
-$databaseName = "nexhire-sql-db-prod"
-$functionAppName = "nexhire-api-func-prod"
-$storageAccountName = "nexhirestorageprod"
+$sqlServerName = "refopen-sql-srv-prod"
+$databaseName = "refopen-sql-db-prod"
+$functionAppName = "refopen-api-func-prod"
+$storageAccountName = "refopenstorageprod"
 
 # Azure SQL Database
 az sql server create --name $sqlServerName --resource-group $resourceGroup --location $location --admin-user $adminUser --admin-password $adminPassword
@@ -1148,10 +1148,10 @@ az sql db create --resource-group $resourceGroup --server $sqlServerName --name 
 az functionapp create --resource-group $resourceGroup --consumption-plan-location $location --runtime node --runtime-version 20 --functions-version 4 --name $functionAppName --storage-account $storageAccountName
 
 # Static Web App
-az staticwebapp create --name nexhire-frontend-prod --resource-group $resourceGroup --source https://github.com/RichardHenryJames/nexhire --branch main --location $location
+az staticwebapp create --name refopen-frontend-prod --resource-group $resourceGroup --source https://github.com/RichardHenryJames/refopen --branch main --location $location
 
 CI/CD Pipeline (GitHub Actions)
-name: Deploy NexHire
+name: Deploy RefOpen
 
 on:
 push:
@@ -1179,7 +1179,7 @@ steps:
 - uses: actions/checkout@v3
 - uses: azure/functions-action@v1
 with:
-app-name: nexhire-api-func-prod
+app-name: refopen-api-func-prod
 package: .
 publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
@@ -1701,7 +1701,7 @@ actions: [
 
 🏁 Conclusion
 📋 Architecture Summary
-NexHire's technical architecture is built for modern scalability, security, and maintainability. Key strengths include:
+RefOpen's technical architecture is built for modern scalability, security, and maintainability. Key strengths include:
 
 🚀 Serverless-First: Cost-effective, auto-scaling Azure Functions architecture
 🗄️ Robust Data Model: Comprehensive relational schema optimized for analytics
@@ -1761,10 +1761,10 @@ CDN optimization
 🛠️ Technical Support
 For technical questions or architectural discussions:
 
-👨‍💻 Engineering Team: engineering@nexhire.com
-📐 Architecture Review: architecture@nexhire.com  
-🔒 Security Concerns: security@nexhire.com
-📊 Data & Analytics: data@nexhire.com
+👨‍💻 Engineering Team: engineering@refopen.com
+📐 Architecture Review: architecture@refopen.com  
+🔒 Security Concerns: security@refopen.com
+📊 Data & Analytics: data@refopen.com
 
 
 This technical documentation is maintained by the engineering team and updated with major architectural changes.

@@ -1,6 +1,6 @@
 /**
  * Frontend Configuration Service
- * Centralized configuration management for NexHire frontend
+ * Centralized configuration management for RefOpen frontend
  * Provides robust fallback when Constants.expoConfig.extra is not available
  */
 
@@ -52,7 +52,7 @@ class FrontendConfigService {
       },
 
       api: {
-        baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://nexhire-api-func.azurewebsites.net/api'),
+        baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://refopen-api-func.azurewebsites.net/api'),
         timeout: parseInt(getEnvVar('apiTimeout', 'EXPO_PUBLIC_API_TIMEOUT', '30000')),
         debug: shouldForceProd ? false : getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', true, false),
       },
@@ -68,7 +68,7 @@ class FrontendConfigService {
           ? '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'
           : getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS'),
         firebase: {
-          projectId: getEnvVar('firebaseProjectId', 'EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'nexhire-123'),
+          projectId: getEnvVar('firebaseProjectId', 'EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'refopen-123'),
           webAppId: getEnvVar('firebaseWebAppId', 'EXPO_PUBLIC_FIREBASE_WEB_APP_ID'),
           androidAppId: getEnvVar('firebaseAndroidAppId', 'EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID'),
           iosAppId: getEnvVar('firebaseIosAppId', 'EXPO_PUBLIC_FIREBASE_IOS_APP_ID'),

@@ -260,7 +260,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
           )}
           
           <Text style={styles.title}>
-            {googleUser ? 'Complete Your Profile' : 'Welcome to NexHire!'}
+            {googleUser ? 'Complete Your Profile' : 'Welcome to RefOpen!'}
           </Text>
           <Text style={styles.subtitle}>
             {googleUser 
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     alignItems: 'center',

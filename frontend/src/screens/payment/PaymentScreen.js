@@ -10,7 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -55,7 +55,7 @@ export default function PaymentScreen({ route, navigation }) {
         customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
       };
 
-      const orderResponse = await nexhireAPI.createRazorpayOrder(orderData);
+      const orderResponse = await refopenAPI.createRazorpayOrder(orderData);
       if (!orderResponse.success) throw new Error(orderResponse.error || 'Failed to create payment order');
       setOrderDetails(orderResponse.data);
       const paymentUrl = createRazorpayPaymentUrl(orderResponse.data);
@@ -96,7 +96,7 @@ export default function PaymentScreen({ route, navigation }) {
       key, // replaced hard-coded key with config-driven key
       amount: orderData.amount,
       currency: 'INR',
-      name: 'NexHire',
+      name: 'RefOpen',
       description: `${customerData.planName} Subscription` || 'Subscription Payment',
       order_id: orderData.orderId || orderData.id, // support both shapes
       handler: (response) => {
@@ -142,7 +142,7 @@ export default function PaymentScreen({ route, navigation }) {
         planId: paymentData.planId,
         amount: paymentData.amount,
       };
-      const result = await nexhireAPI.verifyPaymentAndActivateSubscription(verificationData);
+      const result = await refopenAPI.verifyPaymentAndActivateSubscription(verificationData);
       if (result.success) {
         showToast(`Subscription '${plan.Name}' activated successfully`, 'success');
         navigation.navigate('Jobs');

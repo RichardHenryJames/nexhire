@@ -7,16 +7,16 @@ export default ({ config }) => {
   // Environment-specific app metadata
   const environmentConfig = {
     development: {
-      name: 'NexHire (Dev)',
-      scheme: 'com.nexhire.app.dev',
+      name: 'RefOpen (Dev)',
+      scheme: 'com.refopen.app.dev',
     },
     staging: {
-      name: 'NexHire (Staging)',
-      scheme: 'com.nexhire.app.staging',
+      name: 'RefOpen (Staging)',
+      scheme: 'com.refopen.app.staging',
     },
     production: {
-      name: 'NexHire',
-      scheme: 'com.nexhire.app',
+      name: 'RefOpen',
+      scheme: 'com.refopen.app',
     }
   };
 
@@ -40,7 +40,7 @@ export default ({ config }) => {
     debug: env !== 'production',
 
     // API
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://nexhire-api-func.azurewebsites.net/api',
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api',
     apiTimeout: process.env.EXPO_PUBLIC_API_TIMEOUT || '30000',
     apiDebug: env !== 'production',
 
@@ -50,7 +50,7 @@ export default ({ config }) => {
     googleClientIdIos: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '',
 
     // Firebase
-    firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'nexhire-123',
+    firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'refopen-123',
     firebaseWebAppId: process.env.EXPO_PUBLIC_FIREBASE_WEB_APP_ID || '',
     firebaseAndroidAppId: process.env.EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID || '',
     firebaseIosAppId: process.env.EXPO_PUBLIC_FIREBASE_IOS_APP_ID || '',
@@ -74,7 +74,7 @@ export default ({ config }) => {
   return {
     ...config,
     name: currentEnvConfig.name,
-    slug: 'nexhire',
+    slug: 'refopen',
     version: '1.0.0',
     orientation: 'portrait',
     userInterfaceStyle: 'light',
@@ -90,8 +90,8 @@ export default ({ config }) => {
         {
           action: 'VIEW',
           data: [
-            { scheme: 'https', host: 'nexhire.com' },
-            { scheme: 'https', host: 'www.nexhire.com' },
+            { scheme: 'https', host: 'refopen.com' },
+            { scheme: 'https', host: 'www.refopen.com' },
           ],
           category: ['BROWSABLE', 'DEFAULT'],
         },

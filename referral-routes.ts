@@ -198,7 +198,7 @@ console.log('   GET  /api/referral/stats');
  * ========================================================================
  * AUTHENTICATION:
  * - All endpoints require authentication except /plans (public view)
- * - Uses existing JWT middleware from NexHire auth system
+ * - Uses existing JWT middleware from RefOpen auth system
  * - Role-based permissions: 'read:referral', 'create:referral', etc.
  *
  * FEATURES:

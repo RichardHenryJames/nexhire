@@ -1,6 +1,6 @@
 /**
  * ?? Unified Configuration Service
- * Centralized configuration management for all NexHire services
+ * Centralized configuration management for all RefOpen services
  */
 
 interface AppConfig {
@@ -121,14 +121,14 @@ class ConfigService {
   private loadConfiguration(): AppConfig {
     return {
       app: {
-        env: process.env.NEXHIRE_ENV || 'development',
-        version: process.env.NEXHIRE_VERSION || '1.0.0',
-        debug: process.env.NEXHIRE_DEBUG === 'true',
+        env: process.env.RefOpen_ENV || 'development',
+        version: process.env.RefOpen_VERSION || '1.0.0',
+        debug: process.env.RefOpen_DEBUG === 'true',
       },
 
       database: {
-        server: process.env.DB_SERVER || 'nexhire-sql-srv.database.windows.net',
-        name: process.env.DB_NAME || 'nexhire-sql-db',
+        server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
+        name: process.env.DB_NAME || 'refopen-sql-db',
         user: process.env.DB_USER || 'sqladmin',
         password: process.env.DB_PASSWORD || 'P@ssw0rd1234!',
         connectionString: process.env.DB_CONNECTION_STRING || this.buildConnectionString(),
@@ -149,7 +149,7 @@ class ConfigService {
         androidClientId: process.env.GOOGLE_CLIENT_ID_ANDROID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '',
         iosClientId: process.env.GOOGLE_CLIENT_ID_IOS || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '',
         firebase: {
-          projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'nexhire-123',
+          projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'refopen-123',
           webAppId: process.env.EXPO_PUBLIC_FIREBASE_WEB_APP_ID || '',
           androidAppId: process.env.EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID || '',
           iosAppId: process.env.EXPO_PUBLIC_FIREBASE_IOS_APP_ID || '',
@@ -165,7 +165,7 @@ class ConfigService {
 
       azure: {
         storage: {
-          accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME || 'nexhirestorage',
+          accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME || 'refopenstorage',
           accountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY || '',
           connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
           containers: {
@@ -182,8 +182,8 @@ class ConfigService {
       external: {
         sendgrid: {
           apiKey: process.env.SENDGRID_API_KEY || '',
-          fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@nexhire.com',
-          fromName: process.env.SENDGRID_FROM_NAME || 'NexHire',
+          fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@refopen.com',
+          fromName: process.env.SENDGRID_FROM_NAME || 'RefOpen',
         },
         linkedin: {
           clientId: process.env.LINKEDIN_CLIENT_ID || '',

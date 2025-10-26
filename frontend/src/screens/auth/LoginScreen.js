@@ -301,7 +301,7 @@ export default function LoginScreen({ navigation }) {
               <Text style={screenStyles.devHelperTitle}>Quick Test (Dev Mode)</Text>
               <TouchableOpacity
                 onPress={() => {
-                  setEmail('test@nexhire.com');
+                  setEmail('test@refopen.com');
                   setPassword('password123');
                 }}
                 style={screenStyles.devButton}

@@ -1,7 +1,7 @@
 {
-  "name": "nexhire-backend-api",
+  "name": "refopen-backend-api",
   "version": "1.0.0",
-  "description": "NexHire Job Platform Backend APIs - Azure Functions",
+  "description": "RefOpen Job Platform Backend APIs - Azure Functions",
   "main": "dist/index.js",
   "engines": {
     "node": ">=20.0.0"
@@ -20,9 +20,9 @@
     "test:profile-update": "jest tests/profile-update-flow.test.ts --verbose",
     "test:api-integration": "jest tests/frontend-api-integration.test.ts --verbose",
     "test:all-flows": "npm run test:registration-only && npm run test:profile-update && npm run test:api-integration",
-    "deploy:backend": "func azure functionapp publish nexhire-api-func --typescript --force",
+    "deploy:backend": "func azure functionapp publish refopen-api-func --typescript --force",
     "deploy": "npm run deploy:backend",
-    "postinstall": "echo 'NexHire Backend API installed successfully'",
+    "postinstall": "echo 'RefOpen Backend API installed successfully'",
     "populate:orgs": "ts-node scripts/populate-organizations.ts",
     "populate:india": "ts-node scripts/populate-india-and-fortune.ts",
     "populate:fortune": "cross-env MODE=fortune ts-node scripts/populate-india-and-fortune.ts",
@@ -77,6 +77,6 @@
     "nodejs",
     "sql-server"
   ],
-  "author": "NexHire Team",
+  "author": "RefOpen Team",
   "license": "MIT"
 }

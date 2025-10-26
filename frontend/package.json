@@ -1,7 +1,7 @@
 {
-  "name": "nexhire-frontend",
+  "name": "refopen-frontend",
   "version": "1.0.0",
-  "description": "NexHire Job Platform - Universal React Native App",
+  "description": "RefOpen Job Platform - Universal React Native App",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -12,7 +12,7 @@
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "deploy:web": "npm run build:web && swa deploy --app-location . --output-location web-build",
-    "deploy:azure": "npm run build:web && az staticwebapp deploy --name nexhire-frontend-web --resource-group nexhire-dev-rg --source ./web-build",
+    "deploy:azure": "npm run build:web && az staticwebapp deploy --name refopen-frontend-web --resource-group refopen-dev-rg --source ./web-build",
     "test": "jest",
     "test:frontend": "powershell -ExecutionPolicy Bypass -File ../test-frontend.ps1",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
@@ -90,10 +90,10 @@
     "react-native",
     "expo",
     "job-platform",
-    "nexhire",
+    "refopen",
     "mobile",
     "web"
   ],
-  "author": "NexHire Team",
+  "author": "RefOpen Team",
   "license": "MIT"
 }

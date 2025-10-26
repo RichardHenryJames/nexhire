@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_NAME: nexhire-api-func
-  AZURE_RESOURCE_GROUP: nexhire-rg
-  STORAGE_ACCOUNT_NAME: nexhirefuncdevst
+  AZURE_FUNCTIONAPP_NAME: refopen-api-func
+  AZURE_RESOURCE_GROUP: refopen-rg
+  STORAGE_ACCOUNT_NAME: refopenfuncdevst
   CONTAINER_NAME: deployments
   NODE_VERSION: '20.x'
 
@@ -42,7 +42,7 @@ jobs:
       run: |
         echo "Creating deployment ZIP package..."
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        ZIP_NAME="nexhire-backend-$TIMESTAMP.zip"
+        ZIP_NAME="refopen-backend-$TIMESTAMP.zip"
         echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
         
         # Create ZIP with only essential files
@@ -130,7 +130,7 @@ jobs:
         
         # Test health endpoint
         echo "Testing health endpoint..."
-        HEALTH_URL="https://nexhire-api-func.azurewebsites.net/api/health"
+        HEALTH_URL="https://refopen-api-func.azurewebsites.net/api/health"
         HEALTH_SUCCESS=false
         
         for i in {1..5}; do
@@ -146,7 +146,7 @@ jobs:
         
         # Test countries API
         echo "Testing countries API..."
-        COUNTRIES_URL="https://nexhire-api-func.azurewebsites.net/api/reference/countries"
+        COUNTRIES_URL="https://refopen-api-func.azurewebsites.net/api/reference/countries"
         COUNTRIES_RESPONSE=$(curl -s $COUNTRIES_URL)
         
         if echo "$COUNTRIES_RESPONSE" | grep -q '"success":true'; then
@@ -173,4 +173,4 @@ jobs:
         echo "Package: $ZIP_NAME"
         echo "Storage: ${{ env.STORAGE_ACCOUNT_NAME }}/${{ env.CONTAINER_NAME }}"
         echo "Blob URL: $BLOB_URL"
-        echo "Health: https://nexhire-api-func.azurewebsites.net/api/health"
+        echo "Health: https://refopen-api-func.azurewebsites.net/api/health"

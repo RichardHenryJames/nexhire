@@ -751,7 +751,7 @@ app.http('health', {
     authLevel: 'anonymous',
     route: 'health',
     handler: withErrorHandling(async (req, context) => {
-        return { status: 200, jsonBody: { success: true, message: 'NexHire Backend API is running', timestamp: new Date().toISOString(), version: '1.0.0' } };
+        return { status: 200, jsonBody: { success: true, message: 'RefOpen Backend API is running', timestamp: new Date().toISOString(), version: '1.0.0' } };
     })
 });
 
@@ -1336,12 +1336,149 @@ app.http('scraping-health', {
 });
 
 // ========================================================================
+// JOB SCRAPING SCHEDULER CONTROL ENDPOINTS - ? NEW
+// ========================================================================
+
+app.http('scheduler-status', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'scheduler/status',
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            const { SchedulerService } = await import('./src/services/scheduler.service');
+            const scheduler = SchedulerService.getInstance();
+            const status = scheduler.getStatus();
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: status,
+                    message: 'Scheduler status retrieved successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Scheduler status error:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to get scheduler status'
+                }
+            };
+        }
+    })
+});
+
+app.http('scheduler-start', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'scheduler/start',
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Admin auth check
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Authorization header required' }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Admin access required' }
+                };
+            }
+
+            const { SchedulerService } = await import('./src/services/scheduler.service');
+            const scheduler = SchedulerService.getInstance();
+            scheduler.start();
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: scheduler.getStatus(),
+                    message: 'Scheduler started successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Scheduler start error:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to start scheduler'
+                }
+            };
+        }
+    })
+});
+
+app.http('scheduler-stop', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'scheduler/stop',
+    handler: withErrorHandling(async (req, context) => {
+        try {
+            // Admin auth check
+            const authHeader = req.headers.get('authorization');
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Authorization header required' }
+                };
+            }
+
+            const token = authHeader.substring(7);
+            const { AuthService } = await import('./src/services/auth.service');
+            const payload = AuthService.verifyToken(token);
+            
+            if (payload.userType !== 'Admin') {
+                return {
+                    status: 403,
+                    jsonBody: { success: false, error: 'Admin access required' }
+                };
+            }
+
+            const { SchedulerService } = await import('./src/services/scheduler.service');
+            const scheduler = SchedulerService.getInstance();
+            scheduler.stop();
+            
+            return {
+                status: 200,
+                jsonBody: {
+                    success: true,
+                    data: scheduler.getStatus(),
+                    message: 'Scheduler stopped successfully'
+                }
+            };
+        } catch (error) {
+            console.error('Scheduler stop error:', error);
+            return {
+                status: 500,
+                jsonBody: {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to stop scheduler'
+                }
+            };
+        }
+    })
+});
+
+// ========================================================================
 // STARTUP LOG
 // ========================================================================
 
-console.log('NexHire Backend API - All functions registered (with Google OAuth)');
+console.log('RefOpen Backend API - All functions registered (with Google OAuth)');
 console.log('Google OAuth endpoints added: /auth/google, /auth/google-register');
-console.log('API Base URL: https://nexhire-api-func.azurewebsites.net/api');
+console.log('API Base URL: https://refopen-api-func.azurewebsites.net/api');
 
 // ========================================================================
 // FINAL TEST ENDPOINT - Added at the very end
@@ -1367,7 +1504,7 @@ export {}
 
 /*
  * ========================================================================
- * ?? UPDATED API ENDPOINT LIST (50 total - Added Google OAuth):
+ * ?? UPDATED API ENDPOINT LIST (53 total - Added Scheduler Control):
  * ========================================================================
  * 
  * AUTHENTICATION (7 endpoints): ?? +2 Google OAuth
@@ -1467,5 +1604,16 @@ export {}
  * ?? STORAGE & FILES (2 endpoints): ?? AZURE BLOB STORAGE
  * POST   /storage/upload                      - Upload files to Azure Blob Storage
  * DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
+ * 
+ * ?? JOB SCRAPING SCHEDULER (9 endpoints): ? AUTOMATED JOB POPULATION
+ * POST   /jobs/scrape/trigger           - Manually trigger job scraping
+ * GET    /jobs/scrape/config            - Get scraping configuration
+ * PUT    /jobs/scrape/config            - Update scraping configuration
+ * GET    /jobs/scrape/stats             - Get scraping statistics
+ * DELETE /jobs/scrape/cleanup           - Clean up old scraped jobs
+ * GET    /jobs/scrape/health            - Scraper service health check
+ * GET    /scheduler/status              - ? Get scheduler status
+ * POST   /scheduler/start               - ? Start scheduler (admin)
+ * POST   /scheduler/stop                - ? Stop scheduler (admin)
  * ========================================================================
  */

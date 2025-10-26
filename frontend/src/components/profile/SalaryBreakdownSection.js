@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection';
 
 // Helpers to normalize backend data to a consistent shape
@@ -97,8 +97,8 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
   const loadReferenceData = async () => {
     try {
       const [componentsRes, currenciesRes] = await Promise.all([
-        nexhireAPI.getSalaryComponents(),
-        nexhireAPI.getCurrencies(),
+        refopenAPI.getSalaryComponents(),
+        refopenAPI.getCurrencies(),
       ]);
       if (componentsRes?.success) setSalaryComponents(normalizeSalaryComponents(componentsRes.data));
       if (currenciesRes?.success) {
@@ -236,7 +236,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
     setLoading(true);
     try {
-      const result = await nexhireAPI.updateSalaryBreakdown(profile.UserID, payload);
+      const result = await refopenAPI.updateSalaryBreakdown(profile.UserID, payload);
       if (result?.success) {
         setLocalSalaryBreakdown(payload);
         setProfile && setProfile((prev) => ({ ...prev, salaryBreakdown: payload }));

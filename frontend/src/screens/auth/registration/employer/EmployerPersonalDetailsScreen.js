@@ -23,10 +23,11 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
   const googleUser = pendingGoogleAuth?.user;
 
-  const [jobTitle, setJobTitle] = useState('Hiring Manager');
-  const [department, setDepartment] = useState('Human Resources');
+  const [jobTitle, setJobTitle] = useState('');
+  const [department, setDepartment] = useState('');
   const [linkedInProfile, setLinkedInProfile] = useState('');
   const [bio, setBio] = useState('');
+  const [errors, setErrors] = useState({});
 
   // Pre-populate some data for Google users
   useEffect(() => {
@@ -38,7 +39,27 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
     }
   }, [isGoogleUser, googleUser]);
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!jobTitle.trim()) {
+      newErrors.jobTitle = 'Job title is required';
+    }
+
+    if (!department.trim()) {
+      newErrors.department = 'Department is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const onContinue = () => {
+    if (!validateForm()) {
+      Alert.alert('Validation Error', 'Please fill in all required fields');
+      return;
+    }
+
     navigation.navigate('EmployerAccountScreen', {
       employerType,
       selectedCompany,
@@ -91,45 +112,69 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
         </Text>
 
         <View style={styles.field}> 
-          <Text style={styles.label}>Job Title</Text>
+          <Text style={styles.label}>
+            Job Title <Text style={styles.required}>*</Text>
+          </Text>
           <TextInput 
-            style={styles.input} 
+            style={[styles.input, errors.jobTitle && styles.inputError]} 
             value={jobTitle} 
-            onChangeText={setJobTitle}
+            onChangeText={(text) => {
+              setJobTitle(text);
+              if (errors.jobTitle) {
+                setErrors({ ...errors, jobTitle: null });
+              }
+            }}
             placeholder="e.g., CEO, HR Manager, Talent Acquisition Specialist"
+            placeholderTextColor={colors.gray400}
           />
+          {errors.jobTitle && (
+            <Text style={styles.errorText}>{errors.jobTitle}</Text>
+          )}
         </View>
 
         <View style={styles.field}> 
-          <Text style={styles.label}>Department</Text>
+          <Text style={styles.label}>
+            Department <Text style={styles.required}>*</Text>
+          </Text>
           <TextInput 
-            style={styles.input} 
+            style={[styles.input, errors.department && styles.inputError]} 
             value={department} 
-            onChangeText={setDepartment}
+            onChangeText={(text) => {
+              setDepartment(text);
+              if (errors.department) {
+                setErrors({ ...errors, department: null });
+              }
+            }}
             placeholder="e.g., Human Resources, Engineering, Marketing"
+            placeholderTextColor={colors.gray400}
           />
+          {errors.department && (
+            <Text style={styles.errorText}>{errors.department}</Text>
+          )}
         </View>
 
         <View style={styles.field}> 
-          <Text style={styles.label}>LinkedIn Profile (Optional)</Text>
+          <Text style={styles.label}>LinkedIn Profile</Text>
           <TextInput 
             style={styles.input} 
             value={linkedInProfile} 
             onChangeText={setLinkedInProfile} 
             autoCapitalize="none"
             placeholder="https://linkedin.com/in/yourprofile"
+            placeholderTextColor={colors.gray400}
             keyboardType="url"
           />
         </View>
 
         <View style={styles.field}> 
-          <Text style={styles.label}>About You (Optional)</Text>
+          <Text style={styles.label}>About You</Text>
           <TextInput 
             style={[styles.input, { height: 120, textAlignVertical: 'top' }]} 
             value={bio} 
             onChangeText={setBio} 
             multiline
             placeholder="Brief description of your role and hiring focus..."
+            placeholderTextColor={colors.gray400}
           />
         </View>
 
@@ -208,6 +253,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
+  required: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
+  },
   input: { 
     backgroundColor: colors.surface, 
     borderWidth: 1, 
@@ -216,6 +265,14 @@ const styles = StyleSheet.create({
     padding: 12, 
     color: colors.text,
     fontSize: typography.sizes.md,
+  },
+  inputError: {
+    borderColor: colors.danger,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: typography.sizes.sm,
+    marginTop: 4,
   },
   primaryBtn: { 
     marginTop: 24, 

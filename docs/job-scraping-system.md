@@ -1,8 +1,8 @@
-# NexHire Job Scraping System ???
+# RefOpen Job Scraping System ???
 
 ## Overview
 
-The NexHire Job Scraping System is a comprehensive, automated solution that fetches fresh job postings from multiple platforms and populates your Jobs table. It's designed to run continuously, providing a steady stream of up-to-date job opportunities for your users.
+The RefOpen Job Scraping System is a comprehensive, automated solution that fetches fresh job postings from multiple platforms and populates your Jobs table. It's designed to run continuously, providing a steady stream of up-to-date job opportunities for your users.
 
 ## ? Features
 
@@ -388,7 +388,7 @@ The system supports integration with job board APIs:
 
 ## ?? License
 
-This job scraping system is part of the NexHire platform and follows the same licensing terms as the main project.
+This job scraping system is part of the RefOpen platform and follows the same licensing terms as the main project.
 
 ---
 

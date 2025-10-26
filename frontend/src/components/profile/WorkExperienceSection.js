@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
 import { useEditing } from './ProfileSection';
 import DatePicker from '../DatePicker';
@@ -172,8 +172,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     try {
       setLoading(true);
       const [expRes, curRes] = await Promise.all([
-        nexhireAPI.getMyWorkExperiences(),
-        nexhireAPI.getCurrencies().catch(() => ({ success: false }))
+        refopenAPI.getMyWorkExperiences(),
+        refopenAPI.getCurrencies().catch(() => ({ success: false }))
       ]);
       if (expRes && expRes.success) {
         setExperiences(Array.isArray(expRes.data) ? expRes.data : []);
@@ -212,7 +212,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {
@@ -277,7 +277,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     if (!id) { setShowDeleteModal(false); setPendingDelete(null); Alert.alert('Error', 'Invalid experience id'); return; }
     try {
       setDeleting(true);
-      const res = await nexhireAPI.deleteWorkExperience(id);
+      const res = await refopenAPI.deleteWorkExperience(id);
       if (!res?.success) throw new Error(res?.error || 'Delete failed');
       setShowDeleteModal(false); setPendingDelete(null);
       await loadData();
@@ -358,11 +358,11 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       if (editingItem) {
         const id = getId(editingItem);
         if (!id) throw new Error('Invalid experience id');
-        const res = await nexhireAPI.updateWorkExperienceById(id, payload);
+        const res = await refopenAPI.updateWorkExperienceById(id, payload);
         console.log('[WorkExp] Update response:', res);
         if (!res?.success) throw new Error(res?.error || 'Update failed');
       } else {
-        const res = await nexhireAPI.createWorkExperience(payload);
+        const res = await refopenAPI.createWorkExperience(payload);
         console.log('[WorkExp] Create response:', res);
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }
@@ -454,6 +454,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               value={form.jobTitle}
               onChangeText={(t) => { setForm({ ...form, jobTitle: t }); if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined })); }}
               placeholder="e.g., Software Engineer"
+              placeholderTextColor={colors.gray400}
               autoCapitalize="words"
             />
             {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
@@ -479,6 +480,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                     value={orgQuery}
                     onChangeText={setOrgQuery}
                     placeholder={manualOrgMode ? 'Enter company name' : 'Search organizations...'}
+                    placeholderTextColor={colors.gray400}
                     autoCapitalize="words"
                   />
                   {manualOrgMode ? (
@@ -527,7 +529,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
             {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
-            <TextInput style={styles.input} value={form.department} onChangeText={(t) => setForm({ ...form, department: t })} placeholder="e.g., Engineering" />
+            <TextInput 
+              style={styles.input} 
+              value={form.department} 
+              onChangeText={(t) => setForm({ ...form, department: t })} 
+              placeholder="e.g., Engineering" 
+              placeholderTextColor={colors.gray400}
+            />
 
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
@@ -584,24 +592,74 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             )}
 
             <Text style={styles.label}>Location</Text>
-            <TextInput style={styles.input} value={form.location} onChangeText={(t) => setForm({ ...form, location: t })} placeholder="City, State" />
+            <TextInput 
+              style={styles.input} 
+              value={form.location} 
+              onChangeText={(t) => setForm({ ...form, location: t })} 
+              placeholder="City, State" 
+              placeholderTextColor={colors.gray400}
+            />
+            
             <Text style={styles.label}>Country</Text>
-            <TextInput style={styles.input} value={form.country} onChangeText={(t) => setForm({ ...form, country: t })} placeholder="Country" />
+            <TextInput 
+              style={styles.input} 
+              value={form.country} 
+              onChangeText={(t) => setForm({ ...form, country: t })} 
+              placeholder="Country" 
+              placeholderTextColor={colors.gray400}
+            />
 
             <Text style={styles.label}>Description</Text>
-            <TextInput style={[styles.input, styles.multiline]} value={form.description} onChangeText={(t) => setForm({ ...form, description: t })} placeholder="Role responsibilities, tech stack, etc." multiline numberOfLines={4} />
+            <TextInput 
+              style={[styles.input, styles.multiline]} 
+              value={form.description} 
+              onChangeText={(t) => setForm({ ...form, description: t })} 
+              placeholder="Role responsibilities, tech stack, etc." 
+              placeholderTextColor={colors.gray400}
+              multiline 
+              numberOfLines={4} 
+            />
 
             <Text style={styles.label}>Skills</Text>
-            <TextInput style={[styles.input, styles.multiline]} value={form.skills} onChangeText={(t) => setForm({ ...form, skills: t })} placeholder="Comma separated e.g., React, Node.js, SQL" multiline numberOfLines={3} />
+            <TextInput 
+              style={[styles.input, styles.multiline]} 
+              value={form.skills} 
+              onChangeText={(t) => setForm({ ...form, skills: t })} 
+              placeholder="Comma separated e.g., React, Node.js, SQL" 
+              placeholderTextColor={colors.gray400}
+              multiline 
+              numberOfLines={3} 
+            />
 
             <Text style={styles.label}>Achievements</Text>
-            <TextInput style={[styles.input, styles.multiline]} value={form.achievements} onChangeText={(t) => setForm({ ...form, achievements: t })} placeholder="Key accomplishments" multiline numberOfLines={3} />
+            <TextInput 
+              style={[styles.input, styles.multiline]} 
+              value={form.achievements} 
+              onChangeText={(t) => setForm({ ...form, achievements: t })} 
+              placeholder="Key accomplishments" 
+              placeholderTextColor={colors.gray400}
+              multiline 
+              numberOfLines={3} 
+            />
 
             <Text style={styles.label}>Reason for Leaving</Text>
-            <TextInput style={styles.input} value={form.reasonForLeaving} onChangeText={(t) => setForm({ ...form, reasonForLeaving: t })} placeholder="Optional" />
+            <TextInput 
+              style={styles.input} 
+              value={form.reasonForLeaving} 
+              onChangeText={(t) => setForm({ ...form, reasonForLeaving: t })} 
+              placeholder="Optional" 
+              placeholderTextColor={colors.gray400}
+            />
 
             <Text style={styles.label}>Salary</Text>
-            <TextInput style={styles.input} value={form.salary} onChangeText={(t) => setForm({ ...form, salary: t })} placeholder="e.g., 120000" keyboardType="numeric" />
+            <TextInput 
+              style={styles.input} 
+              value={form.salary} 
+              onChangeText={(t) => setForm({ ...form, salary: t })} 
+              placeholder="e.g., 120000" 
+              placeholderTextColor={colors.gray400}
+              keyboardType="numeric" 
+            />
 
             <Text style={styles.label}>Currency</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
@@ -619,9 +677,22 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
 
             <Text style={styles.label}>Manager Name</Text>
-            <TextInput style={styles.input} value={form.managerName} onChangeText={(t) => setForm({ ...form, managerName: t })} placeholder="Optional" />
+            <TextInput 
+              style={styles.input} 
+              value={form.managerName} 
+              onChangeText={(t) => setForm({ ...form, managerName: t })} 
+              placeholder="Optional" 
+              placeholderTextColor={colors.gray400}
+            />
+            
             <Text style={styles.label}>Manager Contact</Text>
-            <TextInput style={styles.input} value={form.managerContact} onChangeText={(t) => setForm({ ...form, managerContact: t })} placeholder="Email/Phone" />
+            <TextInput 
+              style={styles.input} 
+              value={form.managerContact} 
+              onChangeText={(t) => setForm({ ...form, managerContact: t })} 
+              placeholder="Email/Phone" 
+              placeholderTextColor={colors.gray400}
+            />
 
             <View style={styles.rowBetween}>
               <Text style={styles.label}>Recruiter can contact manager</Text>

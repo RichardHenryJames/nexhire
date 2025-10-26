@@ -1,6 +1,6 @@
 /**
- * Production Scheduler Service for NexHire Job Scraping
- * Integrates with existing NexHire architecture
+ * Production Scheduler Service for RefOpen Job Scraping
+ * Integrates with existing RefOpen architecture
  */
 
 import { JobScraperService } from './job-scraper.service';
@@ -10,9 +10,9 @@ export class SchedulerService {
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
   private config = {
-    enabled: process.env.SCHEDULER_ENABLED !== 'false',
+    enabled: process.env.SCHEDULER_ENABLED !== 'false', // Default to enabled unless explicitly disabled
     intervalHours: parseInt(process.env.SCRAPING_INTERVAL_HOURS || '24'),
-    autoStart: process.env.NODE_ENV === 'production' || process.env.AUTO_START_SCHEDULER === 'true'
+    autoStart: true // ? CHANGED: Always auto-start by default
   };
 
   private constructor() {}
@@ -27,16 +27,16 @@ export class SchedulerService {
   // Start automated job scraping schedule
   start(): void {
     if (this.isRunning) {
-      console.log('Scheduler already running');
+      console.log('?? Scheduler already running');
       return;
     }
 
     if (!this.config.enabled) {
-      console.log('Scheduler is disabled');
+      console.log('?? Scheduler is disabled via configuration');
       return;
     }
 
-    console.log(`Starting NexHire job scraping scheduler (every ${this.config.intervalHours}h)`);
+    console.log(`?? Starting RefOpen job scraping scheduler (every ${this.config.intervalHours}h)`);
     
     // Run immediately on start
     this.runJobScraping();
@@ -48,13 +48,13 @@ export class SchedulerService {
     }, intervalMs);
     
     this.isRunning = true;
-    console.log('Scheduler started successfully');
+    console.log('? Scheduler started successfully');
   }
 
   // Stop the scheduler
   stop(): void {
     if (!this.isRunning) {
-      console.log('Scheduler is not running');
+      console.log('?? Scheduler is not running');
       return;
     }
 
@@ -64,7 +64,7 @@ export class SchedulerService {
     }
 
     this.isRunning = false;
-    console.log('Scheduler stopped');
+    console.log('?? Scheduler stopped');
   }
 
   // Get scheduler status
@@ -83,7 +83,7 @@ export class SchedulerService {
     const oldConfig = { ...this.config };
     this.config = { ...this.config, ...newConfig };
     
-    console.log('Scheduler configuration updated');
+    console.log('?? Scheduler configuration updated');
     
     // Restart if interval changed and scheduler is running
     if (this.isRunning && oldConfig.intervalHours !== this.config.intervalHours) {
@@ -95,14 +95,14 @@ export class SchedulerService {
   // Run job scraping with error handling
   private async runJobScraping(): Promise<void> {
     try {
-      console.log('??? Scheduled job scraping started...');
+      console.log('?? Scheduled job scraping started...');
       const startTime = Date.now();
       
       const result = await JobScraperService.scrapeAndPopulateJobs();
       const duration = Date.now() - startTime;
       
       if (result.success) {
-        console.log(`Scheduled scraping completed successfully:`);
+        console.log(`? Scheduled scraping completed successfully:`);
         console.log(`   - Jobs added: ${result.jobsAdded}`);
         console.log(`   - India jobs: ${result.summary.indiaJobsAdded}`);
         console.log(`   - Sources: ${Object.keys(result.summary.sourceBreakdown).join(', ')}`);
@@ -112,14 +112,14 @@ export class SchedulerService {
         await this.logScrapingResult(result, duration);
         
       } else {
-        console.error('Scheduled scraping failed:');
+        console.error('? Scheduled scraping failed:');
         result.errors.forEach(error => console.error(`   - ${error}`));
         
         await this.logScrapingResult(result, duration);
       }
       
     } catch (error: any) {
-      console.error('Scheduled scraping crashed:', error.message);
+      console.error('?? Scheduled scraping crashed:', error.message);
       
       // Log crash for monitoring
       await this.logScrapingResult({
@@ -170,7 +170,7 @@ export class SchedulerService {
       ]);
       
     } catch (logError: any) {
-      console.error('Failed to log scraping result:', logError.message);
+      console.error('?? Failed to log scraping result:', logError.message);
       // Don't throw - logging failure shouldn't crash the scheduler
     }
   }
@@ -199,44 +199,54 @@ export class SchedulerService {
       `;
       
       await dbService.executeQuery(createTableQuery);
-      console.log('Scraping logs table ready');
+      console.log('? Scraping logs table ready');
       
     } catch (error: any) {
-      console.error('Failed to initialize scraping logs:', error.message);
+      console.error('? Failed to initialize scraping logs:', error.message);
     }
   }
 }
 
-// Initialize and optionally auto-start scheduler
+// ? ENHANCED INITIALIZATION - Always try to initialize
 const initializeScheduler = async () => {
   try {
+    console.log('?? Initializing RefOpen Job Scraping Scheduler...');
+    
     // Initialize logging table
     await SchedulerService.initializeLogging();
     
     const scheduler = SchedulerService.getInstance();
+    const status = scheduler.getStatus();
     
-    if (scheduler.getStatus().config.autoStart) {
-      console.log('Auto-starting job scraping scheduler...');
+    console.log('?? Scheduler configuration:', status.config);
+    
+    if (status.config.enabled && status.config.autoStart) {
+      console.log('? Auto-starting job scraping scheduler...');
       scheduler.start();
+    } else {
+      console.log('?? Scheduler is disabled. Set SCHEDULER_ENABLED=true to enable automatic scraping.');
+      console.log('?? You can also manually trigger scraping via POST /jobs/scrape/trigger');
     }
     
     // Graceful shutdown handlers
     process.on('SIGTERM', () => {
-      console.log('SIGTERM received, stopping scheduler...');
+      console.log('?? SIGTERM received, stopping scheduler...');
       scheduler.stop();
     });
     
     process.on('SIGINT', () => {
-      console.log('SIGINT received, stopping scheduler...');
+      console.log('?? SIGINT received, stopping scheduler...');
       scheduler.stop();
     });
     
   } catch (error: any) {
-    console.error('Scheduler initialization failed:', error.message);
+    console.error('? Scheduler initialization failed:', error.message);
+    console.error('?? Job scraping will need to be triggered manually via API');
   }
 };
 
-// Auto-initialize in production
-if (process.env.NODE_ENV === 'production' || process.env.INIT_SCHEDULER === 'true') {
-  initializeScheduler();
-}
+// ? CHANGED: Always initialize (removed environment checks)
+console.log('?? Scheduler service loaded - initializing...');
+initializeScheduler().catch(error => {
+  console.error('?? Fatal scheduler initialization error:', error);
+});

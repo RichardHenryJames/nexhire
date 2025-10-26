@@ -1,22 +1,23 @@
 # ================================================================
-# NexHire Environment Variables Sync Script
+# Environment Variables Sync Script - Multi-Environment Support
 # ================================================================
 # Syncs environment variables from .env file to Azure Function App
-# Supports dev, staging, production environments
+# - Production: Uses RefOpen infrastructure (refopen-api-func, refopen-prod-rg)
+# - Dev/Staging: Uses RefOpen infrastructure (refopen-api-func, refopen-dev-rg)
 # ================================================================
 
 param(
     [string]$Environment = "production",  # dev, staging, production
-    [string]$FunctionAppName = "nexhire-api-func",
-    [string]$ResourceGroup = "nexhire-dev-rg",
+    [string]$FunctionAppName = "",  # Auto-detected based on environment
+    [string]$ResourceGroup = "",  # Auto-detected based on environment
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",
     [switch]$DryRun,
     [switch]$Force,
     [switch]$Restart = $true  # Default: restart after sync
 )
 
-Write-Host "🚀 NexHire Environment Variables Sync" -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
+Write-Host "🚀 Environment Variables Sync - RefOpen/RefOpen" -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
 
 # -------------------------
 # Validate environment
@@ -36,15 +37,39 @@ if ($normalizedEnv -notin @("dev", "staging", "prod")) {
 }
 
 # -------------------------
-# Determine target Function App
+# Auto-detect infrastructure based on environment
 # -------------------------
-$targetFunctionApp = switch ($normalizedEnv) {
-    "staging" { if ($FunctionAppName -eq "nexhire-api-func") { "nexhire-api-staging" } else { $FunctionAppName } }
-    default { $FunctionAppName }
+# PRODUCTION = RefOpen infrastructure
+# DEV/STAGING = RefOpen infrastructure
+if ([string]::IsNullOrEmpty($FunctionAppName) -or [string]::IsNullOrEmpty($ResourceGroup)) {
+    switch ($normalizedEnv) {
+        "prod" {
+            # RefOpen Production Infrastructure
+            $FunctionAppName = "refopen-api-func"
+            $ResourceGroup = "refopen-prod-rg"
+            $InfrastructureName = "RefOpen"
+            Write-Host "🎯 Using RefOpen Production Infrastructure" -ForegroundColor Magenta
+        }
+        "staging" {
+            # RefOpen Staging Infrastructure
+            $FunctionAppName = "refopen-api-staging"
+            $ResourceGroup = "refopen-dev-rg"
+            $InfrastructureName = "RefOpen"
+            Write-Host "🎯 Using RefOpen Staging Infrastructure" -ForegroundColor Yellow
+        }
+        "dev" {
+            # RefOpen Development Infrastructure
+            $FunctionAppName = "refopen-api-func"
+            $ResourceGroup = "refopen-dev-rg"
+            $InfrastructureName = "RefOpen"
+            Write-Host "🎯 Using RefOpen Development Infrastructure" -ForegroundColor Cyan
+        }
+    }
 }
 
 Write-Host "🌍 Environment: $normalizedEnv" -ForegroundColor Green
-Write-Host "⚡ Target Function App: $targetFunctionApp" -ForegroundColor Cyan
+Write-Host "🏢 Infrastructure: $InfrastructureName" -ForegroundColor White
+Write-Host "⚡ Target Function App: $FunctionAppName" -ForegroundColor Cyan
 Write-Host "📦 Resource Group: $ResourceGroup" -ForegroundColor Gray
 
 # -------------------------
@@ -58,38 +83,51 @@ if (-not (Test-Path $envFile)) {
     exit 1
 }
 
+Write-Host "✅ Found environment file: $envFile" -ForegroundColor Green
+
 # -------------------------
 # Set Azure subscription
 # -------------------------
-Write-Host "🔑 Setting Azure subscription..." -ForegroundColor Yellow
+Write-Host "`n🔑 Setting Azure subscription..." -ForegroundColor Yellow
 az account set --subscription $SubscriptionId
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Subscription set successfully" -ForegroundColor Green
+} else {
+    Write-Host "❌ Failed to set subscription" -ForegroundColor Red
+    exit 1
+}
 
 # -------------------------
 # Verify Function App
 # -------------------------
 Write-Host "🔍 Verifying Function App exists..." -ForegroundColor Yellow
-$appExists = az functionapp show --name $targetFunctionApp --resource-group $ResourceGroup 2>$null
+$appExists = az functionapp show --name $FunctionAppName --resource-group $ResourceGroup 2>$null
 if (-not $appExists) {
-    Write-Host "❌ Function App not found: $targetFunctionApp" -ForegroundColor Red
+    Write-Host "❌ Function App not found: $FunctionAppName in $ResourceGroup" -ForegroundColor Red
+    Write-Host "💡 Available Function Apps:" -ForegroundColor Yellow
+    az functionapp list --resource-group $ResourceGroup --query "[].name" -o tsv 2>$null | ForEach-Object {
+        Write-Host "   - $_" -ForegroundColor Gray
+    }
     exit 1
 }
-Write-Host "✅ Function App verified" -ForegroundColor Green
+Write-Host "✅ Function App verified: $FunctionAppName" -ForegroundColor Green
 
 # -------------------------
 # Read and parse environment variables
 # -------------------------
-Write-Host "📖 Reading environment variables from: $envFile" -ForegroundColor Yellow
+Write-Host "`n📖 Reading environment variables from: $envFile" -ForegroundColor Yellow
 $envVars = @{}
 $envLines = Get-Content $envFile | Where-Object { $_ -and -not $_.StartsWith("#") -and $_.Contains("=") }
 
-# Variables Azure manages automatically
+# Variables Azure manages automatically - DO NOT SYNC
 $excludeVars = @(
     "AzureWebJobsStorage",
     "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
     "WEBSITE_CONTENTSHARE",
     "WEBSITE_NODE_DEFAULT_VERSION",
     "WEBSITE_RUN_FROM_PACKAGE",
-    "SCM_DO_BUILD_DURING_DEPLOYMENT"
+    "SCM_DO_BUILD_DURING_DEPLOYMENT",
+    "AzureWebJobsDashboard"
 )
 
 Write-Host "⚙️ Processing environment variables..." -ForegroundColor Yellow
@@ -121,12 +159,14 @@ Write-Host "   📦 Total in .env: $($includedCount + $excludedCount)" -Foregrou
 # -------------------------
 Write-Host "`n🔒 Validating critical variables..." -ForegroundColor Yellow
 $criticalVars = @(
-    @{ Name = "GOOGLE_CLIENT_ID_WEB"; Description = "Google OAuth Web Client" },
-    @{ Name = "RAZORPAY_KEY_ID"; Description = "Razorpay Payment Key" },
-    @{ Name = "JWT_SECRET"; Description = "JWT Authentication Secret" },
-    @{ Name = "DB_PASSWORD"; Description = "Database Password" },
     @{ Name = "DB_SERVER"; Description = "Database Server" },
-    @{ Name = "NEXHIRE_ENV"; Description = "Environment Name" }
+    @{ Name = "DB_NAME"; Description = "Database Name" },
+    @{ Name = "DB_PASSWORD"; Description = "Database Password" },
+    @{ Name = "JWT_SECRET"; Description = "JWT Authentication Secret" },
+    @{ Name = "AZURE_STORAGE_ACCOUNT_NAME"; Description = "Storage Account" },
+    @{ Name = "RAZORPAY_KEY_ID"; Description = "Razorpay Payment Key" },
+    @{ Name = "GOOGLE_CLIENT_ID_WEB"; Description = "Google OAuth Web Client" },
+    @{ Name = "NODE_ENV"; Description = "Environment Name" }
 )
 
 $missingCritical = @()
@@ -142,7 +182,39 @@ foreach ($criticalVar in $criticalVars) {
     } else {
         $presentCritical += $criticalVar
         $value = $envVars[$varName]
-        $displayValue = if ($value.Length -gt 20) { $value.Substring(0, 20) + "..." } else { $value }
+        
+        # Special display for infrastructure-specific variables
+        if ($normalizedEnv -eq "prod") {
+            $displayValue = switch ($varName) {
+                "DB_SERVER" { 
+                    if ($value -like "*refopen*") { 
+                        "✅ $value (RefOpen)" 
+                    } else { 
+                        "⚠️ $value (Should be RefOpen!)" 
+                    }
+                }
+                "AZURE_STORAGE_ACCOUNT_NAME" { 
+                    if ($value -like "*refopen*") { 
+                        "✅ $value (RefOpen)" 
+                    } else { 
+                        "⚠️ $value (Should be RefOpen!)" 
+                    }
+                }
+                "RAZORPAY_KEY_ID" { 
+                    if ($value -like "rzp_live_*") { 
+                        "✅ LIVE mode" 
+                    } else { 
+                        "⚠️ TEST mode (Should be LIVE!)" 
+                    }
+                }
+                default { 
+                    if ($value.Length -gt 30) { $value.Substring(0, 30) + "..." } else { $value }
+                }
+            }
+        } else {
+            $displayValue = if ($value.Length -gt 30) { $value.Substring(0, 30) + "..." } else { $value }
+        }
+        
         Write-Host "   ✅ ${varDesc}: $displayValue" -ForegroundColor Green
     }
 }
@@ -157,13 +229,47 @@ if ($missingCritical.Count -gt 0 -and -not $Force) {
 }
 
 # -------------------------
-# Show variables to sync
+# Show variables to sync (grouped)
 # -------------------------
-Write-Host "`n📌 Variables to sync:" -ForegroundColor Cyan
-$envVars.Keys | Sort-Object | ForEach-Object {
-    $value = $envVars[$_]
-    $displayValue = if ($value.Length -gt 50) { $value.Substring(0, 50) + "..." } else { $value }
-    Write-Host "   🔑 $_ = $displayValue" -ForegroundColor Gray
+Write-Host "`n📌 Variables to sync (grouped by category):" -ForegroundColor Cyan
+
+$categories = @{
+    "Database" = @("DB_SERVER", "DB_NAME", "DB_USER", "DB_PASSWORD", "DB_ENCRYPT", "DB_TRUST_SERVER_CERTIFICATE", "DB_CONNECTION_TIMEOUT", "DB_CONNECTION_STRING")
+    "Authentication" = @("JWT_SECRET", "JWT_EXPIRES_IN", "JWT_REFRESH_EXPIRES_IN", "JWT_ACCESS_TOKEN_EXPIRY", "JWT_REFRESH_TOKEN_EXPIRY", "BCRYPT_SALT_ROUNDS")
+    "Storage" = @("AZURE_STORAGE_ACCOUNT_NAME", "AZURE_STORAGE_ACCOUNT_KEY", "AZURE_STORAGE_CONNECTION_STRING", "AZURE_STORAGE_CONTAINER_NAME", "AZURE_STORAGE_CONTAINER_RESUMES", "AZURE_STORAGE_CONTAINER_PROFILE_IMAGES", "AZURE_STORAGE_CONTAINER_DOCUMENTS", "AZURE_STORAGE_CONTAINER_COMPANY_LOGOS", "AZURE_STORAGE_CONTAINER_REFERRAL_PROOFS")
+    "Monitoring" = @("APPLICATIONINSIGHTS_CONNECTION_STRING", "APPINSIGHTS_INSTRUMENTATIONKEY")
+    "Payment" = @("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET")
+    "OAuth" = @("GOOGLE_CLIENT_ID_WEB", "GOOGLE_CLIENT_ID_ANDROID", "GOOGLE_CLIENT_ID_IOS")
+    "Job Scraping" = @("ADZUNA_APP_ID", "ADZUNA_APP_KEY", "SCHEDULER_ENABLED", "SCRAPING_INTERVAL_HOURS", "AUTO_START_SCHEDULER", "INIT_SCHEDULER")
+    "Features" = @("FEATURE_FLAG_REFERRAL_SYSTEM", "FEATURE_FLAG_GOOGLE_SIGNIN", "FEATURE_FLAG_PAYMENT_SYSTEM", "FEATURE_FLAG_JOB_SCRAPING")
+    "API" = @("CORS_ORIGINS", "CORS_ALLOWED_ORIGINS", "RATE_LIMIT_MAX_REQUESTS", "RATE_LIMIT_WINDOW_MS")
+    "Logging" = @("DEBUG_LEVEL", "LOG_LEVEL", "DETAILED_LOGGING")
+    "Environment" = @("NODE_ENV", "RefOpen_ENV", "RefOpen_VERSION", "RefOpen_DEBUG")
+    "Functions" = @("FUNCTIONS_WORKER_RUNTIME", "FUNCTIONS_EXTENSION_VERSION", "ENABLE_ARYX_BUILD")
+}
+
+foreach ($category in $categories.Keys | Sort-Object) {
+    $categoryVars = $categories[$category] | Where-Object { $envVars.ContainsKey($_) }
+    if ($categoryVars.Count -gt 0) {
+        Write-Host "`n   📂 $category ($($categoryVars.Count) vars)" -ForegroundColor Yellow
+        foreach ($varName in $categoryVars) {
+            $value = $envVars[$varName]
+            $displayValue = if ($value.Length -gt 60) { $value.Substring(0, 60) + "..." } else { $value }
+            Write-Host "      🔑 $varName = $displayValue" -ForegroundColor Gray
+        }
+    }
+}
+
+# Show uncategorized variables
+$categorizedVars = $categories.Values | ForEach-Object { $_ } | Select-Object -Unique
+$uncategorizedVars = $envVars.Keys | Where-Object { $_ -notin $categorizedVars } | Sort-Object
+if ($uncategorizedVars.Count -gt 0) {
+    Write-Host "`n   📂 Other ($($uncategorizedVars.Count) vars)" -ForegroundColor Yellow
+    foreach ($varName in $uncategorizedVars) {
+        $value = $envVars[$varName]
+        $displayValue = if ($value.Length -gt 60) { $value.Substring(0, 60) + "..." } else { $value }
+        Write-Host "      🔑 $varName = $displayValue" -ForegroundColor Gray
+    }
 }
 
 # -------------------------
@@ -181,7 +287,9 @@ if ($DryRun) {
 # -------------------------
 if (-not $Force) {
     Write-Host "`n⚠️ This will update $($envVars.Count) environment variables in Azure" -ForegroundColor Yellow
-    Write-Host "   Function App: $targetFunctionApp" -ForegroundColor White
+    Write-Host "   Infrastructure: $InfrastructureName" -ForegroundColor White
+    Write-Host "   Function App: $FunctionAppName" -ForegroundColor White
+    Write-Host "   Resource Group: $ResourceGroup" -ForegroundColor White
     Write-Host "   Environment: $normalizedEnv" -ForegroundColor White
     if ($Restart) { Write-Host "   🔄 Will RESTART Function App after sync" -ForegroundColor Red }
     $response = Read-Host "Proceed with sync? (y/N)"
@@ -208,7 +316,8 @@ if ($envVars.Count -gt 0) {
 
         $batchSettings = @()
         foreach ($varName in $currentBatch) {
-            $batchSettings += "$varName=$($envVars[$varName])"
+            $escapedValue = $envVars[$varName] -replace '"', '\"'
+            $batchSettings += "$varName=$escapedValue"
         }
 
         $batchNumber = [Math]::Floor($i / $batchSize) + 1
@@ -218,10 +327,10 @@ if ($envVars.Count -gt 0) {
 
         try {
             & az functionapp config appsettings set `
-                --name $targetFunctionApp `
+                --name $FunctionAppName `
                 --resource-group $ResourceGroup `
                 --settings @batchSettings `
-                --output none
+                --output none 2>$null
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "   ✅ Batch ${batchNumber} completed" -ForegroundColor Green
@@ -234,6 +343,9 @@ if ($envVars.Count -gt 0) {
             Write-Host "   ❌ Batch ${batchNumber} failed: $($_.Exception.Message)" -ForegroundColor Red
             $failCount += $currentBatch.Count
         }
+        
+        # Small delay between batches
+        Start-Sleep -Seconds 2
     }
 
     Write-Host "`n📊 Sync Results:" -ForegroundColor Cyan
@@ -247,34 +359,46 @@ if ($envVars.Count -gt 0) {
 # -------------------------
 # Wait for propagation
 # -------------------------
-Write-Host "`n⏳ Waiting for settings to propagate..." -ForegroundColor Yellow
-Start-Sleep -Seconds 10
+Write-Host "`n⏳ Waiting for settings to propagate (15 seconds)..." -ForegroundColor Yellow
+for ($i = 15; $i -gt 0; $i--) {
+    Write-Progress -Activity "Waiting for propagation" -Status "$i seconds remaining..." -PercentComplete ((15 - $i) / 15 * 100)
+    Start-Sleep -Seconds 1
+}
+Write-Progress -Activity "Waiting for propagation" -Completed
 
 # -------------------------
-# Verify critical variables
+# Verify critical variables in Azure
 # -------------------------
 Write-Host "🔍 Verifying critical variables in Azure..." -ForegroundColor Yellow
+$verifiedCount = 0
+$failedVerify = 0
+
 foreach ($criticalVar in $presentCritical) {
     $varName = $criticalVar.Name
     $varDesc = $criticalVar.Description
 
     try {
         $azureValue = az functionapp config appsettings list `
-            --name $targetFunctionApp `
+            --name $FunctionAppName `
             --resource-group $ResourceGroup `
             --query "[?name=='$varName'].value" `
-            -o tsv
+            -o tsv 2>$null
 
         if ($azureValue) {
-            $displayValue = if ($azureValue.Length -gt 20) { $azureValue.Substring(0, 20) + "..." } else { $azureValue }
+            $displayValue = if ($azureValue.Length -gt 30) { $azureValue.Substring(0, 30) + "..." } else { $azureValue }
             Write-Host "   ✅ ${varDesc}: $displayValue" -ForegroundColor Green
+            $verifiedCount++
         } else {
             Write-Host "   ❌ ${varDesc}: NOT FOUND in Azure" -ForegroundColor Red
+            $failedVerify++
         }
     } catch {
         Write-Host "   ⚠️ ${varDesc}: Could not verify" -ForegroundColor Yellow
+        $failedVerify++
     }
 }
+
+Write-Host "`n   Verified: $verifiedCount / $($presentCritical.Count)" -ForegroundColor $(if ($failedVerify -eq 0) { "Green" } else { "Yellow" })
 
 # -------------------------
 # Count total variables in Azure
@@ -282,8 +406,8 @@ foreach ($criticalVar in $presentCritical) {
 Write-Host "`n📊 Counting total variables in Azure..." -ForegroundColor Yellow
 try {
     $azureVarCount = (az functionapp config appsettings list `
-        --name $targetFunctionApp `
-        --resource-group $ResourceGroup | ConvertFrom-Json).Count
+        --name $FunctionAppName `
+        --resource-group $ResourceGroup 2>$null | ConvertFrom-Json).Count
     Write-Host "✅ Total environment variables in Azure: $azureVarCount" -ForegroundColor Green
 } catch {
     Write-Host "⚠️ Could not count variables" -ForegroundColor Yellow
@@ -296,14 +420,20 @@ if ($Restart) {
     Write-Host "`n🔄 Restarting Function App to apply changes..." -ForegroundColor Yellow
     try {
         az functionapp restart `
-            --name $targetFunctionApp `
+            --name $FunctionAppName `
             --resource-group $ResourceGroup `
-            --output none
+            --output none 2>$null
 
         if ($LASTEXITCODE -eq 0) {
             Write-Host "✅ Function App restart initiated" -ForegroundColor Green
-            Write-Host "⏳ Waiting 30 seconds for restart..." -ForegroundColor Gray
-            Start-Sleep -Seconds 30
+            Write-Host "⏳ Waiting 45 seconds for restart..." -ForegroundColor Gray
+            
+            for ($i = 45; $i -gt 0; $i--) {
+                Write-Progress -Activity "Restarting Function App" -Status "$i seconds remaining..." -PercentComplete ((45 - $i) / 45 * 100)
+                Start-Sleep -Seconds 1
+            }
+            Write-Progress -Activity "Restarting Function App" -Completed
+            
             Write-Host "✅ Function App should be running with new variables" -ForegroundColor Green
         } else {
             Write-Host "❌ Function App restart failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
@@ -313,28 +443,38 @@ if ($Restart) {
     }
 } else {
     Write-Host "`n⏸️ Function App NOT restarted" -ForegroundColor Yellow
-    Write-Host "   ⚠️ Variables are synced but may not be active yet" -ForegroundColor Gray
+    Write-Host "   ⚠️ Variables are synced but may not be active until restart" -ForegroundColor Gray
 }
 
 # -------------------------
 # Final summary
 # -------------------------
-Write-Host "`n🏁 Environment variables sync completed!" -ForegroundColor Green
-Write-Host "📊 Summary:" -ForegroundColor Cyan
+Write-Host "`n╔════════════════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║  ✅ ENVIRONMENT VARIABLES SYNC COMPLETED              ║" -ForegroundColor Green
+Write-Host "╚════════════════════════════════════════════════════════╝" -ForegroundColor Green
+
+Write-Host "`n📊 Summary:" -ForegroundColor Cyan
+Write-Host "   Infrastructure: $InfrastructureName" -ForegroundColor White
 Write-Host "   Environment: $normalizedEnv" -ForegroundColor White
-Write-Host "   Function App: $targetFunctionApp" -ForegroundColor White
+Write-Host "   Function App: $FunctionAppName" -ForegroundColor White
+Write-Host "   Resource Group: $ResourceGroup" -ForegroundColor White
 Write-Host "   Variables Synced: $successCount / $($envVars.Count)" -ForegroundColor White
 Write-Host "   Total in Azure: $azureVarCount" -ForegroundColor White
+Write-Host "   Critical Variables Verified: $verifiedCount / $($presentCritical.Count)" -ForegroundColor White
 Write-Host "   Function App Restarted: $(if ($Restart) { 'YES ✅' } else { 'NO ⏸️' })" -ForegroundColor $(if ($Restart) { "Green" } else { "Yellow" })
 
-if ($failCount -eq 0) {
+if ($failCount -eq 0 -and $failedVerify -eq 0) {
     Write-Host "`n📌 Next steps:" -ForegroundColor Cyan
     if (-not $Restart) {
-        Write-Host "   🔄 Restart Function App manually: az functionapp restart --name $targetFunctionApp --resource-group $ResourceGroup" -ForegroundColor White
+        Write-Host "   🔄 Restart Function App: az functionapp restart --name $FunctionAppName --resource-group $ResourceGroup" -ForegroundColor White
     }
-    Write-Host "   🚀 Deploy function code: .\deploy-backend.ps1 -Environment $normalizedEnv -SkipEnvSync" -ForegroundColor White
-    Write-Host "   🌐 Test health endpoint: https://$targetFunctionApp.azurewebsites.net/api/health" -ForegroundColor White
+    Write-Host "   🚀 Deploy function code: .\deploy-backend.ps1 -Environment $normalizedEnv" -ForegroundColor White
+    Write-Host "   🌐 Test health endpoint: https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor White
+    Write-Host "   📊 Monitor logs in Azure Portal" -ForegroundColor White
 } else {
-    Write-Host "`n⚠️ Some variables failed to sync. Review errors above." -ForegroundColor Yellow
+    Write-Host "`n⚠️ Some variables failed to sync or verify. Review errors above." -ForegroundColor Yellow
     exit 1
 }
+
+Write-Host "`n💡 Quick Test:" -ForegroundColor Yellow
+Write-Host "   Invoke-RestMethod https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor Cyan

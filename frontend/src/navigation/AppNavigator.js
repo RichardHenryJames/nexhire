@@ -45,9 +45,9 @@ const Tab = createBottomTabNavigator();
 // FIXED: Deep Linking Configuration with unique paths
 const linking = {
   prefixes: [
-    'nexhire://',
-    'https://nexhire.com',
-    'https://www.nexhire.com',
+    'refopen://',
+    'https://refopen.com',
+    'https://www.refopen.com',
   ],
   config: {
     screens: {

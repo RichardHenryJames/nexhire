@@ -1,4 +1,4 @@
-# ?? NexHire Deployment Commands Reference
+# ?? RefOpen Deployment Commands Reference
 
 ## ?? **Quick Commands**
 
@@ -46,8 +46,8 @@ cd frontend
 | Environment | Frontend URL | Backend URL |
 |-------------|--------------|-------------|
 | **Development** | Local build | `http://localhost:7071/api` |
-| **Staging** | `https://nexhire-frontend-staging.azurestaticapps.net` | `https://nexhire-api-staging.azurewebsites.net/api` |
-| **Production** | `https://nexhire-frontend-web.azurestaticapps.net` | `https://nexhire-api-func.azurewebsites.net/api` |
+| **Staging** | `https://refopen-frontend-staging.azurestaticapps.net` | `https://refopen-api-staging.azurewebsites.net/api` |
+| **Production** | `https://refopen-frontend-web.azurestaticapps.net` | `https://refopen-api-func.azurewebsites.net/api` |
 
 ## ?? **Complete Deployment Workflows**
 
@@ -130,10 +130,10 @@ cd frontend && npm run env:status
 ### **Test Deployed APIs**
 ```powershell
 # Test health endpoint
-curl https://nexhire-api-func.azurewebsites.net/api/health
+curl https://refopen-api-func.azurewebsites.net/api/health
 
 # Test countries API
-curl https://nexhire-api-func.azurewebsites.net/api/reference/countries
+curl https://refopen-api-func.azurewebsites.net/api/reference/countries
 ```
 
 ## ??? **Troubleshooting Common Issues**
@@ -213,4 +213,4 @@ az functionapp list --query "[].{name:name,resourceGroup:resourceGroupName}"
 
 ---
 
-?? **Your deployment system is now ready!** Use these commands to deploy NexHire to any environment with confidence! ??
+?? **Your deployment system is now ready!** Use these commands to deploy RefOpen to any environment with confidence! ??

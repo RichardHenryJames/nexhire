@@ -1,8 +1,8 @@
-# NexHire Applicant Profile Views Tracking Script (Option 3 - On-Demand Aggregation)
+# RefOpen Applicant Profile Views Tracking Script (Option 3 - On-Demand Aggregation)
 # Creates ApplicantProfileViews table, supporting indexes, and aggregation view (no cached column on Applicants)
 
 param(
-    [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
     [int]$RetentionDays = 365 # Set 0 to skip retention purge
 )
 

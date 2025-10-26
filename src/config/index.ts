@@ -1,7 +1,7 @@
 // Database Configuration
 export const dbConfig = {
-    server: process.env.DB_SERVER || 'nexhire-sql-srv.database.windows.net',
-    database: process.env.DB_NAME || 'nexhire-sql-db',
+    server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
+    database: process.env.DB_NAME || 'refopen-sql-db',
     user: process.env.DB_USER || 'sqladmin',
     password: process.env.DB_PASSWORD || 'P@ssw0rd1234!',
     options: {
@@ -19,7 +19,7 @@ export const dbConfig = {
 
 // JWT Configuration
 export const jwtConfig = {
-    secret: process.env.JWT_SECRET || 'nexhire-super-secret-key-change-in-production',
+    secret: process.env.JWT_SECRET || 'refopen-super-secret-key-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
 };
@@ -27,13 +27,13 @@ export const jwtConfig = {
 // Azure Blob Storage Configuration
 export const blobConfig = {
     connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
-    containerName: process.env.BLOB_CONTAINER_NAME || 'nexhire-files'
+    containerName: process.env.BLOB_CONTAINER_NAME || 'refopen-files'
 };
 
 // API Configuration
 export const apiConfig = {
     port: process.env.PORT || 7071,
-    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'https://nexhire-frontend-web.azurestaticapps.net'],
+    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'https://refopen-frontend-web.azurestaticapps.net'],
     rateLimit: {
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 100 // limit each IP to 100 requests per windowMs
@@ -45,7 +45,7 @@ export const emailConfig = {
     service: process.env.EMAIL_SERVICE || 'gmail',
     user: process.env.EMAIL_USER || '',
     password: process.env.EMAIL_PASSWORD || '',
-    from: process.env.EMAIL_FROM || 'noreply@nexhire.com'
+    from: process.env.EMAIL_FROM || 'noreply@refopen.com'
 };
 
 // Application Constants

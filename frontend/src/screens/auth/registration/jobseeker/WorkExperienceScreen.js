@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
 // Debounce like college picker
@@ -121,6 +121,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       <TextInput
         style={[styles.textInput, multiline && styles.multilineInput]}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
@@ -205,7 +206,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return; // skip fetching when manual mode
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX and to support partial matches
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
@@ -513,6 +514,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -640,7 +642,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     marginBottom: 32,

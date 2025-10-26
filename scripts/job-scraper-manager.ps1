@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-    NexHire Job Scraper Management Script
+    RefOpen Job Scraper Management Script
 
 .DESCRIPTION
-    This script provides management functions for the NexHire job scraping system.
+    This script provides management functions for the RefOpen job scraping system.
     It can trigger scraping, check status, configure settings, and view statistics.
 
 .PARAMETER Action
     The action to perform: trigger, status, config, stats, cleanup, setup
 
 .PARAMETER ConnectionString
-    SQL Server connection string for the NexHire database
+    SQL Server connection string for the RefOpen database
 
 .PARAMETER ApiBaseUrl
-    Base URL for the NexHire API (default: http://localhost:7071/api)
+    Base URL for the RefOpen API (default: http://localhost:7071/api)
 
 .PARAMETER AdminToken
     Admin JWT token for API authentication
@@ -25,7 +25,7 @@
     .\job-scraper-manager.ps1 -Action setup -ConnectionString $connectionString
 
 .EXAMPLE
-    .\job-scraper-manager.ps1 -Action stats -ApiBaseUrl "https://nexhire-api-func.azurewebsites.net/api" -AdminToken $token
+    .\job-scraper-manager.ps1 -Action stats -ApiBaseUrl "https://refopen-api-func.azurewebsites.net/api" -AdminToken $token
 #>
 
 param(

@@ -4,7 +4,7 @@ Write-Host "?? Testing Admin Job Scraper API..." -ForegroundColor Green
 # Step 1: Health Check
 Write-Host "`n1?? Testing health check..." -ForegroundColor Yellow
 try {
-    $healthResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/jobs/scrape/ping" -Method GET
+    $healthResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/jobs/scrape/ping" -Method GET
     Write-Host "? Health check passed: $($healthResponse.message)" -ForegroundColor Green
 } catch {
     Write-Host "? Health check failed: $($_.Exception.Message)" -ForegroundColor Red
@@ -19,7 +19,7 @@ $loginBody = @{
 } | ConvertTo-Json
 
 try {
-    $loginResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json"
+    $loginResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json"
     
     if ($loginResponse.success) {
         $adminToken = $loginResponse.data.tokens.accessToken
@@ -41,7 +41,7 @@ $headers = @{
 }
 
 try {
-    $statsResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/jobs/scrape/stats" -Method GET -Headers $headers
+    $statsResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/jobs/scrape/stats" -Method GET -Headers $headers
     $beforeCount = $statsResponse.data.summary.TotalScrapedJobs
     Write-Host "? Current total jobs: $beforeCount" -ForegroundColor Green
     Write-Host "   ?? Jobs last 24h: $($statsResponse.data.summary.JobsLast24h)" -ForegroundColor Gray
@@ -59,7 +59,7 @@ try {
     Write-Host "?? Starting scraping process..." -ForegroundColor Cyan
     
     # Use longer timeout for the enhanced scraper
-    $scrapeResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/jobs/scrape/trigger" -Method POST -Headers $headers -Body "{}" -TimeoutSec 600
+    $scrapeResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/jobs/scrape/trigger" -Method POST -Headers $headers -Body "{}" -TimeoutSec 600
     
     if ($scrapeResponse.success) {
         Write-Host "?? Job scraping completed successfully!" -ForegroundColor Green
@@ -93,7 +93,7 @@ try {
         Start-Sleep -Seconds 10
         
         try {
-            $afterStatsResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/jobs/scrape/stats" -Method GET -Headers $headers
+            $afterStatsResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/jobs/scrape/stats" -Method GET -Headers $headers
             $afterCount = $afterStatsResponse.data.summary.TotalScrapedJobs
             $jobsAdded = $afterCount - $beforeCount
             
@@ -119,7 +119,7 @@ try {
 # Step 5: Final Status Check
 Write-Host "`n5?? Final health check..." -ForegroundColor Yellow
 try {
-    $finalHealthResponse = Invoke-RestMethod -Uri "https://nexhire-api-func.azurewebsites.net/api/jobs/scrape/health" -Method GET
+    $finalHealthResponse = Invoke-RestMethod -Uri "https://refopen-api-func.azurewebsites.net/api/jobs/scrape/health" -Method GET
     Write-Host "? Scraper Status: $($finalHealthResponse.data.status)" -ForegroundColor Green
     Write-Host "   ?? Total scraped jobs: $($finalHealthResponse.data.totalScrapedJobs)" -ForegroundColor White
     Write-Host "   ?? Jobs last 24h: $($finalHealthResponse.data.jobsLast24h)" -ForegroundColor White
@@ -132,7 +132,7 @@ try {
 Write-Host "`n?? Test completed!" -ForegroundColor Green
 Write-Host ""
 Write-Host "?? About Azure Functions Timeout:" -ForegroundColor Yellow
-Write-Host "   • Enhanced scraper processes 800+ jobs (vs 150 before)" -ForegroundColor Gray
-Write-Host "   • Azure Functions timeout after 10 minutes" -ForegroundColor Gray
-Write-Host "   • Scraper may continue running in background" -ForegroundColor Gray
-Write-Host "   • Check stats periodically to see progress" -ForegroundColor Gray
+Write-Host "   ï¿½ Enhanced scraper processes 800+ jobs (vs 150 before)" -ForegroundColor Gray
+Write-Host "   ï¿½ Azure Functions timeout after 10 minutes" -ForegroundColor Gray
+Write-Host "   ï¿½ Scraper may continue running in background" -ForegroundColor Gray
+Write-Host "   ï¿½ Check stats periodically to see progress" -ForegroundColor Gray

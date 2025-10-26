@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 
@@ -14,7 +14,7 @@ export const useAuth = () => {
 };
 
 // NEW: Helper functions for sessionStorage persistence
-const GOOGLE_AUTH_STORAGE_KEY = 'nexhire_pending_google_auth';
+const GOOGLE_AUTH_STORAGE_KEY = 'refopen_pending_google_auth';
 
 const savePendingGoogleAuthToStorage = (data) => {
   try {
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Initialize smart auth methods
-  const smartMethods = createSmartAuthMethods(nexhireAPI, setUser, setError);
+  const smartMethods = createSmartAuthMethods(refopenAPI, setUser, setError);
 
   // Initialize auth state on app start
   useEffect(() => {
@@ -86,18 +86,18 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       // Check if user has valid token
-      const token = await nexhireAPI.getToken('nexhire_token');
+      const token = await refopenAPI.getToken('refopen_token');
       
       if (token) {
         console.log('Found stored token, verifying with server...');
         // Verify token is still valid by fetching profile
-        const result = await nexhireAPI.getProfile();
+        const result = await refopenAPI.getProfile();
         if (result.success) {
           console.log('Token valid, user authenticated:', result.data.Email);
           setUser(result.data);
         } else {
           console.log('Token invalid, clearing stored tokens');
-          await nexhireAPI.clearTokens();
+          await refopenAPI.clearTokens();
           // FIXED: Don't set error for normal token expiration
           setError(null);
         }
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      await nexhireAPI.clearTokens();
+      await refopenAPI.clearTokens();
       // FIXED: Don't show error to user for normal auth check failures
       // The user will see the login screen anyway
       setError(null);
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }) => {
 
       // Step 2: Try to login with existing account
       try {
-        const loginResult = await nexhireAPI.loginWithGoogle(googleResult.data);
+        const loginResult = await refopenAPI.loginWithGoogle(googleResult.data);
         
         if (loginResult.success) {
           console.log('? Existing user login successful');
@@ -228,7 +228,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       
       console.log('Attempting login for:', email);
-      const result = await nexhireAPI.login(email, password);
+      const result = await refopenAPI.login(email, password);
       
       if (result.success) {
         console.log('Login successful for:', result.data.user.Email);
@@ -278,7 +278,7 @@ export const AuthProvider = ({ children }) => {
       console.log('Separated job preferences:', jobPreferences ? JSON.stringify(jobPreferences, null, 2) : 'None');
       
       console.log('Calling API register with:', JSON.stringify(registrationData, null, 2));
-      const result = await nexhireAPI.register(registrationData);
+      const result = await refopenAPI.register(registrationData);
       console.log('API register result:', result);
       
       if (result.success) {
@@ -303,7 +303,7 @@ export const AuthProvider = ({ children }) => {
               }
             };
             
-            loginResult = await nexhireAPI.loginWithGoogle(googleLoginData);
+            loginResult = await refopenAPI.loginWithGoogle(googleLoginData);
             console.log('Google login result:', loginResult);
           } catch (googleLoginError) {
             console.warn('Google login failed, falling back to regular login:', googleLoginError);
@@ -323,13 +323,13 @@ export const AuthProvider = ({ children }) => {
           console.log('? User state set after auto-login:', loginResult.user?.Email || loginResult.data?.user?.Email);
           
           // FIXED: Ensure API token is properly set before profile updates
-          await nexhireAPI.init(); // Re-initialize API to sync token
+          await refopenAPI.init(); // Re-initialize API to sync token
           
           // Save education data if provided
           if (educationData) {
             console.log('Saving education data:', JSON.stringify(educationData, null, 2));
             try {
-              const educationResult = await nexhireAPI.updateEducation(educationData);
+              const educationResult = await refopenAPI.updateEducation(educationData);
               console.log('Education save result:', educationResult);
               if (educationResult.success) {
                 console.log('? Education data saved successfully');
@@ -364,7 +364,7 @@ export const AuthProvider = ({ children }) => {
                 console.log(`   - Current: ${isCurrentPosition ? 'Yes' : 'No'}`);
                 
                 try {
-                  const createResult = await nexhireAPI.createWorkExperience({
+                  const createResult = await refopenAPI.createWorkExperience({
                     jobTitle,
                     companyName,
                     organizationId,
@@ -399,7 +399,7 @@ export const AuthProvider = ({ children }) => {
           if (jobPreferences) {
             console.log('Saving job preferences:', JSON.stringify(jobPreferences, null, 2));
             try {
-              const jobPreferencesResult = await nexhireAPI.updateJobPreferences(jobPreferences);
+              const jobPreferencesResult = await refopenAPI.updateJobPreferences(jobPreferences);
               console.log('Job preferences save result:', jobPreferencesResult);
               if (jobPreferencesResult.success) {
                 console.log('? Job preferences saved successfully');
@@ -451,7 +451,7 @@ export const AuthProvider = ({ children }) => {
 
       // Call API logout
       console.log('Calling API logout...');
-      const result = await nexhireAPI.logout();
+      const result = await refopenAPI.logout();
       
       if (result.success) {
         console.log('Logout successful:', result.message);
@@ -481,7 +481,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       console.log('Updating profile for:', user?.Email);
-      const result = await nexhireAPI.updateProfile(profileData);
+      const result = await refopenAPI.updateProfile(profileData);
       
       if (result.success) {
         console.log('Profile updated successfully');

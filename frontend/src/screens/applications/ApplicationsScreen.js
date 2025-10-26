@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
@@ -70,7 +70,7 @@ export default function ApplicationsScreen({ navigation }) {
       let result;
       if (isJobSeeker) {
         // API call: Get job seeker's own applications from backend
-        result = await nexhireAPI.getMyApplications(currentPage, pagination.pageSize);
+        result = await refopenAPI.getMyApplications(currentPage, pagination.pageSize);
       } else {
         // For employers, we'd need to get applications for their jobs
         // This would require a different API call or job-specific applications
@@ -105,8 +105,8 @@ export default function ApplicationsScreen({ navigation }) {
     if (!user || !isJobSeeker) return;
     try {
       const [referralRes, eligibilityRes] = await Promise.all([
-        nexhireAPI.getMyReferralRequests(1, 500),
-        nexhireAPI.checkReferralEligibility()
+        refopenAPI.getMyReferralRequests(1, 500),
+        refopenAPI.checkReferralEligibility()
       ]);
       
       if (referralRes?.success && referralRes.data?.requests) {
@@ -126,7 +126,7 @@ export default function ApplicationsScreen({ navigation }) {
   const loadPrimaryResume = async () => {
     if (!user || !isJobSeeker) return;
     try {
-      const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -242,7 +242,7 @@ export default function ApplicationsScreen({ navigation }) {
 
     // Real-time eligibility check (SAME AS JobsScreen & JobDetailsScreen)
     try {
-      const freshEligibility = await nexhireAPI.checkReferralEligibility();
+      const freshEligibility = await refopenAPI.checkReferralEligibility();
 
       if (freshEligibility?.success) {
         const eligibilityData = freshEligibility.data;
@@ -268,7 +268,7 @@ export default function ApplicationsScreen({ navigation }) {
 
     // Double-check no existing request (in case of race conditions)
     try {
-      const existing = await nexhireAPI.getMyReferralRequests(1, 100);
+      const existing = await refopenAPI.getMyReferralRequests(1, 100);
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId);
         if (already) {
@@ -355,7 +355,7 @@ export default function ApplicationsScreen({ navigation }) {
       setShowResumeModal(false);
       if (referralMode) {
         // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
-        const res = await nexhireAPI.createReferralRequest({
+        const res = await refopenAPI.createReferralRequest({
           jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
           extJobID: null, // Explicitly null for internal referrals
           resumeID: resumeData.ResumeID
@@ -389,7 +389,7 @@ export default function ApplicationsScreen({ navigation }) {
     const id = job.JobID || job.id;
     try {
       // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
-      const res = await nexhireAPI.createReferralRequest({
+      const res = await refopenAPI.createReferralRequest({
         jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
         extJobID: null, // Explicitly null for internal referrals
         resumeID: resumeId
@@ -430,7 +430,7 @@ export default function ApplicationsScreen({ navigation }) {
   // Withdraw application function
   const withdrawApplication = async (application) => {
     try {
-      const res = await nexhireAPI.withdrawApplication(application.ApplicationID);
+      const res = await refopenAPI.withdrawApplication(application.ApplicationID);
       
       if (res.success) {
         // Remove the application from the list

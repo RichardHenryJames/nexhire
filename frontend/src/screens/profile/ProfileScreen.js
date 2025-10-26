@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import EducationSection from '../../components/profile/EducationSection';
 import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSection';
 import ProfileSection, { useEditing } from '../../components/profile/ProfileSection';
@@ -511,7 +511,7 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       console.log('Saving employer data...');
-      const result = await nexhireAPI.updateEmployerProfile(user.UserID, updatedData);
+      const result = await refopenAPI.updateEmployerProfile(user.UserID, updatedData);
       if (result.success) {
         Alert.alert('Success', 'Employer information updated successfully!');
         return true;
@@ -714,7 +714,7 @@ export default function ProfileScreen() {
       if (userType === 'JobSeeker') {
         console.log('👤 Loading JobSeeker profile for UserID:', user.UserID);
         
-        const response = await nexhireAPI.getApplicantProfile(user.UserID);
+        const response = await refopenAPI.getApplicantProfile(user.UserID);
         console.log('📊 JobSeeker profile API response:', response.success ? 'Success' : 'Failed');
         
         if (response.success) {
@@ -818,7 +818,7 @@ export default function ProfileScreen() {
       } else if (userType === 'Employer') {
         console.log('🏢 Loading Employer profile for UserID:', user.UserID);
         
-        const response = await nexhireAPI.getEmployerProfile(user.UserID);
+        const response = await refopenAPI.getEmployerProfile(user.UserID);
         console.log('📊 Employer profile API response:', response.success ? 'Success' : 'Failed');
         
         if (response.success) {
