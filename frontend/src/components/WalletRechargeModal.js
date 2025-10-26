@@ -41,7 +41,7 @@ export default function WalletRechargeModal({
           >
             {/* Header with Icon - Red background, more compact */}
             <View style={styles.header}>
-              <Ionicons name="wallet" size={32} color="#fff" style={styles.headerIcon} />
+              <Ionicons name="wallet" size={32} color="#fff"/>
               <Text style={styles.title}>Wallet Recharge Required</Text>
             </View>
 
