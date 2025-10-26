@@ -108,6 +108,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     organizationId: null, // NEW: Organization ID from database
     jobTitle: '', // NEW: Job title (required when company is selected)
     startDate: '', // NEW: Start date (required when company is selected)
+    referralCode: '', // 🎁 NEW: Referral code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -339,6 +340,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
+        ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
         
         // Include all the collected data for profile completion
         experienceType,
@@ -675,6 +677,42 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             </View>
 
             {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
+            
+            {/* 🎁 NEW: Referral Code Input (Optional) */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Referral Code (Optional)
+              </Text>
+              <View style={styles.referralCodeContainer}>
+                <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+                <TextInput
+                  style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
+                  placeholder="Enter referral code"
+                  placeholderTextColor={colors.gray400}
+                  value={formData.referralCode}
+                  onChangeText={(text) => {
+                    // Convert to uppercase and remove spaces
+                    const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                    setFormData({ ...formData, referralCode: cleanCode });
+                    if (errors.referralCode) {
+                      setErrors({ ...errors, referralCode: null });
+                    }
+                  }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={8}
+                />
+              </View>
+              {errors.referralCode && (
+                <Text style={styles.errorText}>{errors.referralCode}</Text>
+              )}
+              <View style={styles.referralCodeHint}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+                <Text style={styles.referralCodeHintText}>
+                  Have a referral code? Get ₹50 bonus when you sign up!
+                </Text>
+              </View>
+            </View>
             
             {/* Only show password fields for non-Google users */}
             {!isGoogleUser && (
@@ -1164,6 +1202,37 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
     marginTop: 4,
+  },
+  // 🎁 NEW: Referral code styles
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    flex: 1,
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   selectionButton: {
     backgroundColor: colors.surface,

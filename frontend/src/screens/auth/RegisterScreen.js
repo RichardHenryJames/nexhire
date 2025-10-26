@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import DatePicker from '../../components/DatePicker';
@@ -25,6 +26,7 @@ export default function RegisterScreen({ navigation }) {
     phone: '',
     dateOfBirth: '',
     gender: '',
+    referralCode: '', // ?? NEW: Referral code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -120,6 +122,7 @@ export default function RegisterScreen({ navigation }) {
         ...(formData.phone && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // ?? NEW: Add referral code
       };
 
       const result = await register(registrationData);
@@ -189,6 +192,43 @@ export default function RegisterScreen({ navigation }) {
           {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}
           {renderInput('lastName', 'Last Name', 'e.g., Doe', false, 'default', false, true)}
           {renderInput('email', 'Email Address', 'e.g., john.doe@example.com', false, 'email-address', false, true)}
+          
+          {/* ?? NEW: Referral Code Input (Optional) */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>
+              Referral Code (Optional)
+            </Text>
+            <View style={styles.referralCodeContainer}>
+              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+              <TextInput
+                style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
+                placeholder="Enter referral code"
+                placeholderTextColor={colors.gray400}
+                value={formData.referralCode}
+                onChangeText={(text) => {
+                  // Convert to uppercase and remove spaces
+                  const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                  setFormData({ ...formData, referralCode: cleanCode });
+                  if (errors.referralCode) {
+                    setErrors({ ...errors, referralCode: null });
+                  }
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+              />
+            </View>
+            {errors.referralCode && (
+              <Text style={styles.errorText}>{errors.referralCode}</Text>
+            )}
+            <View style={styles.referralCodeHint}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+              <Text style={styles.referralCodeHintText}>
+                Have a referral code? Get ?50 bonus when you sign up!
+              </Text>
+            </View>
+          </View>
+          
           {renderInput('password', 'Password', 'Minimum 8 characters', true, 'default', false, true)}
           {renderInput('confirmPassword', 'Confirm Password', 'Re-enter your password', true, 'default', false, true)}
 
@@ -359,6 +399,35 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     marginTop: 4,
     marginLeft: 4,
+  },
+  // ?? NEW: Referral code styles
+  referralCodeContainer: {
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 16,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   fieldContainer: {
     marginBottom: 20,
