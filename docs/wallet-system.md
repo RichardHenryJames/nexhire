@@ -1,8 +1,8 @@
-# ?? NexHire Wallet System
+# ?? RefOpen Wallet System
 
 ## Overview
 
-The NexHire Wallet System allows users to add money to their digital wallet using Razorpay payment gateway. Users can maintain a balance, recharge their wallet, view transaction history, and use wallet funds for various platform services.
+The RefOpen Wallet System allows users to add money to their digital wallet using Razorpay payment gateway. Users can maintain a balance, recharge their wallet, view transaction history, and use wallet funds for various platform services.
 
 ---
 
@@ -370,7 +370,7 @@ const options = {
   key: razorpayKeyId,
   amount: amount, // in paise
   currency: 'INR',
-  name: 'NexHire',
+  name: 'RefOpen',
   description: 'Wallet Recharge',
   order_id: orderId,
   handler: async function (response) {
@@ -525,4 +525,4 @@ For issues related to:
 
 ---
 
-**Built with ?? for NexHire Platform**
+**Built with ?? for RefOpen Platform**
