@@ -1647,6 +1647,85 @@ class RefOpenAPI {
   }
 
   // ========================================================================
+  // WALLET SYSTEM APIs - Complete Integration
+  // ========================================================================
+
+  // 💰 NEW: Get wallet balance
+  async getWalletBalance() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Loading wallet balance...');
+      return await this.apiCall('/wallet/balance');
+    } catch (error) {
+      console.error('❌ Failed to load wallet balance:', error);
+      return { success: false, error: error.message || 'Failed to load wallet balance' };
+    }
+  }
+
+  // 💰 NEW: Get full wallet details
+  async getWallet() {
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Loading wallet details...');
+      return await this.apiCall('/wallet');
+    } catch (error) {
+      console.error('❌ Failed to load wallet:', error);
+      return { success: false, error: error.message || 'Failed to load wallet' };
+    }
+  }
+
+  // 💰 NEW: Get wallet transactions
+  async getWalletTransactions(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/wallet/transactions?${params}`);
+  }
+
+  // 💰 NEW: Create wallet recharge order
+  async createWalletRechargeOrder(amount, currencyId = 4) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/wallet/recharge/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currencyId }),
+    });
+  }
+
+  // 💰 NEW: Verify wallet recharge
+  async verifyWalletRecharge(verificationData) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/wallet/recharge/verify', {
+      method: 'POST',
+      body: JSON.stringify(verificationData),
+    });
+  }
+
+  // ========================================================================
   // REFERRAL SYSTEM APIs - Complete Integration
   // ========================================================================
 

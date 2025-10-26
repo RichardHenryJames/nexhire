@@ -858,6 +858,21 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  // 🆕 NEW: Load wallet balance
+  const loadWalletBalance = async () => {
+    try {
+      setLoadingWallet(true);
+      const result = await refopenAPI.getWalletBalance();
+      if (result.success) {
+        setWalletBalance(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading wallet balance:', error);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
   // ? Smart profile save using field routing
   const handleSmartSave = async () => {
     try {
