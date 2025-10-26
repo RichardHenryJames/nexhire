@@ -612,4 +612,153 @@ export class WalletService {
       throw error;
     }
   }
+
+  /**
+   * ? NEW: Credit bonus to wallet (welcome bonus, referral bonus, etc.)
+   * Used for automated bonuses during registration and referrals
+   */
+  static async creditBonus(
+    userId: string,
+    amount: number,
+    source: 'NEW_USER_BONUS' | 'REFERRAL_BONUS' | 'ADMIN_BONUS',
+    description: string
+  ): Promise<{ success: boolean; transactionId: string; newBalance: number }> {
+    try {
+      console.log(`?? Crediting ${source} of ?${amount} to user ${userId}`);
+
+      if (amount <= 0) {
+        throw new ValidationError('Bonus amount must be greater than 0');
+      }
+
+      const wallet = await this.getOrCreateWallet(userId);
+      const balanceBefore = wallet.Balance;
+      const balanceAfter = balanceBefore + amount;
+
+      // Update wallet balance
+      await dbService.executeQuery(
+        `UPDATE Wallets 
+         SET Balance = @param1, 
+             UpdatedAt = GETUTCDATE(), 
+             LastTransactionAt = GETUTCDATE() 
+         WHERE WalletID = @param0`,
+        [wallet.WalletID, balanceAfter]
+      );
+
+      // Create transaction record
+      const transactionId = AuthService.generateUniqueId();
+      await dbService.executeQuery(
+        `INSERT INTO WalletTransactions (
+          TransactionID, WalletID, TransactionType, Amount, 
+          BalanceBefore, BalanceAfter, CurrencyID, Source, 
+          Description, Status, CreatedAt
+        ) VALUES (
+          @param0, @param1, 'Credit', @param2, @param3, 
+          @param4, @param5, @param6, @param7, 'Completed', GETUTCDATE()
+        )`,
+        [
+          transactionId,
+          wallet.WalletID,
+          amount,
+          balanceBefore,
+          balanceAfter,
+          wallet.CurrencyID,
+          source,
+          description
+        ]
+      );
+
+      console.log(`? Bonus credited: ?${amount} to user ${userId}. New balance: ?${balanceAfter}`);
+
+      return {
+        success: true,
+        transactionId,
+        newBalance: balanceAfter
+      };
+    } catch (error) {
+      console.error('Error crediting bonus:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ? NEW: Give welcome bonus to new user (?100)
+   * Called automatically during user registration
+   */
+  static async giveWelcomeBonus(userId: string): Promise<{ success: boolean; amount: number }> {
+    try {
+      const WELCOME_BONUS_AMOUNT = 100;
+
+      // Check if bonus already given
+      const checkQuery = `
+        SELECT WalletBonusGiven 
+        FROM Users 
+        WHERE UserID = @param0
+      `;
+      const checkResult = await dbService.executeQuery(checkQuery, [userId]);
+
+      if (checkResult.recordset[0]?.WalletBonusGiven) {
+        console.log(`?? Welcome bonus already given to user ${userId}`);
+        return { success: false, amount: 0 };
+      }
+
+      // Credit welcome bonus
+      await this.creditBonus(
+        userId,
+        WELCOME_BONUS_AMOUNT,
+        'NEW_USER_BONUS',
+        `Welcome bonus - ?${WELCOME_BONUS_AMOUNT} credited to your wallet`
+      );
+
+      // Mark bonus as given
+      await dbService.executeQuery(
+        `UPDATE Users 
+         SET WalletBonusGiven = 1, UpdatedAt = GETUTCDATE() 
+         WHERE UserID = @param0`,
+        [userId]
+      );
+
+      console.log(`?? Welcome bonus of ?${WELCOME_BONUS_AMOUNT} credited to user ${userId}`);
+
+      return { success: true, amount: WELCOME_BONUS_AMOUNT };
+    } catch (error) {
+      console.error('Error giving welcome bonus:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ? NEW: Give referral bonuses (?50 to both referrer and referee)
+   * Called when a new user registers with a referral code
+   */
+  static async giveReferralBonuses(
+    newUserId: string,
+    referrerId: string
+  ): Promise<{ success: boolean; amount: number }> {
+    try {
+      const REFERRAL_BONUS_AMOUNT = 50;
+
+      // Credit bonus to new user
+      await this.creditBonus(
+        newUserId,
+        REFERRAL_BONUS_AMOUNT,
+        'REFERRAL_BONUS',
+        `Referral bonus - ?${REFERRAL_BONUS_AMOUNT} for joining via referral`
+      );
+
+      // Credit bonus to referrer
+      await this.creditBonus(
+        referrerId,
+        REFERRAL_BONUS_AMOUNT,
+        'REFERRAL_BONUS',
+        `Referral bonus - ?${REFERRAL_BONUS_AMOUNT} for referring a new user`
+      );
+
+      console.log(`?? Referral bonuses credited: ?${REFERRAL_BONUS_AMOUNT} each to ${newUserId} and ${referrerId}`);
+
+      return { success: true, amount: REFERRAL_BONUS_AMOUNT };
+    } catch (error) {
+      console.error('Error giving referral bonuses:', error);
+      throw error;
+    }
+  }
 }

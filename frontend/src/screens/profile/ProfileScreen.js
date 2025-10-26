@@ -25,7 +25,7 @@ import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 import ResumeSection from '../../components/profile/ResumeSection';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { 
     user, 
     logout, 
@@ -44,6 +44,10 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   const [skillType, setSkillType] = useState('primary'); // ? NEW: Track which skill type we're adding
+
+  // 🆕 NEW: Wallet state
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [loadingWallet, setLoadingWallet] = useState(false);
 
   // Initialize basic profile with correct backend field names
   const [profile, setProfile] = useState({
@@ -661,6 +665,10 @@ export default function ProfileScreen() {
       
       // Load extended profile based on user type
       loadExtendedProfile();
+      // 🆕 NEW: Load wallet balance for job seekers
+      if (userType === 'JobSeeker') {
+        loadWalletBalance();
+      }
     }
   }, [user]);
 
@@ -1117,6 +1125,34 @@ export default function ProfileScreen() {
           <Text style={styles.title}>Profile</Text>
         </View>
 
+        {/* 🆕 NEW: Wallet Balance Card (for Job Seekers only) */}
+        {userType === 'JobSeeker' && (
+          <TouchableOpacity 
+            style={styles.walletCard}
+            onPress={() => navigation.navigate('Wallet')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.walletCardLeft}>
+              <View style={styles.walletIconContainer}>
+                <Ionicons name="wallet" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.walletTextContainer}>
+                <Text style={styles.walletLabel}>Wallet Balance</Text>
+                {loadingWallet ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={styles.walletAmount}>
+                    ₹{walletBalance?.balance?.toFixed(2) || '0.00'}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.walletCardRight}>
+              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+            </View>
+          </TouchableOpacity>
+        )}
+
         <UserProfileHeader
           user={user}
           profile={profile}
@@ -1552,18 +1588,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16, // Increased for better spacing before profile header
+    marginBottom: 16,
     paddingHorizontal: 4,
   },
   title: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 22, // Slightly larger for better hierarchy
-    fontWeight: '700', // Bolder for header importance
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.textPrimary || colors.text,
     letterSpacing: 0.3,
   },
   
+  // 🆕 NEW: Wallet card styles
+  walletCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  walletCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  walletIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  walletTextContainer: {
+    flex: 1,
+  },
+  walletLabel: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#666666',
+    marginBottom: 4,
+  },
+  walletAmount: {
+    fontSize: typography.sizes?.xl || 24,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.primary,
+  },
+  walletCardRight: {
+    marginLeft: 8,
+  },
+
   // Field styles
   fieldContainer: {
     marginBottom: 20,

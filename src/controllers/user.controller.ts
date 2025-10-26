@@ -66,7 +66,7 @@ export const googleLogin = withErrorHandling(async (req: HttpRequest, context: I
     }
 });
 
-// ?? NEW: Google OAuth Registration
+// ? NEW: Google OAuth Registration
 export const googleRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { accessToken, idToken, user: googleUser, userType, ...additionalData } = await extractRequestBody(req);
     
@@ -273,3 +273,90 @@ export const updateWorkExperience = withAuth(async (req: HttpRequest, context: I
         jsonBody: successResponse(updatedProfile, 'Work experience data updated successfully')
     };
 }, ['write:profile']);
+
+// ? NEW: Get user's referral code and stats
+export const getMyReferralCode = async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        // Get user from auth token
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader) {
+            return {
+                status: 401,
+                jsonBody: {
+                    success: false,
+                    error: 'Authorization required'
+                }
+            };
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const decoded = AuthService.verifyToken(token);
+        const userId = decoded.userId;
+
+        // Get user details
+        const user = await UserService.findById(userId);
+        if (!user) {
+            return {
+                status: 404,
+                jsonBody: {
+                    success: false,
+                    error: 'User not found'
+                }
+            };
+        }
+
+        // Generate referral code from UserID (first part before hyphen)
+        const referralCode = userId.split('-')[0];
+
+        // Get referral stats
+        const statsQuery = `
+            SELECT 
+                COUNT(DISTINCT r.UserID) as TotalReferrals,
+                SUM(CASE WHEN r.CreatedAt >= DATEADD(MONTH, -1, GETUTCDATE()) THEN 1 ELSE 0 END) as ReferralsLast30Days,
+                SUM(CASE WHEN r.IsActive = 1 THEN 1 ELSE 0 END) as ActiveReferrals,
+                MAX(r.CreatedAt) as LastReferralDate
+            FROM Users r
+            WHERE r.ReferredBy = @param0
+        `;
+
+        const { dbService } = await import('../services/database.service');
+        const statsResult = await dbService.executeQuery(statsQuery, [userId]);
+        const stats = statsResult.recordset[0] || {};
+
+        // Calculate total bonus earned (?50 per referral)
+        const totalBonusEarned = (stats.TotalReferrals || 0) * 50;
+
+        return {
+            status: 200,
+            jsonBody: {
+                success: true,
+                data: {
+                    referralCode,
+                    shareUrl: `https://refopen.com/register?ref=${referralCode}`,
+                    stats: {
+                        totalReferrals: stats.TotalReferrals || 0,
+                        referralsLast30Days: stats.ReferralsLast30Days || 0,
+                        activeReferrals: stats.ActiveReferrals || 0,
+                        lastReferralDate: stats.LastReferralDate,
+                        totalBonusEarned
+                    },
+                    bonusInfo: {
+                        newUserBonus: 100,
+                        referralBonus: 50,
+                        description: "Invite friends and both get ?50 when they sign up!"
+                    }
+                },
+                message: 'Referral code retrieved successfully'
+            }
+        };
+    } catch (error) {
+        console.error('Error getting referral code:', error);
+        return {
+            status: 500,
+            jsonBody: {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to get referral code'
+            }
+        };
+    }
+};

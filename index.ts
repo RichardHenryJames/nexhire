@@ -17,7 +17,8 @@ import {
     deactivateAccount, 
     refreshToken,
     googleLogin,  // ?? NEW: Google OAuth login
-    googleRegister  // ?? NEW: Google OAuth registration
+    googleRegister,  // ?? NEW: Google OAuth registration
+    getMyReferralCode  // ? NEW: Get user's referral code and stats
 } from './src/controllers/user.controller';
 import { 
     createJob, 
@@ -171,7 +172,7 @@ app.http('users-profile', {
 
 app.http('users-change-password', {
     methods: ['POST', 'OPTIONS'],
-    authLevel: 'anonymous',
+    authLevel: 'anonymous",
     route: 'users/change-password',
     handler: withErrorHandling(changePassword)
 });
@@ -195,6 +196,14 @@ app.http('users-update-education', {
     authLevel: 'anonymous',
     route: 'users/education',
     handler: withErrorHandling(updateEducation)
+});
+
+// ? NEW: Get my referral code and stats
+app.http('users-referral-code', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/referral-code',
+    handler: withErrorHandling(getMyReferralCode)
 });
 
 // ========================================================================

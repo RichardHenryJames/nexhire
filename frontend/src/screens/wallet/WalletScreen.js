@@ -155,7 +155,16 @@ export default function WalletScreen({ navigation }) {
 
       {/* Recent Transactions */}
       <View style={styles.transactionsContainer}>
-        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        {/* ? NEW: Header with Add Money button */}
+        <View style={styles.transactionsHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <TouchableOpacity
+            style={styles.miniAddButton}
+            onPress={() => navigation.navigate('WalletRecharge')}
+          >
+            <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
 
         <FlatList
           data={transactions.slice(0, 5)}
@@ -171,6 +180,13 @@ export default function WalletScreen({ navigation }) {
               <Text style={styles.emptySubtext}>
                 Add money to your wallet to get started
               </Text>
+              <TouchableOpacity
+                style={styles.emptyAddButton}
+                onPress={() => navigation.navigate('WalletRecharge')}
+              >
+                <Ionicons name="add-circle" size={20} color="#FFF" />
+                <Text style={styles.emptyAddButtonText}>Add Money Now</Text>
+              </TouchableOpacity>
             </View>
           }
           contentContainerStyle={styles.listContent}
@@ -346,5 +362,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007AFF',
     marginRight: 4,
+  },
+
+  // ? NEW: Transactions header styles
+  transactionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  miniAddButton: {
+    padding: 4,
+  },
+
+  // ? NEW: Empty state add button
+  emptyAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  emptyAddButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

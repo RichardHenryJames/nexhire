@@ -86,7 +86,7 @@ export default function WalletRechargeScreen({ navigation }) {
       key: orderData.razorpayKeyId,
       amount: orderData.amount, // amount in paise
       currency: orderData.currency || 'INR',
-      name: 'NexHire',
+      name: 'RefOpen',
       description: 'Wallet Recharge',
       order_id: orderData.orderId,
       handler: async function (response) {

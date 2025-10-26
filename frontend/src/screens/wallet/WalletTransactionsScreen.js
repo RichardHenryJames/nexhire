@@ -124,10 +124,22 @@ export default function WalletTransactionsScreen({ navigation }) {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      {/* Current Balance */}
+      {/* Current Balance with Add Money button */}
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceCardLabel}>Current Balance</Text>
-        <Text style={styles.balanceCardAmount}>?{currentBalance.toFixed(2)}</Text>
+        <View style={styles.balanceCardHeader}>
+          <View>
+            <Text style={styles.balanceCardLabel}>Current Balance</Text>
+            <Text style={styles.balanceCardAmount}>?{currentBalance.toFixed(2)}</Text>
+          </View>
+          {/* ? NEW: Add Money button in balance card */}
+          <TouchableOpacity
+            style={styles.balanceAddButton}
+            onPress={() => navigation.navigate('WalletRecharge')}
+          >
+            <Ionicons name="add-circle" size={24} color="#FFF" />
+            <Text style={styles.balanceAddButtonText}>Add Money</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter Buttons */}
@@ -250,6 +262,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
   },
+  balanceCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   balanceCardLabel: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
@@ -259,6 +276,20 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  balanceAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  balanceAddButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   filterContainer: {
     flexDirection: 'row',

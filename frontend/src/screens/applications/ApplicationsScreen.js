@@ -240,29 +240,42 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // Real-time eligibility check (SAME AS JobsScreen & JobDetailsScreen)
+    // ✅ NEW: Check wallet balance instead of subscription
     try {
-      const freshEligibility = await refopenAPI.checkReferralEligibility();
+      console.log('Checking wallet balance...');
+      const walletBalance = await refopenAPI.getWalletBalance();
+      console.log('Wallet balance result:', walletBalance);
 
-      if (freshEligibility?.success) {
-        const eligibilityData = freshEligibility.data;
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        console.log('Current balance:', balance);
 
-        if (!eligibilityData.isEligible) {
-          // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
-          if (eligibilityData.dailyQuotaRemaining === 0) {
-            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
-            return;
-          }
-          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+        // Check if balance >= ₹50
+        if (balance < 50) {
+          console.log('Insufficient wallet balance:', balance);
+          Alert.alert(
+            'Insufficient Wallet Balance',
+            `Your current wallet balance is ₹${balance.toFixed(2)}.\n\nYou need ₹50.00 to request a referral.\n\nPlease add ₹${(50 - balance).toFixed(2)} or more to continue.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Add Money to Wallet', 
+                onPress: () => navigation.navigate('WalletRecharge')
+              }
+            ]
+          );
           return;
         }
 
-        // Update local state with fresh data
-        setReferralEligibility(eligibilityData);
+        console.log('✅ Sufficient balance - proceeding with referral');
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance.error);
+        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        return;
       }
     } catch (e) {
-      console.error('Failed to check referral eligibility:', e);
-      Alert.alert('Error', 'Unable to check referral quota. Please try again.');
+      console.error('Failed to check wallet balance:', e);
+      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
       return;
     }
 
@@ -367,12 +380,40 @@ export default function ApplicationsScreen({ navigation }) {
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          showToast('Referral request sent successfully', 'success');
+          
+          // ✅ NEW: Show wallet deduction info
+          const amountDeducted = res.data?.amountDeducted || 50;
+          const balanceAfter = res.data?.walletBalanceAfter;
+          
+          let message = 'Referral request sent successfully';
+          if (balanceAfter !== undefined) {
+            message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+          }
+          
+          showToast(message, 'success');
           
           // NEW: Reload primary resume after submission (same as JobDetailsScreen)
           await loadPrimaryResume();
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          // ✅ NEW: Handle insufficient balance error
+          if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+            const currentBalance = res.data?.currentBalance || 0;
+            const requiredAmount = res.data?.requiredAmount || 50;
+            
+            Alert.alert(
+              'Insufficient Wallet Balance',
+              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Add Money to Wallet', 
+                  onPress: () => navigation.navigate('WalletRecharge')
+                }
+              ]
+            );
+          } else {
+            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          }
         }
       }
     } catch (e) {
@@ -401,9 +442,37 @@ export default function ApplicationsScreen({ navigation }) {
           dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
           isEligible: prev.dailyQuotaRemaining > 1
         }));
-        showToast('Referral request sent', 'success');
+        
+        // ✅ NEW: Show wallet deduction info
+        const amountDeducted = res.data?.amountDeducted || 50;
+        const balanceAfter = res.data?.walletBalanceAfter;
+        
+        let message = 'Referral request sent';
+        if (balanceAfter !== undefined) {
+          message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+        }
+        
+        showToast(message, 'success');
       } else {
-        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        // ✅ NEW: Handle insufficient balance error
+        if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+          const currentBalance = res.data?.currentBalance || 0;
+          const requiredAmount = res.data?.requiredAmount || 50;
+          
+          Alert.alert(
+            'Insufficient Wallet Balance',
+            `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Add Money to Wallet', 
+                onPress: () => navigation.navigate('WalletRecharge')
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');

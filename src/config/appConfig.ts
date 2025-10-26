@@ -130,7 +130,7 @@ class ConfigService {
         server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
         name: process.env.DB_NAME || 'refopen-sql-db',
         user: process.env.DB_USER || 'sqladmin',
-        password: process.env.DB_PASSWORD || 'P@ssw0rd1234!',
+        password: process.env.DB_PASSWORD || 'RefOpen@2024!Secure',
         connectionString: process.env.DB_CONNECTION_STRING || this.buildConnectionString(),
         encrypt: process.env.DB_ENCRYPT !== 'false',
         trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',

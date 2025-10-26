@@ -36,6 +36,10 @@ import ReferralScreen from '../screens/referral/ReferralScreen';
 import AskReferralScreen from '../screens/referral/AskReferralScreen';
 import ReferralPlansScreen from '../screens/referral/ReferralPlansScreen';
 import PaymentScreen from '../screens/payment/PaymentScreen';
+// ?? NEW: Wallet screens
+import WalletScreen from '../screens/wallet/WalletScreen';
+import WalletTransactionsScreen from '../screens/wallet/WalletTransactionsScreen';
+import WalletRechargeScreen from '../screens/wallet/WalletRechargeScreen';
 
 import { colors } from '../styles/theme';
 
@@ -334,6 +338,34 @@ function MainStack() {
         options={{ 
           headerShown: true,
           title: 'Secure Payment',
+          headerBackTitleVisible: false,
+        }}
+      />
+      {/* ?? NEW: Wallet screens */}
+      <Stack.Screen 
+        name="Wallet" 
+        component={WalletScreen}
+        options={{ 
+          headerShown: true,
+          title: 'My Wallet',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="WalletTransactions" 
+        component={WalletTransactionsScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Transaction History',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="WalletRecharge" 
+        component={WalletRechargeScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Add Money to Wallet',
           headerBackTitleVisible: false,
         }}
       />
