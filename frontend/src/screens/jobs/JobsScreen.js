@@ -102,6 +102,10 @@ export default function JobsScreen({ navigation, route }) {
   const [primaryResume, setPrimaryResume] = useState(null);
   const primaryResumeLoadedRef = useRef(false);
 
+  // 💎 NEW: Beautiful wallet modal state
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  
   // Load primary resume once (or first resume as fallback)
   const loadPrimaryResume = useCallback(async () => {
     if (!user || !isJobSeeker) return;
@@ -901,38 +905,9 @@ export default function JobsScreen({ navigation, route }) {
         if (balance < 50) {
           console.log('Insufficient wallet balance:', balance);
           
-          // Use window.confirm for web
-          if (Platform.OS === 'web') {
-            const message =
-              `💰 Wallet Recharge Required\n\n` +
-              `To request a referral, you need ₹50 in your wallet.\n\n` +
-              `📊 Current Balance: ₹${balance.toFixed(2)}\n` +
-              `💵 Required Amount: ₹50.00\n` +
-              `➕ Add at least: ₹${(50 - balance).toFixed(2)}\n\n` +
-              `Why is this needed?\n` +
-              `• Referral requests require a small fee to maintain quality\n` +
-              `• This ensures serious job seekers and fair compensation for referrers\n` +
-              `• Your wallet balance can be used for multiple referral requests\n\n` +
-              `Would you like to add money to your wallet now?`;
-            
-            if (window.confirm(message)) {
-              navigation.navigate('WalletRecharge');
-            }
-            return;
-          }
-          
-          // Native Alert
-          Alert.alert(
-            'Insufficient Wallet Balance',
-            `Your current wallet balance is ₹${balance.toFixed(2)}.\n\nYou need ₹50.00 to request a referral.\n\nPlease add ₹${(50 - balance).toFixed(2)} or more to continue.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Add Money to Wallet', 
-                onPress: () => navigation.navigate('WalletRecharge')
-              }
-            ]
-          );
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
+          setShowWalletModal(true);
           return;
         }
 
@@ -1218,31 +1193,9 @@ export default function JobsScreen({ navigation, route }) {
           const currentBalance = res.data?.currentBalance || 0;
           const requiredAmount = res.data?.requiredAmount || 50;
           
-          // Use window.confirm for web
-          if (Platform.OS === 'web') {
-            const message =
-              `Insufficient Wallet Balance\n\n` +
-              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\n` +
-              `You need ₹${requiredAmount.toFixed(2)} to request a referral.\n\n` +
-              `Please add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.\n\n` +
-              `Would you like to add money to your wallet now?`;
-            
-            if (window.confirm(message)) {
-              navigation.navigate('WalletRecharge');
-            }
-          } else {
-            Alert.alert(
-              'Insufficient Wallet Balance',
-              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Add Money to Wallet', 
-                  onPress: () => navigation.navigate('WalletRecharge')
-                }
-              ]
-            );
-          }
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance, requiredAmount });
+          setShowWalletModal(true);
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -1560,6 +1513,18 @@ export default function JobsScreen({ navigation, route }) {
         onResumeSelected={handleResumeSelected}
         user={user}
         jobTitle={pendingJobForApplication?.Title}
+      />
+      
+      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
       />
     </View>
   );

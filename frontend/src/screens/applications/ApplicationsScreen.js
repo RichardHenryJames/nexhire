@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Image, // NEW: Import Image for company logos
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
 
@@ -44,6 +45,10 @@ export default function ApplicationsScreen({ navigation }) {
   const [primaryResume, setPrimaryResume] = useState(null);
   // Web withdraw confirmation state
   const [withdrawTarget, setWithdrawTarget] = useState(null);
+
+  // 💎 NEW: Beautiful wallet modal state
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -218,7 +223,6 @@ export default function ApplicationsScreen({ navigation }) {
   const handleAskReferral = async (job) => {
     if (!job) return;
     if (!user) {
-      // Web-compatible alert
       if (Platform.OS === 'web') {
         if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
           navigation.navigate('Auth');
@@ -253,7 +257,7 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // ✅ NEW: Check wallet balance instead of subscription
+    // ✅ Check wallet balance
     try {
       console.log('Checking wallet balance...');
       const walletBalance = await refopenAPI.getWalletBalance();
@@ -267,38 +271,9 @@ export default function ApplicationsScreen({ navigation }) {
         if (balance < 50) {
           console.log('Insufficient wallet balance:', balance);
           
-          // Use window.confirm for web
-          if (Platform.OS === 'web') {
-            const message =
-              `💰 Wallet Recharge Required\n\n` +
-              `To request a referral, you need ₹50 in your wallet.\n\n` +
-              `📊 Current Balance: ₹${balance.toFixed(2)}\n` +
-              `💵 Required Amount: ₹50.00\n` +
-              `➕ Add at least: ₹${(50 - balance).toFixed(2)}\n\n` +
-              `Why is this needed?\n` +
-              `• Referral requests require a small fee to maintain quality\n` +
-              `• This ensures serious job seekers and fair compensation for referrers\n` +
-              `• Your wallet balance can be used for multiple referral requests\n\n` +
-              `Would you like to add money to your wallet now?`;
-            
-            if (window.confirm(message)) {
-              navigation.navigate('WalletRecharge');
-            }
-            return;
-          }
-          
-          // Native Alert
-          Alert.alert(
-            'Insufficient Wallet Balance',
-            `Your current wallet balance is ₹${balance.toFixed(2)}.\n\nYou need ₹50.00 to request a referral.\n\nPlease add ₹${(50 - balance).toFixed(2)} or more to continue.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Add Money to Wallet', 
-                onPress: () => navigation.navigate('WalletRecharge')
-              }
-            ]
-          );
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
+          setShowWalletModal(true);
           return;
         }
 
@@ -314,7 +289,7 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // Double-check no existing request (in case of race conditions)
+    // Double-check no existing request
     try {
       const existing = await refopenAPI.getMyReferralRequests(1, 100);
       if (existing.success && existing.data?.requests) {
@@ -408,10 +383,9 @@ export default function ApplicationsScreen({ navigation }) {
     try {
       setShowResumeModal(false);
       if (referralMode) {
-        // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
         const res = await refopenAPI.createReferralRequest({
-          jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
-          extJobID: null, // Explicitly null for internal referrals
+          jobID: id,
+          extJobID: null,
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
@@ -422,7 +396,6 @@ export default function ApplicationsScreen({ navigation }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           
-          // ✅ NEW: Show wallet deduction info
           const amountDeducted = res.data?.amountDeducted || 50;
           const balanceAfter = res.data?.walletBalanceAfter;
           
@@ -432,40 +405,16 @@ export default function ApplicationsScreen({ navigation }) {
           }
           
           showToast(message, 'success');
-          
-          // NEW: Reload primary resume after submission (same as JobDetailsScreen)
           await loadPrimaryResume();
         } else {
-          // ✅ NEW: Handle insufficient balance error
+          // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
             const requiredAmount = res.data?.requiredAmount || 50;
             
-            // Use window.confirm for web
-            if (Platform.OS === 'web') {
-              const message =
-                `Insufficient Wallet Balance\n\n` +
-                `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\n` +
-                `You need ₹${requiredAmount.toFixed(2)} to request a referral.\n\n` +
-                `Please add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.\n\n` +
-                `Would you like to add money to your wallet now?`;
-              
-              if (window.confirm(message)) {
-                navigation.navigate('WalletRecharge');
-              }
-            } else {
-              Alert.alert(
-                'Insufficient Wallet Balance',
-                `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Add Money to Wallet', 
-                    onPress: () => navigation.navigate('WalletRecharge')
-                  }
-                ]
-              );
-            }
+            // 💎 NEW: Show beautiful modal instead of ugly alert
+            setWalletModalData({ currentBalance, requiredAmount });
+            setShowWalletModal(true);
           } else {
             Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
           }
@@ -497,7 +446,6 @@ export default function ApplicationsScreen({ navigation }) {
           isEligible: prev.dailyQuotaRemaining > 1
         }));
         
-        // ✅ NEW: Show wallet deduction info
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
         
@@ -508,36 +456,14 @@ export default function ApplicationsScreen({ navigation }) {
         
         showToast(message, 'success');
       } else {
-        // ✅ NEW: Handle insufficient balance error
+        // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
           const requiredAmount = res.data?.requiredAmount || 50;
           
-          // Use window.confirm for web
-          if (Platform.OS === 'web') {
-            const message =
-              `Insufficient Wallet Balance\n\n` +
-              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\n` +
-              `You need ₹${requiredAmount.toFixed(2)} to request a referral.\n\n` +
-              `Please add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.\n\n` +
-              `Would you like to add money to your wallet now?`;
-            
-            if (window.confirm(message)) {
-              navigation.navigate('WalletRecharge');
-            }
-          } else {
-            Alert.alert(
-              'Insufficient Wallet Balance',
-              `Your current wallet balance is ₹${currentBalance.toFixed(2)}.\n\nYou need ₹${requiredAmount.toFixed(2)} to request a referral.\n\nPlease add ₹${(requiredAmount - currentBalance).toFixed(2)} or more to continue.`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Add Money to Wallet', 
-                  onPress: () => navigation.navigate('WalletRecharge')
-                }
-              ]
-            );
-          }
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance, requiredAmount });
+          setShowWalletModal(true);
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
         }
@@ -864,6 +790,18 @@ export default function ApplicationsScreen({ navigation }) {
         onResumeSelected={handleResumeSelected}
         user={user}
         jobTitle={pendingJobForApplication?.JobTitle || pendingJobForApplication?.Title}
+      />
+
+      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
       />
 
       {/* Custom Withdraw Confirmation (web only) */}

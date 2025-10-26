@@ -5,8 +5,8 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Animated,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../styles/theme';
@@ -33,85 +33,83 @@ export default function WalletRechargeModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          {/* Header with Icon */}
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="wallet" size={48} color="#fff" />
-            </View>
-            <Text style={styles.title}>?? Wallet Recharge Required</Text>
-          </View>
-
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.message}>
-              To request a referral, you need ?{requiredAmount.toFixed(2)} in your wallet.
-            </Text>
-
-            {/* Balance Info Cards */}
-            <View style={styles.balanceCards}>
-              <View style={[styles.balanceCard, styles.currentBalanceCard]}>
-                <Ionicons name="cash-outline" size={20} color="#ef4444" />
-                <Text style={styles.balanceLabel}>Current Balance</Text>
-                <Text style={styles.balanceAmount}>?{currentBalance.toFixed(2)}</Text>
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+            bounces={false}
+          >
+            {/* Header with Icon */}
+            <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="wallet" size={40} color="#fff" />
               </View>
-
-              <View style={[styles.balanceCard, styles.requiredBalanceCard]}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#10b981" />
-                <Text style={styles.balanceLabel}>Required Amount</Text>
-                <Text style={styles.balanceAmount}>?{requiredAmount.toFixed(2)}</Text>
-              </View>
+              <Text style={styles.title}>💰 Wallet Recharge Required</Text>
             </View>
 
-            {/* Amount Needed Highlight */}
-            <View style={styles.amountNeededCard}>
-              <Ionicons name="add-circle" size={24} color="#0066cc" />
-              <View style={styles.amountNeededText}>
-                <Text style={styles.amountNeededLabel}>Add at least</Text>
-                <Text style={styles.amountNeededValue}>?{amountNeeded.toFixed(2)}</Text>
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.message}>
+                To request a referral, you need ₹{requiredAmount.toFixed(2)} in your wallet.
+              </Text>
+
+              {/* Balance Info Cards */}
+              <View style={styles.balanceCards}>
+                <View style={[styles.balanceCard, styles.currentBalanceCard]}>
+                  <Ionicons name="cash-outline" size={18} color="#ef4444" />
+                  <Text style={styles.balanceLabel}>Current Balance</Text>
+                  <Text style={styles.balanceAmount}>₹{currentBalance.toFixed(2)}</Text>
+                </View>
+
+                <View style={[styles.balanceCard, styles.requiredBalanceCard]}>
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#10b981" />
+                  <Text style={styles.balanceLabel}>Required Amount</Text>
+                  <Text style={styles.balanceAmount}>₹{requiredAmount.toFixed(2)}</Text>
+                </View>
+              </View>
+
+              {/* Why Section - Smaller and more compact */}
+              <View style={styles.whySection}>
+                <Text style={styles.whyTitle}>Why is this needed?</Text>
+                <View style={styles.whyItem}>
+                  <Ionicons name="shield-checkmark" size={14} color="#6366f1" />
+                  <Text style={styles.whyText}>
+                    Maintains quality and serious job seekers
+                  </Text>
+                </View>
+                <View style={styles.whyItem}>
+                  <Ionicons name="people" size={14} color="#6366f1" />
+                  <Text style={styles.whyText}>
+                    Fair compensation for referrers
+                  </Text>
+                </View>
+                <View style={styles.whyItem}>
+                  <Ionicons name="repeat" size={14} color="#6366f1" />
+                  <Text style={styles.whyText}>
+                    Reusable for multiple referral requests
+                  </Text>
+                </View>
               </View>
             </View>
 
-            {/* Why Section */}
-            <View style={styles.whySection}>
-              <Text style={styles.whyTitle}>Why is this needed?</Text>
-              <View style={styles.whyItem}>
-                <Ionicons name="shield-checkmark" size={16} color="#6366f1" />
-                <Text style={styles.whyText}>
-                  Maintains quality and serious job seekers
-                </Text>
-              </View>
-              <View style={styles.whyItem}>
-                <Ionicons name="people" size={16} color="#6366f1" />
-                <Text style={styles.whyText}>
-                  Fair compensation for referrers
-                </Text>
-              </View>
-              <View style={styles.whyItem}>
-                <Ionicons name="repeat" size={16} color="#6366f1" />
-                <Text style={styles.whyText}>
-                  Reusable for multiple referral requests
-                </Text>
-              </View>
+            {/* Action Buttons */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onCancel}
+              >
+                <Text style={styles.cancelButtonText}>Maybe Later</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton]}
+                onPress={onAddMoney}
+              >
+                <Ionicons name="card" size={18} color="#fff" />
+                <Text style={styles.primaryButtonText}>Add Money</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onCancel}
-            >
-              <Text style={styles.cancelButtonText}>Maybe Later</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
-              onPress={onAddMoney}
-            >
-              <Ionicons name="card" size={20} color="#fff" />
-              <Text style={styles.primaryButtonText}>Add Money</Text>
-            </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -128,67 +126,74 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 16,
     width: '100%',
-    maxWidth: 480,
+    maxWidth: 420,
+    maxHeight: '85%',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 10,
+        elevation: 8,
       },
       web: {
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
       },
     }),
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
     backgroundColor: colors.primary,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   title: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: '#fff',
     textAlign: 'center',
   },
   content: {
-    padding: 24,
+    padding: 20,
   },
   message: {
     fontSize: typography.sizes.md,
     color: colors.text,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: 22,
+    marginBottom: 16,
   },
   balanceCards: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginBottom: 16,
   },
   balanceCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   currentBalanceCard: {
     backgroundColor: '#fef2f2',
@@ -201,66 +206,42 @@ const styles = StyleSheet.create({
     borderColor: '#bbf7d0',
   },
   balanceLabel: {
-    fontSize: typography.sizes.xs,
+    fontSize: 11,
     color: colors.gray600,
     fontWeight: typography.weights.medium,
   },
   balanceAmount: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
-  },
-  amountNeededCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    backgroundColor: '#eff6ff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#0066cc',
-    marginBottom: 20,
-  },
-  amountNeededText: {
-    flex: 1,
-  },
-  amountNeededLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    marginBottom: 2,
-  },
-  amountNeededValue: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: '#0066cc',
   },
   whySection: {
     backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
+    padding: 12,
+    borderRadius: 10,
+    gap: 8,
   },
   whyTitle: {
-    fontSize: typography.sizes.md,
+    fontSize: 13,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   whyItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
   },
   whyText: {
     flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.gray700,
-    lineHeight: 20,
+    fontSize: 11,
+    color: colors.gray600,
+    lineHeight: 16,
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 20,
+    gap: 10,
+    padding: 16,
     paddingTop: 0,
   },
   button: {
@@ -268,10 +249,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 6,
   },
   cancelButton: {
     backgroundColor: '#f3f4f6',
@@ -279,7 +260,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   cancelButtonText: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     color: colors.gray700,
   },
@@ -288,20 +269,20 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
       },
       android: {
-        elevation: 4,
+        elevation: 3,
       },
       web: {
-        boxShadow: '0 4px 12px rgba(0, 102, 204, 0.3)',
+        boxShadow: '0 3px 10px rgba(0, 102, 204, 0.25)',
       },
     }),
   },
   primaryButtonText: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
     color: '#fff',
   },
