@@ -1646,6 +1646,82 @@ class RefOpenAPI {
     return this.getMyResumes();
   }
 
+  // ✅ NEW: Set a resume as primary
+  async setPrimaryResume(resumeId) {
+    console.log('📝 API: Setting primary resume:', resumeId);
+    
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+
+if (!resumeId) {
+      console.error('❌ No resume ID provided');
+      return { success: false, error: 'Resume ID is required' };
+  }
+    
+    try {
+      console.log('📝 Making PUT request to:', `/users/resume/${resumeId}/primary`);
+      
+      const result = await this.apiCall(`/users/resume/${resumeId}/primary`, {
+        method: 'PUT',
+      });
+  
+      console.log('✅ Set primary resume successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Set primary resume failed:', error.message);
+      return { 
+ success: false, 
+   error: error.message || 'Failed to set primary resume' 
+      };
+    }
+  }
+
+  // ✅ NEW: Delete a resume
+  async deleteResume(resumeId) {
+    console.log('🗑️ API: Deleting resume:', resumeId);
+    
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+ return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!resumeId) {
+      console.error('❌ No resume ID provided');
+      return { success: false, error: 'Resume ID is required' };
+    }
+    
+    try {
+      console.log('🗑️ Making DELETE request to:', `/users/resume/${resumeId}`);
+      
+      const result = await this.apiCall(`/users/resume/${resumeId}`, {
+        method: 'DELETE',
+      });
+      
+      console.log('✅ Delete resume successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Delete resume failed:', error.message);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to delete resume' 
+      };
+    }
+  }
+
   // ========================================================================
   // WALLET SYSTEM APIs - Complete Integration
   // ========================================================================
