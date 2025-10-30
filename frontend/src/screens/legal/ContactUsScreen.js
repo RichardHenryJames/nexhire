@@ -191,17 +191,7 @@ export default function ContactUsScreen() {
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>GST Information</Text>
-        <View style={styles.infoBox}>
-       <Text style={styles.text}>
-            <Text style={styles.bold}>Company:</Text> Refopen Technologies Pvt. Ltd.
-   {'\n'}<Text style={styles.bold}>GST Number:</Text> [GST Number]
-       {'\n'}<Text style={styles.bold}>PAN:</Text> [PAN Number]
-          </Text>
-          <Text style={styles.note}>
-For GST-related queries, contact: billing@refopen.com
-       </Text>
-    </View>
+      
 
      <Text style={styles.sectionTitle}>Feedback & Suggestions</Text>
   <View style={styles.infoBox}>
@@ -224,15 +214,17 @@ For GST-related queries, contact: billing@refopen.com
         </View>
 
         <Text style={styles.sectionTitle}>Before You Contact Us</Text>
-  <Text style={styles.text}>
-  To help us serve you better, please:
-     {'\n\n'}? Check our FAQ section for quick answers
-    {'\n'}? Include your registered email address
-          {'\n'}? Provide transaction IDs for payment queries
-       {'\n'}? Attach screenshots for technical issues
-  {'\n'}? Be specific about the problem you're facing
-  {'\n'}? Mention your device and app version
-    </Text>
+        <Text style={styles.text}>
+          To help us serve you better, please:
+        </Text>
+    <View style={styles.bulletList}>
+          <Text style={styles.bulletItem}>• Check our FAQ section for quick answers</Text>
+          <Text style={styles.bulletItem}>• Include your registered email address</Text>
+          <Text style={styles.bulletItem}>• Provide transaction IDs for payment queries</Text>
+          <Text style={styles.bulletItem}>• Attach screenshots for technical issues</Text>
+          <Text style={styles.bulletItem}>• Be specific about the problem you're facing</Text>
+  <Text style={styles.bulletItem}>• Mention your device and app version</Text>
+        </View>
 
         <View style={styles.acknowledgment}>
         <Text style={styles.acknowledgmentText}>
@@ -345,22 +337,19 @@ socialBox: {
     marginBottom: 12,
   },
   socialItem: {
-    fontSize: 15,
+ fontSize: 14,
     color: colors.gray700,
     marginBottom: 8,
+    lineHeight: 20,
   },
-  acknowledgment: {
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 8,
-    marginTop: 24,
-    marginBottom: 30,
+  bulletList: {
+    marginTop: 8,
+    marginBottom: 12,
   },
-  acknowledgmentText: {
+  bulletItem: {
     fontSize: 15,
-  color: colors.primary,
- fontWeight: '500',
-    lineHeight: 22,
-    textAlign: 'center',
+    color: colors.gray700,
+    lineHeight: 24,
+    marginBottom: 4,
   },
 });
