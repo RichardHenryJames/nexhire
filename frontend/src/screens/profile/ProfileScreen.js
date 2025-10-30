@@ -49,6 +49,8 @@ export default function ProfileScreen({ navigation }) {
   const [walletBalance, setWalletBalance] = useState(null);
   const [loadingWallet, setLoadingWallet] = useState(false);
 
+  const scrollRef = useRef(null); // ? FIX: Declare ref used in useFocusEffect & ScrollView
+
   // Initialize basic profile with correct backend field names
   const [profile, setProfile] = useState({
     userID: user?.UserID || '',
@@ -678,16 +680,24 @@ export default function ProfileScreen({ navigation }) {
       console.log('🎯 ProfileScreen focused');
       console.log('🎯 User at focus:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
       
+      // ? NEW: Always scroll to top when screen gains focus
+      try {
+        if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
+          scrollRef.current.scrollTo({ y:0, animated: false });
+        }
+        // For web fallback
+        if (typeof window !== 'undefined' && window?.scrollTo) {
+          window.scrollTo(0,0);
+        }
+      } catch (e) {
+        console.warn('Failed to auto-scroll to top:', e);
+      }
+      
       if (user && user.UserID) {
         console.log('🎯 User found on focus, loading profile...');
         loadExtendedProfile();
       } else if (!loading) {
         console.log('🎯 No user found on focus, auth loading state:', loading);
-        // If not loading and no user, trigger auth check
-        if (!loading) {
-          console.log('🎯 Triggering auth state check...');
-          // Access checkAuthState from AuthContext if available
-        }
       }
     }, [user, loading])
   );
@@ -1125,6 +1135,7 @@ export default function ProfileScreen({ navigation }) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <ScrollView 
+        ref={scrollRef} // ? NEW: attach ref
         style={styles.container} 
         contentContainerStyle={styles.contentContainer}
         refreshControl={
