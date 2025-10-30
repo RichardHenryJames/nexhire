@@ -1696,7 +1696,7 @@ if (!resumeId) {
     
     if (!this.token) {
       console.error('❌ No authentication token available');
- return { success: false, error: 'Authentication required' };
+      return { success: false, error: 'Authentication required' };
     }
     
     if (!resumeId) {
@@ -1706,19 +1706,40 @@ if (!resumeId) {
     
     try {
       console.log('🗑️ Making DELETE request to:', `/users/resume/${resumeId}`);
-      
-      const result = await this.apiCall(`/users/resume/${resumeId}`, {
-        method: 'DELETE',
-      });
-      
-      console.log('✅ Delete resume successful:', result);
-      return result;
+      const result = await this.apiCall(`/users/resume/${resumeId}`, { method: 'DELETE' });
+      console.log('✅ Raw delete resume response:', result);
+
+      // Normalize response shape (backend returns success + softDelete flags)
+      const normalized = {
+ success: !!result.success,
+ softDelete: !!result.softDelete,
+ message: result.message || (result.softDelete
+ ? 'Resume archived.'
+ : 'Resume permanently deleted.'),
+ applicationCount: result.applicationCount ??0,
+ referralCount: result.referralCount ??0
+ };
+
+ // Optional inline user feedback (can be removed if handled in UI components)
+ try {
+ if (normalized.success) {
+ if (normalized.softDelete) {
+ Alert && Alert.alert(
+ 'Resume Archived',
+ `${normalized.message}\nReferenced by ${normalized.applicationCount} application(s) and ${normalized.referralCount} referral(s).`
+ );
+ } else {
+ Alert && Alert.alert('Resume Deleted', normalized.message);
+ }
+ }
+ } catch (alertErr) {
+ console.warn('Alert failed (web env?)', alertErr);
+ }
+
+ return normalized;
     } catch (error) {
       console.error('❌ Delete resume failed:', error.message);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to delete resume' 
-      };
+      return { success: false, error: error.message || 'Failed to delete resume' };
     }
   }
 

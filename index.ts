@@ -701,7 +701,7 @@ app.http('users-resume-delete', {
         const authHeader = req.headers.get('authorization');
         
         if (!authHeader) {
-            return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+            return { status:401, jsonBody: { success: false, error: 'Authorization required' } };
         }
 
         try {
@@ -712,52 +712,54 @@ app.http('users-resume-delete', {
             const { ApplicantService } = await import('./src/services/profile.service');
             const profile = await ApplicantService.getApplicantProfile(decoded.userId);
             
-            // ? FIXED: Get resume details BEFORE deleting from database
+            // Get resume details BEFORE deletion from active list (includes deleted flag now)
             const resumes = await ApplicantService.getApplicantResumes(profile.ApplicantID);
             const resumeToDelete = resumes.find(r => r.ResumeID === resumeId);
             
             if (!resumeToDelete) {
-                return {
-                    status: 404,
-                    jsonBody: {
-                        success: false,
-                        error: 'Resume not found'
-                    }
-                };
+                // Try historical (maybe already soft-deleted previously)
+                const historical = await ApplicantService.getResumeForViewing(resumeId);
+                if (!historical) {
+                    return { status:404, jsonBody: { success: false, error: 'Resume not found' } };
+                }
+                return { status:400, jsonBody: { success: false, error: 'Resume already deleted' } };
             }
             
-            console.log('??? Deleting resume:', {
-                resumeId,
-                resumeURL: resumeToDelete.ResumeURL,
-                userId: decoded.userId
-            });
+            console.log('Deleting resume request:', { resumeId, userId: decoded.userId });
             
-            // ? FIXED: Delete from database first
-            await ApplicantService.deleteApplicantResume(profile.ApplicantID, resumeId);
-            console.log('Resume deleted from database');
+            // Perform deletion (soft or hard)
+            const result = await ApplicantService.deleteApplicantResume(profile.ApplicantID, resumeId);
+            console.log('Delete result:', result);
             
-            // ? FIXED: Delete file from Azure Storage
-            try {
-                const { ResumeStorageService } = await import('./src/services/resume-upload.service');
-                const storageService = new ResumeStorageService();
-                await storageService.deleteOldResume(decoded.userId, resumeToDelete.ResumeURL);
-                console.log('Resume file deleted from storage');
-            } catch (storageError) {
-                console.error('Warning: Failed to delete file from storage:', storageError);
-                // Don't fail the entire operation if storage deletion fails
+            // Only attempt file deletion for hard delete
+            if (!result.softDelete && resumeToDelete.ResumeURL) {
+                try {
+                    const { ResumeStorageService } = await import('./src/services/resume-upload.service');
+                    const storageService = new ResumeStorageService();
+                    await storageService.deleteOldResume(decoded.userId, resumeToDelete.ResumeURL);
+                    console.log('Resume file deleted from storage');
+                } catch (storageError) {
+                    console.error('Warning: Failed to delete file from storage:', storageError);
+                    // Non-critical
+                }
+            } else if (result.softDelete) {
+                console.log('Soft delete performed - file retained for historical applications');
             }
             
             return {
-                status: 200,
+                status:200,
                 jsonBody: {
                     success: true,
-                    message: 'Resume deleted successfully from both database and storage'
+                    message: result.message,
+                    softDelete: result.softDelete,
+                    applicationCount: result.applicationCount,
+                    referralCount: result.referralCount
                 }
             };
         } catch (error) {
             console.error('Error deleting resume:', error);
             return {
-                status: 500,
+                status:500,
                 jsonBody: {
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to delete resume'

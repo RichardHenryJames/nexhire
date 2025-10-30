@@ -483,7 +483,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Get all resumes for an applicant
+    // ? NEW: Get all resumes for an applicant (exclude soft-deleted)
     static async getApplicantResumes(applicantId: string): Promise<any[]> {
         try {
             const query = `
@@ -492,10 +492,12 @@ export class ApplicantService {
                     ResumeLabel,
                     ResumeURL,
                     IsPrimary,
+                    IsDeleted,
+                    DeletedAt,
                     CreatedAt,
                     UpdatedAt
                 FROM ApplicantResumes 
-                WHERE ApplicantID = @param0
+                WHERE ApplicantID = @param0 AND (IsDeleted =0 OR IsDeleted IS NULL)
                 ORDER BY IsPrimary DESC, CreatedAt DESC
             `;
             const result = await dbService.executeQuery(query, [applicantId]);
@@ -503,6 +505,30 @@ export class ApplicantService {
         } catch (error) {
             console.error('Error getting applicant resumes:', error);
             throw error;
+        }
+    }
+
+    // ? NEW: Get resume for historical viewing (include soft-deleted)
+    static async getResumeForViewing(resumeId: string): Promise<any | null> {
+        try {
+            const query = `
+                SELECT 
+                    ResumeID,
+                    ResumeLabel,
+                    ResumeURL,
+                    IsPrimary,
+                    IsDeleted,
+                    DeletedAt,
+                    CreatedAt,
+                    UpdatedAt
+                FROM ApplicantResumes 
+                WHERE ResumeID = @param0
+            `;
+            const result = await dbService.executeQuery(query, [resumeId]);
+            return result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+        } catch (error) {
+            console.error('Error getting resume for viewing:', error);
+            return null;
         }
     }
 
@@ -518,11 +544,11 @@ export class ApplicantService {
                     CreatedAt,
                     UpdatedAt
                 FROM ApplicantResumes 
-                WHERE ApplicantID = @param0 AND IsPrimary = 1
+                WHERE ApplicantID = @param0 AND IsPrimary =1 AND (IsDeleted =0 OR IsDeleted IS NULL)
                 ORDER BY CreatedAt DESC
             `;
             const result = await dbService.executeQuery(query, [applicantId]);
-            return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+            return result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
         } catch (error) {
             console.error('Error getting primary resume:', error);
             return null;
@@ -615,65 +641,84 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Delete a resume
-    static async deleteApplicantResume(applicantId: string, resumeId: string): Promise<void> {
+    // ? UPDATED: Delete a resume (soft delete if referenced, hard delete otherwise)
+    static async deleteApplicantResume(applicantId: string, resumeId: string): Promise<{ success: boolean; softDelete: boolean; message: string; applicationCount?: number; referralCount?: number; }> {
         try {
-            // Don't allow deleting the last resume or primary resume
-            const resumesQuery = 'SELECT COUNT(*) as Total, SUM(CAST(IsPrimary as INT)) as PrimaryCount FROM ApplicantResumes WHERE ApplicantID = @param0';
-            const resumesResult = await dbService.executeQuery(resumesQuery, [applicantId]);
-            const { Total, PrimaryCount } = resumesResult.recordset[0];
-
-            if (Total <= 1) {
-                throw new ValidationError('Cannot delete the last resume');
-            }
-
-            const resumeQuery = 'SELECT IsPrimary FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1';
+            // Verify resume exists
+            const resumeQuery = `SELECT IsPrimary, IsDeleted, ResumeURL FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1`;
             const resumeResult = await dbService.executeQuery(resumeQuery, [resumeId, applicantId]);
-            
-            if (!resumeResult.recordset || resumeResult.recordset.length === 0) {
+            if (!resumeResult.recordset || resumeResult.recordset.length ===0) {
                 throw new NotFoundError('Resume not found');
             }
+            const resume = resumeResult.recordset[0];
+            if (resume.IsDeleted) {
+                throw new ValidationError('Resume has already been deleted');
+            }
 
-            if (resumeResult.recordset[0].IsPrimary && PrimaryCount <= 1) {
+            // Active (non-deleted) resume counts
+            const activeResumesQuery = `SELECT COUNT(*) as Total, SUM(CAST(IsPrimary as INT)) as PrimaryCount FROM ApplicantResumes WHERE ApplicantID = @param0 AND (IsDeleted =0 OR IsDeleted IS NULL)`;
+            const activeResumesResult = await dbService.executeQuery(activeResumesQuery, [applicantId]);
+            const { Total, PrimaryCount } = activeResumesResult.recordset[0];
+            if (Total <=1) {
+                throw new ValidationError('Cannot delete the last resume. Upload a new resume first.');
+            }
+            if (resume.IsPrimary && PrimaryCount <=1) {
                 throw new ValidationError('Cannot delete the primary resume. Set another resume as primary first.');
             }
 
-            // Delete the resume
+            // Check usage
+            const usageQuery = `
+            SELECT 
+                (SELECT COUNT(*) FROM JobApplications WHERE ResumeID = @param0) as ApplicationCount,
+                (SELECT COUNT(*) FROM ReferralRequests WHERE ResumeID = @param0) as ReferralCount
+            `;
+            const usageResult = await dbService.executeQuery(usageQuery, [resumeId]);
+            const { ApplicationCount, ReferralCount } = usageResult.recordset[0];
+            const isUsed = ApplicationCount >0 || ReferralCount >0;
+
+            if (isUsed) {
+                // Soft delete
+                await dbService.executeQuery(
+                    `UPDATE ApplicantResumes SET IsDeleted =1, DeletedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0 AND ApplicantID = @param1`,
+                    [resumeId, applicantId]
+                );
+                console.log(`Soft deleted resume ${resumeId} (used in ${ApplicationCount} applications, ${ReferralCount} referrals)`);
+                return {
+                    success: true,
+                    softDelete: true,
+                    message: `Resume archived. It is referenced by ${ApplicationCount} application(s) and ${ReferralCount} referral request(s).`,
+                    applicationCount: ApplicationCount,
+                    referralCount: ReferralCount
+                };
+            }
+
+            // Hard delete
             await dbService.executeQuery(
                 'DELETE FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1',
                 [resumeId, applicantId]
             );
 
-            console.log(`Deleted resume ${resumeId} for applicant ${applicantId}`);
+            console.log(`Hard deleted resume ${resumeId}`);
+            return { success: true, softDelete: false, message: 'Resume permanently deleted.' };
         } catch (error) {
             console.error('Error deleting applicant resume:', error);
             throw error;
         }
     }
 
-    // ? NEW: Set a resume as primary
+    // ? UPDATED: Set a resume as primary (cannot set deleted)
     static async setPrimaryResume(applicantId: string, resumeId: string): Promise<void> {
         try {
-            // Verify resume belongs to applicant
-            const resumeQuery = 'SELECT ResumeID FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1';
+            const resumeQuery = 'SELECT ResumeID, IsDeleted FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1';
             const resumeResult = await dbService.executeQuery(resumeQuery, [resumeId, applicantId]);
-            
-            if (!resumeResult.recordset || resumeResult.recordset.length === 0) {
+            if (!resumeResult.recordset || resumeResult.recordset.length ===0) {
                 throw new NotFoundError('Resume not found');
             }
-
-            // Unset current primary
-            await dbService.executeQuery(
-                'UPDATE ApplicantResumes SET IsPrimary = 0 WHERE ApplicantID = @param0',
-                [applicantId]
-            );
-
-            // Set new primary
-            await dbService.executeQuery(
-                'UPDATE ApplicantResumes SET IsPrimary = 1, UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0',
-                [resumeId]
-            );
-
+            if (resumeResult.recordset[0].IsDeleted) {
+                throw new ValidationError('Cannot set a deleted resume as primary');
+            }
+            await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =0 WHERE ApplicantID = @param0', [applicantId]);
+            await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =1, UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0', [resumeId]);
             console.log(`Set resume ${resumeId} as primary for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error setting primary resume:', error);

@@ -356,6 +356,8 @@ BEGIN
         ResumeLabel NVARCHAR(200) NOT NULL, -- e.g. "Tech Resume", "Managerial Resume"
         ResumeURL NVARCHAR(1000) NOT NULL,
         IsPrimary BIT DEFAULT 0, -- optional: mark default resume
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        DeletedAt DATETIME NULL,
         CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
         UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID)
