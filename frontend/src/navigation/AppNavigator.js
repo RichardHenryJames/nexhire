@@ -41,6 +41,16 @@ import WalletScreen from '../screens/wallet/WalletScreen';
 import WalletTransactionsScreen from '../screens/wallet/WalletTransactionsScreen';
 import WalletRechargeScreen from '../screens/wallet/WalletRechargeScreen';
 
+// Legal/Compliance Screens
+import TermsScreen from '../screens/legal/TermsScreen';
+import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
+import RefundPolicyScreen from '../screens/legal/RefundPolicyScreen';
+import ShippingDeliveryScreen from '../screens/legal/ShippingDeliveryScreen';
+import ContactUsScreen from '../screens/legal/ContactUsScreen';
+import AboutUsScreen from '../screens/legal/AboutUsScreen';
+import DisclaimerScreen from '../screens/legal/DisclaimerScreen';
+import FAQScreen from '../screens/legal/FAQScreen';
+
 import { colors } from '../styles/theme';
 
 const Stack = createStackNavigator();
@@ -91,27 +101,37 @@ const linking = {
       // ? FIXED: Only define the paths that actually exist in the tab navigator
       // Since Jobs/EmployerJobs are conditionally rendered, we don't need to define both
       MainTabs: {
-        path: '',
+      path: '',
         screens: {
           Home: '',
-          Jobs: 'jobs', // This will match whichever screen is actually rendered (Jobs or EmployerJobs)
-          CreateJob: 'create-job',
+    Jobs: 'jobs', // This will match whichever screen is actually rendered (Jobs or EmployerJobs)
+     CreateJob: 'create-job',
           Applications: 'applications',
-          Referrals: 'referrals',
+   Referrals: 'referrals',
           Profile: 'profile',
         },
       },
       
       // Modal/Stack screens - unique paths
-      JobDetails: 'job/:jobId',
-      AskReferral: 'ask-referral',
+   JobDetails: 'job/:jobId',
+    AskReferral: 'ask-referral',
       ReferralPlans: 'plans',
       Payment: 'payment',
       
-      // ?? NEW: Wallet screens
+  // ?? NEW: Wallet screens
       Wallet: 'Wallet',
       WalletTransactions: 'WalletTransactions',
       WalletRecharge: 'WalletRecharge',
+      
+  // Legal/Compliance screens
+      Terms: 'terms',
+      PrivacyPolicy: 'privacy',
+      RefundPolicy: 'refund',
+      ShippingDelivery: 'shipping',
+      ContactUs: 'contact',
+   AboutUs: 'about',
+      Disclaimer: 'disclaimer',
+      FAQ: 'faq',
     },
   },
 };
@@ -323,56 +343,130 @@ function MainStack() {
         name="AskReferral" 
         component={AskReferralScreen}
         options={{ 
-          headerShown: true,
+        headerShown: true,
           title: 'Ask for Referral',
-          headerBackTitleVisible: false,
+     headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 
         name="ReferralPlans" 
         component={ReferralPlansScreen}
         options={{ 
-          headerShown: true,
+      headerShown: true,
           title: 'Subscription Plans',
-          headerBackTitleVisible: false,
+   headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 
         name="Payment" 
         component={PaymentScreen}
         options={{ 
-          headerShown: true,
+ headerShown: true,
           title: 'Secure Payment',
           headerBackTitleVisible: false,
         }}
       />
       {/* ?? NEW: Wallet screens */}
       <Stack.Screen 
-        name="Wallet" 
-        component={WalletScreen}
-        options={{ 
+    name="Wallet" 
+    component={WalletScreen}
+   options={{ 
           headerShown: true,
-          title: 'My Wallet',
+     title: 'My Wallet',
           headerBackTitleVisible: false,
-        }}
+     }}
       />
       <Stack.Screen 
         name="WalletTransactions" 
         component={WalletTransactionsScreen}
         options={{ 
-          headerShown: true,
+    headerShown: true,
           title: 'Transaction History',
+       headerBackTitleVisible: false,
+      }}
+      />
+      <Stack.Screen 
+name="WalletRecharge" 
+        component={WalletRechargeScreen}
+        options={{ 
+  headerShown: true,
+title: 'Add Money to Wallet',
+          headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Legal/Compliance Screens */}
+      <Stack.Screen 
+        name="Terms" 
+        component={TermsScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Terms & Conditions',
+          headerBackTitleVisible: false,
+        }}
+    />
+      <Stack.Screen 
+        name="PrivacyPolicy" 
+      component={PrivacyPolicyScreen}
+        options={{ 
+  headerShown: true,
+          title: 'Privacy Policy',
+       headerBackTitleVisible: false,
+   }}
+      />
+      <Stack.Screen 
+        name="RefundPolicy" 
+        component={RefundPolicyScreen}
+        options={{ 
+    headerShown: true,
+          title: 'Refund Policy',
+          headerBackTitleVisible: false,
+        }}
+    />
+      <Stack.Screen 
+ name="ShippingDelivery" 
+        component={ShippingDeliveryScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Shipping & Delivery',
+          headerBackTitleVisible: false,
+   }}
+      />
+      <Stack.Screen 
+        name="ContactUs" 
+        component={ContactUsScreen}
+        options={{ 
+          headerShown: true,
+       title: 'Contact Us',
           headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 
-        name="WalletRecharge" 
-        component={WalletRechargeScreen}
+        name="AboutUs" 
+        component={AboutUsScreen}
         options={{ 
-          headerShown: true,
-          title: 'Add Money to Wallet',
+   headerShown: true,
+       title: 'About Us',
           headerBackTitleVisible: false,
         }}
+      />
+ <Stack.Screen 
+   name="Disclaimer" 
+  component={DisclaimerScreen}
+        options={{ 
+ headerShown: true,
+      title: 'Disclaimer',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="FAQ" 
+        component={FAQScreen}
+        options={{ 
+          headerShown: true,
+          title: 'FAQ',
+          headerBackTitleVisible: false,
+    }}
       />
     </Stack.Navigator>
   );

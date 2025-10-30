@@ -350,7 +350,7 @@ export default function JobDetailsScreen({ route, navigation }) {
           }
         ]
       );
-      // Fallback: ensure navigation if user does not pick (defensive � some platforms auto-dismiss custom buttons)
+      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
       setTimeout(() => {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;

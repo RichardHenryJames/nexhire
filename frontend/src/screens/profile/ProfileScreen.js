@@ -24,6 +24,7 @@ import ProfileSection, { useEditing } from '../../components/profile/ProfileSect
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 import ResumeSection from '../../components/profile/ResumeSection';
+import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function ProfileScreen({ navigation }) {
   const { 
@@ -1518,6 +1519,9 @@ export default function ProfileScreen({ navigation }) {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
+
+        {/* Compliance Footer with legal links */}
+        <ComplianceFooter currentPage="profile" />
       </ScrollView>
 
       {/* Skills Modal */}
