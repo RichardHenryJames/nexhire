@@ -65,73 +65,81 @@ const linking = {
   ],
   config: {
     screens: {
-      // Auth screens - no nesting conflicts
-      Login: 'login',
-      Register: 'register', 
-      UserTypeSelection: 'register/select-type',
-      
-      // NEW: Direct skip screens for web navigation
-      PersonalDetailsScreenDirect: 'register/complete-profile',
-      EmployerAccountScreenDirect: 'register/complete-employer',
-      
-      // Job Seeker Registration Flow - unique paths
-      JobSeekerFlow: {
-        path: 'register/jobseeker',
-        screens: {
-          ExperienceTypeSelection: 'experience',
-          WorkExperienceScreen: 'work',
-          EducationDetailsScreen: 'education',
-          JobPreferencesScreen: 'preferences',
-          PersonalDetails: 'details',
-        },
-      },
-      
-      // Employer Registration Flow - unique paths
-      EmployerFlow: {
-        path: 'register/employer',
-        screens: {
-          EmployerTypeSelection: 'type',
-          OrganizationDetailsScreen: 'organization',
-          EmployerPersonalDetailsScreen: 'details',
-          EmployerAccountScreen: 'account',
-        },
-      },
-      
-      // Main App - simplified structure
-      // ? FIXED: Only define the paths that actually exist in the tab navigator
-      // Since Jobs/EmployerJobs are conditionally rendered, we don't need to define both
-      MainTabs: {
-      path: '',
-        screens: {
-          Home: '',
-    Jobs: 'jobs', // This will match whichever screen is actually rendered (Jobs or EmployerJobs)
-     CreateJob: 'create-job',
-          Applications: 'applications',
-   Referrals: 'referrals',
-          Profile: 'profile',
-        },
-      },
-      
-      // Modal/Stack screens - unique paths
-   JobDetails: 'job/:jobId',
-    AskReferral: 'ask-referral',
-      ReferralPlans: 'plans',
-      Payment: 'payment',
-      
-  // ?? NEW: Wallet screens
-      Wallet: 'Wallet',
-      WalletTransactions: 'WalletTransactions',
-      WalletRecharge: 'WalletRecharge',
-      
-  // Legal/Compliance screens
+      // Public Legal/Compliance screens - accessible without auth
       Terms: 'terms',
       PrivacyPolicy: 'privacy',
       RefundPolicy: 'refund',
       ShippingDelivery: 'shipping',
       ContactUs: 'contact',
-   AboutUs: 'about',
+      AboutUs: 'about',
       Disclaimer: 'disclaimer',
       FAQ: 'faq',
+
+      // Auth Stack
+      Auth: {
+      path: 'auth',
+     screens: {
+          Login: 'login',
+ Register: 'register', 
+          UserTypeSelection: 'register/select-type',
+      
+      // Direct skip screens for web navigation
+          PersonalDetailsScreenDirect: 'register/complete-profile',
+          EmployerAccountScreenDirect: 'register/complete-employer',
+   
+        // Job Seeker Registration Flow
+       JobSeekerFlow: {
+   path: 'register/jobseeker',
+    screens: {
+       ExperienceTypeSelection: 'experience',
+    WorkExperienceScreen: 'work',
+   EducationDetailsScreen: 'education',
+    JobPreferencesScreen: 'preferences',
+    PersonalDetails: 'details',
+            },
+          },
+ 
+    // Employer Registration Flow
+    EmployerFlow: {
+      path: 'register/employer',
+            screens: {
+       EmployerTypeSelection: 'type',
+       OrganizationDetailsScreen: 'organization',
+              EmployerPersonalDetailsScreen: 'details',
+              EmployerAccountScreen: 'account',
+     },
+          },
+      },
+      },
+      
+      // Main App Stack - requires authentication
+      Main: {
+        path: '',
+        screens: {
+        MainTabs: {
+        path: '',
+   screens: {
+     Home: '',
+  Jobs: 'jobs',
+    CreateJob: 'create-job',
+              Applications: 'applications',
+           Referrals: 'referrals',
+    Profile: 'profile',
+       },
+          },
+          
+     // Modal/Stack screens
+   JobDetails: 'job/:jobId',
+          AskReferral: 'ask-referral',
+       ReferralPlans: 'plans',
+     Payment: 'payment',
+          
+  // Wallet screens
+  Wallet: 'wallet',
+     WalletTransactions: 'wallet/transactions',
+   WalletRecharge: 'wallet/recharge',
+     },
+      },
     },
   },
 };
@@ -326,147 +334,73 @@ function MainStack() {
         component={JobDetailsScreen}
         options={{ 
           headerShown: true,
-          title: 'Job Details',
-          headerBackTitleVisible: false,
+title: 'Job Details',
+    headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 
         name="Referral" 
-        component={ReferralScreen}
+  component={ReferralScreen}
         options={{ 
-          headerShown: true,
-          title: 'Referral',
+        headerShown: true,
+  title: 'Referral',
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
+ <Stack.Screen 
         name="AskReferral" 
-        component={AskReferralScreen}
+      component={AskReferralScreen}
         options={{ 
-        headerShown: true,
-          title: 'Ask for Referral',
-     headerBackTitleVisible: false,
+  headerShown: true,
+title: 'Ask for Referral',
+          headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 
         name="ReferralPlans" 
         component={ReferralPlansScreen}
-        options={{ 
-      headerShown: true,
-          title: 'Subscription Plans',
-   headerBackTitleVisible: false,
-        }}
+     options={{ 
+          headerShown: true,
+        title: 'Subscription Plans',
+      headerBackTitleVisible: false,
+  }}
       />
       <Stack.Screen 
         name="Payment" 
         component={PaymentScreen}
         options={{ 
- headerShown: true,
+  headerShown: true,
           title: 'Secure Payment',
           headerBackTitleVisible: false,
-        }}
-      />
-      {/* ?? NEW: Wallet screens */}
-      <Stack.Screen 
-    name="Wallet" 
-    component={WalletScreen}
-   options={{ 
-          headerShown: true,
-     title: 'My Wallet',
-          headerBackTitleVisible: false,
-     }}
-      />
-      <Stack.Screen 
-        name="WalletTransactions" 
-        component={WalletTransactionsScreen}
-        options={{ 
-    headerShown: true,
-          title: 'Transaction History',
-       headerBackTitleVisible: false,
       }}
       />
+{/* ?? NEW: Wallet screens */}
       <Stack.Screen 
-name="WalletRecharge" 
+  name="Wallet" 
+        component={WalletScreen}
+        options={{ 
+          headerShown: true,
+          title: 'My Wallet',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+  name="WalletTransactions" 
+        component={WalletTransactionsScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Transaction History',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="WalletRecharge" 
         component={WalletRechargeScreen}
         options={{ 
-  headerShown: true,
-title: 'Add Money to Wallet',
-          headerBackTitleVisible: false,
-        }}
-      />
-      
-      {/* Legal/Compliance Screens */}
-      <Stack.Screen 
-        name="Terms" 
-        component={TermsScreen}
-        options={{ 
-          headerShown: true,
-          title: 'Terms & Conditions',
-          headerBackTitleVisible: false,
-        }}
-    />
-      <Stack.Screen 
-        name="PrivacyPolicy" 
-      component={PrivacyPolicyScreen}
-        options={{ 
-  headerShown: true,
-          title: 'Privacy Policy',
-       headerBackTitleVisible: false,
-   }}
-      />
-      <Stack.Screen 
-        name="RefundPolicy" 
-        component={RefundPolicyScreen}
-        options={{ 
-    headerShown: true,
-          title: 'Refund Policy',
-          headerBackTitleVisible: false,
-        }}
-    />
-      <Stack.Screen 
- name="ShippingDelivery" 
-        component={ShippingDeliveryScreen}
-        options={{ 
-          headerShown: true,
-          title: 'Shipping & Delivery',
-          headerBackTitleVisible: false,
-   }}
-      />
-      <Stack.Screen 
-        name="ContactUs" 
-        component={ContactUsScreen}
-        options={{ 
-          headerShown: true,
-       title: 'Contact Us',
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen 
-        name="AboutUs" 
-        component={AboutUsScreen}
-        options={{ 
-   headerShown: true,
-       title: 'About Us',
-          headerBackTitleVisible: false,
-        }}
-      />
- <Stack.Screen 
-   name="Disclaimer" 
-  component={DisclaimerScreen}
-        options={{ 
- headerShown: true,
-      title: 'Disclaimer',
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen 
-        name="FAQ" 
-        component={FAQScreen}
-        options={{ 
-          headerShown: true,
-          title: 'FAQ',
-          headerBackTitleVisible: false,
-    }}
+      headerShown: true,
+          title: 'Add Money to Wallet',
+     headerBackTitleVisible: false,
+     }}
       />
     </Stack.Navigator>
   );
@@ -487,24 +421,118 @@ export default function AppNavigator() {
     return <LoadingScreen />;
   }
 
-  // FIXED: Better logic for handling Google registration flow
-  // Priority:
-  // 1. If user has pending Google auth (new Google user) -> show AuthStack to complete registration
-  // 2. If user is authenticated and no pending Google auth -> show MainStack 
-  // 3. Otherwise -> show AuthStack for login/registration
+  // Determine initial route based on auth state
+  const initialRouteName = hasPendingGoogleAuth 
+    ? 'Auth' 
+    : isAuthenticated 
+    ? 'Main' 
+    : 'Auth';
 
-  if (hasPendingGoogleAuth) {
-    console.log('Pending Google auth detected - showing registration flow');
-    return <AuthStack />;
-  }
+  return (
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      {/* Auth Stack - always present for deep linking */}
+   <Stack.Screen 
+   name="Auth" 
+ component={AuthStack}
+ options={{ headerShown: false }}
+      />
 
-  if (isAuthenticated) {
-    console.log('? User authenticated - showing main app');
-    return <MainStack />;
-  }
+  {/* Main App Stack - protected, requires authentication */}
+  <Stack.Screen 
+ name="Main" 
+     component={MainStack}
+        options={{ headerShown: false }}
+        listeners={({ navigation }) => ({
+          focus: () => {
+// Redirect to Auth if not authenticated
+ if (!isAuthenticated) {
+      console.log('Main screen accessed without auth, redirecting to Auth');
+     navigation.navigate('Auth');
+         }
+        },
+     })}
+      />
 
-  console.log('User not authenticated - showing auth flow');
-  return <AuthStack />;
+      {/* Public Legal/Compliance Routes - Always accessible */}
+      <Stack.Screen 
+   name="Terms" 
+        component={TermsScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Terms & Conditions',
+      headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="PrivacyPolicy" 
+        component={PrivacyPolicyScreen}
+        options={{ 
+          headerShown: true,
+   title: 'Privacy Policy',
+     headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="RefundPolicy" 
+ component={RefundPolicyScreen}
+  options={{ 
+          headerShown: true,
+title: 'Refund Policy',
+          headerBackTitleVisible: false,
+     }}
+      />
+      <Stack.Screen 
+        name="ShippingDelivery" 
+        component={ShippingDeliveryScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Shipping & Delivery',
+          headerBackTitleVisible: false,
+   }}
+    />
+      <Stack.Screen 
+      name="ContactUs" 
+        component={ContactUsScreen}
+        options={{ 
+   headerShown: true,
+   title: 'Contact Us',
+    headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+      name="AboutUs" 
+    component={AboutUsScreen}
+     options={{ 
+          headerShown: true,
+          title: 'About Us',
+          headerBackTitleVisible: false,
+    }}
+      />
+      <Stack.Screen 
+        name="Disclaimer" 
+     component={DisclaimerScreen}
+        options={{ 
+          headerShown: true,
+          title: 'Disclaimer',
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen 
+        name="FAQ" 
+      component={FAQScreen}
+        options={{ 
+          headerShown: true,
+          title: 'FAQ',
+          headerBackTitleVisible: false,
+        }}
+      />
+    </Stack.Navigator>
+  );
 }
 
 // Export linking config for use in App.js
