@@ -156,10 +156,13 @@ export default function LoginScreen({ navigation }) {
 
             <Text style={screenStyles.title}>Welcome to RefOpen!</Text>
 
-            <Text style={screenStyles.subtitle}>
-              India’s first job referral app — making referrals effortless.
-              Sign in to get started.
-            </Text>
+           {/*
+           <Text style={screenStyles.subtitle}>
+             India’s first job referral app — making referrals effortless.
+             Sign in to get started.
+           </Text>
+           */}
+
           </View>
 
 
