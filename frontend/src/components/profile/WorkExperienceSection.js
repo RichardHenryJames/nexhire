@@ -582,7 +582,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                     setForm({ ...form, endDate: date }); 
                     if (validationErrors.endDate) setValidationErrors(v => ({ ...v, endDate: undefined })); 
                   }}
-                  placeholder={endDateRequired ? "Required - Select end date" : "Select end date"}
+                  placeholder="Select end date"
                   required={endDateRequired}
                   minimumDate={form.startDate ? new Date(form.startDate) : undefined} // End must be after start
                   maximumDate={new Date()} // Can't end in the future
