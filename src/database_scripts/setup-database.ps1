@@ -148,6 +148,30 @@ BEGIN
     );
 END
 
+-- Create ApplicantSalaries table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
+BEGIN
+    CREATE TABLE ApplicantSalaries (
+        ApplicantSalaryID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ComponentID INT NOT NULL,
+        Amount DECIMAL(18,2) NOT NULL,          -- precision chosen for money-like values
+        CurrencyID INT NOT NULL,
+        Frequency NVARCHAR(50) NULL,            -- optional, so nullable
+        SalaryContext NVARCHAR(50) NOT NULL,
+        Notes NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NULL DEFAULT SYSUTCDATETIME(),
+
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+    );
+
+    -- Optional index to speed up lookups by ApplicantID
+    CREATE INDEX IX_ApplicantSalaries_ApplicantID ON ApplicantSalaries(ApplicantID);
+END
+
+
 -- WorkExperiences table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkExperiences')
 BEGIN

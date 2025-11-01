@@ -576,7 +576,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               <>
                 {/* ? REPLACED: DatePicker for End Date */}
                 <DatePicker
-                  label={`End Date${endDateRequired ? ' *' : ''}`}
+                  label="End Date"
                   value={form.endDate}
                   onChange={(date) => {
                     setForm({ ...form, endDate: date }); 
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
   addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   addButtonText: { color: colors.white, marginLeft: 6 },
   modalContainer: { flex: 1, backgroundColor: colors.background },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   // Removed saveButton style as it's now in footer
   formContainer: { padding: 20, paddingBottom: 40 },

@@ -1131,54 +1131,46 @@ export default function ProfileScreen({ navigation }) {
   // Render the profile screen UI
   return (
     <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
+    style={{ flex: 1 }} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <ScrollView 
         ref={scrollRef} // ? NEW: attach ref
         style={styles.container} 
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
+   contentContainerStyle={styles.contentContainer}
+    refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={loadExtendedProfile}
-            colors={[colors.primary]}
-          />
-        }
-      >
-        {/* HEADER */}
+        colors={[colors.primary]}
+ />
+      }
+ >
+     {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-        </View>
-
-        {/* 🆕 NEW: Wallet Balance Card (for Job Seekers only) */}
-        {userType === 'JobSeeker' && (
-          <TouchableOpacity 
-            style={styles.walletCard}
-            onPress={() => navigation.navigate('Wallet')}
+    <View style={{ width: 24 }} />
+  <Text style={styles.title}>Profile</Text>
+          {/* 🆕 NEW: Compact Wallet Button in Header */}
+ {userType === 'JobSeeker' && (
+            <TouchableOpacity 
+   style={styles.walletHeaderButton}
+           onPress={() => navigation.navigate('Wallet')}
             activeOpacity={0.7}
           >
-            <View style={styles.walletCardLeft}>
-              <View style={styles.walletIconContainer}>
-                <Ionicons name="wallet" size={24} color={colors.primary} />
-              </View>
-              <View style={styles.walletTextContainer}>
-                <Text style={styles.walletLabel}>Wallet Balance</Text>
-                {loadingWallet ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={styles.walletAmount}>
-                    ₹{walletBalance?.balance?.toFixed(2) || '0.00'}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <View style={styles.walletCardRight}>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
-            </View>
-          </TouchableOpacity>
-        )}
+     <Ionicons name="wallet" size={16} color={colors.primary} />
+   {loadingWallet ? (
+         <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
+ ) : (
+     <Text style={styles.walletHeaderAmount}>
+  ₹{walletBalance?.balance?.toFixed(0) || '0'}
+</Text>
+            )}
+        </TouchableOpacity>
+          )}
+        </View>
+
+        {/* REMOVED: Large wallet card - no longer needed */}
 
         <UserProfileHeader
           user={user}
@@ -1630,55 +1622,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   
-  // 🆕 NEW: Wallet card styles
-  walletCard: {
+  // 🆕 NEW: Compact wallet button in header
+  walletHeaderButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    backgroundColor: colors.primary + '10',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.primary + '20',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  walletCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  walletIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary + '30',
+    gap: 4,
+    minWidth: 70,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
-  walletTextContainer: {
-    flex: 1,
-  },
-  walletLabel: {
+  walletHeaderAmount: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#666666',
-    marginBottom: 4,
-  },
-  walletAmount: {
-    fontSize: typography.sizes?.xl || 24,
     fontWeight: typography.weights?.bold || 'bold',
     color: colors.primary,
-  },
-  walletCardRight: {
-    marginLeft: 8,
+    marginLeft: 2,
   },
 
   // Field styles
