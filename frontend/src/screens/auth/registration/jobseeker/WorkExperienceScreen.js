@@ -62,8 +62,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
     yearsOfExperience: '',
     workArrangement: '',
     jobType: '',
-    primarySkills: '',
-    secondarySkills: '',
     summary: '',
   });
 
@@ -76,8 +74,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
     yearsOfExperience: '',
     workArrangement: '',
     jobType: '',
-    primarySkills: '',
-    secondarySkills: '',
     summary: '',
   });
 
@@ -254,8 +250,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
         isCurrentPosition: true,
         workArrangement: currentWorkData.workArrangement || null,
         jobType: currentWorkData.jobType || null,
-        primarySkills: currentWorkData.primarySkills?.trim() || null,
-        secondarySkills: currentWorkData.secondarySkills?.trim() || null,
         summary: currentWorkData.summary?.trim() || null,
       });
     }
@@ -271,8 +265,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
         isCurrentPosition: false,
         workArrangement: previousWorkData.workArrangement || null,
         jobType: previousWorkData.jobType || null,
-        primarySkills: previousWorkData.primarySkills?.trim() || null,
-        secondarySkills: previousWorkData.secondarySkills?.trim() || null,
         summary: previousWorkData.summary?.trim() || null,
       });
     }
@@ -432,47 +424,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 maximumDate={new Date()} // Can't end in the future
               />
             )}
-
-            {/* Optional older fields */}
-            <View style={{ height: 8 }} />
-            <Text style={styles.sectionHint}>Optional details</Text>
-
-            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowExperienceModal(true)}>
-              <Text style={[styles.selectionValue, !formData.yearsOfExperience && styles.selectionPlaceholder]}>
-                {formData.yearsOfExperience || 'Select experience level'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowWorkArrangementModal(true)}>
-              <Text style={[styles.selectionValue, !formData.workArrangement && styles.selectionPlaceholder]}>
-                {formData.workArrangement || 'Select work arrangement'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.selectionButton} onPress={() => setShowJobTypeModal(true)}>
-              <Text style={[styles.selectionValue, !formData.jobType && styles.selectionPlaceholder]}>
-                {formData.jobType || 'Select job type'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={colors.gray500} />
-            </TouchableOpacity>
-
-            <InputField
-              label="Primary Skills"
-              value={formData.primarySkills}
-              onChangeText={(text) => updateField('primarySkills', text)}
-              placeholder="e.g. JavaScript, React, Node.js, Project Management"
-              multiline
-            />
-
-            <InputField
-              label="Secondary Skills"
-              value={formData.secondarySkills}
-              onChangeText={(text) => updateField('secondarySkills', text)}
-              placeholder="e.g. Python, AWS, Team Leadership, Agile"
-              multiline
-            />
 
             <InputField
               label="Professional Summary"
@@ -784,11 +735,6 @@ const styles = StyleSheet.create({
   modalItemTextSelected: {
     color: colors.primary,
     fontWeight: typography.weights.medium,
-  },
-  sectionHint: {
-    color: colors.gray600,
-    marginLeft: 4,
-    marginTop: 8,
   },
   // Company selector styles with logo support
   companySelectorContent: {

@@ -722,10 +722,10 @@ export default function UserProfileHeader({
               </View>
             )}
 
-            {/* Professional Summary styled like other highlights */}
+            {/* Professional Summary (About) */}
             {jobSeekerProfile?.summary && (
               <View style={styles.highlight}>
-                <MaterialIcons name="person" size={16} color="#3B82F6" />
+                <MaterialIcons name="description" size={16} color="#8B5CF6" />
                 <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
               </View>
             )}
@@ -1017,14 +1017,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   highlight: {
-    flexDirection: 'row',
+ flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 2,
   },
   highlightText: {
-    fontSize: 14,
-    color: '#374151',
-    marginLeft: 8,
+  fontSize: 14,
+ color: '#374151',
+ marginLeft: 8,
     flex: 1,
     lineHeight: 18,
   },

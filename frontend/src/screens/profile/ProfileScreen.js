@@ -64,7 +64,7 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     const listenerId = scrollY.addListener(({ value }) => {
       // Show profile pic after scrolling ~50px (past UserProfileHeader)
-      if (value > 50 && !showHeaderProfilePic) {
+      if (value > 250 && !showHeaderProfilePic) {
         setShowHeaderProfilePic(true);
         // Fade in with spring scale animation
         Animated.parallel([
@@ -1197,54 +1197,59 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.stickyHeader}>
     {/* 🆕 Animated Profile Picture (appears on scroll) */}
         {showHeaderProfilePic && (
-  <Animated.View 
-     style={[
-       styles.headerProfilePic,
-      {
+          <Animated.View 
+        style={[
+           styles.headerProfilePic,
+ {
           opacity: headerProfileOpacity,
-    transform: [{ scale: headerProfileScale }]
-         }
-      ]}
+        transform: [{ scale: headerProfileScale }]
+     }
+       ]}
           >
-  <TouchableOpacity 
+<TouchableOpacity 
    onPress={scrollToTop}
-              activeOpacity={0.8}
-         >
-   {profile?.profilePictureURL ? (
-   <Image 
-           source={{ uri: profile.profilePictureURL }} 
-      style={styles.headerProfileImage}
+activeOpacity={0.8}
+      >
+       {profile?.profilePictureURL ? (
+     <Image 
+          source={{ uri: profile.profilePictureURL }} 
+       style={styles.headerProfileImage}
       />
-) : (
-    <View style={styles.headerProfilePlaceholder}>
-          <Text style={styles.headerInitials}>
-                    {`${profile?.firstName?.charAt(0) || ''}${profile?.lastName?.charAt(0) || ''}`.toUpperCase()}
-         </Text>
-           </View>
-            )}
-          </TouchableOpacity>
-      </Animated.View>
+          ) : (
+   <View style={styles.headerProfilePlaceholder}>
+    <Text style={styles.headerInitials}>
+             {`${profile?.firstName?.charAt(0) || ''}${profile?.lastName?.charAt(0) || ''}`.toUpperCase()}
+   </Text>
+       </View>
+              )}
+      </TouchableOpacity>
+          </Animated.View>
         )}
 
-        <Text style={styles.title}>Profile</Text>
+        {/* Left spacer to balance the layout */}
+        <View style={styles.headerSpacer} />
+
+   <Text style={styles.title}>Profile</Text>
      
         {/* 🆕 NEW: Compact Wallet Button in Header */}
-        {userType === 'JobSeeker' && (
-     <TouchableOpacity 
+        {userType === 'JobSeeker' ? (
+          <TouchableOpacity 
     style={styles.walletHeaderButton}
             onPress={() => navigation.navigate('Wallet')}
-      activeOpacity={0.7}
->
-     <Ionicons name="wallet" size={16} color={colors.primary} />
+    activeOpacity={0.7}
+       >
+   <Ionicons name="wallet" size={16} color={colors.primary} />
             {loadingWallet ? (
   <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
-   ) : (
+      ) : (
         <Text style={styles.walletHeaderAmount}>
-   ₹{walletBalance?.balance?.toFixed(0) || '0'}
-              </Text>
+     ₹{walletBalance?.balance?.toFixed(0) || '0'}
+   </Text>
             )}
-          </TouchableOpacity>
-        )}
+   </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+    )}
       </View>
 
       <ScrollView
@@ -1712,15 +1717,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     height: 64, // Fixed height to prevent shaking
-backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.background || '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: colors.border || '#E5E7EB',
- shadowColor: '#000',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
     zIndex: 1000,
+  },
+  
+  // 🆕 Header spacer to balance layout
+  headerSpacer: {
+    width: 70, // Match the wallet button width
   },
   
   // 🆕 ANIMATED HEADER PROFILE PIC STYLES
@@ -1731,6 +1741,7 @@ backgroundColor: colors.background || '#FFFFFF',
     overflow: 'hidden',
     position: 'absolute',
     left: 20,
+    zIndex: 1,
   },
   headerProfileImage: {
     width: 40,
@@ -1765,7 +1776,6 @@ backgroundColor: colors.background || '#FFFFFF',
     fontWeight: '700',
     color: colors.textPrimary || colors.text,
     letterSpacing: 0.3,
-    marginHorizontal: 60, // Space for profile pic (left) and wallet button (right)
   },
   
   // 🆕 NEW: Compact wallet button in header
