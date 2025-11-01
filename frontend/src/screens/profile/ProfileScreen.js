@@ -327,6 +327,7 @@ export default function ProfileScreen({ navigation }) {
                   onFocus={handleFocus}
                   onBlur={handleBlur}          // ? Updates parent on blur
                   placeholder="Enter salary in INR"
+                  placeholderTextColor={colors.gray400 || '#9CA3AF'}
                   keyboardType="numeric"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -341,6 +342,7 @@ export default function ProfileScreen({ navigation }) {
                 onFocus={handleFocus}
                 onBlur={handleBlur}          // ? Updates parent on blur
                 placeholder={placeholder}
+                placeholderTextColor={colors.gray400 || '#9CA3AF'}
                 multiline={multiline}
                 numberOfLines={multiline ? 4 : 1}
                 keyboardType={keyboardType}
@@ -1648,6 +1650,7 @@ activeOpacity={0.8}
               value={newSkill}
               onChangeText={setNewSkill}
               placeholder={`Enter a ${skillType} skill...`}
+              placeholderTextColor={colors.gray400 || '#9CA3AF'}
               autoFocus
             />
           </View>

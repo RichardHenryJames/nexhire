@@ -172,6 +172,26 @@ BEGIN
 END
 
 
+-- Create SalaryComponents table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SalaryComponents')
+BEGIN
+    CREATE TABLE SalaryComponents (
+        ComponentID INT NOT NULL PRIMARY KEY IDENTITY(1,1),
+        ComponentName NVARCHAR(100) NOT NULL,
+        ComponentType NVARCHAR(50) NOT NULL,   -- e.g., Recurring, OneTime, Equity
+        IsActive BIT NULL                      -- optional field (1 = active, 0 = inactive)
+    );
+
+    -- Insert default seed data
+    INSERT INTO SalaryComponents (ComponentName, ComponentType, IsActive)
+    VALUES
+        ('Fixed', 'Recurring', 1),
+        ('Variable', 'Recurring', 1),
+        ('Bonus', 'OneTime', 1),
+        ('Stock', 'Equity', 1);
+END
+
+
 -- WorkExperiences table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkExperiences')
 BEGIN
