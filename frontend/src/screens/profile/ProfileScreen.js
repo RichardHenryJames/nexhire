@@ -12,6 +12,8 @@ import {
   RefreshControl,
   Modal,
   ActivityIndicator,
+  Animated,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -51,6 +53,55 @@ export default function ProfileScreen({ navigation }) {
   const [loadingWallet, setLoadingWallet] = useState(false);
 
   const scrollRef = useRef(null); // ? FIX: Declare ref used in useFocusEffect & ScrollView
+  
+  // 🆕 NEW: Scroll animation state
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [showHeaderProfilePic, setShowHeaderProfilePic] = useState(false);
+  const headerProfileOpacity = useRef(new Animated.Value(0)).current;
+  const headerProfileScale = useRef(new Animated.Value(0.8)).current;
+
+  // 🆕 NEW: Handle scroll animation for header profile pic
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      // Show profile pic after scrolling ~250px (past UserProfileHeader)
+      if (value > 150 && !showHeaderProfilePic) {
+        setShowHeaderProfilePic(true);
+        // Fade in with spring scale animation
+        Animated.parallel([
+          Animated.timing(headerProfileOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(headerProfileScale, {
+            toValue: 1,
+            friction: 5,
+            tension: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else if (value <= 250 && showHeaderProfilePic) {
+        // Fade out when scrolling back up
+        setShowHeaderProfilePic(false);
+        Animated.parallel([
+          Animated.timing(headerProfileOpacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(headerProfileScale, {
+            toValue: 0.8,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    });
+
+    return () => {
+      scrollY.removeListener(listenerId);
+    };
+  }, [showHeaderProfilePic]);
 
   // Initialize basic profile with correct backend field names
   const [profile, setProfile] = useState({
@@ -85,7 +136,7 @@ export default function ProfileScreen({ navigation }) {
     ,highestEducation: ''
     ,fieldOfStudy: ''
     ,institution: ''
-    ,graduationYear: '>'
+    ,graduationYear: ''
     ,gpa: ''
     
     // Professional Information
@@ -171,6 +222,13 @@ export default function ProfileScreen({ navigation }) {
     ,linkedInProfile: ''
     ,bio: ''
   });
+
+  // 🆕 NEW: Scroll to top when header profile pic is tapped
+  const scrollToTop = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ y: 0, animated: true });
+    }
+  };
 
   // ? FIX: Optimized ProfileField component with proper debounce cleanup
   // ? FIX: Local state ProfileField - no parent updates until blur (like normal forms)
@@ -1131,48 +1189,86 @@ export default function ProfileScreen({ navigation }) {
   // Render the profile screen UI
   return (
     <KeyboardAvoidingView 
-    style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  style={{ flex: 1 }} 
+ behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
-      <ScrollView 
-        ref={scrollRef} // ? NEW: attach ref
-        style={styles.container} 
-   contentContainerStyle={styles.contentContainer}
-    refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={loadExtendedProfile}
-        colors={[colors.primary]}
- />
-      }
- >
-     {/* HEADER */}
-        <View style={styles.header}>
-    <View style={{ width: 24 }} />
-  <Text style={styles.title}>Profile</Text>
-          {/* 🆕 NEW: Compact Wallet Button in Header */}
- {userType === 'JobSeeker' && (
-            <TouchableOpacity 
-   style={styles.walletHeaderButton}
-           onPress={() => navigation.navigate('Wallet')}
-            activeOpacity={0.7}
+      {/* 🆕 STICKY HEADER */}
+      <View style={styles.stickyHeader}>
+    {/* 🆕 Animated Profile Picture (appears on scroll) */}
+        {showHeaderProfilePic && (
+  <Animated.View 
+     style={[
+       styles.headerProfilePic,
+      {
+          opacity: headerProfileOpacity,
+    transform: [{ scale: headerProfileScale }]
+         }
+      ]}
           >
-     <Ionicons name="wallet" size={16} color={colors.primary} />
-   {loadingWallet ? (
-         <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
- ) : (
-     <Text style={styles.walletHeaderAmount}>
-  ₹{walletBalance?.balance?.toFixed(0) || '0'}
-</Text>
+  <TouchableOpacity 
+   onPress={scrollToTop}
+              activeOpacity={0.8}
+         >
+   {profile?.profilePictureURL ? (
+   <Image 
+           source={{ uri: profile.profilePictureURL }} 
+      style={styles.headerProfileImage}
+      />
+) : (
+    <View style={styles.headerProfilePlaceholder}>
+          <Text style={styles.headerInitials}>
+                    {`${profile?.firstName?.charAt(0) || ''}${profile?.lastName?.charAt(0) || ''}`.toUpperCase()}
+         </Text>
+           </View>
             )}
-        </TouchableOpacity>
-          )}
-        </View>
+          </TouchableOpacity>
+      </Animated.View>
+        )}
+
+        <Text style={styles.title}>Profile</Text>
+     
+        {/* 🆕 NEW: Compact Wallet Button in Header */}
+        {userType === 'JobSeeker' && (
+     <TouchableOpacity 
+    style={styles.walletHeaderButton}
+            onPress={() => navigation.navigate('Wallet')}
+      activeOpacity={0.7}
+>
+     <Ionicons name="wallet" size={16} color={colors.primary} />
+            {loadingWallet ? (
+  <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
+   ) : (
+        <Text style={styles.walletHeaderAmount}>
+   ₹{walletBalance?.balance?.toFixed(0) || '0'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <ScrollView
+        ref={scrollRef}
+        style={styles.container} 
+      contentContainerStyle={styles.contentContainer}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+       { useNativeDriver: false }
+  )}
+        scrollEventThrottle={16}
+        refreshControl={
+      <RefreshControl
+            refreshing={refreshing}
+    onRefresh={loadExtendedProfile}
+          colors={[colors.primary]}
+       />
+        }
+      >
+        {/* REMOVED OLD HEADER - Now sticky at top */}
 
         {/* REMOVED: Large wallet card - no longer needed */}
 
-        <UserProfileHeader
+   <UserProfileHeader
           user={user}
           profile={profile}
           jobSeekerProfile={jobSeekerProfile}
@@ -1604,8 +1700,57 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingTop: 0, // Remove top padding since we have sticky header
     paddingBottom: 32,
   },
+  
+  // 🆕 STICKY HEADER STYLES
+  stickyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    height: 64, // Fixed height to prevent shaking
+backgroundColor: colors.background || '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#E5E7EB',
+ shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 1000,
+  },
+  
+  // 🆕 ANIMATED HEADER PROFILE PIC STYLES
+  headerProfilePic: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'absolute',
+    left: 20,
+  },
+  headerProfileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  headerProfilePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1620,6 +1765,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary || colors.text,
     letterSpacing: 0.3,
+    marginHorizontal: 60, // Space for profile pic (left) and wallet button (right)
   },
   
   // 🆕 NEW: Compact wallet button in header
@@ -1857,40 +2003,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   
-  // ? FIX: Add missing logout section styles
-  logoutSection: {
-    marginTop: 32,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.border || '#E0E0E0',
-    alignItems: 'center',
-  },
-  logoutMainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.danger || '#FF3B30',
-    backgroundColor: (colors.danger || '#FF3B30') + '10',
-    minWidth: 150,
-  },
-  logoutMainButtonText: {
-    fontSize: typography.sizes?.md || 16,
-    color: colors.danger || '#FF3B30',
-    fontWeight: typography.weights?.medium || '500',
-  },
-  
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  
-  // Logout button styles
+ // Logout button styles
   logoutSection: {
     marginTop: 24,
     alignItems: 'center',
@@ -2081,5 +2194,45 @@ const styles = StyleSheet.create({
     color: colors.text || '#111827',
     lineHeight: 18,
     marginTop: 2,
+  },
+  
+  // Action button styles
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 16,
+  },
+actionButton: {
+    flex: 1,
+    backgroundColor: colors.primary || '#007AFF',
+    borderRadius: 12,
+ paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.background || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E0E0E0',
+  },
+  actionButtonText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.white || '#FFFFFF',
+  },
+  
+  // Loading overlay
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+ left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
   },
 });
