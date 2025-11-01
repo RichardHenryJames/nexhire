@@ -1301,7 +1301,7 @@ activeOpacity={0.8}
                 view={
                   <View>
                     <ReadOnlyKVRow label="Professional Headline" value={jobSeekerProfile.headline} icon="briefcase" />
-                    {/* Professional Summary is now shown in the header, so omit it here in view mode */}
+                    <ReadOnlyKVRow label="Professional Summary" value={jobSeekerProfile.summary} icon="document-text" />
                     <ReadOnlyKVRow label="Current Location" value={jobSeekerProfile.currentLocation} icon="location" />
                     <ReadOnlyKVRow label="Current Job Title" value={jobSeekerProfile.currentJobTitle} icon="medal" />
                     <ReadOnlyKVRow label="Current Company" value={jobSeekerProfile.currentCompany} icon="business" />
