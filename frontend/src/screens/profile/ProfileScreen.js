@@ -63,8 +63,8 @@ export default function ProfileScreen({ navigation }) {
   // 🆕 NEW: Handle scroll animation for header profile pic
   useEffect(() => {
     const listenerId = scrollY.addListener(({ value }) => {
-      // Show profile pic after scrolling ~250px (past UserProfileHeader)
-      if (value > 150 && !showHeaderProfilePic) {
+      // Show profile pic after scrolling ~50px (past UserProfileHeader)
+      if (value > 50 && !showHeaderProfilePic) {
         setShowHeaderProfilePic(true);
         // Fade in with spring scale animation
         Animated.parallel([
