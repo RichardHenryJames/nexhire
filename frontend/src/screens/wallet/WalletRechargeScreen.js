@@ -179,14 +179,18 @@ export default function WalletRechargeScreen({ navigation }) {
 
       if (verifyResult.success) {
         Alert.alert(
-          '? Payment Successful',
-          `?${rechargeAmount} added to your wallet!\n\nNew Balance: ?${verifyResult.data.balanceAfter}`,
+          '💰 Payment Successful',
+          `₹${rechargeAmount} added to your wallet!\n\nNew Balance: ₹${verifyResult.data.balanceAfter}`,
           [
             {
               text: 'OK',
               onPress: () => {
                 setAmount('');
-                navigation.goBack();
+                // Navigate to wallet screen and force refresh
+                navigation.navigate('Wallet', { 
+                  refresh: true,
+                  timestamp: Date.now() // Force re-render
+                });
               },
             },
           ]

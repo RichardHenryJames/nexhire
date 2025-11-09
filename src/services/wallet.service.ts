@@ -291,7 +291,7 @@ export class WalletService {
           balanceAfter,
           wallet.CurrencyID,
           verificationData.razorpayPaymentId,
-          `Wallet recharge via Razorpay - ?${order.Amount}`
+          `Wallet recharge - ₹${order.Amount}`
         ]
       );
 
