@@ -112,13 +112,13 @@ export class WalletService {
 
   /**
    * Create Razorpay order for wallet recharge
-   * ? UPDATED: Minimum recharge amount is ₹100
+   * ? UPDATED: No minimum recharge limit
    */
   static async createRechargeOrder(amount: number, userId: string) {
     try {
-      // ? UPDATED: Validate amount (minimum ₹100, maximum ₹100,000)
-      if (!amount || amount < 100) {
-        throw new ValidationError('Minimum recharge amount is ₹100');
+      // ? UPDATED: Validate amount (must be greater than 0, maximum ₹100,000)
+      if (!amount || amount <= 0) {
+        throw new ValidationError('Amount must be greater than zero');
       }
 
       // Check maximum limit (₹100,000)

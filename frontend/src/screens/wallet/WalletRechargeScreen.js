@@ -32,8 +32,8 @@ export default function WalletRechargeScreen({ navigation }) {
       return false;
     }
 
-    if (rechargeAmount < 100) {
-      Alert.alert('Minimum Amount', 'Minimum recharge amount is ₹100');
+    if (rechargeAmount <= 0) {
+      Alert.alert('Invalid Amount', 'Amount must be greater than zero');
       return false;
     }
 
@@ -257,8 +257,8 @@ export default function WalletRechargeScreen({ navigation }) {
         </View>
 
         {/* Validation Messages */}
-        {amount && parseInt(amount) < 100 && (
-          <Text style={styles.warningText}>Minimum recharge: ₹100</Text>
+        {amount && parseInt(amount) <= 0 && (
+          <Text style={styles.errorText}>Amount must be greater than zero</Text>
         )}
         {amount && parseInt(amount) > 100000 && (
           <Text style={styles.errorText}>Maximum recharge: ₹1,00,000</Text>
@@ -269,7 +269,6 @@ export default function WalletRechargeScreen({ navigation }) {
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={20} color="#007AFF" />
         <Text style={styles.infoText}>
-          Minimum recharge: ₹100{'\n'}
           Maximum recharge: ₹1,00,000{'\n'}
           Instant credit after payment
         </Text>
@@ -279,10 +278,10 @@ export default function WalletRechargeScreen({ navigation }) {
       <TouchableOpacity
         style={[
           styles.rechargeButton,
-          (!amount || parseInt(amount) < 100 || loading) && styles.rechargeButtonDisabled,
+          (!amount || parseInt(amount) <= 0 || loading) && styles.rechargeButtonDisabled,
         ]}
         onPress={handleRecharge}
-        disabled={!amount || parseInt(amount) < 100 || loading}
+        disabled={!amount || parseInt(amount) <= 0 || loading}
       >
         {loading ? (
           <ActivityIndicator color="#FFF" />
@@ -401,11 +400,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
     paddingVertical: 16,
-  },
-  warningText: {
-    fontSize: 12,
-    color: '#F59E0B',
-    marginTop: 8,
   },
   errorText: {
     fontSize: 12,
