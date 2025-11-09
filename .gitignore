@@ -28,7 +28,6 @@ out/
 
 # Logs and databases
 *.log
-*.sql
 *.db
 
 # OS generated files
