@@ -149,16 +149,16 @@ export default function JobsScreen({ navigation, route }) {
   // Compute quick labels based on selections
   const quickJobTypeLabel = useMemo(() => {
     const ids = filters.jobTypeIds || [];
-    if (!ids.length) return 'Any';
+    if (!ids.length) return 'JobType';
     const names = ids.map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
-    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Any';
+    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'JobType';
   }, [filters.jobTypeIds, jobTypes]);
 
   const quickWorkplaceLabel = useMemo(() => {
     const ids = filters.workplaceTypeIds || [];
-    if (!ids.length) return 'Any';
+    if (!ids.length) return 'Workplace';
     const names = ids.map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
-    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Any';
+    return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Workplace';
   }, [filters.workplaceTypeIds, workplaceTypes]);
 
   // Toggle selection helper
@@ -1433,7 +1433,7 @@ export default function JobsScreen({ navigation, route }) {
                   onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
                 >
                   <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
-                    {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Any'}
+                    {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
                   </Text>
                   <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
                 </TouchableOpacity>
