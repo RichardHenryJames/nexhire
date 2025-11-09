@@ -695,6 +695,8 @@ export default function JobsScreen({ navigation, route }) {
   // Build summary string
   const summaryText = useMemo(() => {
     const parts = [];
+    
+    // Smart boosts (if enabled)
     if (smartBoosts.candidateYears) parts.push(`${smartBoosts.candidateYears}+ yrs`);
     const jt = (smartBoosts.boostJobTypeIds || '').split(',').filter(Boolean).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
     const wt = (smartBoosts.boostWorkplaceTypeIds || '').split(',').filter(Boolean).map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
@@ -702,16 +704,60 @@ export default function JobsScreen({ navigation, route }) {
     if (wt.length) parts.push(wt.join('/'));
     if (smartBoosts.boostLocation) parts.push(smartBoosts.boostLocation);
 
+    // ✅ ADD ALL MANUAL FILTERS
     if (parts.length === 0) {
-      if (filters.experienceMin) parts.push(`${filters.experienceMin}+ yrs`);
-      const jobTypeNames = (filters.jobTypeIds || []).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
+      // Job Type filter
+ const jobTypeNames = (filters.jobTypeIds || []).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
+      if (jobTypeNames.length) parts.push(jobTypeNames.slice(0, 2).join('/'));
+      
+      // Workplace Type filter  
       const workplaceNames = (filters.workplaceTypeIds || []).map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
-      if (jobTypeNames.length) parts.push(jobTypeNames.slice(0, 3).join('/'));
       if (workplaceNames.length) parts.push(workplaceNames.join('/'));
+      
+      // Location filter
       if (filters.location) parts.push(filters.location);
+   
+  // ✅ NEW: Department filter
+      if (filters.department) parts.push(`Dept: ${filters.department}`);
+      
+      // ✅ NEW: Experience filter
+ if (filters.experienceMin || filters.experienceMax) {
+        if (filters.experienceMin && filters.experienceMax) {
+          parts.push(`${filters.experienceMin}-${filters.experienceMax} yrs exp`);
+      } else if (filters.experienceMin) {
+        parts.push(`${filters.experienceMin}+ yrs exp`);
+  } else if (filters.experienceMax) {
+     parts.push(`Up to ${filters.experienceMax} yrs exp`);
+        }
+      }
+  
+      // ✅ NEW: Salary filter
+      if (filters.salaryMin || filters.salaryMax) {
+        const currencySymbol = currencies.find(c => c.CurrencyID === filters.currencyId)?.Symbol || '₹';
+        if (filters.salaryMin && filters.salaryMax) {
+          parts.push(`${currencySymbol}${filters.salaryMin}-${filters.salaryMax}`);
+     } else if (filters.salaryMin) {
+          parts.push(`${currencySymbol}${filters.salaryMin}+`);
+      } else if (filters.salaryMax) {
+          parts.push(`Up to ${currencySymbol}${filters.salaryMax}`);
+        }
+      }
+      
+      // ✅ NEW: Freshness filter (THIS WAS MISSING!)
+      if (filters.postedWithinDays) {
+     const daysMap = {
+          1: 'Last 24h',
+          3: 'Last 3 days',
+          7: 'Last week',
+          14: 'Last 2 weeks',
+          30: 'Last month'
+        };
+        parts.push(daysMap[filters.postedWithinDays] || `Last ${filters.postedWithinDays} days`);
     }
+}
+    
     return parts.join(' • ');
-  }, [smartBoosts, filters, jobTypes, workplaceTypes]);
+  }, [smartBoosts, filters, jobTypes, workplaceTypes, currencies]);
 
   // Render list without animations
   const renderList = () => {

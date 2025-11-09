@@ -13,446 +13,442 @@ const FilterModal = ({
   workplaceTypes = [], 
   currencies = [] 
 }) => {
-  const [expandedSection, setExpandedSection] = useState('workMode'); // Track which section is expanded
+  const [selectedCategory, setSelectedCategory] = useState('workMode');
 
-  const toggleSection = (section) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
-  // Helper to check if any values in a section are selected
-  const isSectionActive = (section) => {
+const isSectionActive = (section) => {
     switch (section) {
       case 'workMode':
         return (filters.workplaceTypeIds || []).length > 0;
       case 'department':
         return !!filters.department;
-      case 'location':
-        return !!filters.location;
+   case 'location':
+    return !!filters.location;
       case 'experience':
-return !!filters.experienceMin || !!filters.experienceMax;
+    return !!filters.experienceMin || !!filters.experienceMax;
       case 'salary':
-      return !!filters.salaryMin || !!filters.salaryMax;
+        return !!filters.salaryMin || !!filters.salaryMax;
       case 'postedBy':
         return !!filters.postedWithinDays;
       case 'jobType':
         return (filters.jobTypeIds || []).length > 0;
-      default:
-        return false;
+ default:
+    return false;
     }
   };
 
-  // Count total active filters
   const activeFiltersCount = () => {
     let count = 0;
     if ((filters.workplaceTypeIds || []).length > 0) count += filters.workplaceTypeIds.length;
     if ((filters.jobTypeIds || []).length > 0) count += filters.jobTypeIds.length;
     if (filters.location) count++;
     if (filters.department) count++;
- if (filters.experienceMin || filters.experienceMax) count++;
-  if (filters.salaryMin || filters.salaryMax) count++;
+    if (filters.experienceMin || filters.experienceMax) count++;
+    if (filters.salaryMin || filters.salaryMax) count++;
     if (filters.postedWithinDays) count++;
     return count;
   };
 
-  const FilterSection = ({ title, section, count, children }) => {
-    const isExpanded = expandedSection === section;
-    const isActive = isSectionActive(section);
+  const categories = [
+    { id: 'workMode', label: 'Work mode' },
+    { id: 'department', label: 'Department' },
+    { id: 'location', label: 'Location' },
+    { id: 'experience', label: 'Experience' },
+    { id: 'salary', label: 'Salary' },
+    { id: 'jobType', label: 'Role' },
+    { id: 'postedBy', label: 'Freshness' }
+  ];
 
-    return (
-      <View style={styles.filterSection}>
-        <TouchableOpacity 
-          style={styles.sectionHeader}
-    onPress={() => toggleSection(section)}
+  const renderRightContent = () => {
+    switch (selectedCategory) {
+      case 'workMode':
+        return (
+          <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Work mode</Text>
+          {workplaceTypes.map(wt => {
+    const active = (filters.workplaceTypeIds || []).map(String).includes(String(wt.WorkplaceTypeID));
+           return (
+              <TouchableOpacity
+            key={wt.WorkplaceTypeID}
+         style={styles.optionItem}
+   onPress={() => {
+        const has = (filters.workplaceTypeIds || []).some(x => String(x) === String(wt.WorkplaceTypeID));
+    const next = has
+            ? (filters.workplaceTypeIds || []).filter(x => String(x) !== String(wt.WorkplaceTypeID))
+       : [...(filters.workplaceTypeIds || []), wt.WorkplaceTypeID];
+      onFiltersChange({ ...filters, workplaceTypeIds: next });
+        }}
      >
- <Text style={[styles.sectionTitle, isActive && styles.sectionTitleActive]}>
-{title}
- </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
- {count !== undefined && count > 0 && (
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{count}</Text>
-     </View>
-            )}
-  <Ionicons 
-           name={isExpanded ? "chevron-up" : "chevron-down"} 
-            size={20} 
-       color={isActive ? "#0066cc" : "#9ca3af"} 
-          />
-          </View>
+          <View style={[styles.checkbox, active && styles.checkboxActive]}>
+  {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+                  </View>
+       <Text style={styles.optionLabel}>{wt.Type}</Text>
+           <Text style={styles.optionCount}>1217</Text>
         </TouchableOpacity>
-        
-        {isExpanded && (
-          <View style={styles.sectionContent}>
-    {children}
+              );
+    })}
           </View>
-        )}
-    </View>
-  );
-  };
+        );
 
-  return (
-    <Modal 
-      visible={visible} 
-      animationType="slide" 
-      presentationStyle="pageSheet" 
-    onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-   {/* Header */}
-        <View style={styles.header}>
-       <Text style={styles.headerTitle}>Filter Jobs</Text>
-      <View style={styles.headerRight}>
-  {activeFiltersCount() > 0 && (
-        <TouchableOpacity onPress={onClear} style={styles.clearAll}>
-     <Text style={styles.clearAllText}>Clear All</Text>
-      </TouchableOpacity>
-            )}
+  case 'department':
+        return (
+          <View style={styles.rightContent}>
+     <Text style={styles.rightTitle}>Department</Text>
+            <TextInput
+    style={styles.searchInput}
+  placeholder="Search department..."
+     value={filters.department || ''}
+      onChangeText={(t) => onFiltersChange({ ...filters, department: t })}
+              placeholderTextColor="#9ca3af"
+            />
         </View>
-    </View>
+        );
 
-        {/* Scrollable Filter Sections */}
-        <ScrollView 
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
+  case 'location':
+        return (
+       <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Location</Text>
+            <TextInput
+  style={styles.searchInput}
+         placeholder="City, State or Country"
+              value={filters.location || ''}
+         onChangeText={(t) => onFiltersChange({ ...filters, location: t })}
+ placeholderTextColor="#9ca3af"
+  />
+     </View>
+        );
+
+  case 'experience':
+        return (
+  <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Experience</Text>
+      <View style={styles.rangeContainer}>
+        <View style={styles.rangeInput}>
+     <Text style={styles.rangeLabel}>Min (years)</Text>
+  <TextInput
+            style={styles.rangeTextInput}
+       placeholder="0"
+      value={filters.experienceMin?.toString() || ''}
+      onChangeText={(t) => onFiltersChange({ ...filters, experienceMin: t ? parseInt(t) : '' })}
+      keyboardType="numeric"
+      placeholderTextColor="#9ca3af"
+       />
+      </View>
+         <Text style={styles.rangeSeparator}>-</Text>
+       <View style={styles.rangeInput}>
+     <Text style={styles.rangeLabel}>Max (years)</Text>
+         <TextInput
+        style={styles.rangeTextInput}
+           placeholder="10+"
+   value={filters.experienceMax?.toString() || ''}
+         onChangeText={(t) => onFiltersChange({ ...filters, experienceMax: t ? parseInt(t) : '' })}
+            keyboardType="numeric"
+        placeholderTextColor="#9ca3af"
+                />
+  </View>
+            </View>
+   </View>
+        );
+
+      case 'salary':
+        return (
+        <View style={styles.rightContent}>
+   <Text style={styles.rightTitle}>Salary</Text>
+            <View style={styles.rangeContainer}>
+     <View style={styles.rangeInput}>
+          <Text style={styles.rangeLabel}>Min</Text>
+      <TextInput
+         style={styles.rangeTextInput}
+          placeholder="0"
+        value={filters.salaryMin?.toString() || ''}
+   onChangeText={(t) => onFiltersChange({ ...filters, salaryMin: t ? parseInt(t) : '' })}
+       keyboardType="numeric"
+     placeholderTextColor="#9ca3af"
+  />
+     </View>
+              <Text style={styles.rangeSeparator}>-</Text>
+      <View style={styles.rangeInput}>
+ <Text style={styles.rangeLabel}>Max</Text>
+    <TextInput
+       style={styles.rangeTextInput}
+         placeholder="100000+"
+        value={filters.salaryMax?.toString() || ''}
+          onChangeText={(t) => onFiltersChange({ ...filters, salaryMax: t ? parseInt(t) : '' })}
+     keyboardType="numeric"
+      placeholderTextColor="#9ca3af"
+       />
+    </View>
+            </View>
+            {currencies.length > 0 && (
+         <View style={styles.currencyPills}>
+       {currencies.slice(0, 4).map(curr => {
+    const active = filters.currencyId === curr.CurrencyID;
+     return (
+           <TouchableOpacity
+  key={curr.CurrencyID}
+      style={[styles.currencyPill, active && styles.currencyPillActive]}
+            onPress={() => onFiltersChange({ ...filters, currencyId: curr.CurrencyID })}
         >
-        {/* Work Mode */}
-          <FilterSection 
-    title="Work mode" 
-    section="workMode"
-       count={(filters.workplaceTypeIds || []).length}
-     >
-            <View style={styles.checkboxList}>
-              {workplaceTypes.map(wt => {
-   const active = (filters.workplaceTypeIds || []).map(String).includes(String(wt.WorkplaceTypeID));
-    return (
-      <TouchableOpacity 
-       key={wt.WorkplaceTypeID}
-        style={styles.checkboxItem}
-                    onPress={() => {
-          const has = (filters.workplaceTypeIds || []).some(x => String(x) === String(wt.WorkplaceTypeID));
-      const next = has 
-  ? (filters.workplaceTypeIds || []).filter(x => String(x) !== String(wt.WorkplaceTypeID))
-      : [...(filters.workplaceTypeIds || []), wt.WorkplaceTypeID];
-              onFiltersChange({ ...filters, workplaceTypeIds: next });
-          }}
- >
-     <View style={[styles.checkbox, active && styles.checkboxActive]}>
-           {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+             <Text style={[styles.currencyPillText, active && styles.currencyPillTextActive]}>
+            {curr.Code}
+            </Text>
+             </TouchableOpacity>
+           );
+      })}
  </View>
-        <Text style={styles.checkboxLabel}>{wt.Type}</Text>
-  <Text style={styles.checkboxCount}>1217</Text>
+ )}
+          </View>
+        );
+
+      case 'jobType':
+        return (
+          <View style={styles.rightContent}>
+    <Text style={styles.rightTitle}>Role</Text>
+            {jobTypes.map(jt => {
+const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobTypeID));
+          return (
+       <TouchableOpacity
+           key={jt.JobTypeID}
+              style={styles.optionItem}
+  onPress={() => {
+    const has = (filters.jobTypeIds || []).some(x => String(x) === String(jt.JobTypeID));
+         const next = has
+           ? (filters.jobTypeIds || []).filter(x => String(x) !== String(jt.JobTypeID))
+        : [...(filters.jobTypeIds || []), jt.JobTypeID];
+        onFiltersChange({ ...filters, jobTypeIds: next });
+       }}
+          >
+   <View style={[styles.checkbox, active && styles.checkboxActive]}>
+            {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+       </View>
+       <Text style={styles.optionLabel}>{jt.Type}</Text>
       </TouchableOpacity>
          );
    })}
-  </View>
-          </FilterSection>
+       </View>
+        );
 
-     {/* Department */}
-          <FilterSection title="Department" section="department">
-       <TextInput 
-     style={styles.searchInput}
-              placeholder="Search department..."
-    value={filters.department || ''}
-              onChangeText={(t) => onFiltersChange({ ...filters, department: t })}
-     placeholderTextColor="#9ca3af"
-            />
-    </FilterSection>
-
-          {/* Location */}
-          <FilterSection title="Location" section="location">
-      <TextInput 
-              style={styles.searchInput}
-            placeholder="City, State or Country"
-           value={filters.location || ''}
-     onChangeText={(t) => onFiltersChange({ ...filters, location: t })}
-  placeholderTextColor="#9ca3af"
-      />
-     </FilterSection>
-
-          {/* Experience */}
-          <FilterSection title="Experience" section="experience">
-  <View style={styles.rangeInputContainer}>
-   <View style={styles.rangeInput}>
-      <Text style={styles.rangeLabel}>Min (years)</Text>
-        <TextInput
-      style={styles.rangeTextInput}
-   placeholder="0"
-       value={filters.experienceMin?.toString() || ''}
-  onChangeText={(t) => onFiltersChange({ ...filters, experienceMin: t ? parseInt(t) : '' })}
-        keyboardType="numeric"
-               placeholderTextColor="#9ca3af"
-          />
-      </View>
-     <Text style={styles.rangeSeparator}>-</Text>
-     <View style={styles.rangeInput}>
-                <Text style={styles.rangeLabel}>Max (years)</Text>
-           <TextInput
-    style={styles.rangeTextInput}
-    placeholder="10+"
-                  value={filters.experienceMax?.toString() || ''}
-                  onChangeText={(t) => onFiltersChange({ ...filters, experienceMax: t ? parseInt(t) : '' })}
-      keyboardType="numeric"
-              placeholderTextColor="#9ca3af"
-  />
-              </View>
-            </View>
-          </FilterSection>
-
-        {/* Salary */}
-   <FilterSection title="Salary" section="salary">
-  <View style={styles.rangeInputContainer}>
-           <View style={styles.rangeInput}>
-              <Text style={styles.rangeLabel}>Min</Text>
-   <TextInput
-        style={styles.rangeTextInput}
-          placeholder="0"
-             value={filters.salaryMin?.toString() || ''}
-     onChangeText={(t) => onFiltersChange({ ...filters, salaryMin: t ? parseInt(t) : '' })}
-          keyboardType="numeric"
-       placeholderTextColor="#9ca3af"
-/>
-    </View>
-    <Text style={styles.rangeSeparator}>-</Text>
-   <View style={styles.rangeInput}>
-  <Text style={styles.rangeLabel}>Max</Text>
-         <TextInput
-   style={styles.rangeTextInput}
-         placeholder="100000+"
-          value={filters.salaryMax?.toString() || ''}
-             onChangeText={(t) => onFiltersChange({ ...filters, salaryMax: t ? parseInt(t) : '' })}
-         keyboardType="numeric"
-           placeholderTextColor="#9ca3af"
-    />
-     </View>
-            </View>
-            {currencies.length > 0 && (
-     <View style={styles.currencyPills}>
-                {currencies.slice(0, 4).map(curr => {
-const active = filters.currencyId === curr.CurrencyID;
+      case 'postedBy':
      return (
-     <TouchableOpacity
-              key={curr.CurrencyID}
-    style={[styles.currencyPill, active && styles.currencyPillActive]}
-       onPress={() => onFiltersChange({ ...filters, currencyId: curr.CurrencyID })}
-           >
-         <Text style={[styles.currencyPillText, active && styles.currencyPillTextActive]}>
-         {curr.Code}
-             </Text>
+          <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Freshness</Text>
+            {[
+  { label: 'Last 24 hours', value: 1 },
+          { label: 'Last 3 days', value: 3 },
+ { label: 'Last 7 days', value: 7 },
+   { label: 'Last 14 days', value: 14 },
+   { label: 'Last 30 days', value: 30 }
+            ].map(item => {
+        const active = filters.postedWithinDays === item.value;
+     return (
+           <TouchableOpacity
+      key={item.value}
+        style={styles.optionItem}
+      onPress={() => onFiltersChange({ ...filters, postedWithinDays: active ? null : item.value })}
+         >
+          <View style={[styles.checkbox, active && styles.checkboxActive]}>
+     {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+      </View>
+ <Text style={styles.optionLabel}>{item.label}</Text>
            </TouchableOpacity>
-       );
-           })}
-  </View>
-   )}
-          </FilterSection>
-
-        {/* Job Type (Role) */}
-          <FilterSection 
-            title="Role" 
-     section="jobType"
-   count={(filters.jobTypeIds || []).length}
-          >
-            <View style={styles.checkboxList}>
-        {jobTypes.map(jt => {
-           const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobTypeID));
-             return (
-            <TouchableOpacity 
-  key={jt.JobTypeID}
-          style={styles.checkboxItem}
-     onPress={() => {
-               const has = (filters.jobTypeIds || []).some(x => String(x) === String(jt.JobTypeID));
-    const next = has 
-   ? (filters.jobTypeIds || []).filter(x => String(x) !== String(jt.JobTypeID))
-      : [...(filters.jobTypeIds || []), jt.JobTypeID];
-   onFiltersChange({ ...filters, jobTypeIds: next });
-            }}
-   >
-  <View style={[styles.checkbox, active && styles.checkboxActive]}>
-              {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
-            </View>
-   <Text style={styles.checkboxLabel}>{jt.Type}</Text>
-        </TouchableOpacity>
-         );
-       })}
-            </View>
-   </FilterSection>
-
-          {/* Freshness (Posted by) */}
-          <FilterSection title="Freshness" section="postedBy">
-            <View style={styles.checkboxList}>
-      {{
-      { label: 'Last 24 hours', value: 1 },
- { label: 'Last 3 days', value: 3 },
-        { label: 'Last 7 days', value: 7 },
-    { label: 'Last 14 days', value: 14 },
-          { label: 'Last 30 days', value: 30 }
-              ].map(item => {
-         const active = filters.postedWithinDays === item.value;
-       return (
-       <TouchableOpacity 
-         key={item.value}
-      style={styles.checkboxItem}
-           onPress={() => {
-         onFiltersChange({ 
-    ...filters, 
-               postedWithinDays: active ? null : item.value 
-        });
-    }}
-   >
-                    <View style={[styles.checkbox, active && styles.checkboxActive]}>
-          {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+              );
+            })}
           </View>
-             <Text style={styles.checkboxLabel}>{item.label}</Text>
+        );
+
+ default:
+        return null;
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+    animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Filter Jobs</Text>
+          {activeFiltersCount() > 0 && (
+            <TouchableOpacity onPress={onClear} style={styles.clearAll}>
+      <Text style={styles.clearAllText}>Clear All</Text>
    </TouchableOpacity>
+  )}
+ </View>
+
+        {/* Two Column Layout */}
+        <View style={styles.twoColumnContainer}>
+          {/* Left Column - Categories */}
+          <View style={styles.leftColumn}>
+    <ScrollView showsVerticalScrollIndicator={false}>
+              {categories.map(cat => {
+      const isActive = selectedCategory === cat.id;
+ const hasFilters = isSectionActive(cat.id);
+     return (
+       <TouchableOpacity
+        key={cat.id}
+     style={[styles.categoryItem, isActive && styles.categoryItemActive]}
+          onPress={() => setSelectedCategory(cat.id)}
+      >
+            <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>
+        {cat.label}
+      </Text>
+        {hasFilters && <View style={styles.activeDot} />}
+  </TouchableOpacity>
     );
-     })}
+    })}
+      </ScrollView>
   </View>
-   </FilterSection>
 
-  {/* Spacer for bottom buttons */}
-          <View style={{ height: 100 }} />
-    </ScrollView>
+          {/* Right Column - Filter Options */}
+          <View style={styles.rightColumn}>
+     <ScrollView showsVerticalScrollIndicator={false}>
+       {renderRightContent()}
+            </ScrollView>
+      </View>
+        </View>
 
-        {/* Footer Buttons */}
-    <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.cancelButton}
-     onPress={onClose}
-          >
+     {/* Footer */}
+        <View style={styles.footer}>
+     <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
- <TouchableOpacity 
-    style={styles.applyButton}
-     onPress={onApply}
-       >
-            <Text style={styles.applyButtonText}>Apply</Text>
-    </TouchableOpacity>
-      </View>
-      </View>
+          <TouchableOpacity style={styles.applyButton} onPress={onApply}>
+<Text style={styles.applyButtonText}>Apply</Text>
+          </TouchableOpacity>
+        </View>
+    </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
- flex: 1, 
-    backgroundColor: '#ffffff' // Changed from #000000 to white
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff'
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-borderBottomWidth: 1, 
-    borderBottomColor: '#e5e7eb' // Changed from #1f1f1f to light gray
-  },
-  headerTitle: { 
-    fontSize: 22, 
-    fontWeight: '700', 
-    color: '#111827' // Changed from #ffffff to dark gray
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  clearAll: {
- paddingHorizontal: 12,
-    paddingVertical: 6,
-borderRadius: 6,
-    backgroundColor: '#fef2f2' // Light red background
-  },
-  clearAllText: {
-    color: '#dc2626', // Red text
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  scrollView: {
-    flex: 1
-  },
-  filterSection: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6' // Light gray border
-  },
-  sectionHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  paddingHorizontal: 20,
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb'
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  clearAll: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#fef2f2'
+  },
+  clearAllText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  twoColumnContainer: {
+    flex: 1,
+    flexDirection: 'row'
+  },
+  leftColumn: {
+    width: '30%',
+    borderRightWidth: 1,
+ borderRightColor: '#e5e7eb',
+    backgroundColor: '#f9fafb'
+  },
+  categoryItem: {
     paddingVertical: 16,
-    backgroundColor: '#ffffff' // White background
+  paddingHorizontal: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+    flexDirection: 'row',
+ alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  sectionTitle: {
-    fontSize: 16,
+  categoryItemActive: {
+    borderLeftColor: '#0066cc',
+    backgroundColor: '#ffffff'
+  },
+  categoryLabel: {
+    fontSize: 15,
+    color: '#6b7280',
+ fontWeight: '500'
+  },
+  categoryLabelActive: {
+    color: '#111827',
+    fontWeight: '600'
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#0066cc'
+  },
+  rightColumn: {
+ flex: 1,
+    backgroundColor: '#ffffff'
+  },
+  rightContent: {
+    padding: 20
+  },
+  rightTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#6b7280' // Gray text
+    color: '#111827',
+    marginBottom: 16
   },
-  sectionTitleActive: {
-    color: '#111827' // Dark text when active
-  },
-  countBadge: {
-    backgroundColor: '#3b82f6', // Blue badge
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-    minWidth: 24,
-    alignItems: 'center'
-  },
-  countText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700'
-  },
-  sectionContent: {
- paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#f9fafb' // Light gray background
-  },
-  checkboxList: {
-    gap: 12
-  },
-  checkboxItem: {
- flexDirection: 'row',
+  optionItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6'
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
- borderColor: '#d1d5db', // Light gray border
+    borderColor: '#d1d5db',
     marginRight: 12,
-    alignItems: 'center',
+alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff' // White background
+    backgroundColor: '#ffffff'
   },
   checkboxActive: {
-    borderColor: '#3b82f6', // Blue border
-    backgroundColor: '#eff6ff' // Very light blue background
+    borderColor: '#0066cc',
+    backgroundColor: '#e3f2fd'
   },
-  checkboxLabel: {
+  optionLabel: {
     flex: 1,
     fontSize: 15,
-    color: '#374151' // Dark gray text
+    color: '#374151'
   },
-  checkboxCount: {
+  optionCount: {
     fontSize: 13,
-    color: '#9ca3af', // Gray text
+    color: '#9ca3af',
     fontWeight: '600'
   },
   searchInput: {
-    backgroundColor: '#ffffff', // White background
+    backgroundColor: '#f9fafb',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827', // Dark text
-  borderWidth: 1,
-    borderColor: '#d1d5db' // Light gray border
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  rangeInputContainer: {
+  rangeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12
@@ -462,21 +458,21 @@ borderRadius: 6,
   },
   rangeLabel: {
     fontSize: 13,
-    color: '#6b7280', // Gray text
+    color: '#6b7280',
     marginBottom: 6
   },
   rangeTextInput: {
-    backgroundColor: '#ffffff', // White background
+    backgroundColor: '#f9fafb',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827', // Dark text
-borderWidth: 1,
-    borderColor: '#d1d5db' // Light gray border
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#e5e7eb'
   },
   rangeSeparator: {
-    color: '#9ca3af', // Gray text
+    color: '#9ca3af',
     fontSize: 18,
     marginTop: 20
   },
@@ -484,27 +480,27 @@ borderWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12
+    marginTop: 16
   },
   currencyPill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#d1d5db', // Light gray border
-    backgroundColor: '#ffffff' // White background
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff'
   },
   currencyPillActive: {
-    borderColor: '#3b82f6', // Blue border
-    backgroundColor: '#eff6ff' // Light blue background
+    borderColor: '#0066cc',
+    backgroundColor: '#e3f2fd'
   },
   currencyPillText: {
-    color: '#6b7280', // Gray text
+    color: '#6b7280',
     fontSize: 14,
     fontWeight: '600'
   },
   currencyPillTextActive: {
-    color: '#3b82f6' // Blue text
+    color: '#0066cc'
   },
   footer: {
     flexDirection: 'row',
@@ -512,8 +508,8 @@ borderWidth: 1,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb', // Light gray border
-    backgroundColor: '#ffffff' // White background
+    borderTopColor: '#e5e7eb',
+    backgroundColor: '#ffffff'
   },
   cancelButton: {
     flex: 1,
@@ -521,11 +517,11 @@ borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#3b82f6', // Blue border
-    backgroundColor: '#ffffff' // White background
+    borderColor: '#0066cc',
+    backgroundColor: '#ffffff'
   },
   cancelButtonText: {
-    color: '#3b82f6', // Blue text
+    color: '#0066cc',
     fontSize: 16,
     fontWeight: '700'
   },
@@ -534,12 +530,12 @@ borderWidth: 1,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#3b82f6' // Blue background
+    backgroundColor: '#0066cc'
   },
   applyButtonText: {
-    color: '#ffffff', // White text
+    color: '#ffffff',
     fontSize: 16,
-  fontWeight: '700'
+    fontWeight: '700'
   }
 });
 
