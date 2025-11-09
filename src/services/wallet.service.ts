@@ -706,7 +706,7 @@ export class WalletService {
         userId,
         WELCOME_BONUS_AMOUNT,
         'NEW_USER_BONUS',
-        `Welcome bonus - ₹${WELCOME_BONUS_AMOUNT} credited to your wallet`
+        `Welcome bonus credited to your wallet`
       );
 
       // Mark bonus as given
@@ -742,7 +742,7 @@ export class WalletService {
         newUserId,
         REFERRAL_BONUS_AMOUNT,
         'REFERRAL_BONUS',
-        `Referral bonus - ?${REFERRAL_BONUS_AMOUNT} for joining via referral`
+        `Referral bonus for joining via referral`
       );
 
       // Credit bonus to referrer
@@ -750,7 +750,7 @@ export class WalletService {
         referrerId,
         REFERRAL_BONUS_AMOUNT,
         'REFERRAL_BONUS',
-        `Referral bonus - ₹${REFERRAL_BONUS_AMOUNT} for referring a new user`
+        `Referral bonus for referring a new user`
       );
 
       console.log(`?? Referral bonuses credited: ?${REFERRAL_BONUS_AMOUNT} each to ${newUserId} and ${referrerId}`);
