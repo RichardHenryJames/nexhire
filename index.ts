@@ -1,4 +1,5 @@
 import { app } from '@azure/functions';
+import type { InvocationContext, Timer } from '@azure/functions';
 
 // FIXED: Import CORS middleware
 import { withErrorHandling, corsHeaders } from './src/middleware';
@@ -16,31 +17,31 @@ import {
     getDashboardStats, 
     deactivateAccount, 
     refreshToken,
-    googleLogin,  // ?? NEW: Google OAuth login
-    googleRegister,  // ?? NEW: Google OAuth registration
-    getMyReferralCode  // ? NEW: Get user's referral code and stats
+    googleLogin,  // NEW: Google OAuth login
+    googleRegister,  // NEW: Google OAuth registration
+    getMyReferralCode  // NEW: Get user's referral code and stats
 } from './src/controllers/user.controller';
-import { 
-    createJob, 
-    getJobs, 
-    getJobById, 
-    updateJob, 
-    deleteJob, 
-    publishJob, 
-    closeJob, 
-    searchJobs, 
-    getJobsByOrganization, 
-    getJobTypes, 
-    getCurrencies 
+import {
+    createJob,
+    getJobs,
+    getJobById,
+    updateJob,
+    deleteJob,
+    publishJob,
+    closeJob,
+    searchJobs,
+    getJobsByOrganization,
+    getJobTypes,
+    getCurrencies
 } from './src/controllers/job.controller';
-import { 
-    applyForJob, 
-    getMyApplications, 
-    getJobApplications, 
-    updateApplicationStatus, 
-    withdrawApplication, 
-    getApplicationDetails, 
-    getApplicationStats 
+import {
+    applyForJob,
+    getMyApplications,
+    getJobApplications,
+    updateApplicationStatus,
+    withdrawApplication,
+    getApplicationDetails,
+    getApplicationStats
 } from './src/controllers/job-application.controller';
 import {
     getOrganizations,
@@ -71,16 +72,16 @@ import {
     checkReferralEligibility,
     createReferralRequest,
     getMyReferralRequests,
-    getAvailableRequests, // ?? FIXED: Correct import name
+    getAvailableRequests, // FIXED: Correct import name
     claimReferralRequest,
     submitReferralProof,
     verifyReferralCompletion,
     getMyReferrerRequests,
     getReferralAnalytics,
-    claimReferralRequest as claimReferralRequestWithProof, // ?? FIXED: Use alias for now
+    claimReferralRequest as claimReferralRequestWithProof, // FIXED: Use alias for now
     cancelReferralRequest,
     getReferrerStats,
-    getReferralPointsHistory // ?? NEW: Add points history import
+    getReferralPointsHistory // NEW: Add points history import
 } from './src/controllers/referral.controller';
 
 // NEW: Payment controllers - Razorpay Integration
@@ -126,7 +127,7 @@ app.http('auth-login', {
     handler: withErrorHandling(login)
 });
 
-// ?? NEW: Google OAuth Login
+// NEW: Google OAuth Login
 app.http('auth-google-login', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -134,7 +135,7 @@ app.http('auth-google-login', {
     handler: withErrorHandling(googleLogin)
 });
 
-// ?? NEW: Google OAuth Registration
+// NEW: Google OAuth Registration
 app.http('auth-google-register', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -198,7 +199,7 @@ app.http('users-update-education', {
     handler: withErrorHandling(updateEducation)
 });
 
-// ? NEW: Get my referral code and stats
+// NEW: Get my referral code and stats
 app.http('users-referral-code', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
@@ -268,13 +269,13 @@ app.http('applicants-profile', {
     route: 'applicants/{userId}/profile',
     handler: withErrorHandling(async (req, context) => {
         const userId = req.params.userId;
-        
+
         try {
             // Handle OPTIONS for CORS
             if (req.method === 'OPTIONS') {
                 return { status: 200 };
             }
-            
+
             // Handle GET - Get applicant profile
             if (req.method === 'GET') {
                 console.log('Getting applicant profile for user:', userId);
@@ -287,18 +288,18 @@ app.http('applicants-profile', {
                     }
                 };
             }
-            
+
             // Handle PUT - Update applicant profile
             if (req.method === 'PUT') {
                 console.log('Updating applicant profile for user:', userId);
-                
+
                 const profileData = await req.json() as any;
                 console.log('Profile data received fields:', Object.keys(profileData));
                 console.log('hideCurrentCompany:', profileData.hideCurrentCompany);
                 console.log('hideSalaryDetails:', profileData.hideSalaryDetails);
-                
+
                 const updatedProfile = await ApplicantService.updateApplicantProfile(userId, profileData);
-                
+
                 console.log('Profile updated successfully');
                 return {
                     status: 200,
@@ -309,7 +310,7 @@ app.http('applicants-profile', {
                     }
                 };
             }
-            
+
             // Unsupported method
             return {
                 status: 405,
@@ -318,7 +319,7 @@ app.http('applicants-profile', {
                     error: 'Method not allowed'
                 }
             };
-            
+
         } catch (error) {
             console.error(`Error handling applicant profile ${req.method}:`, error);
             return {
@@ -332,20 +333,20 @@ app.http('applicants-profile', {
     })
 });
 
-// FIXED: Combined Employer Profile Management (GET + PUT in single function)  
+// FIXED: Combined Employer Profile Management (GET + PUT in single function)
 app.http('employers-profile', {
     methods: ['GET', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'employers/{userId}/profile',
     handler: withErrorHandling(async (req, context) => {
         const userId = req.params.userId;
-        
+
         try {
             // Handle OPTIONS for CORS
             if (req.method === 'OPTIONS') {
                 return { status: 200 };
             }
-            
+
             // Handle GET - Get employer profile
             if (req.method === 'GET') {
                 console.log('Getting employer profile for user:', userId);
@@ -358,14 +359,14 @@ app.http('employers-profile', {
                     }
                 };
             }
-            
+
             // Handle PUT - Update employer profile
             if (req.method === 'PUT') {
                 console.log('Updating employer profile for user:', userId);
-                
+
                 const profileData = await req.json() as any;
                 const updatedProfile = await EmployerService.updateEmployerProfile(userId, profileData);
-                
+
                 return {
                     status: 200,
                     jsonBody: {
@@ -375,7 +376,7 @@ app.http('employers-profile', {
                     }
                 };
             }
-            
+
             // Unsupported method
             return {
                 status: 405,
@@ -384,7 +385,7 @@ app.http('employers-profile', {
                     error: 'Method not allowed'
                 }
             };
-            
+
         } catch (error) {
             console.error(`Error handling employer profile ${req.method}:`, error);
             return {
@@ -627,11 +628,11 @@ app.http('users-resumes', {
             const token = authHeader.replace('Bearer ', '');
             const { AuthService } = await import('./src/services/auth.service');
             const decoded = AuthService.verifyToken(token);
-            
+
             const { ApplicantService } = await import('./src/services/profile.service');
             const profile = await ApplicantService.getApplicantProfile(decoded.userId);
             const resumes = await ApplicantService.getApplicantResumes(profile.ApplicantID);
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -659,7 +660,7 @@ app.http('users-resume-primary', {
     handler: withErrorHandling(async (req, context) => {
         const resumeId = req.params.resumeId;
         const authHeader = req.headers.get('authorization');
-        
+
         if (!authHeader) {
             return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
         }
@@ -668,11 +669,11 @@ app.http('users-resume-primary', {
             const token = authHeader.replace('Bearer ', '');
             const { AuthService } = await import('./src/services/auth.service');
             const decoded = AuthService.verifyToken(token);
-            
+
             const { ApplicantService } = await import('./src/services/profile.service');
             const profile = await ApplicantService.getApplicantProfile(decoded.userId);
             await ApplicantService.setPrimaryResume(profile.ApplicantID, resumeId);
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -699,38 +700,38 @@ app.http('users-resume-delete', {
     handler: withErrorHandling(async (req, context) => {
         const resumeId = req.params.resumeId;
         const authHeader = req.headers.get('authorization');
-        
+
         if (!authHeader) {
-            return { status:401, jsonBody: { success: false, error: 'Authorization required' } };
+            return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
         }
 
         try {
             const token = authHeader.replace('Bearer ', '');
             const { AuthService } = await import('./src/services/auth.service');
             const decoded = AuthService.verifyToken(token);
-            
+
             const { ApplicantService } = await import('./src/services/profile.service');
             const profile = await ApplicantService.getApplicantProfile(decoded.userId);
-            
+
             // Get resume details BEFORE deletion from active list (includes deleted flag now)
             const resumes = await ApplicantService.getApplicantResumes(profile.ApplicantID);
             const resumeToDelete = resumes.find(r => r.ResumeID === resumeId);
-            
+
             if (!resumeToDelete) {
                 // Try historical (maybe already soft-deleted previously)
                 const historical = await ApplicantService.getResumeForViewing(resumeId);
                 if (!historical) {
-                    return { status:404, jsonBody: { success: false, error: 'Resume not found' } };
+                    return { status: 404, jsonBody: { success: false, error: 'Resume not found' } };
                 }
-                return { status:400, jsonBody: { success: false, error: 'Resume already deleted' } };
+                return { status: 400, jsonBody: { success: false, error: 'Resume already deleted' } };
             }
-            
+
             console.log('Deleting resume request:', { resumeId, userId: decoded.userId });
-            
+
             // Perform deletion (soft or hard)
             const result = await ApplicantService.deleteApplicantResume(profile.ApplicantID, resumeId);
             console.log('Delete result:', result);
-            
+
             // Only attempt file deletion for hard delete
             if (!result.softDelete && resumeToDelete.ResumeURL) {
                 try {
@@ -745,9 +746,9 @@ app.http('users-resume-delete', {
             } else if (result.softDelete) {
                 console.log('Soft delete performed - file retained for historical applications');
             }
-            
+
             return {
-                status:200,
+                status: 200,
                 jsonBody: {
                     success: true,
                     message: result.message,
@@ -759,7 +760,7 @@ app.http('users-resume-delete', {
         } catch (error) {
             console.error('Error deleting resume:', error);
             return {
-                status:500,
+                status: 500,
                 jsonBody: {
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to delete resume'
@@ -779,7 +780,7 @@ app.http('health', {
 });
 
 // ========================================================================
-// REFERRAL SYSTEM ENDPOINTS - ? FIXED TO MATCH WORKING PATTERN
+// REFERRAL SYSTEM ENDPOINTS - FIXED TO MATCH WORKING PATTERN
 // ========================================================================
 
 // Referral Plans
@@ -787,14 +788,14 @@ app.http('referral-plans', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/plans',
-    handler: withErrorHandling(getReferralPlans) // ? Public endpoint - no auth needed
+    handler: withErrorHandling(getReferralPlans) // Public endpoint - no auth needed
 });
 
 app.http('referral-plans-purchase', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/plans/purchase',
-    handler: withErrorHandling(purchaseReferralPlan) // ? Same pattern as work experience
+    handler: withErrorHandling(purchaseReferralPlan) // Same pattern as work experience
 });
 
 // Referral Requests
@@ -802,28 +803,28 @@ app.http('referral-requests-create', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/requests',
-    handler: withErrorHandling(createReferralRequest) // ? Same pattern as work experience
+    handler: withErrorHandling(createReferralRequest) // Same pattern as work experience
 });
 
 app.http('referral-my-requests', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/my-requests',
-    handler: withErrorHandling(getMyReferralRequests) // ? Same pattern as work experience
+    handler: withErrorHandling(getMyReferralRequests) // Same pattern as work experience
 });
 
 app.http('referral-available', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/available',
-    handler: withErrorHandling(getAvailableRequests) // ? Same pattern as work experience
+    handler: withErrorHandling(getAvailableRequests) // Same pattern as work experience
 });
 
 app.http('referral-claim', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/requests/{requestId}/claim',
-    handler: withErrorHandling(claimReferralRequest) // ? Same pattern as work experience
+    handler: withErrorHandling(claimReferralRequest) // Same pattern as work experience
 });
 
 // NEW: Proof Submission & Verification
@@ -831,14 +832,14 @@ app.http('referral-proof-submit', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/requests/{requestId}/proof',
-    handler: withErrorHandling(submitReferralProof) // ? Same pattern as work experience
+    handler: withErrorHandling(submitReferralProof) // Same pattern as work experience
 });
 
 app.http('referral-verify', {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/requests/{requestId}/verify',
-    handler: withErrorHandling(verifyReferralCompletion) // ? Same pattern as work experience
+    handler: withErrorHandling(verifyReferralCompletion) // Same pattern as work experience
 });
 
 // NEW: Cancel referral request
@@ -853,38 +854,36 @@ app.http('referral-my-referrer-requests', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/my-referrer-requests',
-    handler: withErrorHandling(getMyReferrerRequests) // ? Same pattern as work experience
+    handler: withErrorHandling(getMyReferrerRequests) // Same pattern as work experience
 });
 
-// Analytics & Stats
 app.http('referral-analytics', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/analytics',
-    handler: withErrorHandling(getReferralAnalytics) // ? Same pattern as work experience
+    handler: withErrorHandling(getReferralAnalytics) // Same pattern as work experience
 });
 
 app.http('referral-eligibility', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/eligibility',
-    handler: withErrorHandling(checkReferralEligibility) // ? Same pattern as work experience
+    handler: withErrorHandling(checkReferralEligibility) // Same pattern as work experience
 });
 
 app.http('referral-stats', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/stats',
-    handler: withErrorHandling(getReferrerStats) // ? Same pattern as work experience
+    handler: withErrorHandling(getReferrerStats) // Same pattern as work experience
 });
 
 app.http('referral-subscription', {
     methods: ['GET', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'referral/subscription',
-    handler: withErrorHandling(getCurrentSubscription) // ? Same pattern as work experience
+    handler: withErrorHandling(getCurrentSubscription) // Same pattern as work experience
 });
-
 
 // NEW: Get detailed referral points history
 app.http('referral-points-history', {
@@ -920,7 +919,7 @@ app.http('saved-jobs-my', {
 });
 
 // ========================================================================
-// PAYMENT SYSTEM ENDPOINTS - ?? Razorpay Integration
+// PAYMENT SYSTEM ENDPOINTS - Razorpay Integration
 // ========================================================================
 
 app.http('payment-create-order', {
@@ -945,7 +944,7 @@ app.http('payment-history', {
 });
 
 // ========================================================================
-// WALLET SYSTEM ENDPOINTS - ?? Wallet Management
+// WALLET SYSTEM ENDPOINTS - Wallet Management
 // ========================================================================
 
 app.http('wallet-get', {
@@ -1044,7 +1043,7 @@ app.http('scraping-ping', {
 });
 
 // ========================================================================
-// JOB SCRAPING ENDPOINTS - ?? PROPER IMPLEMENTATION with Dynamic Loading
+// JOB SCRAPING ENDPOINTS - PROPER IMPLEMENTATION with Dynamic Loading
 // ========================================================================
 
 app.http('job-scraper-trigger', {
@@ -1068,7 +1067,7 @@ app.http('job-scraper-trigger', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1080,12 +1079,12 @@ app.http('job-scraper-trigger', {
             }
 
             console.log('Manual job scraping triggered by admin:', payload.userId);
-            
+
             // Dynamic import of JobScraperService
             try {
                 const { JobScraperService } = await import('./src/services/job-scraper.service');
                 const result = await JobScraperService.scrapeAndPopulateJobs();
-                
+
                 return {
                     status: result.success ? 200 : 500,
                     jsonBody: {
@@ -1144,7 +1143,7 @@ app.http('scraping-config', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1154,7 +1153,7 @@ app.http('scraping-config', {
 
             // Dynamic import and actual functionality
             const { JobScraperService } = await import('./src/services/job-scraper.service');
-            
+
             if (req.method === 'GET') {
                 const config = JobScraperService.getConfig();
                 return {
@@ -1167,7 +1166,7 @@ app.http('scraping-config', {
                 };
             } else if (req.method === 'PUT') {
                 const updates = await req.json() as any;
-                
+
                 // Validate updates
                 if (updates.maxJobsPerRun && (updates.maxJobsPerRun < 1 || updates.maxJobsPerRun > 500)) {
                     return {
@@ -1180,7 +1179,7 @@ app.http('scraping-config', {
                 }
 
                 JobScraperService.updateConfig(updates);
-                
+
                 return {
                     status: 200,
                     jsonBody: {
@@ -1190,9 +1189,9 @@ app.http('scraping-config', {
                     }
                 };
             }
-            
+
             return { status: 405, jsonBody: { success: false, error: 'Method not allowed' } };
-            
+
         } catch (serviceError) {
             console.error('Scraping config error:', serviceError);
             return {
@@ -1225,7 +1224,7 @@ app.http('scraping-stats', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1236,7 +1235,7 @@ app.http('scraping-stats', {
             // Get actual stats from service
             const { JobScraperService } = await import('./src/services/job-scraper.service');
             const stats = await JobScraperService.getScrapingStats();
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1277,7 +1276,7 @@ app.http('scraping-cleanup', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1286,7 +1285,7 @@ app.http('scraping-cleanup', {
             }
 
             const { daysOld = 90, source = null } = req.query as any;
-            
+
             if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
                 return {
                     status: 400,
@@ -1299,16 +1298,16 @@ app.http('scraping-cleanup', {
 
             // Perform actual cleanup
             const { dbService } = await import('./src/services/database.service');
-            
+
             let cleanupQuery = `
-                DELETE FROM Jobs 
-                WHERE PostedByType = 0 
+                DELETE FROM Jobs
+                WHERE PostedByType = 0
                   AND ExternalJobID IS NOT NULL
                   AND CreatedAt < DATEADD(day, -@param0, GETUTCDATE())
             `;
-            
+
             const queryParams: any[] = [parseInt(daysOld)];
-            
+
             if (source) {
                 cleanupQuery += ` AND ExternalJobID LIKE @param1`;
                 queryParams.push(`${source}_%`);
@@ -1316,7 +1315,7 @@ app.http('scraping-cleanup', {
 
             const result = await dbService.executeQuery(cleanupQuery, queryParams);
             const deletedCount = result.rowsAffected?.[0] || 0;
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1351,28 +1350,28 @@ app.http('scraping-health', {
         try {
             // Try to load service and get real health data
             const { JobScraperService } = await import('./src/services/job-scraper.service');
-            
+
             const config = JobScraperService.getConfig();
             const stats = await JobScraperService.getScrapingStats();
-            
+
             // Determine real health status
             const totalJobs = stats.summary?.TotalScrapedJobs || 0;
             const jobsLast24h = stats.summary?.JobsLast24h || 0;
             const isHealthy = config.enabled && totalJobs >= 0;
-            
+
             const healthData = {
                 status: isHealthy ? 'healthy' : 'degraded',
                 scrapingEnabled: config.enabled,
                 totalScrapedJobs: totalJobs,
                 jobsLast24h: jobsLast24h,
                 indiaJobs: stats.summary?.TotalIndiaJobs || 0,
-                activeSources: Object.keys(config.sources).filter(source => 
+                activeSources: Object.keys(config.sources).filter(source =>
                     (config.sources as any)[source]?.enabled
                 ),
                 lastCheck: new Date().toISOString(),
                 recommendations: [] as string[]
             };
-            
+
             // Add intelligent recommendations
             if (!config.enabled) {
                 healthData.recommendations.push('Enable job scraping in configuration');
@@ -1385,7 +1384,7 @@ app.http('scraping-health', {
             if (totalJobs < 100) {
                 healthData.recommendations.push('Low job count - consider running scraper more frequently');
             }
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1419,7 +1418,7 @@ app.http('scraping-health', {
 });
 
 // ========================================================================
-// JOB SCRAPING SCHEDULER CONTROL ENDPOINTS - ? NEW
+// JOB SCRAPING SCHEDULER CONTROL ENDPOINTS - NEW
 // ========================================================================
 
 app.http('scheduler-status', {
@@ -1431,7 +1430,7 @@ app.http('scheduler-status', {
             const { SchedulerService } = await import('./src/services/scheduler.service');
             const scheduler = SchedulerService.getInstance();
             const status = scheduler.getStatus();
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1471,7 +1470,7 @@ app.http('scheduler-start', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1482,7 +1481,7 @@ app.http('scheduler-start', {
             const { SchedulerService } = await import('./src/services/scheduler.service');
             const scheduler = SchedulerService.getInstance();
             scheduler.start();
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1522,7 +1521,7 @@ app.http('scheduler-stop', {
             const token = authHeader.substring(7);
             const { AuthService } = await import('./src/services/auth.service');
             const payload = AuthService.verifyToken(token);
-            
+
             if (payload.userType !== 'Admin') {
                 return {
                     status: 403,
@@ -1533,7 +1532,7 @@ app.http('scheduler-stop', {
             const { SchedulerService } = await import('./src/services/scheduler.service');
             const scheduler = SchedulerService.getInstance();
             scheduler.stop();
-            
+
             return {
                 status: 200,
                 jsonBody: {
@@ -1564,6 +1563,129 @@ console.log('Google OAuth endpoints added: /auth/google, /auth/google-register')
 console.log('API Base URL: https://refopen-api-func.azurewebsites.net/api');
 
 // ========================================================================
+// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours)
+// ========================================================================
+
+app.timer('jobScraperTimer', {
+    schedule: '0 0 */2 * * *', // Every 2 hours
+    handler: async (myTimer: Timer, context: InvocationContext) => {
+        const startTime = Date.now();
+        const executionId = `timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        context.log('// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //');
+        context.log('//       JOB SCRAPER TIMER TRIGGER STARTED    //');
+        context.log('// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //');
+        context.log(`// Execution ID: ${executionId}`);
+        context.log(`// Triggered at: ${new Date().toISOString()}`);
+        context.log(`// Past Due: ${myTimer.isPastDue ? 'Yes (catching up)' : 'No'}`);
+
+        if (myTimer.isPastDue) {
+            context.warn('// WARNING: This execution is past its scheduled time!');
+        }
+
+        try {
+            context.log('\n// Starting job scraping process...\n');
+            const { JobScraperService } = await import('./src/services/job-scraper.service');
+            const result = await JobScraperService.scrapeAndPopulateJobs();
+
+            const duration = Date.now() - startTime;
+            const durationSeconds = Math.round(duration / 1000);
+            const durationMinutes = Math.floor(durationSeconds / 60);
+            const remainingSeconds = durationSeconds % 60;
+
+            if (result.success) {
+                context.log('\n// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //');
+                context.log('//       JOB SCRAPING COMPLETED SUCCESSFULLY   //');
+                context.log('// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //');
+                context.log(`\n// EXECUTION SUMMARY:`);
+                context.log(`   // Jobs Added: ${result.jobsAdded}`);
+                context.log(`   // Total Scraped: ${result.summary.totalJobsScraped}`);
+                context.log(`   // India Jobs: ${result.summary.indiaJobsAdded}`);
+                context.log(`   // Time: ${durationMinutes}m ${remainingSeconds}s`);
+
+                context.log(`\n// SOURCE BREAKDOWN:`);
+                Object.entries(result.summary.sourceBreakdown).forEach(([source, count]) => {
+                    const percentage = result.summary.totalJobsScraped > 0
+                        ? ((count / result.summary.totalJobsScraped) * 100).toFixed(1)
+                        : '0.0';
+                    context.log(`   // ${source.padEnd(20)}: ${String(count).padStart(4)} jobs (${percentage}%)`);
+                });
+            } else {
+                context.error('\n// Job scraping completed with errors');
+                context.error(`   // Jobs Added: ${result.jobsAdded}`);
+                context.error(`   // Errors: ${result.errors.length}`);
+                result.errors.forEach((error, i) => context.error(`   // ${i + 1}. ${error}`));
+            }
+
+            // Log to database
+            try {
+                const { dbService } = await import('./src/services/database.service');
+                await dbService.executeQuery(`
+                    INSERT INTO ScrapingLogs (
+                        RunId, StartTime, EndTime, Success, JobsAdded, IndiaJobs,
+                        TotalScraped, Sources, ErrorCount, Errors, TriggerType, WasPastDue
+                    )
+                    VALUES (@param0, @param1, @param2, @param3, @param4, @param5,
+                            @param6, @param7, @param8, @param9, @param10, @param11)
+                `, [
+                    executionId,
+                    new Date().toISOString(),
+                    new Date(Date.now() + duration).toISOString(),
+                    result.success,
+                    result.jobsAdded,
+                    result.summary.indiaJobsAdded,
+                    result.summary.totalJobsScraped,
+                    JSON.stringify(result.summary.sourceBreakdown),
+                    result.errors.length,
+                    result.errors.slice(0, 5).join('; '),
+                    'TimerTrigger',
+                    myTimer.isPastDue
+                ]);
+                context.log('\n// Logged to database successfully');
+            } catch (logError: any) {
+                context.warn(`\n// Failed to log to database: ${logError.message}`);
+            }
+
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            context.error('\n// JOB SCRAPER TIMER TRIGGER FAILED');
+            context.error(`   // Error: ${error.message}`);
+            context.error(`   // Duration: ${Math.round(duration / 1000)}s`);
+
+            // Log failure
+            try {
+                const { dbService } = await import('./src/services/database.service');
+                await dbService.executeQuery(`
+                    INSERT INTO ScrapingLogs (
+                        RunId, StartTime, EndTime, Success, JobsAdded, IndiaJobs,
+                        TotalScraped, Sources, ErrorCount, Errors, TriggerType, WasPastDue
+                    )
+                    VALUES (@param0, @param1, @param2, @param3, @param4, @param5,
+                            @param6, @param7, @param8, @param9, @param10, @param11)
+                `, [
+                    executionId,
+                    new Date().toISOString(),
+                    new Date(Date.now() + duration).toISOString(),
+                    false,
+                    0, 0, 0,
+                    JSON.stringify({}),
+                    1,
+                    error.message,
+                    'TimerTrigger',
+                    myTimer.isPastDue
+                ]);
+            } catch (logError: any) {
+                context.warn(`// Failed to log error: ${logError.message}`);
+            }
+
+            throw error;
+        }
+    }
+});
+
+console.log('// Timer Trigger registered: Job Scraper (runs every 2 hours)');
+
+// ========================================================================
 // FINAL TEST ENDPOINT - Added at the very end
 // ========================================================================
 
@@ -1587,120 +1709,134 @@ export {}
 
 /*
  * ========================================================================
- * ?? UPDATED API ENDPOINT LIST (61 total - Added Wallet System):
+ * UPDATED API ENDPOINT LIST (62 total - Added Timer Trigger):
  * ========================================================================
- * 
- * AUTHENTICATION (7 endpoints): ?? +2 Google OAuth
- * POST   /auth/register               - User registration
- * POST   /auth/login                  - User login
- * POST   /auth/google                 - ?? Google OAuth login
- * POST   /auth/google-register        - ?? Google OAuth registration
- * POST   /auth/logout                 - User logout
- * POST   /auth/refresh                - Refresh JWT token
- * GET    /health                      - Health check
- * 
- * USER MANAGEMENT (11 endpoints):
- * GET    /users/profile               - Get user profile
- * PUT    /users/profile               - Update user profile
- * POST   /users/change-password       - User password update
- * POST   /users/verify-email          - User email verification
- * GET    /users/dashboard-stats       - User dashboard statistics
- * POST   /users/deactivate            - User account deactivation
- * POST   /users/profile-image         - Upload profile image
- * POST   /users/resume                - Upload resume document
- * GET    /users/resumes               - Get user's resumes
- * PUT    /users/resume/{id}/primary   - Set resume as primary
- * DELETE /users/resume/{id}           - Delete a resume
- * POST   /employers/initialize        - Initialize employer profile
- * 
+ *
+ * AUTHENTICATION (7 endpoints): +2 Google OAuth
+ * POST   /auth/register - User registration
+ * POST   /auth/login    - User login
+ * POST   /auth/google   - Google OAuth login
+ * POST   /auth/google-register  - Google OAuth registration
+ * POST   /auth/logout   - User logout
+ * POST   /auth/refresh  - Refresh JWT token
+ * GET    /health        - Health check
+ *
+ * USER MANAGEMENT (12 endpoints):
+ * GET    /users/profile - Get user profile
+ * PUT    /users/profile - Update user profile
+ * POST   /users/change-password - User password update
+ * POST   /users/verify-email - User email verification
+ * GET    /users/dashboard-stats - User dashboard statistics
+ * POST   /users/deactivate - User account deactivation
+ * POST   /users/profile-image - Upload profile image
+ * POST   /users/resume - Upload resume document
+ * GET    /users/resumes - Get user's resumes
+ * PUT    /users/resume/{id}/primary - Set resume as primary
+ * DELETE /users/resume/{id} - Delete a resume
+ * GET    /users/referral-code - Get my referral code and stats
+ * POST   /employers/initialize - Initialize employer profile
+ *
+ * WORK EXPERIENCES (4 endpoints):
+ * GET    /work-experiences/my - Get my work experiences
+ * GET    /work-experiences/applicant/{id} - Get applicant work experiences
+ * POST   /work-experiences - Create work experience
+ * GET    /work-experiences/{id} - Get work experience by ID
+ * PUT    /work-experiences/{id} - Update work experience
+ * DELETE /work-experiences/{id} - Delete work experience
+ *
  * APPLICANT/EMPLOYER PROFILE (4 endpoints):
- * GET    /applicants/{userId}/profile          - Get applicant profile
- * PUT    /applicants/{userId}/profile          - Update applicant profile
- * GET    /employers/{userId}/profile           - Get employer profile
- * PUT    /employers/{userId}/profile           - Update employer profile
- * 
+ * GET    /applicants/{userId}/profile - Get applicant profile
+ * PUT    /applicants/{userId}/profile - Update applicant profile
+ * GET    /employers/{userId}/profile - Get employer profile
+ * PUT    /employers/{userId}/profile - Update employer profile
+ *
  * JOB MANAGEMENT (8 endpoints):
- * GET    /jobs                        - List all jobs
- * POST   /jobs                        - Create new job
- * GET    /jobs/{id}                   - Get job details
- * PUT    /jobs/{id}                   - Update job
- * DELETE /jobs/{id}                   - Delete job
- * POST   /jobs/{id}/publish           - Publish job
- * POST   /jobs/{id}/close             - Close job
- * GET    /search/jobs                 - Search jobs
- * 
- * JOB APPLICATIONS (7 endpoints):
- * POST   /applications                - Apply for job
- * GET    /my/applications             - Get my applications
- * GET    /applications/stats          - Get application stats
- * GET    /jobs/{jobId}/applications   - Get job applications
- * PUT    /applications/{id}/status    - Update application status
- * DELETE /applications/{id}           - Withdraw application
- * GET    /applications/{id}           - Get application details
- * 
- * ?? JOB SCRAPING SYSTEM (6 endpoints): ?? AUTOMATED JOB POPULATION
- * POST   /jobs/scrape/trigger           - Manually trigger job scraping
- * GET    /jobs/scrape/config            - Get scraping configuration
- * PUT    /jobs/scrape/config            - Update scraping configuration
- * GET    /jobs/scrape/stats             - Get scraping statistics
- * DELETE /jobs/scrape/cleanup           - Clean up old scraped jobs
- * GET    /jobs/scrape/health            - Scraper service health check
- * 
- * REFERRAL SYSTEM (15 endpoints): ?? EXPANDED
- * GET    /referral/plans                           - Get all referral plans
- * POST   /referral/plans/purchase                  - Purchase a referral plan
- * GET    /referral/subscription                    - Get current subscription
- * POST   /referral/requests                        - Create referral request
- * GET    /referral/my-requests                     - Get my referral requests (seeker)
- * GET    /referral/available                       - Get available requests (referrer)
- * POST   /referral/requests/{id}/claim             - Claim a referral request
- * POST   /referral/requests/{id}/proof      ?? NEW - Submit proof of referral
- * POST   /referral/requests/{id}/verify     ?? NEW - Verify referral completion
- * POST   /referral/requests/{id}/cancel     ?? NEW - Cancel referral request
- * GET    /referral/my-referrer-requests     ?? NEW - Get my requests as referrer
- * GET    /referral/analytics                       - Get referral analytics
- * GET    /referral/eligibility                     - Check referral eligibility
- * GET    /referral/stats                           - Get referrer badge stats
- * GET    /referral/points-history                  - Get detailed referral points history
- * 
+ * GET    /jobs - List all jobs
+ * POST   /jobs - Create new job
+ * GET    /jobs/{id} - Get job details
+ * PUT    /jobs/{id} - Update job
+ * DELETE /jobs/{id} - Delete job
+ * POST   /jobs/{id}/publish - Publish job
+ * POST   /jobs/{id}/close - Close job
+ * GET    /search/jobs - Search jobs
+ * GET    /organizations/{id}/jobs - Get organization jobs
+ *
+ * JOB APPLICATIONS (6 endpoints):
+ * POST   /applications - Apply for job
+ * GET    /my/applications - Get my applications
+ * GET    /jobs/{jobId}/applications - Get job applications
+ * PUT    /applications/{id}/status - Update application status
+ * DELETE /applications/{id} - Withdraw application
+ * GET    /applications/{id} - Get application details
+ *
+ * JOB SCRAPING SYSTEM (7 endpoints): AUTOMATED JOB POPULATION
+ * POST   /jobs/scrape/trigger - Manually trigger job scraping (Admin)
+ * GET    /jobs/scrape/config - Get scraping configuration (Admin)
+ * PUT    /jobs/scrape/config - Update scraping configuration (Admin)
+ * GET    /jobs/scrape/stats - Get scraping statistics (Admin)
+ * DELETE /jobs/scrape/cleanup - Clean up old scraped jobs (Admin)
+ * GET    /jobs/scrape/health - Scraper service health check
+ * GET    /jobs/scrape/ping - Simple ping test endpoint
+ * TIMER  /jobScraperTimer - Automated scraping every 2 hours
+ *
+ * REFERRAL SYSTEM (15 endpoints): EXPANDED
+ * GET    /referral/plans - Get all referral plans
+ * POST   /referral/plans/purchase - Purchase a referral plan
+ * GET    /referral/subscription - Get current subscription
+ * POST   /referral/requests - Create referral request
+ * GET    /referral/my-requests - Get my referral requests (seeker)
+ * GET    /referral/available - Get available requests (referrer)
+ * POST   /referral/requests/{id}/claim - Claim a referral request
+ * POST   /referral/requests/{id}/proof - NEW - Submit proof of referral
+ * POST   /referral/requests/{id}/verify - NEW - Verify referral completion
+ * POST   /referral/requests/{id}/cancel - NEW - Cancel referral request
+ * GET    /referral/my-referrer-requests - NEW - Get my requests as referrer
+ * GET    /referral/analytics - Get referral analytics
+ * GET    /referral/eligibility - Check referral eligibility
+ * GET    /referral/stats - Get referrer badge stats
+ * GET    /referral/points-history - Get detailed referral points history
+ *
  * REFERENCE DATA (9 endpoints):
- * GET    /reference/job-types         - Get job types
- * GET    /reference/workplace-types   - Get workplace types
- * GET    /reference/currencies        - Get currencies
- * GET    /reference/organizations     - Get organizations
- * GET    /reference/colleges          - Get colleges/universities
- * GET    /reference/industries        - Get industries
+ * GET    /reference/job-types - Get job types
+ * GET    /reference/workplace-types - Get workplace types
+ * GET    /reference/currencies - Get currencies
+ * GET    /reference/organizations - Get organizations
+ * GET    /reference/colleges - Get colleges/universities
+ * GET    /reference/industries - Get industries
  * GET    /reference/universities-by-country - Get universities by country and state
- * GET    /reference/countries         - Get countries
+ * GET    /reference/countries - Get countries
  * GET    /reference/salary-components - Get salary components
- * 
+ *
  * SAVED JOBS (3 endpoints):
- * POST   /saved-jobs                 - Save a job
- * DELETE /saved-jobs/{jobId}        - Unsave a job
- * GET    /my/saved-jobs              - Get my saved jobs
- * 
- * ?? PAYMENT SYSTEM (3 endpoints): ?? RAZORPAY INTEGRATION
- * POST   /payments/razorpay/create-order      - Create Razorpay payment order
+ * POST   /saved-jobs - Save a job
+ * DELETE /saved-jobs/{jobId} - Unsave a job
+ * GET    /my/saved-jobs - Get my saved jobs
+ *
+ * PAYMENT SYSTEM (3 endpoints): RAZORPAY INTEGRATION
+ * POST   /payments/razorpay/create-order - Create Razorpay payment order
  * POST   /payments/razorpay/verify-and-activate - Verify payment and activate subscription
- * GET    /payments/history                    - Get payment transaction history
- * 
- * ?? WALLET SYSTEM (8 endpoints): ?? NEW - Wallet Management
- * GET    /wallet                              - Get wallet details
- * GET    /wallet/balance                      - Get wallet balance
- * POST   /wallet/recharge/create-order        - Create recharge order (Razorpay)
- * POST   /wallet/recharge/verify              - Verify payment and credit wallet
- * GET    /wallet/transactions                 - Get transaction history (paginated)
- * GET    /wallet/recharge/history             - Get recharge order history
- * GET    /wallet/stats                        - Get wallet statistics
- * POST   /wallet/debit                        - Debit wallet (internal use)
- * 
- * ?? STORAGE & FILES (2 endpoints): ?? AZURE BLOB STORAGE
- * POST   /storage/upload                      - Upload files to Azure Blob Storage
+ * GET    /payments/history - Get payment transaction history
+ *
+ * WALLET SYSTEM (8 endpoints): NEW - Wallet Management
+ * GET    /wallet - Get wallet details
+ * GET    /wallet/balance - Get wallet balance
+ * POST   /wallet/recharge/create-order - Create recharge order (Razorpay)
+ * POST   /wallet/recharge/verify - Verify payment and credit wallet
+ * GET    /wallet/transactions - Get transaction history (paginated)
+ * GET    /wallet/recharge/history - Get recharge order history
+ * GET    /wallet/stats - Get wallet statistics
+ * POST   /wallet/debit - Debit wallet (internal use)
+ *
+ * STORAGE & FILES (2 endpoints): AZURE BLOB STORAGE
+ * POST   /storage/upload - Upload files to Azure Blob Storage
  * DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
+ *
+ * JOB SCRAPING SCHEDULER (3 endpoints): MANUAL SCHEDULER CONTROL
+ * GET    /scheduler/status - Get scheduler status
+ * POST   /scheduler/start - Start scheduler (admin)
+ * POST   /scheduler/stop - Stop scheduler (admin)
  * 
- * ?? JOB SCRAPING SCHEDULER (3 endpoints): ?? AUTOMATED JOB POPULATION
- * GET    /scheduler/status              - ?? Get scheduler status
- * POST   /scheduler/start               - ?? Start scheduler (admin)
- * POST   /scheduler/stop                - ?? Stop scheduler (admin)
+ * ========================================================================
+ * TOTAL: 62 HTTP endpoints + 1 Timer Trigger = 63 functions
  * ========================================================================
  */
