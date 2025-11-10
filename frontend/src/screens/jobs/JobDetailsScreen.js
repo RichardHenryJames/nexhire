@@ -964,39 +964,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
           />
         ) : null}
-        {/* ✅ NEW: Show job source information */}
-        {job.ExternalJobID && (
-          <InfoRow
-            icon="globe-outline"
-            label="Job Source"
-            value={getJobSourceInfo()}
-          />
-        )}
       </View>
-
-      {/* ✅ NEW: External Application Section */}
-      {job.ApplicationURL && (
-        <View style={styles.externalApplicationSection}>
-          <View style={styles.externalApplicationHeader}>
-            <Ionicons name="link" size={20} color={colors.primary} />
-            <Text style={styles.externalApplicationTitle}>
-              Apply Directly on {getJobSourceName()}
-            </Text>
-          </View>
-          <Text style={styles.externalApplicationDescription}>
-            This job was posted on {getJobSourceName()}. You can apply directly on their platform for the most up-to-date application process.
-          </Text>
-          <TouchableOpacity
-            style={styles.externalApplicationButton}
-            onPress={() => openExternalApplication()}
-          >
-            <Ionicons name="open-outline" size={20} color={colors.white} />
-            <Text style={styles.externalApplicationButtonText}>
-              Apply on {getJobSourceName()}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* ✅ NEW: Job Tags Section */}
       {job.Tags && (

@@ -116,28 +116,41 @@ function Get-CompanyWebsiteFromSearch {
     
     if ([string]::IsNullOrEmpty($CompanyName)) { return $null }
     
-    try {
-        $searchTerm = [System.Web.HttpUtility]::UrlEncode($CompanyName)
-        $url = "https://api.duckduckgo.com/?q=$searchTerm&format=json&no_html=1&skip_disambig=1"
-        
-        $response = Invoke-RestMethod -Uri $url -TimeoutSec 10
-        
-        if ($response.AbstractURL) {
-            $uri = [System.Uri]$response.AbstractURL
-            $domain = $uri.Host -replace 'www\.', ''
-            
-            return @{
-                Website = "https://$domain"
-                Description = $response.AbstractText
-            }
-        }
-    } catch {
-        # Search failed
-    }
+    # ✅ IMPROVED: Don't use DuckDuckGo API as it returns Wikipedia URLs
+    # Instead, rely on Clearbit or manual website entry
+    # This function now just validates existing websites
     
-    return $null
+  return $null
 }
 
+# ✅ NEW: Better website validation function
+function Test-ValidCompanyWebsite {
+    param([string]$Website)
+    
+    if ([string]::IsNullOrEmpty($Website)) { return $false }
+    
+    try {
+  $uri = [System.Uri]$Website
+ 
+   # Block non-company domains
+        $invalidDomains = @(
+            'wikipedia.org', 'wikimedia.org', 'wikidata.org',
+          'britannica.com', 'dictionary.com', 'facebook.com',
+       'twitter.com', 'linkedin.com', 'instagram.com',
+ 'youtube.com', 'google.com', 'microsoft.com'
+        )
+        
+        foreach ($invalidDomain in $invalidDomains) {
+            if ($uri.Host -like "*$invalidDomain*") {
+    return $false
+ }
+        }
+        
+  return $true
+    } catch {
+  return $false
+    }
+}
 function Get-LinkedInUrl {
     param([string]$CompanyName)
     
@@ -296,7 +309,7 @@ WHERE OrganizationID = $OrganizationID
 
 function Enrich-Organization {
     param(
-        [PSCustomObject]$Organization,
+    [PSCustomObject]$Organization,
         [string]$ClearbitApiKey,
         [bool]$SkipLogos,
         [bool]$SkipWebsites,
@@ -306,101 +319,103 @@ function Enrich-Organization {
     $updates = @{}
     $enrichmentCount = 0
     
-    # 1. Find website if missing
-    if ([string]::IsNullOrEmpty($Organization.Website) -and -not $SkipWebsites) {
-        Write-Host "      ?Searching for website..." -ForegroundColor Gray
-        Start-Sleep -Milliseconds $ApiRateLimitDelayMs
-        
-        $searchResult = Get-CompanyWebsiteFromSearch -CompanyName $Organization.Name
-        if ($searchResult -and $searchResult.Website) {
-            $updates.Website = $searchResult.Website
-            Write-Host "         Found: $($searchResult.Website)" -ForegroundColor Green
-            $enrichmentCount++
-            
-            # Use description if we don't have one
-            if ([string]::IsNullOrEmpty($Organization.Description) -and $searchResult.Description) {
-                $updates.Description = $searchResult.Description
-            }
+    # ❌ REMOVED: Unreliable DuckDuckGo website search
+    # Websites should be provided in the job scraper or manually entered
+    # We'll only use Clearbit API if we already have a website
+    
+    # Validate existing website
+    if ($Organization.Website) {
+        $isValid = Test-ValidCompanyWebsite -Website $Organization.Website
+    if (-not $isValid) {
+   Write-Host "      ⚠️ Invalid website detected, clearing..." -ForegroundColor Yellow
+            $updates.Website = $null
+            $Organization.Website = $null
         }
     }
     
     $websiteToUse = if ($updates.Website) { $updates.Website } else { $Organization.Website }
     
-    # 2. Get logo if missing
+# 1. Get logo if we have a valid website
     if ([string]::IsNullOrEmpty($Organization.LogoURL) -and -not $SkipLogos -and $websiteToUse) {
-        Write-Host "      ?Fetching logo..." -ForegroundColor Gray
+        Write-Host "    🎨 Fetching logo..." -ForegroundColor Gray
         
         $logo = Get-ClearbitLogo -Domain $websiteToUse
-        if ($logo) {
+if ($logo) {
             $updates.LogoURL = $logo
-            Write-Host "         Found: Logo" -ForegroundColor Green
-            $enrichmentCount++
+            Write-Host "         ✅ Found: Logo" -ForegroundColor Green
+       $enrichmentCount++
         }
     }
     
-    # 3. Get comprehensive data from Clearbit if API key provided
+    # 2. Get comprehensive data from Clearbit if API key provided
     if ($websiteToUse -and -not [string]::IsNullOrEmpty($ClearbitApiKey)) {
-        Write-Host "      ?Fetching company data..." -ForegroundColor Gray
+        Write-Host "      📊 Fetching company data..." -ForegroundColor Gray
         Start-Sleep -Milliseconds $ApiRateLimitDelayMs
         
-        $clearbitData = Get-ClearbitCompanyInfo -Domain $websiteToUse -ApiKey $ClearbitApiKey
+  $clearbitData = Get-ClearbitCompanyInfo -Domain $websiteToUse -ApiKey $ClearbitApiKey
         
-        if ($clearbitData) {
-            if ([string]::IsNullOrEmpty($Organization.Description) -and $clearbitData.Description) {
-                $updates.Description = $clearbitData.Description
-                $enrichmentCount++
+     if ($clearbitData) {
+  if ([string]::IsNullOrEmpty($Organization.Description) -and $clearbitData.Description) {
+           $updates.Description = $clearbitData.Description
+         $enrichmentCount++
             }
-            
-            if ([string]::IsNullOrEmpty($Organization.Industry) -and $clearbitData.Industry) {
-                $updates.Industry = $clearbitData.Industry
-                $enrichmentCount++
-            }
-            
+
+  if ([string]::IsNullOrEmpty($Organization.Industry) -and $clearbitData.Industry) {
+          $updates.Industry = $clearbitData.Industry
+    $enrichmentCount++
+   }
+     
             if ([string]::IsNullOrEmpty($Organization.Headquarters) -and $clearbitData.Location) {
-                $updates.Headquarters = $clearbitData.Location
+    $updates.Headquarters = $clearbitData.Location
                 $enrichmentCount++
-            }
-            
+}
+    
             if ($clearbitData.FoundedYear) {
-                $updates.EstablishedDate = [datetime]::Parse("$($clearbitData.FoundedYear)-01-01")
-                $enrichmentCount++
+       $updates.EstablishedDate = [datetime]::Parse("$($clearbitData.FoundedYear)-01-01")
+       $enrichmentCount++
+            }
+  
+         if ($clearbitData.EmployeeCount) {
+   $updates.Size = $clearbitData.EmployeeCount
+     $enrichmentCount++
             }
             
-            if ($clearbitData.EmployeeCount) {
-                $updates.Size = $clearbitData.EmployeeCount
-                $enrichmentCount++
+     if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and $clearbitData.LinkedIn) {
+          $updates.LinkedInProfile = $clearbitData.LinkedIn
+             $enrichmentCount++
             }
-            
-            if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and $clearbitData.LinkedIn) {
-                $updates.LinkedInProfile = $clearbitData.LinkedIn
-                $enrichmentCount++
-            }
-            
-            # Better logo from Clearbit
+      
+        # Better logo from Clearbit
             if ([string]::IsNullOrEmpty($Organization.LogoURL) -and $clearbitData.Logo) {
-                $updates.LogoURL = $clearbitData.Logo
-                $enrichmentCount++
+          $updates.LogoURL = $clearbitData.Logo
+  $enrichmentCount++
+            }
+      
+         # ✅ NEW: Update website from Clearbit if it's better
+            if ($clearbitData.Domain -and $clearbitData.Domain -ne $websiteToUse) {
+        $updates.Website = "https://$($clearbitData.Domain)"
+ Write-Host "    ✅ Updated website from Clearbit" -ForegroundColor Green
+      $enrichmentCount++
             }
             
-            if ($enrichmentCount -gt 0) {
-                Write-Host "         Found: $enrichmentCount fields" -ForegroundColor Green
-            }
-        }
+   if ($enrichmentCount -gt 0) {
+   Write-Host "    ✅ Found: $enrichmentCount fields" -ForegroundColor Green
+    }
+  }
     }
     
-    # 4. Generate LinkedIn URL if missing
-    if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and -not $SkipLinkedIn -and [string]::IsNullOrEmpty($updates.LinkedIn)) {
-        $updates.LinkedInProfile = Get-LinkedInUrl -CompanyName $Organization.Name
-        Write-Host "         ? Generated: LinkedIn URL" -ForegroundColor Cyan
+    # 3. Generate LinkedIn URL if missing (only if we don't have unreliable data)
+    if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and -not $SkipLinkedIn -and [string]::IsNullOrEmpty($updates.LinkedInProfile)) {
+    $updates.LinkedInProfile = Get-LinkedInUrl -CompanyName $Organization.Name
+   Write-Host "   🔗 Generated: LinkedIn URL" -ForegroundColor Cyan
         $enrichmentCount++
-    }
+ }
     
     return @{
         Updates = $updates
-        Count = $enrichmentCount
+      Count = $enrichmentCount
     }
 }
-
 # ================================================================
 # Main Execution
 # ================================================================
