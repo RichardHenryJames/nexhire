@@ -71,7 +71,7 @@ export default function JobsScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, total: 0, totalPages: 0, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 30, total: 0, totalPages: 0, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
