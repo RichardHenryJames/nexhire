@@ -105,7 +105,7 @@ export default function JobsScreen({ navigation, route }) {
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
-  
+
   // Load primary resume once (or first resume as fallback)
   const loadPrimaryResume = useCallback(async () => {
     if (!user || !isJobSeeker) return;
@@ -196,34 +196,34 @@ export default function JobsScreen({ navigation, route }) {
         showToast(successMessage, 'success');
       }, 500); // Small delay to ensure screen is loaded
     }
-    
+
     // 🔧 NEW: Remove applied job from jobs list and refresh data
     if (appliedJobId) {
       console.log('🔄 Removing applied job from UI and refreshing data:', appliedJobId);
-      
+
       // Remove from current jobs list immediately
       setJobs(prev => {
         const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
         console.log(`📊 Jobs list updated: ${prev.length} -> ${filtered.length}`);
         return filtered;
       });
-      
+
       // Update pagination totals to reflect removal
       setPagination(prev => {
         const newTotal = Math.max((prev.total || 0) - 1, 0);
         const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
         console.log(`📊 Pagination updated: total ${prev.total} -> ${newTotal}`);
-        return { 
-          ...prev, 
-          total: newTotal, 
-          totalPages: newTotalPages, 
-          hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize 
+        return {
+          ...prev,
+          total: newTotal,
+          totalPages: newTotalPages,
+          hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
         };
       });
-      
+
       // Add to applied IDs
       setAppliedIds(prev => new Set([...prev, appliedJobId]));
-      
+
       // Trigger a full refresh to get updated data after a short delay
       setTimeout(() => {
         console.log('🔄 Triggering full data refresh...');
@@ -419,42 +419,72 @@ export default function JobsScreen({ navigation, route }) {
         setLoading(true);
         const apiFilters = {};
         if (filters.location) apiFilters.location = filters.location;
-        if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
-        if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
+if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
+    if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
         if (filters.salaryMin) apiFilters.salaryMin = filters.salaryMin;
         if (filters.salaryMax) apiFilters.salaryMax = filters.salaryMax;
         if (filters.currencyId) apiFilters.currencyId = filters.currencyId;
         if (filters.experienceMin) apiFilters.experienceMin = filters.experienceMin;
         if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
-        if (filters.department) apiFilters.department = filters.department;
+    if (filters.department) apiFilters.department = filters.department;
 
-        const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
+    const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
+
+   // ⏱️ START: Measure API response time
+const apiStartTime = performance.now();
+        console.log('🚀 API Request Started:', {
+          endpoint: shouldUseSearch ? 'searchJobs' : 'getJobs',
+          searchQuery: debouncedQuery.trim(),
+   filters: apiFilters,
+          smartBoosts,
+      timestamp: new Date().toISOString()
+   });
 
         let result;
         if (shouldUseSearch) {
-          const params = { page: 1, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
-          result = await refopenAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
+    const params = { page: 1, pageSize: pagination.pageSize, ...apiFilters, ...smartBoosts };
+    result = await refopenAPI.searchJobs(debouncedQuery.trim() || '', params, { signal: controller.signal });
         } else {
           result = await refopenAPI.getJobs(1, pagination.pageSize, apiFilters, { signal: controller.signal });
         }
-        if (controller.signal.aborted) return;
+
+        // ⏱️ END: Calculate and log response time
+ const apiEndTime = performance.now();
+  const responseTime = apiEndTime - apiStartTime;
+        console.log('✅ API Response Received:', {
+ endpoint: shouldUseSearch ? 'searchJobs' : 'getJobs',
+     responseTime: `${responseTime.toFixed(2)}ms`,
+          responseTimeSeconds: `${(responseTime / 1000).toFixed(2)}s`,
+          success: result.success,
+  jobsCount: Array.isArray(result.data) ? result.data.length : 0,
+     total: result.meta?.total,
+          timestamp: new Date().toISOString()
+        });
+
+      if (controller.signal.aborted) return;
 
         if (result.success) {
-          const list = Array.isArray(result.data) ? result.data : [];
-          setJobs(list);
-          const meta = result.meta || {};
+       const list = Array.isArray(result.data) ? result.data : [];
+       setJobs(list);
+  const meta = result.meta || {};
           const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (meta.page ? (meta.page < (meta.totalPages || 1)) : false);
           setPagination(prev => ({
-            ...prev,
-            page: meta.page || 1,
-            total: meta.total || list.length,
+    ...prev,
+        page: meta.page || 1,
+ total: meta.total || list.length,
             totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
-            hasMore
-          }));
+     hasMore
+ }));
         }
-      } catch (e) {
-        if (e?.name !== 'AbortError') console.error('Error fetching jobs:', e);
+   } catch (e) {
+    if (e?.name !== 'AbortError') {
+        console.error('❌ API Error:', {
+ error: e.message,
+            name: e.name,
+          timestamp: new Date().toISOString()
+          });
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -508,37 +538,67 @@ export default function JobsScreen({ navigation, route }) {
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
 
+      // ⏱️ START: Measure API response time for pagination
+ const apiStartTime = performance.now();
+      console.log('🚀 Load More API Request Started:', {
+        page: nextPage,
+        pageSize: pagination.pageSize,
+     filters: apiFilters,
+  searchQuery: debouncedQuery.trim(),
+     timestamp: new Date().toISOString()
+      });
+
       let result;
-      if (debouncedQuery.trim().length > 0 || hasBoosts) {
+   if (debouncedQuery.trim().length > 0 || hasBoosts) {
         result = await refopenAPI.searchJobs(debouncedQuery.trim(), { ...apiFilters, page: nextPage, pageSize: pagination.pageSize }, { signal: controller.signal });
       } else {
         result = await refopenAPI.getJobs(nextPage, pagination.pageSize, apiFilters, { signal: controller.signal });
       }
-      if (controller.signal.aborted) return;
 
-      if (result.success) {
+      // ⏱️ END: Calculate and log response time
+      const apiEndTime = performance.now();
+      const responseTime = apiEndTime - apiStartTime;
+      console.log('✅ Load More API Response:', {
+        page: nextPage,
+        responseTime: `${responseTime.toFixed(2)}ms`,
+ responseTimeSeconds: `${(responseTime / 1000).toFixed(2)}s`,
+        success: result.success,
+        jobsCount: Array.isArray(result.data) ? result.data.length : 0,
+        hasMore: result.meta?.hasMore,
+        timestamp: new Date().toISOString()
+      });
+
+   if (controller.signal.aborted) return;
+
+    if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        console.log(`?? Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
+        console.log(`📊 Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
         setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
-        setPagination(prev => ({
+   setPagination(prev => ({
           ...prev,
           page: meta.page || nextPage,
-          total: meta.total ?? prev.total,
-          totalPages: meta.totalPages ?? prev.totalPages,
-          hasMore: Boolean(meta.hasMore)
+      total: meta.total ?? prev.total,
+  totalPages: meta.totalPages ?? prev.totalPages,
+     hasMore: Boolean(meta.hasMore)
         }));
 
         if (list.length === 0) {
-          console.log('?? No more jobs returned - setting hasMore to false');
+     console.log('📊 No more jobs returned - setting hasMore to false');
           setPagination(prev => ({ ...prev, hasMore: false }));
         } else {
           lastAutoLoadPageRef.current = meta.page || nextPage;
-        }
+    }
       }
     } catch (e) {
-      if (e?.name !== 'AbortError') console.error('Error loading more jobs:', e);
+      if (e?.name !== 'AbortError') {
+        console.error('❌ Load More API Error:', {
+          error: e.message,
+          name: e.name,
+          timestamp: new Date().toISOString()
+  });
+      }
     } finally {
       if (!controller.signal.aborted) {
         setLoadingMore(false);
@@ -695,7 +755,7 @@ export default function JobsScreen({ navigation, route }) {
   // Build summary string
   const summaryText = useMemo(() => {
     const parts = [];
-    
+
     // Smart boosts (if enabled)
     if (smartBoosts.candidateYears) parts.push(`${smartBoosts.candidateYears}+ yrs`);
     const jt = (smartBoosts.boostJobTypeIds || '').split(',').filter(Boolean).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
@@ -709,17 +769,17 @@ export default function JobsScreen({ navigation, route }) {
       // Job Type filter
  const jobTypeNames = (filters.jobTypeIds || []).map(id => (jobTypes.find(j => String(j.JobTypeID) === String(id)) || {}).Type).filter(Boolean);
       if (jobTypeNames.length) parts.push(jobTypeNames.slice(0, 2).join('/'));
-      
-      // Workplace Type filter  
+
+      // Workplace Type filter
       const workplaceNames = (filters.workplaceTypeIds || []).map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
       if (workplaceNames.length) parts.push(workplaceNames.join('/'));
-      
+
       // Location filter
       if (filters.location) parts.push(filters.location);
-   
+
   // ✅ NEW: Department filter
       if (filters.department) parts.push(`Dept: ${filters.department}`);
-      
+
       // ✅ NEW: Experience filter
  if (filters.experienceMin || filters.experienceMax) {
         if (filters.experienceMin && filters.experienceMax) {
@@ -730,7 +790,7 @@ export default function JobsScreen({ navigation, route }) {
      parts.push(`Up to ${filters.experienceMax} yrs exp`);
         }
       }
-  
+
       // ✅ NEW: Salary filter
       if (filters.salaryMin || filters.salaryMax) {
         const currencySymbol = currencies.find(c => c.CurrencyID === filters.currencyId)?.Symbol || '₹';
@@ -742,7 +802,7 @@ export default function JobsScreen({ navigation, route }) {
           parts.push(`Up to ${currencySymbol}${filters.salaryMax}`);
         }
       }
-      
+
       // ✅ NEW: Freshness filter (THIS WAS MISSING!)
       if (filters.postedWithinDays) {
      const daysMap = {
@@ -755,7 +815,7 @@ export default function JobsScreen({ navigation, route }) {
         parts.push(daysMap[filters.postedWithinDays] || `Last ${filters.postedWithinDays} days`);
     }
 }
-    
+
     return parts.join(' • ');
   }, [smartBoosts, filters, jobTypes, workplaceTypes, currencies]);
 
@@ -790,7 +850,7 @@ export default function JobsScreen({ navigation, route }) {
               ? hasMoreToLoad
                 ? 'Checking for more opportunities...'
                 : `You've seen all available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
-              : activeTab === 'saved' 
+              : activeTab === 'saved'
                 ? 'Saved jobs will appear here when you bookmark jobs for later.'
                 : 'New opportunities will appear here.'
             }
@@ -950,7 +1010,7 @@ export default function JobsScreen({ navigation, route }) {
         // Check if balance >= ₹50
         if (balance < 50) {
           console.log('Insufficient wallet balance:', balance);
-          
+
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
           setShowWalletModal(true);
@@ -1007,7 +1067,7 @@ export default function JobsScreen({ navigation, route }) {
      console.log('💳 showSubscriptionModal called in JobsScreen');
      console.log('💳 Navigation object:', navigation);
      console.log('💳 Available routes:', navigation.getState?.());
-     
+
      // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
      const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
      const body = hasActiveSubscription
@@ -1019,19 +1079,19 @@ export default function JobsScreen({ navigation, route }) {
        navigation.navigate('ReferralPlans');
        return;
      }
-     
+
      try {
        Alert.alert(
          '🚀 Upgrade Required',
          body,
          [
-           { 
-             text: 'Maybe Later', 
+           {
+             text: 'Maybe Later',
              style: 'cancel',
              onPress: () => console.log('💳 User selected Maybe Later')
            },
-           { 
-             text: 'View Plans', 
+           {
+             text: 'View Plans',
              onPress: () => {
                console.log('💳 User selected View Plans - attempting navigation...');
                try {
@@ -1125,7 +1185,7 @@ export default function JobsScreen({ navigation, route }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           showToast('Referral request sent successfully', 'success');
-          
+
           // 🔧 FIXED: Reload primary resume after successful referral
           await loadPrimaryResume();
         } else {
@@ -1153,13 +1213,13 @@ export default function JobsScreen({ navigation, route }) {
           }
           setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
           showToast('Application submitted successfully', 'success');
-          
+
           // 🔧 FIXED: Reload primary resume after successful application
           console.log('🔄 Reloading primary resume after successful application...');
           primaryResumeLoadedRef.current = false; // Reset the loaded flag
           await loadPrimaryResume(); // Reload primary resume
           console.log('✅ Primary resume reloaded, next applications will auto-apply');
-          
+
           // Only refresh applied count (lightweight)
           try {
             const appliedRes = await refopenAPI.getMyApplications(1, 1);
@@ -1222,23 +1282,23 @@ export default function JobsScreen({ navigation, route }) {
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id]));
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
-        
+
         // ✅ NEW: Show wallet deduction info
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
-        
+
         let message = 'Referral request sent';
         if (balanceAfter !== undefined) {
           message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
         }
-        
+
         showToast(message, 'success');
       } else {
         // ✅ NEW: Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
           const requiredAmount = res.data?.requiredAmount || 50;
-          
+
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
           setShowWalletModal(true);
@@ -1267,10 +1327,10 @@ export default function JobsScreen({ navigation, route }) {
           next.add(id);
           return next;
         });
-        
+
         // Add job to saved list without removing from openings
         setSavedJobs(prev => [{ ...job, __savedAt: Date.now() }, ...prev]);
-        
+
         showToast('Job saved successfully', 'success');
       } else {
         Alert.alert('Save Failed', res.error || 'Failed to save job');
@@ -1560,7 +1620,7 @@ export default function JobsScreen({ navigation, route }) {
         user={user}
         jobTitle={pendingJobForApplication?.Title}
       />
-      
+
       {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
       <WalletRechargeModal
         visible={showWalletModal}
