@@ -161,29 +161,37 @@ export class JobService {
         }
 
         const searchTerm = (search || f.search || f.q || '').toString().trim();
-        // 🔧 CRITICAL FIX: Handle short search terms differently        
-        if (searchTerm && searchTerm.length > 0) {
+        // 🔧 CRITICAL FIX: Handle short search terms differently     
+      if (searchTerm && searchTerm.length > 0) {
             if (searchTerm.length <= 2) {
-   // For 1-2 character searches, use LIKE instead of CONTAINS for better UX
+      // For 1-2 character searches, use LIKE for all fields
                 console.log('🔍 Using LIKE for short search term:', searchTerm);
-        whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
-queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
-    paramIndex += 4;
-    } else {
-          // For longer searches, use full-text search with wildcards
-   console.log('🔍 Using CONTAINS for search term:', searchTerm);
-            // OPTIMIZED: Use CONTAINS for full-text search on multiple columns
-  const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit tokens to avoid explosion
-   const tokenClauses: string[] = [];
-            tokens.forEach(tok => {
-    // Full-text search: CONTAINS supports OR across columns implicitly in this structure
-          tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
-         queryParams.push(`"${tok}*"`); // Wildcard suffix for partial word matching
-                paramIndex += 1;
-       });
-whereClause += ` AND (${tokenClauses.join(' OR ')})`;
-        }
+       whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
+     queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+     paramIndex += 4;
+          } else {
+    // For longer searches, use CONTAINS for Jobs table + LIKE for Organization name
+         console.log('🔍 Using CONTAINS + LIKE for search term:', searchTerm);
+              // Use CONTAINS for full-text indexed columns on Jobs table
+// Use LIKE for o.Name since Organizations table is not full-text indexed
+       const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
+        const tokenClauses: string[] = [];
+       
+      // Full-text search on Jobs table columns
+           tokens.forEach(tok => {
+       tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, j.Location, j.City, j.Country), @param${paramIndex})`);
+          queryParams.push(`"${tok}*"`);
+   paramIndex += 1;
+  });
+        
+  // Add organization name with LIKE (not CONTAINS)
+         tokenClauses.push(`o.Name LIKE @param${paramIndex}`);
+      queryParams.push(`%${searchTerm}%`);
+paramIndex += 1;
+    
+       whereClause += ` AND (${tokenClauses.join(' OR ')})`;
     }
+        }
 
         // ... (rest of filters unchanged, but remove ISNULL where possible for index usage)
         if (f.location) {
@@ -617,7 +625,7 @@ whereClause += ` AND (${tokenClauses.join(' OR ')})`;
             let whereClause = "WHERE o.IsActive = 1 AND j.Status = 'Published'";
             const queryParams: any[] = [];
             let paramIndex = 0;
-            let useFullTextIndex = false;
+            let useFullTextIndex = false; // Note: This variable is set but not used to determine hint; removing hint instead
 
             // Exclude applied jobs ONLY (not saved jobs) for the current user
             if (excludeUserApplications) {
@@ -632,29 +640,36 @@ whereClause += ` AND (${tokenClauses.join(' OR ')})`;
 
             const searchTerm = (f.search || f.q || '').toString().trim();
             // 🔧 CRITICAL FIX: Handle short search terms differently
-          if (searchTerm && searchTerm.length > 0) {
-              if (searchTerm.length <= 2) {
-           // For 1-2 character searches, use LIKE instead of CONTAINS for better UX
-                console.log('🔍 Using LIKE for short search term:', searchTerm);
-        whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
-      queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
-                  paramIndex += 4;
-    } else {
-         // For longer searches, use full-text search with wildcards
-     useFullTextIndex = true;
-          console.log('🔍 Using CONTAINS for search term:', searchTerm);
-            // OPTIMIZED: Use CONTAINS for full-text search on multiple columns
-  const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit tokens to avoid explosion
-   const tokenClauses: string[] = [];
-            tokens.forEach(tok => {
-    // Full-text search: CONTAINS supports OR across columns implicitly in this structure
-          tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
-         queryParams.push(`"${tok}*"`); // Wildcard suffix for partial word matching
-                paramIndex += 1;
-       });
-whereClause += ` AND (${tokenClauses.join(' OR ')})`;
-        }
-    }
+            if (searchTerm && searchTerm.length > 0) {
+                if (searchTerm.length <= 2) {
+                    // For 1-2 character searches, use LIKE for all fields
+                    console.log('🔍 Using LIKE for short search term:', searchTerm);
+                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
+                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+                    paramIndex += 4;
+                } else {
+                    // For longer searches, use CONTAINS for Jobs table + LIKE for Organization name
+                    console.log('🔍 Using CONTAINS + LIKE for search term:', searchTerm);
+                    // Use CONTAINS for full-text indexed columns on Jobs table
+                    // Use LIKE for o.Name since Organizations table is not full-text indexed
+                    const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
+                    const tokenClauses: string[] = [];
+
+                    // Full-text search on Jobs table columns
+                    tokens.forEach(tok => {
+                        tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, j.Location, j.City, j.Country), @param${paramIndex})`);
+                        queryParams.push(`"${tok}*"`);
+                        paramIndex += 1;
+                    });
+
+                    // Add organization name with LIKE (not CONTAINS)
+                    tokenClauses.push(`o.Name LIKE @param${paramIndex}`);
+                    queryParams.push(`%${searchTerm}%`);
+                    paramIndex += 1;
+
+                    whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+                }
+            }
 
             if (f.location) {
                 whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
@@ -734,25 +749,20 @@ whereClause += ` AND (${tokenClauses.join(' OR ')})`;
                 paramIndex++;
             }
 
-            // OPTIMIZED: Use appropriate index hint based on query type
-            const indexHint = useFullTextIndex ? 'WITH (INDEX(IX_Jobs_Status_FullText_Search))' : 'WITH (INDEX(IX_Jobs_WorkplaceTypeID_Status_Published))';
-
             // ⏱️ Count query timing
             const countStartTime = Date.now();
             const countQuery = `
-     SELECT COUNT(*) as total
-      FROM Jobs j ${indexHint}
-    INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-     INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-         ${whereClause}
-        OPTION (RECOMPILE, MAXDOP 4)
-         `;
+                SELECT COUNT(*) as total
+                FROM Jobs j
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                ${whereClause}
+                OPTION (RECOMPILE, MAXDOP 4)
+            `;
 
             console.log('🔍 Executing count query:', {
                 whereClause,
                 paramCount: queryParams.length,
-                useFullTextIndex,
-                indexHint,
                 timestamp: new Date().toISOString()
             });
 
@@ -799,7 +809,7 @@ whereClause += ` AND (${tokenClauses.join(' OR ')})`;
                         WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                         ELSE 'External Recruiter'
                     END as PostedByName
-                FROM Jobs j ${indexHint}
+                FROM Jobs j
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
