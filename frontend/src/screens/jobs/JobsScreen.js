@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
@@ -823,18 +823,21 @@ const apiStartTime = performance.now();
   const renderList = () => {
     const data = activeTab === 'openings' ? jobs : savedJobs;
 
+    // 🔧 NEW: Show loader while initially loading OR when searching/filtering (loading=true and no jobs yet)
     if (loading && data.length === 0 && activeTab === 'openings') {
       return (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading jobs...</Text>
+          <ActivityIndicator size="large" color="#0066cc" />
+       <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading jobs...</Text>
         </View>
-      );
+   );
     }
 
     if (smartPaginating && data.length === 0 && activeTab === 'openings') {
       return (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Finding more opportunities...</Text>
+      <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0066cc" />
+          <Text style={[styles.loadingText, { marginTop: 12 }]}>Finding more opportunities...</Text>
         </View>
       );
     }
@@ -1575,9 +1578,16 @@ const apiStartTime = performance.now();
       {/* Summary */}
       {activeTab === 'openings' && (
         <View style={styles.summaryContainer}>
-          <Text style={styles.summaryText}>
-            {(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
-          </Text>
+       {loading && jobs.length === 0 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <ActivityIndicator size="small" color="#0066cc" style={{ marginRight: 8 }} />
+         <Text style={styles.summaryText}>Searching jobs...</Text>
+          </View>
+    ) : (
+        <Text style={styles.summaryText}>
+              {(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
+     </Text>
+        )}
         </View>
       )}
 
