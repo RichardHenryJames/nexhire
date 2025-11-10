@@ -509,6 +509,7 @@ export default function AskReferralScreen({ navigation }) {
             <TextInput
               style={[styles.input, errors.jobId && styles.inputError]}
               placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
+              placeholderTextColor={colors.gray500}
               value={formData.jobId}
               onChangeText={(value) => updateFormData('jobId', value)}
               maxLength={100}
@@ -529,6 +530,7 @@ export default function AskReferralScreen({ navigation }) {
             <TextInput
               style={[styles.input, errors.jobTitle && styles.inputError]}
               placeholder="e.g., Senior Software Engineer, Product Manager"
+              placeholderTextColor={colors.gray500}
               value={formData.jobTitle}
               onChangeText={(value) => updateFormData('jobTitle', value)}
               maxLength={200}
@@ -544,6 +546,7 @@ export default function AskReferralScreen({ navigation }) {
             <TextInput
               style={[styles.input, errors.jobUrl && styles.inputError]}
               placeholder="https://careers.company.com/job/12345"
+              placeholderTextColor={colors.gray500}
               value={formData.jobUrl}
               onChangeText={(value) => updateFormData('jobUrl', value)}
               keyboardType="url"
@@ -562,6 +565,7 @@ export default function AskReferralScreen({ navigation }) {
               placeholder="Tell the referrer about yourself and why you're interested in this role... 
               
 Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns with my passion for building scalable web applications. I'd be grateful for any referral help!'"
+              placeholderTextColor={colors.gray500}
               value={formData.referralMessage}
               onChangeText={(value) => updateFormData('referralMessage', value)}
               multiline

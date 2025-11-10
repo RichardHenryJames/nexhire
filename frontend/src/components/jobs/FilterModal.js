@@ -82,7 +82,6 @@ const isSectionActive = (section) => {
   {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
                   </View>
        <Text style={styles.optionLabel}>{wt.Type}</Text>
-           <Text style={styles.optionCount}>1217</Text>
         </TouchableOpacity>
               );
     })}
@@ -153,46 +152,46 @@ const isSectionActive = (section) => {
         return (
         <View style={styles.rightContent}>
    <Text style={styles.rightTitle}>Salary</Text>
-            <View style={styles.rangeContainer}>
+       <View style={styles.rangeContainer}>
      <View style={styles.rangeInput}>
-          <Text style={styles.rangeLabel}>Min</Text>
+      <Text style={styles.rangeLabel}>Min</Text>
       <TextInput
          style={styles.rangeTextInput}
-          placeholder="0"
+placeholder="0"
         value={filters.salaryMin?.toString() || ''}
    onChangeText={(t) => onFiltersChange({ ...filters, salaryMin: t ? parseInt(t) : '' })}
        keyboardType="numeric"
      placeholderTextColor="#9ca3af"
   />
      </View>
-              <Text style={styles.rangeSeparator}>-</Text>
+  <Text style={styles.rangeSeparator}>-</Text>
       <View style={styles.rangeInput}>
  <Text style={styles.rangeLabel}>Max</Text>
     <TextInput
        style={styles.rangeTextInput}
-         placeholder="100000+"
+       placeholder="100000+"
         value={filters.salaryMax?.toString() || ''}
           onChangeText={(t) => onFiltersChange({ ...filters, salaryMax: t ? parseInt(t) : '' })}
      keyboardType="numeric"
       placeholderTextColor="#9ca3af"
        />
     </View>
-            </View>
+        </View>
             {currencies.length > 0 && (
          <View style={styles.currencyPills}>
-       {currencies.slice(0, 4).map(curr => {
+       {currencies.map(curr => {
     const active = filters.currencyId === curr.CurrencyID;
      return (
-           <TouchableOpacity
+    <TouchableOpacity
   key={curr.CurrencyID}
-      style={[styles.currencyPill, active && styles.currencyPillActive]}
-            onPress={() => onFiltersChange({ ...filters, currencyId: curr.CurrencyID })}
+  style={[styles.currencyPill, active && styles.currencyPillActive]}
+  onPress={() => onFiltersChange({ ...filters, currencyId: curr.CurrencyID })}
         >
-             <Text style={[styles.currencyPillText, active && styles.currencyPillTextActive]}>
-            {curr.Code}
-            </Text>
+    <Text style={[styles.currencyPillText, active && styles.currencyPillTextActive]}>
+        {curr.Code}
+     </Text>
              </TouchableOpacity>
-           );
+         );
       })}
  </View>
  )}
@@ -334,8 +333,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb'
   },

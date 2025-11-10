@@ -31,8 +31,16 @@ export default function WalletRechargeModal({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+      <TouchableOpacity 
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onCancel}
+      >
+        <TouchableOpacity 
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
           <ScrollView 
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -108,8 +116,8 @@ export default function WalletRechargeModal({
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
