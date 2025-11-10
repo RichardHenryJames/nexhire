@@ -161,18 +161,29 @@ export class JobService {
         }
 
         const searchTerm = (search || f.search || f.q || '').toString().trim();
-        if (searchTerm) {
+        // 🔧 CRITICAL FIX: Handle short search terms differently        
+        if (searchTerm && searchTerm.length > 0) {
+            if (searchTerm.length <= 2) {
+   // For 1-2 character searches, use LIKE instead of CONTAINS for better UX
+                console.log('🔍 Using LIKE for short search term:', searchTerm);
+        whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
+queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+    paramIndex += 4;
+    } else {
+          // For longer searches, use full-text search with wildcards
+   console.log('🔍 Using CONTAINS for search term:', searchTerm);
             // OPTIMIZED: Use CONTAINS for full-text search on multiple columns
-            const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit tokens to avoid explosion
-            const tokenClauses: string[] = [];
+  const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit tokens to avoid explosion
+   const tokenClauses: string[] = [];
             tokens.forEach(tok => {
-                // Full-text search: CONTAINS supports OR across columns implicitly in this structure
-                tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
-                queryParams.push(`"${tok}"`); // Quoted for exact word/phrase matching
+    // Full-text search: CONTAINS supports OR across columns implicitly in this structure
+          tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
+         queryParams.push(`"${tok}*"`); // Wildcard suffix for partial word matching
                 paramIndex += 1;
-            });
-            whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+       });
+whereClause += ` AND (${tokenClauses.join(' OR ')})`;
         }
+    }
 
         // ... (rest of filters unchanged, but remove ISNULL where possible for index usage)
         if (f.location) {
@@ -603,9 +614,10 @@ export class JobService {
             } = searchParams || {};
 
             const f = { ...rest } as any;
-            let whereClause = "WHERE o.IsActive = 1 AND j.Status = 'Published' AND j.JobID = j.JobID"; // Add JobID for full-text filtering
+            let whereClause = "WHERE o.IsActive = 1 AND j.Status = 'Published'";
             const queryParams: any[] = [];
             let paramIndex = 0;
+            let useFullTextIndex = false;
 
             // Exclude applied jobs ONLY (not saved jobs) for the current user
             if (excludeUserApplications) {
@@ -619,17 +631,30 @@ export class JobService {
             }
 
             const searchTerm = (f.search || f.q || '').toString().trim();
-            if (searchTerm) {
-                const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit for perf
-                const tokenClauses: string[] = [];
-                tokens.forEach(tok => {
-                    // OPTIMIZED: Use CONTAINS for full-text on key columns; supports word/phrase
-                    tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
-                    queryParams.push(`"${tok}"`); // Exact word matching
-                    paramIndex += 1;
-                });
-                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
-            }
+            // 🔧 CRITICAL FIX: Handle short search terms differently
+          if (searchTerm && searchTerm.length > 0) {
+              if (searchTerm.length <= 2) {
+           // For 1-2 character searches, use LIKE instead of CONTAINS for better UX
+                console.log('🔍 Using LIKE for short search term:', searchTerm);
+        whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex + 1} OR j.Tags LIKE @param${paramIndex + 2} OR o.Name LIKE @param${paramIndex + 3})`;
+      queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+                  paramIndex += 4;
+    } else {
+         // For longer searches, use full-text search with wildcards
+     useFullTextIndex = true;
+          console.log('🔍 Using CONTAINS for search term:', searchTerm);
+            // OPTIMIZED: Use CONTAINS for full-text search on multiple columns
+  const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10); // Limit tokens to avoid explosion
+   const tokenClauses: string[] = [];
+            tokens.forEach(tok => {
+    // Full-text search: CONTAINS supports OR across columns implicitly in this structure
+          tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, o.Name, j.Location, j.City, j.Country), @param${paramIndex})`);
+         queryParams.push(`"${tok}*"`); // Wildcard suffix for partial word matching
+                paramIndex += 1;
+       });
+whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+        }
+    }
 
             if (f.location) {
                 whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
@@ -709,19 +734,25 @@ export class JobService {
                 paramIndex++;
             }
 
+            // OPTIMIZED: Use appropriate index hint based on query type
+            const indexHint = useFullTextIndex ? 'WITH (INDEX(IX_Jobs_Status_FullText_Search))' : 'WITH (INDEX(IX_Jobs_WorkplaceTypeID_Status_Published))';
+
             // ⏱️ Count query timing
             const countStartTime = Date.now();
             const countQuery = `
-                SELECT COUNT(*) as total
-                FROM Jobs j WITH (INDEX(IX_Jobs_Status_FullText_Search))
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-                ${whereClause}
-            `;
+     SELECT COUNT(*) as total
+      FROM Jobs j ${indexHint}
+    INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+     INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+         ${whereClause}
+        OPTION (RECOMPILE, MAXDOP 4)
+         `;
 
             console.log('🔍 Executing count query:', {
                 whereClause,
                 paramCount: queryParams.length,
+                useFullTextIndex,
+                indexHint,
                 timestamp: new Date().toISOString()
             });
 
@@ -768,7 +799,7 @@ export class JobService {
                         WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                         ELSE 'External Recruiter'
                     END as PostedByName
-                FROM Jobs j WITH (INDEX(IX_Jobs_Status_FullText_Search))
+                FROM Jobs j ${indexHint}
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
@@ -781,11 +812,11 @@ export class JobService {
 
             if (!noPaging) {
                 const offset = (pageNum - 1) * pageSizeNum;
-                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY OPTION (RECOMPILE, MAXDOP 4)`;
                 dataParams.push(offset, pageSizeNum);
                 paramIndex += 2;
             } else {
-                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC`;
+                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OPTION (RECOMPILE, MAXDOP 4)`;
             }
 
             console.log('🔍 Executing data query:', {
