@@ -83,6 +83,7 @@ export default function JobsScreen({ navigation, route }) {
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
   const [showFilters, setShowFilters] = useState(false);
+  const [initialFilterSection, setInitialFilterSection] = useState(null);
 
   // ✅ NEW: Resume modal state
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -664,10 +665,16 @@ const apiStartTime = performance.now();
   }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Handlers =====
-  const openFilters = useCallback(() => { setFilterDraft({ ...filters }); setShowFilters(true); }, [filters]);
+  const openFilters = useCallback((section = null) => { 
+    setFilterDraft({ ...filters }); 
+    setInitialFilterSection(section);
+    setShowFilters(true); 
+  }, [filters]);
   const closeFilters = useCallback(() => setShowFilters(false), []);
   const resetDraft = useCallback(() => setFilterDraft({ ...EMPTY_FILTERS }), []);
   const applyDraft = useCallback(() => {
+    setJobs([]); // Clear old jobs immediately
+    setLoading(true); // Show loader
     setFilters({ ...filterDraft });
     setShowFilters(false);
     setPagination(p => ({ ...p, page: 1 }));
@@ -1469,7 +1476,7 @@ const apiStartTime = performance.now();
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => setExpandedQuick(expandedQuick === 'jobType' ? null : 'jobType')}
+                  onPress={() => openFilters('jobType')}
                 >
                   <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                     {quickJobTypeLabel}
@@ -1481,7 +1488,7 @@ const apiStartTime = performance.now();
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => setExpandedQuick(expandedQuick === 'workplace' ? null : 'workplace')}
+                  onPress={() => openFilters('workMode')}
                 >
                   <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                     {quickWorkplaceLabel}
@@ -1493,7 +1500,7 @@ const apiStartTime = performance.now();
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
-                  onPress={() => setExpandedQuick(expandedQuick === 'posted' ? null : 'posted')}
+                  onPress={() => openFilters('postedBy')}
                 >
                   <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
                     {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
@@ -1509,69 +1516,6 @@ const apiStartTime = performance.now();
               </TouchableOpacity>
             )}
           </View>
-        </View>
-      )}
-
-      {/* Expanded Quick Filter Slider */}
-      {activeTab === 'openings' && expandedQuick && (
-        <View style={styles.sliderBar}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 32 }}
-            style={{ flexDirection: 'row' }}
-          >
-            {expandedQuick === 'jobType' && jobTypes.map(jt => (
-              <TouchableOpacity
-                key={jt.JobTypeID}
-                style={[styles.chip, isSelected(filters.jobTypeIds, jt.JobTypeID) && styles.chipActive]}
-                onPress={() => onQuickToggleJobType(jt.JobTypeID)}
-              >
-                <Text style={[styles.chipText, isSelected(filters.jobTypeIds, jt.JobTypeID) && styles.chipTextActive]}>
-                  {jt.Type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            {expandedQuick === 'workplace' && workplaceTypes.map(wt => (
-              <TouchableOpacity
-                key={wt.WorkplaceTypeID}
-                style={[styles.chip, isSelected(filters.workplaceTypeIds, wt.WorkplaceTypeID) && styles.chipActive]}
-                onPress={() => onQuickToggleWorkplace(wt.WorkplaceTypeID)}
-              >
-                <Text style={[styles.chipText, isSelected(filters.workplaceTypeIds, wt.WorkplaceTypeID) && styles.chipTextActive]}>
-                  {wt.Type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            {expandedQuick === 'posted' && (
-              <>
-                <TouchableOpacity
-                  style={[styles.chip, quickPostedWithin === 1 && styles.chipActive]}
-                  onPress={() => { setQuickPostedWithin(1); handleQuickPostedWithinChange(1); }}
-                >
-                  <Text style={[styles.chipText, quickPostedWithin === 1 && styles.chipTextActive]}>Last 24h</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.chip, quickPostedWithin === 7 && styles.chipActive]}
-                  onPress={() => { setQuickPostedWithin(7); handleQuickPostedWithinChange(7); }}
-                >
-                  <Text style={[styles.chipText, quickPostedWithin === 7 && styles.chipTextActive]}>Last 7 days</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.chip, quickPostedWithin === 30 && styles.chipActive]}
-                  onPress={() => { setQuickPostedWithin(30); handleQuickPostedWithinChange(30); }}
-                >
-                  <Text style={[styles.chipText, quickPostedWithin === 30 && styles.chipTextActive]}>Last 30 days</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.chip, (!quickPostedWithin && !filters.postedWithinDays) && styles.chipActive]}
-                  onPress={() => { setQuickPostedWithin(null); handleQuickPostedWithinChange(null); }}
-                >
-                  <Text style={[styles.chipText, (!quickPostedWithin && !filters.postedWithinDays) && styles.chipTextActive]}>Any</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
         </View>
       )}
 
@@ -1616,6 +1560,7 @@ const apiStartTime = performance.now();
         onToggleJobType={onToggleJobType}
         onToggleWorkplaceType={onToggleWorkplaceType}
         onSelectCurrency={onSelectCurrency}
+        initialSection={initialFilterSection}
       />
 
       {/* ? NEW: Resume Upload Modal */}

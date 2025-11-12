@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,9 +11,17 @@ const FilterModal = ({
   onClear, 
   jobTypes = [], 
   workplaceTypes = [], 
-  currencies = [] 
+  currencies = [],
+  initialSection = null
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('workMode');
+
+  // Auto-select category when modal opens with initialSection
+  useEffect(() => {
+    if (visible && initialSection) {
+      setSelectedCategory(initialSection);
+    }
+  }, [visible, initialSection]);
 
 const isSectionActive = (section) => {
     switch (section) {
@@ -49,12 +57,12 @@ const isSectionActive = (section) => {
   };
 
   const categories = [
-    { id: 'workMode', label: 'Work mode' },
+    { id: 'workMode', label: 'Workplace' },
     { id: 'department', label: 'Department' },
     { id: 'location', label: 'Location' },
     { id: 'experience', label: 'Experience' },
     { id: 'salary', label: 'Salary' },
-    { id: 'jobType', label: 'Role' },
+    { id: 'jobType', label: 'JobType' },
     { id: 'postedBy', label: 'Freshness' }
   ];
 
@@ -63,7 +71,7 @@ const isSectionActive = (section) => {
       case 'workMode':
         return (
           <View style={styles.rightContent}>
-            <Text style={styles.rightTitle}>Work mode</Text>
+            <Text style={styles.rightTitle}>Workplace</Text>
           {workplaceTypes.map(wt => {
     const active = (filters.workplaceTypeIds || []).map(String).includes(String(wt.WorkplaceTypeID));
            return (
@@ -201,7 +209,7 @@ placeholder="0"
       case 'jobType':
         return (
           <View style={styles.rightContent}>
-    <Text style={styles.rightTitle}>Role</Text>
+    <Text style={styles.rightTitle}>JobType</Text>
             {jobTypes.map(jt => {
 const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobTypeID));
           return (
