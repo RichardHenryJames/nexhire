@@ -151,13 +151,15 @@ export class JobService {
 
         // User-specific filtering to exclude applied jobs ONLY (not saved jobs)
         if (excludeUserApplications) {
-            whereClause += ` AND j.JobID NOT IN (
-                SELECT DISTINCT ja.JobID FROM JobApplications ja
-                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
-                WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-            )`;
-            queryParams.push(excludeUserApplications);
-            paramIndex += 1;
+            whereClause += ` AND NOT EXISTS (
+          SELECT 1 FROM JobApplications ja
+        INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+         WHERE a.UserID = @param${paramIndex} 
+             AND ja.StatusID != 6
+   AND ja.JobID = j.JobID
+      )`;
+    queryParams.push(excludeUserApplications);
+      paramIndex += 1;
         }
 
         const searchTerm = (search || f.search || f.q || '').toString().trim();
@@ -267,8 +269,9 @@ paramIndex += 1;
         }
 
         if (f.postedWithinDays) {
-            whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
-            queryParams.push(Number(f.postedWithinDays));
+            const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
+ whereClause += ` AND COALESCE(j.PublishedAt, j.CreatedAt) >= @param${paramIndex}`;
+            queryParams.push(cutoffDate);
             paramIndex++;
         }
 
@@ -296,21 +299,21 @@ paramIndex += 1;
           SELECT
               j.*,
               jt.Type as JobTypeName,
-              o.Name as OrganizationName,
+        o.Name as OrganizationName,
               ISNULL(o.LogoURL, '') as OrganizationLogo,
               ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
-              ISNULL(o.Website, '') as OrganizationWebsite,
-              ISNULL(c.Symbol, '$') as CurrencySymbol,
+   ISNULL(o.Website, '') as OrganizationWebsite,
+       ISNULL(c.Symbol, '$') as CurrencySymbol,
               CASE
-                  WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                  WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                  ELSE 'External Recruiter'
-              END as PostedByName
+    WHEN j.PostedByUserID IS NOT NULL THEN ISNULL(u.FirstName + ' ' + u.LastName, 'User')
+       WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
+        ELSE 'External Recruiter'
+          END as PostedByName
           FROM Jobs j
-          INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+ INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
           INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-          LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-          LEFT JOIN Users u ON j.PostedByUserID = u.UserID
+    LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
+    LEFT JOIN Users u ON j.PostedByUserID = u.UserID
           ${whereClause}
         `;
 
@@ -629,13 +632,15 @@ paramIndex += 1;
 
             // Exclude applied jobs ONLY (not saved jobs) for the current user
             if (excludeUserApplications) {
-                whereClause += ` AND j.JobID NOT IN (
-                    SELECT DISTINCT ja.JobID FROM JobApplications ja
-                    INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
-                    WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-                )`;
-                queryParams.push(excludeUserApplications);
-                paramIndex += 1;
+                whereClause += ` AND NOT EXISTS (
+          SELECT 1 FROM JobApplications ja
+        INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+         WHERE a.UserID = @param${paramIndex} 
+             AND ja.StatusID != 6
+   AND ja.JobID = j.JobID
+      )`;
+    queryParams.push(excludeUserApplications);
+      paramIndex += 1;
             }
 
             const searchTerm = (f.search || f.q || '').toString().trim();
@@ -744,8 +749,9 @@ paramIndex += 1;
             }
 
             if (f.postedWithinDays) {
-                whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
-                queryParams.push(Number(f.postedWithinDays));
+                const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
+ whereClause += ` AND COALESCE(j.PublishedAt, j.CreatedAt) >= @param${paramIndex}`;
+                queryParams.push(cutoffDate);
                 paramIndex++;
             }
 
@@ -805,7 +811,7 @@ paramIndex += 1;
                     ISNULL(o.Website, '') as OrganizationWebsite,
                     ISNULL(c.Symbol, '$') as CurrencySymbol,
                     CASE
-                        WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
+                        WHEN j.PostedByUserID IS NOT NULL THEN ISNULL(u.FirstName + ' ' + u.LastName, 'User')
                         WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                         ELSE 'External Recruiter'
                     END as PostedByName
