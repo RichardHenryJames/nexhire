@@ -29,6 +29,15 @@ const monthsToYears = (m) => {
   return isNaN(n) ? 0 : Math.floor(n / 12);
 };
 
+// Helper to format counts smartly
+const formatCount = (count) => {
+  const num = Number(count) || 0;
+  if (num < 100) return String(num); // Exact count below 100
+  if (num < 1000) return '100+'; // 100-999
+  if (num < 10000) return '1000+'; // 1000-9999
+  return '10k+'; // 10000+
+};
+
 // Map strings to ids using reference arrays
 const mapTypesToIds = (names = [], ref = [], idKey = 'JobTypeID', nameKey = 'Type') => {
   const set = new Set(names.map((s) => (s || '').toString().trim().toLowerCase()));
@@ -934,11 +943,10 @@ const apiStartTime = performance.now();
     <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e9ecef' }}>
       {['openings','saved'].map(key => {
         const labels = { openings: 'Openings', saved: 'Saved' };
-        const count = key === 'openings' ? openingsCount : savedCount;
         const active = activeTab === key;
         return (
           <TouchableOpacity key={key} onPress={() => setActiveTab(key)} style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: active ? '#0066cc' : 'transparent' }}>
-            <Text style={{ color: active ? '#0066cc' : '#555', fontWeight: active ? '700' : '600' }}>{`${labels[key]}(${count})`}</Text>
+            <Text style={{ color: active ? '#0066cc' : '#555', fontWeight: active ? '700' : '600' }}>{labels[key]}</Text>
           </TouchableOpacity>
         );
       })}
@@ -1450,7 +1458,14 @@ const apiStartTime = performance.now();
             style={styles.searchInput}
             placeholder="Search jobs..."
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              // Clear jobs immediately when user starts typing
+              if (text.trim().length > 0) {
+                setJobs([]);
+                setLoading(true);
+              }
+            }}
             onSubmitEditing={handleSearchSubmit}
             placeholderTextColor="#999"
           />
@@ -1519,19 +1534,12 @@ const apiStartTime = performance.now();
         </View>
       )}
 
-      {/* Summary */}
-      {activeTab === 'openings' && (
+      {/* Summary - only show when jobs are loaded */}
+      {activeTab === 'openings' && !loading && jobs.length > 0 && (
         <View style={styles.summaryContainer}>
-       {loading && jobs.length === 0 ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <ActivityIndicator size="small" color="#0066cc" style={{ marginRight: 8 }} />
-         <Text style={styles.summaryText}>Searching jobs...</Text>
-          </View>
-    ) : (
-        <Text style={styles.summaryText}>
-              {(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
-     </Text>
-        )}
+          <Text style={styles.summaryText}>
+            {formatCount(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
+          </Text>
         </View>
       )}
 

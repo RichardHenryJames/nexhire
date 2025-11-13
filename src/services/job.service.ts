@@ -151,6 +151,14 @@ export class JobService {
         const queryParams: any[] = [];
         let paramIndex = 0;
 
+        // 🚀 OPTIMIZATION: Default to last 30 days unless user specifies otherwise
+        if (!f.postedWithinDays) {
+            const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+            queryParams.push(cutoffDate);
+            paramIndex++;
+        }
+
         // 🚀 OPTIMIZATION: Add most selective filters first for better query plan
         // Workplace Type filter (very selective)
         if (f.workplaceTypeIds) {
@@ -200,22 +208,27 @@ export class JobService {
             paramIndex += 1;
         }
 
-        // 🚀 OPTIMIZATION: Search term handling
+        // 🚀 OPTIMIZATION: Search term handling - Title, Location, Organization only
         const searchTerm = (search || f.search || f.q || '').toString().trim();
         if (searchTerm && searchTerm.length > 0) {
-            if (searchTerm.length <= 2) {
-                // For 1-2 character searches, use LIKE for indexed columns only
-                whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1})`;
-                queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
-                paramIndex += 2;
+            if (searchTerm.length <= 4) {
+                // For 1-4 character searches, use LIKE (CONTAINS doesn't work well for short partial matches)
+                whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1} OR o.Name LIKE @param${paramIndex + 2})`;
+                queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+                paramIndex += 3;
             } else {
-                // For longer searches, use CONTAINS for full-text indexed columns
+                // For longer searches (5+ chars), use CONTAINS fulltext for all fields
                 const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
                 const tokenClauses: string[] = [];
 
+                // Search in Title, Location, City, Country, Organization using fulltext
                 tokens.forEach(tok => {
-                    tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, j.Location, j.City, j.Country), @param${paramIndex})`);
-                    queryParams.push(`"${tok}*"`);
+                    tokenClauses.push(`CONTAINS((j.Title, j.Location, j.City, j.Country), @param${paramIndex})`);
+                    queryParams.push(`${tok}*`);
+                    paramIndex += 1;
+                    
+                    tokenClauses.push(`CONTAINS(o.Name, @param${paramIndex})`);
+                    queryParams.push(`${tok}*`);
                     paramIndex += 1;
                 });
 
@@ -276,10 +289,11 @@ export class JobService {
             paramIndex++;
         }
 
-        // 🚀 OPTIMIZATION: Simplified count query without unnecessary joins
+        // 🚀 OPTIMIZATION: Count query with Organizations join for search
         const countQuery = `
             SELECT COUNT(*) as total
             FROM Jobs j
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             ${whereClause}
         `;
 
@@ -620,6 +634,14 @@ export class JobService {
             const queryParams: any[] = [];
             let paramIndex = 0;
 
+            // 🚀 OPTIMIZATION: Default to last 30 days unless user specifies otherwise
+            if (!f.postedWithinDays) {
+                const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+                queryParams.push(cutoffDate);
+                paramIndex++;
+            }
+
             // 🚀 OPTIMIZATION: Add most selective filters first
             // Workplace Type filter (very selective)
             if (f.workplaceTypeIds) {
@@ -669,24 +691,29 @@ export class JobService {
                 paramIndex += 1;
             }
 
-            // 🚀 OPTIMIZATION: Search term handling
+            // 🚀 OPTIMIZATION: Search term handling - Title, Location, Organization only
             const searchTerm = (f.search || f.q || '').toString().trim();
             if (searchTerm && searchTerm.length > 0) {
-                if (searchTerm.length <= 2) {
-                    // For 1-2 character searches, use LIKE for indexed columns only
+                if (searchTerm.length <= 4) {
+                    // For 1-4 character searches, use LIKE (CONTAINS doesn't work well for short partial matches)
                     console.log('🔍 Using LIKE for short search term:', searchTerm);
-                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1})`;
-                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
-                    paramIndex += 2;
+                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1} OR o.Name LIKE @param${paramIndex + 2})`;
+                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
+                    paramIndex += 3;
                 } else {
-                    // For longer searches, use CONTAINS for full-text indexed columns
+                    // For longer searches (5+ chars), use CONTAINS fulltext
                     console.log('🔍 Using CONTAINS for search term:', searchTerm);
                     const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
                     const tokenClauses: string[] = [];
 
+                    // Search in Title, Location, City, Country using fulltext
                     tokens.forEach(tok => {
-                        tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags, j.Location, j.City, j.Country), @param${paramIndex})`);
-                        queryParams.push(`"${tok}*"`);
+                        tokenClauses.push(`CONTAINS((j.Title, j.Location, j.City, j.Country), @param${paramIndex})`);
+                        queryParams.push(`${tok}*`);
+                        paramIndex += 1;
+                        
+                        tokenClauses.push(`CONTAINS(o.Name, @param${paramIndex})`);
+                        queryParams.push(`${tok}*`);
                         paramIndex += 1;
                     });
 
@@ -747,15 +774,20 @@ export class JobService {
                 paramIndex++;
             }
 
-            // 🚀 OPTIMIZATION: Simplified count query without Organization join
+            // 🚀 OPTIMIZATION: Count query with Organizations join for search
             const countStartTime = Date.now();
             const countQuery = `
                 SELECT COUNT(*) as total
                 FROM Jobs j
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 ${whereClause}
             `;
 
-            console.log('🔍 Executing count query');
+            console.log('🔍 Executing count query:', { 
+                query: countQuery.substring(0, 500), 
+                paramCount: queryParams.length,
+                params: queryParams.slice(0, 5) 
+            });
             const countResult = await dbService.executeQuery(countQuery, queryParams);
             const countTime = Date.now() - countStartTime;
             const total = countResult.recordset?.[0]?.total || 0;
