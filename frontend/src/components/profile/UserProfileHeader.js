@@ -550,12 +550,12 @@ export default function UserProfileHeader({
     let badgeIcon = 'person';
 
     if (userType === 'JobSeeker') {
-      if (jobSeekerProfile?.isOpenToWork) {
-        badgeText = 'Open to Work';
+      if (jobSeekerProfile?.openToRefer) {
+        badgeText = 'Open to Refer';
         badgeColor = '#10B981'; // Green
-        badgeIcon = 'work';
+        badgeIcon = 'people';
       } else {
-        badgeText = 'Not Actively Looking';
+        badgeText = 'Not Open to Refer';
         badgeColor = colors.gray600;
         badgeIcon = 'pause';
       }
@@ -710,94 +710,6 @@ export default function UserProfileHeader({
         )}
       </View>
 
-      {/* Highlights */}
-      <View style={styles.highlights}>
-        {userType === 'JobSeeker' && (
-          <>
-            {/* Professional Headline */}
-            {jobSeekerProfile?.headline && (
-              <View style={styles.highlight}>
-                <MaterialIcons name="work" size={16} color="#3B82F6" />
-                <Text style={styles.highlightText}>{jobSeekerProfile.headline}</Text>
-              </View>
-            )}
-
-            {/* Professional Summary (About) */}
-            {jobSeekerProfile?.summary && (
-              <View style={styles.highlight}>
-                <MaterialIcons name="description" size={16} color="#8B5CF6" />
-                <Text style={styles.highlightText}>{jobSeekerProfile.summary}</Text>
-              </View>
-            )}
-
-            {/* Skills with stars icon */}
-            {Array.isArray(jobSeekerProfile?.primarySkills) && jobSeekerProfile.primarySkills.length > 0 && (
-              <View style={styles.highlight}>
-                <MaterialIcons name="star" size={16} color="#F59E0B" />
-                <Text style={styles.highlightText}>
-                  {jobSeekerProfile.primarySkills.slice(0, 3).join(', ')}
-                  {jobSeekerProfile.primarySkills.length > 3 && ` +${jobSeekerProfile.primarySkills.length - 3}`}
-                </Text>
-              </View>
-            )}
-
-            {/* Current Location also as a highlight */}
-            {jobSeekerProfile?.currentLocation && (
-              <View style={styles.highlight}>
-                <MaterialIcons name="location-on" size={16} color="#6B7280" />
-                <Text style={styles.highlightText}>{jobSeekerProfile.currentLocation}</Text>
-              </View>
-            )}
-
-            {/* Work Style & Salary */}
-            <View style={styles.bottomRow}>
-              {jobSeekerProfile?.preferredWorkTypes && (
-                <View style={styles.smallHighlight}>
-                  <MaterialIcons name="home" size={14} color="#8B5CF6" />
-                  <Text style={styles.smallText}>{jobSeekerProfile.preferredWorkTypes.toLowerCase()}</Text>
-                </View>
-              )}
-
-              {!jobSeekerProfile?.preferredWorkTypes && jobSeekerProfile?.graduationYear && jobSeekerProfile.graduationYear.trim() && (
-                <View style={styles.smallHighlight}>
-                  <MaterialIcons name="calendar-today" size={14} color="#8B5CF6" />
-                  <Text style={styles.smallText}>Class of {jobSeekerProfile.graduationYear}</Text>
-                </View>
-              )}
-
-              {(() => {
-                const salary = jobSeekerProfile?.minimumSalary;
-                const numericSalary = typeof salary === 'string' ? parseFloat(salary) : salary;
-                if (numericSalary && !isNaN(numericSalary) && numericSalary > 1000) {
-                  return (
-                    <View style={styles.smallHighlight}>
-                      <MaterialIcons name="payments" size={14} color="#059669" />
-                      <Text style={styles.smallText}>
-                        ₹{numericSalary >= 100000 
-                          ? `${Math.round(numericSalary/100000)}L+`
-                          : `${Math.round(numericSalary/1000)}k+`
-                        }
-                      </Text>
-                    </View>
-                  );
-                }
-                return null;
-              })()}
-            </View>
-          </>
-        )}
-
-        {userType === 'Employer' && employerProfile?.recruitmentFocus && (
-          <View style={styles.highlight}>
-            <MaterialIcons name="business" size={16} color="#3B82F6" />
-            <Text style={styles.highlightText}>
-              Hiring: {employerProfile.recruitmentFocus.slice(0, 60)}
-              {employerProfile.recruitmentFocus.length > 60 && '...'}
-            </Text>
-          </View>
-        )}
-      </View>
-
       {/* IMAGE PICKER MODAL */}
       <Modal
         visible={showImagePickerModal}
@@ -863,7 +775,6 @@ const styles = StyleSheet.create({
   mainContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
   },
 
   // Profile Section
@@ -1007,47 +918,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 2,
-  },
-
-  // Highlights Section
-  highlights: {
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 16,
-    gap: 10,
-  },
-  highlight: {
- flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  highlightText: {
-  fontSize: 14,
- color: '#374151',
- marginLeft: 8,
-    flex: 1,
-    lineHeight: 18,
-  },
-
-  // Bottom Row
-  bottomRow: {
-    flexDirection: 'row',
-    gap: 20,
-    marginTop: 4,
-  },
-  smallHighlight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  smallText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 4,
-    fontWeight: '500',
   },
 
   // IMAGE PICKER MODAL

@@ -271,7 +271,7 @@ export class JobService {
         // Date filter
         if (f.postedWithinDays) {
             const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
-            whereClause += ` AND j.PublishedDate >= @param${paramIndex}`;
+            whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
             queryParams.push(cutoffDate);
             paramIndex++;
         }
@@ -293,26 +293,23 @@ export class JobService {
         const pageNum = Math.max(Number(page) || 1, 1);
         const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-        // 🚀 OPTIMIZATION: Use covering index columns, optimized join order
+        // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
         let dataQuery = `
             SELECT
-                j.*,
+                j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
+                j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
+                j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
                 jt.Type as JobTypeName,
+                wt.Type as WorkplaceTypeName,
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
-                ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
-                ISNULL(o.Website, '') as OrganizationWebsite,
-                ISNULL(c.Symbol, '$') as CurrencySymbol,
-                CASE
-                    WHEN j.PostedByUserID IS NOT NULL THEN ISNULL(u.FirstName + ' ' + u.LastName, 'User')
-                    WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                    ELSE 'External Recruiter'
-                END as PostedByName
-            FROM Jobs j WITH (INDEX(IX_Jobs_Optimized_GetSearch))
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                ISNULL(c.Symbol, '$') as CurrencySymbol
+            FROM Jobs j
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-            LEFT JOIN Users u ON j.PostedByUserID = u.UserID
             ${whereClause}
         `;
 
@@ -321,15 +318,14 @@ export class JobService {
 
         if (!noPaging) {
             const offset = (pageNum - 1) * pageSizeNum;
-            // 🚀 OPTIMIZATION: Use optimized sort and add query hints
+            // 🚀 OPTIMIZATION: Use indexed PublishedAt column for sorting
             dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
                           OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-                          OPTION (OPTIMIZE FOR (@param${paramIndex} = 0), MAXDOP 4)`;
+                          OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
             dataParams.push(offset, pageSizeNum);
             paramIndex += 2;
         } else {
-            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
-                          OPTION (MAXDOP 4)`;
+            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
         }
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
@@ -746,7 +742,7 @@ export class JobService {
             // Date filter
             if (f.postedWithinDays) {
                 const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
-                whereClause += ` AND j.PublishedDate >= @param${paramIndex}`;
+                whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
                 queryParams.push(cutoffDate);
                 paramIndex++;
             }
@@ -757,7 +753,6 @@ export class JobService {
                 SELECT COUNT(*) as total
                 FROM Jobs j
                 ${whereClause}
-                OPTION (MAXDOP 4)
             `;
 
             console.log('🔍 Executing count query');
@@ -779,27 +774,24 @@ export class JobService {
             const pageNum = Math.max(Number(page) || 1, 1);
             const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-            // 🚀 OPTIMIZATION: Use covering index and optimized joins
+            // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
             const dataStartTime = Date.now();
             let dataQuery = `
                 SELECT
-                    j.*,
+                    j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                    j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
+                    j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
+                    j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
                     jt.Type as JobTypeName,
+                    wt.Type as WorkplaceTypeName,
                     o.Name as OrganizationName,
                     ISNULL(o.LogoURL, '') as OrganizationLogo,
-                    ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
-                    ISNULL(o.Website, '') as OrganizationWebsite,
-                    ISNULL(c.Symbol, '$') as CurrencySymbol,
-                    CASE
-                        WHEN j.PostedByUserID IS NOT NULL THEN ISNULL(u.FirstName + ' ' + u.LastName, 'User')
-                        WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                        ELSE 'External Recruiter'
-                    END as PostedByName
-                FROM Jobs j WITH (INDEX(IX_Jobs_Optimized_GetSearch))
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                    ISNULL(c.Symbol, '$') as CurrencySymbol
+                FROM Jobs j
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-                LEFT JOIN Users u ON j.PostedByUserID = u.UserID
                 ${whereClause}
             `;
 
@@ -808,13 +800,14 @@ export class JobService {
 
             if (!noPaging) {
                 const offset = (pageNum - 1) * pageSizeNum;
-                dataQuery += ` ORDER BY j.PublishedDate DESC, j.JobID DESC 
+                // 🚀 OPTIMIZATION: Use indexed PublishedAt instead of PublishedDate
+                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC 
                               OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-                              OPTION (OPTIMIZE FOR (@param${paramIndex} = 0), MAXDOP 4)`;
+                              OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
                 dataParams.push(offset, pageSizeNum);
                 paramIndex += 2;
             } else {
-                dataQuery += ` ORDER BY j.PublishedDate DESC, j.JobID DESC OPTION (MAXDOP 4)`;
+                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC`;
             }
 
             console.log('🔍 Executing data query');
