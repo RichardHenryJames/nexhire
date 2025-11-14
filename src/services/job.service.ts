@@ -212,10 +212,10 @@ export class JobService {
         const searchTerm = (search || f.search || f.q || '').toString().trim();
         if (searchTerm && searchTerm.length > 0) {
             if (searchTerm.length <= 4) {
-                // For 1-4 character searches, use LIKE (CONTAINS doesn't work well for short partial matches)
-                whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1} OR o.Name LIKE @param${paramIndex + 2})`;
-                queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
-                paramIndex += 3;
+                // For 1-4 character searches, use LIKE only on Title and Org Name (most relevant)
+                whereClause += ` AND (j.Title LIKE @param${paramIndex} OR o.Name LIKE @param${paramIndex + 1})`;
+                queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+                paramIndex += 2;
             } else {
                 // For longer searches (5+ chars), use CONTAINS fulltext for all fields
                 const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
@@ -695,11 +695,11 @@ export class JobService {
             const searchTerm = (f.search || f.q || '').toString().trim();
             if (searchTerm && searchTerm.length > 0) {
                 if (searchTerm.length <= 4) {
-                    // For 1-4 character searches, use LIKE (CONTAINS doesn't work well for short partial matches)
+                    // For 1-4 character searches, use LIKE only on Title and Org Name (most relevant)
                     console.log('🔍 Using LIKE for short search term:', searchTerm);
-                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR j.Location LIKE @param${paramIndex + 1} OR o.Name LIKE @param${paramIndex + 2})`;
-                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
-                    paramIndex += 3;
+                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR o.Name LIKE @param${paramIndex + 1})`;
+                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+                    paramIndex += 2;
                 } else {
                     // For longer searches (5+ chars), use CONTAINS fulltext
                     console.log('🔍 Using CONTAINS for search term:', searchTerm);

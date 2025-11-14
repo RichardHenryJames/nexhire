@@ -31,7 +31,7 @@ import EmployerJobsScreen from '../screens/employer/EmployerJobsScreen'; // NEW:
 import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import CreateJobScreen from '../screens/jobs/CreateJobScreen';
 import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
+import ProfileScreen from '../screens/profile/ProfileScreenNew';
 import ReferralScreen from '../screens/referral/ReferralScreen';
 import AskReferralScreen from '../screens/referral/AskReferralScreen';
 import ReferralPlansScreen from '../screens/referral/ReferralPlansScreen';

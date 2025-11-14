@@ -103,6 +103,7 @@ const styles = StyleSheet.create({
   },
   footerContent: {
     paddingBottom: 20,
+    paddingHorizontal: 16,
   },
   footerTitle: {
     fontSize: 24,

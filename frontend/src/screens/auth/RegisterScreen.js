@@ -26,7 +26,7 @@ export default function RegisterScreen({ navigation }) {
     phone: '',
     dateOfBirth: '',
     gender: '',
-    referralCode: '', // ?? NEW: Referral code for bonus
+    inviteCode: '', // ?? NEW: Invite code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -122,7 +122,7 @@ export default function RegisterScreen({ navigation }) {
         ...(formData.phone && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
-        ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // ?? NEW: Add referral code
+        ...(formData.inviteCode && { inviteCode: formData.inviteCode.trim() }), // ?? NEW: Add invite code
       };
 
       const result = await register(registrationData);
@@ -193,24 +193,24 @@ export default function RegisterScreen({ navigation }) {
           {renderInput('lastName', 'Last Name', 'e.g., Doe', false, 'default', false, true)}
           {renderInput('email', 'Email Address', 'e.g., john.doe@example.com', false, 'email-address', false, true)}
           
-          {/* ?? NEW: Referral Code Input (Optional) */}
+          {/* ?? NEW: Invite Code Input (Optional) */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>
-              Referral Code (Optional)
+              Invite Code (Optional)
             </Text>
-            <View style={styles.referralCodeContainer}>
-              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+            <View style={styles.inviteCodeContainer}>
+              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.inviteCodeIcon} />
               <TextInput
-                style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
-                placeholder="Enter referral code"
+                style={[styles.input, styles.inviteCodeInput, errors.inviteCode && styles.inputError]}
+                placeholder="Enter invite code"
                 placeholderTextColor={colors.gray400}
-                value={formData.referralCode}
+                value={formData.inviteCode}
                 onChangeText={(text) => {
                   // Convert to uppercase and remove spaces
                   const cleanCode = text.toUpperCase().replace(/\s/g, '');
-                  setFormData({ ...formData, referralCode: cleanCode });
-                  if (errors.referralCode) {
-                    setErrors({ ...errors, referralCode: null });
+                  setFormData({ ...formData, inviteCode: cleanCode });
+                  if (errors.inviteCode) {
+                    setErrors({ ...errors, inviteCode: null });
                   }
                 }}
                 autoCapitalize="characters"
@@ -218,13 +218,13 @@ export default function RegisterScreen({ navigation }) {
                 maxLength={8}
               />
             </View>
-            {errors.referralCode && (
-              <Text style={styles.errorText}>{errors.referralCode}</Text>
+            {errors.inviteCode && (
+              <Text style={styles.errorText}>{errors.inviteCode}</Text>
             )}
-            <View style={styles.referralCodeHint}>
+            <View style={styles.inviteCodeHint}>
               <Ionicons name="information-circle-outline" size={14} color={colors.success} />
-              <Text style={styles.referralCodeHintText}>
-                Have a referral code? Get ₹50 bonus when you sign up!
+              <Text style={styles.inviteCodeHintText}>
+                Have an invite code? Get ₹50 bonus when you sign up!
               </Text>
             </View>
           </View>
@@ -400,22 +400,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
   },
-  // ?? NEW: Referral code styles
-  referralCodeContainer: {
+  // ?? NEW: Invite code styles
+  inviteCodeContainer: {
     position: 'relative',
   },
-  referralCodeIcon: {
+  inviteCodeIcon: {
     position: 'absolute',
     left: 12,
     top: 16,
     zIndex: 1,
   },
-  referralCodeInput: {
+  inviteCodeInput: {
     paddingLeft: 40, // Make room for the icon
     fontWeight: typography.weights.bold,
     letterSpacing: 1,
   },
-  referralCodeHint: {
+  inviteCodeHint: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
   },
-  referralCodeHintText: {
+  inviteCodeHintText: {
     fontSize: typography.sizes.xs,
     color: colors.success,
     marginLeft: 6,
