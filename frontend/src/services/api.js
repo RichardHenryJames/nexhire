@@ -1035,10 +1035,12 @@ class RefOpenAPI {
   }
 
   // NEW: Get organizations for employer registration - FIXED to use real database
-  async getOrganizations(searchTerm = '') {
+  async getOrganizations(searchTerm = '', limit = null, offset = 0) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
+      if (limit !== null) params.append('limit', limit.toString());
+      if (offset > 0) params.append('offset', offset.toString());
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await this.apiCall(endpoint);

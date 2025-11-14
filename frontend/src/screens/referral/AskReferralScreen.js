@@ -135,7 +135,7 @@ export default function AskReferralScreen({ navigation }) {
   const loadCompanies = async () => {
     try {
       // Use the same method that works in profile screen
-      const result = await refopenAPI.getOrganizations(''); // Empty string for no search filter
+      const result = await refopenAPI.getOrganizations('', null); // No limit - get all companies
       console.log('Organizations API response:', result);
       
       if (result?.success && result.data && Array.isArray(result.data)) {

@@ -202,7 +202,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return; // skip fetching when manual mode
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX and to support partial matches
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);

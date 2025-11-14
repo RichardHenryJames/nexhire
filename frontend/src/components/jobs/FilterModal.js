@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const FilterModal = ({ 
@@ -12,9 +12,12 @@ const FilterModal = ({
   jobTypes = [], 
   workplaceTypes = [], 
   currencies = [],
+  companies = [],
   initialSection = null
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('workMode');
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(100); // Show first 100 companies initially
 
   // Auto-select category when modal opens with initialSection
   useEffect(() => {
@@ -31,6 +34,8 @@ const isSectionActive = (section) => {
         return !!filters.department;
    case 'location':
     return !!filters.location;
+      case 'company':
+        return (filters.companies || []).length > 0;
       case 'experience':
     return !!filters.experienceMin || !!filters.experienceMax;
       case 'salary':
@@ -48,6 +53,7 @@ const isSectionActive = (section) => {
     let count = 0;
     if ((filters.workplaceTypeIds || []).length > 0) count += filters.workplaceTypeIds.length;
     if ((filters.jobTypeIds || []).length > 0) count += filters.jobTypeIds.length;
+    if ((filters.companies || []).length > 0) count += filters.companies.length;
     if (filters.location) count++;
     if (filters.department) count++;
     if (filters.experienceMin || filters.experienceMax) count++;
@@ -60,6 +66,7 @@ const isSectionActive = (section) => {
     { id: 'workMode', label: 'Workplace' },
     { id: 'department', label: 'Department' },
     { id: 'location', label: 'Location' },
+    { id: 'company', label: 'Company' },
     { id: 'experience', label: 'Experience' },
     { id: 'salary', label: 'Salary' },
     { id: 'jobType', label: 'JobType' },
@@ -122,6 +129,88 @@ const isSectionActive = (section) => {
  placeholderTextColor="#9ca3af"
   />
      </View>
+        );
+
+      case 'company':
+              const filteredCompanies = companies.filter(org => {
+          const matches = companySearchQuery.trim() === '' || 
+            org.name.toLowerCase().includes(companySearchQuery.toLowerCase());
+          return matches;
+        });
+        // For search results, show all matches. Otherwise, paginate
+        const displayCompanies = companySearchQuery.trim() !== '' 
+          ? filteredCompanies 
+          : filteredCompanies.slice(0, displayLimit);
+        
+        return (
+          <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Company</Text>
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search companies..."
+                value={companySearchQuery}
+                onChangeText={setCompanySearchQuery}
+                placeholderTextColor="#9ca3af"
+              />
+              {companySearchQuery.length > 0 ? (
+                <TouchableOpacity onPress={() => setCompanySearchQuery('')} style={styles.searchIconContainer}>
+                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.searchIconContainer}>
+                  <Ionicons name="search" size={20} color="#9ca3af" />
+                </View>
+              )}
+            </View>
+            <ScrollView style={styles.optionsList}>
+              {displayCompanies.map((org, index) => {
+                  const active = (filters.companies || []).includes(org.name);
+                  return (
+                    <TouchableOpacity
+                      key={org.id || index}
+                      style={styles.optionItem}
+                      onPress={() => {
+                        const has = (filters.companies || []).includes(org.name);
+                        const next = has
+                          ? (filters.companies || []).filter(c => c !== org.name)
+                          : [...(filters.companies || []), org.name];
+                        onFiltersChange({ ...filters, companies: next });
+                      }}
+                    >
+                      <View style={[styles.checkbox, active && styles.checkboxActive]}>
+                        {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+                      </View>
+                      {org.logoURL ? (
+                        <Image 
+                          source={{ uri: org.logoURL }} 
+                          style={styles.companyLogo}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <View style={styles.companyLogoPlaceholder}>
+                          <Ionicons name="business" size={16} color="#9ca3af" />
+                        </View>
+                      )}
+                      <Text style={styles.optionLabel} numberOfLines={1}>{org.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              
+              {/* Load More button if there are more companies to show */}
+              {companySearchQuery.trim() === '' && displayLimit < filteredCompanies.length && (
+                <TouchableOpacity 
+                  style={styles.loadMoreButton}
+                  onPress={() => setDisplayLimit(prev => prev + 100)}
+                >
+                  <Text style={styles.loadMoreText}>
+                    Load More ({filteredCompanies.length - displayLimit} more companies)
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color="#0066cc" />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
         );
 
   case 'experience':
@@ -413,6 +502,9 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 16
   },
+  optionsList: {
+    maxHeight: 400,
+  },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -446,14 +538,35 @@ alignItems: 'center',
     fontWeight: '600'
   },
   searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderRadius: 8,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
+  searchIconContainer: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchInputWithIcon: {
+    flex: 1,
     paddingVertical: 12,
     fontSize: 15,
     color: '#111827',
-    borderWidth: 1,
-    borderColor: '#e5e7eb'
+  },
+  clearSearchButton: {
+    padding: 4,
   },
   rangeContainer: {
     flexDirection: 'row',
@@ -543,7 +656,60 @@ alignItems: 'center',
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700'
-  }
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  chipText: {
+    fontSize: 14,
+    color: '#0066cc',
+    fontWeight: '500',
+  },
+  companyLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#f9fafb',
+  },
+  companyLogoPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    marginTop: 8,
+    marginHorizontal: 8,
+    gap: 8,
+  },
+  loadMoreText: {
+    fontSize: 14,
+    color: '#0066cc',
+    fontWeight: '600',
+  },
 });
 
 export default FilterModal;

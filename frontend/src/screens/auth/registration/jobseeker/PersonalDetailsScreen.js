@@ -168,7 +168,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return;
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);

@@ -49,6 +49,7 @@ const EMPTY_FILTERS = {
   location: '',
   jobTypeIds: [],
   workplaceTypeIds: [],
+  companies: [],
   salaryMin: '',
   salaryMax: '',
   currencyId: null,
@@ -139,6 +140,7 @@ export default function JobsScreen({ navigation, route }) {
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
   const [currencies, setCurrencies] = useState([]);
+  const [companies, setCompanies] = useState([]);
 
   // Smart filter toggle
   const [smartEnabled] = useState(false);
@@ -170,6 +172,12 @@ export default function JobsScreen({ navigation, route }) {
     const names = ids.map(id => (workplaceTypes.find(w => String(w.WorkplaceTypeID) === String(id)) || {}).Type).filter(Boolean);
     return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Workplace';
   }, [filters.workplaceTypeIds, workplaceTypes]);
+
+  const quickCompanyLabel = useMemo(() => {
+    const companyNames = filters.companies || [];
+    if (!companyNames.length) return 'Company';
+    return companyNames.length ? companyNames.slice(0, 2).join('/') + (companyNames.length > 2 ? ` +${companyNames.length - 2}` : '') : 'Company';
+  }, [filters.companies]);
 
   // Toggle selection helper
   const toggleId = (arr, id) => (arr || []).some(x => String(x) === String(id))
@@ -386,14 +394,32 @@ export default function JobsScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const [jt, wt, cur] = await Promise.all([
+        const [jt, wt, cur, orgs] = await Promise.all([
           refopenAPI.getJobTypes(),
           refopenAPI.getWorkplaceTypes(),
-          refopenAPI.getCurrencies()
+          refopenAPI.getCurrencies(),
+          refopenAPI.getOrganizations('', null) // No limit - get all companies
         ]);
         if (jt?.success) setJobTypes(jt.data);
         if (wt?.success) setWorkplaceTypes(wt.data);
         if (cur?.success) setCurrencies(cur.data);
+        if (orgs?.success) {
+          console.log('JobsScreen - Organizations loaded:', orgs.data?.length);
+          console.log('JobsScreen - First org sample:', orgs.data?.[0]);
+          // Pass full organization objects sorted by name
+          const sortedOrgs = orgs.data
+            .filter(org => {
+              const hasName = org.name && org.name.trim().length > 0;
+              if (!hasName) console.log('Org without name:', org);
+              return hasName;
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+          console.log('JobsScreen - Filtered and sorted companies:', sortedOrgs.length);
+          console.log('JobsScreen - First sorted company:', sortedOrgs[0]);
+          setCompanies(sortedOrgs);
+        } else {
+          console.log('JobsScreen - Organizations fetch failed:', orgs);
+        }
       } catch {}
     })();
   }, []);
@@ -431,6 +457,7 @@ export default function JobsScreen({ navigation, route }) {
         if (filters.location) apiFilters.location = filters.location;
 if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
     if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
+        if (filters.companies?.length) apiFilters.companies = filters.companies.join('|'); // Use pipe delimiter to avoid issues with commas in company names
         if (filters.salaryMin) apiFilters.salaryMin = filters.salaryMin;
         if (filters.salaryMax) apiFilters.salaryMax = filters.salaryMax;
         if (filters.currencyId) apiFilters.currencyId = filters.currencyId;
@@ -1523,6 +1550,18 @@ const apiStartTime = performance.now();
                   <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
                 </TouchableOpacity>
               </View>
+
+              <View style={styles.quickFilterItem}>
+                <TouchableOpacity
+                  style={[styles.quickFilterDropdown, (filters.companies || []).length > 0 && styles.quickFilterActive]}
+                  onPress={() => openFilters('company')}
+                >
+                  <Text style={[styles.quickFilterText, (filters.companies || []).length > 0 && styles.quickFilterActiveText]}>
+                    {quickCompanyLabel}
+                  </Text>
+                  <Ionicons name="chevron-down" size={14} color={(filters.companies || []).length > 0 ? '#0066cc' : '#666'} />
+                </TouchableOpacity>
+              </View>
             </ScrollView>
 
             {isFiltersDirty(filters) && (
@@ -1565,6 +1604,7 @@ const apiStartTime = performance.now();
         jobTypes={jobTypes}
         workplaceTypes={workplaceTypes}
         currencies={currencies}
+        companies={companies}
         onToggleJobType={onToggleJobType}
         onToggleWorkplaceType={onToggleWorkplaceType}
         onSelectCurrency={onSelectCurrency}

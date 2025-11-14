@@ -250,6 +250,27 @@ export class JobService {
             paramIndex++;
         }
 
+        // Company filter (multiple companies support)
+        if (f.companies) {
+            console.log('🏢 Company filter received:', f.companies);
+            const companiesStr = String(f.companies).trim();
+            if (companiesStr) {
+                const companyNames = companiesStr.split('|').map(s => s.trim()).filter(s => s.length > 0); // Split by pipe to handle commas in company names
+                console.log('🏢 Company names parsed:', companyNames);
+                if (companyNames.length > 0) {
+                    const companyConditions = companyNames.map(() => {
+                        const condition = `o.Name = @param${paramIndex}`; // Exact match instead of LIKE
+                        paramIndex++;
+                        return condition;
+                    });
+                    whereClause += ` AND (${companyConditions.join(' OR ')})`;
+                    queryParams.push(...companyNames); // No wildcards - exact match
+                    console.log('🏢 Company WHERE clause:', `AND (${companyConditions.join(' OR ')})`);
+                    console.log('🏢 Company query params:', companyNames);
+                }
+            }
+        }
+
         // Currency filter
         if (f.currencyId) {
             whereClause += ` AND j.CurrencyID = @param${paramIndex}`;
@@ -299,6 +320,12 @@ export class JobService {
 
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset?.[0]?.total || 0;
+        
+        // 🔍 DEBUG: Log WHERE clause and parameters
+        console.log('🔍 Final WHERE clause:', whereClause);
+        console.log('🔍 Query parameters:', queryParams);
+        console.log('🔍 Total count:', total);
+        
         if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
 
         const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
@@ -307,7 +334,12 @@ export class JobService {
         const pageNum = Math.max(Number(page) || 1, 1);
         const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-        // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
+        // � DEBUG: Log final WHERE clause and parameters
+        console.log('🔍 [getJobs] Final WHERE clause:', whereClause);
+        console.log('🔍 [getJobs] Query parameters:', queryParams);
+        console.log('🔍 [getJobs] Filters received:', JSON.stringify(f, null, 2));
+
+        // �🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
         let dataQuery = `
             SELECT
                 j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
@@ -733,6 +765,26 @@ export class JobService {
                 whereClause += ` AND j.Department LIKE @param${paramIndex}`;
                 queryParams.push(`%${f.department}%`);
                 paramIndex++;
+            }
+
+            // Company filter (multiple companies support)
+            if (f.companies) {
+                console.log('🏢 [searchJobs] Company filter received:', f.companies);
+                const companiesStr = String(f.companies).trim();
+                if (companiesStr) {
+                    const companyNames = companiesStr.split('|').map(s => s.trim()).filter(s => s.length > 0);
+                    console.log('🏢 [searchJobs] Company names parsed:', companyNames);
+                    if (companyNames.length > 0) {
+                        const companyConditions = companyNames.map(() => {
+                            const condition = `o.Name = @param${paramIndex}`;
+                            paramIndex++;
+                            return condition;
+                        });
+                        whereClause += ` AND (${companyConditions.join(' OR ')})`;
+                        queryParams.push(...companyNames);
+                        console.log('🏢 [searchJobs] Company WHERE clause:', `AND (${companyConditions.join(' OR ')})`);
+                    }
+                }
             }
 
             // Currency filter

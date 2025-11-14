@@ -212,7 +212,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {

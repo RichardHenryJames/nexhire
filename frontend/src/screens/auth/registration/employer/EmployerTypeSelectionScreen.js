@@ -65,7 +65,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return; // skip when manual entry mode or closed
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
         setOrgResults(filtered);
