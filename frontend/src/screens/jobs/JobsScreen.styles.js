@@ -254,4 +254,51 @@ export const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '700',
   },
+
+  // Floating Action Buttons
+  fabContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 80,
+    alignItems: 'center',
+    gap: 12,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginVertical: 6,
+  },
+  fabSaved: {
+    backgroundColor: '#0066cc',
+  },
+  fabApplications: {
+    backgroundColor: '#0066cc',
+  },
+  fabBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ff3b30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  fabBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

@@ -57,6 +57,20 @@ export default function ApplicationsScreen({ navigation }) {
     loadPrimaryResume();
   }, []); // Fixed: was <></> which is invalid syntax
 
+  // Update navigation header with count
+  useEffect(() => {
+    const title = isEmployer ? 'Job Applications' : 'My Applications';
+    if (pagination.total > 0) {
+      navigation.setOptions({
+        headerTitle: `${title} (${pagination.total})`,
+      });
+    } else {
+      navigation.setOptions({
+        headerTitle: title,
+      });
+    }
+  }, [pagination.total, isEmployer, navigation]);
+
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -750,16 +764,6 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header section */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isEmployer ? 'Job Applications' : 'My Applications'}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          {pagination.total} {pagination.total === 1 ? 'application' : 'applications'}
-        </Text>
-      </View>
-
       {/* Applications List */}
       <FlatList
         data={applications}

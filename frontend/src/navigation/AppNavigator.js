@@ -1,144 +1,150 @@
-import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { createStackNavigator } from "@react-navigation/stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import { useAuth } from '../contexts/AuthContext';
-import LoadingScreen from '../screens/LoadingScreen';
+import { useAuth } from "../contexts/AuthContext";
+import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
-import UserTypeSelectionScreen from '../screens/auth/registration/UserTypeSelectionScreen';
-import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
+import UserTypeSelectionScreen from "../screens/auth/registration/UserTypeSelectionScreen";
+import LoginScreen from "../screens/auth/LoginScreen";
+import RegisterScreen from "../screens/auth/RegisterScreen";
 
 // Job Seeker Registration Flow
-import ExperienceTypeSelectionScreen from '../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen';
-import WorkExperienceScreen from '../screens/auth/registration/jobseeker/WorkExperienceScreen';
-import EducationDetailsScreen from '../screens/auth/registration/jobseeker/EducationDetailsScreen';
-import JobPreferencesScreen from '../screens/auth/registration/jobseeker/JobPreferencesScreen';
-import PersonalDetailsScreen from '../screens/auth/registration/jobseeker/PersonalDetailsScreen';
+import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
+import WorkExperienceScreen from "../screens/auth/registration/jobseeker/WorkExperienceScreen";
+import EducationDetailsScreen from "../screens/auth/registration/jobseeker/EducationDetailsScreen";
+import JobPreferencesScreen from "../screens/auth/registration/jobseeker/JobPreferencesScreen";
+import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/PersonalDetailsScreen";
 
-// Employer Registration Flow  
-import EmployerTypeSelectionScreen from '../screens/auth/registration/employer/EmployerTypeSelectionScreen';
-import OrganizationDetailsScreen from '../screens/auth/registration/employer/OrganizationDetailsScreen';
-import EmployerPersonalDetailsScreen from '../screens/auth/registration/employer/EmployerPersonalDetailsScreen';
-import EmployerAccountScreen from '../screens/auth/registration/employer/EmployerAccountScreen';
+// Employer Registration Flow
+import EmployerTypeSelectionScreen from "../screens/auth/registration/employer/EmployerTypeSelectionScreen";
+import OrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
+import EmployerPersonalDetailsScreen from "../screens/auth/registration/employer/EmployerPersonalDetailsScreen";
+import EmployerAccountScreen from "../screens/auth/registration/employer/EmployerAccountScreen";
 
 // Main App Screens
-import HomeScreen from '../screens/HomeScreen';
-import JobsScreen from '../screens/jobs/JobsScreen';
-import EmployerJobsScreen from '../screens/employer/EmployerJobsScreen'; // NEW: Employer jobs screen
-import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
-import CreateJobScreen from '../screens/jobs/CreateJobScreen';
-import ApplicationsScreen from '../screens/applications/ApplicationsScreen';
-import ProfileScreen from '../screens/profile/ProfileScreenNew';
-import ReferralScreen from '../screens/referral/ReferralScreen';
-import AskReferralScreen from '../screens/referral/AskReferralScreen';
-import ReferralPlansScreen from '../screens/referral/ReferralPlansScreen';
-import PaymentScreen from '../screens/payment/PaymentScreen';
+import HomeScreen from "../screens/HomeScreen";
+import JobsScreen from "../screens/jobs/JobsScreen";
+import SavedJobsScreen from "../screens/jobs/SavedJobsScreen";
+import EmployerJobsScreen from "../screens/employer/EmployerJobsScreen"; // NEW: Employer jobs screen
+import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
+import CreateJobScreen from "../screens/jobs/CreateJobScreen";
+import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
+import ProfileScreen from "../screens/profile/ProfileScreenNew";
+import ReferralScreen from "../screens/referral/ReferralScreen";
+import AskReferralScreen from "../screens/referral/AskReferralScreen";
+import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
+import PaymentScreen from "../screens/payment/PaymentScreen";
+// ?? NEW: Messaging screens
+import ConversationsScreen from "../screens/messaging/ConversationsScreen";
+import ChatScreen from "../screens/messaging/ChatScreen";
+// ?? NEW: Profile viewing screen
+import ViewProfileScreen from "../screens/profile/ViewProfileScreen";
 // ?? NEW: Wallet screens
-import WalletScreen from '../screens/wallet/WalletScreen';
-import WalletTransactionsScreen from '../screens/wallet/WalletTransactionsScreen';
-import WalletRechargeScreen from '../screens/wallet/WalletRechargeScreen';
+import WalletScreen from "../screens/wallet/WalletScreen";
+import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
+import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
 
 // Legal/Compliance Screens
-import TermsScreen from '../screens/legal/TermsScreen';
-import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
-import RefundPolicyScreen from '../screens/legal/RefundPolicyScreen';
-import ShippingDeliveryScreen from '../screens/legal/ShippingDeliveryScreen';
-import ContactUsScreen from '../screens/legal/ContactUsScreen';
-import AboutUsScreen from '../screens/legal/AboutUsScreen';
-import DisclaimerScreen from '../screens/legal/DisclaimerScreen';
-import FAQScreen from '../screens/legal/FAQScreen';
+import TermsScreen from "../screens/legal/TermsScreen";
+import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
+import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
+import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
+import ContactUsScreen from "../screens/legal/ContactUsScreen";
+import AboutUsScreen from "../screens/legal/AboutUsScreen";
+import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
+import FAQScreen from "../screens/legal/FAQScreen";
 
-import { colors } from '../styles/theme';
+import { colors } from "../styles/theme";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // FIXED: Deep Linking Configuration with unique paths
 const linking = {
-  prefixes: [
-    'refopen://',
-    'https://refopen.com',
-    'https://www.refopen.com',
-  ],
+  prefixes: ["refopen://", "https://refopen.com", "https://www.refopen.com"],
   config: {
     screens: {
       // Public Legal/Compliance screens - accessible without auth
-      Terms: 'terms',
-      PrivacyPolicy: 'privacy',
-      RefundPolicy: 'refund',
-      ShippingDelivery: 'shipping',
-      ContactUs: 'contact',
-      AboutUs: 'about',
-      Disclaimer: 'disclaimer',
-      FAQ: 'faq',
+      Terms: "terms",
+      PrivacyPolicy: "privacy",
+      RefundPolicy: "refund",
+      ShippingDelivery: "shipping",
+      ContactUs: "contact",
+      AboutUs: "about",
+      Disclaimer: "disclaimer",
+      FAQ: "faq",
 
       // Auth Stack
       Auth: {
-      path: 'auth',
-     screens: {
-          Login: 'login',
- Register: 'register', 
-          UserTypeSelection: 'register/select-type',
-      
-      // Direct skip screens for web navigation
-          PersonalDetailsScreenDirect: 'register/complete-profile',
-          EmployerAccountScreenDirect: 'register/complete-employer',
-   
-        // Job Seeker Registration Flow
-       JobSeekerFlow: {
-   path: 'register/jobseeker',
-    screens: {
-       ExperienceTypeSelection: 'experience',
-    WorkExperienceScreen: 'work',
-   EducationDetailsScreen: 'education',
-    JobPreferencesScreen: 'preferences',
-    PersonalDetails: 'details',
+        path: "auth",
+        screens: {
+          Login: "login",
+          Register: "register",
+          UserTypeSelection: "register/select-type",
+
+          // Direct skip screens for web navigation
+          PersonalDetailsScreenDirect: "register/complete-profile",
+          EmployerAccountScreenDirect: "register/complete-employer",
+
+          // Job Seeker Registration Flow
+          JobSeekerFlow: {
+            path: "register/jobseeker",
+            screens: {
+              ExperienceTypeSelection: "experience",
+              WorkExperienceScreen: "work",
+              EducationDetailsScreen: "education",
+              JobPreferencesScreen: "preferences",
+              PersonalDetails: "details",
             },
           },
- 
-    // Employer Registration Flow
-    EmployerFlow: {
-      path: 'register/employer',
+
+          // Employer Registration Flow
+          EmployerFlow: {
+            path: "register/employer",
             screens: {
-       EmployerTypeSelection: 'type',
-       OrganizationDetailsScreen: 'organization',
-              EmployerPersonalDetailsScreen: 'details',
-              EmployerAccountScreen: 'account',
-     },
+              EmployerTypeSelection: "type",
+              OrganizationDetailsScreen: "organization",
+              EmployerPersonalDetailsScreen: "details",
+              EmployerAccountScreen: "account",
+            },
           },
+        },
       },
-      },
-      
+
       // Main App Stack - requires authentication
       Main: {
-        path: '',
+        path: "",
         screens: {
-        MainTabs: {
-        path: '',
-   screens: {
-     Home: '',
-  Jobs: 'jobs',
-    CreateJob: 'create-job',
-              Applications: 'applications',
-           Referrals: 'referrals',
-    Profile: 'profile',
-       },
+          MainTabs: {
+            path: "",
+            screens: {
+              Home: "",
+              Jobs: "jobs",
+              CreateJob: "create-job",
+              Messages: "messages",
+              Referrals: "referrals",
+              Profile: "profile",
+            },
           },
-          
-     // Modal/Stack screens
-   JobDetails: 'job/:jobId',
-          AskReferral: 'ask-referral',
-       ReferralPlans: 'plans',
-     Payment: 'payment',
-          
-  // Wallet screens
-  Wallet: 'wallet',
-     WalletTransactions: 'wallet/transactions',
-   WalletRecharge: 'wallet/recharge',
-     },
+
+          // Modal/Stack screens
+          JobDetails: "job/:jobId",
+          SavedJobs: "saved-jobs",
+          Applications: "applications",
+          ViewProfile: "profile/:userId",
+          Chat: "chat/:conversationId",
+          AskReferral: "ask-referral",
+          ReferralPlans: "plans",
+          Payment: "payment",
+
+          // Wallet screens
+          Wallet: "wallet",
+          WalletTransactions: "wallet/transactions",
+          WalletRecharge: "wallet/recharge",
+        },
       },
     },
   },
@@ -152,10 +158,22 @@ function JobSeekerFlow() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="ExperienceTypeSelection" component={ExperienceTypeSelectionScreen} />
-      <Stack.Screen name="WorkExperienceScreen" component={WorkExperienceScreen} />
-      <Stack.Screen name="EducationDetailsScreen" component={EducationDetailsScreen} />
-      <Stack.Screen name="JobPreferencesScreen" component={JobPreferencesScreen} />
+      <Stack.Screen
+        name="ExperienceTypeSelection"
+        component={ExperienceTypeSelectionScreen}
+      />
+      <Stack.Screen
+        name="WorkExperienceScreen"
+        component={WorkExperienceScreen}
+      />
+      <Stack.Screen
+        name="EducationDetailsScreen"
+        component={EducationDetailsScreen}
+      />
+      <Stack.Screen
+        name="JobPreferencesScreen"
+        component={JobPreferencesScreen}
+      />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
     </Stack.Navigator>
   );
@@ -169,10 +187,22 @@ function EmployerFlow() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="EmployerTypeSelection" component={EmployerTypeSelectionScreen} />
-      <Stack.Screen name="OrganizationDetailsScreen" component={OrganizationDetailsScreen} />
-      <Stack.Screen name="EmployerPersonalDetailsScreen" component={EmployerPersonalDetailsScreen} />
-      <Stack.Screen name="EmployerAccountScreen" component={EmployerAccountScreen} />
+      <Stack.Screen
+        name="EmployerTypeSelection"
+        component={EmployerTypeSelectionScreen}
+      />
+      <Stack.Screen
+        name="OrganizationDetailsScreen"
+        component={OrganizationDetailsScreen}
+      />
+      <Stack.Screen
+        name="EmployerPersonalDetailsScreen"
+        component={EmployerPersonalDetailsScreen}
+      />
+      <Stack.Screen
+        name="EmployerAccountScreen"
+        component={EmployerAccountScreen}
+      />
     </Stack.Navigator>
   );
 }
@@ -181,18 +211,18 @@ function EmployerFlow() {
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
 
-  console.log('AuthStack state:', {
+  console.log("AuthStack state:", {
     hasPendingGoogleAuth,
-    googleUserEmail: pendingGoogleAuth?.user?.email
+    googleUserEmail: pendingGoogleAuth?.user?.email,
   });
 
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      console.log('Google auth pending - starting at UserTypeSelection');
+      console.log("Google auth pending - starting at UserTypeSelection");
       return "UserTypeSelection";
     }
-    console.log('No pending auth - starting at Login');
+    console.log("No pending auth - starting at Login");
     return "Login";
   };
 
@@ -205,28 +235,32 @@ function AuthStack() {
     >
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen 
-        name="UserTypeSelection" 
+      <Stack.Screen
+        name="UserTypeSelection"
         component={UserTypeSelectionScreen}
         // Pass Google user data automatically when coming from Google auth
-        initialParams={hasPendingGoogleAuth ? {
-          googleUser: pendingGoogleAuth?.user,
-          fromGoogleAuth: true
-        } : undefined}
+        initialParams={
+          hasPendingGoogleAuth
+            ? {
+                googleUser: pendingGoogleAuth?.user,
+                fromGoogleAuth: true,
+              }
+            : undefined
+        }
       />
       <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
       <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
-      
+
       {/* NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
-      <Stack.Screen 
-        name="PersonalDetailsScreenDirect" 
+      <Stack.Screen
+        name="PersonalDetailsScreenDirect"
         component={PersonalDetailsScreen}
-        options={{ title: 'Complete Your Profile' }}
+        options={{ title: "Complete Your Profile" }}
       />
-      <Stack.Screen 
-        name="EmployerAccountScreenDirect" 
+      <Stack.Screen
+        name="EmployerAccountScreenDirect"
         component={EmployerAccountScreen}
-        options={{ title: 'Complete Your Profile' }}
+        options={{ title: "Complete Your Profile" }}
       />
     </Stack.Navigator>
   );
@@ -242,18 +276,18 @@ function MainTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Jobs') {
-            iconName = focused ? 'briefcase' : 'briefcase-outline';
-          } else if (route.name === 'CreateJob') {
-            iconName = focused ? 'add-circle' : 'add-circle-outline';
-          } else if (route.name === 'Applications') {
-            iconName = focused ? 'document-text' : 'document-text-outline';
-          } else if (route.name === 'Referrals') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Jobs") {
+            iconName = focused ? "briefcase" : "briefcase-outline";
+          } else if (route.name === "CreateJob") {
+            iconName = focused ? "add-circle" : "add-circle-outline";
+          } else if (route.name === "Messages") {
+            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+          } else if (route.name === "Referrals") {
+            iconName = focused ? "people" : "people-outline";
+          } else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -270,51 +304,50 @@ function MainTabNavigator() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: "500",
         },
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ title: "Home" }}
       />
-      
-      {/* ? FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
-      <Tab.Screen 
-        name="Jobs" 
+
+      {/* FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
+      <Tab.Screen
+        name="Jobs"
         component={isEmployer ? EmployerJobsScreen : JobsScreen}
-        options={{ title: 'Jobs' }}
+        options={{ title: "Jobs" }}
       />
 
       {isEmployer && (
-        <Tab.Screen 
-          name="CreateJob" 
+        <Tab.Screen
+          name="CreateJob"
           component={CreateJobScreen}
-          options={{ title: 'Post Job' }}
+          options={{ title: "Post Job" }}
         />
       )}
-      
-      <Tab.Screen 
-        name="Applications" 
-        component={ApplicationsScreen}
-        options={{ title: 'Applications' }}
+
+      <Tab.Screen
+        name="Messages"
+        component={ConversationsScreen}
+        options={{ title: "Messages" }}
       />
-      
-      {/* ? CONDITIONAL: Only show Referrals tab for job seekers */}
+
       {isJobSeeker && (
-        <Tab.Screen 
-          name="Referrals" 
+        <Tab.Screen
+          name="Referrals"
           component={ReferralScreen}
-          options={{ title: 'Referrals' }}
+          options={{ title: "Referrals" }}
         />
       )}
-      
-      <Tab.Screen 
-        name="Profile" 
+
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: "Profile" }}
       />
     </Tab.Navigator>
   );
@@ -329,78 +362,112 @@ function MainStack() {
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
-      <Stack.Screen 
-        name="JobDetails" 
+      <Stack.Screen
+        name="JobDetails"
         component={JobDetailsScreen}
-        options={{ 
+        options={{
           headerShown: true,
-title: 'Job Details',
-    headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen 
-        name="Referral" 
-  component={ReferralScreen}
-        options={{ 
-        headerShown: true,
-  title: 'Referral',
+          title: "Job Details",
           headerBackTitleVisible: false,
         }}
       />
- <Stack.Screen 
-        name="AskReferral" 
-      component={AskReferralScreen}
-        options={{ 
-  headerShown: true,
-title: 'Ask for Referral',
+      <Stack.Screen
+        name="SavedJobs"
+        component={SavedJobsScreen}
+        options={{
+          headerShown: true,
+          title: "Saved Jobs",
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-        name="ReferralPlans" 
+      <Stack.Screen
+        name="Applications"
+        component={ApplicationsScreen}
+        options={{
+          headerShown: true,
+          title: "My Applications",
+          headerBackTitleVisible: false,
+        }}
+      />
+      {/* ?? NEW: Chat screen for messaging */}
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          headerShown: false, // Custom header in component
+        }}
+      />
+      {/* ?? NEW: View other user's profile */}
+      <Stack.Screen
+        name="ViewProfile"
+        component={ViewProfileScreen}
+        options={{
+          headerShown: false, // Custom header in component
+        }}
+      />
+      <Stack.Screen
+        name="Referral"
+        component={ReferralScreen}
+        options={{
+          headerShown: true,
+          title: "Referral",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="AskReferral"
+        component={AskReferralScreen}
+        options={{
+          headerShown: true,
+          title: "Ask for Referral",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="ReferralPlans"
         component={ReferralPlansScreen}
-     options={{ 
+        options={{
           headerShown: true,
-        title: 'Subscription Plans',
-      headerBackTitleVisible: false,
-  }}
+          title: "Subscription Plans",
+          headerBackTitleVisible: false,
+        }}
       />
-      <Stack.Screen 
-        name="Payment" 
+      <Stack.Screen
+        name="Payment"
         component={PaymentScreen}
-        options={{ 
-  headerShown: true,
-          title: 'Secure Payment',
+        options={{
+          headerShown: true,
+          title: "Secure Payment",
           headerBackTitleVisible: false,
-      }}
+        }}
       />
-{/* ?? NEW: Wallet screens */}
-      <Stack.Screen 
-  name="Wallet" 
+      {/* NEW: Wallet screens */}
+      <Stack.Screen
+        name="Wallet"
         component={WalletScreen}
-        options={{ 
+        options={{
           headerShown: true,
-          title: 'My Wallet',
+          title: "My Wallet",
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-  name="WalletTransactions" 
+      <Stack.Screen
+        name="WalletTransactions"
         component={WalletTransactionsScreen}
-        options={{ 
+        options={{
           headerShown: true,
-          title: 'Transaction History',
+          title: "Transaction History",
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-        name="WalletRecharge" 
+      <Stack.Screen
+        name="WalletRecharge"
         component={WalletRechargeScreen}
-        options={{ 
-      headerShown: true,
-          title: 'Add Money to Wallet',
-     headerBackTitleVisible: false,
-     }}
+        options={{
+          headerShown: true,
+          title: "Add Money to Wallet",
+          headerBackTitleVisible: false,
+        }}
       />
     </Stack.Navigator>
   );
@@ -410,10 +477,10 @@ title: 'Ask for Referral',
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
 
-  console.log('AppNavigator state check:', {
+  console.log("AppNavigator state check:", {
     loading,
     isAuthenticated,
-    hasPendingGoogleAuth
+    hasPendingGoogleAuth,
   });
 
   // Show loading screen while checking authentication state
@@ -422,11 +489,11 @@ export default function AppNavigator() {
   }
 
   // Determine initial route based on auth state
-  const initialRouteName = hasPendingGoogleAuth 
-    ? 'Auth' 
-    : isAuthenticated 
-    ? 'Main' 
-    : 'Auth';
+  const initialRouteName = hasPendingGoogleAuth
+    ? "Auth"
+    : isAuthenticated
+    ? "Main"
+    : "Auth";
 
   return (
     <Stack.Navigator
@@ -436,98 +503,100 @@ export default function AppNavigator() {
       }}
     >
       {/* Auth Stack - always present for deep linking */}
-   <Stack.Screen 
-   name="Auth" 
- component={AuthStack}
- options={{ headerShown: false }}
+      <Stack.Screen
+        name="Auth"
+        component={AuthStack}
+        options={{ headerShown: false }}
       />
 
-  {/* Main App Stack - protected, requires authentication */}
-  <Stack.Screen 
- name="Main" 
-     component={MainStack}
+      {/* Main App Stack - protected, requires authentication */}
+      <Stack.Screen
+        name="Main"
+        component={MainStack}
         options={{ headerShown: false }}
         listeners={({ navigation }) => ({
           focus: () => {
-// Redirect to Auth if not authenticated
- if (!isAuthenticated) {
-      console.log('Main screen accessed without auth, redirecting to Auth');
-     navigation.navigate('Auth');
-         }
-        },
-     })}
+            // Redirect to Auth if not authenticated
+            if (!isAuthenticated) {
+              console.log(
+                "Main screen accessed without auth, redirecting to Auth"
+              );
+              navigation.navigate("Auth");
+            }
+          },
+        })}
       />
 
       {/* Public Legal/Compliance Routes - Always accessible */}
-      <Stack.Screen 
-   name="Terms" 
+      <Stack.Screen
+        name="Terms"
         component={TermsScreen}
-        options={{ 
+        options={{
           headerShown: true,
-          title: 'Terms & Conditions',
-      headerBackTitleVisible: false,
+          title: "Terms & Conditions",
+          headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-        name="PrivacyPolicy" 
+      <Stack.Screen
+        name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
-        options={{ 
+        options={{
           headerShown: true,
-   title: 'Privacy Policy',
-     headerBackTitleVisible: false,
+          title: "Privacy Policy",
+          headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-        name="RefundPolicy" 
- component={RefundPolicyScreen}
-  options={{ 
+      <Stack.Screen
+        name="RefundPolicy"
+        component={RefundPolicyScreen}
+        options={{
           headerShown: true,
-title: 'Refund Policy',
+          title: "Refund Policy",
           headerBackTitleVisible: false,
-     }}
+        }}
       />
-      <Stack.Screen 
-        name="ShippingDelivery" 
+      <Stack.Screen
+        name="ShippingDelivery"
         component={ShippingDeliveryScreen}
-        options={{ 
+        options={{
           headerShown: true,
-          title: 'Shipping & Delivery',
+          title: "Shipping & Delivery",
           headerBackTitleVisible: false,
-   }}
-    />
-      <Stack.Screen 
-      name="ContactUs" 
+        }}
+      />
+      <Stack.Screen
+        name="ContactUs"
         component={ContactUsScreen}
-        options={{ 
-   headerShown: true,
-   title: 'Contact Us',
-    headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen 
-      name="AboutUs" 
-    component={AboutUsScreen}
-     options={{ 
+        options={{
           headerShown: true,
-          title: 'About Us',
-          headerBackTitleVisible: false,
-    }}
-      />
-      <Stack.Screen 
-        name="Disclaimer" 
-     component={DisclaimerScreen}
-        options={{ 
-          headerShown: true,
-          title: 'Disclaimer',
+          title: "Contact Us",
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen 
-        name="FAQ" 
-      component={FAQScreen}
-        options={{ 
+      <Stack.Screen
+        name="AboutUs"
+        component={AboutUsScreen}
+        options={{
           headerShown: true,
-          title: 'FAQ',
+          title: "About Us",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="Disclaimer"
+        component={DisclaimerScreen}
+        options={{
+          headerShown: true,
+          title: "Disclaimer",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="FAQ"
+        component={FAQScreen}
+        options={{
+          headerShown: true,
+          title: "FAQ",
           headerBackTitleVisible: false,
         }}
       />

@@ -74,7 +74,7 @@ export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
-  const { activeTab: initialTab, successMessage, appliedJobId } = route.params || {};
+  const { successMessage, appliedJobId } = route.params || {};
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -197,10 +197,7 @@ export default function JobsScreen({ navigation, route }) {
     triggerReload()
   }, [triggerReload])
 
-  // Tabs state and counts
-  const [activeTab, setActiveTab] = useState(initialTab || 'openings'); // 🔧 Use initial tab from navigation
-  const [appliedJobs, setAppliedJobs] = useState([]);
-  const [savedJobs, setSavedJobs] = useState([]);
+  // Applied count for badge display
   const [appliedCount, setAppliedCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [appliedIds, setAppliedIds] = useState(new Set());
@@ -259,17 +256,7 @@ export default function JobsScreen({ navigation, route }) {
       if (r?.success) {
         const ids = new Set((r.data || []).map(a => a.JobID));
         setAppliedIds(ids);
-        const items = (r.data || []).map(a => ({
-          JobID: a.JobID,
-          Title: a.JobTitle || a.Title,
-          OrganizationName: a.CompanyName || a.OrganizationName,
-          Location: a.JobLocation || a.Location,
-          SalaryRangeMin: a.SalaryRangeMin,
-          SalaryRangeMax: a.SalaryRangeMax,
-          PublishedAt: a.SubmittedAt,
-        }));
-        setAppliedJobs(items);
-        setAppliedCount(Number(r.meta?.total || items.length || 0));
+        setAppliedCount(Number(r.meta?.total || r.data?.length || 0));
         console.log('✅ Applications data refreshed successfully');
       }
     } catch (e) {
@@ -285,17 +272,21 @@ export default function JobsScreen({ navigation, route }) {
         if (r?.success) {
           const ids = new Set((r.data || []).map(a => a.JobID));
           setAppliedIds(ids);
-          const items = (r.data || []).map(a => ({
-            JobID: a.JobID,
-            Title: a.JobTitle || a.Title,
-            OrganizationName: a.CompanyName || a.OrganizationName,
-            Location: a.JobLocation || a.Location,
-            SalaryRangeMin: a.SalaryRangeMin,
-            SalaryRangeMax: a.SalaryRangeMax,
-            PublishedAt: a.SubmittedAt,
-          }));
-          setAppliedJobs(items);
-          setAppliedCount(Number(r.meta?.total || items.length || 0));
+          setAppliedCount(Number(r.meta?.total || r.data?.length || 0));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Preload saved job IDs
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await refopenAPI.getMySavedJobs(1, 500);
+        if (r?.success) {
+          const ids = new Set((r.data || []).map(s => s.JobID));
+          setSavedIds(ids);
+          setSavedCount(Number(r.meta?.total || r.data?.length || 0));
         }
       } catch {}
     })();
@@ -659,7 +650,7 @@ const apiStartTime = performance.now();
 
   // Smart pagination monitoring with improved UX
   useEffect(() => {
-    if (activeTab !== 'openings' || loading || loadingMore) return;
+    if (loading || loadingMore) return;
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5;
 
@@ -698,7 +689,7 @@ const apiStartTime = performance.now();
         setTimeout(() => setSmartPaginating(false), 1000);
       }, 100);
     }
-  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
+  }, [jobs.length, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Handlers =====
   const openFilters = useCallback((section = null) => { 
@@ -790,7 +781,6 @@ const apiStartTime = performance.now();
   // Add this helper (was missing, caused ReferenceError in browser)
   const removeSavedJobLocally = useCallback((jobId) => {
     if (!jobId) return;
-    setSavedJobs(prev => prev.filter(j => (j.JobID || j.id) !== jobId));
     setSavedIds(prev => { const next = new Set(prev ?? new Set()); next.delete(jobId); return next; });
     setSavedCount(c => Math.max((c || 0) - 1, 0));
   }, []);
@@ -864,10 +854,10 @@ const apiStartTime = performance.now();
 
   // Render list without animations
   const renderList = () => {
-    const data = activeTab === 'openings' ? jobs : savedJobs;
+    const data = jobs; // Always show openings
 
     // 🔧 NEW: Show loader while initially loading OR when searching/filtering (loading=true and no jobs yet)
-    if (loading && data.length === 0 && activeTab === 'openings') {
+    if (loading && data.length === 0) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0066cc" />
@@ -876,7 +866,7 @@ const apiStartTime = performance.now();
    );
     }
 
-    if (smartPaginating && data.length === 0 && activeTab === 'openings') {
+    if (smartPaginating && data.length === 0) {
       return (
       <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0066cc" />
@@ -886,19 +876,15 @@ const apiStartTime = performance.now();
     }
 
     if (data.length === 0) {
-      const hasMoreToLoad = activeTab === 'openings' && pagination.hasMore;
+      const hasMoreToLoad = pagination.hasMore;
 
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No {activeTab} jobs</Text>
+          <Text style={styles.emptyTitle}>No jobs found</Text>
           <Text style={styles.emptyMessage}>
-            {activeTab === 'openings'
-              ? hasMoreToLoad
-                ? 'Checking for more opportunities...'
-                : `You've seen all available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
-              : activeTab === 'saved'
-                ? 'Saved jobs will appear here when you bookmark jobs for later.'
-                : 'New opportunities will appear here.'
+            {hasMoreToLoad
+              ? 'Checking for more opportunities...'
+              : `You've seen all available jobs! Great job exploring every opportunity. New jobs will appear here as they're posted.`
             }
           </Text>
 
@@ -938,7 +924,7 @@ const apiStartTime = performance.now();
             onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
             onSave={() => handleSave(job)}
             onUnsave={() => handleUnsave(job)}
-            savedContext={activeTab === 'saved'}
+            savedContext={false}
             isReferred={isReferred}
             isSaved={isSaved}
             isReferralRequesting={isReferralRequesting}
@@ -949,36 +935,6 @@ const apiStartTime = performance.now();
   };
 
   const openingsCount = jobs.length;
-
-  // 🔧 NEW: Preload saved job IDs and list
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await refopenAPI.getMySavedJobs(1, 500);
-        if (r?.success) {
-          const ids = new Set((r.data || []).map(s => s.JobID));
-          setSavedIds(ids);
-          setSavedJobs(r.data || []);
-          setSavedCount(Number(r.meta?.total || r.data?.length || 0));
-        }
-      } catch {}
-    })();
-  }, []);
-
-  // Tabs header
-  const Tabs = () => (
-    <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e9ecef' }}>
-      {['openings','saved'].map(key => {
-        const labels = { openings: 'Openings', saved: 'Saved' };
-        const active = activeTab === key;
-        return (
-          <TouchableOpacity key={key} onPress={() => setActiveTab(key)} style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: active ? '#0066cc' : 'transparent' }}>
-            <Text style={{ color: active ? '#0066cc' : '#555', fontWeight: active ? '700' : '600' }}>{labels[key]}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
 
   // Handle apply - simplified without animations
   const handleApply = useCallback(async (job) => {
@@ -1248,15 +1204,12 @@ const apiStartTime = performance.now();
           setAppliedCount(c => (Number(c) || 0) + 1);
           // Always remove from saved locally (backend auto-removes later)
             removeSavedJobLocally(id);
-          if (activeTab === 'openings') {
-            setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-            setPagination(prev => {
-              const newTotal = Math.max((prev.total || 0) - 1, 0);
-              const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-              return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-            });
-          }
-          setAppliedJobs(prev => [{ ...job, __appliedAt: Date.now() }, ...prev]);
+          setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+          setPagination(prev => {
+            const newTotal = Math.max((prev.total || 0) - 1, 0);
+            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
+          });
           showToast('Application submitted successfully', 'success');
 
           // 🔧 FIXED: Reload primary resume after successful application
@@ -1281,7 +1234,7 @@ const apiStartTime = performance.now();
       setPendingJobForApplication(null);
       setReferralMode(false);
     }
-  }, [pendingJobForApplication, referralMode, activeTab, removeSavedJobLocally, loadPrimaryResume]);
+  }, [pendingJobForApplication, referralMode, removeSavedJobLocally, loadPrimaryResume]);
 
   // NEW: Auto apply with known resume (no modal)
   const quickApply = useCallback(async (job, resumeId) => {
@@ -1293,14 +1246,12 @@ const apiStartTime = performance.now();
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAppliedCount(c => (Number(c) || 0) + 1);
         removeSavedJobLocally(id); // ensure removal if it was saved
-        if (activeTab === 'openings') {
-          setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          setPagination(prev => {
-            const newTotal = Math.max((prev.total || 0) - 1, 0);
-            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-          });
-        }
+        setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+        setPagination(prev => {
+          const newTotal = Math.max((prev.total || 0) - 1, 0);
+          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
+          return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
+        });
         showToast('Application submitted', 'success');
         try {
           const appliedRes = await refopenAPI.getMyApplications(1, 1);
@@ -1312,9 +1263,7 @@ const apiStartTime = performance.now();
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to submit application');
     }
-  }, [activeTab, removeSavedJobLocally]);
-
-  // NEW: Auto referral with known resume
+  }, [removeSavedJobLocally]);
   const quickReferral = useCallback(async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
@@ -1373,9 +1322,6 @@ const apiStartTime = performance.now();
           return next;
         });
 
-        // Add job to saved list without removing from openings
-        setSavedJobs(prev => [{ ...job, __savedAt: Date.now() }, ...prev]);
-
         showToast('Job saved successfully', 'success');
       } else {
         Alert.alert('Save Failed', res.error || 'Failed to save job');
@@ -1385,14 +1331,8 @@ const apiStartTime = performance.now();
       Alert.alert('Error', e.message || 'Failed to save job');
     } finally {
       refreshCounts();
-      if (activeTab === 'saved') {
-        try {
-          const r = await refopenAPI.getMySavedJobs(1, 50);
-          if (r?.success) setSavedJobs(r.data || []);
-        } catch {}
-      }
     }
-  }, [activeTab, refreshCounts, showToast]);
+  }, [refreshCounts, showToast]);
 
   // 🔧 NEW: Handle unsave functionality
   const handleUnsave = useCallback(async (job) => {
@@ -1412,25 +1352,9 @@ const apiStartTime = performance.now();
     }
   }, [removeSavedJobLocally, showToast]);
 
-  // Tab data loading effect - refresh when switching tabs
-  useEffect(() => {
-    (async () => {
-      if (activeTab === 'saved') {
-        try {
-          console.log('🔄 Refreshing saved jobs data...');
-          const r = await refopenAPI.getMySavedJobs(1, 50);
-          if (r?.success) setSavedJobs(r.data || []);
-        } catch {}
-      } else if (activeTab === 'applied') {
-        // 🔧 NEW: Refresh applied jobs when switching to applied tab
-        await refreshApplicationsData();
-      }
-    })();
-  }, [activeTab, refreshApplicationsData]);
-
   // Smart pagination monitoring with improved UX
   useEffect(() => {
-    if (activeTab !== 'openings' || loading || loadingMore) return;
+    if (loading || loadingMore) return;
 
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5; // Trigger when only 5 jobs left
@@ -1472,7 +1396,7 @@ const apiStartTime = performance.now();
         setTimeout(() => setSmartPaginating(false), 1000);
       }, 100);
     }
-  }, [jobs.length, activeTab, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
+  }, [jobs.length, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Render =====
   return (
@@ -1507,11 +1431,7 @@ const apiStartTime = performance.now();
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
-      <Tabs />
-
       {/* Quick Filters Row */}
-      {activeTab === 'openings' && (
         <View style={styles.quickFiltersContainer}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
@@ -1571,23 +1491,20 @@ const apiStartTime = performance.now();
             )}
           </View>
         </View>
-      )}
 
       {/* Summary - only show when jobs are loaded */}
-      {activeTab === 'openings' && !loading && jobs.length > 0 && (
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryText}>
             {formatCount(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
           </Text>
         </View>
-      )}
 
       {/* Job List */}
       <ScrollView
         style={styles.jobList}
         showsVerticalScrollIndicator={false}
-        refreshControl={activeTab === 'openings' ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
-        onScroll={activeTab === 'openings' ? onScrollNearEnd : undefined}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onScroll={onScrollNearEnd}
         scrollEventThrottle={16}
       >
         {renderList()}
@@ -1635,6 +1552,37 @@ const apiStartTime = performance.now();
         }}
         onCancel={() => setShowWalletModal(false)}
       />
+
+      {/* Floating Action Buttons */}
+      <View style={styles.fabContainer}>
+        {/* Saved Jobs Button */}
+        <TouchableOpacity
+          style={[styles.fab, styles.fabSaved]}
+          onPress={() => navigation.navigate('SavedJobs')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="bookmark" size={24} color="#FFFFFF" />
+          {savedIds.length > 0 && (
+            <View style={styles.fabBadge}>
+              <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Applications Button */}
+        <TouchableOpacity
+          style={[styles.fab, styles.fabApplications]}
+          onPress={() => navigation.navigate('Applications')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="briefcase" size={24} color="#FFFFFF" />
+          {appliedCount > 0 && (
+            <View style={styles.fabBadge}>
+              <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
