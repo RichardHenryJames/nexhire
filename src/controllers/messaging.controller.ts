@@ -500,46 +500,46 @@ export const searchUsers = withAuth(async (req: HttpRequest, context: Invocation
 
     const { dbService } = await import('../services/database.service');
     
-    // Search users by name or email
+    // Search users by name or email - only show users with Public profiles
     const searchQuery = `
       SELECT 
-        u.UserID,
+      u.UserID,
         u.FirstName + ' ' + u.LastName AS UserName,
         u.ProfilePictureURL,
         a.CurrentCompanyName,
-        a.CurrentJobTitle,
-        a.Headline,
-        u.UserType
+     a.CurrentJobTitle,
+      a.Headline,
+      u.UserType
       FROM Users u
       LEFT JOIN Applicants a ON u.UserID = a.UserID
       WHERE u.IsActive = 1
         AND u.UserID != @param0
-        AND u.ProfileVisibility != 'Private'
+     AND u.ProfileVisibility = 'Public'
         AND (
-          u.FirstName LIKE @param1 
+        u.FirstName LIKE @param1 
           OR u.LastName LIKE @param1
-          OR u.Email LIKE @param1
-          OR (u.FirstName + ' ' + u.LastName) LIKE @param1
+     OR u.Email LIKE @param1
+   OR (u.FirstName + ' ' + u.LastName) LIKE @param1
         )
       ORDER BY 
         CASE WHEN u.FirstName LIKE @param1 THEN 1 ELSE 2 END,
         u.FirstName, u.LastName
-      OFFSET @param2 ROWS FETCH NEXT @param3 ROWS ONLY
+  OFFSET @param2 ROWS FETCH NEXT @param3 ROWS ONLY
     `;
 
     // Get total count
     const countQuery = `
       SELECT COUNT(*) AS Total
       FROM Users u
-      WHERE u.IsActive = 1
-        AND u.UserID != @param0
-        AND u.ProfileVisibility != 'Private'
+    WHERE u.IsActive = 1
+   AND u.UserID != @param0
+        AND u.ProfileVisibility = 'Public'
         AND (
-          u.FirstName LIKE @param1 
-          OR u.LastName LIKE @param1
-          OR u.Email LIKE @param1
+      u.FirstName LIKE @param1 
+    OR u.LastName LIKE @param1
+      OR u.Email LIKE @param1
           OR (u.FirstName + ' ' + u.LastName) LIKE @param1
-        )
+    )
     `;
 
     const [searchResult, countResult] = await Promise.all([
@@ -555,11 +555,11 @@ export const searchUsers = withAuth(async (req: HttpRequest, context: Invocation
       status: 200,
       headers: corsHeaders,
       jsonBody: successResponse(users, 'Users found successfully', {
-        page,
+page,
         pageSize,
-        total,
-        totalPages,
-        hasMore: page < totalPages
+    total,
+   totalPages,
+    hasMore: page < totalPages
       })
     };
   } catch (error) {

@@ -156,25 +156,29 @@ const req = https.request(url, options, (res) => {
   }
 
   /**
-   * Send new message event
+   * Send new message event - USING CONVERSATION GROUP (works better with free tier)
    */
   static async emitNewMessage(conversationId: string, message: any, receiverUserId: string) {
-    console.log(`📤 Emitting newMessage to user ${receiverUserId} and group conversation_${conversationId}`);
+    console.log(`📤 Emitting newMessage - Conversation: ${conversationId}, Receiver: ${receiverUserId}`);
     
     try {
-      // Send to specific user
-      await this.sendToUser(receiverUserId, {
-        target: 'newMessage',
-        arguments: [message],
-      });
-      console.log(`✅ Message sent to user ${receiverUserId}`);
-
-      // Also send to conversation group (for multi-device support)
+      // Send to conversation group (both users in the conversation)
       await this.sendToGroup(`conversation_${conversationId}`, {
         target: 'newMessage',
         arguments: [message],
       });
-      console.log(`✅ Message sent to group conversation_${conversationId}`);
+      console.log(`✅ Message sent to conversation group: conversation_${conversationId}`);
+      
+      // Also try sending to specific user (if supported)
+      try {
+        await this.sendToUser(receiverUserId, {
+          target: 'newMessage',
+          arguments: [message],
+        });
+        console.log(`✅ Message also sent to user: ${receiverUserId}`);
+      } catch (userError) {
+        console.warn(`⚠️ Could not send to user directly (non-critical):`, userError);
+      }
     } catch (error) {
       console.error('❌ Failed to emit new message via SignalR:', error);
       throw error;

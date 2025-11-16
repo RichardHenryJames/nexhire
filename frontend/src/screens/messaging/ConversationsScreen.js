@@ -579,8 +579,6 @@ paddingHorizontal: 20,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
   },
   userResultAvatar: {
     width: 48,

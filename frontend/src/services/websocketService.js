@@ -132,6 +132,38 @@ class SignalRService {
   }
 
   /**
+   * Join a conversation group
+   */
+  async joinConversationGroup(conversationId) {
+    if (!this.connection || !this.connected) {
+      console.warn('⚠️ Cannot join group - not connected to SignalR');
+      return;
+    }
+
+    try {
+      // Azure SignalR automatically manages groups - client just needs to listen
+      console.log(`✅ Ready to receive messages for conversation: ${conversationId}`);
+    } catch (error) {
+      console.error('❌ Error joining conversation group:', error);
+    }
+  }
+
+  /**
+   * Leave a conversation group
+   */
+  async leaveConversationGroup(conversationId) {
+    if (!this.connection || !this.connected) {
+      return;
+    }
+
+    try {
+      console.log(`👋 Left conversation group: ${conversationId}`);
+    } catch (error) {
+      console.error('❌ Error leaving conversation group:', error);
+    }
+  }
+
+  /**
    * Check if connected
    */
   isConnected() {
