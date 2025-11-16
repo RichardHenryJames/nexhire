@@ -6,16 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
   Alert,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import messagingApi from "../../services/messagingApi";
-import webSocketService from "../../services/websocketService"; // This is now SignalR!
+import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
 import { colors } from "../../styles/theme";
 
@@ -24,6 +23,7 @@ export default function ChatScreen() {
   const route = useRoute();
   const { user } = useAuth();
   const flatListRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const { conversationId, otherUserName, otherUserId } = route.params;
 
@@ -34,15 +34,21 @@ export default function ChatScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [signalRConnected, setSignalRConnected] = useState(false); // ?? Track SignalR status
-  const [usePolling, setUsePolling] = useState(false); // ?? Fallback to polling if SignalR fails
+  const [signalRConnected, setSignalRConnected] = useState(false);
+  const [usePolling, setUsePolling] = useState(false);
+  const [otherUserProfile, setOtherUserProfile] = useState(null);
+  const [showMenu, setShowMenu] = useState(false); // For web dropdown
 
-  // ?? DEBUG: Check user object
-  console.log("?? ChatScreen - User object:", user);
-  console.log("?? ChatScreen - User ID:", user?.userId || user?.UserID);
-
-  // ?? FIX: Check both userId and UserID (capitalization)
+  const connectionStatusRef = useRef({ connected: false, polling: false });
   const currentUserId = user?.userId || user?.UserID;
+
+  const scrollToBottom = () => {
+    if (Platform.OS === "web" && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    } else if (flatListRef.current) {
+      flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+    }
+  };
 
   if (!user || !currentUserId) {
     return (
@@ -53,7 +59,6 @@ export default function ChatScreen() {
     );
   }
 
-  // Load messages
   const loadMessages = useCallback(
     async (pageNum = 1, append = false) => {
       try {
@@ -68,13 +73,11 @@ export default function ChatScreen() {
 
         if (result.success) {
           const newMessages = result.data || [];
-
           if (append) {
             setMessages((prev) => [...prev, ...newMessages]);
           } else {
             setMessages(newMessages);
           }
-
           setHasMore(newMessages.length === 50);
           setPage(pageNum);
         }
@@ -89,23 +92,46 @@ export default function ChatScreen() {
     [conversationId]
   );
 
-  // Initial load
+  // Load other user's profile for picture
+  const loadOtherUserProfile = useCallback(async () => {
+    try {
+      // Try to get profile picture from first message or fetch from API
+      if (messages.length > 0) {
+        const otherUserMessage = messages.find(
+          (m) => m.SenderUserID !== currentUserId
+        );
+        if (otherUserMessage && otherUserMessage.SenderProfilePic) {
+          setOtherUserProfile({
+            profilePictureUrl: otherUserMessage.SenderProfilePic,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading other user profile:", error);
+    }
+  }, [messages, currentUserId]);
+
   useEffect(() => {
+    loadOtherUserProfile();
+  }, [messages, loadOtherUserProfile]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let pollingInterval = null;
+
     loadMessages(1);
 
-    // ?? Mark conversation as read ONCE when opening
     const markAsReadOnOpen = async () => {
       try {
         await messagingApi.markConversationAsRead(conversationId);
-        console.log("? Conversation marked as read");
-
-        // Update local state to show all messages as read
-        setMessages((prev) =>
-          prev.map((msg) => ({
-            ...msg,
-            IsRead: msg.SenderUserID !== currentUserId ? true : msg.IsRead,
-          }))
-        );
+        if (isMounted) {
+          setMessages((prev) =>
+            prev.map((msg) => ({
+              ...msg,
+              IsRead: msg.SenderUserID !== currentUserId ? true : msg.IsRead,
+            }))
+          );
+        }
       } catch (error) {
         console.error("Error marking conversation as read:", error);
       }
@@ -113,72 +139,49 @@ export default function ChatScreen() {
 
     markAsReadOnOpen();
 
-    // ?? NEW: Connect to SignalR ONLY when entering chat
-    // This saves connections for SignalR Free Tier limits!
     const connectSignalR = async () => {
       try {
-        console.log("🔄 Attempting SignalR connection...");
-
-        // ?? FIX: Use localStorage directly instead of API method
         const token = localStorage.getItem("refopen_token");
-
         if (!token) {
-          console.warn("⚠️ No auth token found, falling back to polling");
-          setUsePolling(true);
+          connectionStatusRef.current.polling = true;
+          if (isMounted) setUsePolling(true);
           return;
         }
 
         await webSocketService.connect(token);
-        setSignalRConnected(true);
-        console.log("✅ SignalR connected - Real-time messaging enabled");
+        connectionStatusRef.current.connected = true;
+        if (isMounted) setSignalRConnected(true);
       } catch (error) {
-        console.error("❌ SignalR connection failed:", error);
-        console.warn("⚠️ Falling back to polling mode (refresh every 3 seconds)");
-        setUsePolling(true);
-        setSignalRConnected(false);
+        console.error("? SignalR connection failed:", error);
+        connectionStatusRef.current.polling = true;
+        if (isMounted) {
+          setUsePolling(true);
+          setSignalRConnected(false);
+        }
       }
     };
 
     connectSignalR();
 
-    // ? Listen for new messages in real-time (only if SignalR connected)
     const handleNewMessage = (message) => {
-      console.log("✅ New message received via SignalR:", message);
-
-      if (message.ConversationID === conversationId) {
-        // ✅ CHECK: Don't add if message already exists (prevent duplicates)
+      if (message.ConversationID === conversationId && isMounted) {
         setMessages((prev) => {
-          const exists = prev.find(m => m.MessageID === message.MessageID);
-          if (exists) {
-            console.log("⚠️ Message already exists, skipping duplicate");
-            return prev;
-          }
-          
-          // ✅ ADD message to top of list
-          console.log("✅ Adding new message to UI");
+          const exists = prev.find((m) => m.MessageID === message.MessageID);
+          if (exists) return prev;
           return [message, ...prev];
         });
 
-        // Auto-mark as read if it's not from me
         if (message.SenderUserID !== currentUserId) {
           messagingApi
             .markMessageAsRead(message.MessageID)
             .catch(console.error);
         }
-
-        // Scroll to bottom
-        setTimeout(() => {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }, 100);
+        setTimeout(scrollToBottom, 100);
       }
     };
 
-    // ? Listen for read receipts
     const handleConversationRead = (data) => {
-      console.log("✅ Conversation read event via SignalR:", data);
-
-      if (data.conversationId === conversationId) {
-        // Update all my messages to read
+      if (data.conversationId === conversationId && isMounted) {
         setMessages((prev) =>
           prev.map((msg) => ({
             ...msg,
@@ -190,91 +193,62 @@ export default function ChatScreen() {
       }
     };
 
-    // Attach SignalR listeners (only if not using polling)
-    if (!usePolling) {
-      webSocketService.onNewMessage(handleNewMessage);
-      webSocketService.onConversationRead(handleConversationRead);
-    }
+    webSocketService.onNewMessage(handleNewMessage);
+    webSocketService.onConversationRead(handleConversationRead);
 
-    // ?? FALLBACK: Polling mechanism (3-second intervals)
-    let pollingInterval = null;
-
-    if (usePolling) {
-      console.log("🔄 Starting polling mode - checking every 3 seconds");
-
-      pollingInterval = setInterval(async () => {
-        try {
-          const result = await messagingApi.getMessages(conversationId, 1, 50);
-
-          if (result.success) {
-            const newMessages = result.data || [];
-
-            // Only update if messages changed
-            setMessages((prev) => {
-              const prevIds = prev.map((m) => m.MessageID).join(",");
-              const newIds = newMessages.map((m) => m.MessageID).join(",");
-
-              if (prevIds !== newIds) {
-                console.log("✅ Polling: New messages detected, updating UI");
-
-                // Check if there's a new message from the other user
-                const latestMessage = newMessages[0];
-                if (
-                  latestMessage &&
-                  latestMessage.SenderUserID !== currentUserId
-                ) {
-                  setTimeout(() => {
-                    flatListRef.current?.scrollToOffset({
-                      offset: 0,
-                      animated: true,
-                    });
-                  }, 100);
+    setTimeout(() => {
+      if (connectionStatusRef.current.polling && isMounted) {
+        pollingInterval = setInterval(async () => {
+          try {
+            const result = await messagingApi.getMessages(
+              conversationId,
+              1,
+              50
+            );
+            if (result.success && isMounted) {
+              const newMessages = result.data || [];
+              setMessages((prev) => {
+                const prevIds = prev.map((m) => m.MessageID).join(",");
+                const newIds = newMessages.map((m) => m.MessageID).join(",");
+                if (prevIds !== newIds) {
+                  const latestMessage = newMessages[0];
+                  if (
+                    latestMessage &&
+                    latestMessage.SenderUserID !== currentUserId
+                  ) {
+                    setTimeout(scrollToBottom, 100);
+                  }
+                  return newMessages;
                 }
-
-                return newMessages;
-              }
-
-              return prev;
-            });
+                return prev;
+              });
+            }
+          } catch (error) {
+            console.error("? Polling error:", error);
           }
-        } catch (error) {
-          console.error("❌ Polling error:", error);
-        }
-      }, 3000); // Poll every 3 seconds
-    }
-
-    // ?? CLEANUP: Disconnect SignalR and stop polling when leaving chat
-    return () => {
-      console.log("🧹 Cleaning up chat connections...");
-
-      if (signalRConnected) {
-        console.log("🔌 Disconnecting SignalR on chat exit");
-        webSocketService.disconnect();
-        webSocketService.off("newMessage");
-        webSocketService.off("conversationRead");
+        }, 3000);
       }
+    }, 2000);
 
+    return () => {
+      isMounted = false;
+      if (connectionStatusRef.current.connected) {
+        webSocketService.disconnect();
+      }
+      webSocketService.off("newMessage");
+      webSocketService.off("conversationRead");
       if (pollingInterval) {
-        console.log("🛑 Stopping polling interval");
         clearInterval(pollingInterval);
       }
     };
-  }, [
-    conversationId,
-    currentUserId,
-    loadMessages,
-    signalRConnected,
-    usePolling,
-  ]);
+  }, [conversationId, currentUserId, loadMessages]);
 
-  // Send message - OPTIMISTIC UI
   const handleSend = async () => {
     if (!messageText.trim()) return;
 
     const textToSend = messageText.trim();
-    setMessageText(""); // Clear input immediately
-    
-    // ✅ CREATE OPTIMISTIC MESSAGE (shows immediately)
+    setMessageText("");
+
     const optimisticMessageId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticMessage = {
       MessageID: optimisticMessageId,
@@ -287,24 +261,16 @@ export default function ChatScreen() {
       CreatedAt: new Date().toISOString(),
       SenderName: user.firstName + " " + user.lastName,
       SenderProfilePic: user.profilePictureUrl,
-      _sending: true, // Flag to show loading indicator
+      _sending: true,
     };
 
-    // ✅ ADD TO UI IMMEDIATELY (OPTIMISTIC)
     setMessages((prev) => [optimisticMessage, ...prev]);
     setSending(true);
-
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-    }, 50);
+    setTimeout(scrollToBottom, 50);
 
     try {
-      // ✅ SEND TO BACKEND (async, in background)
       const result = await messagingApi.sendMessage(conversationId, textToSend);
-
       if (result.success) {
-        // ✅ REPLACE optimistic message with real message from server
         const realMessage = result.data;
         setMessages((prev) =>
           prev.map((msg) =>
@@ -313,12 +279,9 @@ export default function ChatScreen() {
               : msg
           )
         );
-        console.log("✅ Message sent successfully");
       }
     } catch (error) {
-      console.error("❌ Error sending message:", error);
-      
-      // ✅ MARK MESSAGE AS FAILED
+      console.error("? Error sending message:", error);
       setMessages((prev) =>
         prev.map((msg) =>
           msg.MessageID === optimisticMessageId
@@ -326,54 +289,37 @@ export default function ChatScreen() {
             : msg
         )
       );
-      
-      Alert.alert(
-        "Failed to send",
-        "Message could not be sent. Tap to retry.",
-        [
-          { text: "Delete", onPress: () => {
-            setMessages(prev => prev.filter(m => m.MessageID !== optimisticMessageId));
-          }},
-          { text: "Retry", onPress: () => {
-            setMessages(prev => prev.filter(m => m.MessageID !== optimisticMessageId));
+      Alert.alert("Failed to send", "Message could not be sent.", [
+        {
+          text: "Delete",
+          onPress: () =>
+            setMessages((prev) =>
+              prev.filter((m) => m.MessageID !== optimisticMessageId)
+            ),
+        },
+        {
+          text: "Retry",
+          onPress: () => {
+            setMessages((prev) =>
+              prev.filter((m) => m.MessageID !== optimisticMessageId)
+            );
             setMessageText(textToSend);
-          }}
-        ]
-      );
+          },
+        },
+      ]);
     } finally {
       setSending(false);
     }
   };
 
-  // Load more messages (pagination)
   const handleLoadMore = () => {
     if (!loadingMore && hasMore && messages.length > 0) {
       loadMessages(page + 1, true);
     }
   };
 
-  // Mark message as read when viewing
-  const markAsRead = async (messageId, isRead) => {
-    if (isRead) return; // Already read
-
-    try {
-      await messagingApi.markMessageAsRead(messageId);
-
-      // Update local state
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.MessageID === messageId ? { ...msg, IsRead: true } : msg
-        )
-      );
-    } catch (error) {
-      console.error("Error marking as read:", error);
-    }
-  };
-
-  // Delete message
   const handleDeleteMessage = (messageId, senderId) => {
-    const isMine = senderId === currentUserId; // ?? FIX: Use currentUserId
-
+    const isMine = senderId === currentUserId;
     Alert.alert(
       "Delete Message",
       "How would you like to delete this message?",
@@ -395,9 +341,7 @@ export default function ChatScreen() {
   const deleteMessage = async (messageId, deleteFor) => {
     try {
       const result = await messagingApi.deleteMessage(messageId, deleteFor);
-
       if (result.success) {
-        // Remove from local state
         setMessages((prev) =>
           prev.filter((msg) => msg.MessageID !== messageId)
         );
@@ -409,29 +353,23 @@ export default function ChatScreen() {
     }
   };
 
-  // Format timestamp
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
-
     const date = new Date(timestamp);
     const now = new Date();
     const diffDays = Math.floor((now - date) / 86400000);
 
     if (diffDays === 0) {
-      // Today - show time
       return date.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
     } else if (diffDays === 1) {
-      // Yesterday
       return "Yesterday";
     } else if (diffDays < 7) {
-      // This week - show day name
       return date.toLocaleDateString("en-US", { weekday: "short" });
     } else {
-      // Older - show date
       return date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -439,7 +377,6 @@ export default function ChatScreen() {
     }
   };
 
-  // Render message bubble
   const renderMessage = ({ item }) => {
     const isMine = item.SenderUserID === currentUserId;
     const isSending = item._sending === true;
@@ -456,9 +393,7 @@ export default function ChatScreen() {
           isMine ? styles.myMessageContainer : styles.theirMessageContainer,
         ]}
       >
-        {/* ?? Show sender name for their messages */}
         {!isMine && <Text style={styles.senderName}>{otherUserName}</Text>}
-
         <View
           style={[
             styles.messageBubble,
@@ -476,8 +411,6 @@ export default function ChatScreen() {
           >
             {item.Content}
           </Text>
-
-          {/* ? Time and Read Receipt Row */}
           <View style={styles.messageFooter}>
             <Text
               style={[
@@ -487,39 +420,33 @@ export default function ChatScreen() {
             >
               {formatTime(item.SentAt || item.CreatedAt)}
             </Text>
-
-            {/* ?? Read receipt / sending indicator (only for my messages) */}
             {isMine && (
               <View style={styles.readReceiptContainer}>
                 {isFailed ? (
-                  // ❌ Failed indicator
                   <Ionicons
                     name="alert-circle"
                     size={14}
-                    color="#FF5252"
+                    color={colors.danger}
                     style={styles.readReceipt}
                   />
                 ) : isSending ? (
-                  // ⏳ Sending indicator (clock)
-                  <ActivityIndicator 
-                    size="small" 
-                    color="rgba(255,255,255,0.6)" 
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.gray400}
                     style={styles.sendingIndicator}
                   />
                 ) : item.IsRead ? (
-                  // ✅ Blue double check (Read)
                   <Ionicons
                     name="checkmark-done"
                     size={14}
-                    color="#4FC3F7"
+                    color={colors.primary}
                     style={styles.readReceipt}
                   />
                 ) : (
-                  // ✓✓ Gray double check (Delivered)
                   <Ionicons
                     name="checkmark-done"
                     size={14}
-                    color="rgba(255,255,255,0.6)"
+                    color={colors.gray400}
                     style={styles.readReceipt}
                   />
                 )}
@@ -531,43 +458,409 @@ export default function ChatScreen() {
     );
   };
 
-  // Render date separator
-  const renderDateSeparator = (date) => (
-    <View style={styles.dateSeparator}>
-      <Text style={styles.dateSeparatorText}>{formatDateSeparator(date)}</Text>
-    </View>
-  );
-
-  const formatDateSeparator = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffDays = Math.floor((now - date) / 86400000);
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-
-    return date.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    });
-  };
-
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </View>
     );
   }
 
+  // WEB LAYOUT
+  if (Platform.OS === "web") {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          backgroundColor: colors.gray50,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "12px 16px",
+            backgroundColor: colors.primary,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            zIndex: 10,
+            position: "sticky",
+            top: 0,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ padding: 4, marginRight: 12 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+
+          {/* Clickable Profile Section */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              navigation.navigate("ViewProfile", { userId: otherUserId })
+            }
+          >
+            {/* Profile Picture */}
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.gray300,
+                marginRight: 12,
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {otherUserProfile?.profilePictureUrl ? (
+                <img
+                  src={otherUserProfile.profilePictureUrl}
+                  alt={otherUserName}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <Ionicons name="person" size={24} color={colors.gray500} />
+              )}
+            </div>
+
+            {/* Name Only */}
+            <div style={{ flex: 1 }}>
+              <div
+                style={{ fontSize: 16, fontWeight: "600", color: colors.white }}
+              >
+                {otherUserName}
+              </div>
+            </div>
+          </div>
+
+          {/* Menu Button */}
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert("Conversation Options", "Choose an action", [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete Conversation",
+                  style: "destructive",
+                  onPress: async () => {
+                    Alert.alert(
+                      "Delete Conversation",
+                      "Are you sure you want to delete this conversation?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: async () => {
+                            try {
+                              await messagingApi.archiveConversation(
+                                conversationId,
+                                true
+                              );
+                              Alert.alert("Success", "Conversation deleted");
+                              navigation.goBack();
+                            } catch (error) {
+                              Alert.alert(
+                                "Error",
+                                "Failed to delete conversation"
+                              );
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  },
+                },
+                {
+                  text: "Block User",
+                  style: "destructive",
+                  onPress: async () => {
+                    Alert.alert(
+                      "Block User",
+                      "Are you sure you want to block this user? You won't receive messages from them.",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Block",
+                          style: "destructive",
+                          onPress: async () => {
+                            try {
+                              await messagingApi.blockUser(
+                                otherUserId,
+                                "Blocked from chat"
+                              );
+                              Alert.alert("Success", "User blocked");
+                              navigation.goBack();
+                            } catch (error) {
+                              Alert.alert("Error", "Failed to block user");
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  },
+                },
+              ]);
+            }}
+            style={{ padding: 4 }}
+          >
+            <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            overflow: "auto",
+            display: "flex",
+            flexDirection: "column-reverse",
+            padding: "8px",
+            backgroundColor: colors.gray50,
+          }}
+        >
+          {messages.length === 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+              }}
+            >
+              <Ionicons
+                name="chatbubbles-outline"
+                size={64}
+                color={colors.gray300}
+              />
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: "600",
+                  color: colors.gray600,
+                  marginTop: 16,
+                }}
+              >
+                No messages yet
+              </div>
+              <div
+                style={{ fontSize: 14, color: colors.gray500, marginTop: 8 }}
+              >
+                Send a message to start the conversation
+              </div>
+            </div>
+          ) : (
+            <>
+              <div ref={messagesEndRef} />
+              {messages.map((item) => {
+                const isMine = item.SenderUserID === currentUserId;
+                const isSending = item._sending === true;
+                const isFailed = item._failed === true;
+
+                return (
+                  <div
+                    key={item.MessageID}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: isMine ? "flex-end" : "flex-start",
+                      marginBottom: "4px",
+                      maxWidth: "65%",
+                      alignSelf: isMine ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    {!isMine && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: colors.gray600,
+                          marginBottom: 2,
+                          marginLeft: 8,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {otherUserName}
+                      </div>
+                    )}
+                    <div
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        if (!isSending)
+                          handleDeleteMessage(
+                            item.MessageID,
+                            item.SenderUserID
+                          );
+                      }}
+                      style={{
+                        backgroundColor: isMine ? colors.primary : colors.white,
+                        borderRadius: "12px",
+                        padding: "8px 12px",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                        position: "relative",
+                        minWidth: "60px",
+                        opacity: isSending ? 0.7 : isFailed ? 0.5 : 1,
+                        border: isFailed
+                          ? `1px solid ${colors.danger}`
+                          : "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 15,
+                          lineHeight: "20px",
+                          color: isMine ? colors.white : colors.gray900,
+                          wordWrap: "break-word",
+                          whiteSpace: "pre-wrap",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {item.Content}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: "4px",
+                          marginTop: "2px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: isMine ? colors.gray100 : colors.gray500,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {formatTime(item.SentAt || item.CreatedAt)}
+                        </span>
+                        {isMine && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            {isFailed ? (
+                              <Ionicons
+                                name="alert-circle"
+                                size={16}
+                                color={colors.danger}
+                              />
+                            ) : isSending ? (
+                              <div style={{ width: 16, height: 16 }}>
+                                <ActivityIndicator
+                                  size="small"
+                                  color={colors.gray100}
+                                />
+                              </div>
+                            ) : item.IsRead ? (
+                              <Ionicons
+                                name="checkmark-done"
+                                size={16}
+                                color={colors.gray100}
+                              />
+                            ) : (
+                              <Ionicons
+                                name="checkmark-done"
+                                size={16}
+                                color={colors.gray300}
+                              />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {loadingMore && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "16px",
+                  }}
+                >
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "8px 12px",
+            backgroundColor: colors.white,
+            borderTop: `1px solid ${colors.border}`,
+            position: "sticky",
+            bottom: 0,
+          }}
+        >
+          <TextInput
+            style={{
+              flex: 1,
+              backgroundColor: colors.gray100,
+              borderRadius: 24,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              fontSize: 15,
+              maxHeight: 100,
+              marginRight: 8,
+              outline: "none",
+              border: "none",
+            }}
+            placeholder="Type a message"
+            placeholderTextColor={colors.gray400}
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor:
+                messageText.trim() && !sending
+                  ? colors.primary
+                  : colors.gray300,
+              justifyContent: "center",
+              alignItems: "center",
+              transition: "background-color 0.2s",
+            }}
+            onPress={handleSend}
+            disabled={!messageText.trim() || sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={20} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </div>
+      </div>
+    );
+  }
+
+  // MOBILE LAYOUT
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-    >
-      {/* Header */}
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -576,40 +869,75 @@ export default function ChatScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
 
+        {/* Clickable Profile Section */}
         <TouchableOpacity
-          style={styles.headerInfo}
+          style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
           onPress={() =>
             navigation.navigate("ViewProfile", { userId: otherUserId })
           }
         >
-          <Text style={styles.headerName}>{otherUserName}</Text>
-          <Text style={styles.headerStatus}>
-            {signalRConnected
-              ? "Real-time messaging"
-              : usePolling
-              ? "Polling mode"
-              : "Tap to view profile"}
-          </Text>
+          {/* Profile Picture */}
+          <View style={styles.profilePicture}>
+            {otherUserProfile?.profilePictureUrl ? (
+              <Image
+                source={{ uri: otherUserProfile.profilePictureUrl }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Ionicons name="person" size={24} color={colors.gray500} />
+            )}
+          </View>
+
+          {/* Name Only */}
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerName}>{otherUserName}</Text>
+          </View>
         </TouchableOpacity>
 
+        {/* Menu Button */}
         <TouchableOpacity
           onPress={() => {
             Alert.alert("Conversation Options", "Choose an action", [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Archive",
-                onPress: () => {
-                  messagingApi.archiveConversation(conversationId, true);
-                  navigation.goBack();
+                text: "Delete Conversation",
+                style: "destructive",
+                onPress: async () => {
+                  Alert.alert(
+                    "Delete Conversation",
+                    "Are you sure you want to delete this conversation?",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            await messagingApi.archiveConversation(
+                              conversationId,
+                              true
+                            );
+                            Alert.alert("Success", "Conversation deleted");
+                            navigation.goBack();
+                          } catch (error) {
+                            Alert.alert(
+                              "Error",
+                              "Failed to delete conversation"
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
                 },
               },
               {
                 text: "Block User",
                 style: "destructive",
-                onPress: () => {
+                onPress: async () => {
                   Alert.alert(
                     "Block User",
-                    "Are you sure you want to block this user?",
+                    "Are you sure you want to block this user? You won't receive messages from them.",
                     [
                       { text: "Cancel", style: "cancel" },
                       {
@@ -617,7 +945,10 @@ export default function ChatScreen() {
                         style: "destructive",
                         onPress: async () => {
                           try {
-                            await messagingApi.blockUser(otherUserId);
+                            await messagingApi.blockUser(
+                              otherUserId,
+                              "Blocked from chat"
+                            );
                             Alert.alert("Success", "User blocked");
                             navigation.goBack();
                           } catch (error) {
@@ -637,7 +968,6 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages List (inverted for bottom-up) */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -663,24 +993,22 @@ export default function ChatScreen() {
             />
             <Text style={styles.emptyText}>No messages yet</Text>
             <Text style={styles.emptySubtext}>
-              Start the conversation by sending a message
+              Send a message to start the conversation
             </Text>
           </View>
         }
       />
 
-      {/* Message Input */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Type a message..."
+          placeholder="Type a message"
           placeholderTextColor={colors.gray400}
           value={messageText}
           onChangeText={setMessageText}
           multiline
           maxLength={1000}
         />
-
         <TouchableOpacity
           style={[
             styles.sendButton,
@@ -696,15 +1024,12 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
+  container: { flex: 1, backgroundColor: colors.gray50 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -717,129 +1042,83 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.primary,
+    elevation: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    zIndex: 10,
   },
-  backButton: {
-    padding: 4,
-    marginRight: 8,
+  backButton: { padding: 4, marginRight: 12 },
+  profilePicture: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gray300,
+    marginRight: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerInfo: {
-    flex: 1,
-  },
-  headerName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: colors.white,
-  },
-  headerStatus: {
-    fontSize: 12,
-    color: colors.white,
-    opacity: 0.8,
-  },
-  menuButton: {
-    padding: 4,
-  },
+  profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  headerInfo: { flex: 1 },
+  headerName: { fontSize: 16, fontWeight: "600", color: colors.white },
+  menuButton: { padding: 4 },
   messagesList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingVertical: 8,
+    backgroundColor: colors.gray50,
   },
-  messageContainer: {
-    marginVertical: 4,
-    maxWidth: "80%",
-  },
-  myMessageContainer: {
-    alignSelf: "flex-end", // ? RIGHT side for my messages
-  },
-  theirMessageContainer: {
-    alignSelf: "flex-start", // ? LEFT side for their messages
-  },
+  messageContainer: { marginVertical: 2, maxWidth: "75%" },
+  myMessageContainer: { alignSelf: "flex-end" },
+  theirMessageContainer: { alignSelf: "flex-start" },
   senderName: {
     fontSize: 12,
     color: colors.gray600,
-    marginBottom: 4,
-    marginLeft: 12,
+    marginBottom: 2,
+    marginLeft: 8,
     fontWeight: "500",
   },
   messageBubble: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: 12,
     maxWidth: "100%",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  messageSending: {
-    opacity: 0.7, // Slightly faded while sending
-  },
-  messageFailed: {
-    opacity: 0.5,
-    borderWidth: 1,
-    borderColor: '#FF5252',
-  },
-  myMessageBubble: {
-    backgroundColor: colors.primary, // Blue background for my messages
-    borderBottomRightRadius: 4,
-  },
-  theirMessageBubble: {
-    backgroundColor: colors.gray200, // Gray background for their messages
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  messageTextFaded: {
-    opacity: 0.8, // Slightly faded for sending messages
-  },
-  myMessageText: {
-    color: colors.white,
-  },
-  theirMessageText: {
-    color: colors.gray900,
-  },
+  messageSending: { opacity: 0.7 },
+  messageFailed: { opacity: 0.5, borderWidth: 1, borderColor: colors.danger },
+  myMessageBubble: { backgroundColor: colors.primary },
+  theirMessageBubble: { backgroundColor: colors.white },
+  messageText: { fontSize: 15, lineHeight: 20, color: colors.gray900 },
+  messageTextFaded: { opacity: 0.8 },
+  myMessageText: { color: colors.white },
+  theirMessageText: { color: colors.gray900 },
   messageFooter: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 4,
     justifyContent: "flex-end",
+    gap: 4,
   },
-  messageTime: {
-    fontSize: 10, // ? Smaller font for time
-    fontWeight: "400",
-  },
-  myMessageTime: {
-    color: "rgba(255,255,255,0.7)", // ? Semi-transparent white
-  },
-  theirMessageTime: {
-    color: colors.gray500, // ? Gray for their messages
-  },
-  readReceipt: {
-    marginLeft: 3,
-  },
-  readReceiptContainer: {
-    marginLeft: 3,
-  },
-  sendingIndicator: {
-    width: 14,
-    height: 14,
-  },
-  dateSeparator: {
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  dateSeparatorText: {
-    fontSize: 12,
-    color: colors.gray500,
-    backgroundColor: colors.gray100,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
+  messageTime: { fontSize: 11, fontWeight: "400" },
+  myMessageTime: { color: colors.gray100 },
+  theirMessageTime: { color: colors.gray500 },
+  readReceipt: { marginLeft: 3 },
+  readReceiptContainer: { marginLeft: 3 },
+  sendingIndicator: { width: 16, height: 16 },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: colors.gray200,
+    borderTopColor: colors.border,
   },
   input: {
     flex: 1,
@@ -847,7 +1126,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    fontSize: 16,
+    fontSize: 15,
     maxHeight: 100,
     marginRight: 8,
   },
@@ -859,19 +1138,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sendButtonDisabled: {
-    backgroundColor: colors.gray300,
-  },
-  loadingMore: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
+  sendButtonDisabled: { backgroundColor: colors.gray300 },
+  loadingMore: { paddingVertical: 16, alignItems: "center" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
-    transform: [{ scaleY: -1 }], // Flip back since list is inverted
+    transform: [{ scaleY: -1 }],
   },
   emptyText: {
     fontSize: 18,
