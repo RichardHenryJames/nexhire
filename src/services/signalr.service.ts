@@ -18,17 +18,27 @@ export class SignalRService {
 
   static initialize() {
     if (!SIGNALR_CONNECTION_STRING) {
-      console.warn('?? SIGNALR_CONNECTION_STRING not configured');
-  return;
+      console.warn('⚠️ SIGNALR_CONNECTION_STRING not configured');
+      return;
     }
+
+    console.log('🔄 Initializing SignalR Service...');
+    console.log('Connection string present:', !!SIGNALR_CONNECTION_STRING);
+    console.log('Connection string length:', SIGNALR_CONNECTION_STRING.length);
 
     const endpointMatch = SIGNALR_CONNECTION_STRING.match(/Endpoint=([^;]+)/);
     const keyMatch = SIGNALR_CONNECTION_STRING.match(/AccessKey=([^;]+)/);
 
     if (endpointMatch && keyMatch) {
-   this.endpoint = endpointMatch[1];
+      this.endpoint = endpointMatch[1];
       this.accessKey = keyMatch[1];
-      console.log('? SignalR Service initialized');
+      console.log('✅ SignalR Service initialized');
+      console.log('Endpoint:', this.endpoint);
+      console.log('AccessKey length:', this.accessKey.length);
+    } else {
+      console.error('❌ Failed to parse SignalR connection string');
+      console.error('Endpoint match:', !!endpointMatch);
+      console.error('Key match:', !!keyMatch);
     }
   }
 
@@ -61,21 +71,36 @@ export class SignalRService {
    */
   static async sendToUser(userId: string, message: SignalRMessage): Promise<void> {
     if (!this.endpoint || !this.accessKey) {
-      console.warn('SignalR not configured, skipping message');
+      console.warn('⚠️ SignalR not configured, skipping message');
+      console.warn('Endpoint:', this.endpoint);
+      console.warn('AccessKey present:', !!this.accessKey);
       return;
     }
 
     try {
-  const audience = `${this.endpoint}/api/v1/hubs/messaging`;
-    const token = this.generateAccessToken(audience);
+      const audience = `${this.endpoint}/api/v1/hubs/messaging`;
+      const token = this.generateAccessToken(audience);
       
       const url = new URL(`${this.endpoint}/api/v1/hubs/messaging/users/${userId}`);
       const data = JSON.stringify(message);
 
+      console.log(`📤 Sending to SignalR:`, {
+        url: url.toString(),
+        userId,
+        target: message.target,
+        endpoint: this.endpoint
+      });
+
       await this.makeRequest(url, token, data);
-    console.log(`?? SignalR message sent to user ${userId}:`, message.target);
+      console.log(`✅ SignalR message sent to user ${userId}:`, message.target);
     } catch (error) {
-      console.error('SignalR sendToUser error:', error);
+      console.error('❌ SignalR sendToUser error:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+        target: message.target
+      });
+      throw error; // Re-throw to be caught by caller
     }
   }
 
@@ -134,15 +159,26 @@ const req = https.request(url, options, (res) => {
    * Send new message event
    */
   static async emitNewMessage(conversationId: string, message: any, receiverUserId: string) {
-    await this.sendToUser(receiverUserId, {
-      target: 'newMessage',
-      arguments: [message],
-    });
+    console.log(`📤 Emitting newMessage to user ${receiverUserId} and group conversation_${conversationId}`);
+    
+    try {
+      // Send to specific user
+      await this.sendToUser(receiverUserId, {
+        target: 'newMessage',
+        arguments: [message],
+      });
+      console.log(`✅ Message sent to user ${receiverUserId}`);
 
-    await this.sendToGroup(`conversation_${conversationId}`, {
-    target: 'newMessage',
-      arguments: [message],
-    });
+      // Also send to conversation group (for multi-device support)
+      await this.sendToGroup(`conversation_${conversationId}`, {
+        target: 'newMessage',
+        arguments: [message],
+      });
+      console.log(`✅ Message sent to group conversation_${conversationId}`);
+    } catch (error) {
+      console.error('❌ Failed to emit new message via SignalR:', error);
+      throw error;
+    }
   }
 
   /**

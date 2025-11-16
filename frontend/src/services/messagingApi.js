@@ -142,13 +142,15 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
    */
   async markConversationAsRead(conversationId) {
     try {
-      const result = await api.apiCall(`/conversations/${conversationId}/read`, {
-        method: 'PUT',
+      const result = await api.apiCall(`/conversations/${conversationId}/mark-read`, {
+  method: 'PUT',
       });
-   return result;
+      
+      console.log('? Mark conversation as read result:', result);
+      return result;
     } catch (error) {
       console.error('? Mark conversation as read failed:', error);
-      throw error;
+  throw error;
     }
   }
 
@@ -224,10 +226,10 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
    */
   async checkIfBlocked(userId) {
     try {
-      const result = await api.apiCall(`/users/${userId}/blocked`);
+      const result = await api.apiCall(`/users/is-blocked/${userId}`);
  return result;
     } catch (error) {
-      console.error('? Check blocked failed:', error);
+    console.error('? Check blocked failed:', error);
       throw error;
     }
   }

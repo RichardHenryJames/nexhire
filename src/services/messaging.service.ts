@@ -227,7 +227,7 @@ export class MessagingService {
   }
 
   /**
-   * Send a message
+   * Send a message - OPTIMIZED FOR SPEED
    */
   static async sendMessage(params: SendMessageParams) {
     const {
@@ -242,36 +242,65 @@ export class MessagingService {
       replyToMessageId,
     } = params;
 
-    // Insert message
-    const insertQuery = `
-   INSERT INTO Messages (
-   ConversationID, 
-        SenderUserID, 
-        Content, 
- MessageType,
-    AttachmentURL,
-         AttachmentType,
-  AttachmentSize,
-        AttachmentName,
-  ReplyToMessageID,
-   CreatedAt
+    // ✅ OPTIMIZATION 1: Single query with OUTPUT to get inserted message + conversation data
+    const preview = content.length > 200 ? content.substring(0, 197) + "..." : content;
+    
+    const combinedQuery = `
+    DECLARE @MessageID NVARCHAR(50);
+    DECLARE @User1ID NVARCHAR(50);
+    DECLARE @User2ID NVARCHAR(50);
+    
+    -- Insert message
+    INSERT INTO Messages (
+      ConversationID, 
+      SenderUserID, 
+      Content, 
+      MessageType,
+      AttachmentURL,
+      AttachmentType,
+      AttachmentSize,
+      AttachmentName,
+      ReplyToMessageID,
+      CreatedAt
     )
-    OUTPUT 
-        INSERTED.MessageID,
-   INSERTED.ConversationID,
-      INSERTED.SenderUserID,
-        INSERTED.Content,
-       INSERTED.MessageType,
-        INSERTED.AttachmentURL,
-       INSERTED.IsRead,
-      INSERTED.IsDeleted,
-         INSERTED.CreatedAt
-  VALUES (
-       @param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, GETUTCDATE()
-     )
-        `;
+    VALUES (
+      @param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, GETUTCDATE()
+    );
+    
+    SET @MessageID = (SELECT TOP 1 MessageID FROM Messages WHERE ConversationID = @param0 AND SenderUserID = @param1 ORDER BY CreatedAt DESC);
+    
+    -- Update conversation (in same transaction)
+    UPDATE Conversations
+    SET 
+      LastMessageAt = GETUTCDATE(),
+      LastMessagePreview = @param9,
+      LastMessageSenderID = @param1,
+      UpdatedAt = GETUTCDATE()
+    WHERE ConversationID = @param0;
+    
+    -- Get receiver info (in same transaction)
+    SELECT 
+      @User1ID = User1ID,
+      @User2ID = User2ID
+    FROM Conversations 
+    WHERE ConversationID = @param0;
+    
+    -- Return everything in one result
+    SELECT 
+      @MessageID as MessageID,
+      @param0 as ConversationID,
+      @param1 as SenderUserID,
+      @param2 as Content,
+      @param3 as MessageType,
+      @param4 as AttachmentURL,
+      0 as IsRead,
+      0 as IsDeleted,
+      GETUTCDATE() as CreatedAt,
+      CASE WHEN @User1ID = @param1 THEN @User2ID ELSE @User1ID END as ReceiverUserID
+    `;
 
-    const result = await dbService.executeQuery(insertQuery, [
+    // ✅ OPTIMIZATION 2: Execute as single batch query
+    const result = await dbService.executeQuery(combinedQuery, [
       conversationId,
       senderUserId,
       content,
@@ -281,49 +310,30 @@ export class MessagingService {
       attachmentSize || null,
       attachmentName || null,
       replyToMessageId || null,
+      preview, // @param9
     ]);
 
     const newMessage = result.recordset[0];
+    const receiverUserId = newMessage.ReceiverUserID;
 
-    // Update conversation last message
-    const updateConversationQuery = `
-   UPDATE Conversations
-    SET 
- LastMessageAt = GETUTCDATE(),
-       LastMessagePreview = @param0,
-LastMessageSenderID = @param1,
-          UpdatedAt = GETUTCDATE()
-WHERE ConversationID = @param2
-     `;
+    console.log(`📤 Attempting to emit message via SignalR to receiver: ${receiverUserId}`);
 
-    const preview =
-      content.length > 200 ? content.substring(0, 197) + "..." : content;
-    await dbService.executeQuery(updateConversationQuery, [
-      preview,
-      senderUserId,
-      conversationId,
-    ]);
+    // ✅ OPTIMIZATION 3: Fire SignalR async (don't await - let it run in background)
+    // This makes the API response instant
+    SignalRService.emitNewMessage(conversationId, newMessage, receiverUserId)
+      .then(() => console.log(`✅ SignalR emission completed successfully`))
+      .catch(err => {
+        console.error('❌ SignalR emit error (non-critical):', err);
+        console.error('Error details:', {
+          message: err.message,
+          stack: err.stack,
+          conversationId,
+          receiverUserId
+        });
+      });
 
-    // ?? NEW: Get receiver user ID and emit SignalR event
-    try {
-      const conversationQuery = `
-  SELECT User1ID, User2ID 
-        FROM Conversations 
-        WHERE ConversationID = @param0
-      `;
-      const convResult = await dbService.executeQuery(conversationQuery, [conversationId]);
-      
-      if (convResult.recordset && convResult.recordset.length > 0) {
-        const { User1ID, User2ID } = convResult.recordset[0];
-      const receiverUserId = User1ID === senderUserId ? User2ID : User1ID;
- 
-      // Emit real-time event via Azure SignalR
-        await SignalRService.emitNewMessage(conversationId, newMessage, receiverUserId);
-      }
-    } catch (signalrError) {
-      console.error('SignalR emit error (non-critical):', signalrError);
-      // Don't throw - message was saved successfully
-    }
+    // Remove internal field from response
+    delete newMessage.ReceiverUserID;
 
     return newMessage;
   }

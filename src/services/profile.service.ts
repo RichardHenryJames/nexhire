@@ -55,6 +55,7 @@ export class ApplicantService {
                     u.LastName,
                     u.Email,
                     u.Phone,
+                    u.ProfilePictureURL,
                     ISNULL(a.ReferralPoints, 0) as ReferralPoints
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID
@@ -78,7 +79,7 @@ export class ApplicantService {
 
             const profile = applicantResult.recordset[0];
 
-            // ? NEW: Compute derived current job fields and total experience from WorkExperiences
+            // NEW: Compute derived current job fields and total experience from WorkExperiences
             try {
                 const experiences = await dbService.executeQuery(
                     `SELECT TOP 1 * FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)

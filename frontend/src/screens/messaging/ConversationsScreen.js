@@ -151,16 +151,17 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
     }
 
     try {
-      setSearchingUsers(true);
-      console.log('?? Searching for users:', query); // DEBUG LOG
+  setSearchingUsers(true);
+   console.log('?? Searching for users:', query); // DEBUG LOG
    
       // ?? UPDATED: Use real API endpoint instead of filtering conversations
       const result = await messagingApi.searchUsers(query);
       
       console.log('?? Search results:', result); // DEBUG LOG
+      console.log('?? First user data:', result.data?.[0]); // DEBUG: Check first user's data
       
       if (result.success) {
-    setSearchResults(result.data || []);
+        setSearchResults(result.data || []);
   } else {
         setSearchResults([]);
       }

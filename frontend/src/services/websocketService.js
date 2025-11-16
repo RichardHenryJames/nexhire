@@ -10,8 +10,8 @@ class SignalRService {
    * Connect to Azure SignalR
    */
   async connect(token) {
-if (this.connection && this.connected) {
-      console.log('?? Already connected to SignalR');
+    if (this.connection && this.connected) {
+      console.log('✅ Already connected to SignalR');
       return;
     }
 
@@ -19,59 +19,62 @@ if (this.connection && this.connected) {
       // Get SignalR connection info from negotiate endpoint
       const API_URL = process.env.REACT_APP_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
    
-      console.log('?? Negotiating SignalR connection...');
+      console.log('🔄 Negotiating SignalR connection...');
       
       const response = await fetch(`${API_URL}/signalr/negotiate`, {
         method: 'POST',
         headers: {
-    'Authorization': `Bearer ${token || getToken()}`,
+          'Authorization': `Bearer ${token || getToken()}`,
           'Content-Type': 'application/json',
-    },
-    });
+        },
+      });
 
- if (!response.ok) {
-        throw new Error(`Negotiate failed: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Negotiate failed: ${response.status} - ${errorText}`);
       }
 
       const connectionInfo = await response.json();
-console.log('? SignalR connection info received');
+      console.log('✅ SignalR connection info received:', connectionInfo.url);
 
       // Build SignalR connection
       this.connection = new signalR.HubConnectionBuilder()
         .withUrl(connectionInfo.url, {
- accessTokenFactory: () => connectionInfo.accessToken,
+          accessTokenFactory: () => connectionInfo.accessToken,
         })
-        .withAutomaticReconnect()
+        .withAutomaticReconnect([0, 2000, 10000, 30000]) // Retry intervals
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
       // Connection events
-      this.connection.onclose(() => {
+      this.connection.onclose((error) => {
         this.connected = false;
- console.log('? SignalR disconnected');
+        console.log('❌ SignalR disconnected', error ? `(Error: ${error.message})` : '');
       });
 
-      this.connection.onreconnecting(() => {
-        console.log('?? SignalR reconnecting...');
+      this.connection.onreconnecting((error) => {
+        console.log('🔄 SignalR reconnecting...', error ? `(${error.message})` : '');
       });
 
-   this.connection.onreconnected(() => {
-    this.connected = true;
-   console.log('? SignalR reconnected');
+      this.connection.onreconnected((connectionId) => {
+        this.connected = true;
+        console.log('✅ SignalR reconnected (Connection ID:', connectionId, ')');
       });
 
-    // Re-attach all existing listeners
+      // Re-attach all existing listeners
       this.listeners.forEach((callback, event) => {
         this.connection.on(event, callback);
+        console.log(`🎧 Re-attached listener: ${event}`);
       });
 
       // Start connection
+      console.log('🚀 Starting SignalR connection...');
       await this.connection.start();
       this.connected = true;
-      console.log('? SignalR connected');
+      console.log('✅ SignalR connected successfully! Real-time messaging enabled.');
 
     } catch (error) {
-    console.error('? SignalR connection error:', error);
+      console.error('❌ SignalR connection error:', error);
       throw error;
     }
   }
@@ -84,7 +87,7 @@ console.log('? SignalR connection info received');
       await this.connection.stop();
       this.connection = null;
       this.connected = false;
-      console.log('?? SignalR disconnected manually');
+      console.log('🔌 SignalR disconnected manually');
     }
   }
 
@@ -109,10 +112,11 @@ console.log('? SignalR connection info received');
     if (this.connection) {
       this.connection.on(event, callback);
       this.listeners.set(event, callback);
-    console.log(`?? Listening for: ${event}`);
+      console.log(`🎧 Now listening for: ${event}`);
     } else {
       // Store listener for when connection is established
-    this.listeners.set(event, callback);
+      this.listeners.set(event, callback);
+      console.log(`📝 Queued listener for: ${event} (will attach when connected)`);
     }
   }
 
@@ -123,7 +127,7 @@ console.log('? SignalR connection info received');
     if (this.connection) {
       this.connection.off(event);
       this.listeners.delete(event);
-    console.log(`?? Stopped listening for: ${event}`);
+      console.log(`🔇 Stopped listening for: ${event}`);
     }
   }
 

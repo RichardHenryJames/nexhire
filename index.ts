@@ -129,8 +129,11 @@ import {
   recordProfileView,
   getMyProfileViews,
   getPublicProfile,
-  searchUsers, // ?? NEW: User search
+  searchUsers, // ?? User search
 } from "./src/controllers/messaging.controller";
+
+// ?? Import SignalR controller
+import "./src/controllers/signalr.controller";
 
 // Import profile services
 import {

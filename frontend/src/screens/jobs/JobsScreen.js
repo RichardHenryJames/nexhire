@@ -1556,33 +1556,33 @@ const apiStartTime = performance.now();
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
         {/* Saved Jobs Button */}
-        <TouchableOpacity
-          style={[styles.fab, styles.fabSaved]}
-          onPress={() => navigation.navigate('SavedJobs')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="bookmark" size={24} color="#FFFFFF" />
-          {savedIds.length > 0 && (
+     <TouchableOpacity
+     style={[styles.fab, styles.fabSaved]}
+    onPress={() => navigation.navigate('SavedJobs')}
+       activeOpacity={0.8}
+ >
+          <Ionicons name="bookmark" size={20} color="#FFFFFF" />
+      {savedIds.length > 0 && (
             <View style={styles.fabBadge}>
               <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
             </View>
-          )}
-        </TouchableOpacity>
+        )}
+     </TouchableOpacity>
 
         {/* Applications Button */}
         <TouchableOpacity
-          style={[styles.fab, styles.fabApplications]}
+  style={[styles.fab, styles.fabApplications]}
           onPress={() => navigation.navigate('Applications')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="briefcase" size={24} color="#FFFFFF" />
+    activeOpacity={0.8}
+   >
+          <Ionicons name="briefcase" size={20} color="#FFFFFF" />
           {appliedCount > 0 && (
             <View style={styles.fabBadge}>
-              <Text style={styles.fabBadgeText}>{appliedCount}</Text>
-            </View>
-          )}
+         <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+          </View>
+   )}
         </TouchableOpacity>
-      </View>
+  </View>
     </View>
   );
 }

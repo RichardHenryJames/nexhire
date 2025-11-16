@@ -259,22 +259,22 @@ export const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 80,
+    bottom: 20, // ?? FIXED: Reduced from 80 to 20 to sit just above Profile tab
     alignItems: 'center',
-    gap: 12,
+    gap: 8, // ?? REDUCED: From 12 to 8 for tighter spacing
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48, // ?? REDUCED: From 56 to 48 (smaller)
+    height: 48, // ?? REDUCED: From 56 to 48 (smaller)
+    borderRadius: 24, // ?? UPDATED: From 28 to 24 (matches new size)
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    marginVertical: 6,
+    shadowOffset: { width: 0, height: 2 }, // ?? REDUCED: Softer shadow
+    shadowOpacity: 0.25, // ?? REDUCED: From 0.3 to 0.25
+    shadowRadius: 6, // ?? REDUCED: From 8 to 6
+    elevation: 6, // ?? REDUCED: From 8 to 6
+    marginVertical: 4, // ?? REDUCED: From 6 to 4
   },
   fabSaved: {
     backgroundColor: '#0066cc',
