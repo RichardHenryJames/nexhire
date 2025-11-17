@@ -2,7 +2,7 @@ import { dbService } from "./database.service";
 import { SignalRService } from "./signalr.service";
 
 // Azure SignalR connection string
-const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || '';
+const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || "";
 
 interface CreateConversationParams {
   user1Id: string;
@@ -243,8 +243,9 @@ export class MessagingService {
     } = params;
 
     // ✅ OPTIMIZATION 1: Single query with OUTPUT to get inserted message + conversation data
-    const preview = content.length > 200 ? content.substring(0, 197) + "..." : content;
-    
+    const preview =
+      content.length > 200 ? content.substring(0, 197) + "..." : content;
+
     const combinedQuery = `
     DECLARE @MessageID NVARCHAR(50);
     DECLARE @User1ID NVARCHAR(50);
@@ -269,20 +270,24 @@ export class MessagingService {
     
     SET @MessageID = (SELECT TOP 1 MessageID FROM Messages WHERE ConversationID = @param0 AND SenderUserID = @param1 ORDER BY CreatedAt DESC);
     
-    -- Update conversation (in same transaction)
+    -- Get conversation users
+    SELECT 
+      @User1ID = User1ID,
+      @User2ID = User2ID
+    FROM Conversations 
+    WHERE ConversationID = @param0;
+    
+    -- 🆕 FIX: Un-archive conversation for receiver when new message arrives
+    -- This ensures the conversation reappears in their inbox
     UPDATE Conversations
     SET 
       LastMessageAt = GETUTCDATE(),
       LastMessagePreview = @param9,
       LastMessageSenderID = @param1,
-      UpdatedAt = GETUTCDATE()
-    WHERE ConversationID = @param0;
-    
-    -- Get receiver info (in same transaction)
-    SELECT 
-      @User1ID = User1ID,
-      @User2ID = User2ID
-    FROM Conversations 
+    UpdatedAt = GETUTCDATE(),
+      -- Un-archive for the receiver (not the sender)
+      IsArchived1 = CASE WHEN User1ID != @param1 THEN 0 ELSE IsArchived1 END,
+      IsArchived2 = CASE WHEN User2ID != @param1 THEN 0 ELSE IsArchived2 END
     WHERE ConversationID = @param0;
     
     -- Return everything in one result
@@ -316,19 +321,21 @@ export class MessagingService {
     const newMessage = result.recordset[0];
     const receiverUserId = newMessage.ReceiverUserID;
 
-    console.log(`📤 Attempting to emit message via SignalR to receiver: ${receiverUserId}`);
+    console.log(
+      `📤 Attempting to emit message via SignalR to receiver: ${receiverUserId}`
+    );
 
     // ✅ OPTIMIZATION 3: Fire SignalR async (don't await - let it run in background)
     // This makes the API response instant
     SignalRService.emitNewMessage(conversationId, newMessage, receiverUserId)
       .then(() => console.log(`✅ SignalR emission completed successfully`))
-      .catch(err => {
-        console.error('❌ SignalR emit error (non-critical):', err);
-        console.error('Error details:', {
+      .catch((err) => {
+        console.error("❌ SignalR emit error (non-critical):", err);
+        console.error("Error details:", {
           message: err.message,
           stack: err.stack,
           conversationId,
-          receiverUserId
+          receiverUserId,
         });
       });
 
@@ -474,15 +481,19 @@ SELECT COUNT(*) as Total
     // ?? NEW: Emit SignalR event to sender
     if (senderUserId && markedCount > 0) {
       try {
-  await SignalRService.emitConversationRead(conversationId, userId, senderUserId);
+        await SignalRService.emitConversationRead(
+          conversationId,
+          userId,
+          senderUserId
+        );
       } catch (signalrError) {
-   console.error('SignalR emit error (non-critical):', signalrError);
-    }
+        console.error("SignalR emit error (non-critical):", signalrError);
+      }
     }
 
-return {
+    return {
       success: true,
-  markedCount,
+      markedCount,
     };
   }
 
@@ -492,15 +503,20 @@ return {
   static async getUnreadCount(userId: string) {
     const query = `
             SELECT 
-         COUNT(*) as TotalUnread,
-                COUNT(DISTINCT m.ConversationID) as UnreadConversations
+      COUNT(*) as TotalUnread,
+          COUNT(DISTINCT m.ConversationID) as UnreadConversations
     FROM Messages m
-            INNER JOIN Conversations c ON c.ConversationID = m.ConversationID
-            WHERE (c.User1ID = @param0 OR c.User2ID = @param0)
+    INNER JOIN Conversations c ON c.ConversationID = m.ConversationID
+    WHERE (c.User1ID = @param0 OR c.User2ID = @param0)
        AND m.SenderUserID != @param0
    AND m.IsRead = 0
   AND m.IsDeleted = 0
-        `;
+      -- 🆕 FIX: Only count unread messages from non-archived conversations
+      AND (
+        (c.User1ID = @param0 AND c.IsArchived1 = 0) OR
+        (c.User2ID = @param0 AND c.IsArchived2 = 0)
+      )
+ `;
 
     const result = await dbService.executeQuery(query, [userId]);
 

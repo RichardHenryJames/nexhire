@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import messagingApi from '../../services/messagingApi';
 import { colors } from '../../styles/theme';
@@ -35,25 +35,34 @@ export default function ConversationsScreen() {
     try {
       const result = await messagingApi.getMyConversations();
  if (result.success) {
-      setConversations(result.data || []);
+        setConversations(result.data || []);
       }
-      
+
       // Load unread count
       const unreadResult = await messagingApi.getUnreadCount();
       if (unreadResult.success) {
         setUnreadCount(unreadResult.data.TotalUnread || 0);
       }
     } catch (error) {
-      console.error('Error loading conversations:', error);
+    console.error('Error loading conversations:', error);
     } finally {
-      setLoading(false);
+    setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  // Initial load on mount
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Refresh whenever the screen comes into focus (navigating back to Messages)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('?? Messages screen focused - refreshing data...');
+      loadConversations();
+ }, [loadConversations])
+  );
 
   // Refresh handler
   const onRefresh = useCallback(() => {
