@@ -468,31 +468,42 @@ export default function ChatScreen() {
     );
   }
 
+  // Handle back navigation - works even after hard refresh
+  const handleBackPress = () => {
+    // Check if we can go back in the navigation history
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // If no history (e.g., after hard refresh), navigate to Messages screen
+      navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Messages' } });
+    }
+  };
+
   // WEB LAYOUT
   if (Platform.OS === "web") {
     return (
       <div
         style={{
-          display: "flex",
+   display: "flex",
           flexDirection: "column",
           height: "100vh",
-          backgroundColor: colors.gray50,
+       backgroundColor: colors.gray50,
         }}
       >
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "12px 16px",
-            backgroundColor: colors.primary,
+        style={{
+  display: "flex",
+         alignItems: "center",
+  padding: "12px 16px",
+          backgroundColor: colors.primary,
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            zIndex: 10,
-            position: "sticky",
+     zIndex: 10,
+         position: "sticky",
             top: 0,
           }}
         >
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+          onPress={handleBackPress}
             style={{ padding: 4, marginRight: 12 }}
           >
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -863,10 +874,10 @@ export default function ChatScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleBackPress}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+       <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
 
         {/* Clickable Profile Section */}
