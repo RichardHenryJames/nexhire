@@ -133,6 +133,22 @@ export class WorkExperienceService {
       await dbService.executeQuery(updateQuery, params);
     }
 
+    // ? NEW: Also save professional summary to Applicants.Summary if provided
+    // This ensures the summary from registration appears in the profile
+    if (data.description) {
+      console.log(`Saving professional summary to Applicants.Summary for applicant ${applicantId}`);
+      try {
+  await dbService.executeQuery(
+          `UPDATE Applicants SET Summary = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
+          [applicantId, data.description]
+        );
+        console.log(`Successfully saved professional summary to profile`);
+      } catch (error) {
+        console.warn('Failed to update Applicants.Summary:', error);
+    // Don't throw - this is a supplementary operation
+      }
+    }
+
     // Update derived fields on Applicants
     await this.updateApplicantDerivedFields(applicantId);
     // Recalculate profile completeness (centralized)

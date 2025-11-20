@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -39,6 +39,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState(''); // 🎁 NEW: Referral code
   const [submitting, setSubmitting] = useState(false);
 
   // Pre-populate Google user data
@@ -56,11 +57,15 @@ export default function EmployerAccountScreen({ navigation, route }) {
   }, [isGoogleUser, googleUser]);
 
   const validate = () => {
-    if (!firstName.trim() || !lastName.trim()) return 'Name is required';
+    if (!firstName.trim() || !lastName.trim()) return 'First name and last name are required';
     if (!email.trim()) return 'Email is required';
     
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    
     // Skip password validation for Google users and already authenticated users
-    if (!nexhireAPI.token && !isGoogleUser) {
+    if (!refopenAPI.token && !isGoogleUser) {
       if (!password || password.length < 6) return 'Password must be at least 6 characters';
       if (password !== confirmPassword) return 'Passwords do not match';
     }
@@ -109,6 +114,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           userType: 'Employer',
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+          ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           
           // Add Google OAuth data
           googleAuth: {
@@ -135,12 +141,50 @@ export default function EmployerAccountScreen({ navigation, route }) {
           // Navigation will be handled automatically by AuthContext when isAuthenticated becomes true
           return;
         } else {
-          throw new Error(result.error || 'Google registration failed');
+          // ✅ NEW: Check if error is "User already exists"
+          const errorMessage = result.error || 'Google registration failed';
+          
+          if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+            console.log('⚠️ User already exists error - clearing auth data and redirecting to login');
+            
+            // Clear any pending Google auth data
+            clearPendingGoogleAuth();
+            
+            Alert.alert(
+              'Account Already Exists', 
+              `An account with ${email} already exists. Would you like to sign in instead?`,
+              [
+                { 
+                  text: 'Cancel', 
+                  style: 'cancel'
+                },
+                { 
+                  text: 'Sign In', 
+                  onPress: () => {
+                    // Navigate to login screen
+                    if (typeof window !== 'undefined') {
+                      // For web
+                      window.location.href = '/login';
+                    } else {
+                      // For native
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
+                    }
+                  }
+                }
+              ]
+            );
+            return;
+          }
+          
+          throw new Error(errorMessage);
         }
       }
 
       // Original flow for non-Google users
-      if (!nexhireAPI.token) {
+      if (!refopenAPI.token) {
         const payload = {
           email: email.trim().toLowerCase(),
           password,
@@ -149,14 +193,52 @@ export default function EmployerAccountScreen({ navigation, route }) {
           userType: 'Employer',
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth }),
+          ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           ...organizationPayload,
         };
 
-        const reg = await nexhireAPI.register(payload);
-        if (!reg?.success) throw new Error(reg?.error || 'Registration failed');
+        const reg = await refopenAPI.register(payload);
+        if (!reg?.success) {
+          // ✅ NEW: Check if error is "User already exists"
+          const errorMessage = reg?.error || 'Registration failed';
+          
+          if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+            console.log('⚠️ User already exists error - redirecting to login');
+            
+            Alert.alert(
+              'Account Already Exists', 
+              `An account with ${email} already exists. Would you like to sign in instead?`,
+              [
+                { 
+                  text: 'Cancel', 
+                  style: 'cancel'
+                },
+                { 
+                  text: 'Sign In', 
+                  onPress: () => {
+                    // Navigate to login screen
+                    if (typeof window !== 'undefined') {
+                      // For web
+                      window.location.href = '/login';
+                    } else {
+                      // For native
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
+                    }
+                  }
+                }
+              ]
+            );
+            return;
+          }
+          
+          throw new Error(errorMessage);
+        }
 
         // Auto-login
-        const login = await nexhireAPI.login(email.trim().toLowerCase(), password);
+        const login = await refopenAPI.login(email.trim().toLowerCase(), password);
         if (!login?.success) throw new Error(login?.error || 'Login failed');
 
         Alert.alert('Welcome', 'Your employer account is ready.', [
@@ -167,11 +249,11 @@ export default function EmployerAccountScreen({ navigation, route }) {
 
       // If already authenticated, best-effort: initialize employer profile if backend supports it, fallback to profile update
       try {
-        const res = await nexhireAPI.initializeEmployerProfile(organizationPayload);
+        const res = await refopenAPI.initializeEmployerProfile(organizationPayload);
         if (!res?.success) throw new Error(res?.error || 'Init failed');
       } catch (_) {
         // Fallback: at least update basic profile
-        await nexhireAPI.updateProfile({ firstName, lastName, phone });
+        await refopenAPI.updateProfile({ firstName, lastName, phone });
       }
 
       Alert.alert('All set!', 'Employer onboarding steps completed.', [
@@ -179,10 +261,48 @@ export default function EmployerAccountScreen({ navigation, route }) {
       ]);
     } catch (e) {
       console.error('Employer account creation error:', e);
-      Alert.alert('Error', e.message || 'Failed to complete setup');
-    } finally {
-      setSubmitting(false);
-    }
+      
+      // ✅ NEW: Also handle caught errors for "already exists"
+      const errorMessage = e.message || 'Failed to complete setup';
+      
+      if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+        console.log('⚠️ User already exists error (caught) - clearing auth data and redirecting to login');
+        
+        // Clear any pending Google auth data
+        if (isGoogleUser) {
+          clearPendingGoogleAuth();
+        }
+        
+        Alert.alert(
+          'Account Already Exists', 
+          `An account with ${email} already exists. Would you like to sign in instead?`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel'
+            },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                // Navigate to login screen
+                if (typeof window !== 'undefined') {
+                  // For web
+                  window.location.href = '/login';
+                } else {
+                  // For native
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                  });
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -225,7 +345,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
-              First Name
+              First Name <Text style={styles.required}>*</Text>
               {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
@@ -234,11 +354,12 @@ export default function EmployerAccountScreen({ navigation, route }) {
               onChangeText={setFirstName}
               editable={true}
               placeholder="Enter first name"
+              placeholderTextColor={colors.gray400}
             />
           </View>
           <View style={[styles.field, { flex: 1, marginLeft: 6 }]}> 
             <Text style={styles.label}>
-              Last Name
+              Last Name <Text style={styles.required}>*</Text>
               {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
@@ -247,13 +368,14 @@ export default function EmployerAccountScreen({ navigation, route }) {
               onChangeText={setLastName}
               editable={true}
               placeholder="Enter last name"
+              placeholderTextColor={colors.gray400}
             />
           </View>
         </View>
 
         <View style={styles.field}> 
           <Text style={styles.label}>
-            Email Address
+            Email Address <Text style={styles.required}>*</Text>
             {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
           </Text>
           <TextInput 
@@ -263,23 +385,53 @@ export default function EmployerAccountScreen({ navigation, route }) {
             autoCapitalize="none"
             editable={true}
             placeholder="Enter email address"
+            placeholderTextColor={colors.gray400}
           />
         </View>
 
+        {/* 🎁 NEW: Referral Code Input (Optional) */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Referral Code (Optional)</Text>
+          <View style={styles.referralCodeContainer}>
+            <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+            <TextInput
+              style={[styles.input, styles.referralCodeInput]}
+              placeholder="Enter referral code"
+              placeholderTextColor={colors.gray400}
+              value={referralCode}
+              onChangeText={(text) => {
+                // Convert to uppercase and remove spaces
+                const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                setReferralCode(cleanCode);
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={8}
+            />
+          </View>
+          <View style={styles.referralCodeHint}>
+            <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+            <Text style={styles.referralCodeHintText}>
+              Have a referral code? Get ₹50 bonus when you sign up!
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.field}> 
-          <Text style={styles.label}>Phone Number (Optional)</Text>
+          <Text style={styles.label}>Phone Number</Text>
           <TextInput 
             style={styles.input} 
             value={phone} 
             onChangeText={setPhone}
             placeholder="Enter phone number"
+            placeholderTextColor={colors.gray400}
             keyboardType="phone-pad"
           />
         </View>
 
         {/* ✅ Wrapped in field container with matching button style */}
         <View style={styles.field}> 
-          <Text style={styles.label}>Date of Birth (Optional)</Text>
+          <Text style={styles.label}>Date of Birth</Text>
           <DatePicker
             value={dateOfBirth}
             onChange={(date) => setDateOfBirth(date)}
@@ -291,7 +443,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         </View>
 
         {/* Only show password fields for non-Google users and unauthenticated users */}
-        {!nexhireAPI.token && !isGoogleUser && (
+        {!refopenAPI.token && !isGoogleUser && (
           <>
             <View style={styles.field}> 
               <Text style={styles.label}>Password</Text>
@@ -301,6 +453,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                 onChangeText={setPassword} 
                 secureTextEntry
                 placeholder="Enter password (min 6 characters)"
+                placeholderTextColor={colors.gray400}
               />
             </View>
             <View style={styles.field}> 
@@ -311,6 +464,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                 onChangeText={setConfirmPassword} 
                 secureTextEntry
                 placeholder="Confirm your password"
+                placeholderTextColor={colors.gray400}
               />
             </View>
           </>
@@ -426,6 +580,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
+  required: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
+  },
   prefilledLabel: {
     color: colors.success,
     fontWeight: typography.weights.normal,
@@ -444,6 +602,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success + '08',
     borderColor: colors.success,
     borderWidth: 1.5,
+  },
+  // 🎁 NEW: Referral code styles
+  referralCodeContainer: {
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   summaryContainer: {
     backgroundColor: colors.surface,

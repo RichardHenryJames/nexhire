@@ -2,7 +2,7 @@ import { Dimensions, Platform } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Color palette - NexHire Brand Colors
+// Color palette - RefOpen Brand Colors
 export const colors = {
   // Primary brand colors
   primary: '#3B82F6',      // Blue - matches your backend CORS config
@@ -34,6 +34,7 @@ export const colors = {
   border: '#E5E7EB',
   
   // Text colors
+  text: '#111827',         // ?? ADD THIS - Default text color
   textPrimary: '#111827',
   textSecondary: '#6B7280',
   textLight: '#9CA3AF',

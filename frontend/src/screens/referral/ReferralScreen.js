@@ -14,11 +14,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ReferralProofModal from '../../components/ReferralProofModal';
 import { showToast } from '../../components/Toast';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ReferralScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
@@ -66,7 +67,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadMyRequests = async () => {
     try {
-      const result = await nexhireAPI.getMyReferralRequests(1, 50);
+      const result = await refopenAPI.getMyReferralRequests(1, 50);
       if (result.success) {
         setMyRequests(result.data?.requests || []);
       }
@@ -78,7 +79,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadRequestsToMe = async () => {
     try {
-      const result = await nexhireAPI.getAvailableReferralRequests(1, 50);
+      const result = await refopenAPI.getAvailableReferralRequests(1, 50);
       if (result.success) {
         setRequestsToMe(result.data?.requests || []);
       }
@@ -90,7 +91,7 @@ export default function ReferralScreen({ navigation }) {
 
   const loadStats = async () => {
     try {
-      const result = await nexhireAPI.getReferrerStats();
+      const result = await refopenAPI.getReferrerStats();
       if (result.success) {
         setStats(result.data || { pendingCount: 0 });
       }
@@ -136,7 +137,7 @@ export default function ReferralScreen({ navigation }) {
     console.log('User confirmed cancellation for request:', requestId);
     try {
       console.log('Making API call to cancel request...');
-      const res = await nexhireAPI.cancelReferralRequest(requestId);
+      const res = await refopenAPI.cancelReferralRequest(requestId);
       console.log('API response:', res);
       
       if (res.success) {
@@ -177,7 +178,7 @@ export default function ReferralScreen({ navigation }) {
       console.log('Submitting proof with claim:', proofData);
       
       // Use the new enhanced API that combines claim + proof
-      const result = await nexhireAPI.claimReferralRequestWithProof(
+      const result = await refopenAPI.claimReferralRequestWithProof(
         selectedRequest.RequestID,
         proofData
       );
@@ -225,7 +226,7 @@ export default function ReferralScreen({ navigation }) {
   const handleVerifyReferral = async (requestId) => {
     console.log('? Verify pressed for request:', requestId);
     try {
-      const result = await nexhireAPI.verifyReferralCompletion(requestId, true);
+      const result = await refopenAPI.verifyReferralCompletion(requestId, true);
       console.log('? Verify API result:', result);
       if (result.success) {
         showToast('Referral verified', 'success');
@@ -505,12 +506,34 @@ export default function ReferralScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with Get Your Custom Referral Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Referrals</Text>
-        <Text style={styles.headerSubtitle}>
-          Connect job seekers with opportunities
-        </Text>
+    <View style={styles.headerLeft}>
+ <Text style={styles.headerTitle}>Referrals</Text>
+      <Text style={styles.headerSubtitle}>
+            Connect job seekers with opportunities
+   </Text>
+ </View>
+   
+        {/* NEW: Get Your Custom Referral Button */}
+        {isJobSeeker && (
+          <TouchableOpacity
+            style={styles.getReferralBtn}
+   onPress={() => navigation.navigate('AskReferral')}
+         activeOpacity={0.8}
+   >
+      <LinearGradient
+colors={['#FEB800', '#FF8C00']}
+  start={{ x: 0, y: 0 }}
+     end={{ x: 1, y: 1 }}
+    style={styles.getReferralGradient}
+            >
+   <Ionicons name="gift" size={18} color={colors.white} />
+      <Text style={styles.getReferralText}>Get Your{'\n'}Custom Referral</Text>
+     <Ionicons name="arrow-forward" size={16} color={colors.white} />
+        </LinearGradient>
+          </TouchableOpacity>
+)}
       </View>
 
       {/* Tab Navigation */}
@@ -640,20 +663,56 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: 16, // Reduced from 20
-    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  headerLeft: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginBottom: 2, // Reduced from 4
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: typography.sizes.sm, // Reduced from md
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
+  },
+  // NEW: Get Your Custom Referral Button Styles
+  getReferralBtn: {
+    marginLeft: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#FF8C00',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+ shadowRadius: 8,
+    elevation: 8,
+  },
+  getReferralGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  getReferralText: {
+ fontSize: typography.sizes.xs,
+  fontWeight: typography.weights.bold,
+ color: colors.white,
+    textAlign: 'center',
+    lineHeight: 14,
+    letterSpacing: 0.3,
   },
   tabNavigation: {
     flexDirection: 'row',

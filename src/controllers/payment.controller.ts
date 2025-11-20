@@ -30,10 +30,6 @@ export const createRazorpayOrder = withErrorHandling(async (req: HttpRequest, co
             throw new ValidationError('Amount and plan ID are required');
         }
 
-        if (orderData.amount < 100) {
-            throw new ValidationError('Minimum payment amount is ?1 (100 paise)');
-        }
-
         const order = await RazorpayService.createOrder(orderData, user.userId);
         
         return {

@@ -4,9 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
 
 // FIXED: Use environment variable or fallback to production API
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nexhire-api-func.azurewebsites.net/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
 
-class NexHireAPI {
+class RefOpenAPI {
   constructor() {
     this.token = null;
     this.refreshToken = null;
@@ -50,7 +50,7 @@ class NexHireAPI {
     
     try {
       // Get stored token
-      const token = await this.getToken('nexhire_token');
+      const token = await this.getToken('refopen_token');
       
       // Default headers with config values
       const defaultHeaders = {
@@ -136,8 +136,8 @@ class NexHireAPI {
   async setTokens(accessToken, refreshToken) {
     try {
       await AsyncStorage.multiSet([
-        ['nexhire_token', accessToken],
-        ['nexhire_refresh_token', refreshToken]
+        ['refopen_token', accessToken],
+        ['refopen_refresh_token', refreshToken]
       ]);
       
       if (frontendConfig.shouldLog('debug')) {
@@ -174,8 +174,8 @@ class NexHireAPI {
   async init() {
     try {
       console.log('🔧 API.init() called - loading tokens from storage...');
-      this.token = await this.getToken('nexhire_token');
-      this.refreshToken = await this.getToken('nexhire_refresh_token');
+      this.token = await this.getToken('refopen_token');
+      this.refreshToken = await this.getToken('refopen_refresh_token');
       
       if (this.token) {
         console.log('✅ API.init() - Token loaded successfully');
@@ -196,8 +196,8 @@ class NexHireAPI {
     this.token = null;
     this.refreshToken = null;
     
-    await this.removeToken('nexhire_token');
-    await this.removeToken('nexhire_refresh_token');
+    await this.removeToken('refopen_token');
+    await this.removeToken('refopen_refresh_token');
     console.log('Tokens cleared');
   }
 
@@ -1035,10 +1035,12 @@ class NexHireAPI {
   }
 
   // NEW: Get organizations for employer registration - FIXED to use real database
-  async getOrganizations(searchTerm = '') {
+  async getOrganizations(searchTerm = '', limit = null, offset = 0) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
+      if (limit !== null) params.append('limit', limit.toString());
+      if (offset > 0) params.append('offset', offset.toString());
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await this.apiCall(endpoint);
@@ -1646,6 +1648,187 @@ class NexHireAPI {
     return this.getMyResumes();
   }
 
+  // ✅ NEW: Set a resume as primary
+  async setPrimaryResume(resumeId) {
+    console.log('📝 API: Setting primary resume:', resumeId);
+    
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+
+if (!resumeId) {
+      console.error('❌ No resume ID provided');
+      return { success: false, error: 'Resume ID is required' };
+  }
+    
+    try {
+      console.log('📝 Making PUT request to:', `/users/resume/${resumeId}/primary`);
+      
+      const result = await this.apiCall(`/users/resume/${resumeId}/primary`, {
+        method: 'PUT',
+      });
+  
+      console.log('✅ Set primary resume successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Set primary resume failed:', error.message);
+      return { 
+ success: false, 
+   error: error.message || 'Failed to set primary resume' 
+      };
+    }
+  }
+
+  // ✅ NEW: Delete a resume
+  async deleteResume(resumeId) {
+    console.log('🗑️ API: Deleting resume:', resumeId);
+    
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    if (!resumeId) {
+      console.error('❌ No resume ID provided');
+      return { success: false, error: 'Resume ID is required' };
+    }
+    
+    try {
+      console.log('🗑️ Making DELETE request to:', `/users/resume/${resumeId}`);
+      const result = await this.apiCall(`/users/resume/${resumeId}`, { method: 'DELETE' });
+      console.log('✅ Raw delete resume response:', result);
+
+      // Normalize response shape (backend returns success + softDelete flags)
+      const normalized = {
+ success: !!result.success,
+ softDelete: !!result.softDelete,
+ message: result.message || (result.softDelete
+ ? 'Resume archived.'
+ : 'Resume permanently deleted.'),
+ applicationCount: result.applicationCount ??0,
+ referralCount: result.referralCount ??0
+ };
+
+ // Optional inline user feedback (can be removed if handled in UI components)
+ try {
+ if (normalized.success) {
+ if (normalized.softDelete) {
+ Alert && Alert.alert(
+ 'Resume Archived',
+ `${normalized.message}\nReferenced by ${normalized.applicationCount} application(s) and ${normalized.referralCount} referral(s).`
+ );
+ } else {
+ Alert && Alert.alert('Resume Deleted', normalized.message);
+ }
+ }
+ } catch (alertErr) {
+ console.warn('Alert failed (web env?)', alertErr);
+ }
+
+ return normalized;
+    } catch (error) {
+      console.error('❌ Delete resume failed:', error.message);
+      return { success: false, error: error.message || 'Failed to delete resume' };
+    }
+  }
+
+  // ========================================================================
+  // WALLET SYSTEM APIs - Complete Integration
+  // ========================================================================
+
+  // 💰 NEW: Get wallet balance
+  async getWalletBalance() {
+    // 🔧 CRITICAL FIX: Ensure token is loaded before checking
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Loading wallet balance...');
+      return await this.apiCall('/wallet/balance');
+    } catch (error) {
+      console.error('❌ Failed to load wallet balance:', error);
+      return { success: false, error: error.message || 'Failed to load wallet balance' };
+    }
+  }
+
+  // 💰 NEW: Get full wallet details
+  async getWallet() {
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Loading wallet details...');
+      return await this.apiCall('/wallet');
+    } catch (error) {
+      console.error('❌ Failed to load wallet:', error);
+      return { success: false, error: error.message || 'Failed to load wallet' };
+    }
+  }
+
+  // 💰 NEW: Get wallet transactions
+  async getWalletTransactions(page = 1, pageSize = 20, transactionType) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    // Add transaction type filter if provided
+    if (transactionType) {
+      params.append('type', transactionType);
+    }
+    
+    return this.apiCall(`/wallet/transactions?${params}`);
+  }
+
+  // 💰 NEW: Create wallet recharge order
+  async createWalletRechargeOrder(amount, currencyId = 4) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/wallet/recharge/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currencyId }),
+    });
+  }
+
+  // 💰 NEW: Verify wallet recharge
+  async verifyWalletRecharge(verificationData) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/wallet/recharge/verify', {
+      method: 'POST',
+      body: JSON.stringify(verificationData),
+    });
+  }
+
   // ========================================================================
   // REFERRAL SYSTEM APIs - Complete Integration
   // ========================================================================
@@ -2124,4 +2307,4 @@ class NexHireAPI {
   }
 }
 
-export default new NexHireAPI();
+export default new RefOpenAPI();

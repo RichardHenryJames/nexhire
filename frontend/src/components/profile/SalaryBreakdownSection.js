@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection';
 
 // Helpers to normalize backend data to a consistent shape
@@ -97,8 +97,8 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
   const loadReferenceData = async () => {
     try {
       const [componentsRes, currenciesRes] = await Promise.all([
-        nexhireAPI.getSalaryComponents(),
-        nexhireAPI.getCurrencies(),
+        refopenAPI.getSalaryComponents(),
+        refopenAPI.getCurrencies(),
       ]);
       if (componentsRes?.success) setSalaryComponents(normalizeSalaryComponents(componentsRes.data));
       if (currenciesRes?.success) {
@@ -236,7 +236,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
     setLoading(true);
     try {
-      const result = await nexhireAPI.updateSalaryBreakdown(profile.UserID, payload);
+      const result = await refopenAPI.updateSalaryBreakdown(profile.UserID, payload);
       if (result?.success) {
         setLocalSalaryBreakdown(payload);
         setProfile && setProfile((prev) => ({ ...prev, salaryBreakdown: payload }));
@@ -533,11 +533,48 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
         </View>
       )}
 
-      {compact ? renderCompactView() : null}
+      {/* Show compact view when not editing, or inline editor when embedded and editing */}
+      {embedded && editing ? (
+        <View style={{ flex: 1, padding: 16 }}>
+          {renderInlineEditorBody()}
+          
+          {/* Add footer actions for embedded edit mode */}
+          <View style={styles.salaryModalFooterActions}>
+            <TouchableOpacity 
+              style={styles.salaryModalCancelButton}
+              onPress={() => onUpdate && onUpdate({})}
+            >
+              <Ionicons name="close" size={16} color={colors.gray600} />
+              <Text style={styles.salaryModalCancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.salaryModalSaveButton}
+              onPress={() => saveSalaryBreakdown(false)}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <>
+                  <Ionicons name="save-outline" size={16} color={colors.white} />
+                  <Text style={styles.salaryModalSaveButtonText}>Save</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={{ padding: 16 }}>
+          {compact ? renderCompactView() : renderInlineEditorBody()}
+        </View>
+      )}
 
-      <Modal visible={showSalaryModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSalaryModal(false)}>
-        {renderEditor()}
-      </Modal>
+      {/* Only show modal when not embedded */}
+      {!embedded && (
+        <Modal visible={showSalaryModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSalaryModal(false)}>
+          {renderEditor()}
+        </Modal>
+      )}
     </View>
   );
 });

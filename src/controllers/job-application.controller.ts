@@ -41,8 +41,43 @@ export const applyForJob = withAuth(async (req: HttpRequest, context: Invocation
             status: 201,
             jsonBody: successResponse(application, 'Job application submitted successfully')
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in applyForJob:', error);
+        
+        // Return proper status codes for different error types
+        if (error?.name === 'ValidationError') {
+            return {
+                status: 400,
+                jsonBody: { 
+                    success: false, 
+                    error: 'Validation error', 
+                    message: error.message || 'Invalid input'
+                }
+            };
+        }
+        
+        if (error?.name === 'ConflictError') {
+            return {
+                status: 409,
+                jsonBody: { 
+                    success: false, 
+                    error: 'Conflict', 
+                    message: error.message || 'Resource conflict'
+                }
+            };
+        }
+        
+        if (error?.name === 'NotFoundError') {
+            return {
+                status: 404,
+                jsonBody: { 
+                    success: false, 
+                    error: 'Not found', 
+                    message: error.message || 'Resource not found'
+                }
+            };
+        }
+        
         return {
             status: 500,
             jsonBody: { 

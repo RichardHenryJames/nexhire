@@ -1,5 +1,5 @@
 /**
- * Job Scraper Controller for NexHire
+ * Job Scraper Controller for RefOpen
  * Production-ready endpoints for managing automated job scraping
  */
 

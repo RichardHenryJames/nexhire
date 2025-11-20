@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import ProfileSection, { useEditing } from './ProfileSection';
 
 // Import the same data structures from EducationDetailsScreen
@@ -225,7 +225,7 @@ export default function EducationSection({
 
   const loadCountries = async () => {
     try {
-      const response = await nexhireAPI.getCountries();
+      const response = await refopenAPI.getCountries();
       
       if (response.success && response.data.countries) {
         const transformedCountries = response.data.countries.map(country => ({
@@ -256,7 +256,7 @@ export default function EducationSection({
   const loadColleges = async () => {
     try {
       setLoading(true);
-      const response = await nexhireAPI.getColleges(selectedCountry);
+      const response = await refopenAPI.getColleges(selectedCountry);
       
       if (response.success) {
         const transformedColleges = response.data.map(institution => ({
@@ -432,7 +432,7 @@ export default function EducationSection({
         graduationYear: profile.graduationYear,
         gpa: profile.gpa,
       };
-      const result = await nexhireAPI.updateEducation(educationData);
+      const result = await refopenAPI.updateEducation(educationData);
       if (!result.success) {
         console.warn('Education save failed:', result.error);
         Alert.alert('Failed', result.error || 'Failed to update education');
@@ -665,25 +665,17 @@ const EducationContent = ({
             fieldName="highestEducation"
           />
 
-          <SelectionButton
-            label="Field of Study"
-            value={profile.fieldOfStudy}
-            placeholder={
-              profile.highestEducation 
-                ? `Select field for ${profile.highestEducation}` 
-                : "Select degree type first"
-            }
-            onPress={() => {
-              if (!profile.highestEducation) {
-                Alert.alert('Select Degree First', 'Please select your degree type before choosing field of study');
-                return;
-              }
-              openModal('field');
-            }}
-            disabled={!profile.highestEducation}
-            icon="library"
-            fieldName="fieldOfStudy"
-          />
+          {/* Only show Field of Study if Highest Education is selected */}
+      {profile.highestEducation && (
+            <SelectionButton
+     label="Field of Study"
+   value={profile.fieldOfStudy}
+     placeholder={`Select field for ${profile.highestEducation}`}
+       onPress={() => openModal('field')}
+ icon="library"
+    fieldName="fieldOfStudy"
+     />
+          )}
 
           {/* Enhanced Education Details with Database Support */}
           <View style={styles.fieldContainer}>
@@ -697,6 +689,7 @@ const EducationContent = ({
                 if (onUpdate) onUpdate(updatedProfile);
               }}
               placeholder="e.g., 2024"
+              placeholderTextColor={colors.gray400}
               keyboardType="numeric"
               maxLength={4}
             />
@@ -713,6 +706,7 @@ const EducationContent = ({
                 if (onUpdate) onUpdate(updatedProfile);
               }}
               placeholder="e.g., 3.8/4.0, 85%, First Class"
+              placeholderTextColor={colors.gray400}
             />
           </View>
         </>

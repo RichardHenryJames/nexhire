@@ -24,11 +24,31 @@ export default function ProfileSection({
 }) {
   const [localEditing, setLocalEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  // ? FIX: Track if user manually toggled, if not, follow defaultCollapsed prop
   const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
+  const [userToggled, setUserToggled] = useState(false);
+  
+  // ? DEBUG: Log when defaultCollapsed changes
+  useEffect(() => {
+ console.log(`[${title}] defaultCollapsed prop changed to:`, defaultCollapsed);
+  }, [defaultCollapsed, title]);
+  
+  // ? FIX: Update collapsed state when defaultCollapsed changes (data loads) ONLY if user hasn't manually toggled
+  useEffect(() => {
+    if (!userToggled) {
+    console.log(`[${title}] Auto-updating collapsed state to:`, !!defaultCollapsed);
+      setCollapsed(!!defaultCollapsed);
+    } else {
+      console.log(`[${title}] User toggled - ignoring defaultCollapsed change`);
+    }
+  }, [defaultCollapsed, userToggled, title]);
   
   // Auto-expand when global edit mode becomes true
   useEffect(() => {
-    if (globalEditing && collapsed) setCollapsed(false);
+    if (globalEditing && collapsed) {
+      setCollapsed(false);
+      setUserToggled(true); // Mark as user action when auto-expanding for edit
+    }
   }, [globalEditing, collapsed]);
   
   const currentEditMode = globalEditing || localEditing;
@@ -54,25 +74,37 @@ export default function ProfileSection({
   const handleEditPress = () => {
     if (onEdit) {
       // Let parent manage edit; ensure section is expanded first for UX
-      if (collapsed) setCollapsed(false);
-      onEdit();
+      if (collapsed) {
+        setCollapsed(false);
+        setUserToggled(true);
+      }
+   onEdit();
       return;
     }
     if (localEditing) {
       handleSaveAndExit();
     } else {
-      if (collapsed) setCollapsed(false);
+      if (collapsed) {
+ setCollapsed(false);
+        setUserToggled(true);
+   }
       setLocalEditing(true);
     }
   };
 
   const handleCancelPress = () => {
     // Exit local edit mode without saving
-    setLocalEditing(false);
+ setLocalEditing(false);
     setSaving(false);
     if (typeof onCancel === 'function') {
       try { onCancel(); } catch { /* noop */ }
     }
+  };
+
+  // ? FIX: Handle manual toggle by user
+  const handleToggleCollapse = () => {
+    setCollapsed(v => !v);
+    setUserToggled(true);
   };
   
   return (
@@ -80,86 +112,87 @@ export default function ProfileSection({
       <View style={[styles.container, style]}>
         {/* HEADER - Now only contains title and collapse/expand controls */}
         <View style={styles.sectionHeader}>
-          <TouchableOpacity
+   <TouchableOpacity
             style={styles.headerLeft}
-            onPress={() => setCollapsed(v => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title} section`}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={icon} size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>{title}</Text>
+            onPress={handleToggleCollapse}
+    accessibilityRole="button"
+    accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title} section`}
+  activeOpacity={0.7}
+ >
+       <Ionicons name={icon} size={20} color={colors.primary} />
+   <Text style={styles.sectionTitle}>{title}</Text>
             <Ionicons
-              name={collapsed ? 'chevron-down' : 'chevron-up'}
-              size={18}
-              color={colors.gray500 || '#6B7280'}
-              style={{ marginLeft: 6 }}
-            />
+   name={collapsed ? 'chevron-down' : 'chevron-up'}
+   size={18}
+           color={colors.gray500 || '#6B7280'}
+            style={{ marginLeft: 6 }}
+  />
           </TouchableOpacity>
-          
+        
           {/* Only show Edit button in header when not in editing mode and not hideHeaderActions */}
-          {!hideHeaderActions && !globalEditing && !collapsed && !localEditing && (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditPress}
+{!hideHeaderActions && !globalEditing && !collapsed && !localEditing && (
+ <TouchableOpacity
+     style={styles.editButton}
+  onPress={handleEditPress}
               disabled={saving}
-              accessibilityRole="button"
+  accessibilityRole="button"
               accessibilityLabel={`Edit ${title}`}
             >
-              <Ionicons 
-                name="create" 
-                size={16} 
-                color={colors.primary} 
-              />
-              <Text style={styles.editButtonText}>
-                Edit
-              </Text>
+          <Ionicons 
+       name="create" 
+      size={16} 
+ color={colors.primary} 
+     />
+    <Text style={styles.editButtonText}>
+    Edit
+    </Text>
             </TouchableOpacity>
-          )}
-        </View>
+ )}
+      </View>
         
-        {/* CONTENT */}
+     {/* CONTENT */}
         {!collapsed && (
-          <View accessibilityRole="region" accessibilityLabel={`${title} content`}>
-            {children}
-            
+<View accessibilityRole="region" accessibilityLabel={`${title} content`}>
+
+          {children}
+     
             {/* FOOTER ACTIONS - Save and Cancel buttons moved here */}
-            {!hideHeaderActions && !globalEditing && currentEditMode && (
-              <View style={styles.footerActions}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleCancelPress}
-                  disabled={saving}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Cancel editing ${title}`}
-                >
-                  <Ionicons name="close" size={16} color={colors.gray600 || '#6B7280'} />
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                {!hideSaveButton && (
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={handleSaveAndExit}
-                    disabled={saving}
-                    accessibilityRole="button"
-                    accessibilityLabel={saving ? `Saving ${title}` : `Save ${title}`}
-                  >
-                    <Ionicons 
-                      name={saving ? 'hourglass' : 'save-outline'} 
-                      size={16} 
-                      color={saving ? colors.gray400 : colors.white} 
-                    />
-                    <Text style={[
-                      styles.saveButtonText,
-                      saving && styles.saveButtonTextDisabled
-                    ]}>
-                      {saving ? 'Saving...' : 'Save'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+ {!hideHeaderActions && !globalEditing && currentEditMode && (
+       <View style={styles.footerActions}>
+       <TouchableOpacity
+           style={styles.cancelButton}
+onPress={handleCancelPress}
+    disabled={saving}
+        accessibilityRole="button"
+  accessibilityLabel={`Cancel editing ${title}`}
+     >
+      <Ionicons name="close" size={16} color={colors.gray600 || '#6B7280'} />
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+    </TouchableOpacity>
+      {!hideSaveButton && (
+     <TouchableOpacity
+  style={styles.saveButton}
+  onPress={handleSaveAndExit}
+         disabled={saving}
+       accessibilityRole="button"
+              accessibilityLabel={saving ? `Saving ${title}` : `Save ${title}`}
+         >
+         <Ionicons 
+     name={saving ? 'hourglass' : 'save-outline'} 
+         size={16} 
+  color={saving ? colors.gray400 : colors.white} 
+          />
+    <Text style={[
+    styles.saveButtonText,
+      saving && styles.saveButtonTextDisabled
+     ]}>
+   {saving ? 'Saving...' : 'Save'}
+  </Text>
+         </TouchableOpacity>
+       )}
+       </View>
             )}
-          </View>
+       </View>
         )}
       </View>
     </EditingContext.Provider>

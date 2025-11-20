@@ -48,12 +48,12 @@ export const handleError = (error: any, context: InvocationContext): HttpRespons
         details: error.details
     });
     
-    // CORS headers for all error responses
+    // CORS headers for all error responses - UPDATED
     const corsHeaders = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-app-version, x-app-environment'
     };
     
     if (error instanceof ValidationError) {
@@ -132,11 +132,11 @@ export const handleError = (error: any, context: InvocationContext): HttpRespons
     };
 };
 
-// CORS headers helper
+// CORS headers helper - UPDATED to allow custom headers
 export const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-app-version, x-app-environment',
     'Access-Control-Max-Age': '86400'
 };
 

@@ -153,11 +153,18 @@ export default function LoginScreen({ navigation }) {
             <View style={screenStyles.logoContainer}>
               <Ionicons name="briefcase" size={64} color={colors.primary} />
             </View>
-            <Text style={screenStyles.title}>Welcome Back!</Text>
-            <Text style={screenStyles.subtitle}>
-              Sign in to continue your job search journey
-            </Text>
+
+            <Text style={screenStyles.title}>Welcome to RefOpen!</Text>
+
+           {/*
+           <Text style={screenStyles.subtitle}>
+             India’s first job referral app — making referrals effortless.
+             Sign in to get started.
+           </Text>
+           */}
+
           </View>
+
 
           {/* NEW: Google Sign-In Section */}
           {googleAuthAvailable && (
@@ -301,7 +308,7 @@ export default function LoginScreen({ navigation }) {
               <Text style={screenStyles.devHelperTitle}>Quick Test (Dev Mode)</Text>
               <TouchableOpacity
                 onPress={() => {
-                  setEmail('test@nexhire.com');
+                  setEmail('test@refopen.com');
                   setPassword('password123');
                 }}
                 style={screenStyles.devButton}

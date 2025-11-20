@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import DatePicker from '../../components/DatePicker';
@@ -25,6 +26,7 @@ export default function RegisterScreen({ navigation }) {
     phone: '',
     dateOfBirth: '',
     gender: '',
+    inviteCode: '', // ?? NEW: Invite code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -120,6 +122,7 @@ export default function RegisterScreen({ navigation }) {
         ...(formData.phone && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.inviteCode && { inviteCode: formData.inviteCode.trim() }), // ?? NEW: Add invite code
       };
 
       const result = await register(registrationData);
@@ -141,15 +144,21 @@ export default function RegisterScreen({ navigation }) {
 
   const renderInput = (
     key,
+    label,
     placeholder,
     secureTextEntry = false,
     keyboardType = 'default',
-    multiline = false
+    multiline = false,
+    required = false
   ) => (
     <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>
+        {label} {required && <Text style={styles.required}>*</Text>}
+      </Text>
       <TextInput
         style={[styles.input, errors[key] && styles.inputError]}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={formData[key]}
         onChangeText={(text) => {
           setFormData({ ...formData, [key]: text });
@@ -177,18 +186,57 @@ export default function RegisterScreen({ navigation }) {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join NexHire to find your dream job or hire top talent</Text>
+          <Text style={styles.subtitle}>Join RefOpen to find your dream job or hire top talent</Text>
 
           {/* Required Fields */}
-          {renderInput('firstName', 'First Name *')}
-          {renderInput('lastName', 'Last Name *')}
-          {renderInput('email', 'Email Address *', false, 'email-address')}
-          {renderInput('password', 'Password (8+ characters) *', true)}
-          {renderInput('confirmPassword', 'Confirm Password *', true)}
+          {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}
+          {renderInput('lastName', 'Last Name', 'e.g., Doe', false, 'default', false, true)}
+          {renderInput('email', 'Email Address', 'e.g., john.doe@example.com', false, 'email-address', false, true)}
+          
+          {/* ?? NEW: Invite Code Input (Optional) */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>
+              Invite Code (Optional)
+            </Text>
+            <View style={styles.inviteCodeContainer}>
+              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.inviteCodeIcon} />
+              <TextInput
+                style={[styles.input, styles.inviteCodeInput, errors.inviteCode && styles.inputError]}
+                placeholder="Enter invite code"
+                placeholderTextColor={colors.gray400}
+                value={formData.inviteCode}
+                onChangeText={(text) => {
+                  // Convert to uppercase and remove spaces
+                  const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                  setFormData({ ...formData, inviteCode: cleanCode });
+                  if (errors.inviteCode) {
+                    setErrors({ ...errors, inviteCode: null });
+                  }
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+              />
+            </View>
+            {errors.inviteCode && (
+              <Text style={styles.errorText}>{errors.inviteCode}</Text>
+            )}
+            <View style={styles.inviteCodeHint}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+              <Text style={styles.inviteCodeHintText}>
+                Have an invite code? Get ₹50 bonus when you sign up!
+              </Text>
+            </View>
+          </View>
+          
+          {renderInput('password', 'Password', 'Minimum 8 characters', true, 'default', false, true)}
+          {renderInput('confirmPassword', 'Confirm Password', 'Re-enter your password', true, 'default', false, true)}
 
           {/* User Type Selection */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>I am a: *</Text>
+            <Text style={styles.fieldLabel}>
+              I am a: <Text style={styles.required}>*</Text>
+            </Text>
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
                 style={[
@@ -225,8 +273,8 @@ export default function RegisterScreen({ navigation }) {
           {/* Optional Fields */}
           <Text style={styles.sectionTitle}>Optional Information</Text>
           
-          {renderInput('phone', 'Phone Number', false, 'phone-pad')}
-          
+          {renderInput('phone', 'Phone Number', 'e.g., +1234567890', false, 'phone-pad', false, false)}
+
           {/* ? REPLACED: DatePicker instead of manual input */}
           <DatePicker
             label="Date of Birth"
@@ -325,6 +373,15 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 16,
   },
+  inputLabel: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.gray700,
+    marginBottom: 8,
+  },
+  required: {
+    color: colors.danger,
+  },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -342,6 +399,35 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     marginTop: 4,
     marginLeft: 4,
+  },
+  // ?? NEW: Invite code styles
+  inviteCodeContainer: {
+    position: 'relative',
+  },
+  inviteCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 16,
+    zIndex: 1,
+  },
+  inviteCodeInput: {
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  inviteCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  inviteCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   fieldContainer: {
     marginBottom: 20,

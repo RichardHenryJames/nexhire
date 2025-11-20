@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
-import nexhireAPI from '../../../../services/api';
+import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
 // Debounce hook for search
@@ -108,6 +108,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     organizationId: null, // NEW: Organization ID from database
     jobTitle: '', // NEW: Job title (required when company is selected)
     startDate: '', // NEW: Start date (required when company is selected)
+    referralCode: '', // 🎁 NEW: Referral code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -137,13 +138,37 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     }
   }, [isGoogleUser, googleUser]);
 
+  // NEW: Pre-populate current company from work experience data
+  useEffect(() => {
+    // Only for experienced professionals, NOT students
+    if (experienceType === 'Student') return;
+
+    // Check if we have work experience data with current position
+    const experiences = Array.isArray(workExperienceData) 
+      ? workExperienceData 
+      : (workExperienceData ? [workExperienceData] : []);
+
+    const currentExp = experiences.find(exp => exp.isCurrentPosition);
+    
+    if (currentExp && currentExp.companyName) {
+      console.log('🔧 Pre-filling current company from work experience:', currentExp);
+      setFormData(prev => ({
+        ...prev,
+        currentCompany: currentExp.companyName || '',
+        organizationId: currentExp.organizationId || null,
+        jobTitle: currentExp.jobTitle || '',
+        startDate: currentExp.startDate || '',
+      }));
+    }
+  }, [workExperienceData, experienceType]);
+
   // NEW: Debounced organization search
   useEffect(() => {
     const search = async () => {
       if (!showOrgModal || manualOrgMode) return;
       try {
         setOrgLoading(true);
-        const res = await nexhireAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
@@ -258,26 +283,41 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }
     }
 
+    // NEW: Current Company is mandatory for Experienced professionals
+    if (userType === 'JobSeeker' && experienceType === 'Experienced') {
+      // Check if company already captured from work experience flow
+      const experiences = Array.isArray(workExperienceData) 
+        ? workExperienceData 
+      : (workExperienceData ? [workExperienceData] : []);
+      
+      const hasCurrentCompany = experiences.some(exp => exp.isCurrentPosition && exp.companyName);
+      
+   // If no company from work experience, it's mandatory in this form
+      if (!hasCurrentCompany && !formData.currentCompany && !formData.organizationId) {
+      newErrors.currentCompany = 'Current company is required for experienced professionals';
+      }
+    }
+
     // NEW: Validate jobTitle and startDate when company is selected
     if (formData.currentCompany || formData.organizationId) {
-      if (!formData.jobTitle.trim()) {
-        newErrors.jobTitle = 'Job title is required when company is selected';
-      }
+   if (!formData.jobTitle.trim()) {
+newErrors.jobTitle = 'Job title is required when company is selected';
+    }
       if (!formData.startDate.trim()) {
-        newErrors.startDate = 'Start date is required when company is selected';
+ newErrors.startDate = 'Start date is required when company is selected';
       } else {
-        // Validate date format (YYYY-MM-DD)
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+ // Validate date format (YYYY-MM-DD)
+ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(formData.startDate)) {
-          newErrors.startDate = 'Please use YYYY-MM-DD format';
+   newErrors.startDate = 'Please use YYYY-MM-DD format';
         } else {
           const startDate = new Date(formData.startDate);
           const today = new Date();
-          if (startDate > today) {
-            newErrors.startDate = 'Start date cannot be in the future';
+     if (startDate > today) {
+       newErrors.startDate = 'Start date cannot be in the future';
           }
-        }
-      }
+    }
+   }
     }
 
     // Optional field validations
@@ -287,9 +327,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
     if (formData.dateOfBirth) {
       const dob = new Date(formData.dateOfBirth);
-      const today = new Date();
+   const today = new Date();
       if (dob >= today) {
-        newErrors.dateOfBirth = 'Date of birth must be in the past';
+ newErrors.dateOfBirth = 'Date of birth must be in the past';
       }
     }
 
@@ -315,6 +355,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
+        ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
         
         // Include all the collected data for profile completion
         experienceType,
@@ -410,8 +451,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         Alert.alert(
           'Success', 
           isGoogleUser 
-            ? 'Your Google account has been linked successfully! Welcome to NexHire!' 
-            : 'Account created successfully! Welcome to NexHire!', 
+            ? 'Your Google account has been linked successfully! Welcome to RefOpen!'
+            : 'Account created successfully! Welcome to RefOpen!',
           [
             { 
               text: 'Get Started', 
@@ -431,11 +472,90 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           clearPendingGoogleAuth();
         }
       } else {
-        Alert.alert('Registration Failed', result.error || 'Unable to create account. Please try again.');
+        // ✅ NEW: Check if error is "User already exists"
+        const errorMessage = result.error || 'Unable to create account. Please try again.';
+        
+        if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+          console.log('⚠️ User already exists error - clearing auth data and redirecting to login');
+          
+          // Clear any pending Google auth data
+          if (isGoogleUser) {
+            clearPendingGoogleAuth();
+          }
+          
+          Alert.alert(
+            'Account Already Exists', 
+            `An account with ${formData.email} already exists. Would you like to sign in instead?`,
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel'
+              },
+              { 
+                text: 'Sign In', 
+                onPress: () => {
+                  // Navigate to login screen
+                  if (typeof window !== 'undefined') {
+                    // For web
+                    window.location.href = '/login';
+                  } else {
+                    // For native
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'Login' }],
+                    });
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Registration Failed', errorMessage);
+        }
       }
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', error.message || 'Registration failed. Please try again.');
+      
+      // ✅ NEW: Also handle caught errors for "already exists"
+      const errorMessage = error.message || 'Registration failed. Please try again.';
+      
+      if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
+        console.log('⚠️ User already exists error (caught) - clearing auth data and redirecting to login');
+        
+        // Clear any pending Google auth data
+        if (isGoogleUser) {
+          clearPendingGoogleAuth();
+        }
+        
+        Alert.alert(
+          'Account Already Exists', 
+          `An account with ${formData.email} already exists. Would you like to sign in instead?`,
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel'
+            },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                // Navigate to login screen
+                if (typeof window !== 'undefined') {
+                  // For web
+                  window.location.href = '/login';
+                } else {
+                  // For native
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                  });
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -451,7 +571,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
-        {placeholder} {required && '*'}
+        {placeholder} {required && <Text style={styles.requiredAsterisk}>*</Text>}
         {prefilled && (
           <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>
         )}
@@ -462,6 +582,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           errors[key] && styles.inputError,
           prefilled && styles.inputPrefilled
         ]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         value={formData[key]}
         onChangeText={(text) => {
           setFormData({ ...formData, [key]: text });
@@ -487,13 +609,36 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
         Current Company {skippedSteps && '(for referrals)'}
+        {/* NEW: Show asterisk for experienced professionals */}
+    {userType === 'JobSeeker' && experienceType === 'Experienced' && (
+          <Text style={styles.requiredAsterisk}> *</Text>
+        )}
       </Text>
-      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
-        <Text style={[styles.selectionValue, !formData.currentCompany && styles.selectionPlaceholder]}>
-          {formData.currentCompany || 'Select or search company'}
-        </Text>
+      <TouchableOpacity style={[
+styles.selectionButton,
+        errors.currentCompany && styles.inputError
+      ]} onPress={openOrgModal}>
+        {formData.currentCompany ? (
+          <View style={styles.companySelectorContent}>
+       {formData.organizationId && (
+     <View style={styles.companySelectorLogoPlaceholder}>
+      <Ionicons name="business" size={16} color={colors.gray400} />
+       </View>
+            )}
+            <Text style={styles.selectionValue}>
+     {formData.currentCompany}
+   </Text>
+ </View>
+        ) : (
+       <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
+        Select or search company
+          </Text>
+)}
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
+      {errors.currentCompany && (
+        <Text style={styles.errorText}>{errors.currentCompany}</Text>
+      )}
     </View>
   );
 
@@ -558,6 +703,42 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
             {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
             
+            {/* 🎁 NEW: Referral Code Input (Optional) */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Referral Code (Optional)
+              </Text>
+              <View style={styles.referralCodeContainer}>
+                <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+                <TextInput
+                  style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
+                  placeholder="Enter referral code"
+                  placeholderTextColor={colors.gray400}
+                  value={formData.referralCode}
+                  onChangeText={(text) => {
+                    // Convert to uppercase and remove spaces
+                    const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                    setFormData({ ...formData, referralCode: cleanCode });
+                    if (errors.referralCode) {
+                      setErrors({ ...errors, referralCode: null });
+                    }
+                  }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={8}
+                />
+              </View>
+              {errors.referralCode && (
+                <Text style={styles.errorText}>{errors.referralCode}</Text>
+              )}
+              <View style={styles.referralCodeHint}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+                <Text style={styles.referralCodeHintText}>
+                  Have a referral code? Get ₹50 bonus when you sign up!
+                </Text>
+              </View>
+            </View>
+            
             {/* Only show password fields for non-Google users */}
             {!isGoogleUser && (
               <>
@@ -585,11 +766,18 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* NEW: Current Company Dropdown - ONLY show for experienced professionals, NOT for students */}
-            {userType === 'JobSeeker' && experienceType !== 'Student' && <OrgPickerButton />}
+            {/* NEW: Current Company Dropdown - Always show for experienced professionals */}
+            {(() => {
+            // Don't show for students
+              if (userType !== 'JobSeeker' || experienceType === 'Student') return null;
 
-            {/* NEW: Show jobTitle and startDate fields only when company is selected */}
-            {userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
+  // For experienced professionals, always show the field
+       // It will be pre-filled if coming from work experience flow
+         return <OrgPickerButton />;
+       })()}
+
+            {/* NEW: Show jobTitle and startDate fields only when company is selected */
+            userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
                   <Ionicons name="information-circle" size={16} color={colors.primary} />
@@ -850,9 +1038,32 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalItem} onPress={() => handleSelectOrganization(item)}>
-                  <View>
+                  {/* Company Logo */}
+                  {item.logoURL ? (
+                    <Image
+                      source={{ uri: item.logoURL }}
+                      style={styles.companyLogo}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Ionicons name="business" size={20} color={colors.gray400} />
+                    </View>
+                  )}
+                  
+                  <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website ? <Text style={[styles.modalItemText, { color: colors.gray600 }]}>{item.website}</Text> : null}
+                    {item.website && (
+                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}
+                      >
+                        {item.website}
+                      </Text>
+                    )}
+                    {item.industry && (
+                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
+                        {item.industry}
+                      </Text>
+                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -878,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     marginBottom: 24, // CHANGED: Reduced from 32 to 24
@@ -976,6 +1187,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     color: colors.gray600,
   },
+  requiredAsterisk: {
+    color: colors.danger,
+    fontWeight: typography.weights.bold,
+  },
   prefilledLabel: {
     color: colors.success,
     fontWeight: typography.weights.normal,
@@ -1002,6 +1217,37 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
     marginTop: 4,
+  },
+  // 🎁 NEW: Referral code styles
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    flex: 1,
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   selectionButton: {
     backgroundColor: colors.surface,
@@ -1145,9 +1391,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalItemText: {
     fontSize: typography.sizes.md,
     color: colors.text,
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companyInfo: {
+    flex: 1,
+  },
+  companySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  companySelectorLogoPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

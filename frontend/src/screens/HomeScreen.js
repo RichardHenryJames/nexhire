@@ -10,10 +10,11 @@ import {
   Alert,
   Platform,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import nexhireAPI from '../services/api';
+import refopenAPI from '../services/api';
 import { colors, typography } from '../styles/theme';
 import ReferralPointsBreakdown from '../components/profile/ReferralPointsBreakdown';
 
@@ -36,6 +37,10 @@ export default function HomeScreen({ navigation }) {
     recentApplications: [],
     referralStats: {}
   });
+  
+  // 🆕 NEW: Wallet state
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [loadingWallet, setLoadingWallet] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -43,19 +48,31 @@ export default function HomeScreen({ navigation }) {
 
       // Fetch comprehensive dashboard data
       const [dashboardRes, recentJobsRes, applicationsRes, referralEligibilityRes, pointsHistoryRes] = await Promise.all([
-        nexhireAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
-        nexhireAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
-        isJobSeeker ? nexhireAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
-        isJobSeeker ? nexhireAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
+        refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
+        // For employers, fetch only their own jobs; for job seekers, fetch recent jobs from all employers
+        isEmployer 
+          ? refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
+          : refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
+        isJobSeeker ? refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
+        isJobSeeker ? refopenAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
         // NEW: Fetch points history for the breakdown modal
-        isJobSeeker ? nexhireAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
+        isJobSeeker ? refopenAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
       ]);
 
       // Process dashboard stats
       const stats = dashboardRes.success ? dashboardRes.data : {};
       
-      // Process recent jobs
-      const recentJobs = recentJobsRes.success ? recentJobsRes.data.slice(0, 5) : [];
+      // Process recent jobs - handle different response formats
+      let recentJobs = [];
+      if (recentJobsRes.success) {
+        if (isEmployer) {
+          // For employers using getOrganizationJobs, data is directly in the response
+          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+        } else {
+          // For job seekers using getJobs, data might be nested
+          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+        }
+      }
       
       // Process recent applications
       const recentApplications = (isJobSeeker && applicationsRes.success) ? applicationsRes.data.slice(0, 3) : [];
@@ -78,6 +95,11 @@ export default function HomeScreen({ navigation }) {
         recentApplications,
         referralStats
       });
+      
+      // 🆕 NEW: Load wallet balance for job seekers
+      if (isJobSeeker) {
+        loadWalletBalance();
+      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -85,7 +107,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [isJobSeeker]);
+  }, [isJobSeeker, isEmployer, user]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -174,32 +196,6 @@ export default function HomeScreen({ navigation }) {
       <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
     </TouchableOpacity>
   );
-
-  // Performance metrics component
-  const PerformanceMetrics = () => {
-    if (!isJobSeeker) return null;
-
-    const { stats } = dashboardData;
-    const successRate = stats.applicationSuccessRate || 0;
-    const responseTime = stats.averageResponseTime || 0;
-    
-    return (
-      <View style={styles.performanceContainer}>
-        <Text style={styles.sectionTitle}>Performance Insights</Text>
-        <View style={styles.performanceGrid}>
-          <View style={styles.performanceCard}>
-            <Text style={styles.performanceValue}>{successRate.toFixed(1)}%</Text>
-            <Text style={styles.performanceLabel}>Success Rate</Text>
-            <View style={[styles.performanceBar, { width: `${Math.min(successRate, 100)}%` }]} />
-          </View>
-          <View style={styles.performanceCard}>
-            <Text style={styles.performanceValue}>{responseTime.toFixed(1)}</Text>
-            <Text style={styles.performanceLabel}>Avg Response (days)</Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
 
   // Attention items component
   const AttentionItems = () => {
@@ -324,6 +320,21 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // 🆕 NEW: Load wallet balance
+  const loadWalletBalance = async () => {
+    try {
+      setLoadingWallet(true);
+      const result = await refopenAPI.getWalletBalance();
+      if (result.success) {
+        setWalletBalance(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading wallet balance:', error);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -344,24 +355,30 @@ export default function HomeScreen({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Enhanced Header with user context */}
+        {/* New Header with RefOpen branding and profile picture */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            Welcome back, {user?.FirstName || user?.firstName || 'User'}!
-          </Text>
-          <Text style={styles.subGreeting}>
-            {isEmployer ? 'Manage your team and hiring pipeline' : 'Advance your career journey'}
-          </Text>
-          {stats.summary && (
-            <View style={styles.summaryBadge}>
-              <Text style={styles.summaryText}>
-                {isEmployer 
-                  ? `Hiring velocity: ${stats.summary.hiringVelocity || 'Unknown'}`
-                  : `Profile strength: ${stats.summary.profileStrength || 'Unknown'}`
-                }
-              </Text>
-            </View>
-          )}
+          <View style={styles.headerLeft}>
+            <Text style={styles.companyName}>RefOpen</Text>
+            <Text style={styles.subGreeting}>
+              {isEmployer ? 'Manage your team and hiring pipeline' : 'Advance your career journey'}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.headerRight}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
+            {user?.ProfilePictureURL ? (
+              <Image 
+                source={{ uri: user.ProfilePictureURL }} 
+                style={styles.profilePicture}
+              />
+            ) : (
+              <View style={styles.profilePicturePlaceholder}>
+                <Ionicons name="person" size={24} color={colors.white} />
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Primary Stats Overview - Updated to 2x2 Grid */}
@@ -411,25 +428,25 @@ export default function HomeScreen({ navigation }) {
                   title="Applications"
                   value={stats.totalApplications || 0}
                   icon="document-text"
-                  color={colors.primary}
+                  color="#F14F21"
                   subtitle={`${stats.savedJobs || 0} saved jobs`}
                   trend={stats.applicationsLast30Days > 0 ? { positive: true, value: `+${stats.applicationsLast30Days}` } : null}
                   onPress={() => navigation.navigate('Applications')}
                   size="large"
                 />
                 <StatCard
-                  title="Profile Score"
-                  value={`${stats.profileCompleteness || 0}%`}
-                  icon="person"
-                  color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-                  subtitle={`${stats.profileViews || 0} profile views`}
-                  onPress={() => navigation.navigate('Profile')}
+                  title="Wallet Balance"
+                  value={loadingWallet ? '...' : `₹${walletBalance?.balance?.toFixed(2) || '0.00'}`}
+                  icon="wallet"
+                  color="#7EB900"
+                  subtitle="Tap to recharge"
+                  onPress={() => navigation.navigate('WalletRecharge')}
                 />
                 <StatCard
                   title="Referral Points"
                   value={referralPointsData.totalPoints || stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
                   icon="star"
-                  color={colors.info}
+                  color="#00A3EE"
                   subtitle={`${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
                   onPress={handleReferralPointsPress}
                 />
@@ -437,7 +454,7 @@ export default function HomeScreen({ navigation }) {
                   title="Get Referrals"
                   value={referralStats.dailyQuotaRemaining !== undefined ? referralStats.dailyQuotaRemaining : (stats.referralQuotaRemaining !== undefined ? stats.referralQuotaRemaining : '...')}
                   icon="people"
-                  color={colors.success}
+                  color="#FEB800"
                   subtitle={`${stats.referralRequestsMade || 0} requests made`}
                   onPress={() => navigation.navigate('AskReferral')}
                 />
@@ -445,12 +462,6 @@ export default function HomeScreen({ navigation }) {
             )}
           </View>
         </View>
-
-        {/* Performance Metrics for Job Seekers */}
-        <PerformanceMetrics />
-
-        {/* Attention Items */}
-        <AttentionItems />
 
         {/* Quick Actions with Enhanced Urgency */}
         <View style={styles.actionsContainer}>
@@ -558,29 +569,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Recent Activity Timeline for Employers */}
-        {isEmployer && stats.topPerformingJobs && stats.topPerformingJobs.length > 0 && (
-          <View style={styles.recentContainer}>
-            <Text style={styles.sectionTitle}>Top Performing Jobs</Text>
-            {stats.topPerformingJobs.slice(0, 3).map((job, index) => (
-              <TouchableOpacity 
-                key={job.JobID || index} 
-                style={styles.performingJobCard}
-                onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-              >
-                <View style={styles.performingJobHeader}>
-                  <Text style={styles.performingJobTitle}>{job.Title}</Text>
-                  <Text style={styles.performingJobApps}>{job.ApplicationCount} apps</Text>
-                </View>
-                <View style={styles.performingJobStats}>
-                  <Text style={styles.performingJobStat}>{job.ShortlistedCount} shortlisted</Text>
-                  <Text style={styles.performingJobStat}>{job.HiredCount} hired</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
         {/* Enhanced Empty State */}
         {recentJobs.length === 0 && recentApplications.length === 0 && (
           <View style={styles.emptyState}>
@@ -647,9 +635,44 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  companyName: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  headerRight: {
+    marginLeft: 16,
+  },
+  profilePicture: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  profilePicturePlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   greeting: {
     fontSize: typography.sizes.xl,
@@ -658,9 +681,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subGreeting: {
-    fontSize: typography.sizes.md,
-    color: colors.white + 'CC',
-    marginBottom: 12,
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginTop: 2,
   },
   summaryBadge: {
     backgroundColor: colors.white + '20',
@@ -768,38 +791,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 14,
     flexWrap: 'wrap',
-  },
-  performanceContainer: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  performanceGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  performanceCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  performanceValue: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-  },
-  performanceLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray600,
-    marginTop: 4,
-  },
-  performanceBar: {
-    height: 3,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-    marginTop: 8,
-    alignSelf: 'stretch',
   },
   attentionContainer: {
     padding: 20,

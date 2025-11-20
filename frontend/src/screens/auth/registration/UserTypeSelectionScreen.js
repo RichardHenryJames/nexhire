@@ -16,7 +16,6 @@ import { colors, typography } from '../../../styles/theme';
 export default function UserTypeSelectionScreen({ navigation, route }) {
   const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const linkTo = useLinkTo();
   
   // 🔧 Get from context
@@ -108,91 +107,6 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // NEW: Handle Skip to final screen - WEB COMPATIBLE VERSION with useLinkTo fallback
-  const handleSkipToFinal = () => {
-    console.log('🔧 Skip button clicked, selectedType:', selectedType);
-    
-    if (!selectedType) {
-      // 🔧 For web: Use window.confirm instead of Alert
-      if (typeof window !== 'undefined' && window.confirm) {
-        window.confirm('Please select whether you\'re looking for jobs or hiring talent first.');
-      } else {
-        Alert.alert('Selection Required', 'Please select your user type first');
-      }
-      return;
-    }
-
-    console.log('✅ Navigating to final screen for:', selectedType);
-    
-    try {
-      if (selectedType === 'JobSeeker') {
-        console.log('📍 Attempting navigation to PersonalDetailsScreenDirect');
-        
-        const params = {
-          userType: 'JobSeeker',
-          fromGoogleAuth: fromGoogleAuth,
-          googleUser: googleUser,
-          skippedSteps: true,
-          experienceType: 'Unknown',
-        };
-        
-        // 🔧 TRY METHOD 1: Standard navigation
-        navigation.navigate('PersonalDetailsScreenDirect', params);
-        
-        // 🔧 TRY METHOD 2: Use linkTo as fallback for web (after small delay)
-        setTimeout(() => {
-          try {
-            // Encode params as URL query string
-            const queryParams = new URLSearchParams({
-              userType: 'JobSeeker',
-              fromGoogleAuth: fromGoogleAuth.toString(),
-              skippedSteps: 'true',
-              experienceType: 'Unknown',
-            }).toString();
-            
-            linkTo(`/register/complete-profile?${queryParams}`);
-            console.log('🌐 Web navigation fallback triggered');
-          } catch (linkError) {
-            console.warn('Link navigation failed:', linkError);
-          }
-        }, 100);
-        
-        console.log('✅ Navigation dispatched');
-      } else {
-        console.log('📍 Attempting navigation to EmployerAccountScreenDirect');
-        
-        navigation.navigate('EmployerAccountScreenDirect', {
-          userType: 'Employer',
-          fromGoogleAuth: fromGoogleAuth,
-          googleUser: googleUser,
-          skippedSteps: true,
-          employerType: 'company',
-        });
-        
-        // 🔧 Web fallback
-        setTimeout(() => {
-          try {
-            const queryParams = new URLSearchParams({
-              userType: 'Employer',
-              fromGoogleAuth: fromGoogleAuth.toString(),
-              skippedSteps: 'true',
-              employerType: 'company',
-            }).toString();
-            
-            linkTo(`/register/complete-employer?${queryParams}`);
-            console.log('🌐 Web navigation fallback triggered');
-          } catch (linkError) {
-            console.warn('Link navigation failed:', linkError);
-          }
-        }, 100);
-        
-        console.log('✅ Navigation dispatched');
-      }
-    } catch (error) {
-      console.error('💥 Navigation error:', error);
-    }
-  };
-
   const UserTypeCard = ({ type, title, subtitle, icon, description }) => (
     <TouchableOpacity
       style={[
@@ -260,7 +174,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
           )}
           
           <Text style={styles.title}>
-            {googleUser ? 'Complete Your Profile' : 'Welcome to NexHire!'}
+            {googleUser ? 'Complete Your Profile' : 'Welcome to RefOpen!'}
           </Text>
           <Text style={styles.subtitle}>
             {googleUser 
@@ -307,7 +221,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
                 styles.continueButtonText,
                 !selectedType && styles.continueButtonTextDisabled
               ]}>
-                Continue with Full Setup
+                Continue
               </Text>
               <Ionicons 
                 name="arrow-forward" 
@@ -318,79 +232,17 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
 
-        {/* 🔧 NEW: Skip Button for Google users */}
-        {googleUser && (
-          <>
-            <TouchableOpacity
-              style={[
-                styles.skipButton,
-                !selectedType && styles.skipButtonFaded,
-              ]}
-              onPress={handleSkipToFinal}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="flash-outline" 
-                size={20} 
-                color={!selectedType ? colors.gray500 : colors.primary} 
-              />
-              <Text style={[
-                styles.skipButtonText,
-                !selectedType && styles.skipButtonTextFaded
-              ]}>
-                Skip to Profile Register
-              </Text>
-            </TouchableOpacity>
-            {!selectedType && (
-              <Text style={styles.skipHintText}>
-                💡 Select a user type above to enable skip option
-              </Text>
-            )}
-          </>
-        )}
-
         {/* Only show login link if not coming from Google auth */}
         {!googleUser && (
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={() => navigation.navigate('Login')}
+        onPress={() => navigation.navigate('Login')}
             disabled={loading}
           >
-            <Text style={styles.loginButtonText}>
-              Already have an account? Sign In
-            </Text>
+       <Text style={styles.loginButtonText}>
+         Already have an account? Sign In
+     </Text>
           </TouchableOpacity>
-        )}
-
-        {/* 🔧 CONFIRMATION DIALOG: Skip Registration Steps? */}
-        {showSkipConfirm && (
-          <View style={styles.confirmationDialog}>
-            <Text style={styles.confirmationTitle}>
-              Skip Registration Steps?
-            </Text>
-            <Text style={styles.confirmationMessage}>
-              You can complete your profile details now and fill in work/education information later.
-            </Text>
-
-            <View style={styles.confirmationActions}>
-              <TouchableOpacity
-                style={styles.confirmationButton}
-                onPress={() => setShowSkipConfirm(false)} // Cancel
-              >
-                <Text style={styles.confirmationButtonText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.confirmationButton,
-                  styles.confirmationButtonPrimary
-                ]}
-                onPress={confirmSkip} // Confirm skip
-              >
-                <Text style={styles.confirmationButtonText}>Skip to Profile</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -405,7 +257,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
   },
   header: {
     alignItems: 'center',
@@ -528,33 +380,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    marginTop: 24, // ADDED: Equal spacing above button
+    marginTop: 24,
     marginBottom: 16,
     gap: 8,
   },
   continueButtonDisabled: {
     backgroundColor: colors.gray300,
-  },
-  skipButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-  },
-  skipButtonDisabled: {
-    borderColor: colors.gray300,
-    backgroundColor: colors.gray100,
-  },
-  skipButtonFaded: {
-    borderColor: colors.gray400,
-    backgroundColor: colors.gray50,
-    opacity: 0.6,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -562,31 +393,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
-  skipButtonText: {
-    color: colors.primary,
+  color: colors.white,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
   },
   continueButtonTextDisabled: {
     color: colors.gray400,
-  },
-  skipButtonTextDisabled: {
-    color: colors.gray400,
-  },
-  skipButtonTextFaded: {
-    color: colors.gray600,
-  },
-  skipHintText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    textAlign: 'center',
-    marginTop: -8,
-    marginBottom: 16,
-    fontStyle: 'italic',
   },
   loginButton: {
     alignItems: 'center',
@@ -596,49 +408,5 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-  },
-  // 🔧 NEW: Confirmation dialog styles
-  confirmationDialog: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.black + '80',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  confirmationTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.white,
-    marginBottom: 16,
-  },
-  confirmationMessage: {
-    fontSize: typography.sizes.md,
-    color: colors.gray200,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  confirmationActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  confirmationButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 8,
-    alignItems: 'center',
-  },
-  confirmationButtonPrimary: {
-    backgroundColor: colors.primary,
-  },
-  confirmationButtonText: {
-    color: colors.text,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
   },
 });

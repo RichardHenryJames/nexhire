@@ -1,11 +1,11 @@
-# NexHire Database Schema Deployment Script
+# RefOpen Database Schema Deployment Script
 # This script creates all required database tables and populates reference data
 
 param(
-    [string]$ConnectionString = "Server=nexhire-sql-srv.database.windows.net;Database=nexhire-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 )
 
-Write-Host " Setting up NexHire Database Schema..." -ForegroundColor Green
+Write-Host " Setting up RefOpen Database Schema..." -ForegroundColor Green
 
 # Install SqlServer module if not present
 if (-not (Get-Module -ListAvailable -Name SqlServer)) {
@@ -147,6 +147,50 @@ BEGIN
         FOREIGN KEY (CurrentOrganizationID) REFERENCES Organizations(OrganizationID)
     );
 END
+
+-- Create ApplicantSalaries table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
+BEGIN
+    CREATE TABLE ApplicantSalaries (
+        ApplicantSalaryID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ComponentID INT NOT NULL,
+        Amount DECIMAL(18,2) NOT NULL,          -- precision chosen for money-like values
+        CurrencyID INT NOT NULL,
+        Frequency NVARCHAR(50) NULL,            -- optional, so nullable
+        SalaryContext NVARCHAR(50) NOT NULL,
+        Notes NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NULL DEFAULT SYSUTCDATETIME(),
+
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID),
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+    );
+
+    -- Optional index to speed up lookups by ApplicantID
+    CREATE INDEX IX_ApplicantSalaries_ApplicantID ON ApplicantSalaries(ApplicantID);
+END
+
+
+-- Create SalaryComponents table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SalaryComponents')
+BEGIN
+    CREATE TABLE SalaryComponents (
+        ComponentID INT NOT NULL PRIMARY KEY IDENTITY(1,1),
+        ComponentName NVARCHAR(100) NOT NULL,
+        ComponentType NVARCHAR(50) NOT NULL,   -- e.g., Recurring, OneTime, Equity
+        IsActive BIT NULL                      -- optional field (1 = active, 0 = inactive)
+    );
+
+    -- Insert default seed data
+    INSERT INTO SalaryComponents (ComponentName, ComponentType, IsActive)
+    VALUES
+        ('Fixed', 'Recurring', 1),
+        ('Variable', 'Recurring', 1),
+        ('Bonus', 'OneTime', 1),
+        ('Stock', 'Equity', 1);
+END
+
 
 -- WorkExperiences table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkExperiences')
@@ -356,6 +400,8 @@ BEGIN
         ResumeLabel NVARCHAR(200) NOT NULL, -- e.g. "Tech Resume", "Managerial Resume"
         ResumeURL NVARCHAR(1000) NOT NULL,
         IsPrimary BIT DEFAULT 0, -- optional: mark default resume
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        DeletedAt DATETIME NULL,
         CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
         UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
         FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID)
@@ -655,5 +701,5 @@ try {
 }
 
 Write-Host ""
-Write-Host " Database is ready for NexHire APIs!" -ForegroundColor Green
-Write-Host "Now test your APIs: .\test-api.ps1 -BaseUrl 'https://nexhire-api-func.azurewebsites.net/api'" -ForegroundColor Cyan
+Write-Host " Database is ready for RefOpen APIs!" -ForegroundColor Green
+Write-Host "Now test your APIs: .\test-api.ps1 -BaseUrl 'https://refopen-api-func.azurewebsites.net/api'" -ForegroundColor Cyan

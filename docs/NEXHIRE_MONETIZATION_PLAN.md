@@ -1,13 +1,13 @@
-# ?? NexHire Monetization Strategy & Business Plan
+# ?? RefOpen Monetization Strategy & Business Plan
 
-> **A comprehensive revenue generation strategy for the NexHire job platform**  
+> **A comprehensive revenue generation strategy for the RefOpen job platform**  
 > **Projected Annual Revenue**: $2.4M-6M by Year 2 | **Path to Profitability**: 8-12 months
 
 ---
 
 ## ?? **Executive Summary**
 
-NexHire is positioned to become a **$10M+ ARR SaaS platform** by leveraging its unique **monetized referral marketplace** and comprehensive job platform ecosystem. With infrastructure already built and payment systems integrated, we can start generating revenue within **30 days**.
+RefOpen is positioned to become a **$10M+ ARR SaaS platform** by leveraging its unique **monetized referral marketplace** and comprehensive job platform ecosystem. With infrastructure already built and payment systems integrated, we can start generating revenue within **30 days**.
 
 ### **?? Key Value Propositions**
 - **Only job platform with monetized referral system** - First-mover advantage
@@ -50,9 +50,9 @@ const referralPlans = [
 ```
 
 **Revenue Projections**:
-- **Conservative**: 500 active users × $15 average = **$7.5K/month**
-- **Moderate**: 2000 active users × $25 average = **$50K/month**  
-- **Optimistic**: 5000 active users × $40 average = **$200K/month**
+- **Conservative**: 500 active users ï¿½ $15 average = **$7.5K/month**
+- **Moderate**: 2000 active users ï¿½ $25 average = **$50K/month**  
+- **Optimistic**: 5000 active users ï¿½ $40 average = **$200K/month**
 
 **Implementation**: Your payment processing (Razorpay) is already integrated. Just activate the subscription flows.
 
@@ -111,8 +111,8 @@ const jobSeekerPlans = {
 ```
 
 **Revenue Potential**: 
-- **5% conversion** of 10K job seekers = 500 subscribers × $23 average = **$11.5K/month**
-- **10% conversion** of 25K job seekers = 2,500 subscribers × $27 average = **$67.5K/month**
+- **5% conversion** of 10K job seekers = 500 subscribers ï¿½ $23 average = **$11.5K/month**
+- **10% conversion** of 25K job seekers = 2,500 subscribers ï¿½ $27 average = **$67.5K/month**
 
 ### **4. ?? Employer Subscription Tiers**
 
@@ -575,12 +575,12 @@ const viralGrowthFeatures = {
 4. **? Unique Value**: First monetized referral marketplace
 5. **? Scalable Architecture**: Can handle rapid growth
 
-**?? Bottom Line**: NexHire has all the pieces in place to become a $10M+ ARR SaaS platform. The technical foundation is solid, the monetization features are built, and the market opportunity is massive. 
+**?? Bottom Line**: RefOpen has all the pieces in place to become a $10M+ ARR SaaS platform. The technical foundation is solid, the monetization features are built, and the market opportunity is massive. 
 
 **Time to execute and scale! ??**
 
 ---
 
-*Document prepared by: NexHire Strategy Team*  
+*Document prepared by: RefOpen Strategy Team*  
 *Last updated: December 2024*  
 *Next review: January 2025*

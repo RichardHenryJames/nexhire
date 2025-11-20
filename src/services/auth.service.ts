@@ -43,8 +43,8 @@ export class AuthService {
 
         const options: SignOptions = {
             expiresIn: expiresIn as any, // Type assertion to handle StringValue type issue
-            issuer: 'nexhire-api',
-            audience: 'nexhire-app'
+            issuer: 'refopen-api',
+            audience: 'refopen-app'
         };
 
         return jwt.sign(tokenPayload, jwtConfig.secret, options);
@@ -68,8 +68,8 @@ export class AuthService {
     static verifyToken(token: string): TokenPayload {
         try {
             return jwt.verify(token, jwtConfig.secret, {
-                issuer: 'nexhire-api',
-                audience: 'nexhire-app'
+                issuer: 'refopen-api',
+                audience: 'refopen-app'
             }) as TokenPayload;
         } catch (error: any) {
             if (error instanceof jwt.TokenExpiredError) {

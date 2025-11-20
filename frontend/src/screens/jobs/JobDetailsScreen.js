@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
-import nexhireAPI from '../../services/api';
+import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
@@ -29,7 +30,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [publishing, setPublishing] = useState(false); // ✅ NEW: Publishing state
+  const [publishing, setPublishing] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
@@ -39,7 +40,11 @@ export default function JobDetailsScreen({ route, navigation }) {
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
-  const [referralRequesting, setReferralRequesting] = useState(false); // NEW
+  const [referralRequesting, setReferralRequesting] = useState(false);
+  
+  // 💎 NEW: Beautiful wallet modal state
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -92,7 +97,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const loadPrimaryResume = useCallback(async () => {
     if (user && isJobSeeker) {
       try {
-        const profile = await nexhireAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+        const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
         if (profile?.success) {
           const resumes = profile.data?.resumes || [];
           const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -107,7 +112,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const fetchJobDetails = async () => {
     try {
       setLoading(true);
-      const result = await nexhireAPI.getJobById(jobId);
+      const result = await refopenAPI.getJobById(jobId);
       
       if (result.success) {
         setJob(result.data);
@@ -131,7 +136,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const checkApplicationStatus = async () => {
     try {
       // Check if user has already applied by getting their applications
-      const result = await nexhireAPI.getMyApplications(1, 100);
+      const result = await refopenAPI.getMyApplications(1, 100);
       if (result.success) {
         const hasAppliedToJob = result.data.some(app => app.JobID === jobId);
         setHasApplied(hasAppliedToJob);
@@ -145,7 +150,7 @@ export default function JobDetailsScreen({ route, navigation }) {
   const checkSavedStatus = async () => {
     if (!user || !isJobSeeker) return;
     try {
-      const result = await nexhireAPI.getMySavedJobs(1, 100);
+      const result = await refopenAPI.getMySavedJobs(1, 100);
       if (result.success) {
         const isJobSaved = result.data.some(savedJob => savedJob.JobID === jobId);
         setIsSaved(isJobSaved);
@@ -160,8 +165,8 @@ export default function JobDetailsScreen({ route, navigation }) {
     
     try {
       const [referralRes, eligibilityRes] = await Promise.all([
-        nexhireAPI.getMyReferralRequests(1, 100),
-        nexhireAPI.checkReferralEligibility()
+        refopenAPI.getMyReferralRequests(1, 100),
+        refopenAPI.checkReferralEligibility()
       ]);
       
       if (referralRes?.success && referralRes.data?.requests) {
@@ -211,6 +216,12 @@ export default function JobDetailsScreen({ route, navigation }) {
     console.log('handleAskReferral called in JobDetailsScreen');
     
     if (!user) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
       Alert.alert('Login Required', 'Please login to ask for referrals', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Login', onPress: () => navigation.navigate('Auth') }
@@ -223,6 +234,12 @@ export default function JobDetailsScreen({ route, navigation }) {
     }
     
     if (hasReferred) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+          navigation.navigate('Referrals');
+        }
+        return;
+      }
       Alert.alert('Already Requested', 'You have already requested a referral for this job', [
         { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
         { text: 'OK' }
@@ -230,43 +247,50 @@ export default function JobDetailsScreen({ route, navigation }) {
       return;
     }
     
-    // REQUIREMENT 3: Check real-time eligibility and show subscription modal
+    // ✅ Check wallet balance
     try {
-      console.log('Checking referral eligibility...');
-      const freshEligibility = await nexhireAPI.checkReferralEligibility();
-      console.log('Eligibility result:', freshEligibility);
+      console.log('Checking wallet balance...');
+      const walletBalance = await refopenAPI.getWalletBalance();
+      console.log('Wallet balance result:', walletBalance);
       
-      if (freshEligibility?.success) {
-        const eligibilityData = freshEligibility.data;
-        console.log('Eligibility data:', eligibilityData);
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        console.log('Current balance:', balance);
         
-        if (!eligibilityData.isEligible) {
-          console.log('? User not eligible, checking subscription status...');
-          // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
-          if (eligibilityData.dailyQuotaRemaining === 0) {
-            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
-            return;
-          }
-          console.log('? Other eligibility issue:', eligibilityData.reason);
-          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+        // Check if balance >= ₹50
+        if (balance < 50) {
+          console.log('Insufficient wallet balance:', balance);
+          
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
+          setShowWalletModal(true);
           return;
         }
         
-        console.log('? User is eligible - proceeding with referral');
-        setReferralEligibility(eligibilityData);
+        console.log('✅ Sufficient balance - proceeding with referral');
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance.error);
+        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        return;
       }
     } catch (e) {
-      console.error('Failed to check referral eligibility:', e);
-      Alert.alert('Error', 'Unable to check referral quota. Please try again.');
+      console.error('Failed to check wallet balance:', e);
+      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
       return;
     }
     
     // Double-check no existing request
     try {
-      const existing = await nexhireAPI.getMyReferralRequests(1, 100);
+      const existing = await refopenAPI.getMyReferralRequests(1, 100);
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId);
         if (already) {
+          if (Platform.OS === 'web') {
+            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+              navigation.navigate('Referrals');
+            }
+            return;
+          }
           Alert.alert('Already Requested', 'You have already requested a referral for this job', [
             { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
             { text: 'OK' }
@@ -326,7 +350,7 @@ export default function JobDetailsScreen({ route, navigation }) {
           }
         ]
       );
-      // Fallback: ensure navigation if user does not pick (defensive � some platforms auto-dismiss custom buttons)
+      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
       setTimeout(() => {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
@@ -362,7 +386,7 @@ export default function JobDetailsScreen({ route, navigation }) {
                     text: 'Start Referring!', 
                     onPress: async () => {
                       // Refresh eligibility after "purchase"
-                      const eligibilityRes = await nexhireAPI.checkReferralEligibility();
+                      const eligibilityRes = await refopenAPI.checkReferralEligibility();
                       if (eligibilityRes?.success) {
                         setReferralEligibility(eligibilityRes.data);
                       }
@@ -372,7 +396,7 @@ export default function JobDetailsScreen({ route, navigation }) {
               );
               
               // TODO: Implement real payment processing
-              // const purchaseResult = await nexhireAPI.purchaseReferralPlan(plan.PlanID);
+              // const purchaseResult = await refopenAPI.purchaseReferralPlan(plan.PlanID);
               
             } catch (error) {
               Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
@@ -388,7 +412,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     if (referralMode) {
       try {
         setReferralRequesting(true);
-        const res = await nexhireAPI.createReferralRequest({
+        const res = await refopenAPI.createReferralRequest({
           jobID: jobId,
           extJobID: null,
           resumeID: resumeData.ResumeID,
@@ -401,14 +425,34 @@ export default function JobDetailsScreen({ route, navigation }) {
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          showToast('Referral request sent', 'success');
+          
+          const amountDeducted = res.data?.amountDeducted || 50;
+          const balanceAfter = res.data?.walletBalanceAfter;
+          
+          let message = 'Referral request sent';
+          if (balanceAfter !== undefined) {
+            message = `Referral request sent! ₹${amountDeducted} deducted. New balance: ₹${balanceAfter.toFixed(2)}`;
+          }
+          
+          showToast(message, 'success');
           setReferralMessage('');
           setShowReferralMessageInput(false);
           await loadPrimaryResume();
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          // Handle insufficient balance error
+          if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+            const currentBalance = res.data?.currentBalance || 0;
+            const requiredAmount = res.data?.requiredAmount || 50;
+            
+            // 💎 NEW: Show beautiful modal instead of ugly alert
+            setWalletModalData({ currentBalance, requiredAmount });
+            setShowWalletModal(true);
+          } else {
+            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          }
         }
       } catch (e) {
+        console.error('Referral request error:', e);
         Alert.alert('Error', e.message || 'Failed to send referral request');
       } finally {
         setReferralMode(false);
@@ -438,7 +482,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         applicationData.resumeId = resumeId;
       }
 
-      const result = await nexhireAPI.applyForJob(applicationData);
+      const result = await refopenAPI.applyForJob(applicationData);
       
       if (result.success) {
         setHasApplied(true);
@@ -496,7 +540,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         coverLetter: buildCoverLetter(), // 🆕 NEW: Use custom cover letter
         resumeId
       };
-      const res = await nexhireAPI.applyForJob(applicationData);
+      const res = await refopenAPI.applyForJob(applicationData);
       if (res?.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
@@ -520,8 +564,8 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   const quickReferral = async (resumeId) => {
     try {
-      setReferralRequesting(true); // NEW
-      const res = await nexhireAPI.createReferralRequest({
+      setReferralRequesting(true);
+      const res = await refopenAPI.createReferralRequest({
         jobID: jobId,
         extJobID: null,
         resumeID: resumeId,
@@ -530,16 +574,36 @@ export default function JobDetailsScreen({ route, navigation }) {
       if (res?.success) {
         setHasReferred(true);
         setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
-        showToast('Referral request sent', 'success');
+        
+        const amountDeducted = res.data?.amountDeducted || 50;
+        const balanceAfter = res.data?.walletBalanceAfter;
+        
+        let message = 'Referral request sent successfully!';
+        if (balanceAfter !== undefined) {
+          message += `\n\n₹${amountDeducted} deducted from wallet.\nNew balance: ₹${balanceAfter.toFixed(2)}`;
+        }
+        
+        showToast(message, 'success');
         setReferralMessage('');
         setShowReferralMessageInput(false);
       } else {
-        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        // Handle insufficient balance error
+        if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+          const currentBalance = res.data?.currentBalance || 0;
+          const requiredAmount = res.data?.requiredAmount || 50;
+          
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance, requiredAmount });
+          setShowWalletModal(true);
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
       }
     } catch (e) {
+      console.error('Quick referral error:', e);
       Alert.alert('Error', e.message || 'Failed to send referral request');
     } finally {
-      setReferralRequesting(false); // NEW
+      setReferralRequesting(false);
     }
   };
 
@@ -556,7 +620,7 @@ export default function JobDetailsScreen({ route, navigation }) {
     try {
       if (isSaved) {
         // Unsave the job
-        const result = await nexhireAPI.unsaveJob(jobId);
+        const result = await refopenAPI.unsaveJob(jobId);
         if (result.success) {
           setIsSaved(false);
           showToast('Job removed from saved', 'success');
@@ -565,7 +629,7 @@ export default function JobDetailsScreen({ route, navigation }) {
         }
       } else {
         // Save the job
-        const result = await nexhireAPI.saveJob(jobId);
+        const result = await refopenAPI.saveJob(jobId);
         if (result.success) {
           setIsSaved(true);
           showToast('Job saved successfully', 'success');
@@ -595,7 +659,7 @@ export default function JobDetailsScreen({ route, navigation }) {
       setPublishing(true);
       console.log('📡 Calling publishJob API with JobID:', job.JobID);
       
-      const result = await nexhireAPI.publishJob(job.JobID);
+      const result = await refopenAPI.publishJob(job.JobID);
       
       console.log('📡 API Response:', result);
       
@@ -662,7 +726,7 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   // ✅ NEW: Helper functions for external job information
   const getJobSourceInfo = () => {
-    if (!job.ExternalJobID) return 'NexHire';
+    if (!job.ExternalJobID) return 'RefOpen';
     
     const source = job.ExternalJobID.split('_')[0];
     const sourceMap = {
@@ -900,39 +964,7 @@ export default function JobDetailsScreen({ route, navigation }) {
             value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
           />
         ) : null}
-        {/* ✅ NEW: Show job source information */}
-        {job.ExternalJobID && (
-          <InfoRow
-            icon="globe-outline"
-            label="Job Source"
-            value={getJobSourceInfo()}
-          />
-        )}
       </View>
-
-      {/* ✅ NEW: External Application Section */}
-      {job.ApplicationURL && (
-        <View style={styles.externalApplicationSection}>
-          <View style={styles.externalApplicationHeader}>
-            <Ionicons name="link" size={20} color={colors.primary} />
-            <Text style={styles.externalApplicationTitle}>
-              Apply Directly on {getJobSourceName()}
-            </Text>
-          </View>
-          <Text style={styles.externalApplicationDescription}>
-            This job was posted on {getJobSourceName()}. You can apply directly on their platform for the most up-to-date application process.
-          </Text>
-          <TouchableOpacity
-            style={styles.externalApplicationButton}
-            onPress={() => openExternalApplication()}
-          >
-            <Ionicons name="open-outline" size={20} color={colors.white} />
-            <Text style={styles.externalApplicationButtonText}>
-              Apply on {getJobSourceName()}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* ✅ NEW: Job Tags Section */}
       {job.Tags && (
@@ -1249,6 +1281,18 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         onResumeSelected={handleResumeSelected}
         user={user}
         jobTitle={job?.Title}
+      />
+      
+      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
       />
     </ScrollView>
   );
