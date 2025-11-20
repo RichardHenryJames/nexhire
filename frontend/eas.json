@@ -1,7 +1,8 @@
 {
   "cli": {
     "version": ">= 5.2.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "remote",
+    "requireCommit": false
   },
   "build": {
     "development": {
@@ -21,11 +22,17 @@
       },
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://refopen-api-func.azurewebsites.net/api"
       }
     },
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://refopen-api-func.azurewebsites.net/api"
       }
     }
   },
