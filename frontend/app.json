@@ -18,12 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.refopen.app",
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to upload profile pictures and documents.",
-        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to upload images.",
-        "NSMicrophoneUsageDescription": "This app uses the microphone for voice messages."
-      }
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.refopen.app",
@@ -43,41 +38,17 @@
       "bundler": "metro"
     },
     "plugins": [],
-    "extra": {
-      "eas": {
-        "projectId": "fd95890b-34f4-4da8-a4ca-bc95684b279f"
-      },
-      "appEnv": "production",
-      "appVersion": "1.0.0",
-      "debug": false,
-      "apiUrl": "https://refopen-api-func.azurewebsites.net/api",
-      "apiTimeout": "30000",
-      "apiDebug": false,
-      "googleClientIdWeb": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
-      "googleClientIdAndroid": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
-      "googleClientIdIos": "179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com",
-      "firebaseProjectId": "refopen-123",
-      "firebaseWebAppId": "1:179542785325:web:45ca3d80c8b95b30bbe7a4",
-      "firebaseAndroidAppId": "1:179542785325:android:0779a132c01f0613bbe7a4",
-      "firebaseIosAppId": "1:179542785325:ios:b937235a12bbecd0bbe7a4",
-      "razorpayKeyId": "rzp_live_RHBIO2dq7CFGiW",
-      "featureGoogleSignin": true,
-      "featureRazorpayPayments": true,
-      "featureReferralSystem": true,
-      "featureJobScraping": true,
-      "devMenu": false,
-      "debugLogs": false,
-      "logLevel": "error",
-      "router": {
-        "origin": false
-      }
-    },
     "owner": "parimalkumar",
     "updates": {
       "url": "https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f"
     },
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fd95890b-34f4-4da8-a4ca-bc95684b279f"
+      }
     }
   }
 }
