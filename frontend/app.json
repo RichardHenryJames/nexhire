@@ -4,9 +4,11 @@
     "slug": "refopen",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "refopen",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#4F46E5"
     },
@@ -26,6 +28,10 @@
     "android": {
       "package": "com.refopen.app",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F46E5"
+      },
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -33,6 +39,7 @@
       ]
     },
     "web": {
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [],
@@ -65,6 +72,12 @@
         "origin": false
       }
     },
-    "owner": "parimalkumar"
+    "owner": "parimalkumar",
+    "updates": {
+      "url": "https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
