@@ -212,7 +212,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {
@@ -576,13 +576,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               <>
                 {/* ? REPLACED: DatePicker for End Date */}
                 <DatePicker
-                  label={`End Date${endDateRequired ? ' *' : ''}`}
+                  label="End Date"
                   value={form.endDate}
                   onChange={(date) => {
                     setForm({ ...form, endDate: date }); 
                     if (validationErrors.endDate) setValidationErrors(v => ({ ...v, endDate: undefined })); 
                   }}
-                  placeholder={endDateRequired ? "Required - Select end date" : "Select end date"}
+                  placeholder="Select end date"
                   required={endDateRequired}
                   minimumDate={form.startDate ? new Date(form.startDate) : undefined} // End must be after start
                   maximumDate={new Date()} // Can't end in the future
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
   addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   addButtonText: { color: colors.white, marginLeft: 6 },
   modalContainer: { flex: 1, backgroundColor: colors.background },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   // Removed saveButton style as it's now in footer
   formContainer: { padding: 20, paddingBottom: 40 },

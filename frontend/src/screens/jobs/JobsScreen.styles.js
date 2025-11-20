@@ -254,4 +254,51 @@ export const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '700',
   },
+
+  // Floating Action Buttons
+  fabContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 20, // ?? FIXED: Reduced from 80 to 20 to sit just above Profile tab
+    alignItems: 'center',
+    gap: 8, // ?? REDUCED: From 12 to 8 for tighter spacing
+  },
+  fab: {
+    width: 48, // ?? REDUCED: From 56 to 48 (smaller)
+    height: 48, // ?? REDUCED: From 56 to 48 (smaller)
+    borderRadius: 24, // ?? UPDATED: From 28 to 24 (matches new size)
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, // ?? REDUCED: Softer shadow
+    shadowOpacity: 0.25, // ?? REDUCED: From 0.3 to 0.25
+    shadowRadius: 6, // ?? REDUCED: From 8 to 6
+    elevation: 6, // ?? REDUCED: From 8 to 6
+    marginVertical: 4, // ?? REDUCED: From 6 to 4
+  },
+  fabSaved: {
+    backgroundColor: '#0066cc',
+  },
+  fabApplications: {
+    backgroundColor: '#0066cc',
+  },
+  fabBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ff3b30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  fabBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

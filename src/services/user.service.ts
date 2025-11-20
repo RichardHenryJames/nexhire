@@ -28,6 +28,30 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
+        // ? NEW: Validate and lookup referral code if provided
+        let referrerId: string | null = null;
+        if (userData.referralCode && userData.referralCode.trim().length > 0) {
+            console.log(`?? Looking up referral code: ${userData.referralCode}`);
+            
+            // Find user by referral code (UserID prefix)
+            const referrerQuery = `
+                SELECT UserID, Email, FirstName, LastName 
+                FROM Users 
+                WHERE CAST(UserID AS NVARCHAR(50)) LIKE @param0 
+                AND IsActive = 1
+            `;
+            
+            const referrerResult = await dbService.executeQuery(referrerQuery, [userData.referralCode.trim() + '-%']);
+            
+            if (referrerResult.recordset && referrerResult.recordset.length > 0) {
+                referrerId = referrerResult.recordset[0].UserID;
+                console.log(`? Valid referral code! Referrer: ${referrerResult.recordset[0].Email}`);
+            } else {
+                console.log(`?? Invalid referral code: ${userData.referralCode}`);
+                // Don't throw error, just log - invalid codes are silently ignored
+            }
+        }
+        
         // Start transaction for user and organization/applicant creation
         const tx = await dbService.beginTransaction();
         try {
@@ -37,12 +61,12 @@ export class UserService {
                     UserID, Email, Password, UserType, FirstName, LastName, 
                     Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
                     ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
-                    TwoFactorEnabled, LoginAttempts
+                    TwoFactorEnabled, LoginAttempts, ReferredBy
                 ) VALUES (
                     @param0, @param1, @param2, @param3, @param4, @param5,
                     @param6, @param7, @param8, 0, 0,
                     'Public', GETUTCDATE(), GETUTCDATE(), 1,
-                    0, 0
+                    0, 0, @param9
                 );
                 
                 SELECT * FROM Users WHERE UserID = @param0;
@@ -57,7 +81,8 @@ export class UserService {
                 validatedData.lastName,
                 validatedData.phone || null,
                 validatedData.dateOfBirth || null,
-                validatedData.gender || null
+                validatedData.gender || null,
+                referrerId // Store referrer UserID if valid code was provided
             ];
 
             const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
@@ -76,14 +101,31 @@ export class UserService {
             else if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
                 await this.createApplicantProfileTx(tx, userId);
             }
-            // ? NEW: Handle Admin user registration (no additional profile needed)
+            // Handle Admin user registration (no additional profile needed)
             else if (validatedData.userType === 'Admin') {
                 console.log(`Admin user created: ${userId} (${validatedData.email})`);
-                // Admin users don't need additional profiles like Applicants or Employers
-                // They have full system access through their userType
             }
 
             await tx.commit();
+            
+            // ? NEW: Give welcome bonus and referral bonuses AFTER transaction commit
+            try {
+                const { WalletService } = await import('./wallet.service');
+                
+                // Give ₹100 welcome bonus to new user
+                console.log(`?? Giving welcome bonus to new user ${userId}`);
+                await WalletService.giveWelcomeBonus(userId);
+                
+                // If referred, give ₹50 to both new user and referrer
+                if (referrerId) {
+                    console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
+                    await WalletService.giveReferralBonuses(userId, referrerId);
+                }
+            } catch (bonusError) {
+                // Log but don't fail registration if bonus fails
+                console.error('?? Error giving bonuses (registration still successful):', bonusError);
+            }
+            
             return user;
         } catch (error) {
             try { await tx.rollback(); } catch {}
@@ -1506,6 +1548,28 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
+        // ? NEW: Validate and lookup referral code if provided
+        let referrerId: string | null = null;
+        if (additionalData.referralCode && additionalData.referralCode.trim().length > 0) {
+            console.log(`?? Looking up referral code: ${additionalData.referralCode}`);
+            
+            const referrerQuery = `
+                SELECT UserID, Email, FirstName, LastName 
+                FROM Users 
+                WHERE CAST(UserID AS NVARCHAR(50)) LIKE @param0 
+                AND IsActive = 1
+            `;
+            
+            const referrerResult = await dbService.executeQuery(referrerQuery, [additionalData.referralCode.trim() + '-%']);
+            
+            if (referrerResult.recordset && referrerResult.recordset.length > 0) {
+                referrerId = referrerResult.recordset[0].UserID;
+                console.log(`? Valid referral code! Referrer: ${referrerResult.recordset[0].Email}`);
+            } else {
+                console.log(`?? Invalid referral code: ${additionalData.referralCode}`);
+            }
+        }
+        
         console.log('Creating new user with Google data...');
 
         // Start transaction for user and profile creation
@@ -1518,12 +1582,12 @@ export class UserService {
                     Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
                     ProfileVisibility, CreatedAt, UpdatedAt, IsActive, 
                     TwoFactorEnabled, LoginAttempts, GoogleId, ProfilePictureURL,
-                    LoginMethod
+                    LoginMethod, ReferredBy
                 ) VALUES (
                     @param0, @param1, @param2, @param3, @param4, @param5,
                     @param6, @param7, @param8, @param9, 0,
                     'Public', GETUTCDATE(), GETUTCDATE(), 1,
-                    0, 0, @param10, @param11, 'Google'
+                    0, 0, @param10, @param11, 'Google', @param12
                 );
                 
                 SELECT * FROM Users WHERE UserID = @param0;
@@ -1541,7 +1605,8 @@ export class UserService {
                 additionalData.gender || null,
                 googleUser.verified_email ? 1 : 0, // EmailVerified
                 googleUser.id, // GoogleId
-                googleUser.picture || null // ProfilePictureURL
+                googleUser.picture || null, // ProfilePictureURL
+                referrerId // Store referrer UserID if valid code was provided
             ];
 
             const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
@@ -1571,6 +1636,24 @@ export class UserService {
 
             await tx.commit();
             console.log('Transaction committed successfully');
+
+            // ? NEW: Give welcome bonus and referral bonuses AFTER transaction commit
+            try {
+                const { WalletService } = await import('./wallet.service');
+                
+                // Give ₹100 welcome bonus to new user
+                console.log(`?? Giving welcome bonus to new Google user ${userId}`);
+                await WalletService.giveWelcomeBonus(userId);
+                
+                // If referred, give ₹50 to both new user and referrer
+                if (referrerId) {
+                    console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
+                    await WalletService.giveReferralBonuses(userId, referrerId);
+                }
+            } catch (bonusError) {
+                // Log but don't fail registration if bonus fails
+                console.error('?? Error giving bonuses (registration still successful):', bonusError);
+            }
 
             // Generate tokens
             const tokens = AuthService.generateAuthTokens(user);

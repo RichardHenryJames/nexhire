@@ -376,7 +376,7 @@ export const AuthProvider = ({ children }) => {
                     jobType: workExp.jobType || null,
                     primarySkills: workExp.primarySkills || null,
                     secondarySkills: workExp.secondarySkills || null,
-                    summary: workExp.summary || null,
+                    description: workExp.summary || null, // ??? FIXED: Map summary to description for backend
                   });
                   
                   if (createResult.success) {

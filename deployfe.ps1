@@ -51,25 +51,25 @@ $azureResources = switch ($normalizedEnv) {
 if ($ResourceGroup) { $azureResources.ResourceGroup = $ResourceGroup }
 if ($StaticAppName) { $azureResources.StaticAppName = $StaticAppName }
 
-Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?         FRONTEND DEPLOYMENT CONFIGURATION              ?" -ForegroundColor Cyan
-Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "        FRONTEND DEPLOYMENT CONFIGURATION              " -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "?? Target Environment: $normalizedEnv" -ForegroundColor Green
-Write-Host "?? Infrastructure: $($azureResources.Infrastructure)" -ForegroundColor $(if ($normalizedEnv -eq "prod") { "Magenta" } else { "Yellow" })
-Write-Host "?? Resource Group: $($azureResources.ResourceGroup)" -ForegroundColor White
-Write-Host "?? Static Web App: $($azureResources.StaticAppName)" -ForegroundColor White
-Write-Host "? Function App: $($azureResources.FunctionAppName)" -ForegroundColor White
+Write-Host "Target Environment: $normalizedEnv" -ForegroundColor Green
+Write-Host "Infrastructure: $($azureResources.Infrastructure)" -ForegroundColor $(if ($normalizedEnv -eq "prod") { "Magenta" } else { "Yellow" })
+Write-Host "Resource Group: $($azureResources.ResourceGroup)" -ForegroundColor White
+Write-Host "Static Web App: $($azureResources.StaticAppName)" -ForegroundColor White
+Write-Host "Function App: $($azureResources.FunctionAppName)" -ForegroundColor White
 Write-Host ""
 
 # Set Azure subscription
-Write-Host "?? Setting Azure subscription..." -ForegroundColor Yellow
+Write-Host "Setting Azure subscription..." -ForegroundColor Yellow
 az account set --subscription $SubscriptionId
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to set subscription"
     exit 1
 }
-Write-Host "? Subscription set" -ForegroundColor Green
+Write-Host "Subscription set" -ForegroundColor Green
 
 # Step 1: Switch to frontend directory
 if (-not (Test-Path "frontend")) {
@@ -78,15 +78,15 @@ if (-not (Test-Path "frontend")) {
 }
 
 Set-Location "frontend"
-Write-Host "`n?? Changed to frontend directory" -ForegroundColor Cyan
+Write-Host "`nChanged to frontend directory" -ForegroundColor Cyan
 
 # Step 2: Switch environment file
 $envFile = ".env.$normalizedEnv"
-Write-Host "`n?? Switching to $envFile..." -ForegroundColor Yellow
+Write-Host "`nSwitching to $envFile..." -ForegroundColor Yellow
 
 if (Test-Path $envFile) {
     Copy-Item $envFile ".env" -Force
-    Write-Host "? Environment file switched to $envFile" -ForegroundColor Green
+    Write-Host "Environment file switched to $envFile" -ForegroundColor Green
     
     # Show key configurations
     $envContent = Get-Content ".env" -Raw
@@ -95,7 +95,7 @@ if (Test-Path $envFile) {
         Write-Host "   API URL: $apiUrl" -ForegroundColor Gray
     }
 } else {
-    Write-Host "??  Warning: $envFile not found, using existing .env" -ForegroundColor Yellow
+    Write-Host " Warning: $envFile not found, using existing .env" -ForegroundColor Yellow
     if (Test-Path ".env") {
         Write-Host "   Using existing .env file" -ForegroundColor Gray
     } else {
@@ -106,24 +106,24 @@ if (Test-Path $envFile) {
 }
 
 # Step 3: Install dependencies
-Write-Host "`n?? Installing dependencies..." -ForegroundColor Yellow
+Write-Host "`nInstalling dependencies..." -ForegroundColor Yellow
 npm install
 if ($LASTEXITCODE -ne 0) {
     Write-Error "npm install failed!"
     Set-Location ..
     exit 1
 }
-Write-Host "? Dependencies installed" -ForegroundColor Green
+Write-Host "Dependencies installed" -ForegroundColor Green
 
 # Step 4: Clean previous build
 if (Test-Path "web-build") {
-    Write-Host "`n?? Cleaning previous build..." -ForegroundColor Yellow
+    Write-Host "`nCleaning previous build..." -ForegroundColor Yellow
     Remove-Item -Recurse -Force "web-build"
-    Write-Host "? Previous build cleaned" -ForegroundColor Green
+    Write-Host "Previous build cleaned" -ForegroundColor Green
 }
 
 # Step 5: Build frontend
-Write-Host "`n?? Building frontend for $normalizedEnv..." -ForegroundColor Yellow
+Write-Host "`nBuilding frontend for $normalizedEnv..." -ForegroundColor Yellow
 Write-Host "   Platform: web" -ForegroundColor Gray
 Write-Host "   Output: web-build/" -ForegroundColor Gray
 
@@ -143,14 +143,14 @@ if (-not (Test-Path "web-build/index.html")) {
 }
 
 $buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
-Write-Host "? Build completed successfully" -ForegroundColor Green
+Write-Host "Build completed successfully" -ForegroundColor Green
 Write-Host "   Build size: $([math]::Round($buildSize, 2)) MB" -ForegroundColor Gray
 
 # Step 6: Get deployment token
 $targetStaticApp = $azureResources.StaticAppName
 $targetResourceGroup = $azureResources.ResourceGroup
 
-Write-Host "`n?? Fetching deployment token..." -ForegroundColor Yellow
+Write-Host "`nFetching deployment token..." -ForegroundColor Yellow
 $deploymentToken = az staticwebapp secrets list `
     --name $targetStaticApp `
     --resource-group $targetResourceGroup `
@@ -158,14 +158,14 @@ $deploymentToken = az staticwebapp secrets list `
 
 if (-not $deploymentToken) {
     Write-Error "Failed to fetch deployment token for $targetStaticApp in $targetResourceGroup"
-    Write-Host "?? Make sure the Static Web App exists and you have access" -ForegroundColor Yellow
+    Write-Host "Make sure the Static Web App exists and you have access" -ForegroundColor Yellow
     Set-Location ..
     exit 1
 }
-Write-Host "? Deployment token retrieved" -ForegroundColor Green
+Write-Host "Deployment token retrieved" -ForegroundColor Green
 
 # Step 7: Deploy to Azure Static Web App
-Write-Host "`n?? Deploying to Azure Static Web App..." -ForegroundColor Yellow
+Write-Host "`nDeploying to Azure Static Web App..." -ForegroundColor Yellow
 Write-Host "   Target: $targetStaticApp" -ForegroundColor Gray
 Write-Host "   Environment: $normalizedEnv" -ForegroundColor Gray
 
@@ -184,26 +184,26 @@ if ($LASTEXITCODE -ne 0) {
 # Step 8: Success summary
 $deploymentUrl = "https://$targetStaticApp.azurestaticapps.net"
 
-Write-Host "`n??????????????????????????????????????????????????????????" -ForegroundColor Green
-Write-Host "?     ? FRONTEND DEPLOYMENT COMPLETED SUCCESSFULLY      ?" -ForegroundColor Green
-Write-Host "??????????????????????????????????????????????????????????" -ForegroundColor Green
+Write-Host "`n==========================================================" -ForegroundColor Green
+Write-Host "    FRONTEND DEPLOYMENT COMPLETED SUCCESSFULLY      " -ForegroundColor Green
+Write-Host "==========================================================" -ForegroundColor Green
 
-Write-Host "`n?? Deployment Summary:" -ForegroundColor Cyan
+Write-Host "`nDeployment Summary:" -ForegroundColor Cyan
 Write-Host "   Infrastructure: $($azureResources.Infrastructure)" -ForegroundColor White
 Write-Host "   Environment: $normalizedEnv" -ForegroundColor White
 Write-Host "   Static Web App: $targetStaticApp" -ForegroundColor White
 Write-Host "   Resource Group: $targetResourceGroup" -ForegroundColor White
 
-Write-Host "`n?? Access your frontend at:" -ForegroundColor Cyan
+Write-Host "`nAccess your frontend at:" -ForegroundColor Cyan
 Write-Host "   $deploymentUrl" -ForegroundColor Green
 
 if ($normalizedEnv -eq "prod") {
-    Write-Host "`n?? Custom Domains:" -ForegroundColor Cyan
+    Write-Host "`nCustom Domains:" -ForegroundColor Cyan
     Write-Host "   https://refopen.com (if configured)" -ForegroundColor White
     Write-Host "   https://www.refopen.com (if configured)" -ForegroundColor White
 }
 
-Write-Host "`n?? Next Steps:" -ForegroundColor Yellow
+Write-Host "`nNext Steps:" -ForegroundColor Yellow
 Write-Host "   1. Open: $deploymentUrl" -ForegroundColor White
 Write-Host "   2. Test all functionality" -ForegroundColor White
 Write-Host "   3. Check browser console for errors" -ForegroundColor White
@@ -213,4 +213,4 @@ if ($normalizedEnv -eq "prod") {
 
 Set-Location ..
 
-Write-Host "`n? Frontend deployment script completed!" -ForegroundColor Green
+Write-Host "`nFrontend deployment script completed!" -ForegroundColor Green

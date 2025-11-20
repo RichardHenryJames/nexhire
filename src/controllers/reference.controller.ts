@@ -46,7 +46,10 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const url = new URL(req.url);
         const source = url.searchParams.get('source') || 'database';
         const country = url.searchParams.get('country') || 'US';
-        const limit = parseInt(url.searchParams.get('limit') || '1000');
+        const limitParam = url.searchParams.get('limit');
+        const offsetParam = url.searchParams.get('offset');
+        const limit = limitParam ? parseInt(limitParam) : null; // null means no limit
+        const offset = offsetParam ? parseInt(offsetParam) : 0; // default offset is 0
 
         let organizations: any[] = [];
 
@@ -107,11 +110,21 @@ export const getOrganizations = async (req: any): Promise<any> => {
             index === self.findIndex((o: any) => o.name?.toLowerCase() === org.name?.toLowerCase())
         );
 
-        // Limit results if specified
-        const limitedOrganizations: any[] = uniqueOrganizations.slice(0, limit);
+        // Apply offset and limit for pagination
+        let paginatedOrganizations: any[];
+        if (limit) {
+            // If limit is specified, apply offset + limit
+            paginatedOrganizations = uniqueOrganizations.slice(offset, offset + limit);
+        } else if (offset > 0) {
+            // If only offset is specified (no limit), get all from offset onwards
+            paginatedOrganizations = uniqueOrganizations.slice(offset);
+        } else {
+            // No offset, no limit - return all
+            paginatedOrganizations = uniqueOrganizations;
+        }
 
         // Add "My company is not listed" option at the end
-        limitedOrganizations.push({
+        paginatedOrganizations.push({
             id: 999999,
             name: 'My company is not listed',
             industry: 'Other',
@@ -125,12 +138,15 @@ export const getOrganizations = async (req: any): Promise<any> => {
         return {
             status: 200,
             jsonBody: successResponse({
-                organizations: limitedOrganizations,
-                total: limitedOrganizations.length - 1,
+                organizations: paginatedOrganizations,
+                total: uniqueOrganizations.length,
+                offset: offset,
+                limit: limit,
+                hasMore: limit ? (offset + limit < uniqueOrganizations.length) : false,
                 source: source,
                 fromDatabase: organizations.length > 0,
                 fromExternal: source !== 'database'
-            }, `Organizations retrieved successfully (${limitedOrganizations.length - 1} companies)`)
+            }, `Organizations retrieved successfully (${paginatedOrganizations.length - 1} companies)`)
         };
     } catch (error) {
         console.error('Error getting organizations:', error);

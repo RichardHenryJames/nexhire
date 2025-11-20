@@ -66,7 +66,7 @@ BEGIN
         FOREIGN KEY (ResumeID) REFERENCES ApplicantResumes(ResumeID),
         FOREIGN KEY (AssignedReferrerID) REFERENCES Applicants(ApplicantID),
         FOREIGN KEY (OrganizationID) REFERENCES Organizations(OrganizationID),
-        CONSTRAINT UQ_Referral UNIQUE (JobID, ApplicantID)
+        CONSTRAINT UQ_Referral UNIQUE (JobID, ExtJobID, ApplicantID)
     );
 END
 
