@@ -85,7 +85,7 @@ export default ({ config }) => {
       bundleIdentifier: currentEnvConfig.scheme,
     },
     android: {
-      package: currentEnvConfig.scheme,
+      package: 'com.refopen.app',
       intentFilters: [
         {
           action: 'VIEW',
@@ -104,6 +104,9 @@ export default ({ config }) => {
     experiments: {
       typedRoutes: true,
     },
-    extra: extraConfig, // Exposed to app at runtime
+    extra: {
+      ...config.extra,
+      ...extraConfig,
+    }, // Exposed to app at runtime
   };
 };

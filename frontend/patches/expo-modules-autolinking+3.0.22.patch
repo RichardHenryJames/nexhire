@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-modules-autolinking/scripts/android/autolinking_implementation.gradle b/node_modules/expo-modules-autolinking/scripts/android/autolinking_implementation.gradle
+index 2f07c34..64701df 100644
+--- a/node_modules/expo-modules-autolinking/scripts/android/autolinking_implementation.gradle
++++ b/node_modules/expo-modules-autolinking/scripts/android/autolinking_implementation.gradle
+@@ -143,7 +143,7 @@ class ExpoAutolinkingManager {
+ 
+   MavenRepo[] getExtraMavenRepos(ProviderFactory providers, shouldUseCachedValue=false) {
+     Object json = resolve(providers, shouldUseCachedValue)
+-    return json.extraDependencies.collect { new MavenRepo(it) }
++    return json.extraDependencies.collect { new MavenRepo(it instanceof java.util.Map.Entry ? it.value : it) }
+   }
+ 
+   static String getGeneratedFilePath(Project project) {

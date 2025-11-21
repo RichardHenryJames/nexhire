@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/NexHire.iml" filepath="$PROJECT_DIR$/.idea/NexHire.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/nexhire.iml" filepath="$PROJECT_DIR$/.idea/nexhire.iml" />
     </modules>
   </component>
 </project>
