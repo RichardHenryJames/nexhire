@@ -1,11 +1,9 @@
 pluginManagement {
   includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
-  includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
 }
 
 plugins {
   id("com.facebook.react.settings")
-  id("expo-autolinking-settings")
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
@@ -23,3 +21,4 @@ rootProject.name = 'RefOpen'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
+includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
