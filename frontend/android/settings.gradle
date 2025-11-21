@@ -1,27 +1,16 @@
 pluginManagement {
     includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
-    includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
 }
-
-plugins {
-    id("com.facebook.react.settings")
-    id("expo-autolinking-settings")
-}
-
-extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-    if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
-        ex.autolinkLibrariesFromCommand()
-    } else {
-        ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
-    }
-}
-
-expoAutolinking.useExpoModules()
 
 rootProject.name = 'RefOpen'
 
-expoAutolinking.useExpoVersionCatalog()
+// Expo Autolinking (Expo 49 / RN 0.72 style)
+apply from: new File(rootDir, "../node_modules/expo/scripts/autolinking.gradle")
+useExpoModules()
+
+// React Native Autolinking (RN 0.72 style)
+apply from: new File(rootDir, "../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+applyNativeModulesSettingsGradle(settings)
 
 include ':app'
 includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
-includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
