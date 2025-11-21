@@ -1,6 +1,6 @@
 pluginManagement {
-    includeBuild("../node_modules/@react-native/gradle-plugin")
-    includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
+    includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
+    includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
 }
 
 plugins {
@@ -23,5 +23,5 @@ rootProject.name = 'RefOpen'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
-includeBuild('../node_modules/expo-modules-autolinking/android/expo-gradle-plugin')
+includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
+includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
