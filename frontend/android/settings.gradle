@@ -23,5 +23,3 @@ rootProject.name = 'RefOpen'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
-includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
-includeBuild(new File(rootDir, "../node_modules/expo-modules-autolinking/android/expo-gradle-plugin"))
