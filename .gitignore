@@ -20,6 +20,7 @@ src/secret/*
 # Azure Functions / Development tools
 azure-functions-core-tools/
 *.jar
+!gradle-wrapper.jar
 
 # Build output
 /dist/
