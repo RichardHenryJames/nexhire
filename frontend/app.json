@@ -48,30 +48,6 @@
     "extra": {
       "eas": {
         "projectId": "fd95890b-34f4-4da8-a4ca-bc95684b279f"
-      },
-      "appEnv": "staging",
-      "appVersion": "1.0.0",
-      "debug": true,
-      "apiUrl": "https://refopen-api-func.azurewebsites.net/api",
-      "apiTimeout": "30000",
-      "apiDebug": true,
-      "googleClientIdWeb": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
-      "googleClientIdAndroid": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
-      "googleClientIdIos": "179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com",
-      "firebaseProjectId": "refopen-123",
-      "firebaseWebAppId": "1:179542785325:web:45ca3d80c8b95b30bbe7a4",
-      "firebaseAndroidAppId": "1:179542785325:android:0779a132c01f0613bbe7a4",
-      "firebaseIosAppId": "1:179542785325:ios:b937235a12bbecd0bbe7a4",
-      "razorpayKeyId": "rzp_live_RHBIO2dq7CFGiW",
-      "featureGoogleSignin": true,
-      "featureRazorpayPayments": true,
-      "featureReferralSystem": true,
-      "featureJobScraping": true,
-      "devMenu": false,
-      "debugLogs": false,
-      "logLevel": "debug",
-      "router": {
-        "origin": false
       }
     }
   }
