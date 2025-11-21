@@ -1,14 +1,8 @@
-pluginManagement {
-    includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
-}
-
 rootProject.name = 'RefOpen'
 
-// Expo Autolinking (Expo 49 / RN 0.72 style)
 apply from: new File(rootDir, "../node_modules/expo/scripts/autolinking.gradle")
 useExpoModules()
 
-// React Native Autolinking (RN 0.72 style)
 apply from: new File(rootDir, "../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
 applyNativeModulesSettingsGradle(settings)
 
