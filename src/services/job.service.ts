@@ -1,8 +1,8 @@
 import { dbService } from '../services/database.service';
 import { AuthService } from '../services/auth.service';
 import { Job, PaginationParams, QueryParams, JobCreateRequest } from '../types';
-import { 
-    ValidationError, 
+import {
+    ValidationError,
     NotFoundError,
     validateRequest,
     jobCreateSchema,
@@ -15,15 +15,15 @@ const MAX_PAGE_SIZE = 100;
 const MAX_UNPAGED_TOTAL = 500; // only allow all=true when total <= this
 
 export class JobService {
-    // Create new job (schema-aligned with database)
+    // Create new job (schema-aligned with database) - unchanged
     static async createJob(jobData: any, postedByUserID: string, organizationID: string): Promise<Job> {
         // 1. Validate and normalize input
         const validated = validateRequest<JobCreateRequest>(jobCreateSchema, jobData);
-        
+
         // 2. Resolve / derive required DB columns that are NOT part of request
-        // Department NOT NULL in DB � fallback if not provided
+        // Department NOT NULL in DB – fallback if not provided
         const department = validated.department?.trim() || 'General';
-        // Location NOT NULL � fallback if missing (prefer explicit location else remote marker)
+        // Location NOT NULL – fallback if missing (prefer explicit location else remote marker)
         const location = validated.location?.trim() || (validated.isRemote ? 'Remote' : 'Unspecified');
         // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to 1 (Onsite) if not found
         let workplaceTypeId: number = 1;
@@ -37,13 +37,13 @@ export class JobService {
         // ExternalJobID (NOT NULL): prefix to distinguish manually posted jobs
         const jobId = AuthService.generateUniqueId();
         const externalJobId = `USR_${jobId.substring(0, 8)}`;
-        
+
         // 3. Build the insert dynamically ONLY with columns that exist in Jobs table
         //    Avoid old / non-existent columns like Level, PreferredQualifications, ExperienceLevel, Language, WorkplaceType (text)
         const fields: string[] = [];
         const values: any[] = [];
         const add = (column: string, value: any) => { fields.push(column); values.push(value); };
-        
+
         // Required/base columns
         add('JobID', jobId);
         add('OrganizationID', organizationID);
@@ -56,7 +56,7 @@ export class JobService {
         add('Description', validated.description);
         add('Location', location);
         add('ExternalJobID', externalJobId);
-        
+
         // Optional (present in DB schema)
         const opt = (col: string, val: any) => { if (val !== undefined && val !== null && val !== '') add(col, val); };
         opt('Responsibilities', validated.responsibilities);
@@ -100,7 +100,7 @@ export class JobService {
         add('Status', 'Draft');
         // CurrentApplications default 0
         add('CurrentApplications', 0);
-        
+
         // 4. Build parameter placeholders
         const placeholders = fields.map((_, i) => `@param${i}`);
         const insertQuery = `
@@ -112,7 +112,7 @@ export class JobService {
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             WHERE j.JobID = @param0;
         `;
-        
+
         try {
             const result = await dbService.executeQuery<Job>(insertQuery, values);
             if (!result.recordset || result.recordset.length === 0) {
@@ -128,12 +128,13 @@ export class JobService {
         }
     }
 
-    // Get all jobs with filtering and pagination (page-based only)
+    // Get all jobs with filtering and pagination (page-based only) - OPTIMIZED for performance
     static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number; hasMore: boolean; nextCursor: any | null }> {
         const { page, pageSize, excludeUserApplications } = params;
-        let { sortBy = 'CreatedAt', sortOrder = 'desc', search, filters } = params as any;
+        let { sortBy = 'PublishedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
 
+        // 🚀 OPTIMIZATION: Default to PublishedAt for better index usage
         const allowedSort: Record<string, string> = {
             CreatedAt: 'j.CreatedAt',
             UpdatedAt: 'j.UpdatedAt',
@@ -142,62 +143,24 @@ export class JobService {
             SalaryRangeMin: 'j.SalaryRangeMin',
             SalaryRangeMax: 'j.SalaryRangeMax'
         };
-        const normalizedSort = sortBy && allowedSort[sortBy] ? allowedSort[sortBy] : 'j.CreatedAt';
+        const normalizedSort = sortBy && allowedSort[sortBy] ? allowedSort[sortBy] : 'j.PublishedAt';
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-        
-        let whereClause = "WHERE j.Status = 'Published' AND o.IsActive = 1";
+
+        // 🚀 OPTIMIZATION: Status filter first for better index usage
+        let whereClause = "WHERE j.Status = 'Published'";
         const queryParams: any[] = [];
         let paramIndex = 0;
 
-        // User-specific filtering to exclude applied jobs ONLY (not saved jobs)
-        if (excludeUserApplications) {
-            whereClause += ` AND j.JobID NOT IN (
-                SELECT DISTINCT ja.JobID FROM JobApplications ja 
-                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
-                WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-            )`;
-            queryParams.push(excludeUserApplications);
-            paramIndex += 1;
+        // 🚀 OPTIMIZATION: Default to last 30 days unless user specifies otherwise
+        if (!f.postedWithinDays) {
+            const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+            queryParams.push(cutoffDate);
+            paramIndex++;
         }
 
-        const searchTerm = (search || f.search || f.q || '').toString().trim();
-        if (searchTerm) {
-            const tokens = searchTerm.split(/\s+/).filter(Boolean);
-            const tokenClauses: string[] = [];
-            tokens.forEach(tok => {
-                tokenClauses.push(`j.Title LIKE @param${paramIndex}`);
-                tokenClauses.push(`ISNULL(j.Description, '') LIKE @param${paramIndex + 1}`);
-                tokenClauses.push(`ISNULL(j.Tags, '') LIKE @param${paramIndex + 2}`);
-                tokenClauses.push(`o.Name LIKE @param${paramIndex + 3}`);
-                tokenClauses.push(`ISNULL(j.Location, '') LIKE @param${paramIndex + 4}`);
-                tokenClauses.push(`ISNULL(j.City, '') LIKE @param${paramIndex + 5}`);
-                tokenClauses.push(`ISNULL(j.Country, '') LIKE @param${paramIndex + 6}`);
-                const like = `%${tok}%`;
-                queryParams.push(like, like, like, like, like, like, like);
-                paramIndex += 7;
-            });
-            whereClause += ` AND (${tokenClauses.join(' OR ')})`;
-        }
-
-        if (f.location) {
-            whereClause += ` AND (ISNULL(j.Location, '') LIKE @param${paramIndex} OR ISNULL(j.City, '') LIKE @param${paramIndex + 1} OR ISNULL(j.Country, '') LIKE @param${paramIndex + 2})`;
-            queryParams.push(`%${f.location}%`, `%${f.location}%`, `%${f.location}%`);
-            paramIndex += 3;
-        }
-
-        if (f.jobTypeIds) {
-            const jobTypeStr = String(f.jobTypeIds).trim();
-            if (jobTypeStr) {
-                const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                if (ids.length > 0) {
-                    const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
-                    whereClause += ` AND j.JobTypeID IN (${placeholders})`;
-                    queryParams.push(...ids);
-                    paramIndex += ids.length;
-                }
-            }
-        }
-
+        // 🚀 OPTIMIZATION: Add most selective filters first for better query plan
+        // Workplace Type filter (very selective)
         if (f.workplaceTypeIds) {
             const workplaceTypeStr = String(f.workplaceTypeIds).trim();
             if (workplaceTypeStr) {
@@ -211,24 +174,111 @@ export class JobService {
             }
         }
 
+        // Job Type filter (very selective)
+        if (f.jobTypeIds) {
+            const jobTypeStr = String(f.jobTypeIds).trim();
+            if (jobTypeStr) {
+                const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                if (ids.length > 0) {
+                    const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                    whereClause += ` AND j.JobTypeID IN (${placeholders})`;
+                    queryParams.push(...ids);
+                    paramIndex += ids.length;
+                }
+            }
+        }
+
+        // IsRemote filter (selective)
         if (f.isRemote !== undefined) {
             whereClause += ` AND j.IsRemote = @param${paramIndex}`;
             queryParams.push(Boolean(f.isRemote) ? 1 : 0);
             paramIndex++;
         }
 
+        // User-specific filtering to exclude applied jobs ONLY (not saved jobs)
+        if (excludeUserApplications) {
+            whereClause += ` AND NOT EXISTS (
+                SELECT 1 FROM JobApplications ja
+                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                WHERE a.UserID = @param${paramIndex} 
+                    AND ja.StatusID != 6
+                    AND ja.JobID = j.JobID
+            )`;
+            queryParams.push(excludeUserApplications);
+            paramIndex += 1;
+        }
+
+        // 🚀 OPTIMIZATION: Search term handling - Title, Location, Organization only
+        const searchTerm = (search || f.search || f.q || '').toString().trim();
+        if (searchTerm && searchTerm.length > 0) {
+            if (searchTerm.length <= 4) {
+                // For 1-4 character searches, use LIKE only on Title and Org Name (most relevant)
+                whereClause += ` AND (j.Title LIKE @param${paramIndex} OR o.Name LIKE @param${paramIndex + 1})`;
+                queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+                paramIndex += 2;
+            } else {
+                // For longer searches (5+ chars), use CONTAINS fulltext for all fields
+                const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
+                const tokenClauses: string[] = [];
+
+                // Search in Title, Location, City, Country, Organization using fulltext
+                tokens.forEach(tok => {
+                    tokenClauses.push(`CONTAINS((j.Title, j.Location, j.City, j.Country), @param${paramIndex})`);
+                    queryParams.push(`${tok}*`);
+                    paramIndex += 1;
+                    
+                    tokenClauses.push(`CONTAINS(o.Name, @param${paramIndex})`);
+                    queryParams.push(`${tok}*`);
+                    paramIndex += 1;
+                });
+
+                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+            }
+        }
+
+        // Location filter
+        if (f.location) {
+            whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
+            queryParams.push(`%${f.location}%`, `%${f.location}%`, `%${f.location}%`);
+            paramIndex += 3;
+        }
+
+        // Department filter
         if (f.department) {
-            whereClause += ` AND ISNULL(j.Department, '') LIKE @param${paramIndex}`;
+            whereClause += ` AND j.Department LIKE @param${paramIndex}`;
             queryParams.push(`%${f.department}%`);
             paramIndex++;
         }
 
+        // Company filter (multiple companies support)
+        if (f.companies) {
+            console.log('🏢 Company filter received:', f.companies);
+            const companiesStr = String(f.companies).trim();
+            if (companiesStr) {
+                const companyNames = companiesStr.split('|').map(s => s.trim()).filter(s => s.length > 0); // Split by pipe to handle commas in company names
+                console.log('🏢 Company names parsed:', companyNames);
+                if (companyNames.length > 0) {
+                    const companyConditions = companyNames.map(() => {
+                        const condition = `o.Name = @param${paramIndex}`; // Exact match instead of LIKE
+                        paramIndex++;
+                        return condition;
+                    });
+                    whereClause += ` AND (${companyConditions.join(' OR ')})`;
+                    queryParams.push(...companyNames); // No wildcards - exact match
+                    console.log('🏢 Company WHERE clause:', `AND (${companyConditions.join(' OR ')})`);
+                    console.log('🏢 Company query params:', companyNames);
+                }
+            }
+        }
+
+        // Currency filter
         if (f.currencyId) {
-            whereClause += ` AND ISNULL(j.CurrencyID, 0) = @param${paramIndex}`;
+            whereClause += ` AND j.CurrencyID = @param${paramIndex}`;
             queryParams.push(Number(f.currencyId));
             paramIndex++;
         }
 
+        // 🚀 OPTIMIZATION: Experience filters - use range comparison
         if (f.experienceMin) {
             whereClause += ` AND (j.ExperienceMax IS NULL OR j.ExperienceMax >= @param${paramIndex})`;
             queryParams.push(Number(f.experienceMin));
@@ -240,6 +290,7 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🚀 OPTIMIZATION: Salary filters - use range comparison
         if (f.salaryMin) {
             whereClause += ` AND (j.SalaryRangeMax IS NULL OR j.SalaryRangeMax >= @param${paramIndex})`;
             queryParams.push(Number(f.salaryMin));
@@ -251,23 +302,30 @@ export class JobService {
             paramIndex++;
         }
 
+        // Date filter
         if (f.postedWithinDays) {
-            whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
-            queryParams.push(Number(f.postedWithinDays));
+            const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
+            whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+            queryParams.push(cutoffDate);
             paramIndex++;
         }
 
-        // Total count
+        // 🚀 OPTIMIZATION: Count query with Organizations join for search
         const countQuery = `
             SELECT COUNT(*) as total
             FROM Jobs j
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             ${whereClause}
         `;
 
         const countResult = await dbService.executeQuery(countQuery, queryParams);
         const total = countResult.recordset?.[0]?.total || 0;
+        
+        // 🔍 DEBUG: Log WHERE clause and parameters
+        console.log('🔍 Final WHERE clause:', whereClause);
+        console.log('🔍 Query parameters:', queryParams);
+        console.log('🔍 Total count:', total);
+        
         if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
 
         const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
@@ -276,39 +334,44 @@ export class JobService {
         const pageNum = Math.max(Number(page) || 1, 1);
         const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-        const sortExpr = 'COALESCE(j.PublishedAt, j.CreatedAt)';
+        // � DEBUG: Log final WHERE clause and parameters
+        console.log('🔍 [getJobs] Final WHERE clause:', whereClause);
+        console.log('🔍 [getJobs] Query parameters:', queryParams);
+        console.log('🔍 [getJobs] Filters received:', JSON.stringify(f, null, 2));
+
+        // �🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
         let dataQuery = `
-          SELECT 
-              j.*,
-              jt.Type as JobTypeName,
-              o.Name as OrganizationName,
-              ISNULL(o.LogoURL, '') as OrganizationLogo,
-              ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
-              ISNULL(o.Website, '') as OrganizationWebsite,
-              ISNULL(c.Symbol, '$') as CurrencySymbol,
-              CASE 
-                  WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                  WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                  ELSE 'External Recruiter'
-              END as PostedByName
-          FROM Jobs j
-          INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-          INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-          LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-          LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
-          ${whereClause}
+            SELECT
+                j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
+                j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
+                j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
+                jt.Type as JobTypeName,
+                wt.Type as WorkplaceTypeName,
+                o.Name as OrganizationName,
+                ISNULL(o.LogoURL, '') as OrganizationLogo,
+                ISNULL(c.Symbol, '$') as CurrencySymbol
+            FROM Jobs j
+            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
+            LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
+            ${whereClause}
         `;
 
         const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
         const dataParams: any[] = [...queryParams];
 
         if (!noPaging) {
-          const offset = (pageNum - 1) * pageSizeNum;
-          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
-          dataParams.push(offset, pageSizeNum);
-          paramIndex += 2;
+            const offset = (pageNum - 1) * pageSizeNum;
+            // 🚀 OPTIMIZATION: Use indexed PublishedAt column for sorting
+            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
+                          OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+                          OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
+            dataParams.push(offset, pageSizeNum);
+            paramIndex += 2;
         } else {
-          dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC`;
+            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
         }
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
@@ -320,10 +383,10 @@ export class JobService {
         return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
     }
 
-    // Get job by ID
+    // Get job by ID - unchanged
     static async getJobById(jobId: string): Promise<Job | null> {
         const query = `
-            SELECT 
+            SELECT
                 j.*,
                 jt.Type as JobTypeName,
                 o.Name as OrganizationName,
@@ -332,7 +395,7 @@ export class JobService {
                 o.Website as OrganizationWebsite,
                 o.Description as OrganizationDescription,
                 c.Symbol as CurrencySymbol,
-                CASE 
+                CASE
                     WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
                     WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                     ELSE 'External Recruiter'
@@ -340,7 +403,7 @@ export class JobService {
             FROM Jobs j
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-            LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
+            LEFT JOIN Users u ON j.PostedByUserID = u.UserID
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             WHERE j.JobID = @param0
         `;
@@ -349,7 +412,7 @@ export class JobService {
         return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
     }
 
-    // Update job
+    // Update job - unchanged
     static async updateJob(jobId: string, updateData: any, userId: string): Promise<Job> {
         // Verify job exists and user has permission to update
         const existingJob = await this.getJobById(jobId);
@@ -365,7 +428,7 @@ export class JobService {
                 WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, existingJob.OrganizationID]);
-            
+
             if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
                 throw new ValidationError('Insufficient permissions to update this job');
             }
@@ -395,7 +458,7 @@ export class JobService {
             .map(key => updateData[key]);
 
         const query = `
-            UPDATE Jobs 
+            UPDATE Jobs
             SET ${updateFields}, UpdatedAt = GETUTCDATE()
             WHERE JobID = @param0;
         `;
@@ -412,7 +475,7 @@ export class JobService {
         return updatedJob;
     }
 
-    // Publish job
+    // Publish job - unchanged
     static async publishJob(jobId: string, userId: string): Promise<Job> {
         const job = await this.getJobById(jobId);
         if (!job) {
@@ -426,7 +489,7 @@ export class JobService {
                 WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
-            
+
             if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
@@ -434,11 +497,11 @@ export class JobService {
 
         // Update job status to Published
         const query = `
-            UPDATE Jobs 
-            SET Status = 'Published', 
-                PublishedAt = GETUTCDATE(), 
+            UPDATE Jobs
+            SET Status = 'Published',
+                PublishedAt = GETUTCDATE(),
                 UpdatedAt = GETUTCDATE(),
-                ExpiresAt = CASE 
+                ExpiresAt = CASE
                     WHEN ApplicationDeadline IS NOT NULL THEN ApplicationDeadline
                     ELSE DATEADD(DAY, 30, GETUTCDATE())
                 END
@@ -455,7 +518,7 @@ export class JobService {
         return publishedJob;
     }
 
-    // Close job
+    // Close job - unchanged
     static async closeJob(jobId: string, userId: string): Promise<void> {
         const job = await this.getJobById(jobId);
         if (!job) {
@@ -469,14 +532,14 @@ export class JobService {
                 WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
             `;
             const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
-            
+
             if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
                 throw new ValidationError('Insufficient permissions to close this job');
             }
         }
 
         const query = `
-            UPDATE Jobs 
+            UPDATE Jobs
             SET Status = 'Closed', UpdatedAt = GETUTCDATE()
             WHERE JobID = @param0
         `;
@@ -484,7 +547,7 @@ export class JobService {
         await dbService.executeQuery(query, [jobId]);
     }
 
-    // Delete job
+    // Delete job - unchanged
     static async deleteJob(jobId: string, userId: string): Promise<void> {
         const job = await this.getJobById(jobId);
         if (!job) {
@@ -499,7 +562,7 @@ export class JobService {
         // Check if job has applications
         const applicationQuery = 'SELECT COUNT(*) as count FROM JobApplications WHERE JobID = @param0';
         const applicationResult = await dbService.executeQuery(applicationQuery, [jobId]);
-        
+
         if (applicationResult.recordset[0].count > 0) {
             throw new ValidationError('Cannot delete job with existing applications');
         }
@@ -508,7 +571,7 @@ export class JobService {
         await dbService.executeQuery(query, [jobId]);
     }
 
-    // Get jobs by organization
+    // Get jobs by organization - minor search optimization
     static async getJobsByOrganization(organizationId: string, params: PaginationParams & { status?: string; search?: string; postedByUserId?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search, postedByUserId } = params as any;
 
@@ -534,24 +597,21 @@ export class JobService {
                 paramIndex++;
             }
         }
-        
+
         if (postedByUserId) {
             whereClause += ` AND j.PostedByUserID = @param${paramIndex}`;
             queryParams.push(postedByUserId);
             paramIndex++;
         }
-        
+
         if (search) {
             const tokens = String(search).trim().split(/\s+/).filter(Boolean);
             if (tokens.length) {
                 const tokenClauses: string[] = [];
                 tokens.forEach(tok => {
-                    tokenClauses.push(`j.Title LIKE @param${paramIndex}`);
-                    tokenClauses.push(`ISNULL(j.Description,'') LIKE @param${paramIndex+1}`);
-                    tokenClauses.push(`ISNULL(j.Tags,'') LIKE @param${paramIndex+2}`);
-                    const like = `%${tok}%`;
-                    queryParams.push(like, like, like);
-                    paramIndex += 3;
+                    tokenClauses.push(`CONTAINS((j.Title, j.Description, j.Tags), @param${paramIndex})`);
+                    queryParams.push(`"${tok}"`);
+                    paramIndex += 1;
                 });
                 whereClause += ` AND (${tokenClauses.join(' OR ')})`;
             }
@@ -564,98 +624,58 @@ export class JobService {
 
         const offset = (page - 1) * pageSize;
         const dataQuery = `
-            SELECT 
+            SELECT
                 j.*, jt.Type as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             ${whereClause}
             ORDER BY ${normalizedSort} ${normalizedOrder}
-            OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex+1} ROWS ONLY`;
+            OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
         queryParams.push(offset, pageSize);
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
-    // Get job types (reference data)
+    // Get job types (reference data) - unchanged
     static async getJobTypes(): Promise<any[]> {
         const query = 'SELECT * FROM JobTypes WHERE IsActive = 1 ORDER BY Type';
         const result = await dbService.executeQuery(query);
         return result.recordset || [];
     }
 
-    // Get currencies (reference data)
+    // Get currencies (reference data) - unchanged
     static async getCurrencies(): Promise<any[]> {
         const query = 'SELECT * FROM Currencies WHERE IsActive = 1 ORDER BY Code';
         const result = await dbService.executeQuery(query);
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (page-based only)
+    // Search jobs with advanced filters (page-based only) - OPTIMIZED for performance
     static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number; totalPages?: number; hasMore?: boolean; nextCursor?: any | null }> {
-        try {
-            const {
-                page = 1,
-                pageSize = 20,
-                excludeUserApplications,
-                ...rest
-            } = searchParams || {};
+        const searchStartTime = Date.now();
+        console.log('🔍 searchJobs started:', { searchParams, timestamp: new Date().toISOString() });
 
+        try {
+            const { page = 1, pageSize = 20, excludeUserApplications, ...rest } = searchParams || {};
             const f = { ...rest } as any;
-            let whereClause = "WHERE o.IsActive = 1 AND j.Status = 'Published'";
+            
+            // 🚀 OPTIMIZATION: Status filter first for index usage
+            let whereClause = "WHERE j.Status = 'Published'";
             const queryParams: any[] = [];
             let paramIndex = 0;
 
-            // Exclude applied jobs ONLY (not saved jobs) for the current user
-            if (excludeUserApplications) {
-                whereClause += ` AND j.JobID NOT IN (
-                    SELECT DISTINCT ja.JobID FROM JobApplications ja 
-                    INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID 
-                    WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6  -- Exclude withdrawn applications (StatusID=6)
-                )`;
-                queryParams.push(excludeUserApplications);
-                paramIndex += 1;
+            // 🚀 OPTIMIZATION: Default to last 30 days unless user specifies otherwise
+            if (!f.postedWithinDays) {
+                const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+                queryParams.push(cutoffDate);
+                paramIndex++;
             }
 
-            const searchTerm = (f.search || f.q || '').toString().trim();
-            if (searchTerm) {
-                const tokens = searchTerm.split(/\s+/).filter(Boolean);
-                const tokenClauses: string[] = [];
-                tokens.forEach(tok => {
-                    tokenClauses.push(`j.Title LIKE @param${paramIndex}`);
-                    tokenClauses.push(`ISNULL(j.Description, '') LIKE @param${paramIndex + 1}`);
-                    tokenClauses.push(`ISNULL(j.Tags, '') LIKE @param${paramIndex + 2}`);
-                    tokenClauses.push(`o.Name LIKE @param${paramIndex + 3}`);
-                    tokenClauses.push(`ISNULL(j.Location, '') LIKE @param${paramIndex + 4}`);
-                    tokenClauses.push(`ISNULL(j.City, '') LIKE @param${paramIndex + 5}`);
-                    tokenClauses.push(`ISNULL(j.Country, '') LIKE @param${paramIndex + 6}`);
-                    const like = `%${tok}%`;
-                    queryParams.push(like, like, like, like, like, like, like);
-                    paramIndex += 7;
-                });
-                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
-            }
-
-            if (f.location) {
-                whereClause += ` AND (ISNULL(j.Location, '') LIKE @param${paramIndex} OR ISNULL(j.City, '') LIKE @param${paramIndex + 1} OR ISNULL(j.Country, '') LIKE @param${paramIndex + 2})`;
-                queryParams.push(`%${f.location}%`, `%${f.location}%`, `%${f.location}%`);
-                paramIndex += 3;
-            }
-
-            if (f.jobTypeIds) {
-                const jobTypeStr = String(f.jobTypeIds).trim();
-                if (jobTypeStr) {
-                    const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                    if (ids.length > 0) {
-                        const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
-                        whereClause += ` AND j.JobTypeID IN (${placeholders})`;
-                        queryParams.push(...ids);
-                        paramIndex += ids.length;
-                    }
-                }
-            }
-
+            // 🚀 OPTIMIZATION: Add most selective filters first
+            // Workplace Type filter (very selective)
             if (f.workplaceTypeIds) {
                 const workplaceTypeStr = String(f.workplaceTypeIds).trim();
                 if (workplaceTypeStr) {
@@ -669,24 +689,112 @@ export class JobService {
                 }
             }
 
+            // Job Type filter (very selective)
+            if (f.jobTypeIds) {
+                const jobTypeStr = String(f.jobTypeIds).trim();
+                if (jobTypeStr) {
+                    const ids = jobTypeStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    if (ids.length > 0) {
+                        const placeholders = ids.map((_, i) => `@param${paramIndex + i}`).join(',');
+                        whereClause += ` AND j.JobTypeID IN (${placeholders})`;
+                        queryParams.push(...ids);
+                        paramIndex += ids.length;
+                    }
+                }
+            }
+
+            // IsRemote filter (selective)
             if (f.isRemote !== undefined) {
                 whereClause += ` AND j.IsRemote = @param${paramIndex}`;
                 queryParams.push(Boolean(f.isRemote) ? 1 : 0);
                 paramIndex++;
             }
 
+            // Exclude applied jobs ONLY (not saved jobs) for the current user
+            if (excludeUserApplications) {
+                whereClause += ` AND NOT EXISTS (
+                    SELECT 1 FROM JobApplications ja
+                    INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                    WHERE a.UserID = @param${paramIndex} 
+                        AND ja.StatusID != 6
+                        AND ja.JobID = j.JobID
+                )`;
+                queryParams.push(excludeUserApplications);
+                paramIndex += 1;
+            }
+
+            // 🚀 OPTIMIZATION: Search term handling - Title, Location, Organization only
+            const searchTerm = (f.search || f.q || '').toString().trim();
+            if (searchTerm && searchTerm.length > 0) {
+                if (searchTerm.length <= 4) {
+                    // For 1-4 character searches, use LIKE only on Title and Org Name (most relevant)
+                    console.log('🔍 Using LIKE for short search term:', searchTerm);
+                    whereClause += ` AND (j.Title LIKE @param${paramIndex} OR o.Name LIKE @param${paramIndex + 1})`;
+                    queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+                    paramIndex += 2;
+                } else {
+                    // For longer searches (5+ chars), use CONTAINS fulltext
+                    console.log('🔍 Using CONTAINS for search term:', searchTerm);
+                    const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
+                    const tokenClauses: string[] = [];
+
+                    // Search in Title, Location, City, Country using fulltext
+                    tokens.forEach(tok => {
+                        tokenClauses.push(`CONTAINS((j.Title, j.Location, j.City, j.Country), @param${paramIndex})`);
+                        queryParams.push(`${tok}*`);
+                        paramIndex += 1;
+                        
+                        tokenClauses.push(`CONTAINS(o.Name, @param${paramIndex})`);
+                        queryParams.push(`${tok}*`);
+                        paramIndex += 1;
+                    });
+
+                    whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+                }
+            }
+
+            // Location filter
+            if (f.location) {
+                whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
+                queryParams.push(`%${f.location}%`, `%${f.location}%`, `%${f.location}%`);
+                paramIndex += 3;
+            }
+
+            // Department filter
             if (f.department) {
-                whereClause += ` AND ISNULL(j.Department, '') LIKE @param${paramIndex}`;
+                whereClause += ` AND j.Department LIKE @param${paramIndex}`;
                 queryParams.push(`%${f.department}%`);
                 paramIndex++;
             }
 
+            // Company filter (multiple companies support)
+            if (f.companies) {
+                console.log('🏢 [searchJobs] Company filter received:', f.companies);
+                const companiesStr = String(f.companies).trim();
+                if (companiesStr) {
+                    const companyNames = companiesStr.split('|').map(s => s.trim()).filter(s => s.length > 0);
+                    console.log('🏢 [searchJobs] Company names parsed:', companyNames);
+                    if (companyNames.length > 0) {
+                        const companyConditions = companyNames.map(() => {
+                            const condition = `o.Name = @param${paramIndex}`;
+                            paramIndex++;
+                            return condition;
+                        });
+                        whereClause += ` AND (${companyConditions.join(' OR ')})`;
+                        queryParams.push(...companyNames);
+                        console.log('🏢 [searchJobs] Company WHERE clause:', `AND (${companyConditions.join(' OR ')})`);
+                    }
+                }
+            }
+
+            // Currency filter
             if (f.currencyId) {
-                whereClause += ` AND ISNULL(j.CurrencyID, 0) = @param${paramIndex}`;
+                whereClause += ` AND j.CurrencyID = @param${paramIndex}`;
                 queryParams.push(Number(f.currencyId));
                 paramIndex++;
             }
 
+            // Experience filters
             if (f.experienceMin) {
                 whereClause += ` AND (j.ExperienceMax IS NULL OR j.ExperienceMax >= @param${paramIndex})`;
                 queryParams.push(Number(f.experienceMin));
@@ -698,6 +806,7 @@ export class JobService {
                 paramIndex++;
             }
 
+            // Salary filters
             if (f.salaryMin) {
                 whereClause += ` AND (j.SalaryRangeMax IS NULL OR j.SalaryRangeMax >= @param${paramIndex})`;
                 queryParams.push(Number(f.salaryMin));
@@ -709,23 +818,39 @@ export class JobService {
                 paramIndex++;
             }
 
+            // Date filter
             if (f.postedWithinDays) {
-                whereClause += ` AND DATEDIFF(day, COALESCE(j.PublishedAt, j.CreatedAt), GETUTCDATE()) <= @param${paramIndex}`;
-                queryParams.push(Number(f.postedWithinDays));
+                const cutoffDate = new Date(Date.now() - Number(f.postedWithinDays) * 24 * 60 * 60 * 1000);
+                whereClause += ` AND j.PublishedAt >= @param${paramIndex}`;
+                queryParams.push(cutoffDate);
                 paramIndex++;
             }
 
+            // 🚀 OPTIMIZATION: Count query with Organizations join for search
+            const countStartTime = Date.now();
             const countQuery = `
                 SELECT COUNT(*) as total
                 FROM Jobs j
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 ${whereClause}
             `;
 
+            console.log('🔍 Executing count query:', { 
+                query: countQuery.substring(0, 500), 
+                paramCount: queryParams.length,
+                params: queryParams.slice(0, 5) 
+            });
             const countResult = await dbService.executeQuery(countQuery, queryParams);
+            const countTime = Date.now() - countStartTime;
             const total = countResult.recordset?.[0]?.total || 0;
-            if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
+
+            console.log('✅ Count query completed:', { total, countTime: `${countTime}ms` });
+
+            if (total === 0) {
+                const totalTime = Date.now() - searchStartTime;
+                console.log('🔍 searchJobs completed (no results):', { totalTime: `${totalTime}ms` });
+                return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
+            }
 
             const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
             const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
@@ -733,26 +858,24 @@ export class JobService {
             const pageNum = Math.max(Number(page) || 1, 1);
             const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-            const sortExpr = 'COALESCE(j.PublishedAt, j.CreatedAt)';
+            // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
+            const dataStartTime = Date.now();
             let dataQuery = `
-                SELECT 
-                  j.*,
-                  jt.Type as JobTypeName,
-                  o.Name as OrganizationName,
-                  ISNULL(o.LogoURL, '') as OrganizationLogo,
-                  ISNULL(o.LinkedInProfile, '') as OrganizationLinkedIn,
-                  ISNULL(o.Website, '') as OrganizationWebsite,
-                  ISNULL(c.Symbol, '$') as CurrencySymbol,
-                  CASE 
-                      WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                      WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                      ELSE 'External Recruiter'
-                  END as PostedByName
+                SELECT
+                    j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                    j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
+                    j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
+                    j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
+                    jt.Type as JobTypeName,
+                    wt.Type as WorkplaceTypeName,
+                    o.Name as OrganizationName,
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    ISNULL(c.Symbol, '$') as CurrencySymbol
                 FROM Jobs j
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
                 LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-                LEFT JOIN Users u ON j.PostedByUserID = u.UserID  -- ? CHANGED TO LEFT JOIN
                 ${whereClause}
             `;
 
@@ -761,21 +884,41 @@ export class JobService {
 
             if (!noPaging) {
                 const offset = (pageNum - 1) * pageSizeNum;
-                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+                // 🚀 OPTIMIZATION: Use indexed PublishedAt instead of PublishedDate
+                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC 
+                              OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+                              OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
                 dataParams.push(offset, pageSizeNum);
                 paramIndex += 2;
             } else {
-                dataQuery += ` ORDER BY ${sortExpr} DESC, j.JobID DESC`;
+                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC`;
             }
 
+            console.log('🔍 Executing data query');
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
+            const dataTime = Date.now() - dataStartTime;
             const rows = dataResult.recordset || [];
 
+            console.log('✅ Data query completed:', { rowCount: rows.length, dataTime: `${dataTime}ms` });
+
             const hasMore = !noPaging && rows.length === pageSizeNum && pageNum < totalPages;
-            
+
+            const totalTime = Date.now() - searchStartTime;
+            console.log('✅ searchJobs completed:', {
+                totalTime: `${totalTime}ms`,
+                countTime: `${countTime}ms`,
+                dataTime: `${dataTime}ms`,
+                total,
+                returned: rows.length
+            });
+
             return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
         } catch (error) {
-            console.error('Error in JobService.searchJobs (advanced):', error);
+            const totalTime = Date.now() - searchStartTime;
+            console.error('❌ Error in JobService.searchJobs:', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                totalTime: `${totalTime}ms`
+            });
             return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
         }
     }

@@ -26,11 +26,30 @@ const CARD_MARGIN = 10;
 const ResumeSection = ({ 
   profile, 
   setProfile, 
-  // ? REMOVED: editing prop - now uses context
+  editing: editingProp, // ? Accept editing prop for standalone usage
   onUpdate 
 }) => {
-  // ? Use ProfileSection's editing context instead of prop
-  const editing = useEditing();
+  // ? Determine editing state: Prop takes priority over context
+  let editing = true; // Default to true
+  
+  // If prop is explicitly provided, use it (takes highest priority)
+  if (editingProp !== undefined) {
+    editing = editingProp;
+    console.log('📝 ResumeSection: Using prop editing:', editing);
+  } else {
+    // Otherwise try to use context (for old ProfileScreen compatibility)
+    try {
+      const contextEditing = useEditing();
+      if (contextEditing !== undefined) {
+        editing = contextEditing;
+        console.log('📝 ResumeSection: Using context editing:', editing);
+      }
+    } catch (e) {
+      console.log('📝 ResumeSection: Context not available, using default true');
+    }
+  }
+  
+  console.log('📝 ResumeSection FINAL editing value:', editing);
   
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(false);

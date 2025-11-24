@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import DatePicker from '../../components/DatePicker';
@@ -25,6 +26,7 @@ export default function RegisterScreen({ navigation }) {
     phone: '',
     dateOfBirth: '',
     gender: '',
+    inviteCode: '', // ?? NEW: Invite code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -120,6 +122,7 @@ export default function RegisterScreen({ navigation }) {
         ...(formData.phone && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.inviteCode && { inviteCode: formData.inviteCode.trim() }), // ?? NEW: Add invite code
       };
 
       const result = await register(registrationData);
@@ -189,6 +192,43 @@ export default function RegisterScreen({ navigation }) {
           {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}
           {renderInput('lastName', 'Last Name', 'e.g., Doe', false, 'default', false, true)}
           {renderInput('email', 'Email Address', 'e.g., john.doe@example.com', false, 'email-address', false, true)}
+          
+          {/* ?? NEW: Invite Code Input (Optional) */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>
+              Invite Code (Optional)
+            </Text>
+            <View style={styles.inviteCodeContainer}>
+              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.inviteCodeIcon} />
+              <TextInput
+                style={[styles.input, styles.inviteCodeInput, errors.inviteCode && styles.inputError]}
+                placeholder="Enter invite code"
+                placeholderTextColor={colors.gray400}
+                value={formData.inviteCode}
+                onChangeText={(text) => {
+                  // Convert to uppercase and remove spaces
+                  const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                  setFormData({ ...formData, inviteCode: cleanCode });
+                  if (errors.inviteCode) {
+                    setErrors({ ...errors, inviteCode: null });
+                  }
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+              />
+            </View>
+            {errors.inviteCode && (
+              <Text style={styles.errorText}>{errors.inviteCode}</Text>
+            )}
+            <View style={styles.inviteCodeHint}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+              <Text style={styles.inviteCodeHintText}>
+                Have an invite code? Get ₹50 bonus when you sign up!
+              </Text>
+            </View>
+          </View>
+          
           {renderInput('password', 'Password', 'Minimum 8 characters', true, 'default', false, true)}
           {renderInput('confirmPassword', 'Confirm Password', 'Re-enter your password', true, 'default', false, true)}
 
@@ -359,6 +399,35 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     marginTop: 4,
     marginLeft: 4,
+  },
+  // ?? NEW: Invite code styles
+  inviteCodeContainer: {
+    position: 'relative',
+  },
+  inviteCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 16,
+    zIndex: 1,
+  },
+  inviteCodeInput: {
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  inviteCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  inviteCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   fieldContainer: {
     marginBottom: 20,

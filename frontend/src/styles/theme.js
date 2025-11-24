@@ -34,6 +34,7 @@ export const colors = {
   border: '#E5E7EB',
   
   // Text colors
+  text: '#111827',         // ?? ADD THIS - Default text color
   textPrimary: '#111827',
   textSecondary: '#6B7280',
   textLight: '#9CA3AF',

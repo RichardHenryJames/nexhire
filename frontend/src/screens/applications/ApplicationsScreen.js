@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Image, // NEW: Import Image for company logos
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { showToast } from '../../components/Toast';
 import { colors, typography } from '../../styles/theme';
 
@@ -45,12 +46,30 @@ export default function ApplicationsScreen({ navigation }) {
   // Web withdraw confirmation state
   const [withdrawTarget, setWithdrawTarget] = useState(null);
 
+  // 💎 NEW: Beautiful wallet modal state
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+
   // Mount effect: Initial load
   useEffect(() => {
     fetchApplications();
     loadReferralData();
     loadPrimaryResume();
   }, []); // Fixed: was <></> which is invalid syntax
+
+  // Update navigation header with count
+  useEffect(() => {
+    const title = isEmployer ? 'Job Applications' : 'My Applications';
+    if (pagination.total > 0) {
+      navigation.setOptions({
+        headerTitle: `${title} (${pagination.total})`,
+      });
+    } else {
+      navigation.setOptions({
+        headerTitle: title,
+      });
+    }
+  }, [pagination.total, isEmployer, navigation]);
 
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
@@ -218,6 +237,12 @@ export default function ApplicationsScreen({ navigation }) {
   const handleAskReferral = async (job) => {
     if (!job) return;
     if (!user) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
       Alert.alert('Login Required', 'Please login to ask for referrals', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Login', onPress: () => navigation.navigate('Auth') }
@@ -233,6 +258,12 @@ export default function ApplicationsScreen({ navigation }) {
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+          navigation.navigate('Referrals');
+        }
+        return;
+      }
       Alert.alert('Already Requested', 'You have already requested a referral for this job', [
         { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
         { text: 'OK' }
@@ -240,38 +271,50 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // Real-time eligibility check (SAME AS JobsScreen & JobDetailsScreen)
+    // ✅ Check wallet balance
     try {
-      const freshEligibility = await refopenAPI.checkReferralEligibility();
+      console.log('Checking wallet balance...');
+      const walletBalance = await refopenAPI.getWalletBalance();
+      console.log('Wallet balance result:', walletBalance);
 
-      if (freshEligibility?.success) {
-        const eligibilityData = freshEligibility.data;
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        console.log('Current balance:', balance);
 
-        if (!eligibilityData.isEligible) {
-          // Show upgrade modal whenever daily quota hits zero, even if user already has a plan (prompt higher tier)
-          if (eligibilityData.dailyQuotaRemaining === 0) {
-            showSubscriptionModal(eligibilityData.reason, eligibilityData.hasActiveSubscription);
-            return;
-          }
-          Alert.alert('Referral Limit Reached', eligibilityData.reason || 'You have reached your daily referral limit');
+        // Check if balance >= ₹50
+        if (balance < 50) {
+          console.log('Insufficient wallet balance:', balance);
+          
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
+          setShowWalletModal(true);
           return;
         }
 
-        // Update local state with fresh data
-        setReferralEligibility(eligibilityData);
+        console.log('✅ Sufficient balance - proceeding with referral');
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance.error);
+        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        return;
       }
     } catch (e) {
-      console.error('Failed to check referral eligibility:', e);
-      Alert.alert('Error', 'Unable to check referral quota. Please try again.');
+      console.error('Failed to check wallet balance:', e);
+      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
       return;
     }
 
-    // Double-check no existing request (in case of race conditions)
+    // Double-check no existing request
     try {
       const existing = await refopenAPI.getMyReferralRequests(1, 100);
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId);
         if (already) {
+          if (Platform.OS === 'web') {
+            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+              navigation.navigate('Referrals');
+            }
+            return;
+          }
           Alert.alert('Already Requested', 'You have already requested a referral for this job', [
             { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
             { text: 'OK' }
@@ -331,7 +374,7 @@ export default function ApplicationsScreen({ navigation }) {
         ]
       );
       
-      // Fallback: ensure navigation if user does not pick (defensive � some platforms auto-dismiss custom buttons)
+      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
       setTimeout(() => {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
@@ -354,10 +397,9 @@ export default function ApplicationsScreen({ navigation }) {
     try {
       setShowResumeModal(false);
       if (referralMode) {
-        // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
         const res = await refopenAPI.createReferralRequest({
-          jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
-          extJobID: null, // Explicitly null for internal referrals
+          jobID: id,
+          extJobID: null,
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
@@ -367,12 +409,29 @@ export default function ApplicationsScreen({ navigation }) {
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
-          showToast('Referral request sent successfully', 'success');
           
-          // NEW: Reload primary resume after submission (same as JobDetailsScreen)
+          const amountDeducted = res.data?.amountDeducted || 50;
+          const balanceAfter = res.data?.walletBalanceAfter;
+          
+          let message = 'Referral request sent successfully';
+          if (balanceAfter !== undefined) {
+            message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+          }
+          
+          showToast(message, 'success');
           await loadPrimaryResume();
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          // Handle insufficient balance error
+          if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+            const currentBalance = res.data?.currentBalance || 0;
+            const requiredAmount = res.data?.requiredAmount || 50;
+            
+            // 💎 NEW: Show beautiful modal instead of ugly alert
+            setWalletModalData({ currentBalance, requiredAmount });
+            setShowWalletModal(true);
+          } else {
+            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          }
         }
       }
     } catch (e) {
@@ -388,10 +447,9 @@ export default function ApplicationsScreen({ navigation }) {
   const quickReferral = async (job, resumeId) => {
     const id = job.JobID || job.id;
     try {
-      // ? NEW SCHEMA: Send jobID (internal) with extJobID as null
       const res = await refopenAPI.createReferralRequest({
-        jobID: id,  // Internal job ID (UNIQUEIDENTIFIER)
-        extJobID: null, // Explicitly null for internal referrals
+        jobID: id,
+        extJobID: null,
         resumeID: resumeId
       });
       if (res?.success) {
@@ -401,9 +459,28 @@ export default function ApplicationsScreen({ navigation }) {
           dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
           isEligible: prev.dailyQuotaRemaining > 1
         }));
-        showToast('Referral request sent', 'success');
+        
+        const amountDeducted = res.data?.amountDeducted || 50;
+        const balanceAfter = res.data?.walletBalanceAfter;
+        
+        let message = 'Referral request sent';
+        if (balanceAfter !== undefined) {
+          message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+        }
+        
+        showToast(message, 'success');
       } else {
-        Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        // Handle insufficient balance error
+        if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+          const currentBalance = res.data?.currentBalance || 0;
+          const requiredAmount = res.data?.requiredAmount || 50;
+          
+          // 💎 NEW: Show beautiful modal instead of ugly alert
+          setWalletModalData({ currentBalance, requiredAmount });
+          setShowWalletModal(true);
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Failed to send referral request');
@@ -687,16 +764,6 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header section */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isEmployer ? 'Job Applications' : 'My Applications'}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          {pagination.total} {pagination.total === 1 ? 'application' : 'applications'}
-        </Text>
-      </View>
-
       {/* Applications List */}
       <FlatList
         data={applications}
@@ -727,6 +794,18 @@ export default function ApplicationsScreen({ navigation }) {
         onResumeSelected={handleResumeSelected}
         user={user}
         jobTitle={pendingJobForApplication?.JobTitle || pendingJobForApplication?.Title}
+      />
+
+      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
       />
 
       {/* Custom Withdraw Confirmation (web only) */}

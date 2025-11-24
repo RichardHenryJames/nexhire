@@ -665,25 +665,17 @@ const EducationContent = ({
             fieldName="highestEducation"
           />
 
-          <SelectionButton
-            label="Field of Study"
-            value={profile.fieldOfStudy}
-            placeholder={
-              profile.highestEducation 
-                ? `Select field for ${profile.highestEducation}` 
-                : "Select degree type first"
-            }
-            onPress={() => {
-              if (!profile.highestEducation) {
-                Alert.alert('Select Degree First', 'Please select your degree type before choosing field of study');
-                return;
-              }
-              openModal('field');
-            }}
-            disabled={!profile.highestEducation}
-            icon="library"
-            fieldName="fieldOfStudy"
-          />
+          {/* Only show Field of Study if Highest Education is selected */}
+      {profile.highestEducation && (
+            <SelectionButton
+     label="Field of Study"
+   value={profile.fieldOfStudy}
+     placeholder={`Select field for ${profile.highestEducation}`}
+       onPress={() => openModal('field')}
+ icon="library"
+    fieldName="fieldOfStudy"
+     />
+          )}
 
           {/* Enhanced Education Details with Database Support */}
           <View style={styles.fieldContainer}>
@@ -697,6 +689,7 @@ const EducationContent = ({
                 if (onUpdate) onUpdate(updatedProfile);
               }}
               placeholder="e.g., 2024"
+              placeholderTextColor={colors.gray400}
               keyboardType="numeric"
               maxLength={4}
             />
@@ -713,6 +706,7 @@ const EducationContent = ({
                 if (onUpdate) onUpdate(updatedProfile);
               }}
               placeholder="e.g., 3.8/4.0, 85%, First Class"
+              placeholderTextColor={colors.gray400}
             />
           </View>
         </>

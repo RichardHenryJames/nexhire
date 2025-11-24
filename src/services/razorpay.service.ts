@@ -36,7 +36,7 @@ export class RazorpayService {
 
       // Validate amount (should be in paise, minimum 100 paise = ?1)
       if (!orderData.amount || orderData.amount < 100) {
-        throw new ValidationError('Invalid payment amount (minimum ?1)');
+        throw new ValidationError('Invalid payment amount');
       }
 
       // Validate plan and expected amount to prevent tampering

@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ReferralProofModal from '../../components/ReferralProofModal';
 import { showToast } from '../../components/Toast';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ReferralScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
@@ -505,12 +506,34 @@ export default function ReferralScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with Get Your Custom Referral Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Referrals</Text>
-        <Text style={styles.headerSubtitle}>
-          Connect job seekers with opportunities
-        </Text>
+    <View style={styles.headerLeft}>
+ <Text style={styles.headerTitle}>Referrals</Text>
+      <Text style={styles.headerSubtitle}>
+            Connect job seekers with opportunities
+   </Text>
+ </View>
+   
+        {/* NEW: Get Your Custom Referral Button */}
+        {isJobSeeker && (
+          <TouchableOpacity
+            style={styles.getReferralBtn}
+   onPress={() => navigation.navigate('AskReferral')}
+         activeOpacity={0.8}
+   >
+      <LinearGradient
+colors={['#FEB800', '#FF8C00']}
+  start={{ x: 0, y: 0 }}
+     end={{ x: 1, y: 1 }}
+    style={styles.getReferralGradient}
+            >
+   <Ionicons name="gift" size={18} color={colors.white} />
+      <Text style={styles.getReferralText}>Get Your{'\n'}Custom Referral</Text>
+     <Ionicons name="arrow-forward" size={16} color={colors.white} />
+        </LinearGradient>
+          </TouchableOpacity>
+)}
       </View>
 
       {/* Tab Navigation */}
@@ -640,20 +663,56 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: 16, // Reduced from 20
-    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  headerLeft: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginBottom: 2, // Reduced from 4
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: typography.sizes.sm, // Reduced from md
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
+  },
+  // NEW: Get Your Custom Referral Button Styles
+  getReferralBtn: {
+    marginLeft: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#FF8C00',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+ shadowRadius: 8,
+    elevation: 8,
+  },
+  getReferralGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  getReferralText: {
+ fontSize: typography.sizes.xs,
+  fontWeight: typography.weights.bold,
+ color: colors.white,
+    textAlign: 'center',
+    lineHeight: 14,
+    letterSpacing: 0.3,
   },
   tabNavigation: {
     flexDirection: 'row',

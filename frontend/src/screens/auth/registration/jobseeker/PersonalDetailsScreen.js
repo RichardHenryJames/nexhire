@@ -108,6 +108,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     organizationId: null, // NEW: Organization ID from database
     jobTitle: '', // NEW: Job title (required when company is selected)
     startDate: '', // NEW: Start date (required when company is selected)
+    referralCode: '', // 🎁 NEW: Referral code for bonus
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -167,7 +168,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (!showOrgModal || manualOrgMode) return;
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         // Apply client-side filter for better UX
         const filtered = applyOrgFilter(raw, debouncedOrgQuery);
@@ -282,26 +283,41 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }
     }
 
+    // NEW: Current Company is mandatory for Experienced professionals
+    if (userType === 'JobSeeker' && experienceType === 'Experienced') {
+      // Check if company already captured from work experience flow
+      const experiences = Array.isArray(workExperienceData) 
+        ? workExperienceData 
+      : (workExperienceData ? [workExperienceData] : []);
+      
+      const hasCurrentCompany = experiences.some(exp => exp.isCurrentPosition && exp.companyName);
+      
+   // If no company from work experience, it's mandatory in this form
+      if (!hasCurrentCompany && !formData.currentCompany && !formData.organizationId) {
+      newErrors.currentCompany = 'Current company is required for experienced professionals';
+      }
+    }
+
     // NEW: Validate jobTitle and startDate when company is selected
     if (formData.currentCompany || formData.organizationId) {
-      if (!formData.jobTitle.trim()) {
-        newErrors.jobTitle = 'Job title is required when company is selected';
-      }
+   if (!formData.jobTitle.trim()) {
+newErrors.jobTitle = 'Job title is required when company is selected';
+    }
       if (!formData.startDate.trim()) {
-        newErrors.startDate = 'Start date is required when company is selected';
+ newErrors.startDate = 'Start date is required when company is selected';
       } else {
-        // Validate date format (YYYY-MM-DD)
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+ // Validate date format (YYYY-MM-DD)
+ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(formData.startDate)) {
-          newErrors.startDate = 'Please use YYYY-MM-DD format';
+   newErrors.startDate = 'Please use YYYY-MM-DD format';
         } else {
           const startDate = new Date(formData.startDate);
           const today = new Date();
-          if (startDate > today) {
-            newErrors.startDate = 'Start date cannot be in the future';
+     if (startDate > today) {
+       newErrors.startDate = 'Start date cannot be in the future';
           }
-        }
-      }
+    }
+   }
     }
 
     // Optional field validations
@@ -311,9 +327,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
     if (formData.dateOfBirth) {
       const dob = new Date(formData.dateOfBirth);
-      const today = new Date();
+   const today = new Date();
       if (dob >= today) {
-        newErrors.dateOfBirth = 'Date of birth must be in the past';
+ newErrors.dateOfBirth = 'Date of birth must be in the past';
       }
     }
 
@@ -339,6 +355,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
+        ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
         
         // Include all the collected data for profile completion
         experienceType,
@@ -592,26 +609,36 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>
         Current Company {skippedSteps && '(for referrals)'}
+        {/* NEW: Show asterisk for experienced professionals */}
+    {userType === 'JobSeeker' && experienceType === 'Experienced' && (
+          <Text style={styles.requiredAsterisk}> *</Text>
+        )}
       </Text>
-      <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
+      <TouchableOpacity style={[
+styles.selectionButton,
+        errors.currentCompany && styles.inputError
+      ]} onPress={openOrgModal}>
         {formData.currentCompany ? (
           <View style={styles.companySelectorContent}>
-            {formData.organizationId && (
-              <View style={styles.companySelectorLogoPlaceholder}>
-                <Ionicons name="business" size={16} color={colors.gray400} />
-              </View>
+       {formData.organizationId && (
+     <View style={styles.companySelectorLogoPlaceholder}>
+      <Ionicons name="business" size={16} color={colors.gray400} />
+       </View>
             )}
             <Text style={styles.selectionValue}>
-              {formData.currentCompany}
-            </Text>
-          </View>
+     {formData.currentCompany}
+   </Text>
+ </View>
         ) : (
-          <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
-            Select or search company
+       <Text style={[styles.selectionValue, styles.selectionPlaceholder]}>
+        Select or search company
           </Text>
-        )}
+)}
         <Ionicons name="chevron-down" size={20} color={colors.gray500} />
       </TouchableOpacity>
+      {errors.currentCompany && (
+        <Text style={styles.errorText}>{errors.currentCompany}</Text>
+      )}
     </View>
   );
 
@@ -676,6 +703,42 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
             {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
             
+            {/* 🎁 NEW: Referral Code Input (Optional) */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Referral Code (Optional)
+              </Text>
+              <View style={styles.referralCodeContainer}>
+                <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+                <TextInput
+                  style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
+                  placeholder="Enter referral code"
+                  placeholderTextColor={colors.gray400}
+                  value={formData.referralCode}
+                  onChangeText={(text) => {
+                    // Convert to uppercase and remove spaces
+                    const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                    setFormData({ ...formData, referralCode: cleanCode });
+                    if (errors.referralCode) {
+                      setErrors({ ...errors, referralCode: null });
+                    }
+                  }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={8}
+                />
+              </View>
+              {errors.referralCode && (
+                <Text style={styles.errorText}>{errors.referralCode}</Text>
+              )}
+              <View style={styles.referralCodeHint}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+                <Text style={styles.referralCodeHintText}>
+                  Have a referral code? Get ₹50 bonus when you sign up!
+                </Text>
+              </View>
+            </View>
+            
             {/* Only show password fields for non-Google users */}
             {!isGoogleUser && (
               <>
@@ -703,28 +766,18 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             
             {renderInput('location', 'Current Location', false, 'default')}
 
-            {/* NEW: Current Company Dropdown - ONLY show if NOT already captured AND for experienced professionals */}
+            {/* NEW: Current Company Dropdown - Always show for experienced professionals */}
             {(() => {
-              // Don't show for students
+            // Don't show for students
               if (userType !== 'JobSeeker' || experienceType === 'Student') return null;
 
-              // Check if current company already captured from work experience flow
-              const experiences = Array.isArray(workExperienceData) 
-                ? workExperienceData 
-                : (workExperienceData ? [workExperienceData] : []);
-              
-              const hasCurrentCompany = experiences.some(exp => exp.isCurrentPosition && exp.companyName);
+  // For experienced professionals, always show the field
+       // It will be pre-filled if coming from work experience flow
+         return <OrgPickerButton />;
+       })()}
 
-              // Only show for skip flow users (no work experience data) OR if company field is being filled
-              if (!hasCurrentCompany || formData.currentCompany) {
-                return <OrgPickerButton />;
-              }
-
-              return null;
-            })()}
-
-            {/* NEW: Show jobTitle and startDate fields only when company is selected */}
-            {userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
+            {/* NEW: Show jobTitle and startDate fields only when company is selected */
+            userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
                   <Ionicons name="information-circle" size={16} color={colors.primary} />
@@ -1164,6 +1217,37 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
     marginTop: 4,
+  },
+  // 🎁 NEW: Referral code styles
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    flex: 1,
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   selectionButton: {
     backgroundColor: colors.surface,

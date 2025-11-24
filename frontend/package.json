@@ -39,7 +39,9 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^13.0.0",
+    "@microsoft/signalr": "^10.0.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "7.2.0",
     "@react-navigation/bottom-tabs": "^6.5.8",
     "@react-navigation/native": "^6.1.7",
     "@react-navigation/stack": "^6.3.17",
@@ -68,7 +70,7 @@
     "react-native-screens": "~3.22.0",
     "react-native-svg": "^13.9.0",
     "react-native-web": "~0.19.6",
-    "@react-native-community/datetimepicker": "7.2.0"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^1.1.7",

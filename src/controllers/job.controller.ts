@@ -159,33 +159,75 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
 
 // Search jobs (paged, supports cursor) - FIXED: User-aware filtering
 export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    try {
+    // ?? START: Measure total API response time
+    const apiStartTime = Date.now();
+    console.log('?? /search/jobs API called:', {
+        userId: user.userId,
+        timestamp: new Date().toISOString()
+    });
+
+ try {
         const searchParams = extractQueryParams(req);
-        const safeParams = { 
-            ...searchParams, 
-            page: searchParams.page || 1, 
-            pageSize: searchParams.pageSize || 20,
-            // Add user filtering for applied/saved exclusion
-            excludeUserApplications: user.userId
-        } as any;
         
-        const result = await JobService.searchJobs(safeParams);
+        console.log('?? Search params received:', {
+     search: searchParams.search,
+ page: searchParams.page,
+    pageSize: searchParams.pageSize,
+     filters: Object.keys(searchParams).filter(k => !['search', 'page', 'pageSize'].includes(k)),
+       timestamp: new Date().toISOString()
+        });
+
+        const safeParams = { 
+        ...searchParams, 
+       page: searchParams.page || 1, 
+pageSize: searchParams.pageSize || 20,
+       // Add user filtering for applied/saved exclusion
+     excludeUserApplications: user.userId
+        } as any;
+   
+        // ?? Measure service call
+const serviceStartTime = Date.now();
+  const result = await JobService.searchJobs(safeParams);
+        const serviceTime = Date.now() - serviceStartTime;
+   
+        console.log('? JobService.searchJobs completed:', {
+       serviceTime: `${serviceTime}ms`,
+ jobsReturned: result.jobs.length,
+      total: result.total,
+  timestamp: new Date().toISOString()
+        });
+
         const totalPages = Math.max(Math.ceil((result.total || 0) / (Number(safeParams.pageSize) || 20)), 1);
-        const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
+     const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
+        
+        const totalTime = Date.now() - apiStartTime;
+        console.log('? /search/jobs API response ready:', {
+      totalApiTime: `${totalTime}ms`,
+            serviceTime: `${serviceTime}ms`,
+            overheadTime: `${totalTime - serviceTime}ms`,
+      timestamp: new Date().toISOString()
+    });
+
         return {
             status: 200,
             jsonBody: successResponse(result.jobs, 'Jobs search completed', {
-                page: safeParams.page,
-                pageSize: safeParams.pageSize,
-                total: result.total,
-                totalPages,
-                hasMore: result.hasMore,
+    page: safeParams.page,
+    pageSize: safeParams.pageSize,
+      total: result.total,
+    totalPages,
+     hasMore: result.hasMore,
                 nextCursor: result.nextCursor,
-                searchQuery
+        searchQuery,
+_performanceMs: totalTime // Include in response for frontend monitoring
             })
         };
     } catch (error) {
-        console.error('Error in searchJobs:', error);
+        const totalTime = Date.now() - apiStartTime;
+  console.error('? Error in searchJobs:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+   totalTime: `${totalTime}ms`,
+      timestamp: new Date().toISOString()
+        });
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to search jobs' } };
     }
 }, ['read:jobs']);

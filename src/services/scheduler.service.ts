@@ -10,9 +10,9 @@ export class SchedulerService {
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
   private config = {
-    enabled: process.env.SCHEDULER_ENABLED !== 'false', // Default to enabled unless explicitly disabled
+    enabled: false, // ?? DISABLED - Using Azure Timer Trigger instead
     intervalHours: parseInt(process.env.SCRAPING_INTERVAL_HOURS || '24'),
-    autoStart: true // ? CHANGED: Always auto-start by default
+    autoStart: false // ?? DISABLED - Using Azure Timer Trigger instead
   };
 
   private constructor() {}

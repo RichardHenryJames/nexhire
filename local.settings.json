@@ -34,6 +34,8 @@
     "RAZORPAY_KEY_SECRET": "test_key_secret_here",
     "RAZORPAY_WEBHOOK_SECRET": "local_webhook_secret",
     
+    "SIGNALR_CONNECTION_STRING": "Endpoint=https://refopen-signalr.service.signalr.net;AccessKey=3K6yDjZG2aaU7NL8kEilhvOEIucx3uaMrOixe2qBCYYcWHw7JbgIJQQJ99BKACYeBjFXJ3w3AAAAASRSFM9c;Version=1.0;",
+    
     "FEATURE_FLAG_REFERRAL_SYSTEM": "true",
     "FEATURE_FLAG_GOOGLE_SIGNIN": "true",
     "FEATURE_FLAG_PAYMENT_SYSTEM": "true",

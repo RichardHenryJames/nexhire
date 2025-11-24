@@ -39,6 +39,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState(''); // 🎁 NEW: Referral code
   const [submitting, setSubmitting] = useState(false);
 
   // Pre-populate Google user data
@@ -113,6 +114,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           userType: 'Employer',
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+          ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           
           // Add Google OAuth data
           googleAuth: {
@@ -191,6 +193,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           userType: 'Employer',
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth }),
+          ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           ...organizationPayload,
         };
 
@@ -386,6 +389,34 @@ export default function EmployerAccountScreen({ navigation, route }) {
           />
         </View>
 
+        {/* 🎁 NEW: Referral Code Input (Optional) */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Referral Code (Optional)</Text>
+          <View style={styles.referralCodeContainer}>
+            <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
+            <TextInput
+              style={[styles.input, styles.referralCodeInput]}
+              placeholder="Enter referral code"
+              placeholderTextColor={colors.gray400}
+              value={referralCode}
+              onChangeText={(text) => {
+                // Convert to uppercase and remove spaces
+                const cleanCode = text.toUpperCase().replace(/\s/g, '');
+                setReferralCode(cleanCode);
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={8}
+            />
+          </View>
+          <View style={styles.referralCodeHint}>
+            <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+            <Text style={styles.referralCodeHintText}>
+              Have a referral code? Get ₹50 bonus when you sign up!
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.field}> 
           <Text style={styles.label}>Phone Number</Text>
           <TextInput 
@@ -571,6 +602,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success + '08',
     borderColor: colors.success,
     borderWidth: 1.5,
+  },
+  // 🎁 NEW: Referral code styles
+  referralCodeContainer: {
+    position: 'relative',
+  },
+  referralCodeIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  referralCodeInput: {
+    paddingLeft: 40, // Make room for the icon
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1,
+  },
+  referralCodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: colors.success + '10',
+    padding: 8,
+    borderRadius: 6,
+  },
+  referralCodeHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.success,
+    marginLeft: 6,
+    flex: 1,
   },
   summaryContainer: {
     backgroundColor: colors.surface,
