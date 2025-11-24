@@ -7,6 +7,8 @@ obj/
 TestResults/
 *.csproj.user
 packages/
+
+*.apk
 .env*
 backups/*
 frontend/.env*
@@ -20,6 +22,7 @@ src/secret/*
 # Azure Functions / Development tools
 azure-functions-core-tools/
 *.jar
+!gradle-wrapper.jar
 
 # Build output
 /dist/

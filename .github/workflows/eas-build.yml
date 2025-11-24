@@ -1,0 +1,42 @@
+name: EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+   - ios
+        - all
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+   uses: actions/setup-node@v4
+  with:
+          node-version: 20
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+  with:
+     expo-version: latest
+       eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+    - name: Install dependencies
+    working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+    - name: Build Android APK
+        working-directory: frontend
+        run: eas build --platform ${{ github.event.inputs.platform }} --profile preview --non-interactive --no-wait
