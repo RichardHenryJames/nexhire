@@ -284,31 +284,62 @@ export default function ReferralScreen({ navigation }) {
     return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
-  const renderMyRequestCard = (request) => (
-    <View key={request.RequestID} style={styles.requestCard}>
-      <View style={styles.requestHeader}>
-        {/* Company Logo */}
-        <View style={styles.logoContainer}>
-          {request.OrganizationLogo ? (
-            <Image 
-              source={{ uri: request.OrganizationLogo }} 
-              style={styles.companyLogo}
-              onError={() => console.log('Logo load error for:', request.CompanyName)}
-            />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="business-outline" size={24} color={colors.gray500} />
-            </View>
-          )}
-        </View>
+  const renderMyRequestCard = (request) => {
+    // Determine if this is an external or internal referral
+    const isExternalJob = !!request.ExtJobID;
+    const isInternalJob = !!request.JobID && !request.ExtJobID;
+    
+    return (
+      <View key={request.RequestID} style={styles.requestCard}>
+        <View style={styles.requestHeader}>
+          {/* Company Logo */}
+          <View style={styles.logoContainer}>
+            {request.OrganizationLogo ? (
+              <Image 
+                source={{ uri: request.OrganizationLogo }} 
+                style={styles.companyLogo}
+                onError={() => console.log('Logo load error for:', request.CompanyName)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={24} color={colors.gray500} />
+              </View>
+            )}
+          </View>
 
-        <View style={styles.requestInfo}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {request.JobTitle || 'Job Title'}
-          </Text>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {request.CompanyName || 'Company'}
-          </Text>
+          <View style={styles.requestInfo}>
+            {/* Job Type Badge */}
+            <View style={styles.jobTypeBadgeContainer}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {request.JobTitle || 'Job Title'}
+              </Text>
+              {isExternalJob && (
+                <View style={styles.externalBadge}>
+                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
+                  <Text style={styles.externalBadgeText}>External</Text>
+                </View>
+              )}
+              {isInternalJob && (
+                <View style={styles.internalBadge}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
+                  <Text style={styles.internalBadgeText}>Internal</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.companyName} numberOfLines={1}>
+              {request.CompanyName || 'Company'}
+            </Text>
+            
+            {/* Show External Job ID for external referrals */}
+            {isExternalJob && request.ExtJobID && (
+              <View style={styles.externalJobIdRow}>
+                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
+                <Text style={styles.externalJobIdText} numberOfLines={1}>
+                  Job ID: {request.ExtJobID}
+                </Text>
+              </View>
+            )}
           <View style={styles.timestampRow}>
             <Ionicons name="time-outline" size={14} color={colors.gray500} />
             <Text style={styles.requestDate}>
@@ -370,7 +401,8 @@ export default function ReferralScreen({ navigation }) {
         )}
       </View>
     </View>
-  );
+    );
+  };
 
   const renderRequestToMeCard = (request) => {
     // ? NEW: Determine if this is an external or internal referral
