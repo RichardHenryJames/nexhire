@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
+import aiJobRecommendations from '../services/aiJobRecommendations';
 import { colors, typography } from '../styles/theme';
 import ReferralPointsBreakdown from '../components/profile/ReferralPointsBreakdown';
 
@@ -37,6 +38,10 @@ export default function HomeScreen({ navigation }) {
     recentApplications: [],
     referralStats: {}
   });
+  
+  // 🆕 NEW: AI Personalized Jobs state
+  const [aiJobs, setAiJobs] = useState([]);
+  const [loadingAiJobs, setLoadingAiJobs] = useState(false);
   
   // 🆕 NEW: Wallet state
   const [walletBalance, setWalletBalance] = useState(null);
@@ -99,6 +104,8 @@ export default function HomeScreen({ navigation }) {
       // 🆕 NEW: Load wallet balance for job seekers
       if (isJobSeeker) {
         loadWalletBalance();
+        // 🤖 NEW: Load AI personalized jobs
+        loadAIPersonalizedJobs();
       }
 
     } catch (error) {
@@ -335,6 +342,35 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // 🤖 NEW: Load AI Personalized Jobs
+  const loadAIPersonalizedJobs = async () => {
+    try {
+      setLoadingAiJobs(true);
+      const userId = user?.UserID || user?.userId || user?.id;
+      
+      if (!userId) {
+        console.warn('No user ID available for AI recommendations');
+        return;
+      }
+
+      console.log('🤖 Loading AI personalized jobs for user:', userId);
+      const result = await aiJobRecommendations.getPersonalizedJobs(userId, 5);
+      
+      if (result.success && result.jobs) {
+        console.log(`🤖 Loaded ${result.jobs.length} AI personalized jobs`);
+        setAiJobs(result.jobs);
+      } else {
+        console.warn('🤖 No AI personalized jobs found');
+        setAiJobs([]);
+      }
+    } catch (error) {
+      console.error('🤖 Error loading AI personalized jobs:', error);
+      setAiJobs([]);
+    } finally {
+      setLoadingAiJobs(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -551,6 +587,72 @@ export default function HomeScreen({ navigation }) {
                 <JobCard key={job.JobID || index} job={job} />
               ))}
             </ScrollView>
+          </View>
+        )}
+
+        {/* 🤖 AI Personalized Jobs Section - ONLY for Job Seekers */}
+        {isJobSeeker && (
+          <View style={styles.aiJobsContainer}>
+            <View style={styles.aiSectionHeader}>
+              <View style={styles.aiTitleContainer}>
+                <View style={styles.aiSparkleIcon}>
+                  <Ionicons name="bulb-outline" size={24} color={colors.white} />
+                </View>
+                <View>
+                  <Text style={styles.aiSectionTitle}>AI Personalized For You</Text>
+                  <Text style={styles.aiSubtitle}>Jobs matched to your profile</Text>
+                </View>
+              </View>
+              {aiJobs.length > 0 && (
+                <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loadingAiJobs ? (
+              <View style={styles.aiLoadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.aiLoadingText}>AI analyzing your profile...</Text>
+              </View>
+            ) : aiJobs.length > 0 ? (
+              <>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalScroll}
+                >
+                  {aiJobs.map((job, index) => (
+                    <View key={job.JobID || index} style={styles.aiJobCardWrapper}>
+                      <View style={styles.aiJobBadge}>
+                        <Ionicons name="flash-outline" size={12} color={colors.white} />
+                        <Text style={styles.aiJobBadgeText}>AI Matched</Text>
+                      </View>
+                      <JobCard job={job} />
+                    </View>
+                  ))}
+                </ScrollView>
+                <View style={styles.aiTipContainer}>
+                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Text style={styles.aiTipText}>
+                    Complete your profile with more details for even better recommendations
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.aiNoJobsState}>
+                <Ionicons name="search-outline" size={32} color={colors.gray400} />
+                <Text style={styles.aiNoJobsText}>
+                  No matching jobs found right now. Try exploring all jobs or check back later.
+                </Text>
+                <View style={styles.aiTipContainer}>
+                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Text style={styles.aiTipText}>
+                    Add more skills and experience to your profile for better AI recommendations
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -1059,5 +1161,132 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
+  },
+  // 🤖 AI Personalized Jobs Styles
+  aiJobsContainer: {
+    padding: 20,
+    paddingTop: 0,
+    marginTop: 8,
+  },
+  aiSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: `${colors.primary}10`,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  aiTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  aiSparkleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  aiSectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  aiSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
+    fontStyle: 'italic',
+  },
+  aiJobCardWrapper: {
+    position: 'relative',
+  },
+  aiJobBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 20,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 10,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  aiJobBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+    marginLeft: 4,
+  },
+  aiLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary + '30',
+  },
+  aiLoadingText: {
+    marginLeft: 12,
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    fontStyle: 'italic',
+  },
+  aiTipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '08',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  aiTipText: {
+    flex: 1,
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
+    marginLeft: 8,
+    lineHeight: 16,
+  },
+  aiNoJobsState: {
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  aiNoJobsText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 20,
   },
 });

@@ -1876,7 +1876,6 @@ if (!resumeId) {
           referralMessage: requestData.referralMessage,
           // For external referrals, include job details
           jobTitle: requestData.jobTitle,
-          companyName: requestData.companyName,
           organizationId: requestData.organizationId,
           jobUrl: requestData.jobUrl,
         };
@@ -1885,8 +1884,9 @@ if (!resumeId) {
           throw new Error('Resume ID is required');
         }
         
-        if (hasExtJobID && (!payload.jobTitle || !payload.companyName)) {
-          throw new Error('Job title and company name are required for external referrals');
+        // ✅ FIXED: Only require jobTitle and organizationId (no companyName)
+        if (hasExtJobID && (!payload.jobTitle || !payload.organizationId)) {
+          throw new Error('Job title and organization ID are required for external referrals');
         }
       } else {
         // 🔄 OLD FORMAT: String jobID means internal referral (backward compatibility)

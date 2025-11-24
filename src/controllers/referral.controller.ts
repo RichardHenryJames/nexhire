@@ -169,8 +169,8 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
             if (!isValidGuid(requestData.resumeID)) {
                 throw new ValidationError('Invalid Resume ID format');
             }
-            if (!requestData.jobTitle || !requestData.companyName) {
-                throw new ValidationError('Job title and company name are required for external referrals');
+            if (!requestData.jobTitle || !requestData.organizationId) {
+                throw new ValidationError('Job title and organization ID are required for external referrals');
             }
         }
 

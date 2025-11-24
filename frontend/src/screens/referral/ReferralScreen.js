@@ -372,75 +372,128 @@ export default function ReferralScreen({ navigation }) {
     </View>
   );
 
-  const renderRequestToMeCard = (request) => (
-    <View key={request.RequestID} style={styles.requestCard}>
-      <View style={styles.requestHeader}>
-        {/* Company Logo */}
-        <View style={styles.logoContainer}>
-          {request.OrganizationLogo ? (
-            <Image 
-              source={{ uri: request.OrganizationLogo }} 
-              style={styles.companyLogo}
-              onError={() => console.log('Logo load error for:', request.CompanyName)}
-            />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="business-outline" size={24} color={colors.gray500} />
-            </View>
-          )}
-        </View>
+  const renderRequestToMeCard = (request) => {
+    // ? NEW: Determine if this is an external or internal referral
+    const isExternalJob = !!request.ExtJobID;
+    const isInternalJob = !!request.JobID && !request.ExtJobID;
+    
+    // For internal jobs, make the card clickable
+    const CardWrapper = isInternalJob ? TouchableOpacity : View;
+    const cardWrapperProps = isInternalJob 
+      ? { 
+          onPress: () => {
+            console.log('?? Navigating to internal job:', request.JobID);
+            navigation.navigate('JobDetails', { jobId: request.JobID });
+          },
+          activeOpacity: 0.7
+        }
+      : {};
+    
+    return (
+      <CardWrapper key={request.RequestID} style={styles.requestCard} {...cardWrapperProps}>
+        <View style={styles.requestHeader}>
+          {/* Company Logo */}
+          <View style={styles.logoContainer}>
+            {request.OrganizationLogo ? (
+              <Image 
+                source={{ uri: request.OrganizationLogo }} 
+                style={styles.companyLogo}
+                onError={() => console.log('Logo load error for:', request.CompanyName)}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={24} color={colors.gray500} />
+              </View>
+            )}
+          </View>
 
-        <View style={styles.requestInfo}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {request.JobTitle || 'Job Title'}
-          </Text>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {request.CompanyName || 'Company'}
-          </Text>
-          <View style={styles.seekerRow}>
-            <Ionicons name="person-outline" size={14} color={colors.primary} />
-            <Text style={styles.seekerInfo}>
-              Requested by {request.ApplicantName || 'Job Seeker'}
+          <View style={styles.requestInfo}>
+            {/* ? NEW: Job Type Badge */}
+            <View style={styles.jobTypeBadgeContainer}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {request.JobTitle || 'Job Title'}
+              </Text>
+              {isExternalJob && (
+                <View style={styles.externalBadge}>
+                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
+                  <Text style={styles.externalBadgeText}>External</Text>
+                </View>
+              )}
+              {isInternalJob && (
+                <View style={styles.internalBadge}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
+                  <Text style={styles.internalBadgeText}>Internal</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.companyName} numberOfLines={1}>
+              {request.CompanyName || 'Company'}
             </Text>
-          </View>
-          <View style={styles.timestampRow}>
-            <Ionicons name="time-outline" size={14} color={colors.gray500} />
-            <Text style={styles.requestDate}>
-              {formatDate(request.RequestedAt)}
-            </Text>
+            
+            {/* ? NEW: Show External Job ID for external referrals */}
+            {isExternalJob && request.ExtJobID && (
+              <View style={styles.externalJobIdRow}>
+                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
+                <Text style={styles.externalJobIdText} numberOfLines={1}>
+                  Job ID: {request.ExtJobID}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.seekerRow}>
+              <Ionicons name="person-outline" size={14} color={colors.primary} />
+              <Text style={styles.seekerInfo}>
+                Requested by {request.ApplicantName || 'Job Seeker'}
+              </Text>
+            </View>
+            <View style={styles.timestampRow}>
+              <Ionicons name="time-outline" size={14} color={colors.gray500} />
+              <Text style={styles.requestDate}>
+                {formatDate(request.RequestedAt)}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-      
-      <View style={styles.requestActions}>
-        {request.Status === 'Pending' && (
-          <>
-            <TouchableOpacity 
-              style={styles.referBtn}
-              onPress={() => handleClaimRequest(request)}
-            >
-              <Ionicons name="people" size={16} color="#fff" />
-              <Text style={styles.referText}>Refer Now</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.dismissBtn}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </TouchableOpacity>
-          </>
+        
+        {/* ? NEW: Click hint for internal jobs */}
+        {isInternalJob && (
+          <View style={styles.clickHintRow}>
+            <Ionicons name="hand-left-outline" size={14} color={colors.primary} />
+            <Text style={styles.clickHintText}>Tap to view full job details</Text>
+          </View>
         )}
         
-        {request.Status === 'Claimed' && (
-          <TouchableOpacity 
-            style={styles.proofBtn}
-            onPress={() => handleSubmitProof(request)}
-          >
-            <Ionicons name="camera" size={16} color="#fff" />
-            <Text style={styles.proofText}>Submit Proof</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
+        <View style={styles.requestActions}>
+          {request.Status === 'Pending' && (
+            <>
+              <TouchableOpacity 
+                style={styles.referBtn}
+                onPress={() => handleClaimRequest(request)}
+              >
+                <Ionicons name="people" size={16} color="#fff" />
+                <Text style={styles.referText}>Refer Now</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.dismissBtn}>
+                <Text style={styles.dismissText}>Dismiss</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {request.Status === 'Claimed' && (
+            <TouchableOpacity 
+              style={styles.proofBtn}
+              onPress={() => handleSubmitProof(request)}
+            >
+              <Ionicons name="camera" size={16} color="#fff" />
+              <Text style={styles.proofText}>Submit Proof</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </CardWrapper>
+    );
+  };
 
   const renderTabContent = () => {
     if (loading) {
@@ -1076,5 +1129,81 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 16,
     fontWeight: typography.weights.bold,
+  },
+  
+  // ? NEW: Job Type Badge Styles
+  jobTypeBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  externalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  externalBadgeText: {
+    fontSize: typography.sizes.xxs,
+    color: '#8B5CF6',
+    fontWeight: typography.weights.semibold,
+    letterSpacing: 0.3,
+  },
+  internalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  internalBadgeText: {
+    fontSize: typography.sizes.xxs,
+    color: '#3B82F6',
+    fontWeight: typography.weights.semibold,
+    letterSpacing: 0.3,
+  },
+  
+  // ? NEW: External Job ID Row
+  externalJobIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  externalJobIdText: {
+    fontSize: typography.sizes.xs,
+    color: '#8B5CF6',
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
+    letterSpacing: 0.2,
+  },
+  
+  // ? NEW: Tap Hint for Internal Jobs
+  clickHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  clickHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
+    fontStyle: 'italic',
   },
 });
