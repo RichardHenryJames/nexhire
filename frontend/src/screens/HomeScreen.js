@@ -13,106 +13,85 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
 import aiJobRecommendations from '../services/aiJobRecommendations';
 import { colors, typography } from '../styles/theme';
-import ReferralPointsBreakdown from '../components/profile/ReferralPointsBreakdown';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-  const { user, isEmployer, isJobSeeker } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [showReferralBreakdown, setShowReferralBreakdown] = useState(false);
-  const [referralPointsData, setReferralPointsData] = useState({
-    totalPoints: 0,
-    pointsHistory: [],
-    pointTypeMetadata: {}
-  });
-  const [dashboardData, setDashboardData] = useState({
-    // Enhanced stats from backend
-    stats: {},
-    recentJobs: [],
-    recentApplications: [],
-    referralStats: {}
-  });
+const { user, isEmployer, isJobSeeker } = useAuth();
+const [refreshing, setRefreshing] = useState(false);
   
-  // 🆕 NEW: AI Personalized Jobs state
-  const [aiJobs, setAiJobs] = useState([]);
-  const [loadingAiJobs, setLoadingAiJobs] = useState(false);
+// ⚡ NEW: Separate loading states for lazy loading
+const [loadingStats, setLoadingStats] = useState(true);
+const [loadingJobs, setLoadingJobs] = useState(true);
+const [loadingApplications, setLoadingApplications] = useState(true);
   
-  // 🆕 NEW: Wallet state
-  const [walletBalance, setWalletBalance] = useState(null);
-  const [loadingWallet, setLoadingWallet] = useState(false);
+const [dashboardData, setDashboardData] = useState({
+  // Enhanced stats from backend
+  stats: {},
+  recentJobs: [],
+  recentApplications: [],
+  referralStats: {}
+});
+  
+// 🆕 NEW: AI Personalized Jobs state
+const [aiJobs, setAiJobs] = useState([]);
+const [loadingAiJobs, setLoadingAiJobs] = useState(false);
+  
+// ✅ NEW: Scroll ref for scroll-to-top functionality
+const scrollViewRef = React.useRef(null);
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      setLoading(true);
-
-      // Fetch comprehensive dashboard data
-      const [dashboardRes, recentJobsRes, applicationsRes, referralEligibilityRes, pointsHistoryRes] = await Promise.all([
-        refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} })),
-        // For employers, fetch only their own jobs; for job seekers, fetch recent jobs from all employers
-        isEmployer 
-          ? refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
-          : refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] })),
-        isJobSeeker ? refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] })) : Promise.resolve({ success: false, data: [] }),
-        isJobSeeker ? refopenAPI.checkReferralEligibility().catch(() => ({ success: false, data: {} })) : Promise.resolve({ success: false, data: {} }),
-        // NEW: Fetch points history for the breakdown modal
-        isJobSeeker ? refopenAPI.getReferralPointsHistory().catch(() => ({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })) : Promise.resolve({ success: false, data: { totalPoints: 0, history: [], pointTypeMetadata: {} } })
-      ]);
-
-      // Process dashboard stats
+      // ⚡ Load stats first (for Quick Actions badges)
+      setLoadingStats(true);
+      const dashboardRes = await refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} }));
       const stats = dashboardRes.success ? dashboardRes.data : {};
       
-      // Process recent jobs - handle different response formats
+      setDashboardData(prev => ({ ...prev, stats }));
+      setLoadingStats(false);
+
+      // ⚡ Load jobs in parallel (non-blocking)
+      setLoadingJobs(true);
+      const recentJobsRes = isEmployer 
+        ? await refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
+        : await refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] }));
+      
       let recentJobs = [];
       if (recentJobsRes.success) {
         if (isEmployer) {
-          // For employers using getOrganizationJobs, data is directly in the response
           recentJobs = (recentJobsRes.data || []).slice(0, 5);
         } else {
-          // For job seekers using getJobs, data might be nested
           recentJobs = (recentJobsRes.data || []).slice(0, 5);
         }
       }
       
-      // Process recent applications
-      const recentApplications = (isJobSeeker && applicationsRes.success) ? applicationsRes.data.slice(0, 3) : [];
-      
-      // Process referral eligibility (contains dailyQuotaRemaining)
-      const referralStats = referralEligibilityRes.success ? referralEligibilityRes.data : {};
+      setDashboardData(prev => ({ ...prev, recentJobs }));
+      setLoadingJobs(false);
 
-      // NEW: Process points history data
-      if (pointsHistoryRes.success && pointsHistoryRes.data) {
-        setReferralPointsData({
-          totalPoints: pointsHistoryRes.data.totalPoints || 0,
-          pointsHistory: pointsHistoryRes.data.history || [],
-          pointTypeMetadata: pointsHistoryRes.data.pointTypeMetadata || {}
-        });
-      }
-
-      setDashboardData({
-        stats,
-        recentJobs,
-        recentApplications,
-        referralStats
-      });
-      
-      // 🆕 NEW: Load wallet balance for job seekers
+      // ⚡ Load applications (for job seekers)
       if (isJobSeeker) {
-        loadWalletBalance();
-        // 🤖 NEW: Load AI personalized jobs
+        setLoadingApplications(true);
+        const applicationsRes = await refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] }));
+        const recentApplications = applicationsRes.success ? applicationsRes.data.slice(0, 3) : [];
+        
+        setDashboardData(prev => ({ ...prev, recentApplications }));
+        setLoadingApplications(false);
+
+        // 🤖 Load AI personalized jobs (non-critical, can load last)
         loadAIPersonalizedJobs();
       }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
-    } finally {
-      setLoading(false);
+      setLoadingStats(false);
+      setLoadingJobs(false);
+      setLoadingApplications(false);
     }
   }, [isJobSeeker, isEmployer, user]);
 
@@ -128,15 +107,23 @@ export default function HomeScreen({ navigation }) {
     return unsubscribe;
   }, [navigation, fetchDashboardData]);
 
+  // ✅ NEW: Scroll to top when navigating to HomeScreen
+  useFocusEffect(
+    useCallback(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setDashboardData({
+      stats: {},
+      recentJobs: [],
+      recentApplications: [],
+      referralStats: {}
+    });
     await fetchDashboardData();
     setRefreshing(false);
-  };
-
-  const handleReferralPointsPress = () => {
-    console.log('Referral Points card pressed - showing breakdown modal');
-    setShowReferralBreakdown(true);
   };
 
   // Enhanced StatCard with trends and better styling
@@ -327,21 +314,6 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // 🆕 NEW: Load wallet balance
-  const loadWalletBalance = async () => {
-    try {
-      setLoadingWallet(true);
-      const result = await refopenAPI.getWalletBalance();
-      if (result.success) {
-        setWalletBalance(result.data);
-      }
-    } catch (error) {
-      console.error('Error loading wallet balance:', error);
-    } finally {
-      setLoadingWallet(false);
-    }
-  };
-
   // 🤖 NEW: Load AI Personalized Jobs
   const loadAIPersonalizedJobs = async () => {
     try {
@@ -371,20 +343,22 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your personalized dashboard...</Text>
-      </View>
-    );
-  }
+  // ⚡ NEW: Section loading component
+  const SectionLoader = () => (
+    <View style={styles.sectionLoader}>
+      <ActivityIndicator size="small" color={colors.primary} />
+      <Text style={styles.sectionLoaderText}>Loading...</Text>
+    </View>
+  );
+
+  // ⚡ Remove the global loading screen - show content immediately
 
   const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
 
   return (
     <>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.container}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -415,88 +389,6 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
           </TouchableOpacity>
-        </View>
-
-        {/* Primary Stats Overview - Updated to 2x2 Grid */}
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <View style={styles.statsGrid}>
-            {isEmployer ? (
-              <>
-                <StatCard
-                  title="Active Jobs"
-                  value={stats.activeJobs || 0}
-                  icon="briefcase"
-                  color={colors.primary}
-                  subtitle={`${stats.totalJobsPosted || 0} total • ${stats.draftJobs || 0} drafts`}
-                  trend={stats.jobsPostedLast30Days > 0 ? { positive: true, value: `+${stats.jobsPostedLast30Days}` } : null}
-                  onPress={() => navigation.navigate('Jobs')}
-                />
-                <StatCard
-                  title="Applications"
-                  value={stats.totalApplicationsReceived || 0}
-                  icon="document-text"
-                  color={colors.success}
-                  subtitle={`${stats.pendingApplications || 0} pending review`}
-                  trend={stats.applicationsReceivedLast30Days > 0 ? { positive: true, value: `+${stats.applicationsReceivedLast30Days}` } : null}
-                  onPress={() => navigation.navigate('Applications')}
-                />
-                <StatCard
-                  title="Success Rate"
-                  value={`${(stats.hiringSuccessRate || 0).toFixed(1)}%`}
-                  icon="trophy"
-                  color={colors.warning}
-                  subtitle={`${stats.offersExtended || 0} offers extended`}
-                  onPress={() => navigation.navigate('Analytics')}
-                />
-                <StatCard
-                  title="Pipeline"
-                  value={stats.interviewsInProgress || 0}
-                  icon="people"
-                  color={colors.info}
-                  subtitle={`${stats.shortlistedApplications || 0} shortlisted`}
-                  onPress={() => navigation.navigate('Analytics')}
-                />
-              </>
-            ) : (
-              <>
-                <StatCard
-                  title="Applications"
-                  value={stats.totalApplications || 0}
-                  icon="document-text"
-                  color="#F14F21"
-                  subtitle={`${stats.savedJobs || 0} saved jobs`}
-                  trend={stats.applicationsLast30Days > 0 ? { positive: true, value: `+${stats.applicationsLast30Days}` } : null}
-                  onPress={() => navigation.navigate('Applications')}
-                  size="large"
-                />
-                <StatCard
-                  title="Wallet Balance"
-                  value={loadingWallet ? '...' : `₹${walletBalance?.balance?.toFixed(2) || '0.00'}`}
-                  icon="wallet"
-                  color="#7EB900"
-                  subtitle="Tap to recharge"
-                  onPress={() => navigation.navigate('WalletRecharge')}
-                />
-                <StatCard
-                  title="Referral Points"
-                  value={referralPointsData.totalPoints || stats.totalReferralPoints || referralStats.totalPointsEarned || 0}
-                  icon="star"
-                  color="#00A3EE"
-                  subtitle={`${stats.referralRequestsReceived || 0} made • ${stats.completedReferrals || 0} verified`}
-                  onPress={handleReferralPointsPress}
-                />
-                <StatCard
-                  title="Get Referrals"
-                  value={referralStats.dailyQuotaRemaining !== undefined ? referralStats.dailyQuotaRemaining : (stats.referralQuotaRemaining !== undefined ? stats.referralQuotaRemaining : '...')}
-                  icon="people"
-                  color="#FEB800"
-                  subtitle={`${stats.referralRequestsMade || 0} requests made`}
-                  onPress={() => navigation.navigate('AskReferral')}
-                />
-              </>
-            )}
-          </View>
         </View>
 
         {/* Quick Actions with Enhanced Urgency */}
@@ -541,6 +433,13 @@ export default function HomeScreen({ navigation }) {
           ) : (
             <>
               <QuickAction
+                title="Get Referrals"
+                description="Request referrals for job opportunities"
+                icon="people"
+                color="#FEB800"
+                onPress={() => navigation.navigate('AskReferral')}
+              />
+              <QuickAction
                 title="Browse Jobs"
                 description="Discover new opportunities"
                 icon="search"
@@ -570,7 +469,12 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Recent Jobs Section */}
-        {recentJobs.length > 0 && (
+        {loadingJobs ? (
+          <View style={styles.recentContainer}>
+            <Text style={styles.sectionTitle}>Recent Jobs</Text>
+            <SectionLoader />
+          </View>
+        ) : recentJobs.length > 0 ? (
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Jobs</Text>
@@ -588,7 +492,7 @@ export default function HomeScreen({ navigation }) {
               ))}
             </ScrollView>
           </View>
-        )}
+        ) : null}
 
         {/* 🤖 AI Personalized Jobs Section - ONLY for Job Seekers */}
         {isJobSeeker && (
@@ -599,7 +503,7 @@ export default function HomeScreen({ navigation }) {
                   <Ionicons name="bulb-outline" size={24} color={colors.white} />
                 </View>
                 <View>
-                  <Text style={styles.aiSectionTitle}>AI Personalized For You</Text>
+                  <Text style={styles.aiSectionTitle}>AI Recommended Jobs For You</Text>
                   <Text style={styles.aiSubtitle}>Jobs matched to your profile</Text>
                 </View>
               </View>
@@ -657,22 +561,29 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Recent Applications (Job Seekers only) */}
-        {isJobSeeker && recentApplications.length > 0 && (
-          <View style={styles.recentContainer}>
-            <View style={styles.sectionHeader}>
+        {isJobSeeker && (
+          loadingApplications ? (
+            <View style={styles.recentContainer}>
               <Text style={styles.sectionTitle}>Recent Applications</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Applications')}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
+              <SectionLoader />
             </View>
-            {recentApplications.map((application, index) => (
-              <ApplicationCard key={application.ApplicationID || index} application={application} />
-            ))}
-          </View>
+          ) : recentApplications.length > 0 ? (
+            <View style={styles.recentContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Applications</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Applications')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {recentApplications.map((application, index) => (
+                <ApplicationCard key={application.ApplicationID || index} application={application} />
+              ))}
+            </View>
+          ) : null
         )}
 
         {/* Enhanced Empty State */}
-        {recentJobs.length === 0 && recentApplications.length === 0 && (
+        {!loadingJobs && !loadingApplications && recentJobs.length === 0 && recentApplications.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons 
               name={isEmployer ? "briefcase-outline" : "search-outline"} 
@@ -702,20 +613,6 @@ export default function HomeScreen({ navigation }) {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-
-      {/* NEW: Referral Points Breakdown Modal */}
-      <ReferralPointsBreakdown
-        visible={showReferralBreakdown}
-        onClose={() => setShowReferralBreakdown(false)}
-        totalPoints={referralPointsData.totalPoints}
-        pointsHistory={referralPointsData.pointsHistory}
-        pointTypeMetadata={referralPointsData.pointTypeMetadata}
-        referralStats={{
-          totalReferralsMade: stats.referralRequestsReceived || 0,
-          verifiedReferrals: stats.completedReferrals || 0,
-          referralRequestsMade: stats.referralRequestsMade || 0
-        }}
-      />
     </>
   );
 }
@@ -734,6 +631,21 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
+    color: colors.gray600,
+  },
+  // ⚡ NEW: Section loader styles
+  sectionLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  sectionLoaderText: {
+    marginLeft: 12,
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
   },
   header: {

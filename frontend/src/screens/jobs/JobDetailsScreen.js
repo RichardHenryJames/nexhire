@@ -22,7 +22,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
-  const { jobId } = route.params || {};
+const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
@@ -62,18 +62,41 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // ✅ UPDATED: Navigation header - remove save button for employers
+  // ✅ Navigation header with smart back button
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
       headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
       headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerLeft: () => (
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={() => {
+            // ✅ Smart back navigation - check if we have meaningful navigation history
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            
+            // If we have more than 1 route in the stack, go back normally
+            // This handles: Jobs -> JobDetails (back should go to Jobs)
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              // Hard refresh scenario - navigate to Home tab
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Home'
+                }
+              });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      // ✅ FIXED: Only show save button for job seekers (not employers)
+      // ✅ Only show save button for job seekers (not employers)
       headerRight: (hasApplied || isEmployer) ? undefined : () => (
         <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
@@ -1210,69 +1233,72 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       )}
 
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
-      <View style={styles.actionContainer}>        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
-              styles.referralButton,
-              (hasReferred || referralRequesting) && styles.referralButtonDisabled
-            ]}
-            onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
-            disabled={hasReferred || referralRequesting}
-          >
-            <Ionicons 
-              name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
-              size={20} 
-              color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
-            />
-            <Text style={[
-              styles.referralButtonText, 
-              hasReferred && { color: "#10b981" }
-            ]}>
-              {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
+      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab */}
+      {!fromReferralRequest && (
+        <View style={styles.actionContainer}>        
+          {isJobSeeker && (
+            <TouchableOpacity 
+              style={[
+                styles.referralButton,
+                (hasReferred || referralRequesting) && styles.referralButtonDisabled
+              ]}
+              onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
+              disabled={hasReferred || referralRequesting}
+            >
+              <Ionicons 
+                name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
+                size={20} 
+                color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
+              />
+              <Text style={[
+                styles.referralButtonText, 
+                hasReferred && { color: "#10b981" }
+              ]}>
+                {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {isJobSeeker && (
+            <TouchableOpacity 
+              style={[
 
-              styles.applyButton, 
-              (hasApplied || applying) && styles.applyButtonDisabled
-            ]} 
-            onPress={handleApply}
-            disabled={hasApplied || applying}
-          >
-            {applying && <ActivityIndicator size="small" color={colors.white} />}
-            <Text style={styles.applyButtonText}>
-              {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
-            </Text>
-          </TouchableOpacity>
-        )}
+                styles.applyButton, 
+                (hasApplied || applying) && styles.applyButtonDisabled
+              ]} 
+              onPress={handleApply}
+              disabled={hasApplied || applying}
+            >
+              {applying && <ActivityIndicator size="small" color={colors.white} />}
+              <Text style={styles.applyButtonText}>
+                {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
+              </Text>
+            </TouchableOpacity>
+          )}
         
-        {/* ✅ NEW: Publish button for employers viewing draft jobs */}
-        {isEmployer && job.Status === 'Draft' && (
-          <TouchableOpacity
-            style={[
+          {/* ✅ NEW: Publish button for employers viewing draft jobs */}
+          {isEmployer && job.Status === 'Draft' && (
+            <TouchableOpacity
+              style={[
 
-              styles.publishButton,
-              publishing && styles.publishButtonDisabled
-            ]}
-            onPress={handlePublishJob}
-            disabled={publishing}
-          >
-            {publishing ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
-            )}
-            <Text style={styles.publishButtonText}>
-              {publishing ? 'Publishing...' : 'Publish Job'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+                styles.publishButton,
+                publishing && styles.publishButtonDisabled
+              ]}
+              onPress={handlePublishJob}
+              disabled={publishing}
+            >
+              {publishing ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
+              )}
+              <Text style={styles.publishButtonText}>
+                {publishing ? 'Publishing...' : 'Publish Job'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       
       {/* Resume Upload Modal */}
       <ResumeUploadModal

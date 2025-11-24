@@ -23,38 +23,42 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 
 export default function AskReferralScreen({ navigation }) {
-  const { user, isJobSeeker } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [resumes, setResumes] = useState([]);
-
-  // NEW: Company/Organization state
-  const [companies, setCompanies] = useState([]);
-  const [showCompanyModal, setShowCompanyModal] = useState(false);
-  const [companySearchTerm, setCompanySearchTerm] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    jobId: '',
-    jobTitle: '',
-    jobUrl: '',
-    referralMessage: '',
-    selectedResumeId: '',
-  });
-
-  const [errors, setErrors] = useState({});
+const { user, isJobSeeker } = useAuth();
   
-  // Wallet-based eligibility instead of subscription
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
-  const [showWalletModal, setShowWalletModal] = useState(false);
+// ⚡ NEW: Separate loading states for lazy loading
+const [loadingWallet, setLoadingWallet] = useState(true);
+const [loadingResumes, setLoadingResumes] = useState(false);
+const [loadingCompanies, setLoadingCompanies] = useState(false);
+const [submitting, setSubmitting] = useState(false);
   
-  // ✅ NEW: Resume Upload Modal state
-  const [showResumeModal, setShowResumeModal] = useState(false);
+const [resumes, setResumes] = useState([]);
 
-  // ? FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
+// NEW: Company/Organization state
+const [companies, setCompanies] = useState([]);
+const [showCompanyModal, setShowCompanyModal] = useState(false);
+const [companySearchTerm, setCompanySearchTerm] = useState('');
+const [selectedCompany, setSelectedCompany] = useState(null);
+
+// Form state
+const [formData, setFormData] = useState({
+  jobId: '',
+  jobTitle: '',
+  jobUrl: '',
+  referralMessage: '',
+  selectedResumeId: '',
+});
+
+const [errors, setErrors] = useState({});
+  
+// Wallet-based eligibility instead of subscription
+const [walletBalance, setWalletBalance] = useState(0);
+const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+const [showWalletModal, setShowWalletModal] = useState(false);
+  
+// ✅ NEW: Resume Upload Modal state
+const [showResumeModal, setShowResumeModal] = useState(false);
+
+  // ✅ FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
     navigation.setOptions({
       title: 'Ask for Referral',
@@ -73,7 +77,20 @@ export default function AskReferralScreen({ navigation }) {
       headerLeft: () => (
         <TouchableOpacity 
           style={styles.headerButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            // ✅ Smart back navigation - go back if possible, otherwise go to Home tab
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              // Navigate to Main -> MainTabs -> Home (for hard refresh scenario)
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Home'
+                }
+              });
+            }
+          }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text || colors.textPrimary} />
@@ -82,12 +99,12 @@ export default function AskReferralScreen({ navigation }) {
     });
   }, [navigation]);
 
-  // Load initial data
+  // Load initial data - ⚡ Only load wallet balance immediately
   useEffect(() => {
     console.log('AskReferralScreen: Component mounted');
-    loadResumes();
-    loadCompanies();
-    loadWalletBalance();
+    loadWalletBalance(); // Load immediately for banner
+    loadResumesLazily(); // Load resumes after a delay
+    // Companies will load only when dropdown is opened
   }, []);
 
   // Debug useEffect to log form state changes
@@ -106,8 +123,15 @@ export default function AskReferralScreen({ navigation }) {
     }
   }, [selectedCompany]);
 
+  const loadResumesLazily = async () => {
+    // ⚡ Small delay to let UI render first
+    setTimeout(async () => {
+      await loadResumes();
+    }, 100);
+  };
+
   const loadResumes = async () => {
-    setLoading(true);
+    setLoadingResumes(true);
     try {
       // Load user's resumes
       const resumesRes = await refopenAPI.getUserResumes();
@@ -128,31 +152,66 @@ export default function AskReferralScreen({ navigation }) {
       setResumes([]);
       Alert.alert('Error', 'Failed to load resumes. Please try again.');
     } finally {
-      setLoading(false);
+      setLoadingResumes(false);
+    }
+  };
+
+  // ⚡ Load companies only when dropdown is opened
+  const handleCompanyDropdownOpen = () => {
+    setShowCompanyModal(true);
+    
+    // Load companies if not already loaded
+    if (companies.length === 0 && !loadingCompanies) {
+      loadCompanies();
     }
   };
 
   const loadCompanies = async () => {
+    setLoadingCompanies(true);
+    
+    // ⏱️ START: Track API response time
+    const startTime = performance.now();
+    console.log('🕐 [PERFORMANCE] Starting organizations API call at:', new Date().toISOString());
+    
     try {
       // Use the same method that works in profile screen
       const result = await refopenAPI.getOrganizations('', null); // No limit - get all companies
+      
+      // ⏱️ END: Calculate response time
+      const endTime = performance.now();
+      const responseTime = (endTime - startTime).toFixed(2);
+      console.log('⏱️ [PERFORMANCE] Organizations API response time:', responseTime, 'ms');
+      console.log('⏱️ [PERFORMANCE] Response time in seconds:', (responseTime / 1000).toFixed(2), 's');
+      
       console.log('Organizations API response:', result);
       
       if (result?.success && result.data && Array.isArray(result.data)) {
         // The API service already handles the mapping, so we can use the data directly
         console.log('Using mapped organizations from API service:', result.data.length, 'items');
+        console.log('📊 [PERFORMANCE] Loaded', result.data.length, 'organizations in', responseTime, 'ms');
         setCompanies(result.data);
       } else {
         console.error('API call failed or returned invalid data:', result);
         setCompanies([]);
       }
     } catch (error) {
+      // ⏱️ Calculate error response time
+      const endTime = performance.now();
+      const responseTime = (endTime - startTime).toFixed(2);
+      console.error('❌ [PERFORMANCE] Organizations API failed after', responseTime, 'ms');
       console.error('Failed to load companies:', error);
       setCompanies([]);
+    } finally {
+      setLoadingCompanies(false);
+      
+      // ⏱️ Final timing log
+      const totalTime = (performance.now() - startTime).toFixed(2);
+      console.log('✅ [PERFORMANCE] Total loadCompanies execution time:', totalTime, 'ms');
     }
   };
 
   const loadWalletBalance = async () => {
+    setLoadingWallet(true);
     try {
       console.log('Loading wallet balance...');
       const result = await refopenAPI.getWalletBalance();
@@ -167,6 +226,8 @@ export default function AskReferralScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Failed to load wallet balance:', error);
+    } finally {
+      setLoadingWallet(false);
     }
   };
 
@@ -377,15 +438,8 @@ export default function AskReferralScreen({ navigation }) {
     setErrors({});
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your data...</Text>
-      </View>
-    );
-  }
-
+  // ⚡ Remove the global loading screen - show form immediately
+  // Only check if user is job seeker
   if (!isJobSeeker) {
     return (
       <View style={styles.errorContainer}>
@@ -396,8 +450,9 @@ export default function AskReferralScreen({ navigation }) {
     );
   }
 
-  // ✅ NEW: Calculate if wallet balance is sufficient
+  // ✅ Calculate if wallet balance is sufficient and if form is ready
   const hasSufficientBalance = walletBalance >= 50;
+  const isFormReady = !loadingWallet && !loadingResumes; // Form ready when wallet and resumes loaded
 
   return (
     <KeyboardAvoidingView 
@@ -405,41 +460,50 @@ export default function AskReferralScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* ✅ NEW: Wallet Balance Banner */}
-        <View style={[
-          styles.quotaBanner,
-          hasSufficientBalance ? styles.quotaBannerSuccess : styles.quotaBannerWarning
-        ]}>
-          <View style={styles.quotaBannerContent}>
-            <Ionicons 
-              name={hasSufficientBalance ? "wallet" : "warning"} 
-              size={20} 
-              color={hasSufficientBalance ? colors.success : colors.warning} 
-              style={styles.quotaBannerIcon}
-            />
-            <Text style={[
-              styles.quotaBannerText, 
-              hasSufficientBalance ? styles.quotaBannerSuccessText : styles.quotaBannerWarningText
-            ]}>
-              {hasSufficientBalance 
-                ? `Wallet Balance: ₹${walletBalance.toFixed(2)}`
-                : `Insufficient balance: ₹${walletBalance.toFixed(2)}`
-              }
-            </Text>
-            {!hasSufficientBalance && (
-              <TouchableOpacity
-                style={styles.addMoneyChip}
-                onPress={() => {
-                  setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
-                  setShowWalletModal(true);
-                }}
-              >
-                <Ionicons name="add-circle" size={16} color={colors.warning} />
-                <Text style={styles.addMoneyText}>Add</Text>
-              </TouchableOpacity>
-            )}
+        {/* ✅ Wallet Balance Banner - Shows immediately with loading state */}
+        {loadingWallet ? (
+          <View style={styles.quotaBanner}>
+            <View style={styles.quotaBannerContent}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.quotaBannerText}>Loading wallet balance...</Text>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={[
+            styles.quotaBanner,
+            hasSufficientBalance ? styles.quotaBannerSuccess : styles.quotaBannerWarning
+          ]}>
+            <View style={styles.quotaBannerContent}>
+              <Ionicons 
+                name={hasSufficientBalance ? "wallet" : "warning"} 
+                size={20} 
+                color={hasSufficientBalance ? colors.success : colors.warning} 
+                style={styles.quotaBannerIcon}
+              />
+              <Text style={[
+                styles.quotaBannerText, 
+                hasSufficientBalance ? styles.quotaBannerSuccessText : styles.quotaBannerWarningText
+              ]}>
+                {hasSufficientBalance 
+                  ? `Wallet Balance: ₹${walletBalance.toFixed(2)}`
+                  : `Insufficient balance: ₹${walletBalance.toFixed(2)}`
+                }
+              </Text>
+              {!hasSufficientBalance && (
+                <TouchableOpacity
+                  style={styles.addMoneyChip}
+                  onPress={() => {
+                    setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
+                    setShowWalletModal(true);
+                  }}
+                >
+                  <Ionicons name="add-circle" size={16} color={colors.warning} />
+                  <Text style={styles.addMoneyText}>Add</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* ✅ IMPROVED: More compelling and catchy description */}
         <View style={styles.introSection}>
@@ -472,7 +536,7 @@ export default function AskReferralScreen({ navigation }) {
             </Text>
             <TouchableOpacity
               style={[styles.companySelector, errors.company && styles.inputError]}
-              onPress={() => setShowCompanyModal(true)}
+              onPress={handleCompanyDropdownOpen}
             >
               {selectedCompany ? (
                 <View style={styles.companySelectorContent}>
@@ -581,13 +645,18 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
             </Text>
           </View>
 
-          {/* Resume Selection - ✅ UPDATED: Open modal instead of navigating to Profile */}
+          {/* Resume Selection - ✅ Shows loading state */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
               Select Resume <Text style={styles.required}>*</Text>
             </Text>
             
-            {resumes.length === 0 ? (
+            {loadingResumes ? (
+              <View style={styles.resumeLoadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.resumeLoadingText}>Loading your resumes...</Text>
+              </View>
+            ) : resumes.length === 0 ? (
               <View style={styles.noResumeContainer}>
                 <Ionicons name="document-outline" size={24} color={colors.gray400} />
                 <Text style={styles.noResumeText}>No resumes found</Text>
@@ -662,29 +731,37 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         </View>
       </ScrollView>
 
-      {/* Submit Button */}
+      {/* Submit Button - Only enabled when everything is loaded */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (submitting || !hasSufficientBalance) && styles.submitButtonDisabled
+            (!isFormReady || submitting || !hasSufficientBalance) && styles.submitButtonDisabled
           ]}
           onPress={() => {
             console.log('Submit button pressed');
             console.log('Submitting state:', submitting);
             console.log('Wallet balance:', walletBalance);
+            console.log('Form ready:', isFormReady);
             handleSubmit();
           }}
-          disabled={submitting || !hasSufficientBalance}
+          disabled={!isFormReady || submitting || !hasSufficientBalance}
         >
-          <Text style={[
-            styles.submitButtonText,
-            (submitting || !hasSufficientBalance) && styles.submitButtonTextDisabled
-          ]}>
-            {submitting ? 'Submitting...' : 
-             !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
-             'Ask Referral (₹50)'}
-          </Text>
+          {!isFormReady ? (
+            <>
+              <ActivityIndicator size="small" color={colors.white} />
+              <Text style={styles.submitButtonText}>Loading...</Text>
+            </>
+          ) : (
+            <Text style={[
+              styles.submitButtonText,
+              (submitting || !hasSufficientBalance) && styles.submitButtonTextDisabled
+            ]}>
+              {submitting ? 'Submitting...' : 
+               !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
+               'Ask Referral (₹50)'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -944,6 +1021,22 @@ const styles = StyleSheet.create({
     color: colors.gray500,
     textAlign: 'right',
     marginTop: 4,
+  },
+  // ⚡ NEW: Resume loading state
+  resumeLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: colors.gray100,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resumeLoadingText: {
+    marginLeft: 12,
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
   },
   noResumeContainer: {
     alignItems: 'center',

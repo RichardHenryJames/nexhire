@@ -415,7 +415,11 @@ export default function ReferralScreen({ navigation }) {
       ? { 
           onPress: () => {
             console.log('?? Navigating to internal job:', request.JobID);
-            navigation.navigate('JobDetails', { jobId: request.JobID });
+            // Pass fromReferralRequest parameter to hide action buttons
+            navigation.navigate('JobDetails', { 
+              jobId: request.JobID,
+              fromReferralRequest: true // Hide Apply/Ask Referral buttons
+            });
           },
           activeOpacity: 0.7
         }
