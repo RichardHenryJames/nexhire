@@ -24,6 +24,7 @@ import WorkExperienceSection from '../../components/profile/WorkExperienceSectio
 import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSection';
 import EducationSection from '../../components/profile/EducationSection';
 import ResumeSection from '../../components/profile/ResumeSection';
+import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBreakdown';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -58,6 +59,15 @@ export default function ProfileScreen({ navigation }) {
   // Wallet state
   const [walletBalance, setWalletBalance] = useState(null);
   const [loadingWallet, setLoadingWallet] = useState(false);
+  
+  // Referral Points state
+  const [referralPointsData, setReferralPointsData] = useState({
+    totalPoints: 0,
+    pointsHistory: [],
+    pointTypeMetadata: {}
+  });
+  const [loadingReferralPoints, setLoadingReferralPoints] = useState(false);
+  const [showReferralBreakdown, setShowReferralBreakdown] = useState(false);
   
   // Referral code (first part of UserID before dash)
   const referralCode = user?.UserID?.split('-')[0] || '';
@@ -138,6 +148,7 @@ export default function ProfileScreen({ navigation }) {
       loadExtendedProfile();
       if (userType === 'JobSeeker') {
         loadWallet();
+        loadReferralPoints();
       }
     }, [])
   );
@@ -223,11 +234,30 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const loadReferralPoints = async () => {
+    try {
+      setLoadingReferralPoints(true);
+      const response = await refopenAPI.getReferralPointsHistory();
+      if (response.success && response.data) {
+        setReferralPointsData({
+          totalPoints: response.data.totalPoints || 0,
+          pointsHistory: response.data.history || [],
+          pointTypeMetadata: response.data.pointTypeMetadata || {}
+        });
+      }
+    } catch (error) {
+      console.error('Error loading referral points:', error);
+    } finally {
+      setLoadingReferralPoints(false);
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadExtendedProfile();
     if (userType === 'JobSeeker') {
       await loadWallet();
+      await loadReferralPoints();
     }
     setRefreshing(false);
   }, []);
@@ -913,12 +943,12 @@ export default function ProfileScreen({ navigation }) {
           showStats={false}
         />
 
-        {/* Wallet and Invite Buttons */}
+        {/* Wallet, Referral Points, and Invite & Earn Buttons */}
         {userType === 'JobSeeker' && (
           <View style={styles.actionButtonsContainer}>
             {/* Wallet Button */}
             <TouchableOpacity 
-              style={styles.actionButtonHalf}
+              style={styles.actionButtonThird}
               onPress={() => navigation.navigate('Wallet')}
               activeOpacity={0.7}
             >
@@ -935,9 +965,30 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
+            {/* Referral Points Button */}
+            <TouchableOpacity 
+              style={styles.actionButtonThird}
+              onPress={() => setShowReferralBreakdown(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionButtonIcon, { backgroundColor: '#E6F4FF' }]}>
+                <Ionicons name="star" size={20} color="#00A3EE" />
+              </View>
+              <View style={styles.actionButtonContent}>
+                <Text style={styles.actionButtonLabel}>Points</Text>
+                {loadingReferralPoints ? (
+                  <ActivityIndicator size="small" color="#00A3EE" />
+                ) : (
+                  <Text style={[styles.actionButtonAmount, { color: '#00A3EE' }]}>
+                    {referralPointsData.totalPoints || 0}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+
             {/* Invite & Earn Button */}
             <TouchableOpacity 
-              style={styles.actionButtonHalf}
+              style={styles.actionButtonThird}
               onPress={() => setActiveModal('invite')}
               activeOpacity={0.7}
             >
@@ -945,8 +996,8 @@ export default function ProfileScreen({ navigation }) {
                 <Ionicons name="gift" size={20} color="#FF9500" />
               </View>
               <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonLabel}>Invite & Earn</Text>
-                <Text style={styles.actionButtonSubtext}>Both get ₹50</Text>
+                <Text style={styles.actionButtonLabel}>Invite</Text>
+                <Text style={styles.actionButtonSubtext}>Get ₹50</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -1023,6 +1074,21 @@ export default function ProfileScreen({ navigation }) {
       {renderEducationModal()}
       {renderPreferencesModal()}
       {renderResumesModal()}
+
+      {/* Referral Points Breakdown Modal */}
+      <ReferralPointsBreakdown
+        visible={showReferralBreakdown}
+        onClose={() => setShowReferralBreakdown(false)}
+        totalPoints={referralPointsData.totalPoints}
+        pointsHistory={referralPointsData.pointsHistory}
+        pointTypeMetadata={referralPointsData.pointTypeMetadata}
+        navigation={navigation}
+        onConversionSuccess={async () => {
+          // Refresh wallet and points data after successful conversion
+          await loadWallet();
+          await loadReferralPoints();
+        }}
+      />
 
       {/* Invite & Earn Modal */}
       <Modal
@@ -1601,6 +1667,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface || '#FFF',
     padding: 12,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionButtonThird: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    backgroundColor: colors.surface || '#FFF',
+    padding: 10,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

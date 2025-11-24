@@ -675,3 +675,42 @@ export const cancelReferralRequest = withErrorHandling(async (req: HttpRequest, 
         };
     }
 });
+
+/**
+ * Convert referral points to wallet balance
+ * POST /referral/points/convert-to-wallet
+ * Conversion rate: 1 point = ₹0.50
+ */
+export const convertPointsToWallet = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        
+        // Get applicant ID
+        const { dbService } = await import('../services/database.service');
+        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
+        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
+        
+        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            throw new NotFoundError('Applicant profile not found');
+        }
+
+        const applicantId = applicantResult.recordset[0].ApplicantID;
+        
+        // Convert points to wallet using the referral service
+        const result = await ReferralService.convertPointsToWallet(applicantId, user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, `Successfully converted ${result.pointsConverted} points to ₹${result.walletAmount.toFixed(2)}`)
+        };
+    } catch (error: any) {
+        console.error('Error converting points to wallet:', error);
+        return {
+            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to convert points to wallet'
+            }
+        };
+    }
+});

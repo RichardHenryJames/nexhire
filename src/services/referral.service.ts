@@ -1103,20 +1103,31 @@ export class ReferralService {
      */
     static async getReferralPointsHistory(applicantId: string) {
         try {
+            // ✅ FIX: Get current points from Applicants table (the actual available balance)
+            const currentPointsQuery = `
+                SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
+                FROM Applicants
+                WHERE ApplicantID = @param0
+            `;
+            const currentPointsResult = await dbService.executeQuery(currentPointsQuery, [applicantId]);
+            const totalPoints = currentPointsResult.recordset?.[0]?.CurrentPoints || 0;
+
+            // 🆕 ENHANCED: Get BOTH earned points AND conversion transactions
             const historyQuery = `
+                -- Points earned from referrals
                 SELECT 
-                    rw.RewardID,
-                    rw.ReferrerID,
-                    rw.RequestID,
-                    rw.PointsEarned,
+                    rw.RewardID as ID,
+                    'earned' as TransactionType,
+                    rw.PointsEarned as PointsAmount,
                     rw.PointsType,
-                    rw.AwardedAt,
+                    rw.AwardedAt as TransactionDate,
                     rr.JobID,
                     j.Title as JobTitle,
                     o.LogoURL as OrganizationLogo,
                     o.Name as CompanyName,
+                    NULL as WalletAmount,
                     CASE 
-                        WHEN rw.PointsType = 'proof_submission' THEN 'Base referral proof submitted'
+                        WHEN rw.PointsType = 'proof_submission' THEN 'Referral proof submitted'
                         WHEN rw.PointsType = 'verification' THEN 'Referral verified by job seeker'
                         WHEN rw.PointsType = 'quick_response_bonus' THEN 'Quick response bonus (< 24 hours)'
                         ELSE 'Referral activity'
@@ -1126,18 +1137,39 @@ export class ReferralService {
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 WHERE rw.ReferrerID = @param0
-                ORDER BY rw.AwardedAt DESC
+
+                UNION ALL
+
+                -- Points converted to wallet
+                SELECT 
+                    wt.TransactionID as ID,
+                    'converted' as TransactionType,
+                    ABS(wt.Amount / 0.5) as PointsAmount, -- Reverse calculation: ₹25 / 0.5 = 50 points
+                    'conversion' as PointsType,
+                    wt.CreatedAt as TransactionDate,
+                    NULL as JobID,
+                    NULL as JobTitle,
+                    NULL as OrganizationLogo,
+                    NULL as CompanyName,
+                    wt.Amount as WalletAmount,
+                    'Converted ' + CAST(CAST(ABS(wt.Amount / 0.5) AS INT) AS VARCHAR) + ' points to ₹' + CAST(wt.Amount AS VARCHAR) as Description
+                FROM WalletTransactions wt
+                INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+                INNER JOIN Applicants a ON w.UserID = a.UserID
+                WHERE a.ApplicantID = @param0
+                AND wt.Source = 'REFERRAL_BONUS'
+                AND wt.Amount > 0  -- Credits only (conversions)
+
+                ORDER BY TransactionDate DESC
             `;
 
             const result = await dbService.executeQuery(historyQuery, [applicantId]);
             
-            // Calculate total points
-            const totalPoints = result.recordset?.reduce((sum, row) => sum + (row.PointsEarned || 0), 0) || 0;
-
+            // ✅ Return CURRENT available points (from Applicants table), not sum of history
             return {
-                totalPoints,
+                totalPoints, // This is the actual available balance after conversions
                 history: result.recordset || [],
-                // 🆕 ADD: Dynamic point type metadata
+                // 🆕 ADD: Dynamic point type metadata (including conversion type)
                 pointTypeMetadata: this.getPointTypeMetadata()
             };
         } catch (error) {
@@ -1171,6 +1203,13 @@ export class ReferralService {
                 description: 'Extra points for responding within 24 hours',
                 color: '#F59E0B', // Warning amber
                 category: 'bonus'
+            },
+            conversion: {
+                icon: '\uD83D\uDCB8', // 💸 Money with wings emoji
+                title: 'Points Converted',
+                description: 'Points converted to wallet balance (1 point = ₹0.50)',
+                color: '#7EB900', // Green (negative/spent)
+                category: 'conversion'
             },
             // 🚀 FUTURE: Any new point types can be added here without frontend changes
             monthly_bonus: {
@@ -1347,6 +1386,80 @@ export class ReferralService {
             await dbService.executeQuery(query, [jobId]);
         } catch (e) {
             console.warn('Failed to update referrer stats after cancellation:', e);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Convert referral points to wallet balance
+     * Conversion rate: 1 point = ₹0.50
+     * Uses existing WalletService.creditBonus() to add money to wallet
+     */
+    static async convertPointsToWallet(applicantId: string, userId: string): Promise<{
+        success: boolean;
+        pointsConverted: number;
+        walletAmount: number;
+        newWalletBalance: number;
+        transactionId: string;
+    }> {
+        try {
+            console.log(`💱 Converting points to wallet for applicant ${applicantId}, user ${userId}`);
+
+            // Get current referral points
+            const pointsQuery = `
+                SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
+                FROM Applicants
+                WHERE ApplicantID = @param0
+            `;
+            const pointsResult = await dbService.executeQuery(pointsQuery, [applicantId]);
+            
+            if (!pointsResult.recordset || pointsResult.recordset.length === 0) {
+                throw new NotFoundError('Applicant profile not found');
+            }
+
+            const currentPoints = pointsResult.recordset[0].CurrentPoints || 0;
+
+            if (currentPoints <= 0) {
+                throw new ValidationError('No referral points available to convert');
+            }
+
+            // Calculate wallet amount (1 point = ₹0.50)
+            const CONVERSION_RATE = 0.5;
+            const walletAmount = currentPoints * CONVERSION_RATE;
+
+            console.log(`💰 Converting ${currentPoints} points to ₹${walletAmount.toFixed(2)}`);
+
+            // Credit wallet using existing WalletService.creditBonus method
+            const creditResult = await WalletService.creditBonus(
+                userId,
+                walletAmount,
+                'REFERRAL_BONUS',
+                `Converted ${currentPoints} referral points to wallet balance`
+            );
+
+            if (!creditResult.success) {
+                throw new Error('Failed to credit wallet');
+            }
+
+            // Reset referral points to 0
+            const resetQuery = `
+                UPDATE Applicants
+                SET ReferralPoints = 0
+                WHERE ApplicantID = @param0
+            `;
+            await dbService.executeQuery(resetQuery, [applicantId]);
+
+            console.log(`✅ Successfully converted ${currentPoints} points to ₹${walletAmount.toFixed(2)} for user ${userId}`);
+
+            return {
+                success: true,
+                pointsConverted: currentPoints,
+                walletAmount: walletAmount,
+                newWalletBalance: creditResult.newBalance,
+                transactionId: creditResult.transactionId
+            };
+        } catch (error) {
+            console.error('Error converting points to wallet:', error);
+            throw error;
         }
     }
 }

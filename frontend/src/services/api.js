@@ -2121,6 +2121,39 @@ if (!resumeId) {
     }
   }
 
+  // ✅ NEW: Convert referral points to wallet balance
+  async convertPointsToWallet() {
+    console.log('💰 API: Converting points to wallet...');
+    
+    // Ensure token is loaded
+    if (!this.token) {
+      console.log('🔧 Token not in memory, loading from storage...');
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      console.log('💰 Making POST request to:', `/referral/points/convert-to-wallet`);
+      
+      const result = await this.apiCall(`/referral/points/convert-to-wallet`, {
+        method: 'POST',
+      });
+      
+      console.log('✅ Points conversion successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Points conversion failed:', error.message);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to convert points to wallet'
+      };
+    }
+  }
+
   // ✅ NEW: Razorpay payment integration
   async createRazorpayOrder(orderData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
@@ -2304,6 +2337,163 @@ if (!resumeId) {
       console.error('❌ Delete job failed:', error.message);
       return { success: false, error: error.message || 'Failed to delete job' };
     }
+  }
+
+  async uploadFile(fileUri, containerName = 'referral-proofs') {
+    try {
+      console.log('?? === FILE UPLOAD START ===');
+      console.log('?? Platform:', Platform.OS);
+      console.log('?? File URI:', fileUri);
+      console.log('?? Container:', containerName);
+
+      if (!this.token) {
+        throw new Error('Authentication required');
+      }
+
+      const userId = this.getUserIdFromToken();
+      if (!userId) {
+        throw new Error('Unable to identify user');
+      }
+
+      let fileData;
+      let mimeType;
+      let fileName;
+
+      // Handle different file sources
+      if (Platform.OS === 'web') {
+        // Web: Handle data URLs or blob URLs
+        if (fileUri.startsWith('data:')) {
+          // Data URL (from image picker on web)
+          console.log('?? Processing data URL...');
+          const matches = fileUri.match(/^data:([^;]+);base64,(.+)$/);
+          if (!matches) {
+            throw new Error('Invalid data URL format');
+          }
+          mimeType = matches[1];
+          fileData = matches[2];
+          fileName = `proof-${Date.now()}.${this.getExtensionFromMimeType(mimeType)}`;
+        } else if (fileUri.startsWith('blob:')) {
+          // Blob URL
+          console.log('?? Processing blob URL...');
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+
+          fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              const base64 = result.split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          mimeType = blob.type || 'image/jpeg';
+          fileName = `proof-${Date.now()}.${this.getExtensionFromMimeType(mimeType)}`;
+        } else {
+          throw new Error('Unsupported file URI format on web');
+        }
+      } else {
+        // React Native: Read file using Expo FileSystem
+        const { FileSystem } = require('expo-file-system');
+        console.log('?? Reading file from filesystem...');
+
+        fileData = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Determine MIME type from URI
+        const extension = fileUri.split('.').pop()?.toLowerCase();
+        mimeType = this.getMimeTypeFromExtension(extension);
+        fileName = `proof-${Date.now()}.${extension}`;
+      }
+
+      console.log('?? File processed:', {
+        fileName,
+        mimeType,
+        fileDataLength: fileData?.length || 0,
+        fileSizeEstimate: fileData ? `${((fileData.length * 3) / 4 / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
+      });
+
+      // Validate file size (10MB limit)
+      const fileSizeBytes = (fileData.length * 3) / 4;
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (fileSizeBytes > maxSizeBytes) {
+        throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
+      }
+
+      // Prepare upload request
+      const url = `${this.baseURL}/storage/upload`;
+      console.log('?? Upload URL:', url);
+
+      const headers = await this.getAuthHeaders();
+
+      const requestPayload = {
+        fileName,
+        fileData,
+        mimeType,
+        containerName,
+        userId
+      };
+
+      console.log('?? Making upload request...');
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestPayload),
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
+      console.log('?? Response status:', response.status);
+
+      let result;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('? Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+
+      if (!response.ok) {
+        console.error('? Upload failed:', result);
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+
+      console.log('? File uploaded successfully:', {
+        fileUrl: result.data?.fileUrl,
+        fileName: result.data?.fileName
+      });
+      console.log('?? === FILE UPLOAD END ===');
+
+      return result;
+    } catch (error) {
+      console.error('? === FILE UPLOAD ERROR ===');
+      console.error('? Error type:', error.constructor.name);
+      console.error('? Error message:', error.message);
+      console.error('? === END ERROR LOG ===');
+      throw error;
+    }
+  }
+
+  // Helper: Get file extension from MIME type
+  getExtensionFromMimeType(mimeType) {
+    const mimeToExt = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+    };
+    return mimeToExt[mimeType] || 'jpg';
   }
 }
 
