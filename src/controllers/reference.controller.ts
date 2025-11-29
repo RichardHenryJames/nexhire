@@ -57,14 +57,14 @@ export const getOrganizations = async (req: any): Promise<any> => {
 
         let organizations: any[] = [];
 
-        // Enhanced query with search support and pagination at database level
+        // 🚀 OPTIMIZED: Minimal fields for dropdown performance
+        // Only fetch what's absolutely needed for display
         let query = `
             SELECT 
                 OrganizationID as id,
                 Name as name,
                 LogoURL as logoURL,
                 Industry as industry,
-                Type as type,
                 IsFortune500 as isFortune500
             FROM Organizations 
             WHERE IsActive = 1
