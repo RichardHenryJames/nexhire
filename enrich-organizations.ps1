@@ -446,46 +446,37 @@ for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
 # ================================================================
 
 Write-Host "==================================================================" -ForegroundColor Green
-Write-Host " ENRICHMENT SUMMARY                                            📊" -ForegroundColor Green
+Write-Host " ENRICHMENT SUMMARY" -ForegroundColor Green
 Write-Host "==================================================================" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "Statistics:" -ForegroundColor Cyan
 Write-Host "   Organizations enriched: $enrichedCount" -ForegroundColor Green
-Write-Host "   ➕ Total fields updated: $totalFieldsEnriched" -ForegroundColor White
-Write-Host "   ⚠️ Skipped (no updates): $skippedCount" -ForegroundColor Yellow
+Write-Host "   Total fields updated: $totalFieldsEnriched" -ForegroundColor White
+Write-Host "   Skipped no updates: $skippedCount" -ForegroundColor Yellow
 if ($errorCount -gt 0) {
-    Write-Host "   ❌ Errors: $errorCount" -ForegroundColor Red
+    Write-Host "   Errors: $errorCount" -ForegroundColor Red
 }
 Write-Host "   Total processed: $($organizations.Count)" -ForegroundColor White
+Write-Host ""
 
 # Database aggregates
-$stats = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query @"
-SELECT
-    COUNT(*) as Total,
-    SUM(CASE WHEN LogoURL IS NOT NULL THEN 1 ELSE 0 END) as WithLogos,
-    SUM(CASE WHEN Website IS NOT NULL THEN 1 ELSE 0 END) as WithWebsites,
-    SUM(CASE WHEN LinkedInProfile IS NOT NULL THEN 1 ELSE 0 END) as WithLinkedIn,
-    SUM(CASE WHEN Description IS NOT NULL THEN 1 ELSE 0 END) as WithDescription,
-    SUM(CASE WHEN Industry IS NOT NULL THEN 1 ELSE 0 END) as WithIndustry
-FROM Organizations
-WHERE IsActive = 1
-"@ -QueryTimeout 30
+$statsQuery = "SELECT COUNT(*) as Total, " +
+    "SUM(CASE WHEN LogoURL IS NOT NULL THEN 1 ELSE 0 END) as WithLogos, " +
+    "SUM(CASE WHEN Website IS NOT NULL THEN 1 ELSE 0 END) as WithWebsites, " +
+    "SUM(CASE WHEN LinkedInProfile IS NOT NULL THEN 1 ELSE 0 END) as WithLinkedIn, " +
+    "SUM(CASE WHEN Description IS NOT NULL THEN 1 ELSE 0 END) as WithDescription, " +
+    "SUM(CASE WHEN Industry IS NOT NULL THEN 1 ELSE 0 END) as WithIndustry " +
+    "FROM Organizations WHERE IsActive = 1"
 
-Write-Host ""
+$stats = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $statsQuery -QueryTimeout 30
+
 Write-Host "Database Status:" -ForegroundColor Cyan
 Write-Host "   Total Organizations: $($stats.Total)"
-Write-Host "   With Logos: $($stats.WithLogos) ($([math]::Round($stats.WithLogos/$stats.Total*100, 1))%)"
-Write-Host "   With Websites: $($stats.WithWebsites) ($([math]::Round($stats.WithWebsites/$stats.Total*100, 1))%)"
-Write-Host "   With LinkedIn: $($stats.WithLinkedIn) ($([math]::Round($stats.WithLinkedIn/$stats.Total*100, 1))%)"
-Write-Host "   With Description: $($stats.WithDescription) ($([math]::Round($stats.WithDescription/$stats.Total*100, 1))%)"
-Write-Host "   With Industry: $($stats.WithIndustry) ($([math]::Round($stats.WithIndustry/$stats.Total*100, 1))%)"
-
+Write-Host "   With Logos: $($stats.WithLogos)"
+Write-Host "   With Websites: $($stats.WithWebsites)"
+Write-Host "   With LinkedIn: $($stats.WithLinkedIn)"
+Write-Host "   With Description: $($stats.WithDescription)"
+Write-Host "   With Industry: $($stats.WithIndustry)"
 Write-Host ""
-Write-Host "Enrichment completed! ✅" -ForegroundColor Green
-Write-Host ""
-Write-Host "Next Steps:" -ForegroundColor Cyan
-Write-Host "   🔗 Test API: Invoke-RestMethod https://refopen-api-func.azurewebsites.net/api/reference/organizations"
-Write-Host "   ➕ Run again with -OnlyMissingData to fill remaining gaps"
-Write-Host "   🔑 Add Clearbit API key for full enrichment"
-Write-Host ""
+Write-Host "Done" -ForegroundColor Green
