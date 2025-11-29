@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
@@ -14,7 +17,7 @@ import JobCard from '../../components/jobs/JobCard';
 import { colors, typography } from '../../styles/theme';
 
 export default function AIRecommendedJobsScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, isJobSeeker } = useAuth();
   const [loading, setLoading] = useState(true);
   const [aiJobs, setAiJobs] = useState([]);
   const [error, setError] = useState(null);
@@ -63,23 +66,107 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     }
   };
 
+  // Handle Apply button - same as JobsScreen
+  const handleApply = useCallback(async (job) => {
+    if (!job) return;
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to apply for jobs', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      return;
+    }
+    // Navigate to job application screen
+    navigation.navigate('JobApplication', { jobId: job.JobID });
+  }, [user, isJobSeeker, navigation]);
+
+  // Handle Ask Referral button - same as JobsScreen
+  const handleAskReferral = useCallback(async (job) => {
+    if (!job) return;
+    if (!user) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
+      Alert.alert('Login Required', 'Please login to ask for referrals', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') }
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      return;
+    }
+
+    const jobId = job.JobID || job.id;
+
+    // Check wallet balance
+    try {
+      const walletBalance = await refopenAPI.getWalletBalance();
+      
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        
+        if (balance < 50) {
+          if (Platform.OS === 'web') {
+            if (window.confirm(`Insufficient wallet balance. You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}\n\nWould you like to recharge?`)) {
+              navigation.navigate('Wallet');
+            }
+            return;
+          }
+          Alert.alert(
+            'Insufficient Balance',
+            `You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Recharge Wallet', onPress: () => navigation.navigate('Wallet') }
+            ]
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking wallet balance:', error);
+    }
+
+    // Navigate to Create Referral Request
+    navigation.navigate('CreateReferralRequest', { 
+      jobId: jobId,
+      job: job 
+    });
+  }, [user, isJobSeeker, navigation]);
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="bulb" size={20} color={colors.white} />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>AI Recommended Jobs</Text>
-            <Text style={styles.headerSubtitle}>Personalized for you</Text>
+      {/* AI Gradient Header */}
+      <LinearGradient
+        colors={['#1a1a1a', '#2d2d2d', '#404040']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="bulb-outline" size={20} color="#FFD700" />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>AI Recommended Jobs</Text>
+              <Text style={styles.headerSubtitle}>50 AI-matched jobs for you</Text>
+            </View>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -128,20 +215,15 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.infoCard}>
-            <Ionicons name="sparkles" size={20} color={colors.primary} />
-            <Text style={styles.infoText}>
-              {aiJobs.length} AI-matched jobs for you
-            </Text>
-          </View>
-
-          {/* Job Cards - same as JobsScreen */}
+          {/* Job Cards with working handlers */}
           {aiJobs.map((job, index) => (
             <JobCard 
               key={job.JobID || index} 
               job={job}
               onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-              showAIBadge={true}
+              onApply={() => handleApply(job)}
+              onAskReferral={() => handleAskReferral(job)}
+              hideSave={true}
             />
           ))}
         </ScrollView>
@@ -167,16 +249,15 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0a0a0a', // Dark theme
+  },
+  gradientHeader: {
+    paddingTop: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    padding: 12,
   },
   backButton: {
     marginRight: 16,
@@ -187,10 +268,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -198,11 +279,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+    color: colors.white,
   },
   headerSubtitle: {
     fontSize: typography.sizes.xs,
-    color: colors.gray600,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   loadingContainer: {
     flex: 1,
@@ -219,22 +300,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '10',
     padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    gap: 10,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-    lineHeight: 20,
   },
   emptyState: {
     flex: 1,

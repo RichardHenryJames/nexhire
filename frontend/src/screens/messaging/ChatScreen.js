@@ -25,7 +25,7 @@ export default function ChatScreen() {
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  const { conversationId, otherUserName, otherUserId } = route.params;
+  const { conversationId, otherUserName, otherUserId, otherUserProfilePic } = route.params;
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,9 @@ export default function ChatScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [signalRConnected, setSignalRConnected] = useState(false);
   const [usePolling, setUsePolling] = useState(false);
-  const [otherUserProfile, setOtherUserProfile] = useState(null);
+  const [otherUserProfile, setOtherUserProfile] = useState(
+    otherUserProfilePic ? { profilePictureUrl: otherUserProfilePic } : null
+  );
   const [showMenu, setShowMenu] = useState(false); // For web dropdown
 
   const connectionStatusRef = useRef({ connected: false, polling: false });
@@ -549,7 +551,7 @@ export default function ChatScreen() {
             {/* Name Only */}
             <div style={{ flex: 1 }}>
               <div
-                style={{ fontSize: 16, fontWeight: "600", color: colors.white }}
+                style={{ fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
               >
                 {otherUserName}
               </div>
@@ -694,11 +696,12 @@ export default function ChatScreen() {
                     {!isMine && (
                       <div
                         style={{
-                          fontSize: 12,
+                          fontSize: 16,
                           color: colors.gray600,
                           marginBottom: 2,
                           marginLeft: 8,
-                          fontWeight: "500",
+                          fontWeight: "600",
+                          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         }}
                       >
                         {otherUserName}
@@ -728,12 +731,13 @@ export default function ChatScreen() {
                     >
                       <div
                         style={{
-                          fontSize: 15,
+                          fontSize: 14,
                           lineHeight: "20px",
                           color: isMine ? colors.white : colors.gray900,
                           wordWrap: "break-word",
                           whiteSpace: "pre-wrap",
                           marginBottom: "4px",
+                          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         }}
                       >
                         {item.Content}
@@ -1073,7 +1077,7 @@ const styles = StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
   headerInfo: { flex: 1 },
-  headerName: { fontSize: 16, fontWeight: "600", color: colors.white },
+  headerName: { fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "System" },
   menuButton: { padding: 4 },
   messagesList: {
     paddingHorizontal: 8,
@@ -1084,11 +1088,12 @@ const styles = StyleSheet.create({
   myMessageContainer: { alignSelf: "flex-end" },
   theirMessageContainer: { alignSelf: "flex-start" },
   senderName: {
-    fontSize: 12,
+    fontSize: 16,
     color: colors.gray600,
     marginBottom: 2,
     marginLeft: 8,
-    fontWeight: "500",
+    fontWeight: "600",
+    fontFamily: "System",
   },
   messageBubble: {
     paddingHorizontal: 12,
@@ -1105,7 +1110,7 @@ const styles = StyleSheet.create({
   messageFailed: { opacity: 0.5, borderWidth: 1, borderColor: colors.danger },
   myMessageBubble: { backgroundColor: colors.primary },
   theirMessageBubble: { backgroundColor: colors.white },
-  messageText: { fontSize: 15, lineHeight: 20, color: colors.gray900 },
+  messageText: { fontSize: 14, lineHeight: 20, color: colors.gray900, fontFamily: "System" },
   messageTextFaded: { opacity: 0.8 },
   myMessageText: { color: colors.white },
   theirMessageText: { color: colors.gray900 },

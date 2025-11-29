@@ -35,6 +35,7 @@ import {
   getCurrencies,
   getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
   getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
+  checkAIAccessStatus, // NEW: Check if user has active 24hr AI access
 } from "./src/controllers/job.controller";
 import {
   applyForJob,
@@ -529,6 +530,14 @@ app.http("ai-job-filters", {
   authLevel: "anonymous",
   route: "jobs/ai-filters",
   handler: getAIJobFilters,
+});
+
+// NEW: Check AI access status (24hr validity)
+app.http("ai-access-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/ai-access-status",
+  handler: checkAIAccessStatus,
 });
 
 // ========================================================================

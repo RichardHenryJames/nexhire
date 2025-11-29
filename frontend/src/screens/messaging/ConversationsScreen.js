@@ -86,6 +86,7 @@ export default function ConversationsScreen() {
           conversationId: item.ConversationID,
           otherUserName: item.OtherUserName,
           otherUserId: item.OtherUserID,
+          otherUserProfilePic: item.OtherUserProfilePic,
 })}
       >
         {/* Profile Picture */}

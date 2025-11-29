@@ -136,6 +136,7 @@ const linking = {
 
           // Modal/Stack screens
           JobDetails: "job/:jobId",
+          AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
           ViewProfile: "profile/:userId",

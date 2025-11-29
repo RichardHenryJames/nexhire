@@ -45,6 +45,7 @@ const [loadingAiJobs, setLoadingAiJobs] = useState(false);
 const [walletBalance, setWalletBalance] = useState(0);
 const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
 const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
+const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
 const scrollViewRef = React.useRef(null);
@@ -91,6 +92,9 @@ const scrollViewRef = React.useRef(null);
         
         // Load wallet balance for AI feature
         loadWalletBalance();
+        
+        // Check AI access status (24hr validity)
+        checkAIAccessStatus();
       }
 
     } catch (error) {
@@ -111,6 +115,27 @@ const scrollViewRef = React.useRef(null);
       }
     } catch (error) {
       console.error('Error loading wallet balance:', error);
+    }
+  };
+
+  // Check AI access status (24hr validity)
+  const checkAIAccessStatus = async () => {
+    try {
+      console.log('🔍 Checking AI access status...');
+      const result = await refopenAPI.apiCall('/jobs/ai-access-status');
+      console.log('🔍 AI access status result:', result);
+      
+      if (result?.success) {
+        const hasAccess = result.data?.hasActiveAccess || false;
+        console.log('✅ AI access status:', hasAccess ? 'ACTIVE (no payment needed)' : 'INACTIVE (payment required)');
+        setHasActiveAIAccess(hasAccess);
+      } else {
+        console.log('❌ Failed to get AI access status:', result);
+        setHasActiveAIAccess(false);
+      }
+    } catch (error) {
+      console.error('❌ Error checking AI access status:', error);
+      setHasActiveAIAccess(false);
     }
   };
 
@@ -333,18 +358,40 @@ const scrollViewRef = React.useRef(null);
     }
   };
 
-  // Handle Show More AI Jobs (backend will handle ₹100 deduction like referrals)
+  // Handle Show More AI Jobs - check 24hr access first
   const handleShowMoreAIJobs = async () => {
+    try {
+      console.log('🎯 Show More AI Jobs clicked');
+      console.log('💰 Current wallet balance:', walletBalance);
+      console.log('🔓 Current hasActiveAIAccess state:', hasActiveAIAccess);
+      
+      // Check if user has active AI access (paid within 24 hours)
+      const accessStatus = await refopenAPI.apiCall('/jobs/ai-access-status');
+      console.log('🔍 Fresh access check result:', accessStatus);
+      
+      if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
+        // User has active access - navigate directly without payment
+        console.log('✅ User has active 24hr AI access - navigating directly without payment');
+        navigation.navigate('AIRecommendedJobs');
+        return;
+      } else {
+        console.log('❌ No active access - payment required');
+      }
+    } catch (error) {
+      console.error('❌ Error checking AI access status:', error);
+      // Continue to payment flow if check fails
+    }
+
     const requiredAmount = 100;
     
-    // Check balance first (lightweight check)
+    // Check balance (user needs to pay)
     if (walletBalance < requiredAmount) {
       setIsInsufficientBalance(true);
       setShowAIConfirmModal(true);
       return;
     }
 
-    // Show confirmation modal
+    // Show confirmation modal for payment
     setIsInsufficientBalance(false);
     setShowAIConfirmModal(true);
   };
@@ -591,9 +638,13 @@ const scrollViewRef = React.useRef(null);
                   onPress={handleShowMoreAIJobs}
                 >
                   <Text style={styles.showMoreText}>Show More</Text>
-                  <View style={styles.showMoreBadge}>
-                    <Text style={styles.showMoreBadgeText}>₹100</Text>
-                  </View>
+                  {!hasActiveAIAccess && (
+                    <View style={styles.showMoreBadge}>
+                      <Text style={styles.showMoreBadgeText}>₹100</Text>
+                    </View>
+                  )}
+                  {/* Debug log */}
+                  {console.log('🎨 Rendering Show More button - hasActiveAIAccess:', hasActiveAIAccess, '| Showing badge:', !hasActiveAIAccess)}
                 </TouchableOpacity>
                 
                 <View style={styles.aiTipContainer}>
@@ -683,45 +734,139 @@ const scrollViewRef = React.useRef(null);
       >
         <View style={styles.aiModalOverlay}>
           <View style={styles.aiModalContent}>
-            <View style={styles.aiModalIconContainer}>
-              <Ionicons 
-                name={isInsufficientBalance ? "wallet-outline" : "flash"} 
-                size={40} 
-                color={isInsufficientBalance ? colors.warning : colors.primary} 
-              />
-            </View>
-            
-            <Text style={styles.aiModalTitle}>
-              {isInsufficientBalance ? 'Insufficient Balance' : 'AI Recommended Jobs'}
-            </Text>
-            
-            <Text style={styles.aiModalMessage}>
-              {isInsufficientBalance 
-                ? `You need ₹100 to view all AI recommended jobs.\n\nYour current balance: ₹${walletBalance.toFixed(2)}\n\nWould you like to recharge your wallet?`
-                : `₹100 will be deducted from your wallet to access up to 50 personalized AI-matched jobs.\n\nCurrent Balance: ₹${walletBalance.toFixed(2)}\n\nDo you want to continue?`
-              }
-            </Text>
-            
-            <View style={styles.aiModalButtons}>
-              <TouchableOpacity 
-                style={styles.aiModalCancelButton} 
-                onPress={() => setShowAIConfirmModal(false)}
-              >
-                <Text style={styles.aiModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.aiModalConfirmButton,
-                  isInsufficientBalance && styles.aiModalRechargeButton
-                ]} 
-                onPress={isInsufficientBalance ? handleAIJobsCancel : handleAIJobsConfirm}
-              >
-                <Text style={styles.aiModalConfirmText}>
-                  {isInsufficientBalance ? 'Recharge Wallet' : 'Continue'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {isInsufficientBalance ? (
+              <>
+                {/* Header with red gradient */}
+                <View style={styles.insufficientBalanceHeader}>
+                  <Ionicons name="wallet-outline" size={32} color="#FFF" />
+                  <Text style={styles.insufficientBalanceTitle}>Wallet Recharge Required</Text>
+                </View>
+                
+                <View style={styles.insufficientBalanceBody}>
+                  <Text style={styles.insufficientBalanceSubtitle}>Insufficient wallet balance</Text>
+                  
+                  {/* Balance cards */}
+                  <View style={styles.balanceCardsContainer}>
+                    <View style={styles.balanceCardCurrent}>
+                      <Ionicons name="cash-outline" size={24} color="#DC3545" />
+                      <Text style={styles.balanceCardLabel}>Current</Text>
+                      <Text style={styles.balanceCardAmount}>₹{walletBalance.toFixed(2)}</Text>
+                    </View>
+                    
+                    <View style={styles.balanceCardRequired}>
+                      <Ionicons name="checkmark-circle-outline" size={24} color="#28A745" />
+                      <Text style={styles.balanceCardLabel}>Required</Text>
+                      <Text style={styles.balanceCardAmount}>₹100.00</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Why needed section */}
+                  <View style={styles.whyNeededSection}>
+                    <Text style={styles.whyNeededTitle}>Why is this needed?</Text>
+                    
+                    <View style={styles.whyNeededItem}>
+                      <Ionicons name="shield-checkmark" size={20} color="#6C5CE7" />
+                      <Text style={styles.whyNeededText}>Access 50 AI-matched jobs for 24 hours</Text>
+                    </View>
+                    
+                    <View style={styles.whyNeededItem}>
+                      <Ionicons name="people" size={20} color="#6C5CE7" />
+                      <Text style={styles.whyNeededText}>Personalized job recommendations</Text>
+                    </View>
+                    
+                    <View style={styles.whyNeededItem}>
+                      <Ionicons name="repeat" size={20} color="#6C5CE7" />
+                      <Text style={styles.whyNeededText}>Unlimited views within 24 hours</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Action buttons */}
+                  <View style={styles.insufficientBalanceButtons}>
+                    <TouchableOpacity 
+                      style={styles.maybeLaterButton} 
+                      onPress={() => setShowAIConfirmModal(false)}
+                    >
+                      <Text style={styles.maybeLaterText}>Maybe Later</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.addMoneyButton} 
+                      onPress={handleAIJobsCancel}
+                    >
+                      <Ionicons name="wallet" size={20} color="#FFF" />
+                      <Text style={styles.addMoneyText}>Add Money</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* AI Jobs confirmation modal */}
+                <View style={styles.aiConfirmHeader}>
+                  <Ionicons name="sparkles" size={32} color="#FFD700" />
+                  <Text style={styles.aiConfirmHeaderTitle}>AI Recommended Jobs</Text>
+                </View>
+                
+                <View style={styles.aiConfirmBody}>
+                  <Text style={styles.aiConfirmSubtitle}>Get 50 personalized job matches</Text>
+                  
+                  {/* Cost and Balance */}
+                  <View style={styles.costBalanceContainer}>
+                    <View style={styles.costBalanceRow}>
+                      <Text style={styles.costBalanceLabel}>Cost</Text>
+                      <Text style={styles.costBalanceValue}>₹100.00</Text>
+                    </View>
+                    <View style={styles.costBalanceRow}>
+                      <Text style={styles.costBalanceLabel}>Current Balance</Text>
+                      <Text style={styles.costBalanceValueGreen}>₹{walletBalance.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.costBalanceDivider} />
+                    <View style={styles.costBalanceRow}>
+                      <Text style={styles.costBalanceLabelBold}>Balance After</Text>
+                      <Text style={styles.costBalanceValueBold}>₹{(walletBalance - 100).toFixed(2)}</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Features section */}
+                  <View style={styles.featuresSection}>
+                    <Text style={styles.featuresSectionTitle}>What you'll get:</Text>
+                    
+                    <View style={styles.featureItem}>
+                      <Ionicons name="checkmark-circle" size={20} color="#28A745" />
+                      <Text style={styles.featureText}>50 AI-matched jobs based on your profile</Text>
+                    </View>
+                    
+                    <View style={styles.featureItem}>
+                      <Ionicons name="time" size={20} color="#28A745" />
+                      <Text style={styles.featureText}>24-hour unlimited access</Text>
+                    </View>
+                    
+                    <View style={styles.featureItem}>
+                      <Ionicons name="refresh" size={20} color="#28A745" />
+                      <Text style={styles.featureText}>No additional charges for 24 hours</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Action buttons */}
+                  <View style={styles.aiConfirmButtons}>
+                    <TouchableOpacity 
+                      style={styles.aiConfirmCancelButton} 
+                      onPress={() => setShowAIConfirmModal(false)}
+                    >
+                      <Text style={styles.aiConfirmCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.aiConfirmProceedButton} 
+                      onPress={handleAIJobsConfirm}
+                    >
+                      <Ionicons name="flash" size={20} color="#FFF" />
+                      <Text style={styles.aiConfirmProceedText}>Proceed</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -1355,45 +1500,102 @@ const styles = StyleSheet.create({
   aiModalContent: {
     backgroundColor: colors.surface || '#FFF',
     borderRadius: 20,
-    padding: 28,
     width: '100%',
     maxWidth: 400,
-    alignItems: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 10,
   },
-  aiModalIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
+  // Insufficient Balance Design
+  insufficientBalanceHeader: {
+    backgroundColor: '#DC3545',
+    padding: 24,
     alignItems: 'center',
+    gap: 12,
+  },
+  insufficientBalanceTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  insufficientBalanceBody: {
+    padding: 24,
+  },
+  insufficientBalanceSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text || '#000',
+    textAlign: 'center',
     marginBottom: 20,
   },
-  aiModalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  aiModalMessage: {
-    fontSize: 16,
-    color: colors.gray600 || '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 28,
-  },
-  aiModalButtons: {
+  balanceCardsContainer: {
     flexDirection: 'row',
     gap: 12,
-    width: '100%',
+    marginBottom: 24,
   },
-  aiModalCancelButton: {
+  balanceCardCurrent: {
+    flex: 1,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#DC354520',
+  },
+  balanceCardRequired: {
+    flex: 1,
+    backgroundColor: '#E8F8F0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#28A74520',
+  },
+  balanceCardLabel: {
+    fontSize: 14,
+    color: colors.gray600 || '#666',
+    fontWeight: '500',
+  },
+  balanceCardAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+  },
+  whyNeededSection: {
+    backgroundColor: colors.background || '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  whyNeededTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+    marginBottom: 16,
+  },
+  whyNeededItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  whyNeededText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.gray600 || '#666',
+    lineHeight: 20,
+  },
+  insufficientBalanceButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  maybeLaterButton: {
     flex: 1,
     backgroundColor: colors.background || '#F5F5F7',
     borderWidth: 1,
@@ -1403,25 +1605,150 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  aiModalCancelText: {
+  maybeLaterText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text || '#000',
   },
-  aiModalConfirmButton: {
+  addMoneyButton: {
     flex: 1,
-    backgroundColor: colors.primary || '#007AFF',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  addMoneyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  // AI Confirmation Modal (when balance is sufficient)
+  aiConfirmHeader: {
+    backgroundColor: '#6C5CE7',
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiConfirmHeaderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  aiConfirmBody: {
+    padding: 24,
+  },
+  aiConfirmSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text || '#000',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  costBalanceContainer: {
+    backgroundColor: colors.background || '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  costBalanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  costBalanceLabel: {
+    fontSize: 14,
+    color: colors.gray600 || '#666',
+  },
+  costBalanceLabelBold: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+  },
+  costBalanceValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text || '#000',
+  },
+  costBalanceValueGreen: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#28A745',
+  },
+  costBalanceValueBold: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+  },
+  costBalanceDivider: {
+    height: 1,
+    backgroundColor: colors.border || '#E5E5EA',
+    marginVertical: 8,
+  },
+  featuresSection: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#007AFF20',
+  },
+  featuresSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+    marginBottom: 16,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  featureText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.gray600 || '#666',
+    lineHeight: 20,
+  },
+  aiConfirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  aiConfirmCancelButton: {
+    flex: 1,
+    backgroundColor: colors.background || '#F5F5F7',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E5EA',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  aiModalRechargeButton: {
-    backgroundColor: colors.warning || '#FEB800',
-  },
-  aiModalConfirmText: {
+  aiConfirmCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.white || '#FFF',
+    color: colors.text || '#000',
+  },
+  aiConfirmProceedButton: {
+    flex: 1,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  aiConfirmProceedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });

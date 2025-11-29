@@ -10,16 +10,49 @@ import { JobService } from './job.service';
 import { InsufficientBalanceError, NotFoundError } from '../utils/validation';
 
 const AI_JOBS_COST = 100; // ₹100 per AI recommendation access
+const AI_ACCESS_DURATION_HOURS = 24; // 24 hours access after payment
 
 export class AIJobRecommendationService {
   /**
-   * Get AI-recommended jobs with wallet deduction
+   * Check if user has active AI access (paid within last 24 hours)
+   */
+  static async hasActiveAIAccess(userId: string): Promise<boolean> {
+    try {
+      const query = `
+        SELECT TOP 1 wt.CreatedAt
+        FROM WalletTransactions wt
+        INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+        WHERE w.UserID = @param0
+          AND wt.Source = 'AI_Job_Recommendations'
+          AND wt.TransactionType = 'Debit'
+          AND wt.Amount = @param1
+          AND wt.CreatedAt >= DATEADD(HOUR, -@param2, GETDATE())
+        ORDER BY wt.CreatedAt DESC
+      `;
+      
+      const result = await dbService.executeQuery(query, [userId, AI_JOBS_COST, AI_ACCESS_DURATION_HOURS]);
+      
+      return result.recordset && result.recordset.length > 0;
+    } catch (error) {
+      console.error('Error checking AI access:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get AI-recommended jobs with conditional wallet deduction
+   * Only deducts if user hasn't paid in last 24 hours
    */
   static async getAIRecommendedJobs(userId: string, limit: number = 50) {
-    // 1. Check wallet balance first (don't deduct yet)
-    const wallet = await WalletService.getOrCreateWallet(userId);
-    if (wallet.Balance < AI_JOBS_COST) {
-      throw new InsufficientBalanceError('Insufficient wallet balance for AI recommendations');
+    // 1. Check if user has active AI access (paid within 24 hours)
+    const hasAccess = await this.hasActiveAIAccess(userId);
+    
+    // 2. Only check/deduct wallet if no active access
+    if (!hasAccess) {
+      const wallet = await WalletService.getOrCreateWallet(userId);
+      if (wallet.Balance < AI_JOBS_COST) {
+        throw new InsufficientBalanceError('Insufficient wallet balance for AI recommendations');
+      }
     }
 
     try {
@@ -36,18 +69,21 @@ export class AIJobRecommendationService {
       
       const result = await JobService.getJobs(params);
       
-      // 5. ONLY deduct from wallet if we successfully got jobs
-      await WalletService.debitWallet(
-        userId, 
-        AI_JOBS_COST, 
-        'AI_Job_Recommendations', 
-        `AI-powered job recommendations (${result.jobs.length} jobs)`
-      );
+      // 5. ONLY deduct from wallet if no active access AND we successfully got jobs
+      if (!hasAccess) {
+        await WalletService.debitWallet(
+          userId, 
+          AI_JOBS_COST, 
+          'AI_Job_Recommendations', 
+          `AI-powered job recommendations (${result.jobs.length} jobs) - 24hr access`
+        );
+      }
       
       return {
         jobs: result.jobs,
         filters,
-        total: result.total
+        total: result.total,
+        alreadyPaid: hasAccess // Let frontend know if this was free access
       };
     } catch (error) {
       // If anything fails, wallet won't be deducted

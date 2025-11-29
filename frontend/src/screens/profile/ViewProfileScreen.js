@@ -104,6 +104,7 @@ export default function ViewProfileScreen() {
         conversationId: result.data.ConversationID,
           otherUserName: profile.UserName || initialUserName,
         otherUserId: userId,
+        otherUserProfilePic: profile.ProfilePictureURL,
         });
       }
     } catch (error) {
