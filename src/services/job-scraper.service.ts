@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import * as cheerio from 'cheerio';
+import { findFortune500Match } from '../data/fortune500-companies';
 
 console.log('🚀 Enhanced Job Scraper - 10x Mode Active');
 
@@ -705,7 +706,27 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     const isBrandName = brandPatterns.some(pattern => pattern.test(original));
     
-    // Step 3: Remove noise words/suffixes (order matters - remove longer phrases first)
+    // Step 3: Remove office codes and location-specific suffixes (e.g., "- A19", "- Hyderabad")
+    // This must happen BEFORE noise word removal to catch patterns like "Amazon Dev Center - Hyderabad"
+    normalized = normalized.replace(/\s*-\s*[a-z]\d+$/i, ''); // Remove "- A19", "- B52" style office codes
+    normalized = normalized.replace(/\s*-\s*(hyderabad|bangalore|mumbai|chennai|delhi|pune|gurgaon|noida)$/i, ''); // Remove city suffixes
+    normalized = normalized.replace(/\s*-\s*(us|usa|uk|india)$/i, ''); // Remove country suffixes
+    
+    // Step 4: Remove generic organizational terms that don't identify the brand
+    const genericTerms = [
+      'development center', 'development centre', 'dev center', 'dev centre',
+      'data center', 'data centre', 'data services',
+      'research center', 'research centre',
+      'manufacturing enterprises',
+      'retail operations'
+    ];
+    
+    for (const term of genericTerms) {
+      const pattern = new RegExp(`\\s+${term.replace(/\s/g, '\\s+')}`, 'gi');
+      normalized = normalized.replace(pattern, '');
+    }
+    
+    // Step 5: Remove noise words/suffixes (order matters - remove longer phrases first)
     const noiseWords = [
       'private limited', 'pvt ltd', 'pvt. ltd', 'pvt ltd.', 'pvt. ltd.',
       'private ltd', 'private', 'pvt', 'limited', 'ltd',
@@ -722,10 +743,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       normalized = normalized.replace(pattern, '');
     }
     
-    // Step 4: Remove all punctuation except spaces (before number handling)
+    // Step 6: Remove all punctuation except spaces (before number handling)
     normalized = normalized.replace(/[^\w\s]/g, '');
     
-    // Step 5: Smart leading number removal (SKIP if brand name)
+    // Step 7: Smart leading number removal (SKIP if brand name)
     if (!isBrandName) {
       // Pattern 1: Leading numbers followed by space (e.g., "2100 Microsoft" -> "microsoft")
       normalized = normalized.replace(/^(\d+)\s+/, '');
@@ -745,7 +766,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
     }
     
-    // Step 6: Token filtering - split into words and filter
+    // Step 8: Token filtering - split into words and filter
     const tokens = normalized
       .split(/\s+/)
       .filter(token => {
@@ -761,10 +782,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         return true;
       });
     
-    // Step 7: Join tokens and clean up extra spaces
+    // Step 9: Join tokens and clean up extra spaces
     normalized = tokens.join(' ').trim().replace(/\s+/g, ' ');
     
-    // Step 8: Final safety check - if result is empty or too short, use original cleaned
+    // Step 10: Final safety check - if result is empty or too short, use original cleaned
     if (!normalized || normalized.length < 2) {
       normalized = original.toLowerCase().replace(/[^\w\s]/g, '').trim();
     }
@@ -942,48 +963,83 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 🏢 ENHANCED: Get or create organization with API data enrichment AND smart normalization
+  // 🏢 ENHANCED: Get or create organization with Fortune 500 matching AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
     const cleanName = companyName.trim().substring(0, 100);
     
-    // 🧹 NEW: Normalize company name to prevent duplicates
-    const normalizedName = this.normalizeCompanyName(cleanName);
+    // 🌟 STEP 1: Check Fortune 500 list first for canonical name
+    const fortune500Match = findFortune500Match(cleanName);
+    const canonicalName = fortune500Match ? fortune500Match.canonicalName : cleanName;
+    const isFortune500 = !!fortune500Match;
     
-    console.log(`🔍 Processing company: "${cleanName}" → Normalized: "${normalizedName}"`);
+    console.log(`🔍 Processing company: "${cleanName}"${fortune500Match ? ` → Fortune 500: "${canonicalName}"` : ''}`);
     
-    // 🎯 NEW: Try to find similar organization using smart matching
+    // 🧹 STEP 2: Normalize for matching (use canonical name if Fortune 500)
+    const normalizedName = this.normalizeCompanyName(canonicalName);
+    
+    // 🎯 STEP 3: Try to find similar organization using smart matching
     const similarOrg = await this.findSimilarOrganization(normalizedName);
     if (similarOrg) {
+      // If it's a Fortune 500 company, update the name to canonical
+      if (isFortune500 && similarOrg.Name !== canonicalName) {
+        await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+      }
+      
       // 🔄 UPDATE existing organization with new data from APIs
-      await this.updateOrganizationWithApiData(similarOrg.OrganizationID, cleanName, source, job, similarOrg);
+      await this.updateOrganizationWithApiData(similarOrg.OrganizationID, canonicalName, source, job, similarOrg);
       return similarOrg.OrganizationID;
     }
 
-    // No similar organization found, create new one with enhanced data
-    const enhancedOrgData = await this.getEnhancedOrganizationData(cleanName, source, job);
+    // STEP 4: No similar organization found, create new one with enhanced data
+    const enhancedOrgData = await this.getEnhancedOrganizationData(canonicalName, source, job);
+    
+    // Override industry if Fortune 500 match provides better data
+    const finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
     
     const insertQuery = `
-      INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, LogoURL, Website, LinkedInProfile)
+      INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, IsFortune500, LogoURL, Website, LinkedInProfile)
       OUTPUT INSERTED.OrganizationID
-      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, 1, @param7, @param8, @param9)
+      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, 1, @param7, @param8, @param9, @param10)
     `;
     
     const now = new Date().toISOString();
     const result = await dbService.executeQuery(insertQuery, [
-      cleanName,  // Store original name, not normalized
+      canonicalName,  // Use canonical name from Fortune 500 list
       'Company',
-      enhancedOrgData.industry,
+      finalIndustry,
       enhancedOrgData.size,
-      `${enhancedOrgData.description} (Auto-created from ${source} job scraping)`,
+      `${enhancedOrgData.description}${isFortune500 ? ' (Fortune 500 Company)' : ''} (Auto-created from ${source} job scraping)`,
       now,
       now,
+      isFortune500 ? 1 : 0,  // IsFortune500 flag
       enhancedOrgData.logoUrl,
       enhancedOrgData.website,
       enhancedOrgData.linkedInProfile
     ]);
 
-    console.log(`🏢 Created new organization: ${cleanName} (normalized: ${normalizedName})`);
+    console.log(`🏢 Created new organization: ${canonicalName}${isFortune500 ? ' ⭐ (Fortune 500)' : ''}`);
     return result.recordset[0].OrganizationID;
+  }
+
+  // 📝 Update organization name to canonical Fortune 500 name
+  private static async updateOrganizationName(organizationId: number, canonicalName: string, isFortune500: boolean, industry?: string): Promise<void> {
+    try {
+      const updates: string[] = ['Name = @param0', 'IsFortune500 = @param1', 'UpdatedAt = @param2'];
+      const params: any[] = [canonicalName, isFortune500 ? 1 : 0, new Date().toISOString()];
+      
+      if (industry) {
+        updates.push('Industry = @param3');
+        params.push(industry);
+      }
+      
+      const updateQuery = `UPDATE Organizations SET ${updates.join(', ')} WHERE OrganizationID = @param${params.length}`;
+      params.push(organizationId);
+      
+      await dbService.executeQuery(updateQuery, params);
+      console.log(`✅ Updated organization ${organizationId} to canonical name: "${canonicalName}" (Fortune 500: ${isFortune500})`);
+    } catch (error: any) {
+      console.warn(`⚠️ Failed to update organization name: ${error.message}`);
+    }
   }
 
   // 🔄 Update existing organization with new API data
