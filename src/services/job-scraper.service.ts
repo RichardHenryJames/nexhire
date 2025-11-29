@@ -689,11 +689,21 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   private static normalizeCompanyName(rawName: string): string {
     if (!rawName) return '';
     
-    // Step 1: Preserve original for special case detection
+    // Step 1: Preserve original and create working copy
     const original = rawName.trim();
-    
-    // Step 2: Convert to lowercase for processing
     let normalized = original.toLowerCase();
+    
+    // Step 2: Define brand patterns FIRST (check against original before modifications)
+    // These patterns identify company names where numbers are part of the brand
+    const brandPatterns = [
+      /^\d{1,3}[a-z]{2,8}$/i,   // 360bet, 99acres, 1mg (1-3 digits + 2-8 letters, likely a brand)
+      /^\d+x\d+/i,              // 24x7services
+      /^\d{1,2}[A-Z][a-z]+/,    // 7Eleven, 8Base (1-2 digits + capital - likely a brand, not 2100Microsoft)
+      /^[0-9]{1,2}[A-Z]+$/,     // 3M, 4U (1-2 digits + all capitals)
+      /^\d+\/\d+/,              // 24/7
+    ];
+    
+    const isBrandName = brandPatterns.some(pattern => pattern.test(original));
     
     // Step 3: Remove noise words/suffixes (order matters - remove longer phrases first)
     const noiseWords = [
@@ -712,43 +722,30 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       normalized = normalized.replace(pattern, '');
     }
     
-    // Step 4: Smart leading number removal
-    // Match patterns:
-    // - "2100 Microsoft" -> remove "2100 "
-    // - "2100Microsoft" -> remove "2100"
-    // - "360bet" -> keep (number + lowercase = brand name)
-    // - "24x7services" -> keep (number + alphanumeric = brand name)
-    // - "7Eleven" -> keep (number + capital = brand name like 7-Eleven)
-    // - "3M" -> keep (short brand name)
-    
-    // Pattern 1: Leading numbers followed by space then capital letter (e.g., "2100 Microsoft")
-    normalized = normalized.replace(/^(\d+)\s+([a-z])/i, '$2');
-    
-    // Pattern 2: Leading numbers directly followed by capital letter (e.g., "2100Microsoft")
-    // Only remove if the result would still be meaningful (3+ chars)
-    const directNumberMatch = normalized.match(/^(\d+)([A-Z][a-z]{2,})/);
-    if (directNumberMatch && directNumberMatch[2].length >= 3) {
-      normalized = normalized.replace(/^\d+/, '');
-    }
-    
-    // Step 5: Check if result is a known brand pattern (preserve these)
-    const brandPatterns = [
-      /^\d+[a-z]+$/,        // 360bet, 99acres, 1mg
-      /^\d+x\d+/,           // 24x7services
-      /^\d+[A-Z]\w+/,       // 7Eleven (after lowercase conversion)
-      /^[0-9][A-Z]$/        // 3M
-    ];
-    
-    // If matches brand pattern against original, keep the number
-    const isBrandName = brandPatterns.some(pattern => pattern.test(original));
-    if (isBrandName) {
-      normalized = original.toLowerCase();
-    }
-    
-    // Step 6: Remove all punctuation except spaces
+    // Step 4: Remove all punctuation except spaces (before number handling)
     normalized = normalized.replace(/[^\w\s]/g, '');
     
-    // Step 7: Token filtering - split into words and filter
+    // Step 5: Smart leading number removal (SKIP if brand name)
+    if (!isBrandName) {
+      // Pattern 1: Leading numbers followed by space (e.g., "2100 Microsoft" -> "microsoft")
+      normalized = normalized.replace(/^(\d+)\s+/, '');
+      
+      // Pattern 2: Leading numbers with 4+ digits followed by letters (e.g., "2100Microsoft" -> "microsoft")
+      // This catches noise like "2100Microsoft" but preserves "360bet", "99acres", "7Eleven"
+      // Only remove if: (a) 4+ leading digits OR (b) remaining text is 4+ chars
+      const longNumberMatch = normalized.match(/^(\d{4,})([a-z]+)/);
+      if (longNumberMatch) {
+        normalized = longNumberMatch[2];
+      } else {
+        // For shorter numbers (1-3 digits), only remove if remaining text is substantial (4+ chars)
+        const shortNumberMatch = normalized.match(/^(\d{1,3})([a-z]{4,})/);
+        if (shortNumberMatch) {
+          normalized = shortNumberMatch[2];
+        }
+      }
+    }
+    
+    // Step 6: Token filtering - split into words and filter
     const tokens = normalized
       .split(/\s+/)
       .filter(token => {
@@ -764,10 +761,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         return true;
       });
     
-    // Step 8: Join tokens and clean up extra spaces
+    // Step 7: Join tokens and clean up extra spaces
     normalized = tokens.join(' ').trim().replace(/\s+/g, ' ');
     
-    // Step 9: Final safety check - if result is empty or too short, use original
+    // Step 8: Final safety check - if result is empty or too short, use original cleaned
     if (!normalized || normalized.length < 2) {
       normalized = original.toLowerCase().replace(/[^\w\s]/g, '').trim();
     }
