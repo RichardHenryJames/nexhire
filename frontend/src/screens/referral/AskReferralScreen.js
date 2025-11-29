@@ -99,12 +99,12 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     });
   }, [navigation]);
 
-  // Load initial data - ⚡ Only load wallet balance immediately
+  // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
     console.log('AskReferralScreen: Component mounted');
     loadWalletBalance(); // Load immediately for banner
     loadResumesLazily(); // Load resumes after a delay
-    // Companies will load only when dropdown is opened
+    loadCompaniesInBackground(); // Load companies in background
   }, []);
 
   // Debug useEffect to log form state changes
@@ -128,6 +128,14 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     setTimeout(async () => {
       await loadResumes();
     }, 100);
+  };
+
+  // ⚡ Load companies in background after resumes (with delay)
+  const loadCompaniesInBackground = async () => {
+    // ⚡ Delay to let wallet and resumes load first
+    setTimeout(async () => {
+      await loadCompanies();
+    }, 300);
   };
 
   const loadResumes = async () => {
@@ -156,14 +164,9 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     }
   };
 
-  // ⚡ Load companies only when dropdown is opened
+  // ⚡ Open company dropdown (companies already loaded in background)
   const handleCompanyDropdownOpen = () => {
     setShowCompanyModal(true);
-    
-    // Load companies if not already loaded
-    if (companies.length === 0 && !loadingCompanies) {
-      loadCompanies();
-    }
   };
 
   const loadCompanies = async () => {

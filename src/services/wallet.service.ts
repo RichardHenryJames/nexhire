@@ -7,7 +7,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
-import { ValidationError, NotFoundError } from '../utils/validation';
+import { ValidationError, NotFoundError, InsufficientBalanceError } from '../utils/validation';
 import { config } from '../config/appConfig';
 
 // Lazy init Razorpay client
@@ -513,7 +513,7 @@ export class WalletService {
 
       // Check sufficient balance
       if (wallet.Balance < amount) {
-        throw new ValidationError('Insufficient wallet balance');
+        throw new InsufficientBalanceError('Insufficient wallet balance');
       }
 
       const balanceBefore = wallet.Balance;

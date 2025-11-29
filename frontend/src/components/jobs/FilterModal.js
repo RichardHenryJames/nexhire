@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const FilterModal = ({ 
@@ -13,6 +13,7 @@ const FilterModal = ({
   workplaceTypes = [], 
   currencies = [],
   companies = [],
+  loadingCompanies = false,
   initialSection = null
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('workMode');
@@ -145,6 +146,13 @@ const isSectionActive = (section) => {
         return (
           <View style={styles.rightContent}>
             <Text style={styles.rightTitle}>Company</Text>
+            {loadingCompanies ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#0066cc" />
+                <Text style={styles.loaderText}>Loading companies...</Text>
+              </View>
+            ) : (
+              <>
             <View style={styles.searchContainer}>
               <TextInput
                 style={styles.searchInput}
@@ -210,6 +218,8 @@ const isSectionActive = (section) => {
                 </TouchableOpacity>
               )}
             </ScrollView>
+              </>
+            )}
           </View>
         );
 
@@ -708,7 +718,18 @@ alignItems: 'center',
   loadMoreText: {
     fontSize: 14,
     color: '#0066cc',
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loaderText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
   },
 });
 

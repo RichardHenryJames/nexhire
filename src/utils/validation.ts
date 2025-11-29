@@ -37,6 +37,13 @@ export class ConflictError extends Error {
     }
 }
 
+export class InsufficientBalanceError extends Error {
+    constructor(message: string = 'Insufficient wallet balance') {
+        super(message);
+        this.name = 'INSUFFICIENT_WALLET_BALANCE';
+    }
+}
+
 // GUID validation utility - FIXED: Improved GUID validation
 export const isValidGuid = (value: string): boolean => {
     if (!value || typeof value !== 'string') return false;

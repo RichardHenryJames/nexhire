@@ -630,6 +630,12 @@ class RefOpenAPI {
     return this.apiCall(`/jobs/${jobId}`);
   }
 
+  // NEW: Get AI-recommended jobs (deducts ₹100 from wallet)
+  async getAIRecommendedJobs(limit = 50) {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    return this.apiCall(`/jobs/ai-recommendations?${params}`);
+  }
+
   async searchJobs(query, filters = {}, fetchOptions = {}) {
     // Clean filters and include q only when non-empty; no implicit all=true
     const cleaned = {};

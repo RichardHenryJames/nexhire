@@ -849,9 +849,24 @@ Apply now to join a dynamic team that's building the future! 🌟`;
    * 🔍 Find existing organization by normalized name with similarity matching
    * Returns organization if found, null otherwise
    */
-  private static async findSimilarOrganization(normalizedName: string): Promise<any | null> {
+  private static async findSimilarOrganization(normalizedName: string, originalName?: string): Promise<any | null> {
     try {
-      // First, try exact match on normalized name (fastest)
+      // FIRST: Try exact match on original name (prevents duplicates)
+      if (originalName) {
+        const exactNameQuery = `
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        
+        const exactNameMatch = await dbService.executeQuery(exactNameQuery, [originalName]);
+        if (exactNameMatch.recordset.length > 0) {
+          console.log(`✅ Exact name match found: "${originalName}"`);
+          return exactNameMatch.recordset[0];
+        }
+      }
+      
+      // SECOND: Try exact match on normalized name (case-insensitive, no spaces)
       const exactQuery = `
         SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
         FROM Organizations 
@@ -859,9 +874,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
           AND IsActive = 1
       `;
       
-      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '')]);
+      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '').toLowerCase()]);
       if (exactMatch.recordset.length > 0) {
-        console.log(`✅ Exact match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
+        console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
         return exactMatch.recordset[0];
       }
       
@@ -1050,8 +1065,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // 🧹 STEP 2: Normalize for matching (use canonical name if Fortune 500)
     const normalizedName = this.normalizeCompanyName(canonicalName);
     
-    // 🎯 STEP 3: Try to find similar organization using smart matching
-    const similarOrg = await this.findSimilarOrganization(normalizedName);
+    // 🎯 STEP 3: Try to find similar organization using smart matching (pass original name for exact match)
+    const similarOrg = await this.findSimilarOrganization(normalizedName, canonicalName);
     if (similarOrg) {
       // If it's a Fortune 500 company, update the name to canonical
       if (isFortune500 && similarOrg.Name !== canonicalName) {
@@ -1076,22 +1091,47 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     `;
     
     const now = new Date().toISOString();
-    const result = await dbService.executeQuery(insertQuery, [
-      canonicalName,  // Use canonical name from Fortune 500 list
-      'Company',
-      finalIndustry,
-      enhancedOrgData.size,
-      `${enhancedOrgData.description}${isFortune500 ? ' (Fortune 500 Company)' : ''} (Auto-created from ${source} job scraping)`,
-      now,
-      now,
-      isFortune500 ? 1 : 0,  // IsFortune500 flag
-      enhancedOrgData.logoUrl,
-      enhancedOrgData.website,
-      enhancedOrgData.linkedInProfile
-    ]);
+    
+    try {
+      const result = await dbService.executeQuery(insertQuery, [
+        canonicalName,  // Use canonical name from Fortune 500 list
+        'Company',
+        finalIndustry,
+        enhancedOrgData.size,
+        `${enhancedOrgData.description}${isFortune500 ? ' (Fortune 500 Company)' : ''} (Auto-created from ${source} job scraping)`,
+        now,
+        now,
+        isFortune500 ? 1 : 0,  // IsFortune500 flag
+        enhancedOrgData.logoUrl,
+        enhancedOrgData.website,
+        enhancedOrgData.linkedInProfile
+      ]);
 
-    console.log(`🏢 Created new organization: ${canonicalName}${isFortune500 ? ' ⭐ (Fortune 500)' : ''}`);
-    return result.recordset[0].OrganizationID;
+      console.log(`🏢 Created new organization: ${canonicalName}${isFortune500 ? ' ⭐ (Fortune 500)' : ''}`);
+      return result.recordset[0].OrganizationID;
+      
+    } catch (insertError: any) {
+      // Handle race condition: Another process inserted the same organization
+      if (insertError.message && insertError.message.includes('UNIQUE KEY constraint')) {
+        console.log(`🔄 Organization "${canonicalName}" was just created by another process, retrieving it...`);
+        
+        // Retrieve the organization that was just created
+        const retrieveQuery = `
+          SELECT OrganizationID 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        const retrieveResult = await dbService.executeQuery(retrieveQuery, [canonicalName]);
+        
+        if (retrieveResult.recordset.length > 0) {
+          console.log(`✅ Retrieved existing organization: ${canonicalName}`);
+          return retrieveResult.recordset[0].OrganizationID;
+        }
+      }
+      
+      // Re-throw if it's a different error
+      throw insertError;
+    }
   }
 
   // 📝 Update organization name to canonical Fortune 500 name

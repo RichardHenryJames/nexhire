@@ -33,6 +33,7 @@ import JobsScreen from "../screens/jobs/JobsScreen";
 import SavedJobsScreen from "../screens/jobs/SavedJobsScreen";
 import EmployerJobsScreen from "../screens/employer/EmployerJobsScreen"; // NEW: Employer jobs screen
 import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
+import AIRecommendedJobsScreen from "../screens/jobs/AIRecommendedJobsScreen"; // NEW: AI Recommended Jobs screen
 import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
 import ProfileScreen from "../screens/profile/ProfileScreenNew";
@@ -375,6 +376,13 @@ function MainStack() {
           headerShown: true,
           title: "Job Details",
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="AIRecommendedJobs"
+        component={AIRecommendedJobsScreen}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen

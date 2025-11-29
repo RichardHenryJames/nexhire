@@ -517,8 +517,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                     keyboardShouldPersistTaps="handled"
                     renderItem={({ item }) => (
                       <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
-                        <Text style={styles.orgName}>{item.name}</Text>
-                        {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
+                        {item.logoURL ? (
+                          <Image source={{ uri: item.logoURL }} style={styles.orgLogo} />
+                        ) : (
+                          <View style={styles.orgLogoPlaceholder}>
+                            <Ionicons name="business" size={16} color={colors.gray400} />
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.orgName}>{item.name}</Text>
+                          {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
+                        </View>
                       </TouchableOpacity>
                     )}
                   />
@@ -795,7 +804,9 @@ const styles = StyleSheet.create({
   orgSearchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.background, gap: 8 },
   orgSearchInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 8, fontSize: typography.sizes?.sm || 14 },
   orgList: { maxHeight: 220 },
-  orgItem: { paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
+  orgItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
+  orgLogo: { width: 32, height: 32, borderRadius: 6, marginRight: 10 },
+  orgLogoPlaceholder: { width: 32, height: 32, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   orgName: { color: colors.text, fontSize: typography.sizes?.md || 16 },
   orgMeta: { color: colors.gray600, fontSize: typography.sizes?.sm || 14 },
   manualEntry: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },

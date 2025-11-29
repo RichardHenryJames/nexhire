@@ -11,6 +11,7 @@ import {
   Platform,
   Dimensions,
   Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,6 +42,9 @@ const [dashboardData, setDashboardData] = useState({
 // 🆕 NEW: AI Personalized Jobs state
 const [aiJobs, setAiJobs] = useState([]);
 const [loadingAiJobs, setLoadingAiJobs] = useState(false);
+const [walletBalance, setWalletBalance] = useState(0);
+const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
+const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
 const scrollViewRef = React.useRef(null);
@@ -84,6 +88,9 @@ const scrollViewRef = React.useRef(null);
 
         // 🤖 Load AI personalized jobs (non-critical, can load last)
         loadAIPersonalizedJobs();
+        
+        // Load wallet balance for AI feature
+        loadWalletBalance();
       }
 
     } catch (error) {
@@ -94,6 +101,18 @@ const scrollViewRef = React.useRef(null);
       setLoadingApplications(false);
     }
   }, [isJobSeeker, isEmployer, user]);
+
+  // Load wallet balance
+  const loadWalletBalance = async () => {
+    try {
+      const result = await refopenAPI.getWalletBalance();
+      if (result?.success) {
+        setWalletBalance(result.data?.balance || 0);
+      }
+    } catch (error) {
+      console.error('Error loading wallet balance:', error);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -314,6 +333,40 @@ const scrollViewRef = React.useRef(null);
     }
   };
 
+  // Handle Show More AI Jobs (backend will handle ₹100 deduction like referrals)
+  const handleShowMoreAIJobs = async () => {
+    const requiredAmount = 100;
+    
+    // Check balance first (lightweight check)
+    if (walletBalance < requiredAmount) {
+      setIsInsufficientBalance(true);
+      setShowAIConfirmModal(true);
+      return;
+    }
+
+    // Show confirmation modal
+    setIsInsufficientBalance(false);
+    setShowAIConfirmModal(true);
+  };
+
+  const handleAIJobsConfirm = () => {
+    setShowAIConfirmModal(false);
+    if (!isInsufficientBalance) {
+      // Navigate - backend will automatically deduct ₹100 when loading AI jobs
+      navigation.navigate('AIRecommendedJobs');
+      // Reload wallet balance after returning
+      setTimeout(() => loadWalletBalance(), 1000);
+    }
+  };
+
+  const handleAIJobsCancel = () => {
+    setShowAIConfirmModal(false);
+    if (isInsufficientBalance) {
+      // Navigate to recharge
+      navigation.navigate('WalletRecharge');
+    }
+  };
+
   // 🤖 NEW: Load AI Personalized Jobs
   const loadAIPersonalizedJobs = async () => {
     try {
@@ -503,15 +556,10 @@ const scrollViewRef = React.useRef(null);
                   <Ionicons name="bulb-outline" size={24} color={colors.white} />
                 </View>
                 <View>
-                  <Text style={styles.aiSectionTitle}>AI Recommended Jobs For You</Text>
+                  <Text style={styles.aiSectionTitle}>AI Recommends</Text>
                   <Text style={styles.aiSubtitle}>Jobs matched to your profile</Text>
                 </View>
               </View>
-              {aiJobs.length > 0 && (
-                <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
-                  <Text style={styles.seeAllText}>See All</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             {loadingAiJobs ? (
@@ -536,6 +584,18 @@ const scrollViewRef = React.useRef(null);
                     </View>
                   ))}
                 </ScrollView>
+                
+                {/* Show More Button */}
+                <TouchableOpacity 
+                  style={styles.showMoreButton}
+                  onPress={handleShowMoreAIJobs}
+                >
+                  <Text style={styles.showMoreText}>Show More</Text>
+                  <View style={styles.showMoreBadge}>
+                    <Text style={styles.showMoreBadgeText}>₹100</Text>
+                  </View>
+                </TouchableOpacity>
+                
                 <View style={styles.aiTipContainer}>
                   <Ionicons name="information-circle" size={16} color={colors.primary} />
                   <Text style={styles.aiTipText}>
@@ -613,6 +673,58 @@ const scrollViewRef = React.useRef(null);
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* AI Jobs Confirmation Modal */}
+      <Modal 
+        visible={showAIConfirmModal} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setShowAIConfirmModal(false)}
+      >
+        <View style={styles.aiModalOverlay}>
+          <View style={styles.aiModalContent}>
+            <View style={styles.aiModalIconContainer}>
+              <Ionicons 
+                name={isInsufficientBalance ? "wallet-outline" : "flash"} 
+                size={40} 
+                color={isInsufficientBalance ? colors.warning : colors.primary} 
+              />
+            </View>
+            
+            <Text style={styles.aiModalTitle}>
+              {isInsufficientBalance ? 'Insufficient Balance' : 'AI Recommended Jobs'}
+            </Text>
+            
+            <Text style={styles.aiModalMessage}>
+              {isInsufficientBalance 
+                ? `You need ₹100 to view all AI recommended jobs.\n\nYour current balance: ₹${walletBalance.toFixed(2)}\n\nWould you like to recharge your wallet?`
+                : `₹100 will be deducted from your wallet to access up to 50 personalized AI-matched jobs.\n\nCurrent Balance: ₹${walletBalance.toFixed(2)}\n\nDo you want to continue?`
+              }
+            </Text>
+            
+            <View style={styles.aiModalButtons}>
+              <TouchableOpacity 
+                style={styles.aiModalCancelButton} 
+                onPress={() => setShowAIConfirmModal(false)}
+              >
+                <Text style={styles.aiModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.aiModalConfirmButton,
+                  isInsufficientBalance && styles.aiModalRechargeButton
+                ]} 
+                onPress={isInsufficientBalance ? handleAIJobsCancel : handleAIJobsConfirm}
+              >
+                <Text style={styles.aiModalConfirmText}>
+                  {isInsufficientBalance ? 'Recharge Wallet' : 'Continue'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -1076,22 +1188,20 @@ const styles = StyleSheet.create({
   },
   // 🤖 AI Personalized Jobs Styles
   aiJobsContainer: {
-    padding: 20,
-    paddingTop: 0,
+    margin: 20,
     marginTop: 8,
+    padding: 16,
+    backgroundColor: `${colors.primary}05`,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
   },
   aiSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: `${colors.primary}10`,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
   },
   aiTitleContainer: {
     flexDirection: 'row',
@@ -1155,6 +1265,39 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     marginLeft: 4,
   },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    gap: 10,
+  },
+  showMoreText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  showMoreBadge: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  showMoreBadgeText: {
+    color: colors.primary,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
   aiLoadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1200,5 +1343,85 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 20,
+  },
+  // AI Modal Styles
+  aiModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  aiModalContent: {
+    backgroundColor: colors.surface || '#FFF',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  aiModalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  aiModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text || '#000',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  aiModalMessage: {
+    fontSize: 16,
+    color: colors.gray600 || '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 28,
+  },
+  aiModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  aiModalCancelButton: {
+    flex: 1,
+    backgroundColor: colors.background || '#F5F5F7',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E5EA',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  aiModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text || '#000',
+  },
+  aiModalConfirmButton: {
+    flex: 1,
+    backgroundColor: colors.primary || '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  aiModalRechargeButton: {
+    backgroundColor: colors.warning || '#FEB800',
+  },
+  aiModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white || '#FFF',
   },
 });

@@ -264,7 +264,7 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, []);
 
-  // Preload applied IDs and list
+  // ✅ PRIORITY 1: Load immediately - Applied job IDs (needed for heart icon state)
   useEffect(() => {
     (async () => {
       try {
@@ -278,7 +278,7 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
-  // Preload saved job IDs
+  // ✅ PRIORITY 1: Load immediately - Saved job IDs (needed for bookmark icon state)
   useEffect(() => {
     (async () => {
       try {
@@ -302,31 +302,36 @@ export default function JobsScreen({ navigation, route }) {
     return unsubscribe;
   }, [navigation, refreshApplicationsData]);
 
-  // ? NEW: Preload referred job IDs
+  // ⏱️ PRIORITY 2: Load after 100ms delay - Referral data (for showing referred state)
   useEffect(() => {
-    (async () => {
-      if (!user || !isJobSeeker) return;
-      try {
-        const [referralRes, eligibilityRes] = await Promise.all([
-          refopenAPI.getMyReferralRequests(1, 500),
-          refopenAPI.checkReferralEligibility()
-        ]);
+    if (!user || !isJobSeeker) return;
 
-        if (referralRes?.success && referralRes.data?.requests) {
-          const ids = new Set(referralRes.data.requests.map(r => r.JobID));
-          setReferredJobIds(ids);
-        }
+    const timer = setTimeout(() => {
+      (async () => {
+        try {
+          const [referralRes, eligibilityRes] = await Promise.all([
+            refopenAPI.getMyReferralRequests(1, 500),
+            refopenAPI.checkReferralEligibility()
+          ]);
 
-        if (eligibilityRes?.success) {
-          setReferralEligibility(eligibilityRes.data);
+          if (referralRes?.success && referralRes.data?.requests) {
+            const ids = new Set(referralRes.data.requests.map(r => r.JobID));
+            setReferredJobIds(ids);
+          }
+
+          if (eligibilityRes?.success) {
+            setReferralEligibility(eligibilityRes.data);
+          }
+        } catch (e) {
+          console.warn('Failed to load referral data:', e.message);
         }
-      } catch (e) {
-        console.warn('Failed to load referral data:', e.message);
-      }
-    })();
+      })();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [user, isJobSeeker]);
 
-  // Counts from backend
+  // ⏱️ PRIORITY 2: Load after 100ms delay - Counts (applications count, saved count)
   const refreshCounts = useCallback(async () => {
     try {
       const [appliedRes, savedRes] = await Promise.all([
@@ -338,7 +343,12 @@ export default function JobsScreen({ navigation, route }) {
     } catch {}
   }, []);
 
-  useEffect(() => { refreshCounts(); }, [refreshCounts]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refreshCounts();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [refreshCounts]);
 
   // Apply smart filters based on user profile
   const applySmart = useCallback(async () => {
@@ -381,39 +391,66 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, [user, personalizationApplied, smartEnabled, searchQuery, filters, applySmart]);
 
-  // Load reference data once
+  // ⏱️ PRIORITY 3: Load after 300ms delay - Job Types, Workplace Types, Currencies (for filters)
   useEffect(() => {
-    (async () => {
-      try {
-        const [jt, wt, cur, orgs] = await Promise.all([
-          refopenAPI.getJobTypes(),
-          refopenAPI.getWorkplaceTypes(),
-          refopenAPI.getCurrencies(),
-          refopenAPI.getOrganizations('')
-        ]);
-        if (jt?.success) setJobTypes(jt.data);
-        if (wt?.success) setWorkplaceTypes(wt.data);
-        if (cur?.success) setCurrencies(cur.data);
-        if (orgs?.success) {
-          console.log('JobsScreen - Organizations loaded with pagination:', orgs.data?.length);
-          console.log('JobsScreen - First org sample:', orgs.data?.[0]);
-          // Pass full organization objects sorted by name
-          const sortedOrgs = orgs.data
-            .filter(org => {
-              const hasName = org.name && org.name.trim().length > 0;
-              if (!hasName) console.log('Org without name:', org);
-              return hasName;
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-          console.log('JobsScreen - Filtered and sorted companies:', sortedOrgs.length);
-          console.log('JobsScreen - First sorted company:', sortedOrgs[0]);
-          setCompanies(sortedOrgs);
-        } else {
-          console.log('JobsScreen - Organizations fetch failed:', orgs);
+    const timer = setTimeout(() => {
+      (async () => {
+        try {
+          const [jt, wt, cur] = await Promise.all([
+            refopenAPI.getJobTypes(),
+            refopenAPI.getWorkplaceTypes(),
+            refopenAPI.getCurrencies()
+          ]);
+          if (jt?.success) setJobTypes(jt.data);
+          if (wt?.success) setWorkplaceTypes(wt.data);
+          if (cur?.success) setCurrencies(cur.data);
+        } catch (e) {
+          console.warn('Failed to load reference data:', e.message);
         }
-      } catch {}
-    })();
+      })();
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  // 🎯 PRIORITY 4: Load only when filter modal opens - Organizations/Companies
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const companiesLoadedRef = useRef(false);
+
+  useEffect(() => {
+    // Only load companies when filter modal is opened and not already loaded
+    if (showFilters && !companiesLoadedRef.current && !loadingCompanies) {
+      companiesLoadedRef.current = true;
+      setLoadingCompanies(true);
+      
+      (async () => {
+        try {
+          const orgs = await refopenAPI.getOrganizations('');
+          if (orgs?.success) {
+            console.log('JobsScreen - Organizations loaded on-demand:', orgs.data?.length);
+            console.log('JobsScreen - First org sample:', orgs.data?.[0]);
+            // Pass full organization objects sorted by name
+            const sortedOrgs = orgs.data
+              .filter(org => {
+                const hasName = org.name && org.name.trim().length > 0;
+                if (!hasName) console.log('Org without name:', org);
+                return hasName;
+              })
+              .sort((a, b) => a.name.localeCompare(b.name));
+            console.log('JobsScreen - Filtered and sorted companies:', sortedOrgs.length);
+            console.log('JobsScreen - First sorted company:', sortedOrgs[0]);
+            setCompanies(sortedOrgs);
+          } else {
+            console.log('JobsScreen - Organizations fetch failed:', orgs);
+          }
+        } catch (e) {
+          console.warn('Failed to load organizations:', e.message);
+        } finally {
+          setLoadingCompanies(false);
+        }
+      })();
+    }
+  }, [showFilters, loadingCompanies]);
 
   // Track modal open and loading states
   const showFiltersRef = useRef(false);
@@ -1522,6 +1559,7 @@ const apiStartTime = performance.now();
         workplaceTypes={workplaceTypes}
         currencies={currencies}
         companies={companies}
+        loadingCompanies={loadingCompanies}
         onToggleJobType={onToggleJobType}
         onToggleWorkplaceType={onToggleWorkplaceType}
         onSelectCurrency={onSelectCurrency}
