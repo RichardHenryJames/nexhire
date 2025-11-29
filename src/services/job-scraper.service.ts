@@ -681,6 +681,214 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return simpleMatch ? simpleMatch[1].trim() : '';
   }
 
+  // 🧹 SMART COMPANY NAME NORMALIZATION
+  /**
+   * Removes noise, leading numbers (smartly), and normalizes company names
+   * to prevent duplicate organizations in the database
+   */
+  private static normalizeCompanyName(rawName: string): string {
+    if (!rawName) return '';
+    
+    // Step 1: Preserve original for special case detection
+    const original = rawName.trim();
+    
+    // Step 2: Convert to lowercase for processing
+    let normalized = original.toLowerCase();
+    
+    // Step 3: Remove noise words/suffixes (order matters - remove longer phrases first)
+    const noiseWords = [
+      'private limited', 'pvt ltd', 'pvt. ltd', 'pvt ltd.', 'pvt. ltd.',
+      'private ltd', 'private', 'pvt', 'limited', 'ltd',
+      'incorporated', 'corporation', 'corp', 'inc',
+      'llc', 'l.l.c', 'l.l.c.', 'company', 'co',
+      'technologies', 'technology', 'tech', 'software', 'systems',
+      'services', 'solutions', 'group', 'international', 'global',
+      'india', 'usa', 'uk', 'us'
+    ];
+    
+    // Remove noise words at the end of the name
+    for (const noise of noiseWords) {
+      const pattern = new RegExp(`\\s+${noise.replace(/\./g, '\\.')}$`, 'gi');
+      normalized = normalized.replace(pattern, '');
+    }
+    
+    // Step 4: Smart leading number removal
+    // Match patterns:
+    // - "2100 Microsoft" -> remove "2100 "
+    // - "2100Microsoft" -> remove "2100"
+    // - "360bet" -> keep (number + lowercase = brand name)
+    // - "24x7services" -> keep (number + alphanumeric = brand name)
+    // - "7Eleven" -> keep (number + capital = brand name like 7-Eleven)
+    // - "3M" -> keep (short brand name)
+    
+    // Pattern 1: Leading numbers followed by space then capital letter (e.g., "2100 Microsoft")
+    normalized = normalized.replace(/^(\d+)\s+([a-z])/i, '$2');
+    
+    // Pattern 2: Leading numbers directly followed by capital letter (e.g., "2100Microsoft")
+    // Only remove if the result would still be meaningful (3+ chars)
+    const directNumberMatch = normalized.match(/^(\d+)([A-Z][a-z]{2,})/);
+    if (directNumberMatch && directNumberMatch[2].length >= 3) {
+      normalized = normalized.replace(/^\d+/, '');
+    }
+    
+    // Step 5: Check if result is a known brand pattern (preserve these)
+    const brandPatterns = [
+      /^\d+[a-z]+$/,        // 360bet, 99acres, 1mg
+      /^\d+x\d+/,           // 24x7services
+      /^\d+[A-Z]\w+/,       // 7Eleven (after lowercase conversion)
+      /^[0-9][A-Z]$/        // 3M
+    ];
+    
+    // If matches brand pattern against original, keep the number
+    const isBrandName = brandPatterns.some(pattern => pattern.test(original));
+    if (isBrandName) {
+      normalized = original.toLowerCase();
+    }
+    
+    // Step 6: Remove all punctuation except spaces
+    normalized = normalized.replace(/[^\w\s]/g, '');
+    
+    // Step 7: Token filtering - split into words and filter
+    const tokens = normalized
+      .split(/\s+/)
+      .filter(token => {
+        // Remove empty tokens
+        if (!token) return false;
+        
+        // Remove tokens shorter than 2 characters (unless it's the only token)
+        if (token.length < 2) return false;
+        
+        // Remove noise words that might appear mid-string
+        if (noiseWords.includes(token.toLowerCase())) return false;
+        
+        return true;
+      });
+    
+    // Step 8: Join tokens and clean up extra spaces
+    normalized = tokens.join(' ').trim().replace(/\s+/g, ' ');
+    
+    // Step 9: Final safety check - if result is empty or too short, use original
+    if (!normalized || normalized.length < 2) {
+      normalized = original.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    }
+    
+    return normalized;
+  }
+
+  /**
+   * 🎯 Calculate similarity between two strings using Levenshtein distance
+   * Returns a similarity score between 0 and 1 (1 = identical)
+   */
+  private static calculateSimilarity(str1: string, str2: string): number {
+    if (str1 === str2) return 1.0;
+    if (!str1 || !str2) return 0.0;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    // Calculate Levenshtein distance
+    const distance = this.levenshteinDistance(longer, shorter);
+    
+    // Convert to similarity score (0-1)
+    return (longer.length - distance) / longer.length;
+  }
+
+  /**
+   * 📏 Calculate Levenshtein distance between two strings
+   */
+  private static levenshteinDistance(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+    
+    // Initialize matrix
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    // Fill matrix
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * 🔍 Find existing organization by normalized name with similarity matching
+   * Returns organization if found, null otherwise
+   */
+  private static async findSimilarOrganization(normalizedName: string): Promise<any | null> {
+    try {
+      // First, try exact match on normalized name (fastest)
+      const exactQuery = `
+        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE LOWER(REPLACE(Name, ' ', '')) = @param0
+          AND IsActive = 1
+      `;
+      
+      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '')]);
+      if (exactMatch.recordset.length > 0) {
+        console.log(`✅ Exact match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
+        return exactMatch.recordset[0];
+      }
+      
+      // Second, fetch potential matches and calculate similarity
+      const candidatesQuery = `
+        SELECT TOP 20 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE LEN(Name) BETWEEN @param0 AND @param1
+          AND IsActive = 1
+        ORDER BY Name
+      `;
+      
+      const minLen = Math.max(3, normalizedName.length - 5);
+      const maxLen = normalizedName.length + 10;
+      
+      const candidates = await dbService.executeQuery(candidatesQuery, [minLen, maxLen]);
+      
+      // Calculate similarity for each candidate
+      const SIMILARITY_THRESHOLD = 0.85;
+      let bestMatch: any = null;
+      let bestScore = 0;
+      
+      for (const candidate of candidates.recordset) {
+        const candidateNormalized = this.normalizeCompanyName(candidate.Name);
+        const similarity = this.calculateSimilarity(normalizedName, candidateNormalized);
+        
+        if (similarity >= SIMILARITY_THRESHOLD && similarity > bestScore) {
+          bestScore = similarity;
+          bestMatch = candidate;
+        }
+      }
+      
+      if (bestMatch) {
+        console.log(`🎯 Similar match found for "${normalizedName}": ${bestMatch.Name} (score: ${bestScore.toFixed(2)})`);
+        return bestMatch;
+      }
+      
+      return null;
+      
+    } catch (error: any) {
+      console.error(`Error finding similar organization: ${error.message}`);
+      return null;
+    }
+  }
+
   // 💾 Enhanced database insertion with organization logo updates
   private static async insertJobIntoRefOpenDB(job: ScrapedJob): Promise<void> {
     try {
@@ -737,24 +945,24 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 🏢 ENHANCED: Get or create organization with API data enrichment
+  // 🏢 ENHANCED: Get or create organization with API data enrichment AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
     const cleanName = companyName.trim().substring(0, 100);
     
-    // Check if organization exists
-    const checkQuery = 'SELECT OrganizationID, LogoURL, Website, Industry FROM Organizations WHERE Name = @param0 AND IsActive = 1';
-    const checkResult = await dbService.executeQuery(checkQuery, [cleanName]);
+    // 🧹 NEW: Normalize company name to prevent duplicates
+    const normalizedName = this.normalizeCompanyName(cleanName);
     
-    if (checkResult.recordset.length > 0) {
-      const existingOrg = checkResult.recordset[0];
-      
+    console.log(`🔍 Processing company: "${cleanName}" → Normalized: "${normalizedName}"`);
+    
+    // 🎯 NEW: Try to find similar organization using smart matching
+    const similarOrg = await this.findSimilarOrganization(normalizedName);
+    if (similarOrg) {
       // 🔄 UPDATE existing organization with new data from APIs
-      await this.updateOrganizationWithApiData(existingOrg.OrganizationID, cleanName, source, job, existingOrg);
-      
-      return existingOrg.OrganizationID;
+      await this.updateOrganizationWithApiData(similarOrg.OrganizationID, cleanName, source, job, similarOrg);
+      return similarOrg.OrganizationID;
     }
 
-    // Create new organization with enhanced data
+    // No similar organization found, create new one with enhanced data
     const enhancedOrgData = await this.getEnhancedOrganizationData(cleanName, source, job);
     
     const insertQuery = `
@@ -765,7 +973,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     const now = new Date().toISOString();
     const result = await dbService.executeQuery(insertQuery, [
-      cleanName,
+      cleanName,  // Store original name, not normalized
       'Company',
       enhancedOrgData.industry,
       enhancedOrgData.size,
@@ -777,7 +985,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       enhancedOrgData.linkedInProfile
     ]);
 
-    console.log(`🏢 Created new organization: ${cleanName} with logo: ${enhancedOrgData.logoUrl ? 'Yes' : 'No'}`);
+    console.log(`🏢 Created new organization: ${cleanName} (normalized: ${normalizedName})`);
     return result.recordset[0].OrganizationID;
   }
 
