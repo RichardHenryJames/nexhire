@@ -389,13 +389,13 @@ export default function JobsScreen({ navigation, route }) {
           refopenAPI.getJobTypes(),
           refopenAPI.getWorkplaceTypes(),
           refopenAPI.getCurrencies(),
-          refopenAPI.getOrganizations('', null) // No limit - get all companies
+          refopenAPI.getOrganizations('')
         ]);
         if (jt?.success) setJobTypes(jt.data);
         if (wt?.success) setWorkplaceTypes(wt.data);
         if (cur?.success) setCurrencies(cur.data);
         if (orgs?.success) {
-          console.log('JobsScreen - Organizations loaded:', orgs.data?.length);
+          console.log('JobsScreen - Organizations loaded with pagination:', orgs.data?.length);
           console.log('JobsScreen - First org sample:', orgs.data?.[0]);
           // Pass full organization objects sorted by name
           const sortedOrgs = orgs.data

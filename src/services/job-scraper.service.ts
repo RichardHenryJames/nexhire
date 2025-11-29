@@ -1190,42 +1190,41 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     let size = 'Unknown';
     let linkedInProfile: string | null = null;
     
-    // ⚡ CRITICAL FIX: Disable logo enrichment to prevent 5-minute timeout
-    // Logo API calls take 5-15 seconds per company causing function to timeout
-    // before other sources (Adzuna, WeWorkRemotely, HackerNews) can be inserted
-    const ENABLE_LOGO_ENRICHMENT = false;
+    // ✅ ENRICHMENT ENABLED: Using same logic as enrich-organizations.ps1
+    // Enriching only the company being scraped, not all companies
+    const ENABLE_ENRICHMENT = true;
     
-    // 1. Get data from RemoteOK API if source is RemoteOK
-    if (source === 'RemoteOK' && ENABLE_LOGO_ENRICHMENT) {
+    // 1. Get logo from RemoteOK API if available (instant, no API call)
+    if (source === 'RemoteOK') {
       logoUrl = await this.getRemoteOKLogo(job);
-      // RemoteOK doesn't provide website/other info directly in job data
     }
     
-    // 2. Try to get additional company data from external APIs
-    if (ENABLE_LOGO_ENRICHMENT) {
+    // 2. Get industry from job data if available (instant, no API call)
+    if (job.companyIndustry) {
+      industry = job.companyIndustry;
+    }
+    
+    if (ENABLE_ENRICHMENT) {
       try {
-        const companyData = await this.fetchCompanyDataFromAPIs(companyName);
-        if (companyData) {
-          website = website || companyData.website || null;
-          industry = companyData.industry || industry;
-          size = companyData.size || size;
-          linkedInProfile = companyData.linkedInProfile || null;
-          // Don't override RemoteOK logo with generic ones
-          if (!logoUrl) {
-            logoUrl = companyData.logoUrl || null;
-          }
+        // 3. Try to find website using common domain patterns (fast, parallel checks)
+        if (!website) {
+          website = await this.searchCompanyWebsiteFast(companyName);
         }
+        
+        // 4. Get Clearbit logo if we have a website (single fast API call)
+        if (!logoUrl && website) {
+          logoUrl = await this.getClearbitLogoFast(website);
+        }
+        
+        // 5. Generate LinkedIn URL (instant, no API call)
+        linkedInProfile = this.generateLinkedInUrl(companyName);
+        
       } catch (error) {
-        console.warn(`⚠️ Failed to fetch external company data for ${companyName}`);
-      }
-    
-      // 3. Try Clearbit Logo API as fallback
-      if (!logoUrl) {
-        logoUrl = await this.getClearbitLogo(companyName, website);
+        console.warn(`⚠️ Enrichment failed for ${companyName}: ${error}`);
       }
     }
     
-    // 4. Enhance industry based on job title/description (fast, no API calls)
+    // 6. Enhance industry based on job title/description (instant, no API call)
     industry = this.enhanceIndustryFromJob(job.title, job.description, industry);
     
     return {
@@ -1244,242 +1243,100 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return (job as any).logoUrl || null;
   }
 
-  // 🌐 Fetch additional company data from external APIs
-  private static async fetchCompanyDataFromAPIs(companyName: string): Promise<{
-    website?: string;
-    industry?: string;
-    size?: string;
-    logoUrl?: string;
-    linkedInProfile?: string;
-  } | null> {
+  // 🌐 Fast website search using common domain patterns (same as enrich-organizations.ps1)
+  private static async searchCompanyWebsiteFast(companyName: string): Promise<string | null> {
     try {
-      // Try multiple external APIs for company data
-      const results = await Promise.allSettled([
-        this.fetchFromClearbitAPI(companyName),
-        this.fetchFromOpenCorporatesAPI(companyName),
-        this.fetchCompanyFromLinkedInSearch(companyName)
-      ]);
+      // Generate domain variations
+      const companySlug = companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
       
-      // Combine results from different APIs
-      let combinedData: any = {};
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          combinedData = { ...combinedData, ...result.value };
-          console.log(`📊 API ${index + 1} provided data for ${companyName}`);
+      const possibleDomains = [
+        `https://www.${companySlug}.com`,
+        `https://www.${companySlug}.io`,
+        `https://www.${companySlug}.co`
+      ];
+      
+      // Try domains in parallel with short timeout
+      const domainChecks = possibleDomains.map(async (domain) => {
+        try {
+          const response = await axios.head(domain, {
+            timeout: 2000, // 2 second timeout
+            validateStatus: (status) => status >= 200 && status < 400
+          });
+          
+          if (response.status >= 200 && response.status < 400) {
+            return domain;
+          }
+        } catch {
+          return null;
         }
+        return null;
       });
       
-      return Object.keys(combinedData).length > 0 ? combinedData : null;
+      // Wait for all checks, return first successful one
+      const results = await Promise.all(domainChecks);
+      const validDomain = results.find(d => d !== null);
       
-    } catch (error) {
-      console.warn(`Failed to fetch external company data for ${companyName}`);
-      return null;
-    }
-  }
-
-  // 🔍 Clearbit API for company data
-  private static async fetchFromClearbitAPI(companyName: string): Promise<any> {
-    // Clearbit would require API key - placeholder for now
-    // return await fetch(`https://company.clearbit.com/v2/companies/find?name=${encodeURIComponent(companyName)}`);
-    return null;
-  }
-
-  // 🏢 OpenCorporates API for basic company info
-  private static async fetchFromOpenCorporatesAPI(companyName: string): Promise<any> {
-    try {
-      const apiUrl = `https://api.opencorporates.com/v0.4/companies/search?q=${encodeURIComponent(companyName)}&format=json&limit=1`;
-      
-      const response = await this.makeStealthRequest(apiUrl, {
-        json: true,
-        timeout: 10000
-      });
-      
-      if (response.status === 200 && response.data?.results?.companies?.[0]) {
-        const company = response.data.results.companies[0].company;
-        return {
-          industry: company.company_type || 'Technology',
-          website: company.registry_url
-        };
+      if (validDomain) {
+        console.log(`🌐 Found website for ${companyName}: ${validDomain}`);
+        return validDomain;
       }
+      
     } catch (error) {
-      console.warn(`OpenCorporates API failed for ${companyName}`);
+      // Silent fail
     }
+    
     return null;
   }
 
-  // 💼 LinkedIn search for company profiles (placeholder)
-  private static async fetchCompanyFromLinkedInSearch(companyName: string): Promise<any> {
-    // LinkedIn would require complex scraping or API access
-    // For now, generate LinkedIn profile URL guess
-    const linkedInSlug = companyName.toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
+  // 🎨 Fast Clearbit logo fetch (same as enrich-organizations.ps1)
+  private static async getClearbitLogoFast(website: string): Promise<string | null> {
+    try {
+      const cleanDomain = website
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '')
+        .trim();
+      
+      // Validate domain format
+      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!domainRegex.test(cleanDomain)) {
+        return null;
+      }
+      
+      const logoUrl = `https://logo.clearbit.com/${cleanDomain}`;
+      
+      // Quick HEAD request to check if logo exists
+      const response = await axios.head(logoUrl, {
+        timeout: 3000, // 3 second timeout
+        validateStatus: (status) => status === 200
+      });
+      
+      if (response.status === 200) {
+        console.log(`🎨 Found Clearbit logo for ${cleanDomain}`);
+        return logoUrl;
+      }
+      
+    } catch {
+      // Silent fail
+    }
+    
+    return null;
+  }
+
+  // 🔗 Generate LinkedIn URL (same as enrich-organizations.ps1)
+  private static generateLinkedInUrl(companyName: string): string {
+    const sanitized = companyName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
-    return {
-      linkedInProfile: `https://www.linkedin.com/company/${linkedInSlug}`
-    };
-  }
-
-  // 🎨 Enhanced Logo API with multiple free fallbacks
-  private static async getClearbitLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      // Method 1: Clearbit with website domain
-      if (website) {
-        const domain = new URL(website).hostname.replace('www.', '');
-        const logoUrl = `https://logo.clearbit.com/${domain}`;
-        
-        const response = await this.makeStealthRequest(logoUrl, { timeout: 5000 });
-        if (response.status === 200) {
-          console.log(`🎨 Found Clearbit logo for ${companyName}: ${logoUrl}`);
-          return logoUrl;
-        }
-      }
-      
-      // Method 2: Try multiple domain variations
-      const domainVariations = this.generateDomainVariations(companyName);
-      for (const domain of domainVariations) {
-        try {
-          const logoUrl = `https://logo.clearbit.com/${domain}`;
-          const response = await this.makeStealthRequest(logoUrl, { timeout: 3000 });
-          if (response.status === 200) {
-            console.log(`🎨 Found Clearbit logo for ${companyName}: ${logoUrl}`);
-            return logoUrl;
-          }
-        } catch (error) {
-          // Continue to next variation
-        }
-      }
-
-      // Method 3: Brandfetch API (free tier)
-      const brandfetchLogo = await this.getBrandfetchLogo(companyName);
-      if (brandfetchLogo) {
-        console.log(`🎨 Found Brandfetch logo for ${companyName}: ${brandfetchLogo}`);
-        return brandfetchLogo;
-      }
-
-      // Method 4: Logo.dev API (free)
-      const logoDevLogo = await this.getLogoDevLogo(companyName, website);
-      if (logoDevLogo) {
-        console.log(`🎨 Found Logo.dev logo for ${companyName}: ${logoDevLogo}`);
-        return logoDevLogo;
-      }
-
-      // Method 5: Google Favicon fallback
-      const faviconLogo = await this.getGoogleFaviconLogo(companyName, website);
-      if (faviconLogo) {
-        console.log(`🎨 Found Favicon logo for ${companyName}: ${faviconLogo}`);
-        return faviconLogo;
-      }
-
-      console.log(`⚠️ No logo found for ${companyName} after trying all methods`);
-      
-    } catch (error) {
-      console.warn(`Logo search failed for ${companyName}: ${error}`);
-    }
-    return null;
-  }
-
-  // Generate domain variations for company names
-  private static generateDomainVariations(companyName: string): string[] {
-    const cleanName = companyName.toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .replace(/inc|corp|llc|ltd|company|co|technologies|tech|software|systems/g, '')
-      .trim();
-    
-    const variations = [
-      `${cleanName}.com`,
-      `${cleanName}.io`,
-      `${cleanName}.net`,
-      `${cleanName}.org`,
-    ];
-
-    // Add variations with common suffixes removed
-    if (cleanName.length > 4) {
-      const shortName = cleanName.substring(0, cleanName.length - 1);
-      variations.push(
-        `${shortName}.com`,
-        `${shortName}.io`
-      );
-    }
-
-    return [...new Set(variations)]; // Remove duplicates
-  }
-
-  // Brandfetch API (free tier)
-  private static async getBrandfetchLogo(companyName: string): Promise<string | null> {
-    try {
-      // Brandfetch free API endpoint
-      const apiUrl = `https://api.brandfetch.io/v2/search/${encodeURIComponent(companyName)}`;
-      
-      const response = await this.makeStealthRequest(apiUrl, { 
-        timeout: 5000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RefOpen/1.0)'
-        }
-      });
-      
-      if (response.status === 200 && response.data) {
-        const brands = Array.isArray(response.data) ? response.data : [];
-        if (brands.length > 0 && brands[0].logos && brands[0].logos.length > 0) {
-          return brands[0].logos[0].image;
-        }
-      }
-    } catch (error) {
-      console.warn(`Brandfetch failed for ${companyName}`);
-    }
-    return null;
-  }
-
-  // Logo.dev API (free)
-  private static async getLogoDevLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      if (!website) return null;
-      
-      const domain = new URL(website).hostname.replace('www.', '');
-      const logoUrl = `https://img.logo.dev/${domain}?token=pk_free&format=png&size=200`;
-      
-      const response = await this.makeStealthRequest(logoUrl, { timeout: 5000 });
-      if (response.status === 200) {
-        return logoUrl;
-      }
-    } catch (error) {
-      console.warn(`Logo.dev failed for ${companyName}`);
-    }
-    return null;
-  }
-
-  // Google Favicon API fallback
-  private static async getGoogleFaviconLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      // Try with website first
-      if (website) {
-        const domain = new URL(website).hostname;
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        
-        const response = await this.makeStealthRequest(faviconUrl, { timeout: 3000 });
-        if (response.status === 200) {
-          return faviconUrl;
-        }
-      }
-
-      // Try with generated domains
-      const domainVariations = this.generateDomainVariations(companyName);
-      for (const domain of domainVariations.slice(0, 2)) { // Try top 2 variations
-        try {
-          const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-          const response = await this.makeStealthRequest(faviconUrl, { timeout: 3000 });
-          if (response.status === 200) {
-            return faviconUrl;
-          }
-        } catch (error) {
-          // Continue to next domain
-        }
-      }
-    } catch (error) {
-      console.warn(`Google Favicon failed for ${companyName}`);
-    }
-    return null;
+    return `https://www.linkedin.com/company/${sanitized}`;
   }
 
   // 🏭 Enhance industry classification from job data

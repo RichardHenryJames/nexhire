@@ -1034,18 +1034,26 @@ class RefOpenAPI {
     }
   }
 
-  // NEW: Get organizations for employer registration - FIXED to use real database
+  // NEW: Get organizations for employer registration - Optimized with database index
   async getOrganizations(searchTerm = '', limit = null, offset = 0) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (limit !== null) params.append('limit', limit.toString());
+      // 🚀 OPTIMIZED: Only add limit if explicitly provided, otherwise fetch ALL
+      if (limit !== null && limit !== undefined) {
+        params.append('limit', limit.toString());
+      }
       if (offset > 0) params.append('offset', offset.toString());
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      console.log('🏢 [PERFORMANCE] Fetching organizations from:', endpoint);
+      const startTime = performance.now();
+      
       const response = await this.apiCall(endpoint);
       
-      console.log('🏢 Organizations API Response:', JSON.stringify(response, null, 2));
+      const duration = (performance.now() - startTime).toFixed(2);
+      console.log(`🏢 [PERFORMANCE] Organizations API responded in ${duration}ms`);
       
       if (response.success && response.data) {
         // Handle the specific backend response format
@@ -1062,7 +1070,7 @@ class RefOpenAPI {
           organizationsArray = [];
         }
         
-        console.log('🏢 Processing organizations array:', organizationsArray.length, 'items');
+        console.log(`🏢 [PERFORMANCE] Loaded ${organizationsArray.length} organizations in ${duration}ms`);
         
         // The backend already transforms the data correctly, so we can use it directly
         // Just ensure we have the "My company is not listed" option
@@ -1071,11 +1079,8 @@ class RefOpenAPI {
           organizationsArray.push({
             id: 999999,
             name: 'My company is not listed',
-            industry: 'Other',
-            size: 'Unknown',
-            type: 'Other',
             logoURL: null,
-            website: null
+            industry: 'Other'
           });
         }
         
@@ -1099,13 +1104,31 @@ class RefOpenAPI {
           {
             id: 999999,
             name: 'My company is not listed',
-            industry: 'Other',
-            size: 'Unknown',
-            type: 'Other',
             logoURL: null,
-            website: null
+            industry: 'Other'
           }
         ]
+      };
+    }
+  }
+
+  // NEW: Get organization by ID with all details
+  async getOrganizationById(organizationId) {
+    try {
+      if (!organizationId || organizationId === 999999) {
+        return {
+          success: false,
+          error: 'Invalid organization ID'
+        };
+      }
+
+      const response = await this.apiCall(`/reference/organizations/${organizationId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to load organization details:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to load organization details'
       };
     }
   }

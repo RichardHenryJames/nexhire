@@ -882,21 +882,44 @@ const { jobId, fromReferralRequest } = route.params || {};
         <View style={styles.companyHeader}>
           {/* 🏢 Company Logo and Details */}
           <View style={styles.companyInfo}>
-            {job.OrganizationLogo ? (
-              <Image 
-                source={{ uri: job.OrganizationLogo }} 
-                style={styles.companyLogo}
-                onError={() => console.log('Company logo load error for:', job.OrganizationName)}
-              />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={32} color="#666" />
-              </View>
-            )}
+            <TouchableOpacity 
+              onPress={() => {
+                if (job.OrganizationID) {
+                  navigation.navigate('OrganizationDetails', { 
+                    organizationId: job.OrganizationID 
+                  });
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {job.OrganizationLogo ? (
+                <Image 
+                  source={{ uri: job.OrganizationLogo }} 
+                  style={styles.companyLogo}
+                  onError={() => console.log('Company logo load error for:', job.OrganizationName)}
+                />
+              ) : (
+                <View style={styles.logoPlaceholder}>
+                  <Ionicons name="business-outline" size={32} color="#666" />
+                </View>
+              )}
+            </TouchableOpacity>
             
             <View style={styles.companyDetails}>
               <Text style={styles.title}>{job.Title}</Text>
-              <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  if (job.OrganizationID) {
+                    navigation.navigate('OrganizationDetails', { 
+                      organizationId: job.OrganizationID 
+                    });
+                  }
+                }}
+              >
+                <Text style={[styles.company, { textDecorationLine: 'underline' }]}>
+                  {job.OrganizationName || 'Company Name'}
+                </Text>
+              </TouchableOpacity>
               
               {/* Company Links Container */}
               <View style={styles.companyLinksContainer}>

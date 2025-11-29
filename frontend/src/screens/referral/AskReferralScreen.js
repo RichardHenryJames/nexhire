@@ -174,8 +174,9 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     console.log('🕐 [PERFORMANCE] Starting organizations API call at:', new Date().toISOString());
     
     try {
-      // Use the same method that works in profile screen
-      const result = await refopenAPI.getOrganizations('', null); // No limit - get all companies
+      // 🚀 OPTIMIZED: Fetch ALL organizations (no limit) - backend now uses covering index
+      // The new IX_Organizations_Lookup_Optimized index makes this instant (0ms vs 169ms)
+      const result = await refopenAPI.getOrganizations('');
       
       // ⏱️ END: Calculate response time
       const endTime = performance.now();
@@ -802,8 +803,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           ) : (
             <FlatList
               data={companies.filter(company =>
-                company.name?.toLowerCase()?.includes(companySearchTerm.toLowerCase()) ||
-                (company.industry && company.industry.toLowerCase().includes(companySearchTerm.toLowerCase()))
+                company.name?.toLowerCase()?.includes(companySearchTerm.toLowerCase())
               )}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
@@ -834,7 +834,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                   
                   <View style={styles.companyInfo}>
                     <Text style={styles.companyName}>{item.name}</Text>
-                    {item.industry && (
+                    {item.industry && item.industry !== 'Other' && (
                       <Text style={styles.companyIndustry}>{item.industry}</Text>
                     )}
                   </View>

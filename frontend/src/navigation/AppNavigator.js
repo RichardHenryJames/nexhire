@@ -20,9 +20,12 @@ import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/Person
 
 // Employer Registration Flow
 import EmployerTypeSelectionScreen from "../screens/auth/registration/employer/EmployerTypeSelectionScreen";
-import OrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
+import EmployerOrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
 import EmployerPersonalDetailsScreen from "../screens/auth/registration/employer/EmployerPersonalDetailsScreen";
 import EmployerAccountScreen from "../screens/auth/registration/employer/EmployerAccountScreen";
+
+// Organization Screen
+import OrganizationDetailsScreen from "../screens/organization/OrganizationDetailsScreen";
 
 // Main App Screens
 import HomeScreen from "../screens/HomeScreen";
@@ -139,6 +142,9 @@ const linking = {
           AskReferral: "ask-referral",
           ReferralPlans: "plans",
           Payment: "payment",
+          
+          // Organization screen with organizationId parameter
+          OrganizationDetails: "OrganizationDetails/:organizationId",
 
           // Wallet screens
           Wallet: "wallet",
@@ -193,7 +199,7 @@ function EmployerFlow() {
       />
       <Stack.Screen
         name="OrganizationDetailsScreen"
-        component={OrganizationDetailsScreen}
+        component={EmployerOrganizationDetailsScreen}
       />
       <Stack.Screen
         name="EmployerPersonalDetailsScreen"
@@ -403,6 +409,16 @@ function MainStack() {
         component={ViewProfileScreen}
         options={{
           headerShown: false, // Custom header in component
+        }}
+      />
+      {/* Organization Details Screen */}
+      <Stack.Screen
+        name="OrganizationDetails"
+        component={OrganizationDetailsScreen}
+        options={{
+          headerShown: true,
+          title: "Company Details",
+          headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen

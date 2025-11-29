@@ -45,6 +45,7 @@ import {
 } from "./src/controllers/job-application.controller";
 import {
   getOrganizations,
+  getOrganizationById,
   getColleges,
   getUniversitiesByCountry,
   getIndustries,
@@ -595,6 +596,13 @@ app.http("reference-organizations", {
   authLevel: "anonymous",
   route: "reference/organizations",
   handler: withErrorHandling(getOrganizations),
+});
+
+app.http("reference-organization-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/organizations/{id}",
+  handler: withErrorHandling(getOrganizationById),
 });
 
 app.http("reference-colleges", {

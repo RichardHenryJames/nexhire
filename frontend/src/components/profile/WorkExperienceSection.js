@@ -162,9 +162,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     if (!q || !q.trim()) return list;
     const s = q.toLowerCase();
     return list.filter(o =>
-      (o.name && o.name.toLowerCase().includes(s)) ||
-      (o.website && o.website.toLowerCase().includes(s)) ||
-      (o.industry && o.industry.toLowerCase().includes(s))
+      (o.name && o.name.toLowerCase().includes(s))
     );
   };
 
@@ -212,7 +210,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
+        // ?? OPTIMIZED: Fetch ALL organizations (no limit) - backend uses covering index
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {
@@ -519,7 +518,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                     renderItem={({ item }) => (
                       <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
                         <Text style={styles.orgName}>{item.name}</Text>
-                        {item.website ? <Text style={styles.orgMeta}>{item.website}</Text> : null}
+                        {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
                       </TouchableOpacity>
                     )}
                   />
