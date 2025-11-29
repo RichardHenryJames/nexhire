@@ -70,10 +70,11 @@ export const getOrganizations = async (req: any): Promise<any> => {
                 LogoURL as logoURL,
                 Website as website,
                 LinkedInProfile as linkedIn,
-                VerificationStatus as verification
+                VerificationStatus as verification,
+                IsFortune500 as isFortune500
             FROM Organizations 
             WHERE IsActive = 1
-            ORDER BY Name ASC
+            ORDER BY IsFortune500 DESC, Name ASC
         `;
 
         const result = await dbService.executeQuery(query);

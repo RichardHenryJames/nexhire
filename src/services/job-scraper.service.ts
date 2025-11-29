@@ -910,8 +910,19 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   // 💾 Enhanced database insertion with organization logo updates
   private static async insertJobIntoRefOpenDB(job: ScrapedJob): Promise<void> {
     try {
-      // Get or create organization WITH enhanced data
-      const organizationId = await this.getOrCreateOrganizationWithEnhancements(job.company, job.source, job);
+      // Get or create organization WITH enhanced data and validation
+      let organizationId: number;
+      try {
+        organizationId = await this.getOrCreateOrganizationWithEnhancements(job.company, job.source, job);
+      } catch (validationError: any) {
+        // If company name is invalid, skip this job but don't crash the whole flow
+        if (validationError.message.includes('Invalid company name')) {
+          console.warn(`⏭️  Skipping job "${job.title}" due to invalid company: ${validationError.message}`);
+          return; // Exit gracefully, continue with next job
+        }
+        // Re-throw other errors
+        throw validationError;
+      }
       
       const jobTypeId = this.getJobTypeId(job.jobType);
       const workplaceTypeId = this.getWorkplaceTypeId(job.workplaceType);
@@ -963,9 +974,71 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
+  /**
+   * 🛡️ VALIDATION: Check if company name is valid before adding to database
+   * Rejects junk/test data, Excel errors, malformed names, etc.
+   */
+  private static isValidCompanyName(companyName: string): { valid: boolean; reason?: string } {
+    if (!companyName || companyName.trim().length === 0) {
+      return { valid: false, reason: 'Empty name' };
+    }
+
+    const trimmed = companyName.trim();
+
+    // Reject: Excel errors
+    if (/^#(REF|NAME|VALUE|DIV|N\/A|NULL|NUM)!?/i.test(trimmed)) {
+      return { valid: false, reason: 'Excel error' };
+    }
+
+    // Reject: Test/placeholder data
+    if (/(test|sample|demo|placeholder|example|abc|xyz).*company/i.test(trimmed)) {
+      return { valid: false, reason: 'Test data' };
+    }
+
+    // Reject: Malformed (starts with *, ., or weird patterns)
+    if (/^[*.]|\.$/i.test(trimmed)) {
+      return { valid: false, reason: 'Malformed name' };
+    }
+
+    // Reject: Too short (1-2 characters) UNLESS known company
+    const knownShort = /^(3M|HP|GE|EA|AT&T|IBM|AMD)$/i;
+    if (!knownShort.test(trimmed) && trimmed.length <= 2) {
+      return { valid: false, reason: 'Too short' };
+    }
+
+    // Reject: Generic operators/addresses
+    if (/main.*street.*operator|^\d+\s+main\s+street|operator$/i.test(trimmed)) {
+      return { valid: false, reason: 'Generic address/operator' };
+    }
+
+    // Reject: Just "Company", "Inc", "LLC", etc.
+    if (/^(company|inc|llc|ltd|org|organization|business|enterprise|firm)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Generic business term' };
+    }
+
+    // Reject: Non-printable or control characters
+    if (/[\x00-\x1F]|[^\x20-\x7E\u00A0-\uFFFF]/.test(trimmed)) {
+      return { valid: false, reason: 'Invalid characters' };
+    }
+
+    // Reject: Obvious placeholder patterns
+    if (/^(webdesigner.*\d+|\d+.*webdesigner)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Placeholder pattern' };
+    }
+
+    return { valid: true };
+  }
+
   // 🏢 ENHANCED: Get or create organization with Fortune 500 matching AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
     const cleanName = companyName.trim().substring(0, 100);
+    
+    // 🛡️ STEP 0: Validate company name BEFORE any processing
+    const validation = this.isValidCompanyName(cleanName);
+    if (!validation.valid) {
+      console.warn(`⚠️ Skipping invalid company name "${cleanName}": ${validation.reason}`);
+      throw new Error(`Invalid company name: ${validation.reason}`);
+    }
     
     // 🌟 STEP 1: Check Fortune 500 list first for canonical name
     const fortune500Match = findFortune500Match(cleanName);
@@ -1751,6 +1824,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       let insertedCount = 0;
       let indiaJobsCount = 0;
       let organizationsEnhanced = 0;
+      let skippedInvalidCompanies = 0;
       
       for (const [index, job] of jobsToInsert.entries()) {
         try {
@@ -1766,11 +1840,17 @@ Apply now to join a dynamic team that's building the future! 🌟`;
           }
           
           if ((index + 1) % 50 === 0) {
-            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted`);
+            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted (${skippedInvalidCompanies} skipped)`);
           }
         } catch (error: any) {
-          console.error(`❌ Failed to insert "${job.title}": ${error.message}`);
-          result.errors.push(`Insert failed: ${job.title} - ${error.message}`);
+          // Check if it's an invalid company that was skipped
+          if (error.message && error.message.includes('Invalid company name')) {
+            skippedInvalidCompanies++;
+            console.warn(`⏭️  Skipped job "${job.title}" at ${job.company}: Invalid company name`);
+          } else {
+            console.error(`❌ Failed to insert "${job.title}": ${error.message}`);
+            result.errors.push(`Insert failed: ${job.title} - ${error.message}`);
+          }
         }
       }
 
@@ -1781,6 +1861,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       console.log(`🎊 Job scraping completed!`);
       console.log(`📊 Results: ${insertedCount} jobs added (${indiaJobsCount} from India)`);
       console.log(`🏢 Organizations enhanced: ${organizationsEnhanced} with logos/data`);
+      if (skippedInvalidCompanies > 0) {
+        console.log(`⏭️  Skipped: ${skippedInvalidCompanies} jobs with invalid company names`);
+      }
       console.log(`⏱️ Execution time: ${Math.round(result.summary.executionTime / 1000)}s`);
 
     } catch (error: any) {

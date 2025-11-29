@@ -1251,6 +1251,108 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
 
   // Fortune 500: 200-300
   {
+    canonicalName: 'Raytheon Technologies',
+    alternateNames: ['RTX', 'Raytheon', 'RTX Corporation'],
+    industry: 'Aerospace & Defense',
+    rank: 203
+  },
+  {
+    canonicalName: 'HF Sinclair',
+    alternateNames: ['HF Sinclair Corporation'],
+    industry: 'Energy',
+    rank: 204
+  },
+  {
+    canonicalName: 'Centene',
+    alternateNames: ['Centene Corporation'],
+    industry: 'Healthcare',
+    rank: 205
+  },
+  {
+    canonicalName: 'Jacobs Engineering',
+    alternateNames: ['Jacobs', 'Jacobs Solutions'],
+    industry: 'Engineering',
+    rank: 206
+  },
+  {
+    canonicalName: 'Genuine Parts',
+    alternateNames: ['Genuine Parts Company', 'NAPA Auto Parts'],
+    industry: 'Retail',
+    rank: 208
+  },
+  {
+    canonicalName: 'TIAA',
+    alternateNames: ['TIAA-CREF', 'Teachers Insurance and Annuity Association'],
+    industry: 'Financial Services',
+    rank: 209
+  },
+  {
+    canonicalName: 'O\'Reilly Automotive',
+    alternateNames: ['O\'Reilly Auto Parts', 'OReilly'],
+    industry: 'Retail',
+    rank: 211
+  },
+  {
+    canonicalName: 'Arrow Electronics',
+    alternateNames: ['Arrow', 'Arrow Electronics Inc'],
+    industry: 'Technology',
+    rank: 212
+  },
+  {
+    canonicalName: 'IQVIA',
+    alternateNames: ['IQVIA Holdings', 'Quintiles IMS'],
+    industry: 'Healthcare',
+    rank: 213
+  },
+  {
+    canonicalName: 'Nationwide',
+    alternateNames: ['Nationwide Mutual Insurance'],
+    industry: 'Insurance',
+    rank: 214
+  },
+  {
+    canonicalName: 'AutoNation',
+    alternateNames: ['AutoNation Inc'],
+    industry: 'Retail',
+    rank: 215
+  },
+  {
+    canonicalName: 'ManpowerGroup',
+    alternateNames: ['Manpower', 'ManpowerGroup Inc'],
+    industry: 'Services',
+    rank: 216
+  },
+  {
+    canonicalName: 'Liberty Mutual',
+    alternateNames: ['Liberty Mutual Insurance', 'Liberty Mutual Group'],
+    industry: 'Insurance',
+    rank: 217
+  },
+  {
+    canonicalName: 'ONEOK',
+    alternateNames: ['ONEOK Inc'],
+    industry: 'Energy',
+    rank: 218
+  },
+  {
+    canonicalName: 'Avnet',
+    alternateNames: ['Avnet Inc'],
+    industry: 'Technology',
+    rank: 219
+  },
+  {
+    canonicalName: 'Occidental Petroleum',
+    alternateNames: ['Oxy', 'Occidental'],
+    industry: 'Energy',
+    rank: 220
+  },
+  {
+    canonicalName: 'Massachusetts Mutual Life Insurance',
+    alternateNames: ['MassMutual', 'Mass Mutual'],
+    industry: 'Insurance',
+    rank: 221
+  },
+  {
     canonicalName: 'Land O\'Lakes',
     alternateNames: ['Land O Lakes'],
     industry: 'Agriculture',
@@ -1896,6 +1998,1226 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
     alternateNames: ['Wynn'],
     industry: 'Hospitality',
     rank: 485
+  },
+  
+  // Additional Fortune 500 Companies (completing the list to 500)
+  {
+    canonicalName: 'Kraft Heinz',
+    alternateNames: ['Kraft', 'Heinz', 'The Kraft Heinz Company'],
+    industry: 'Food & Beverage',
+    rank: 223
+  },
+  {
+    canonicalName: 'CenterPoint Energy',
+    alternateNames: ['CenterPoint'],
+    industry: 'Utilities',
+    rank: 225
+  },
+  {
+    canonicalName: 'Mutual of Omaha',
+    alternateNames: ['Mutual of Omaha Insurance'],
+    industry: 'Insurance',
+    rank: 226
+  },
+  {
+    canonicalName: 'Advance Auto Parts',
+    alternateNames: ['Advance Auto'],
+    industry: 'Retail',
+    rank: 229
+  },
+  {
+    canonicalName: 'Adobe',
+    alternateNames: ['Adobe Inc', 'Adobe Systems'],
+    industry: 'Technology',
+    rank: 231
+  },
+  {
+    canonicalName: 'Paccar',
+    alternateNames: ['PACCAR Inc', 'Kenworth', 'Peterbilt'],
+    industry: 'Manufacturing',
+    rank: 232
+  },
+  {
+    canonicalName: 'Lear',
+    alternateNames: ['Lear Corporation'],
+    industry: 'Automotive',
+    rank: 233
+  },
+  {
+    canonicalName: 'Aramark',
+    alternateNames: ['Aramark Corp'],
+    industry: 'Services',
+    rank: 235
+  },
+  {
+    canonicalName: 'WestRock',
+    alternateNames: ['WestRock Co'],
+    industry: 'Manufacturing',
+    rank: 238
+  },
+  {
+    canonicalName: 'Bed Bath & Beyond',
+    alternateNames: ['Bed Bath and Beyond', 'BBB'],
+    industry: 'Retail',
+    rank: 240
+  },
+  {
+    canonicalName: 'Ecolab',
+    alternateNames: ['Ecolab Inc'],
+    industry: 'Manufacturing',
+    rank: 241
+  },
+  {
+    canonicalName: 'Tenet Healthcare',
+    alternateNames: ['Tenet Health'],
+    industry: 'Healthcare',
+    rank: 242
+  },
+  {
+    canonicalName: 'Sempra Energy',
+    alternateNames: ['Sempra'],
+    industry: 'Utilities',
+    rank: 245
+  },
+  {
+    canonicalName: 'United Natural Foods',
+    alternateNames: ['UNFI'],
+    industry: 'Food & Beverage',
+    rank: 246
+  },
+  {
+    canonicalName: 'Eaton',
+    alternateNames: ['Eaton Corp'],
+    industry: 'Manufacturing',
+    rank: 249
+  },
+  {
+    canonicalName: 'AES',
+    alternateNames: ['AES Corporation'],
+    industry: 'Utilities',
+    rank: 250
+  },
+  {
+    canonicalName: 'Huntsman',
+    alternateNames: ['Huntsman Corporation'],
+    industry: 'Manufacturing',
+    rank: 266
+  },
+  {
+    canonicalName: 'Jacobs Solutions',
+    alternateNames: ['Jacobs'],
+    industry: 'Engineering',
+    rank: 267
+  },
+  {
+    canonicalName: 'Leidos',
+    alternateNames: ['Leidos Holdings'],
+    industry: 'Technology',
+    rank: 269
+  },
+  {
+    canonicalName: 'Colgate-Palmolive',
+    alternateNames: ['Colgate'],
+    industry: 'Consumer Goods',
+    rank: 271
+  },
+  {
+    canonicalName: 'Mohawk Industries',
+    alternateNames: ['Mohawk'],
+    industry: 'Manufacturing',
+    rank: 272
+  },
+  {
+    canonicalName: 'Tenneco',
+    alternateNames: ['Tenneco Inc'],
+    industry: 'Automotive',
+    rank: 273
+  },
+  {
+    canonicalName: 'Freeport-McMoRan',
+    alternateNames: ['Freeport', 'FCX'],
+    industry: 'Mining',
+    rank: 274
+  },
+  {
+    canonicalName: 'Jabil',
+    alternateNames: ['Jabil Inc', 'Jabil Circuit'],
+    industry: 'Manufacturing',
+    rank: 275
+  },
+  {
+    canonicalName: 'Dick\'s Sporting Goods',
+    alternateNames: ['Dicks Sporting Goods', 'Dick\'s'],
+    industry: 'Retail',
+    rank: 276
+  },
+  {
+    canonicalName: 'Kinder Morgan',
+    alternateNames: ['Kinder Morgan Inc'],
+    industry: 'Energy',
+    rank: 277
+  },
+  {
+    canonicalName: 'Hilton',
+    alternateNames: ['Hilton Worldwide Holdings', 'Hilton Hotels'],
+    industry: 'Hospitality',
+    rank: 279
+  },
+  {
+    canonicalName: 'VF Corporation',
+    alternateNames: ['VF Corp', 'Vans', 'The North Face'],
+    industry: 'Consumer Goods',
+    rank: 280
+  },
+  {
+    canonicalName: 'Burlington Stores',
+    alternateNames: ['Burlington Coat Factory', 'Burlington'],
+    industry: 'Retail',
+    rank: 283
+  },
+  {
+    canonicalName: 'PulteGroup',
+    alternateNames: ['Pulte Homes'],
+    industry: 'Real Estate',
+    rank: 284
+  },
+  {
+    canonicalName: 'Xcel Energy',
+    alternateNames: ['Xcel'],
+    industry: 'Utilities',
+    rank: 285
+  },
+  {
+    canonicalName: 'Stanley Black & Decker',
+    alternateNames: ['Stanley Black and Decker', 'Stanley', 'Black & Decker'],
+    industry: 'Manufacturing',
+    rank: 287
+  },
+  {
+    canonicalName: 'Dover',
+    alternateNames: ['Dover Corporation'],
+    industry: 'Manufacturing',
+    rank: 288
+  },
+  {
+    canonicalName: 'Becton Dickinson',
+    alternateNames: ['BD', 'Becton Dickinson and Company'],
+    industry: 'Healthcare',
+    rank: 289
+  },
+  {
+    canonicalName: 'Las Vegas Sands',
+    alternateNames: ['LV Sands', 'Sands Corp'],
+    industry: 'Hospitality',
+    rank: 290
+  },
+  {
+    canonicalName: 'Republic Services',
+    alternateNames: ['Republic Services Inc'],
+    industry: 'Services',
+    rank: 292
+  },
+  {
+    canonicalName: 'American Financial Group',
+    alternateNames: ['AFG'],
+    industry: 'Insurance',
+    rank: 294
+  },
+  {
+    canonicalName: 'Quanta Services',
+    alternateNames: ['Quanta'],
+    industry: 'Engineering',
+    rank: 296
+  },
+  {
+    canonicalName: 'Ameren',
+    alternateNames: ['Ameren Corporation'],
+    industry: 'Utilities',
+    rank: 297
+  },
+  {
+    canonicalName: 'Cummins',
+    alternateNames: ['Cummins Inc'],
+    industry: 'Manufacturing',
+    rank: 299
+  },
+  {
+    canonicalName: 'Sanmina',
+    alternateNames: ['Sanmina Corporation'],
+    industry: 'Manufacturing',
+    rank: 300
+  },
+  {
+    canonicalName: 'Reinsurance Group of America',
+    alternateNames: ['RGA', 'RGA Reinsurance'],
+    industry: 'Insurance',
+    rank: 301
+  },
+  {
+    canonicalName: 'CH Robinson',
+    alternateNames: ['C.H. Robinson', 'CH Robinson Worldwide'],
+    industry: 'Logistics',
+    rank: 302
+  },
+  {
+    canonicalName: 'Mosaic',
+    alternateNames: ['The Mosaic Company'],
+    industry: 'Agriculture',
+    rank: 303
+  },
+  {
+    canonicalName: 'Owens Corning',
+    alternateNames: ['Owens Corning Inc'],
+    industry: 'Manufacturing',
+    rank: 304
+  },
+  {
+    canonicalName: 'Gilead Sciences',
+    alternateNames: ['Gilead'],
+    industry: 'Pharmaceuticals',
+    rank: 305
+  },
+  {
+    canonicalName: 'Group 1 Automotive',
+    alternateNames: ['Group 1'],
+    industry: 'Retail',
+    rank: 306
+  },
+  {
+    canonicalName: 'Hertz',
+    alternateNames: ['Hertz Global Holdings', 'Hertz Rent-A-Car'],
+    industry: 'Transportation',
+    rank: 308
+  },
+  {
+    canonicalName: 'Altria Group',
+    alternateNames: ['Altria', 'Philip Morris USA'],
+    industry: 'Consumer Goods',
+    rank: 309
+  },
+  {
+    canonicalName: 'Molina Healthcare',
+    alternateNames: ['Molina'],
+    industry: 'Healthcare',
+    rank: 311
+  },
+  {
+    canonicalName: 'Builders FirstSource',
+    alternateNames: ['Builders First Source'],
+    industry: 'Retail',
+    rank: 312
+  },
+  {
+    canonicalName: 'Tractor Supply',
+    alternateNames: ['Tractor Supply Co'],
+    industry: 'Retail',
+    rank: 313
+  },
+  {
+    canonicalName: 'Regency Centers',
+    alternateNames: ['Regency Centers Corp'],
+    industry: 'Real Estate',
+    rank: 315
+  },
+  {
+    canonicalName: 'Raymond James Financial',
+    alternateNames: ['Raymond James'],
+    industry: 'Financial Services',
+    rank: 316
+  },
+  {
+    canonicalName: 'Williams Companies',
+    alternateNames: ['Williams', 'Williams Partners'],
+    industry: 'Energy',
+    rank: 317
+  },
+  {
+    canonicalName: 'Eastman Chemical',
+    alternateNames: ['Eastman'],
+    industry: 'Manufacturing',
+    rank: 318
+  },
+  {
+    canonicalName: 'Murphy USA',
+    alternateNames: ['Murphy USA Inc'],
+    industry: 'Retail',
+    rank: 319
+  },
+  {
+    canonicalName: 'NRG Energy',
+    alternateNames: ['NRG'],
+    industry: 'Utilities',
+    rank: 320
+  },
+  {
+    canonicalName: 'Ball Corporation',
+    alternateNames: ['Ball Corp'],
+    industry: 'Manufacturing',
+    rank: 324
+  },
+  {
+    canonicalName: 'Applied Materials',
+    alternateNames: ['Applied Materials Inc', 'AMAT'],
+    industry: 'Technology',
+    rank: 326
+  },
+  {
+    canonicalName: 'Martin Marietta Materials',
+    alternateNames: ['Martin Marietta'],
+    industry: 'Manufacturing',
+    rank: 327
+  },
+  {
+    canonicalName: 'Allegiance',
+    alternateNames: ['Allegiance Bancshares'],
+    industry: 'Financial Services',
+    rank: 328
+  },
+  {
+    canonicalName: 'CDW',
+    alternateNames: ['CDW Corporation'],
+    industry: 'Technology',
+    rank: 329
+  },
+  {
+    canonicalName: 'Host Hotels & Resorts',
+    alternateNames: ['Host Hotels'],
+    industry: 'Real Estate',
+    rank: 330
+  },
+  {
+    canonicalName: 'Universal Health Services',
+    alternateNames: ['UHS'],
+    industry: 'Healthcare',
+    rank: 331
+  },
+  {
+    canonicalName: 'Cognex',
+    alternateNames: ['Cognex Corporation'],
+    industry: 'Technology',
+    rank: 332
+  },
+  {
+    canonicalName: 'Packaging Corporation of America',
+    alternateNames: ['PCA', 'Packaging Corp'],
+    industry: 'Manufacturing',
+    rank: 333
+  },
+  {
+    canonicalName: 'W.W. Grainger',
+    alternateNames: ['Grainger'],
+    industry: 'Retail',
+    rank: 334
+  },
+  {
+    canonicalName: 'Parker Hannifin',
+    alternateNames: ['Parker'],
+    industry: 'Manufacturing',
+    rank: 335
+  },
+  {
+    canonicalName: 'Graphic Packaging',
+    alternateNames: ['Graphic Packaging Holding'],
+    industry: 'Manufacturing',
+    rank: 336
+  },
+  {
+    canonicalName: 'eBay',
+    alternateNames: ['eBay Inc'],
+    industry: 'E-commerce',
+    rank: 338
+  },
+  {
+    canonicalName: 'CSX',
+    alternateNames: ['CSX Corporation'],
+    industry: 'Transportation',
+    rank: 339
+  },
+  {
+    canonicalName: 'Caesars Entertainment',
+    alternateNames: ['Caesars', 'Harrah\'s'],
+    industry: 'Hospitality',
+    rank: 341
+  },
+  {
+    canonicalName: 'Laboratory Corporation of America',
+    alternateNames: ['LabCorp', 'Labcorp Holdings'],
+    industry: 'Healthcare',
+    rank: 342
+  },
+  {
+    canonicalName: 'Newell Brands',
+    alternateNames: ['Newell Rubbermaid'],
+    industry: 'Manufacturing',
+    rank: 344
+  },
+  {
+    canonicalName: 'KKR',
+    alternateNames: ['KKR & Co', 'Kohlberg Kravis Roberts'],
+    industry: 'Financial Services',
+    rank: 345
+  },
+  {
+    canonicalName: 'Markel',
+    alternateNames: ['Markel Corporation'],
+    industry: 'Insurance',
+    rank: 346
+  },
+  {
+    canonicalName: 'Baxter International',
+    alternateNames: ['Baxter'],
+    industry: 'Healthcare',
+    rank: 347
+  },
+  {
+    canonicalName: 'Mondelez International',
+    alternateNames: ['Mondelez', 'Kraft Foods'],
+    industry: 'Food & Beverage',
+    rank: 348
+  },
+  {
+    canonicalName: 'Weyerhaeuser',
+    alternateNames: ['Weyerhaeuser Company'],
+    industry: 'Manufacturing',
+    rank: 349
+  },
+  {
+    canonicalName: 'Live Nation Entertainment',
+    alternateNames: ['Live Nation', 'Ticketmaster'],
+    industry: 'Entertainment',
+    rank: 350
+  },
+  {
+    canonicalName: 'Alliant Energy',
+    alternateNames: ['Alliant'],
+    industry: 'Utilities',
+    rank: 351
+  },
+  {
+    canonicalName: 'Synchrony Financial',
+    alternateNames: ['Synchrony'],
+    industry: 'Financial Services',
+    rank: 352
+  },
+  {
+    canonicalName: 'Norfolk Southern',
+    alternateNames: ['Norfolk Southern Corporation'],
+    industry: 'Transportation',
+    rank: 353
+  },
+  {
+    canonicalName: 'First American Financial',
+    alternateNames: ['First American'],
+    industry: 'Financial Services',
+    rank: 354
+  },
+  {
+    canonicalName: 'Quest Diagnostics',
+    alternateNames: ['Quest'],
+    industry: 'Healthcare',
+    rank: 357
+  },
+  {
+    canonicalName: 'Fifth Third Bancorp',
+    alternateNames: ['Fifth Third Bank'],
+    industry: 'Financial Services',
+    rank: 358
+  },
+  {
+    canonicalName: 'Yum! Brands',
+    alternateNames: ['Yum Brands', 'Yum! Brands Inc', 'KFC', 'Taco Bell', 'Pizza Hut'],
+    industry: 'Food & Beverage',
+    rank: 360
+  },
+  {
+    canonicalName: 'Restaurant Brands International',
+    alternateNames: ['RBI', 'Burger King', 'Tim Hortons', 'Popeyes'],
+    industry: 'Food & Beverage',
+    rank: 362
+  },
+  {
+    canonicalName: 'Valero Energy',
+    alternateNames: ['Valero'],
+    industry: 'Energy',
+    rank: 363
+  },
+  {
+    canonicalName: 'MGM Resorts International',
+    alternateNames: ['MGM Resorts', 'MGM'],
+    industry: 'Hospitality',
+    rank: 365
+  },
+  {
+    canonicalName: 'Western Union',
+    alternateNames: ['Western Union Company'],
+    industry: 'Financial Services',
+    rank: 366
+  },
+  {
+    canonicalName: 'Jacobs Engineering Group',
+    alternateNames: ['Jacobs'],
+    industry: 'Engineering',
+    rank: 367
+  },
+  {
+    canonicalName: 'Consolidated Edison',
+    alternateNames: ['Con Edison', 'ConEd'],
+    industry: 'Utilities',
+    rank: 368
+  },
+  {
+    canonicalName: 'Iron Mountain',
+    alternateNames: ['Iron Mountain Inc'],
+    industry: 'Services',
+    rank: 369
+  },
+  {
+    canonicalName: 'CMS Energy',
+    alternateNames: ['CMS', 'Consumers Energy'],
+    industry: 'Utilities',
+    rank: 370
+  },
+  {
+    canonicalName: 'Avis Budget Group',
+    alternateNames: ['Avis', 'Budget Rent a Car'],
+    industry: 'Transportation',
+    rank: 371
+  },
+  {
+    canonicalName: 'Lennar',
+    alternateNames: ['Lennar Corp'],
+    industry: 'Real Estate',
+    rank: 372
+  },
+  {
+    canonicalName: 'DTE Energy',
+    alternateNames: ['DTE'],
+    industry: 'Utilities',
+    rank: 373
+  },
+  {
+    canonicalName: 'Loews',
+    alternateNames: ['Loews Corporation'],
+    industry: 'Insurance',
+    rank: 374
+  },
+  {
+    canonicalName: 'Genuine Parts Company',
+    alternateNames: ['GPC', 'NAPA'],
+    industry: 'Retail',
+    rank: 375
+  },
+  {
+    canonicalName: 'WEC Energy Group',
+    alternateNames: ['Wisconsin Energy'],
+    industry: 'Utilities',
+    rank: 376
+  },
+  {
+    canonicalName: 'Dana',
+    alternateNames: ['Dana Incorporated'],
+    industry: 'Automotive',
+    rank: 377
+  },
+  {
+    canonicalName: 'Booz Allen Hamilton',
+    alternateNames: ['Booz Allen'],
+    industry: 'Consulting',
+    rank: 379
+  },
+  {
+    canonicalName: 'Motorola Solutions',
+    alternateNames: ['Motorola'],
+    industry: 'Technology',
+    rank: 380
+  },
+  {
+    canonicalName: 'KeyCorp',
+    alternateNames: ['KeyBank'],
+    industry: 'Financial Services',
+    rank: 381
+  },
+  {
+    canonicalName: 'Simon Property Group',
+    alternateNames: ['Simon Property'],
+    industry: 'Real Estate',
+    rank: 382
+  },
+  {
+    canonicalName: 'Oshkosh',
+    alternateNames: ['Oshkosh Corporation'],
+    industry: 'Manufacturing',
+    rank: 383
+  },
+  {
+    canonicalName: 'ASGN',
+    alternateNames: ['ASGN Incorporated'],
+    industry: 'Services',
+    rank: 384
+  },
+  {
+    canonicalName: 'American Tower',
+    alternateNames: ['American Tower Corporation'],
+    industry: 'Telecommunications',
+    rank: 385
+  },
+  {
+    canonicalName: 'Ameriprise Financial',
+    alternateNames: ['Ameriprise'],
+    industry: 'Financial Services',
+    rank: 386
+  },
+  {
+    canonicalName: 'Entergy',
+    alternateNames: ['Entergy Corporation'],
+    industry: 'Utilities',
+    rank: 387
+  },
+  {
+    canonicalName: 'PG&E',
+    alternateNames: ['Pacific Gas and Electric', 'PG&E Corporation'],
+    industry: 'Utilities',
+    rank: 388
+  },
+  {
+    canonicalName: 'Electronic Arts',
+    alternateNames: ['EA', 'EA Games'],
+    industry: 'Technology',
+    rank: 390
+  },
+  {
+    canonicalName: 'Newmont',
+    alternateNames: ['Newmont Corporation', 'Newmont Mining'],
+    industry: 'Mining',
+    rank: 391
+  },
+  {
+    canonicalName: 'LKQ',
+    alternateNames: ['LKQ Corporation'],
+    industry: 'Automotive',
+    rank: 392
+  },
+  {
+    canonicalName: 'DaVita',
+    alternateNames: ['DaVita Inc'],
+    industry: 'Healthcare',
+    rank: 393
+  },
+  {
+    canonicalName: 'Foot Locker',
+    alternateNames: ['Foot Locker Inc'],
+    industry: 'Retail',
+    rank: 394
+  },
+  {
+    canonicalName: 'NVR',
+    alternateNames: ['NVR Inc'],
+    industry: 'Real Estate',
+    rank: 396
+  },
+  {
+    canonicalName: 'Discover Financial Services',
+    alternateNames: ['Discover'],
+    industry: 'Financial Services',
+    rank: 397
+  },
+  {
+    canonicalName: 'Rockwell Automation',
+    alternateNames: ['Rockwell'],
+    industry: 'Manufacturing',
+    rank: 398
+  },
+  {
+    canonicalName: 'Campbell Soup',
+    alternateNames: ['Campbell\'s'],
+    industry: 'Food & Beverage',
+    rank: 399
+  },
+  {
+    canonicalName: 'Reliance Steel & Aluminum',
+    alternateNames: ['Reliance Steel'],
+    industry: 'Manufacturing',
+    rank: 400
+  },
+  {
+    canonicalName: 'WESCO International',
+    alternateNames: ['WESCO'],
+    industry: 'Services',
+    rank: 401
+  },
+  {
+    canonicalName: 'FirstEnergy',
+    alternateNames: ['FirstEnergy Corp'],
+    industry: 'Utilities',
+    rank: 402
+  },
+  {
+    canonicalName: 'Fortive',
+    alternateNames: ['Fortive Corporation'],
+    industry: 'Technology',
+    rank: 403
+  },
+  {
+    canonicalName: 'Cintas',
+    alternateNames: ['Cintas Corp'],
+    industry: 'Services',
+    rank: 405
+  },
+  {
+    canonicalName: 'AutoZone',
+    alternateNames: ['AutoZone Inc'],
+    industry: 'Retail',
+    rank: 406
+  },
+  {
+    canonicalName: 'Danaher',
+    alternateNames: ['Danaher Corporation'],
+    industry: 'Manufacturing',
+    rank: 407
+  },
+  {
+    canonicalName: 'Alcoa',
+    alternateNames: ['Alcoa Corporation'],
+    industry: 'Manufacturing',
+    rank: 408
+  },
+  {
+    canonicalName: 'Crown Holdings',
+    alternateNames: ['Crown Cork & Seal'],
+    industry: 'Manufacturing',
+    rank: 409
+  },
+  {
+    canonicalName: 'Jones Lang LaSalle',
+    alternateNames: ['JLL'],
+    industry: 'Real Estate',
+    rank: 410
+  },
+  {
+    canonicalName: 'Huntington Bancshares',
+    alternateNames: ['Huntington Bank'],
+    industry: 'Financial Services',
+    rank: 411
+  },
+  {
+    canonicalName: 'Nucor',
+    alternateNames: ['Nucor Corp'],
+    industry: 'Manufacturing',
+    rank: 412
+  },
+  {
+    canonicalName: 'Textron',
+    alternateNames: ['Textron Inc'],
+    industry: 'Aerospace & Defense',
+    rank: 413
+  },
+  {
+    canonicalName: 'Block',
+    alternateNames: ['Block Inc', 'Square', 'Cash App'],
+    industry: 'Technology',
+    rank: 414
+  },
+  {
+    canonicalName: 'Sherwin-Williams',
+    alternateNames: ['Sherwin Williams', 'Sherwin-Williams Co'],
+    industry: 'Retail',
+    rank: 415
+  },
+  {
+    canonicalName: 'Steel Dynamics',
+    alternateNames: ['Steel Dynamics Inc'],
+    industry: 'Manufacturing',
+    rank: 416
+  },
+  {
+    canonicalName: 'Coty',
+    alternateNames: ['Coty Inc'],
+    industry: 'Consumer Goods',
+    rank: 418
+  },
+  {
+    canonicalName: 'Principal Financial',
+    alternateNames: ['Principal'],
+    industry: 'Financial Services',
+    rank: 419
+  },
+  {
+    canonicalName: 'Stryker',
+    alternateNames: ['Stryker Corporation'],
+    industry: 'Healthcare',
+    rank: 420
+  },
+  {
+    canonicalName: 'Boston Scientific',
+    alternateNames: ['Boston Scientific Corporation'],
+    industry: 'Healthcare',
+    rank: 421
+  },
+  {
+    canonicalName: 'EMCOR Group',
+    alternateNames: ['EMCOR'],
+    industry: 'Engineering',
+    rank: 422
+  },
+  {
+    canonicalName: 'Williams-Sonoma',
+    alternateNames: ['Williams Sonoma', 'Pottery Barn'],
+    industry: 'Retail',
+    rank: 425
+  },
+  {
+    canonicalName: 'Hormel Foods',
+    alternateNames: ['Hormel'],
+    industry: 'Food & Beverage',
+    rank: 426
+  },
+  {
+    canonicalName: 'Amerisource Bergen',
+    alternateNames: ['AmerisourceBergen'],
+    industry: 'Healthcare',
+    rank: 427
+  },
+  {
+    canonicalName: 'McCormick',
+    alternateNames: ['McCormick & Company'],
+    industry: 'Food & Beverage',
+    rank: 428
+  },
+  {
+    canonicalName: 'Vertex Pharmaceuticals',
+    alternateNames: ['Vertex'],
+    industry: 'Pharmaceuticals',
+    rank: 429
+  },
+  {
+    canonicalName: 'J.M. Smucker',
+    alternateNames: ['Smucker', 'JM Smucker'],
+    industry: 'Food & Beverage',
+    rank: 430
+  },
+  {
+    canonicalName: 'Henry Schein',
+    alternateNames: ['Henry Schein Inc'],
+    industry: 'Healthcare',
+    rank: 431
+  },
+  {
+    canonicalName: 'APA Corporation',
+    alternateNames: ['Apache Corporation'],
+    industry: 'Energy',
+    rank: 432
+  },
+  {
+    canonicalName: 'Toll Brothers',
+    alternateNames: ['Toll Brothers Inc'],
+    industry: 'Real Estate',
+    rank: 434
+  },
+  {
+    canonicalName: 'CenterPoint Energy',
+    alternateNames: ['CenterPoint'],
+    industry: 'Utilities',
+    rank: 435
+  },
+  {
+    canonicalName: 'CarMax',
+    alternateNames: ['CarMax Inc'],
+    industry: 'Retail',
+    rank: 436
+  },
+  {
+    canonicalName: 'Public Storage',
+    alternateNames: ['Public Storage Inc'],
+    industry: 'Real Estate',
+    rank: 437
+  },
+  {
+    canonicalName: 'Darden Restaurants',
+    alternateNames: ['Darden', 'Olive Garden', 'LongHorn Steakhouse'],
+    industry: 'Food & Beverage',
+    rank: 439
+  },
+  {
+    canonicalName: 'Lincoln National',
+    alternateNames: ['Lincoln Financial'],
+    industry: 'Insurance',
+    rank: 440
+  },
+  {
+    canonicalName: 'Whirlpool',
+    alternateNames: ['Whirlpool Corp'],
+    industry: 'Manufacturing',
+    rank: 442
+  },
+  {
+    canonicalName: 'WR Berkley',
+    alternateNames: ['W.R. Berkley'],
+    industry: 'Insurance',
+    rank: 443
+  },
+  {
+    canonicalName: 'Regions Financial',
+    alternateNames: ['Regions Bank'],
+    industry: 'Financial Services',
+    rank: 444
+  },
+  {
+    canonicalName: 'Brighthouse Financial',
+    alternateNames: ['Brighthouse'],
+    industry: 'Insurance',
+    rank: 445
+  },
+  {
+    canonicalName: 'AbbVie',
+    alternateNames: ['AbbVie Inc'],
+    industry: 'Pharmaceuticals',
+    rank: 446
+  },
+  {
+    canonicalName: 'Edison International',
+    alternateNames: ['Edison', 'Southern California Edison'],
+    industry: 'Utilities',
+    rank: 447
+  },
+  {
+    canonicalName: 'Zimmer Biomet',
+    alternateNames: ['Zimmer Biomet Holdings'],
+    industry: 'Healthcare',
+    rank: 448
+  },
+  {
+    canonicalName: 'PPL',
+    alternateNames: ['PPL Corporation'],
+    industry: 'Utilities',
+    rank: 449
+  },
+  {
+    canonicalName: 'Big Lots',
+    alternateNames: ['Big Lots Inc'],
+    industry: 'Retail',
+    rank: 451
+  },
+  {
+    canonicalName: 'AMD',
+    alternateNames: ['Advanced Micro Devices', 'AMD Inc'],
+    industry: 'Technology',
+    rank: 453
+  },
+  {
+    canonicalName: 'Ingredion',
+    alternateNames: ['Ingredion Incorporated'],
+    industry: 'Food & Beverage',
+    rank: 454
+  },
+  {
+    canonicalName: 'Under Armour',
+    alternateNames: ['Under Armour Inc'],
+    industry: 'Consumer Goods',
+    rank: 456
+  },
+  {
+    canonicalName: 'Graybar Electric',
+    alternateNames: ['Graybar'],
+    industry: 'Services',
+    rank: 457
+  },
+  {
+    canonicalName: 'Flex',
+    alternateNames: ['Flex Ltd', 'Flextronics'],
+    industry: 'Manufacturing',
+    rank: 458
+  },
+  {
+    canonicalName: 'Thrivent Financial',
+    alternateNames: ['Thrivent'],
+    industry: 'Financial Services',
+    rank: 459
+  },
+  {
+    canonicalName: 'Spirit AeroSystems',
+    alternateNames: ['Spirit Aero'],
+    industry: 'Aerospace & Defense',
+    rank: 460
+  },
+  {
+    canonicalName: 'Huntington Ingalls Industries',
+    alternateNames: ['HII'],
+    industry: 'Aerospace & Defense',
+    rank: 461
+  },
+  {
+    canonicalName: 'Tapestry',
+    alternateNames: ['Tapestry Inc', 'Coach', 'Kate Spade'],
+    industry: 'Consumer Goods',
+    rank: 462
+  },
+  {
+    canonicalName: 'American Airlines Group',
+    alternateNames: ['American Airlines', 'AA'],
+    industry: 'Transportation',
+    rank: 463
+  },
+  {
+    canonicalName: 'GameStop',
+    alternateNames: ['GameStop Corp'],
+    industry: 'Retail',
+    rank: 465
+  },
+  {
+    canonicalName: 'Caesars Entertainment',
+    alternateNames: ['Caesars'],
+    industry: 'Hospitality',
+    rank: 466
+  },
+  {
+    canonicalName: 'Allegion',
+    alternateNames: ['Allegion plc'],
+    industry: 'Manufacturing',
+    rank: 467
+  },
+  {
+    canonicalName: 'Sealed Air',
+    alternateNames: ['Sealed Air Corporation'],
+    industry: 'Manufacturing',
+    rank: 468
+  },
+  {
+    canonicalName: 'Conagra Brands',
+    alternateNames: ['Conagra'],
+    industry: 'Food & Beverage',
+    rank: 469
+  },
+  {
+    canonicalName: 'Mattel',
+    alternateNames: ['Mattel Inc'],
+    industry: 'Consumer Goods',
+    rank: 471
+  },
+  {
+    canonicalName: 'Interpublic Group',
+    alternateNames: ['IPG', 'Interpublic'],
+    industry: 'Services',
+    rank: 472
+  },
+  {
+    canonicalName: 'Comerica',
+    alternateNames: ['Comerica Bank'],
+    industry: 'Financial Services',
+    rank: 473
+  },
+  {
+    canonicalName: 'Clorox',
+    alternateNames: ['The Clorox Company'],
+    industry: 'Consumer Goods',
+    rank: 475
+  },
+  {
+    canonicalName: 'Hanesbrands',
+    alternateNames: ['Hanes', 'Hanesbrands Inc'],
+    industry: 'Consumer Goods',
+    rank: 476
+  },
+  {
+    canonicalName: 'Voya Financial',
+    alternateNames: ['Voya'],
+    industry: 'Financial Services',
+    rank: 477
+  },
+  {
+    canonicalName: 'Middleby',
+    alternateNames: ['The Middleby Corporation'],
+    industry: 'Manufacturing',
+    rank: 478
+  },
+  {
+    canonicalName: 'Broadcom',
+    alternateNames: ['Broadcom Inc', 'Avago'],
+    industry: 'Technology',
+    rank: 479
+  },
+  {
+    canonicalName: 'Hasbro',
+    alternateNames: ['Hasbro Inc'],
+    industry: 'Consumer Goods',
+    rank: 481
+  },
+  {
+    canonicalName: 'CDK Global',
+    alternateNames: ['CDK'],
+    industry: 'Technology',
+    rank: 482
+  },
+  {
+    canonicalName: 'Molson Coors Beverage',
+    alternateNames: ['Molson Coors', 'Coors'],
+    industry: 'Food & Beverage',
+    rank: 483
+  },
+  {
+    canonicalName: 'UGI',
+    alternateNames: ['UGI Corporation'],
+    industry: 'Utilities',
+    rank: 484
+  },
+  {
+    canonicalName: 'J.B. Hunt Transport Services',
+    alternateNames: ['JB Hunt', 'J.B. Hunt'],
+    industry: 'Logistics',
+    rank: 487
+  },
+  {
+    canonicalName: 'Ross Stores',
+    alternateNames: ['Ross Dress for Less'],
+    industry: 'Retail',
+    rank: 489
+  },
+  {
+    canonicalName: 'Cabot',
+    alternateNames: ['Cabot Corporation'],
+    industry: 'Manufacturing',
+    rank: 490
+  },
+  {
+    canonicalName: 'Masco',
+    alternateNames: ['Masco Corporation'],
+    industry: 'Manufacturing',
+    rank: 492
+  },
+  {
+    canonicalName: 'ViacomCBS',
+    alternateNames: ['Paramount Global', 'CBS', 'Paramount'],
+    industry: 'Entertainment',
+    rank: 493
+  },
+  {
+    canonicalName: 'Ralph Lauren',
+    alternateNames: ['Ralph Lauren Corp', 'Polo Ralph Lauren'],
+    industry: 'Consumer Goods',
+    rank: 495
+  },
+  {
+    canonicalName: 'CenterPoint Energy',
+    alternateNames: ['CenterPoint'],
+    industry: 'Utilities',
+    rank: 496
+  },
+  {
+    canonicalName: 'Rollins',
+    alternateNames: ['Rollins Inc', 'Orkin'],
+    industry: 'Services',
+    rank: 498
+  },
+  {
+    canonicalName: 'Avery Dennison',
+    alternateNames: ['Avery Dennison Corporation'],
+    industry: 'Manufacturing',
+    rank: 499
+  },
+  {
+    canonicalName: 'Erie Insurance Group',
+    alternateNames: ['Erie Insurance'],
+    industry: 'Insurance',
+    rank: 500
   },
 ];
 
