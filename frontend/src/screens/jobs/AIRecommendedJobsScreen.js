@@ -288,13 +288,13 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickReferral]);
 
   return (
-    <View style={styles.container}>
-      {/* AI Gradient Header - Fixed */}
+    <>
+      {/* AI Gradient Header - OUTSIDE content for proper z-index */}
       <LinearGradient
-        colors={['#1a1a1a', '#2d2d2d', '#404040']}
+        colors={['#2C2C34', '#3A3A44', '#4A4A54']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradientHeaderFixed}
+        style={styles.headerFixed}
       >
         <View style={styles.header}>
           <TouchableOpacity 
@@ -333,170 +333,169 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         </View>
       </LinearGradient>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading AI recommendations...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <View style={[styles.errorIconContainer, error.type === 'insufficient-balance' && styles.warningIconContainer]}>
-            <Ionicons 
-              name={error.type === 'insufficient-balance' ? 'wallet-outline' : 'alert-circle-outline'} 
-              size={48} 
-              color={error.type === 'insufficient-balance' ? colors.warning : colors.danger} 
-            />
+      <View style={styles.container}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading AI recommendations...</Text>
           </View>
-          <Text style={styles.errorTitle}>
-            {error.type === 'insufficient-balance' ? 'Insufficient Balance' : 'Something Went Wrong'}
-          </Text>
-          <Text style={styles.errorMessage}>{error.message}</Text>
-          <View style={styles.errorButtons}>
-            <TouchableOpacity 
-              style={styles.errorSecondaryButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.errorSecondaryButtonText}>Go Back</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.errorPrimaryButton, error.type === 'insufficient-balance' && styles.rechargeButton]}
-              onPress={() => {
-                if (error.type === 'insufficient-balance') {
-                  navigation.navigate('Wallet');
-                } else {
-                  loadAllAIJobs();
-                }
-              }}
-            >
-              <Text style={styles.errorPrimaryButtonText}>
-                {error.type === 'insufficient-balance' ? 'Recharge Wallet' : 'Try Again'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : aiJobs.length > 0 ? (
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Job Cards with working handlers */}
-          {aiJobs.map((job, index) => {
-            const jobKey = job.JobID || job.id;
-            const isReferred = referredJobIds.has(jobKey);
-            const isReferralRequesting = referralRequestingIds.has(jobKey);
-            
-            return (
-              <JobCard 
-                key={job.JobID || index} 
-                job={job}
-                onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-                onApply={() => handleApply(job)}
-                onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
-                hideSave={true}
-                isReferred={isReferred}
-                isReferralRequesting={isReferralRequesting}
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <View style={[styles.errorIconContainer, error.type === 'insufficient-balance' && styles.warningIconContainer]}>
+              <Ionicons 
+                name={error.type === 'insufficient-balance' ? 'wallet-outline' : 'alert-circle-outline'} 
+                size={48} 
+                color={error.type === 'insufficient-balance' ? colors.warning : colors.danger} 
               />
-            );
-          })}
-        </ScrollView>
-      ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={48} color={colors.gray400} />
-          <Text style={styles.emptyTitle}>No Matches Found</Text>
-          <Text style={styles.emptyText}>
-            Update your profile with more skills and experience for better recommendations.
-          </Text>
-          <TouchableOpacity 
-            style={styles.updateProfileButton}
-            onPress={() => navigation.navigate('Profile')}
+            </View>
+            <Text style={styles.errorTitle}>
+              {error.type === 'insufficient-balance' ? 'Insufficient Balance' : 'Something Went Wrong'}
+            </Text>
+            <Text style={styles.errorMessage}>{error.message}</Text>
+            <View style={styles.errorButtons}>
+              <TouchableOpacity 
+                style={styles.errorSecondaryButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.errorSecondaryButtonText}>Go Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.errorPrimaryButton, error.type === 'insufficient-balance' && styles.rechargeButton]}
+                onPress={() => {
+                  if (error.type === 'insufficient-balance') {
+                    navigation.navigate('Wallet');
+                  } else {
+                    loadAllAIJobs();
+                  }
+                }}
+              >
+                <Text style={styles.errorPrimaryButtonText}>
+                  {error.type === 'insufficient-balance' ? 'Recharge Wallet' : 'Try Again'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : aiJobs.length > 0 ? (
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.updateProfileButtonText}>Update Profile</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+            {/* Job Cards with working handlers */}
+            {aiJobs.map((job, index) => {
+              const jobKey = job.JobID || job.id;
+              const isReferred = referredJobIds.has(jobKey);
+              const isReferralRequesting = referralRequestingIds.has(jobKey);
+              
+              return (
+                <JobCard 
+                  key={job.JobID || index} 
+                  job={job}
+                  onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+                  onApply={() => handleApply(job)}
+                  onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
+                  hideSave={true}
+                  isReferred={isReferred}
+                  isReferralRequesting={isReferralRequesting}
+                />
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={48} color={colors.gray400} />
+            <Text style={styles.emptyTitle}>No Matches Found</Text>
+            <Text style={styles.emptyText}>
+              Update your profile with more skills and experience for better recommendations.
+            </Text>
+            <TouchableOpacity 
+              style={styles.updateProfileButton}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Text style={styles.updateProfileButtonText}>Update Profile</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0a', // Dark theme
-  },
-  gradientHeaderFixed: {
-    paddingTop: 16,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
+container: {
+  flex: 1,
+  backgroundColor: '#1E1E26',
+},
+headerFixed: {
+  paddingTop: Platform.OS === 'ios' ? 44 : 16,
+  paddingBottom: 12,
+  position: Platform.OS === 'web' ? 'sticky' : 'relative',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 10000,
+  elevation: 10,
+},
+header: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 12,
+},
+backButton: {
+  marginRight: 16,
+},
+headerTitleContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+},
   headerIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.white,
-  },
-  headerSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 100, // Space for fixed header
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-  },
-  scrollView: {
-    flex: 1,
-    marginTop: 100, // Space for fixed header
-  },
-  scrollContent: {
-    padding: 12,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    marginTop: 100, // Space for fixed header
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    marginTop: 100, // Space for fixed header
-  },
+headerTitle: {
+  fontSize: typography.sizes.lg,
+  fontWeight: typography.weights.bold,
+  color: colors.white,
+},
+headerSubtitle: {
+  fontSize: typography.sizes.xs,
+  color: 'rgba(255, 255, 255, 0.9)',
+},
+loadingContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
+},
+loadingText: {
+  marginTop: 16,
+  fontSize: typography.sizes.md,
+  color: colors.gray600,
+},
+scrollView: {
+  flex: 1,
+},
+scrollContent: {
+  padding: 12,
+},
+emptyState: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 24,
+},
+errorContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 24,
+},
   errorIconContainer: {
     width: 80,
     height: 80,

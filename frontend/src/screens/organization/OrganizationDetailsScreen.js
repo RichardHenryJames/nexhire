@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerInfo: {
-    marginTop: 60,
+    marginTop: 0,
     paddingLeft: 140,
     paddingRight: 20,
   },

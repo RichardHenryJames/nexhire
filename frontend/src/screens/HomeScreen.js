@@ -526,12 +526,13 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
               <FlatList
                 data={searchResults}
                 keyExtractor={(item) => item.id.toString()}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.searchResultItem}
                     activeOpacity={0.7}
-                    onPressIn={() => {
-                      // Use onPressIn to trigger before onBlur
+                    onPress={() => {
+                      // ✅ Use onPress instead of onPressIn to allow scrolling
                       console.log('🔍 [HomeScreen] Search result pressed:', {
                         id: item.id,
                         name: item.name,
@@ -540,16 +541,14 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                       
                       console.log('🔍 [HomeScreen] Navigating to OrganizationDetails with ID:', item.id);
                       
-                      // Navigate immediately
+                      // Navigate
                       navigation.navigate('OrganizationDetails', { 
                         organizationId: item.id 
                       });
                       
                       // Clear state after navigation
-                      setTimeout(() => {
-                        setShowSearchResults(false);
-                        setSearchQuery('');
-                      }, 100);
+                      setShowSearchResults(false);
+                      setSearchQuery('');
                     }}
                   >
                     {item.logoURL ? (
@@ -713,7 +712,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
             <View style={styles.aiSectionHeader}>
               <View style={styles.aiTitleContainer}>
                 <View style={styles.aiSparkleIcon}>
-                  <Ionicons name="bulb-outline" size={24} color={colors.white} />
+                  <Ionicons name="bulb-outline" size={24} color="#FFD700" />
                 </View>
                 <View>
                   <Text style={styles.aiSectionTitle}>AI Recommends</Text>
@@ -737,7 +736,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                   {aiJobs.map((job, index) => (
                     <View key={job.JobID || index} style={styles.aiJobCardWrapper}>
                       <View style={styles.aiJobBadge}>
-                        <Ionicons name="flash-outline" size={12} color={colors.white} />
+                        <Ionicons name="flash-outline" size={12} color="#FFD700" />
                         <Text style={styles.aiJobBadgeText}>AI Matched</Text>
                       </View>
                       <JobCard job={job} />
@@ -760,7 +759,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                 </TouchableOpacity>
                 
                 <View style={styles.aiTipContainer}>
-                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Ionicons name="information-circle" size={16} color="#FFD700" />
                   <Text style={styles.aiTipText}>
                     Complete your profile with more details for even better AI recommendations
                   </Text>
@@ -773,7 +772,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                   No matching jobs found right now. Try exploring all jobs or check back later.
                 </Text>
                 <View style={styles.aiTipContainer}>
-                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Ionicons name="information-circle" size={16} color="#FFD700" />
                   <Text style={styles.aiTipText}>
                     Add more skills and experience to your profile for better AI recommendations
                   </Text>
@@ -1557,10 +1556,10 @@ headerCompact: {
     margin: 20,
     marginTop: 8,
     padding: 16,
-    backgroundColor: `${colors.primary}05`,
+    backgroundColor: '#1E1E26',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: '#3A3A44',
     borderStyle: 'dashed',
   },
   aiSectionHeader: {
@@ -1578,11 +1577,11 @@ headerCompact: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
+    backgroundColor: '#2C2C34',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: colors.primary,
+    shadowColor: '#FFD700',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -1594,12 +1593,12 @@ headerCompact: {
   aiSectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.primary,
+    color: '#FFD700',
     marginBottom: 2,
   },
   aiSubtitle: {
     fontSize: typography.sizes.xs,
-    color: colors.gray600,
+    color: '#A0A0AA',
     fontStyle: 'italic',
   },
   aiJobCardWrapper: {
@@ -1609,7 +1608,7 @@ headerCompact: {
     position: 'absolute',
     top: 8,
     right: 20,
-    backgroundColor: colors.primary,
+    backgroundColor: '#2C2C34',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -1626,7 +1625,7 @@ headerCompact: {
     elevation: 5,
   },
   aiJobBadgeText: {
-    color: colors.white,
+    color: '#FFD700',
     fontSize: 10,
     fontWeight: typography.weights.bold,
     marginLeft: 4,
@@ -1635,13 +1634,13 @@ headerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: '#2C2C34',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 16,
     marginBottom: 12,
-    shadowColor: colors.primary,
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1654,13 +1653,13 @@ headerCompact: {
     fontWeight: typography.weights.bold,
   },
   showMoreBadge: {
-    backgroundColor: colors.white,
+    backgroundColor: '#FFD700',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   showMoreBadgeText: {
-    color: colors.primary,
+    color: '#2C2C34',
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
   },
@@ -1669,21 +1668,21 @@ headerCompact: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: colors.surface,
+    backgroundColor: '#2C2C34',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: colors.primary + '30',
+    borderColor: '#3A3A44',
   },
   aiLoadingText: {
     marginLeft: 12,
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: '#A0A0AA',
     fontStyle: 'italic',
   },
   aiTipContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary + '08',
+    backgroundColor: '#2C2C34',
     padding: 12,
     borderRadius: 8,
     marginTop: 12,
@@ -1691,21 +1690,21 @@ headerCompact: {
   aiTipText: {
     flex: 1,
     fontSize: typography.sizes.xs,
-    color: colors.gray600,
+    color: '#A0A0AA',
     marginLeft: 8,
     lineHeight: 16,
   },
   aiNoJobsState: {
     alignItems: 'center',
     padding: 24,
-    backgroundColor: colors.surface,
+    backgroundColor: '#2C2C34',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#3A3A44',
   },
   aiNoJobsText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: '#A0A0AA',
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 20,
