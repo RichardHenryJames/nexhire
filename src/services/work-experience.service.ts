@@ -30,7 +30,8 @@ export class WorkExperienceService {
     const query = `
             SELECT 
                 we.*, 
-                o.Name AS OrganizationName
+                o.Name AS OrganizationName,
+                o.LogoURL AS LogoURL
             FROM WorkExperiences we
             LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
             WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
@@ -46,7 +47,8 @@ export class WorkExperienceService {
     const query = `
             SELECT 
                 we.*, 
-                o.Name AS OrganizationName
+                o.Name AS OrganizationName,
+                o.LogoURL AS LogoURL
             FROM WorkExperiences we
             LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
             WHERE we.WorkExperienceID = @param0`;

@@ -116,19 +116,11 @@ export class ProfileUpdateService {
    */
   async updateProfile(userId: string, profileData: Record<string, any>): Promise<ProfileUpdateResponse> {
     try {
-      console.log('Starting smart profile update for user:', userId);
-      console.log('Profile data received:', Object.keys(profileData));
       
       // Split data by database table
       const { usersData, applicantsData, unknownFields } = this.routeFields(profileData);
       
       // Log routing results
-      if (Object.keys(usersData).length > 0) {
-        console.log('Users table fields:', Object.keys(usersData));
-      }
-      if (Object.keys(applicantsData).length > 0) {
-        console.log('Applicants table fields:', Object.keys(applicantsData));
-      }
       if (unknownFields.length > 0) {
         console.warn('Unknown fields ignored:', unknownFields);
       }
@@ -143,13 +135,11 @@ export class ProfileUpdateService {
       
       // Update Users table if needed
       if (Object.keys(usersData).length > 0) {
-        console.log('Updating Users table...');
         updatePromises.push(
           this.updateUsersTable(usersData)
             .then(result => {
               results.usersUpdated = true;
               results.usersData = result;
-              console.log('Users table updated successfully');
             })
             .catch(error => {
               console.error('Users table update failed:', error);
@@ -160,13 +150,11 @@ export class ProfileUpdateService {
       
       // Update Applicants table if needed
       if (Object.keys(applicantsData).length > 0) {
-        console.log('Updating Applicants table...');
         updatePromises.push(
           this.updateApplicantsTable(userId, applicantsData)
             .then(result => {
               results.applicantsUpdated = true;
               results.applicantsData = result;
-              console.log('Applicants table updated successfully');
             })
             .catch(error => {
               console.error('Applicants table update failed:', error);
@@ -178,12 +166,6 @@ export class ProfileUpdateService {
       // Wait for all updates to complete
       await Promise.all(updatePromises);
       
-      // Summary
-      console.log('Profile update completed:', {
-        usersUpdated: results.usersUpdated,
-        applicantsUpdated: results.applicantsUpdated,
-        errorsCount: results.errors!.length
-      });
       
       return results;
       
@@ -235,7 +217,6 @@ export class ProfileUpdateService {
    */
   async getCompleteProfile(userId: string) {
     try {
-      console.log('Fetching complete user profile...');
       
       const promises = [
         this.apiClient.get('/users/profile'),

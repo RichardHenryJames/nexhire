@@ -188,8 +188,9 @@ export class ReferralService {
 
             if (isExternal) {
                 // EXTERNAL REFERRAL VALIDATION
-                if (!dto.jobTitle || !dto.companyName) {
-                    throw new ValidationError('Job title and company name are required for external referrals');
+                // ✅ FIXED: Only require jobTitle (companyName derived from organizationId)
+                if (!dto.jobTitle) {
+                    throw new ValidationError('Job title is required for external referrals');
                 }
                 
                 // Check if already requested for this external job (by extJobID)
@@ -240,21 +241,22 @@ export class ReferralService {
             const requestId = AuthService.generateUniqueId();
 
             if (isExternal) {
-                // ✅ CREATE EXTERNAL REFERRAL REQUEST
+                // ✅ CREATE EXTERNAL REFERRAL REQUEST with JobTitle and JobURL
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
                         RequestID, ExtJobID, ApplicantID, ResumeID, Status, RequestedAt,
-                        OrganizationID, ReferralMessage
+                        OrganizationID, ReferralMessage, JobTitle, JobURL
                     ) VALUES (
                         @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(),
-                        @param4, @param5
+                        @param4, @param5, @param6, @param7
                     )`;
                 
                 const organizationId = dto.organizationId && dto.organizationId !== '999999' 
                     ? parseInt(dto.organizationId, 10) : null;
                 
                 await dbService.executeQuery(insertQuery, [
-                    requestId, dto.extJobID, applicantId, dto.resumeID, organizationId, dto.referralMessage || null
+                    requestId, dto.extJobID, applicantId, dto.resumeID, organizationId, 
+                    dto.referralMessage || null, dto.jobTitle, dto.jobUrl || null
                 ]);
                 
                 // Update referrer stats for external referrals
@@ -304,7 +306,7 @@ export class ReferralService {
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    rr.OrganizationID, rr.ReferralMessage,
+                    rr.OrganizationID, rr.ReferralMessage, rr.JobTitle, rr.JobURL,
                     -- ✅ DERIVE referral type from data presence (no ReferralType column)
                     CASE WHEN rr.ExtJobID IS NOT NULL THEN 'external' ELSE 'internal' END as ReferralType,
                     -- Internal job data (will be null for external)
@@ -353,9 +355,9 @@ export class ReferralService {
             let actualJobId: string;
             
             if (rawData.ReferralType === 'external') {
-                // For external referrals, use external data
+                // For external referrals, use stored JobTitle (new column) or fallback
                 companyName = rawData.ExternalCompanyName || 'External Company';
-                jobTitle = 'External Job'; // Could be enhanced with stored job details
+                jobTitle = rawData.JobTitle || 'External Job'; // ✅ Use stored JobTitle column
                 actualJobId = rawData.ExtJobID; // Use ExtJobID for external
             } else {
                 // For internal referrals, use job data
@@ -417,10 +419,16 @@ export class ReferralService {
             
             const organizationId = referrerOrgResult.recordset[0].OrganizationID;
             
-            // Build where clause with filters
+            // Build where clause with filters - ✅ FIXED: Include both internal and external referrals
             let whereClause = `
                 WHERE rr.Status = 'Pending' 
-                AND j.OrganizationID = @param0
+                AND (
+                    -- Internal referrals: Match by job's organization
+                    (rr.JobID IS NOT NULL AND j.OrganizationID = @param0)
+                    OR
+                    -- External referrals: Match by stored organization ID
+                    (rr.ExtJobID IS NOT NULL AND rr.OrganizationID = @param0)
+                )
                 AND rr.ApplicantID != @param1  -- Don't show own requests
             `;
             const queryParams = [organizationId, referrerId];
@@ -444,11 +452,11 @@ export class ReferralService {
                 paramIndex++;
             }
             
-            // Count total
+            // Count total - ✅ FIXED: Include both internal and external referrals
             const countQuery = `
                 SELECT COUNT(*) as Total
                 FROM ReferralRequests rr
-                INNER JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
                 ${whereClause}
             `;
             
@@ -456,14 +464,24 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
             
-            // Get paginated data - ? FIX: Convert to integers before using in SQL
+            // Get paginated data - ✅ FIXED: Support both internal and external referrals with stored JobTitle
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
-                    rr.RequestID, rr.JobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    j.Title as JobTitle,
-                    o.Name as CompanyName,
+                    rr.OrganizationID, rr.JobURL,
+                    -- For INTERNAL referrals (JobID not null)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    jo.LogoURL as InternalLogoURL,
+                    -- For EXTERNAL referrals (ExtJobID not null)
+                    eo.Name as ExternalCompanyName,
+                    eo.LogoURL as ExternalLogoURL,
+                    -- ✅ Use stored JobTitle column with proper COALESCE
+                    COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
                     ar.ResumeLabel,
@@ -471,8 +489,11 @@ export class ReferralService {
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription
                 FROM ReferralRequests rr
-                INNER JOIN Jobs j ON rr.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                -- ✅ NEW: JOIN for external organization data
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
@@ -777,13 +798,13 @@ export class ReferralService {
             const total = countResult.recordset[0]?.Total || 0;
             const totalPages = Math.ceil(total / safePageSize);
 
-            // Get paginated data - ✅ FIXED: Support both internal and external referrals
+            // Get paginated data - ✅ FIXED: Support both internal and external referrals with stored JobTitle
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    rr.OrganizationID,
+                    rr.OrganizationID, rr.JobURL,
                     -- For INTERNAL referrals (JobID not null)
                     j.Title as InternalJobTitle,
                     jo.Name as InternalCompanyName,
@@ -791,8 +812,8 @@ export class ReferralService {
                     -- For EXTERNAL referrals (ExtJobID not null)
                     eo.Name as ExternalCompanyName,
                     eo.LogoURL as ExternalLogoURL,
-                    -- Use COALESCE to get the appropriate values
-                    COALESCE(j.Title, 'External Job') as JobTitle,
+                    -- ✅ Use stored JobTitle column with proper COALESCE
+                    COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
                     COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
@@ -1103,20 +1124,31 @@ export class ReferralService {
      */
     static async getReferralPointsHistory(applicantId: string) {
         try {
+            // ✅ FIX: Get current points from Applicants table (the actual available balance)
+            const currentPointsQuery = `
+                SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
+                FROM Applicants
+                WHERE ApplicantID = @param0
+            `;
+            const currentPointsResult = await dbService.executeQuery(currentPointsQuery, [applicantId]);
+            const totalPoints = currentPointsResult.recordset?.[0]?.CurrentPoints || 0;
+
+            // 🆕 ENHANCED: Get BOTH earned points AND conversion transactions
             const historyQuery = `
+                -- Points earned from referrals
                 SELECT 
-                    rw.RewardID,
-                    rw.ReferrerID,
-                    rw.RequestID,
-                    rw.PointsEarned,
+                    rw.RewardID as ID,
+                    'earned' as TransactionType,
+                    rw.PointsEarned as PointsAmount,
                     rw.PointsType,
-                    rw.AwardedAt,
+                    rw.AwardedAt as TransactionDate,
                     rr.JobID,
                     j.Title as JobTitle,
                     o.LogoURL as OrganizationLogo,
                     o.Name as CompanyName,
+                    NULL as WalletAmount,
                     CASE 
-                        WHEN rw.PointsType = 'proof_submission' THEN 'Base referral proof submitted'
+                        WHEN rw.PointsType = 'proof_submission' THEN 'Referral proof submitted'
                         WHEN rw.PointsType = 'verification' THEN 'Referral verified by job seeker'
                         WHEN rw.PointsType = 'quick_response_bonus' THEN 'Quick response bonus (< 24 hours)'
                         ELSE 'Referral activity'
@@ -1126,18 +1158,39 @@ export class ReferralService {
                 INNER JOIN Jobs j ON rr.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 WHERE rw.ReferrerID = @param0
-                ORDER BY rw.AwardedAt DESC
+
+                UNION ALL
+
+                -- Points converted to wallet
+                SELECT 
+                    wt.TransactionID as ID,
+                    'converted' as TransactionType,
+                    ABS(wt.Amount / 0.5) as PointsAmount, -- Reverse calculation: ₹25 / 0.5 = 50 points
+                    'conversion' as PointsType,
+                    wt.CreatedAt as TransactionDate,
+                    NULL as JobID,
+                    NULL as JobTitle,
+                    NULL as OrganizationLogo,
+                    NULL as CompanyName,
+                    wt.Amount as WalletAmount,
+                    'Converted ' + CAST(CAST(ABS(wt.Amount / 0.5) AS INT) AS VARCHAR) + ' points to ₹' + CAST(wt.Amount AS VARCHAR) as Description
+                FROM WalletTransactions wt
+                INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+                INNER JOIN Applicants a ON w.UserID = a.UserID
+                WHERE a.ApplicantID = @param0
+                AND wt.Source = 'REFERRAL_BONUS'
+                AND wt.Amount > 0  -- Credits only (conversions)
+
+                ORDER BY TransactionDate DESC
             `;
 
             const result = await dbService.executeQuery(historyQuery, [applicantId]);
             
-            // Calculate total points
-            const totalPoints = result.recordset?.reduce((sum, row) => sum + (row.PointsEarned || 0), 0) || 0;
-
+            // ✅ Return CURRENT available points (from Applicants table), not sum of history
             return {
-                totalPoints,
+                totalPoints, // This is the actual available balance after conversions
                 history: result.recordset || [],
-                // 🆕 ADD: Dynamic point type metadata
+                // 🆕 ADD: Dynamic point type metadata (including conversion type)
                 pointTypeMetadata: this.getPointTypeMetadata()
             };
         } catch (error) {
@@ -1172,6 +1225,13 @@ export class ReferralService {
                 color: '#F59E0B', // Warning amber
                 category: 'bonus'
             },
+            conversion: {
+                icon: '\uD83D\uDCB8', // 💸 Money with wings emoji
+                title: 'Points Converted',
+                description: 'Points converted to wallet balance (1 point = ₹0.50)',
+                color: '#7EB900', // Green (negative/spent)
+                category: 'conversion'
+            },
             // 🚀 FUTURE: Any new point types can be added here without frontend changes
             monthly_bonus: {
                 icon: '\uD83C\uDF81', // 🎁 Gift emoji
@@ -1202,9 +1262,9 @@ export class ReferralService {
      */
     static async claimReferralRequestWithProof(referrerId: string, dto: ClaimReferralRequestWithProofDto): Promise<ReferralRequest> {
         try {
-            // Check if request is still available
+            // Check if request is still available - ✅ FIXED: Also retrieve ExtJobID and OrganizationID
             const requestQuery = `
-                SELECT RequestID, Status, JobID, ApplicantID, RequestedAt
+                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt
                 FROM ReferralRequests
                 WHERE RequestID = @param0 AND Status = 'Pending'
             `;
@@ -1214,21 +1274,45 @@ export class ReferralService {
                 throw new ValidationError('Request not available for claiming');
             }
             
-            const { JobID: jobId, ApplicantID: seekerId, RequestedAt: requestedAt } = requestResult.recordset[0];
+            const request = requestResult.recordset[0];
+            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt } = request;
+            
+            // Determine referral type
+            const isExternal = !!extJobId && !jobId;
             
             // Verify referrer is eligible (same organization, not the original requester)
             if (referrerId === seekerId) {
                 throw new ValidationError('You cannot claim your own referral request');
             }
             
-            const eligibilityQuery = `
-                SELECT we.OrganizationID
-                FROM WorkExperiences we
-                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND j.JobID = @param1
-            `;
-            const eligibilityResult = await dbService.executeQuery(eligibilityQuery, [referrerId, jobId]);
+            // ✅ FIXED: Use type-specific eligibility check
+            let eligibilityQuery: string;
+            let eligibilityParams: any[];
+            
+            if (isExternal) {
+                // External referral: Match by stored OrganizationID directly
+                eligibilityQuery = `
+                    SELECT we.OrganizationID
+                    FROM WorkExperiences we
+                    INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+                    WHERE a.ApplicantID = @param0 
+                    AND we.OrganizationID = @param1
+                    AND we.IsCurrent = 1
+                `;
+                eligibilityParams = [referrerId, organizationId];
+            } else {
+                // Internal referral: Match via Jobs table (existing logic)
+                eligibilityQuery = `
+                    SELECT we.OrganizationID
+                    FROM WorkExperiences we
+                    INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+                    INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
+                    WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND j.JobID = @param1
+                `;
+                eligibilityParams = [referrerId, jobId];
+            }
+            
+            const eligibilityResult = await dbService.executeQuery(eligibilityQuery, eligibilityParams);
             
             if (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0) {
                 throw new ValidationError('You are not eligible to refer for this job - must work at the same company');
@@ -1347,6 +1431,80 @@ export class ReferralService {
             await dbService.executeQuery(query, [jobId]);
         } catch (e) {
             console.warn('Failed to update referrer stats after cancellation:', e);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Convert referral points to wallet balance
+     * Conversion rate: 1 point = ₹0.50
+     * Uses existing WalletService.creditBonus() to add money to wallet
+     */
+    static async convertPointsToWallet(applicantId: string, userId: string): Promise<{
+        success: boolean;
+        pointsConverted: number;
+        walletAmount: number;
+        newWalletBalance: number;
+        transactionId: string;
+    }> {
+        try {
+            console.log(`💱 Converting points to wallet for applicant ${applicantId}, user ${userId}`);
+
+            // Get current referral points
+            const pointsQuery = `
+                SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
+                FROM Applicants
+                WHERE ApplicantID = @param0
+            `;
+            const pointsResult = await dbService.executeQuery(pointsQuery, [applicantId]);
+            
+            if (!pointsResult.recordset || pointsResult.recordset.length === 0) {
+                throw new NotFoundError('Applicant profile not found');
+            }
+
+            const currentPoints = pointsResult.recordset[0].CurrentPoints || 0;
+
+            if (currentPoints <= 0) {
+                throw new ValidationError('No referral points available to convert');
+            }
+
+            // Calculate wallet amount (1 point = ₹0.50)
+            const CONVERSION_RATE = 0.5;
+            const walletAmount = currentPoints * CONVERSION_RATE;
+
+            console.log(`💰 Converting ${currentPoints} points to ₹${walletAmount.toFixed(2)}`);
+
+            // Credit wallet using existing WalletService.creditBonus method
+            const creditResult = await WalletService.creditBonus(
+                userId,
+                walletAmount,
+                'REFERRAL_BONUS',
+                `Converted ${currentPoints} referral points to wallet balance`
+            );
+
+            if (!creditResult.success) {
+                throw new Error('Failed to credit wallet');
+            }
+
+            // Reset referral points to 0
+            const resetQuery = `
+                UPDATE Applicants
+                SET ReferralPoints = 0
+                WHERE ApplicantID = @param0
+            `;
+            await dbService.executeQuery(resetQuery, [applicantId]);
+
+            console.log(`✅ Successfully converted ${currentPoints} points to ₹${walletAmount.toFixed(2)} for user ${userId}`);
+
+            return {
+                success: true,
+                pointsConverted: currentPoints,
+                walletAmount: walletAmount,
+                newWalletBalance: creditResult.newBalance,
+                transactionId: creditResult.transactionId
+            };
+        } catch (error) {
+            console.error('Error converting points to wallet:', error);
+            throw error;
         }
     }
 }

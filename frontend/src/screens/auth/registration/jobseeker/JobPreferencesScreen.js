@@ -85,11 +85,11 @@ export default function JobPreferencesScreen({ navigation, route }) {
   const loadJobTypes = async () => {
     try {
       setLoading(true);
-      console.log('Loading job types from API...');
+      
       const response = await refopenAPI.getJobTypes();
       if (response.success) {
         setJobTypes(response.data);
-        console.log(`? Loaded ${response.data.length} job types`);
+        
       }
     } catch (error) {
       console.error('Error loading job types:', error);
@@ -108,7 +108,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
 
   // CRITICAL FIX: Ultra-stable handlers with useCallback and dependency control
   const handleJobTypeToggle = useCallback((jobType) => {
-    console.log('Toggling job type:', jobType.Type);
+    
     setFormData(prevData => {
       const isSelected = prevData.preferredJobTypes.some(jt => jt.JobTypeID === jobType.JobTypeID);
       
@@ -116,7 +116,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
         ? prevData.preferredJobTypes.filter(jt => jt.JobTypeID !== jobType.JobTypeID)
         : [...prevData.preferredJobTypes, jobType];
       
-      console.log('Updated selection count:', newPreferredJobTypes.length);
+      
       
       return {
         ...prevData,
@@ -127,22 +127,22 @@ export default function JobPreferencesScreen({ navigation, route }) {
   }, []);
 
   const handleJobTypesDone = useCallback(() => {
-    console.log('Job types selection completed');
+    
     setShowJobTypesModal(false);
   }, []);
 
   const handleModalClose = useCallback(() => {
-    console.log('Modal closed via X button');
+    
     setShowJobTypesModal(false);
   }, []);
 
   const openJobTypeModal = useCallback(() => {
-    console.log('Opening job types modal');
+    
     setShowJobTypesModal(true);
   }, []);
 
   const clearAllJobTypes = useCallback(() => {
-    console.log('?Clearing all job types');
+    
     setFormData(prevData => ({
       ...prevData,
       preferredJobTypes: []
@@ -170,7 +170,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
       return;
     }
 
-    console.log('Job preferences prepared:', formData);
+    
     
     navigation.navigate('PersonalDetails', { 
       userType, 

@@ -33,20 +33,6 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
   // 🔧 Use googleUser from route or fallback to context (SAME AS ExperienceTypeSelectionScreen)
   const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
 
-  // 🔧 DEBUG: Log what we have
-  useEffect(() => {
-    console.log('📍 UserTypeSelection - Google Status:', {
-      fromGoogleAuth,
-      fromGoogleAuthParam,
-      hasGoogleUser: !!googleUser,
-      hasPendingAuth: !!pendingGoogleAuth,
-      googleUserName: googleUser?.name,
-      googleUserEmail: googleUser?.email,
-      googleUserStructure: googleUser,
-      pendingAuthUserStructure: pendingGoogleAuth?.user
-    });
-  }, [fromGoogleAuth, fromGoogleAuthParam, googleUser, pendingGoogleAuth]);
-
   // NEW: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !pendingGoogleAuth && !googleUser) {
@@ -54,7 +40,6 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        console.log('🌐 Using window.location redirect for web');
         window.location.href = '/login';
         return;
       }
@@ -68,13 +53,6 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
       }, 100);
     }
   }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
-
-  // Show welcome message for Google users
-  useEffect(() => {
-    console.log('👋 Google user detected:', googleUser?.name || googleUser?.email || 'undefined');
-    console.log('📊 Full googleUser object:', googleUser);
-    console.log('📊 pendingGoogleAuth.user:', pendingGoogleAuth?.user);
-  }, [googleUser, fromGoogleAuth, pendingGoogleAuth]);
 
   const handleContinue = async () => {
     if (!selectedType) {

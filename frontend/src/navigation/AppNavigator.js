@@ -20,9 +20,12 @@ import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/Person
 
 // Employer Registration Flow
 import EmployerTypeSelectionScreen from "../screens/auth/registration/employer/EmployerTypeSelectionScreen";
-import OrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
+import EmployerOrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
 import EmployerPersonalDetailsScreen from "../screens/auth/registration/employer/EmployerPersonalDetailsScreen";
 import EmployerAccountScreen from "../screens/auth/registration/employer/EmployerAccountScreen";
+
+// Organization Screen
+import OrganizationDetailsScreen from "../screens/organization/OrganizationDetailsScreen";
 
 // Main App Screens
 import HomeScreen from "../screens/HomeScreen";
@@ -30,6 +33,7 @@ import JobsScreen from "../screens/jobs/JobsScreen";
 import SavedJobsScreen from "../screens/jobs/SavedJobsScreen";
 import EmployerJobsScreen from "../screens/employer/EmployerJobsScreen"; // NEW: Employer jobs screen
 import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
+import AIRecommendedJobsScreen from "../screens/jobs/AIRecommendedJobsScreen"; // NEW: AI Recommended Jobs screen
 import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
 import ProfileScreen from "../screens/profile/ProfileScreenNew";
@@ -132,6 +136,7 @@ const linking = {
 
           // Modal/Stack screens
           JobDetails: "job/:jobId",
+          AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
           ViewProfile: "profile/:userId",
@@ -139,6 +144,9 @@ const linking = {
           AskReferral: "ask-referral",
           ReferralPlans: "plans",
           Payment: "payment",
+          
+          // Organization screen with organizationId parameter
+          OrganizationDetails: "OrganizationDetails/:organizationId",
 
           // Wallet screens
           Wallet: "wallet",
@@ -193,7 +201,7 @@ function EmployerFlow() {
       />
       <Stack.Screen
         name="OrganizationDetailsScreen"
-        component={OrganizationDetailsScreen}
+        component={EmployerOrganizationDetailsScreen}
       />
       <Stack.Screen
         name="EmployerPersonalDetailsScreen"
@@ -211,18 +219,12 @@ function EmployerFlow() {
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
 
-  console.log("AuthStack state:", {
-    hasPendingGoogleAuth,
-    googleUserEmail: pendingGoogleAuth?.user?.email,
-  });
 
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      console.log("Google auth pending - starting at UserTypeSelection");
       return "UserTypeSelection";
     }
-    console.log("No pending auth - starting at Login");
     return "Login";
   };
 
@@ -372,6 +374,13 @@ function MainStack() {
         }}
       />
       <Stack.Screen
+        name="AIRecommendedJobs"
+        component={AIRecommendedJobsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="SavedJobs"
         component={SavedJobsScreen}
         options={{
@@ -403,6 +412,16 @@ function MainStack() {
         component={ViewProfileScreen}
         options={{
           headerShown: false, // Custom header in component
+        }}
+      />
+      {/* Organization Details Screen */}
+      <Stack.Screen
+        name="OrganizationDetails"
+        component={OrganizationDetailsScreen}
+        options={{
+          headerShown: true,
+          title: "Company Details",
+          headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen
@@ -477,11 +496,6 @@ function MainStack() {
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
 
-  console.log("AppNavigator state check:", {
-    loading,
-    isAuthenticated,
-    hasPendingGoogleAuth,
-  });
 
   // Show loading screen while checking authentication state
   if (loading) {
@@ -518,9 +532,6 @@ export default function AppNavigator() {
           focus: () => {
             // Redirect to Auth if not authenticated
             if (!isAuthenticated) {
-              console.log(
-                "Main screen accessed without auth, redirecting to Auth"
-              );
               navigation.navigate("Auth");
             }
           },

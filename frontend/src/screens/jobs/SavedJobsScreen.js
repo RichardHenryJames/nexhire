@@ -67,14 +67,11 @@ const SavedJobsScreen = ({ navigation }) => {
 
   // Handle unsave
   const handleUnsave = useCallback(async (job) => {
-    console.log('handleUnsave called with job:', job);
     if (!job) return;
     const id = job.JobID || job.id;
-    console.log('Unsaving job ID:', id);
     
     try {
       const response = await refopenAPI.unsaveJob(id);
-      console.log('Unsave response:', response);
       if (response?.success) {
         removeSavedJobLocally(id);
         // Show success message
@@ -99,17 +96,13 @@ const SavedJobsScreen = ({ navigation }) => {
 
   // Render job card
   const renderJobCard = useCallback(({ item }) => {
-    console.log('Rendering job card for:', item.Title, 'savedContext: true');
     return (
       <JobCard
         job={item}
         onPress={() => handleJobPress(item)}
         savedContext={true}
-        onSave={() => {
-          console.log('onSave called (should not happen in savedContext)');
-        }}
+        onSave={() => {}}
         onUnsave={() => {
-          console.log('onUnsave triggered for job:', item.Title);
           handleUnsave(item);
         }}
       />

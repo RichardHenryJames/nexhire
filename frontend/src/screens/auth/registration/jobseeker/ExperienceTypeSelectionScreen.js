@@ -29,20 +29,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   // 🔧 Use googleUser from route or fallback to context
   const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
 
-  // 🔧 DEBUG: Log what we have
-  useEffect(() => {
-    console.log('📍 ExperienceTypeSelectionScreen - Google Status:', {
-      fromGoogleAuth,
-      fromGoogleAuthParam,
-      hasGoogleUser: !!googleUser,
-      hasPendingAuth: !!pendingGoogleAuth,
-      googleUserName: googleUser?.name,
-      googleUserEmail: googleUser?.email,
-      googleUserStructure: googleUser,
-      pendingAuthUserStructure: pendingGoogleAuth?.user
-    });
-  }, [fromGoogleAuth, fromGoogleAuthParam, googleUser, pendingGoogleAuth]);
-
   // 🔧 IMPROVED: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !googleUser && !pendingGoogleAuth) {
@@ -50,7 +36,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        console.log('🌐 Using window.location redirect for web to UserTypeSelection');
         window.location.href = '/register';
         return;
       }
@@ -94,7 +79,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       return;
     }
 
-    console.log('🔧 Skip button clicked, selectedType:', selectedType);
     
     // Navigate directly to PersonalDetailsScreenDirect (same route used in UserTypeSelectionScreen)
     navigation.navigate('PersonalDetailsScreenDirect', {

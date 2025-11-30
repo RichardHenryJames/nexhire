@@ -1,5 +1,6 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { JobService } from '../services/job.service';
+import { AIJobRecommendationService } from '../services/ai-job-recommendation.service';
 import { dbService } from '../services/database.service';
 import { 
     withErrorHandling, 
@@ -11,7 +12,8 @@ import {
     extractQueryParams,
     validateRequest,
     paginationSchema,
-    isValidGuid
+    isValidGuid,
+    InsufficientBalanceError
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
@@ -330,3 +332,117 @@ export const getCurrencies = withErrorHandling(async (): Promise<HttpResponseIni
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve currencies' } };
     }
 });
+
+/**
+ * Get AI-recommended jobs with wallet deduction
+ * GET /jobs/ai-recommendations
+ * Deducts ₹100 from wallet and returns personalized job recommendations
+ */
+export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    try {
+        // Extract limit from query params (default 50)
+        const url = new URL(req.url);
+        const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '50')));
+        
+        // Get AI recommendations with wallet deduction
+        const result = await AIJobRecommendationService.getAIRecommendedJobs(user.userId, limit);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result.jobs, 'AI-recommended jobs retrieved successfully', {
+                filters: result.filters,
+                total: result.total,
+                cost: 100, // ₹100 deducted
+                limit: limit
+            })
+        };
+    } catch (error: any) {
+        console.error('Error in getAIRecommendedJobs:', error);
+        
+        // Handle insufficient balance error
+        if (error instanceof InsufficientBalanceError || error?.name === 'INSUFFICIENT_WALLET_BALANCE') {
+            return {
+                status: 402, // Payment Required
+                jsonBody: {
+                    success: false,
+                    error: 'Insufficient wallet balance',
+                    errorCode: 'INSUFFICIENT_WALLET_BALANCE',
+                    message: 'Please recharge your wallet to access AI-recommended jobs',
+                    requiredAmount: 100
+                }
+            };
+        }
+        
+        return {
+            status: 500,
+            jsonBody: {
+                success: false,
+                error: 'Failed to retrieve AI recommendations',
+                message: error?.message || 'Internal server error'
+            }
+        };
+    }
+}, ['read:jobs']);
+
+/**
+ * Get AI job filters for user (FREE - no wallet deduction)
+ * GET /jobs/ai-filters
+ * Returns personalized job filters based on user profile
+ * Used by frontend for preview jobs (5 free jobs)
+ */
+export const getAIJobFilters = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    try {
+        // Generate AI filters from user profile
+        const filters = await AIJobRecommendationService.generateJobFilters(user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(filters, 'AI job filters generated successfully')
+        };
+    } catch (error: any) {
+        console.error('Error in getAIJobFilters:', error);
+        
+        return {
+            status: 500,
+            jsonBody: {
+                success: false,
+                error: 'Failed to generate AI filters',
+                message: error?.message || 'Internal server error'
+            }
+        };
+    }
+}, ['read:jobs']);
+
+/**
+ * Check if user has active AI access (paid within 24 hours)
+ * GET /jobs/ai-access-status
+ * Returns whether user needs to pay or has active access
+ */
+export const checkAIAccessStatus = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    try {
+        const hasAccess = await AIJobRecommendationService.hasActiveAIAccess(user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse({
+                hasActiveAccess: hasAccess,
+                requiresPayment: !hasAccess,
+                cost: hasAccess ? 0 : 100,
+                message: hasAccess 
+                    ? 'You have active AI access (valid for 24 hours)' 
+                    : 'Payment required for AI recommendations'
+            }, 'AI access status retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Error in checkAIAccessStatus:', error);
+        
+        return {
+            status: 500,
+            jsonBody: {
+                success: false,
+                error: 'Failed to check AI access status',
+                message: error?.message || 'Internal server error'
+            }
+        };
+    }
+}, ['read:jobs']);

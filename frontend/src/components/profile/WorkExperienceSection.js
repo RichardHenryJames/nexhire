@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { colors, typography } from '../../styles/theme';
@@ -64,29 +64,74 @@ const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperie
   return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
 };
 
-const ExperienceItem = ({ item, onEdit, onDelete, editable }) => {
+const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
-  const startStr = start ? new Date(start).toISOString().split('T')[0] : '';
-  const endStr = end ? new Date(end).toISOString().split('T')[0] : 'Present';
+  const isCurrent = item.IsCurrent || !end;
+  
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+  
+  const startStr = formatDate(start);
+  const endStr = isCurrent ? 'Present' : formatDate(end);
+  const companyName = getCompanyText(item) || 'Company not set';
+  const logoURL = item.LogoURL || item.logoURL || null;
 
   return (
-    <View style={styles.itemContainer}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
-        <Text style={styles.itemCompany}>{getCompanyText(item) || 'Company not set'}</Text>
-        <Text style={styles.itemDates}>{startStr} - {endStr}</Text>
-      </View>
-      {editable && (
-        <View style={styles.itemActions}>
-          <TouchableOpacity onPress={() => onEdit(item)} style={styles.iconButton}>
-            <Ionicons name="create-outline" size={18} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(item)} style={styles.iconButton}>
-            <Ionicons name="trash-outline" size={18} color={colors.danger || '#FF3B30'} />
-          </TouchableOpacity>
+    <View style={styles.timelineItemWrapper}>
+      {/* Timeline connector */}
+      <View style={styles.timelineConnector}>
+        <View style={[styles.timelineDot, isCurrent && styles.timelineDotActive]}>
+          {isCurrent && <View style={styles.timelineDotInner} />}
         </View>
-      )}
+        {!isLast && <View style={styles.timelineLine} />}
+      </View>
+
+      {/* Content card */}
+      <View style={styles.timelineCard}>
+        <View style={styles.timelineCardHeader}>
+          {/* Company logo */}
+          <View style={styles.companyLogoContainer}>
+            {logoURL ? (
+              <Image source={{ uri: logoURL }} style={styles.companyLogo} />
+            ) : (
+              <View style={styles.companyLogoPlaceholder}>
+                <Ionicons name="business" size={20} color={colors.gray400} />
+              </View>
+            )}
+          </View>
+
+          {/* Job info */}
+          <View style={styles.timelineCardContent}>
+            <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
+            <Text style={styles.itemCompany}>{companyName}</Text>
+            <View style={styles.dateRow}>
+              <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
+              <Text style={styles.itemDates}>{startStr} - {endStr}</Text>
+              {isCurrent && (
+                <View style={styles.currentBadge}>
+                  <Text style={styles.currentBadgeText}>Current</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Actions */}
+        {editable && (
+          <View style={styles.timelineCardActions}>
+            <TouchableOpacity onPress={() => onEdit(item)} style={styles.actionButton}>
+              <Ionicons name="create-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onDelete(item)} style={styles.actionButton}>
+              <Ionicons name="trash-outline" size={18} color={colors.danger || '#FF3B30'} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -162,9 +207,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     if (!q || !q.trim()) return list;
     const s = q.toLowerCase();
     return list.filter(o =>
-      (o.name && o.name.toLowerCase().includes(s)) ||
-      (o.website && o.website.toLowerCase().includes(s)) ||
-      (o.industry && o.industry.toLowerCase().includes(s))
+      (o.name && o.name.toLowerCase().includes(s))
     );
   };
 
@@ -212,7 +255,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     const search = async () => {
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null); // No limit
+        // ?? OPTIMIZED: Fetch ALL organizations (no limit) - backend uses covering index
+        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '');
         const raw = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         setOrgResults(applyOrgFilter(raw, debouncedOrgQuery));
       } catch (e) {
@@ -423,12 +467,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       <FlatList
         data={validExperiences}
         keyExtractor={(item, index) => String(getId(item) ?? `idx-${index}`)}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <ExperienceItem
             item={item}
             editable={isEditing}
             onEdit={openEdit}
             onDelete={handleDeletePress}
+            isLast={index === validExperiences.length - 1}
           />
         )}
         ListEmptyComponent={renderEmpty}
@@ -518,8 +563,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                     keyboardShouldPersistTaps="handled"
                     renderItem={({ item }) => (
                       <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
-                        <Text style={styles.orgName}>{item.name}</Text>
-                        {item.website ? <Text style={styles.orgMeta}>{item.website}</Text> : null}
+                        {item.logoURL ? (
+                          <Image source={{ uri: item.logoURL }} style={styles.orgLogo} />
+                        ) : (
+                          <View style={styles.orgLogoPlaceholder}>
+                            <Ionicons name="business" size={16} color={colors.gray400} />
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.orgName}>{item.name}</Text>
+                          {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
+                        </View>
                       </TouchableOpacity>
                     )}
                   />
@@ -746,14 +800,134 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
 const styles = StyleSheet.create({
   sectionContainer: { marginHorizontal: 4 },
-  inlineHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 },
-  inlineAddButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 8, backgroundColor: colors.background },
-  inlineAddText: { color: colors.primary, fontSize: typography.sizes?.sm || 14 },
-  itemContainer: { flexDirection: 'row', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8 },
-  itemTitle: { fontSize: typography.sizes?.md || 16, fontWeight: typography.weights?.medium || '500', color: colors.text },
-  itemCompany: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginTop: 2 },
-  itemDates: { fontSize: typography.sizes?.sm || 14, color: colors.gray500 || '#6B7280', marginTop: 2 },
-  itemActions: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  inlineHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
+  inlineAddButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, backgroundColor: colors.background },
+  inlineAddText: { color: colors.primary, fontSize: typography.sizes?.sm || 14, fontWeight: typography.weights?.medium || '500' },
+  
+  // Timeline styles
+  timelineItemWrapper: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  timelineConnector: {
+    width: 40,
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.gray300 || '#D1D5DB',
+    borderWidth: 2,
+    borderColor: colors.gray400 || '#9CA3AF',
+    zIndex: 1,
+  },
+  timelineDotActive: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineDotInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.white,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.gray300 || '#D1D5DB',
+    marginTop: 4,
+  },
+  timelineCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  timelineCardHeader: {
+    flexDirection: 'row',
+    padding: 12,
+  },
+  companyLogoContainer: {
+    marginRight: 12,
+  },
+  companyLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: colors.gray100,
+  },
+  companyLogoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: colors.gray200 || '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineCardContent: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  itemCompany: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray700 || '#374151',
+    marginBottom: 6,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  itemDates: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.gray500 || '#6B7280',
+  },
+  currentBadge: {
+    backgroundColor: '#DEF7EC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: typography.weights?.semibold || '600',
+    color: '#047857',
+  },
+  timelineCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.gray50 || '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  actionButton: {
+    padding: 6,
+    borderRadius: 6,
+  },
   iconButton: { padding: 8 },
   emptyContainer: { alignItems: 'center', paddingVertical: 16 },
   emptyText: { color: colors.gray600, marginBottom: 8 },
@@ -796,7 +970,9 @@ const styles = StyleSheet.create({
   orgSearchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.background, gap: 8 },
   orgSearchInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 8, fontSize: typography.sizes?.sm || 14 },
   orgList: { maxHeight: 220 },
-  orgItem: { paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
+  orgItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
+  orgLogo: { width: 32, height: 32, borderRadius: 6, marginRight: 10 },
+  orgLogoPlaceholder: { width: 32, height: 32, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   orgName: { color: colors.text, fontSize: typography.sizes?.md || 16 },
   orgMeta: { color: colors.gray600, fontSize: typography.sizes?.sm || 14 },
   manualEntry: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },

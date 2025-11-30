@@ -37,6 +37,13 @@ export class ConflictError extends Error {
     }
 }
 
+export class InsufficientBalanceError extends Error {
+    constructor(message: string = 'Insufficient wallet balance') {
+        super(message);
+        this.name = 'INSUFFICIENT_WALLET_BALANCE';
+    }
+}
+
 // GUID validation utility - FIXED: Improved GUID validation
 export const isValidGuid = (value: string): boolean => {
     if (!value || typeof value !== 'string') return false;
@@ -271,6 +278,7 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         location: query.get('location') || undefined,
         jobTypeIds: (query.get('jobTypeIds') || undefined) as any,
         workplaceTypeIds: (query.get('workplaceTypeIds') || undefined) as any,
+        organizationIds: (query.get('organizationIds') || undefined) as any,
         department: query.get('department') || undefined,
         currencyId: (parseNumber(query.get('currencyId'), 0) || undefined) as any,
         experienceMin: (parseNumber(query.get('experienceMin'), 0) || undefined) as any,

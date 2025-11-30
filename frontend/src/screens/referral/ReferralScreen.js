@@ -107,7 +107,6 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const handleCancelRequest = async (requestId) => {
-    console.log('Cancel button clicked for request:', requestId);
     
     // Find the request object for better UX
     const request = myRequests.find(r => r.RequestID === requestId);
@@ -134,14 +133,10 @@ export default function ReferralScreen({ navigation }) {
 
   // Separate function to perform the actual cancellation
   const performCancelRequest = async (requestId) => {
-    console.log('User confirmed cancellation for request:', requestId);
     try {
-      console.log('Making API call to cancel request...');
       const res = await refopenAPI.cancelReferralRequest(requestId);
-      console.log('API response:', res);
       
       if (res.success) {
-        console.log('? Cancel request successful');
         // Optimistic update
         setMyRequests(prev => prev.map(r => r.RequestID === requestId ? { ...r, Status: 'Cancelled' } : r));
         showToast('Referral request cancelled','success');
@@ -158,7 +153,6 @@ export default function ReferralScreen({ navigation }) {
   // NEW: Enhanced claim request with immediate proof upload
   const handleClaimRequest = async (request) => {
     try {
-      console.log('Claiming request with proof:', request.RequestID);
       
       // Open proof modal instead of immediate claim
       setSelectedRequest(request);
@@ -175,7 +169,6 @@ export default function ReferralScreen({ navigation }) {
     if (!selectedRequest) return;
 
     try {
-      console.log('Submitting proof with claim:', proofData);
       
       // Use the new enhanced API that combines claim + proof
       const result = await refopenAPI.claimReferralRequestWithProof(
@@ -184,7 +177,6 @@ export default function ReferralScreen({ navigation }) {
       );
       
       if (result.success) {
-        console.log('? Claim with proof successful');
         
         // Update UI: move request from "Requests To Me" to "My Referrer Requests"
         setRequestsToMe(prev => prev.filter(r => r.RequestID !== selectedRequest.RequestID));
@@ -214,7 +206,6 @@ export default function ReferralScreen({ navigation }) {
 
   // NEW: View proof of referral
   const handleViewProof = (request) => {
-    console.log('View Proof pressed for request:', request.RequestID, 'Status:', request.Status, 'ProofURL:', request.ProofFileURL);
     if (!request.ProofFileURL) {
       Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
       return;
@@ -224,10 +215,8 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const handleVerifyReferral = async (requestId) => {
-    console.log('? Verify pressed for request:', requestId);
     try {
       const result = await refopenAPI.verifyReferralCompletion(requestId, true);
-      console.log('? Verify API result:', result);
       if (result.success) {
         showToast('Referral verified', 'success');
         // Optimistically update local state so button disappears without full reload
@@ -284,31 +273,62 @@ export default function ReferralScreen({ navigation }) {
     return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
-  const renderMyRequestCard = (request) => (
-    <View key={request.RequestID} style={styles.requestCard}>
-      <View style={styles.requestHeader}>
-        {/* Company Logo */}
-        <View style={styles.logoContainer}>
-          {request.OrganizationLogo ? (
-            <Image 
-              source={{ uri: request.OrganizationLogo }} 
-              style={styles.companyLogo}
-              onError={() => console.log('Logo load error for:', request.CompanyName)}
-            />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="business-outline" size={24} color={colors.gray500} />
-            </View>
-          )}
-        </View>
+  const renderMyRequestCard = (request) => {
+    // Determine if this is an external or internal referral
+    const isExternalJob = !!request.ExtJobID;
+    const isInternalJob = !!request.JobID && !request.ExtJobID;
+    
+    return (
+      <View key={request.RequestID} style={styles.requestCard}>
+        <View style={styles.requestHeader}>
+          {/* Company Logo */}
+          <View style={styles.logoContainer}>
+            {request.OrganizationLogo ? (
+              <Image
+                source={{ uri: request.OrganizationLogo }}
+                style={styles.companyLogo}
+                onError={() => {}}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={24} color={colors.gray500} />
+              </View>
+            )}
+          </View>
 
-        <View style={styles.requestInfo}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {request.JobTitle || 'Job Title'}
-          </Text>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {request.CompanyName || 'Company'}
-          </Text>
+          <View style={styles.requestInfo}>
+            {/* Job Type Badge */}
+            <View style={styles.jobTypeBadgeContainer}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {request.JobTitle || 'Job Title'}
+              </Text>
+              {isExternalJob && (
+                <View style={styles.externalBadge}>
+                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
+                  <Text style={styles.externalBadgeText}>External</Text>
+                </View>
+              )}
+              {isInternalJob && (
+                <View style={styles.internalBadge}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
+                  <Text style={styles.internalBadgeText}>Internal</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.companyName} numberOfLines={1}>
+              {request.CompanyName || 'Company'}
+            </Text>
+            
+            {/* Show External Job ID for external referrals */}
+            {isExternalJob && request.ExtJobID && (
+              <View style={styles.externalJobIdRow}>
+                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
+                <Text style={styles.externalJobIdText} numberOfLines={1}>
+                  Job ID: {request.ExtJobID}
+                </Text>
+              </View>
+            )}
           <View style={styles.timestampRow}>
             <Ionicons name="time-outline" size={14} color={colors.gray500} />
             <Text style={styles.requestDate}>
@@ -370,77 +390,134 @@ export default function ReferralScreen({ navigation }) {
         )}
       </View>
     </View>
-  );
+    );
+  };
 
-  const renderRequestToMeCard = (request) => (
-    <View key={request.RequestID} style={styles.requestCard}>
-      <View style={styles.requestHeader}>
-        {/* Company Logo */}
-        <View style={styles.logoContainer}>
-          {request.OrganizationLogo ? (
-            <Image 
-              source={{ uri: request.OrganizationLogo }} 
-              style={styles.companyLogo}
-              onError={() => console.log('Logo load error for:', request.CompanyName)}
-            />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="business-outline" size={24} color={colors.gray500} />
+  const renderRequestToMeCard = (request) => {
+    // ? NEW: Determine if this is an external or internal referral
+    const isExternalJob = !!request.ExtJobID;
+    const isInternalJob = !!request.JobID && !request.ExtJobID;
+    
+    // For internal jobs, make the card clickable
+    const CardWrapper = isInternalJob ? TouchableOpacity : View;
+    const cardWrapperProps = isInternalJob 
+      ? { 
+          onPress: () => {
+            // Pass fromReferralRequest parameter to hide action buttons
+            navigation.navigate('JobDetails', { 
+              jobId: request.JobID,
+              fromReferralRequest: true // Hide Apply/Ask Referral buttons
+            });
+          },
+          activeOpacity: 0.7
+        }
+      : {};
+    
+    return (
+      <CardWrapper key={request.RequestID} style={styles.requestCard} {...cardWrapperProps}>
+        <View style={styles.requestHeader}>
+          {/* Company Logo */}
+          <View style={styles.logoContainer}>
+            {request.OrganizationLogo ? (
+              <Image
+                source={{ uri: request.OrganizationLogo }}
+                style={styles.companyLogo}
+                onError={() => {}}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="business-outline" size={24} color={colors.gray500} />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.requestInfo}>
+            {/* ? NEW: Job Type Badge */}
+            <View style={styles.jobTypeBadgeContainer}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {request.JobTitle || 'Job Title'}
+              </Text>
+              {isExternalJob && (
+                <View style={styles.externalBadge}>
+                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
+                  <Text style={styles.externalBadgeText}>External</Text>
+                </View>
+              )}
+              {isInternalJob && (
+                <View style={styles.internalBadge}>
+                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
+                  <Text style={styles.internalBadgeText}>Internal</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
-
-        <View style={styles.requestInfo}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {request.JobTitle || 'Job Title'}
-          </Text>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {request.CompanyName || 'Company'}
-          </Text>
-          <View style={styles.seekerRow}>
-            <Ionicons name="person-outline" size={14} color={colors.primary} />
-            <Text style={styles.seekerInfo}>
-              Requested by {request.ApplicantName || 'Job Seeker'}
-            </Text>
-          </View>
-          <View style={styles.timestampRow}>
-            <Ionicons name="time-outline" size={14} color={colors.gray500} />
-            <Text style={styles.requestDate}>
-              {formatDate(request.RequestedAt)}
-            </Text>
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.requestActions}>
-        {request.Status === 'Pending' && (
-          <>
-            <TouchableOpacity 
-              style={styles.referBtn}
-              onPress={() => handleClaimRequest(request)}
-            >
-              <Ionicons name="people" size={16} color="#fff" />
-              <Text style={styles.referText}>Refer Now</Text>
-            </TouchableOpacity>
             
-            <TouchableOpacity style={styles.dismissBtn}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </TouchableOpacity>
-          </>
+            <Text style={styles.companyName} numberOfLines={1}>
+              {request.CompanyName || 'Company'}
+            </Text>
+            
+            {/* ? NEW: Show External Job ID for external referrals */}
+            {isExternalJob && request.ExtJobID && (
+              <View style={styles.externalJobIdRow}>
+                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
+                <Text style={styles.externalJobIdText} numberOfLines={1}>
+                  Job ID: {request.ExtJobID}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.seekerRow}>
+              <Ionicons name="person-outline" size={14} color={colors.primary} />
+              <Text style={styles.seekerInfo}>
+                Requested by {request.ApplicantName || 'Job Seeker'}
+              </Text>
+            </View>
+            <View style={styles.timestampRow}>
+              <Ionicons name="time-outline" size={14} color={colors.gray500} />
+              <Text style={styles.requestDate}>
+                {formatDate(request.RequestedAt)}
+              </Text>
+            </View>
+          </View>
+        </View>
+        
+        {/* ? NEW: Click hint for internal jobs */}
+        {isInternalJob && (
+          <View style={styles.clickHintRow}>
+            <Ionicons name="hand-left-outline" size={14} color={colors.primary} />
+            <Text style={styles.clickHintText}>Tap to view full job details</Text>
+          </View>
         )}
         
-        {request.Status === 'Claimed' && (
-          <TouchableOpacity 
-            style={styles.proofBtn}
-            onPress={() => handleSubmitProof(request)}
-          >
-            <Ionicons name="camera" size={16} color="#fff" />
-            <Text style={styles.proofText}>Submit Proof</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
+        <View style={styles.requestActions}>
+          {request.Status === 'Pending' && (
+            <>
+              <TouchableOpacity 
+                style={styles.referBtn}
+                onPress={() => handleClaimRequest(request)}
+              >
+                <Ionicons name="people" size={16} color="#fff" />
+                <Text style={styles.referText}>Refer Now</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.dismissBtn}>
+                <Text style={styles.dismissText}>Dismiss</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {request.Status === 'Claimed' && (
+            <TouchableOpacity 
+              style={styles.proofBtn}
+              onPress={() => handleSubmitProof(request)}
+            >
+              <Ionicons name="camera" size={16} color="#fff" />
+              <Text style={styles.proofText}>Submit Proof</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </CardWrapper>
+    );
+  };
 
   const renderTabContent = () => {
     if (loading) {
@@ -631,7 +708,6 @@ colors={['#FEB800', '#FF8C00']}
               <TouchableOpacity 
                 style={[styles.confirmBtn, styles.keepBtn]} 
                 onPress={() => {
-                  console.log('Keep request (web modal)');
                   setCancelTarget(null);
                 }}
               >
@@ -640,7 +716,6 @@ colors={['#FEB800', '#FF8C00']}
               <TouchableOpacity 
                 style={[styles.confirmBtn, styles.cancelReqBtn]} 
                 onPress={() => {
-                  console.log('Confirm cancel (web modal)');
                   const requestId = cancelTarget.requestId;
                   setCancelTarget(null);
                   performCancelRequest(requestId);
@@ -1076,5 +1151,81 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 16,
     fontWeight: typography.weights.bold,
+  },
+  
+  // ? NEW: Job Type Badge Styles
+  jobTypeBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  externalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  externalBadgeText: {
+    fontSize: typography.sizes.xxs,
+    color: '#8B5CF6',
+    fontWeight: typography.weights.semibold,
+    letterSpacing: 0.3,
+  },
+  internalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  internalBadgeText: {
+    fontSize: typography.sizes.xxs,
+    color: '#3B82F6',
+    fontWeight: typography.weights.semibold,
+    letterSpacing: 0.3,
+  },
+  
+  // ? NEW: External Job ID Row
+  externalJobIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  externalJobIdText: {
+    fontSize: typography.sizes.xs,
+    color: '#8B5CF6',
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
+    letterSpacing: 0.2,
+  },
+  
+  // ? NEW: Tap Hint for Internal Jobs
+  clickHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  clickHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    marginLeft: 4,
+    fontWeight: typography.weights.medium,
+    fontStyle: 'italic',
   },
 });

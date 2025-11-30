@@ -547,7 +547,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const loadCountries = async () => {
     try {
       setLoadingCountries(true);
-      console.log('Loading countries from API...');
+      
       
       const response = await refopenAPI.getCountries();
       
@@ -561,7 +561,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         }));
         
         setCountries(transformedCountries);
-        console.log(`? Loaded ${transformedCountries.length} countries with flag emojis`);
+        
       } else {
         throw new Error(response.error || 'Failed to load countries');
       }
@@ -580,7 +580,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       ];
       
       setCountries(fallbackCountries);
-      console.log('Using fallback countries due to API error');
+      
     } finally {
       setLoadingCountries(false);
     }
@@ -591,7 +591,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
       setLoading(true);
       setError(null);
       
-      console.log(`Loading colleges for country: ${formData.selectedCountry}`);
       
       const response = await refopenAPI.getColleges(formData.selectedCountry);
       
@@ -612,7 +611,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         }));
         
         setAllColleges(transformedColleges);
-        console.log(`? Loaded ${transformedColleges.length} colleges`);
+        
       } else {
         throw new Error(response.error || 'Failed to load educational institutions');
       }
@@ -714,7 +713,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
       gpa: formData.gpa || '' // Always include, even if empty
     };
 
-    console.log('Enhanced Education data prepared for registration:', finalFormData);
     
     navigation.navigate('JobPreferencesScreen', { 
       userType, 

@@ -109,7 +109,7 @@ class FrontendConfigService {
     };
 
     if (ENABLE_CONFIG_LOGS) {
-      console.log('FrontendConfig Debug:', { config, shouldForceProd, hasValidExtra });
+      
     }
 
     return config;
@@ -138,8 +138,6 @@ class FrontendConfigService {
     if (errors.length > 0) {
       throw new Error(`Frontend configuration validation failed:\n${errors.join('\n')}`);
     }
-
-    console.log(`✅ Frontend configuration loaded for ${this.config.app.env} environment`);
   }
 
   // --- Getters ---
@@ -218,7 +216,7 @@ class FrontendConfigService {
 
   logConfig() {
     if (this.shouldLog('debug')) {
-      console.log('Frontend Configuration:', this.getConfigSummary());
+      
     }
   }
 }

@@ -521,12 +521,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                   
                   <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.website && (
-                      <Text style={[styles.modalItemText, { color: colors.gray600, fontSize: typography.sizes.sm }]}>
-                        {item.website}
-                      </Text>
-                    )}
-                    {item.industry && (
+                    {item.industry && item.industry !== 'Other' && (
                       <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
                         {item.industry}
                       </Text>

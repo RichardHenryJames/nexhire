@@ -33,6 +33,9 @@ import {
   getJobsByOrganization,
   getJobTypes,
   getCurrencies,
+  getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
+  getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
+  checkAIAccessStatus, // NEW: Check if user has active 24hr AI access
 } from "./src/controllers/job.controller";
 import {
   applyForJob,
@@ -45,6 +48,7 @@ import {
 } from "./src/controllers/job-application.controller";
 import {
   getOrganizations,
+  getOrganizationById,
   getColleges,
   getUniversitiesByCountry,
   getIndustries,
@@ -86,6 +90,7 @@ import {
   cancelReferralRequest,
   getReferrerStats,
   getReferralPointsHistory, // NEW: Add points history import
+  convertPointsToWallet, // NEW: Convert points to wallet
 } from "./src/controllers/referral.controller";
 
 // NEW: Payment controllers - Razorpay Integration
@@ -511,6 +516,30 @@ app.http("organization-jobs", {
   handler: withErrorHandling(getJobsByOrganization),
 });
 
+// NEW: AI-recommended jobs with wallet deduction
+app.http("ai-recommended-jobs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/ai-recommendations",
+  handler: getAIRecommendedJobs,
+});
+
+// NEW: AI job filters (FREE - no wallet deduction, for preview)
+app.http("ai-job-filters", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/ai-filters",
+  handler: getAIJobFilters,
+});
+
+// NEW: Check AI access status (24hr validity)
+app.http("ai-access-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/ai-access-status",
+  handler: checkAIAccessStatus,
+});
+
 // ========================================================================
 // JOB APPLICATION ENDPOINTS
 // ========================================================================
@@ -594,6 +623,13 @@ app.http("reference-organizations", {
   authLevel: "anonymous",
   route: "reference/organizations",
   handler: withErrorHandling(getOrganizations),
+});
+
+app.http("reference-organization-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/organizations/{id}",
+  handler: withErrorHandling(getOrganizationById),
 });
 
 app.http("reference-colleges", {
@@ -1019,6 +1055,14 @@ app.http("referral-points-history", {
   authLevel: "anonymous",
   route: "referral/points-history",
   handler: withErrorHandling(getReferralPointsHistory),
+});
+
+// NEW: Convert referral points to wallet balance
+app.http("referral-points-convert", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/points/convert-to-wallet",
+  handler: withErrorHandling(convertPointsToWallet),
 });
 
 // ========================================================================
@@ -2098,7 +2142,7 @@ export {};
  * GET    /employers/{userId}/profile - Get employer profile
  * PUT    /employers/{userId}/profile - Update employer profile
  *
- * JOB MANAGEMENT (8 endpoints):
+ * JOB MANAGEMENT (9 endpoints):
  * GET    /jobs - List all jobs
  * POST   /jobs - Create new job
  * GET    /jobs/{id} - Get job details
@@ -2108,6 +2152,7 @@ export {};
  * POST   /jobs/{id}/close - Close job
  * GET    /search/jobs - Search jobs
  * GET    /organizations/{id}/jobs - Get organization jobs
+ * GET    /jobs/ai-recommendations - Get AI-recommended jobs (₹100 wallet deduction)
  *
  * JOB APPLICATIONS (6 endpoints):
  * POST   /applications - Apply for job

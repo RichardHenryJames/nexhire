@@ -31,10 +31,8 @@ export default function ReferralProofModal({
 
   const handleImagePicker = useCallback(async () => {
     try {
-      console.log('Image picker triggered');
       
       // For now, let's go directly to gallery to test
-      console.log('Opening gallery directly...');
       
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -44,10 +42,8 @@ export default function ReferralProofModal({
         base64: false
       });
 
-      console.log('Gallery result:', result);
 
       if (!result.canceled && result.assets?.[0]) {
-        console.log('Setting proof image from gallery');
         setProofImage(result.assets[0]);
       }
     } catch (error) {
@@ -58,10 +54,8 @@ export default function ReferralProofModal({
 
   const openCamera = useCallback(async () => {
     try {
-      console.log('Opening camera...');
       
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      console.log('Camera permission status:', status);
       
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Camera permissions are required to take a photo.');
@@ -76,10 +70,8 @@ export default function ReferralProofModal({
         base64: false
       });
 
-      console.log('Camera result:', result);
 
       if (!result.canceled && result.assets?.[0]) {
-        console.log('Setting proof image from camera');
         setProofImage(result.assets[0]);
       }
     } catch (error) {
@@ -89,9 +81,6 @@ export default function ReferralProofModal({
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    console.log('Submit proof called');
-    console.log('Has proof image:', !!proofImage);
-    console.log('Description length:', description.trim().length);
     
     if (!proofImage) {
       Alert.alert('Proof Required', 'Please upload a screenshot showing your referral');
@@ -104,13 +93,10 @@ export default function ReferralProofModal({
     }
 
     try {
-      console.log('Starting upload process...');
       setUploading(true);
 
       // Upload image to storage
-      console.log('Uploading image:', proofImage.uri);
       const uploadResponse = await refopenAPI.uploadFile(proofImage.uri, 'referral-proofs');
-      console.log('Upload response:', uploadResponse);
       
       if (!uploadResponse.success) {
         throw new Error(uploadResponse.error || 'Failed to upload proof image');
@@ -122,13 +108,13 @@ export default function ReferralProofModal({
         proofDescription: description.trim()
       };
 
-      console.log('Proof data prepared:', proofData);
+      
 
       // Call the submit handler
-      console.log('Calling onSubmit...');
+      
       await onSubmit(proofData);
       
-      console.log('Submit successful, resetting form...');
+      
       // Reset form
       setProofImage(null);
       setDescription('');
@@ -138,7 +124,7 @@ export default function ReferralProofModal({
       console.error('Submit proof error:', error);
       Alert.alert('Error', error.message || 'Failed to submit proof');
     } finally {
-      console.log('Finishing upload process...');
+      
       setUploading(false);
     }
   }, [proofImage, description, onSubmit]);

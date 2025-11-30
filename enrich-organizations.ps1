@@ -44,23 +44,29 @@ Import-Module SqlServer -Force
 # ================================================================
 
 function Get-ClearbitLogo {
-    param([string]$Domain)
-    
-    if ([string]::IsNullOrEmpty($Domain)) { 
-        return $null 
-  }
-    
-    try {
-        # Clean the domain properly
-        $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
-        
-      # Skip if domain is invalid
-        if ($cleanDomain -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$') {
-            return $null
-        }
-        
+  param([string]$Domain)
+
+  if ([string]::IsNullOrEmpty($Domain)) {
+      return $null
+}
+
+  try {
+      # Clean the domain properly
+      $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
+
+      # ✅ PREVENTION: Skip Wikipedia, LinkedIn, and other invalid domains
+      if ($cleanDomain -match 'wikipedia\.org|wikimedia\.org|wiki\.|linkedin\.com|facebook\.com|twitter\.com|instagram\.com') {
+          Write-Host "         ⚠️ Skipping social media/wiki domain: $cleanDomain" -ForegroundColor Yellow
+          return $null
+      }
+
+    # Skip if domain is invalid
+      if ($cleanDomain -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$') {
+          return $null
+      }
+
         $logoUrl = "https://logo.clearbit.com/$cleanDomain"
-        
+
      # Test if logo exists
         $response = Invoke-WebRequest -Uri $logoUrl -Method Head -TimeoutSec 5 -ErrorAction SilentlyContinue
    if ($response.StatusCode -eq 200) {
@@ -69,7 +75,7 @@ function Get-ClearbitLogo {
     } catch {
         # Logo not found or error occurred
     }
- 
+
     return $null
 }
 
@@ -78,29 +84,29 @@ function Get-ClearbitCompanyInfo {
         [string]$Domain,
         [string]$ApiKey
     )
-    
-    if ([string]::IsNullOrEmpty($Domain) -or [string]::IsNullOrEmpty($ApiKey)) { 
-        return $null 
+
+    if ([string]::IsNullOrEmpty($Domain) -or [string]::IsNullOrEmpty($ApiKey)) {
+        return $null
     }
-    
+
     try {
    $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
         $url = "https://company.clearbit.com/v2/companies/find?domain=$cleanDomain"
-     
+
     $headers = @{
             "Authorization" = "Bearer $ApiKey"
         }
-   
+
         $response = Invoke-RestMethod -Uri $url -Headers $headers -TimeoutSec 10 -ErrorAction Stop
-        
+
  $location = if ($response.location) {
        "$($response.location.city), $($response.location.country)"
         } else { $null }
-        
+
      $employeeCount = if ($response.metrics.employees) {
          "$($response.metrics.employees) employees"
     } else { $null }
-      
+
         return @{
        Name = $response.name
             Domain = $response.domain
@@ -124,23 +130,29 @@ function Get-ClearbitCompanyInfo {
 
 function Search-CompanyWebsite {
     param([string]$CompanyName)
-    
-    if ([string]::IsNullOrEmpty($CompanyName)) { 
-    return $null 
+
+    if ([string]::IsNullOrEmpty($CompanyName)) {
+    return $null
  }
-    
+
     try {
      # Try Google search approach (using DuckDuckGo as it doesn't require API key)
         Add-Type -AssemblyName System.Web
         $searchTerm = [System.Web.HttpUtility]::UrlEncode("$CompanyName official website")
         $url = "https://html.duckduckgo.com/html/?q=$searchTerm"
-        
+
         $response = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -ErrorAction Stop
-        
+
         # Try to extract first result URL
         if ($response.Content -match 'uddg=([^"&]+)') {
     $website = [System.Web.HttpUtility]::UrlDecode($matches[1])
-  
+
+            # ✅ PREVENTION: Skip Wikipedia and LinkedIn URLs
+            if ($website -match 'wikipedia\.org|wikimedia\.org|wiki\.|linkedin\.com|facebook\.com|twitter\.com') {
+                Write-Host "         ⚠️ Skipping social media/wiki website for $CompanyName" -ForegroundColor Yellow
+                return $null
+            }
+
             # Validate it's a proper URL
             if ($website -match '^https?://') {
       $uri = [System.Uri]$website
@@ -150,15 +162,22 @@ function Search-CompanyWebsite {
 } catch {
         # Search failed
     }
-    
+
  # Fallback: Try common domain patterns
     $companySlug = $CompanyName.ToLower() -replace '\s+', '' -replace '[^a-z0-9]', ''
+    
+    # ✅ PREVENTION: Don't try to validate social media company names
+    if ($companySlug -match 'linkedin|facebook|twitter|instagram|wikipedia|wiki') {
+        Write-Host "         ⚠️ Skipping social media company name: $CompanyName" -ForegroundColor Yellow
+        return $null
+    }
+    
     $possibleDomains = @(
       "https://www.$companySlug.com",
 "https://www.$companySlug.io",
         "https://www.$companySlug.co"
     )
-    
+
     foreach ($domain in $possibleDomains) {
         try {
   $test = Invoke-WebRequest -Uri $domain -Method Head -TimeoutSec 5 -ErrorAction SilentlyContinue
@@ -169,23 +188,23 @@ function Search-CompanyWebsite {
             continue
         }
     }
-    
+
     return $null
 }
 
 function Get-LinkedInUrl {
     param([string]$CompanyName)
-    
-  if ([string]::IsNullOrEmpty($CompanyName)) { 
-        return $null 
+
+  if ([string]::IsNullOrEmpty($CompanyName)) {
+        return $null
     }
-    
+
     $sanitized = $CompanyName.ToLower() `
         -replace '[^a-z0-9\s]', '' `
         -replace '\s+', '-' `
         -replace '-+', '-' `
         -replace '^-|-$', ''
-    
+
     return "https://www.linkedin.com/company/$sanitized"
 }
 
@@ -198,10 +217,10 @@ function Get-OrganizationsToEnrich {
      [string]$ConnectionString,
         [bool]$OnlyMissing
     )
-    
+
     $query = if ($OnlyMissing) {
   @"
-SELECT 
+SELECT
     OrganizationID,
     Name,
 Website,
@@ -213,8 +232,8 @@ Website,
 FROM Organizations
 WHERE IsActive = 1
   AND (
-    Website IS NULL OR 
-    LogoURL IS NULL OR 
+    Website IS NULL OR
+    LogoURL IS NULL OR
     LinkedInProfile IS NULL OR
     Description IS NULL OR
     Industry IS NULL
@@ -223,7 +242,7 @@ ORDER BY CreatedAt DESC
 "@
     } else {
         @"
-SELECT 
+SELECT
     OrganizationID,
     Name,
     Website,
@@ -237,7 +256,7 @@ WHERE IsActive = 1
 ORDER BY CreatedAt DESC
 "@
     }
-    
+
     return Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -QueryTimeout 60
 }
 
@@ -247,91 +266,91 @@ function Update-OrganizationData {
         [int]$OrganizationID,
     [hashtable]$Data
     )
-    
+
     $updateParts = @()
     $parameters = @()
     $paramIndex = 0
-    
+
     if ($Data.Website) {
         $updateParts += "Website = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.Website; SqlDbType = [System.Data.SqlDbType]::NVarChar }
  $paramIndex++
     }
-    
+
     if ($Data.LogoURL) {
         $updateParts += "LogoURL = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.LogoURL; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($Data.LinkedInProfile) {
      $updateParts += "LinkedInProfile = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.LinkedInProfile; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($Data.Description) {
         $updateParts += "Description = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.Description; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($Data.Industry) {
         $updateParts += "Industry = @param$paramIndex"
 $parameters += @{ Name = "@param$paramIndex"; Value = $Data.Industry; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($Data.Headquarters) {
       $updateParts += "Headquarters = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.Headquarters; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($Data.EstablishedDate) {
      $updateParts += "EstablishedDate = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.EstablishedDate; SqlDbType = [System.Data.SqlDbType]::Date }
         $paramIndex++
     }
-    
+
     if ($Data.Size) {
     $updateParts += "Size = @param$paramIndex"
         $parameters += @{ Name = "@param$paramIndex"; Value = $Data.Size; SqlDbType = [System.Data.SqlDbType]::NVarChar }
         $paramIndex++
     }
-    
+
     if ($updateParts.Count -eq 0) {
         return $false
     }
-    
+
   $updateParts += "UpdatedAt = GETUTCDATE()"
-    
+
     $query = @"
 UPDATE Organizations
 SET $($updateParts -join ', ')
 WHERE OrganizationID = @orgId
 "@
-    
+
     try {
         $connection = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
         $command = $connection.CreateCommand()
         $command.CommandText = $query
         $command.CommandTimeout = 30
-      
+
         # Add parameters
         foreach ($param in $parameters) {
   $sqlParam = $command.Parameters.Add($param.Name, $param.SqlDbType)
           $sqlParam.Value = $param.Value
  }
-        
+
   # Add organization ID parameter
         $orgParam = $command.Parameters.Add("@orgId", [System.Data.SqlDbType]::Int)
         $orgParam.Value = $OrganizationID
-        
+
         $connection.Open()
         $rowsAffected = $command.ExecuteNonQuery()
         $connection.Close()
-        
+
     return $rowsAffected -gt 0
     } catch {
       Write-Host "   ❌ Database update failed: $($_.Exception.Message)" -ForegroundColor Red
@@ -355,63 +374,63 @@ function Enrich-Organization {
 [bool]$SkipWebsites,
       [bool]$SkipLinkedIn
     )
-    
+
     $updates = @{}
     $enrichmentCount = 0
-    
+
     # 1. Find website if missing
  if ([string]::IsNullOrEmpty($Organization.Website) -and -not $SkipWebsites) {
         Write-Host "      🔍 Searching for website..." -ForegroundColor Gray
-        
+
         $website = Search-CompanyWebsite -CompanyName $Organization.Name
         if ($website) {
      $updates.Website = $website
     Write-Host "         ✅ Found: $website" -ForegroundColor Green
           $enrichmentCount++
    }
-        
+
         Start-Sleep -Milliseconds $ApiRateLimitDelayMs
     }
-    
+
     $websiteToUse = if ($updates.Website) { $updates.Website } else { $Organization.Website }
-    
+
     # 2. Get logo if missing and we have a website
     if ([string]::IsNullOrEmpty($Organization.LogoURL) -and -not $SkipLogos -and $websiteToUse) {
         Write-Host "      🎨 Fetching logo..." -ForegroundColor Gray
-        
+
 $logo = Get-ClearbitLogo -Domain $websiteToUse
         if ($logo) {
           $updates.LogoURL = $logo
     Write-Host "         ✅ Found: Logo" -ForegroundColor Green
         $enrichmentCount++
         }
-      
+
         Start-Sleep -Milliseconds 500
     }
-    
+
     # 3. Get comprehensive data from Clearbit if API key provided
     if ($websiteToUse -and -not [string]::IsNullOrEmpty($ClearbitApiKey)) {
    Write-Host "      📊 Fetching company data from Clearbit..." -ForegroundColor Gray
         Start-Sleep -Milliseconds $ApiRateLimitDelayMs
-        
+
         $clearbitData = Get-ClearbitCompanyInfo -Domain $websiteToUse -ApiKey $ClearbitApiKey
-        
+
     if ($clearbitData) {
      if ([string]::IsNullOrEmpty($Organization.Description) -and $clearbitData.Description) {
                 $updates.Description = $clearbitData.Description
        $enrichmentCount++
             }
-    
+
             if ([string]::IsNullOrEmpty($Organization.Industry) -and $clearbitData.Industry) {
             $updates.Industry = $clearbitData.Industry
     $enrichmentCount++
 }
-            
+
     if ([string]::IsNullOrEmpty($Organization.Headquarters) -and $clearbitData.Location) {
       $updates.Headquarters = $clearbitData.Location
    $enrichmentCount++
    }
-            
+
        if ($clearbitData.FoundedYear) {
            try {
         $updates.EstablishedDate = [datetime]::Parse("$($clearbitData.FoundedYear)-01-01")
@@ -420,23 +439,23 @@ $logo = Get-ClearbitLogo -Domain $websiteToUse
         # Invalid date
      }
             }
- 
+
         if ($clearbitData.EmployeeCount) {
       $updates.Size = $clearbitData.EmployeeCount
     $enrichmentCount++
     }
-          
+
       if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and $clearbitData.LinkedIn) {
                 $updates.LinkedInProfile = $clearbitData.LinkedIn
        $enrichmentCount++
    }
-        
+
             # Better logo from Clearbit if we don't have one yet
             if ([string]::IsNullOrEmpty($Organization.LogoURL) -and [string]::IsNullOrEmpty($updates.LogoURL) -and $clearbitData.Logo) {
        $updates.LogoURL = $clearbitData.Logo
                 $enrichmentCount++
 }
-            
+
             if ($enrichmentCount -gt 0) {
   Write-Host "         ✅ Found: $enrichmentCount fields from Clearbit" -ForegroundColor Green
  } else {
@@ -444,14 +463,14 @@ $logo = Get-ClearbitLogo -Domain $websiteToUse
             }
         }
     }
-    
+
     # 4. Generate LinkedIn URL if missing
     if ([string]::IsNullOrEmpty($Organization.LinkedInProfile) -and [string]::IsNullOrEmpty($updates.LinkedInProfile) -and -not $SkipLinkedIn) {
     $updates.LinkedInProfile = Get-LinkedInUrl -CompanyName $Organization.Name
         Write-Host "    🔗 Generated: LinkedIn URL" -ForegroundColor Cyan
      $enrichmentCount++
     }
- 
+
     return @{
         Updates = $updates
         Count = $enrichmentCount
@@ -507,13 +526,13 @@ $totalBatches = [Math]::Ceiling($organizations.Count / $BatchSize)
 for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
   Write-Host "   📦 Processing Batch $batchNumber of $totalBatches" -ForegroundColor Yellow
     Write-Host ""
-    
+
   $batch = $organizations[$i..[Math]::Min($i + $BatchSize - 1, $organizations.Count - 1)]
-    
+
     foreach ($org in $batch) {
         try {
             Write-Host "      🏢 $($org.Name)" -ForegroundColor White
-   
+
       # Enrich the organization
           $result = Enrich-Organization `
            -Organization $org `
@@ -521,7 +540,7 @@ for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
   -SkipLogos $SkipLogos `
         -SkipWebsites $SkipWebsites `
        -SkipLinkedIn $SkipLinkedIn
-    
+
             if ($result.Count -eq 0) {
     Write-Host "         ℹ️ No enrichment needed" -ForegroundColor Yellow
         $skippedCount++
@@ -531,7 +550,7 @@ for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
         -ConnectionString $ConnectionString `
          -OrganizationID $org.OrganizationID `
        -Data $result.Updates
-                
+
               if ($updated) {
           Write-Host "         ✅ Updated $($result.Count) fields in database" -ForegroundColor Green
            $enrichedCount++
@@ -540,13 +559,13 @@ for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
         Write-Host "    ⚠️ Database update returned no changes" -ForegroundColor Yellow
       }
       }
-            
+
         } catch {
             Write-Host "         ❌ Error: $($_.Exception.Message)" -ForegroundColor Red
  $errorCount++
         }
     }
-    
+
     Write-Host ""
     $batchNumber++
 }
@@ -571,7 +590,7 @@ Write-Host "   📝 Total processed: $($organizations.Count)" -ForegroundColor W
 
 # Get enrichment statistics
 $stats = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query @"
-SELECT 
+SELECT
     COUNT(*) as Total,
     SUM(CASE WHEN LogoURL IS NOT NULL THEN 1 ELSE 0 END) as WithLogos,
     SUM(CASE WHEN Website IS NOT NULL THEN 1 ELSE 0 END) as WithWebsites,

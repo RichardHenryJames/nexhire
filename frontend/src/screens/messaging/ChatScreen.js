@@ -25,7 +25,7 @@ export default function ChatScreen() {
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  const { conversationId, otherUserName, otherUserId } = route.params;
+  const { conversationId, otherUserName, otherUserId, otherUserProfilePic } = route.params;
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,9 @@ export default function ChatScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [signalRConnected, setSignalRConnected] = useState(false);
   const [usePolling, setUsePolling] = useState(false);
-  const [otherUserProfile, setOtherUserProfile] = useState(null);
+  const [otherUserProfile, setOtherUserProfile] = useState(
+    otherUserProfilePic ? { profilePictureUrl: otherUserProfilePic } : null
+  );
   const [showMenu, setShowMenu] = useState(false); // For web dropdown
 
   const connectionStatusRef = useRef({ connected: false, polling: false });
@@ -549,84 +551,27 @@ export default function ChatScreen() {
             {/* Name Only */}
             <div style={{ flex: 1 }}>
               <div
-                style={{ fontSize: 16, fontWeight: "600", color: colors.white }}
+                style={{ fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
               >
                 {otherUserName}
               </div>
             </div>
           </div>
 
-          {/* Menu Button */}
+          {/* Call Button */}
           <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Conversation Options", "Choose an action", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete Conversation",
-                  style: "destructive",
-                  onPress: async () => {
-                    Alert.alert(
-                      "Delete Conversation",
-                      "Are you sure you want to delete this conversation?",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              await messagingApi.archiveConversation(
-                                conversationId,
-                                true
-                              );
-                              Alert.alert("Success", "Conversation deleted");
-                              navigation.goBack();
-                            } catch (error) {
-                              Alert.alert(
-                                "Error",
-                                "Failed to delete conversation"
-                              );
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  },
-                },
-                {
-                  text: "Block User",
-                  style: "destructive",
-                  onPress: async () => {
-                    Alert.alert(
-                      "Block User",
-                      "Are you sure you want to block this user? You won't receive messages from them.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Block",
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              await messagingApi.blockUser(
-                                otherUserId,
-                                "Blocked from chat"
-                              );
-                              Alert.alert("Success", "User blocked");
-                              navigation.goBack();
-                            } catch (error) {
-                              Alert.alert("Error", "Failed to block user");
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  },
-                },
-              ]);
-            }}
+            onPress={() => window.alert("Feature Coming Soon\nCall feature is under development")}
+            style={{ padding: 4, marginRight: 12 }}
+          >
+            <Ionicons name="call" size={24} color={colors.white} />
+          </TouchableOpacity>
+
+          {/* Video Call Button */}
+          <TouchableOpacity
+            onPress={() => window.alert("Feature Coming Soon\nVideo call feature is under development")}
             style={{ padding: 4 }}
           >
-            <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+            <Ionicons name="videocam" size={24} color={colors.white} />
           </TouchableOpacity>
         </div>
 
@@ -694,11 +639,12 @@ export default function ChatScreen() {
                     {!isMine && (
                       <div
                         style={{
-                          fontSize: 12,
+                          fontSize: 16,
                           color: colors.gray600,
                           marginBottom: 2,
                           marginLeft: 8,
-                          fontWeight: "500",
+                          fontWeight: "600",
+                          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         }}
                       >
                         {otherUserName}
@@ -728,12 +674,13 @@ export default function ChatScreen() {
                     >
                       <div
                         style={{
-                          fontSize: 15,
+                          fontSize: 14,
                           lineHeight: "20px",
                           color: isMine ? colors.white : colors.gray900,
                           wordWrap: "break-word",
                           whiteSpace: "pre-wrap",
                           marginBottom: "4px",
+                          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         }}
                       >
                         {item.Content}
@@ -905,77 +852,20 @@ export default function ChatScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Menu Button */}
+        {/* Call Button */}
         <TouchableOpacity
-          onPress={() => {
-            Alert.alert("Conversation Options", "Choose an action", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete Conversation",
-                style: "destructive",
-                onPress: async () => {
-                  Alert.alert(
-                    "Delete Conversation",
-                    "Are you sure you want to delete this conversation?",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await messagingApi.archiveConversation(
-                              conversationId,
-                              true
-                            );
-                            Alert.alert("Success", "Conversation deleted");
-                            navigation.goBack();
-                          } catch (error) {
-                            Alert.alert(
-                              "Error",
-                              "Failed to delete conversation"
-                            );
-                          }
-                        },
-                      },
-                    ]
-                  );
-                },
-              },
-              {
-                text: "Block User",
-                style: "destructive",
-                onPress: async () => {
-                  Alert.alert(
-                    "Block User",
-                    "Are you sure you want to block this user? You won't receive messages from them.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Block",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await messagingApi.blockUser(
-                              otherUserId,
-                              "Blocked from chat"
-                            );
-                            Alert.alert("Success", "User blocked");
-                            navigation.goBack();
-                          } catch (error) {
-                            Alert.alert("Error", "Failed to block user");
-                          }
-                        },
-                      },
-                    ]
-                  );
-                },
-              },
-            ]);
-          }}
+          onPress={() => Alert.alert("Feature Coming Soon", "Call feature is under development")}
+          style={[styles.menuButton, { marginRight: 12 }]}
+        >
+          <Ionicons name="call" size={24} color={colors.white} />
+        </TouchableOpacity>
+
+        {/* Video Call Button */}
+        <TouchableOpacity
+          onPress={() => Alert.alert("Feature Coming Soon", "Video call feature is under development")}
           style={styles.menuButton}
         >
-          <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+          <Ionicons name="videocam" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
 
@@ -1073,7 +963,7 @@ const styles = StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
   headerInfo: { flex: 1 },
-  headerName: { fontSize: 16, fontWeight: "600", color: colors.white },
+  headerName: { fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "System" },
   menuButton: { padding: 4 },
   messagesList: {
     paddingHorizontal: 8,
@@ -1084,11 +974,12 @@ const styles = StyleSheet.create({
   myMessageContainer: { alignSelf: "flex-end" },
   theirMessageContainer: { alignSelf: "flex-start" },
   senderName: {
-    fontSize: 12,
+    fontSize: 16,
     color: colors.gray600,
     marginBottom: 2,
     marginLeft: 8,
-    fontWeight: "500",
+    fontWeight: "600",
+    fontFamily: "System",
   },
   messageBubble: {
     paddingHorizontal: 12,
@@ -1105,7 +996,7 @@ const styles = StyleSheet.create({
   messageFailed: { opacity: 0.5, borderWidth: 1, borderColor: colors.danger },
   myMessageBubble: { backgroundColor: colors.primary },
   theirMessageBubble: { backgroundColor: colors.white },
-  messageText: { fontSize: 15, lineHeight: 20, color: colors.gray900 },
+  messageText: { fontSize: 14, lineHeight: 20, color: colors.gray900, fontFamily: "System" },
   messageTextFaded: { opacity: 0.8 },
   myMessageText: { color: colors.white },
   theirMessageText: { color: colors.gray900 },

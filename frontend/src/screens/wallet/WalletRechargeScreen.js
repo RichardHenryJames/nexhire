@@ -60,8 +60,6 @@ export default function WalletRechargeScreen({ navigation }) {
         throw new Error(orderResult.error || 'Failed to create order');
       }
 
-      console.log('Order created:', orderResult.data);
-
       // For web platform, use Razorpay web checkout
       if (Platform.OS === 'web') {
         loadRazorpayScript(orderResult.data, rechargeAmount);
@@ -85,11 +83,9 @@ export default function WalletRechargeScreen({ navigation }) {
   const loadRazorpayScript = (orderData, rechargeAmount) => {
     if (typeof window !== 'undefined') {
       if (typeof window.Razorpay === 'undefined') {
-        console.log('Loading Razorpay script...');
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.onload = () => {
-          console.log('Razorpay script loaded successfully');
           openRazorpayWeb(orderData, rechargeAmount);
         };
         script.onerror = () => {
@@ -99,7 +95,6 @@ export default function WalletRechargeScreen({ navigation }) {
         };
         document.head.appendChild(script);
       } else {
-        console.log('Razorpay script already loaded');
         openRazorpayWeb(orderData, rechargeAmount);
       }
     } else {
@@ -109,8 +104,6 @@ export default function WalletRechargeScreen({ navigation }) {
   };
 
   const openRazorpayWeb = (orderData, rechargeAmount) => {
-    console.log('Opening Razorpay checkout with order:', orderData);
-    
     if (!orderData.razorpayKeyId) {
       Alert.alert('Error', 'Payment gateway configuration is missing. Please contact support.');
       setLoading(false);
@@ -131,7 +124,6 @@ export default function WalletRechargeScreen({ navigation }) {
       description: 'Wallet Recharge',
       order_id: orderData.orderId,
       handler: async function (response) {
-        console.log('Payment success:', response);
         await verifyPayment(response, rechargeAmount);
       },
       prefill: {
@@ -145,12 +137,9 @@ export default function WalletRechargeScreen({ navigation }) {
       modal: {
         ondismiss: function () {
           setLoading(false);
-          console.log('Payment cancelled by user');
         },
       },
     };
-
-    console.log('Razorpay options:', { ...options, key: options.key.substring(0, 10) + '...' });
 
     if (typeof window !== 'undefined' && window.Razorpay) {
       try {

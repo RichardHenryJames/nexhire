@@ -273,17 +273,13 @@ export default function ApplicationsScreen({ navigation }) {
 
     // ✅ Check wallet balance
     try {
-      console.log('Checking wallet balance...');
       const walletBalance = await refopenAPI.getWalletBalance();
-      console.log('Wallet balance result:', walletBalance);
 
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('Current balance:', balance);
 
         // Check if balance >= ₹50
         if (balance < 50) {
-          console.log('Insufficient wallet balance:', balance);
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
@@ -291,7 +287,6 @@ export default function ApplicationsScreen({ navigation }) {
           return;
         }
 
-        console.log('✅ Sufficient balance - proceeding with referral');
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
@@ -581,7 +576,7 @@ export default function ApplicationsScreen({ navigation }) {
                 <Image 
                   source={{ uri: application.OrganizationLogo }} 
                   style={styles.companyLogo}
-                  onError={() => console.log('Logo load error for:', application.CompanyName)}
+                  onError={() => {}}
                 />
               ) : (
                 <View style={styles.logoPlaceholder}>

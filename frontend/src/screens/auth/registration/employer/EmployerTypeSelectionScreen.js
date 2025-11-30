@@ -92,17 +92,13 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       setSelectedCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown',
-        size: org.size || 'Unknown',
-        website: org.website || null
+        industry: org.industry || 'Unknown'
       });
     } else if (orgPickerContext === 'startup') {
       setStartupCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown',
-        size: org.size || 'Unknown',
-        website: org.website || null
+        industry: org.industry || 'Unknown'
       });
     }
     closeOrgModal();

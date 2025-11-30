@@ -15,7 +15,6 @@ class RefOpenAPI {
     
     // Log configuration on initialization
     if (frontendConfig.shouldLog('debug')) {
-      console.log('🌐 API Service initialized');
       this.logConfigStatus();
     }
   }
@@ -28,20 +27,17 @@ class RefOpenAPI {
       environment: frontendConfig.app.env,
       version: frontendConfig.app.version,
     };
-    console.log('🌐 API Configuration:', config);
   }
 
   // Helper method to log API calls in debug mode
   logApiCall(method, endpoint, data = null) {
     if (frontendConfig.shouldLog('debug') && frontendConfig.api.debug) {
-      console.log(`🌐 API ${method.toUpperCase()} ${endpoint}`, data ? { payload: data } : '');
     }
   }
 
   // Helper method to log API responses in debug mode
   logApiResponse(method, endpoint, response, duration) {
     if (frontendConfig.shouldLog('debug') && frontendConfig.api.debug) {
-      console.log(`🌐 API ${method.toUpperCase()} ${endpoint} → ${response.status} (${duration}ms)`);
     }
   }
 
@@ -141,7 +137,6 @@ class RefOpenAPI {
       ]);
       
       if (frontendConfig.shouldLog('debug')) {
-        console.log('✅ Tokens stored successfully');
       }
     } catch (error) {
       console.error('❌ Failed to store tokens:', error);
@@ -173,16 +168,12 @@ class RefOpenAPI {
   // Initialize API with stored tokens
   async init() {
     try {
-      console.log('🔧 API.init() called - loading tokens from storage...');
       this.token = await this.getToken('refopen_token');
       this.refreshToken = await this.getToken('refopen_refresh_token');
       
       if (this.token) {
-        console.log('✅ API.init() - Token loaded successfully');
-        console.log('🔧 Token preview:', this.token.substring(0, 20) + '...');
         return true;
       } else {
-        console.log('⚠️ API.init() - No stored auth token found');
         return false;
       }
     } catch (error) {
@@ -198,7 +189,6 @@ class RefOpenAPI {
     
     await this.removeToken('refopen_token');
     await this.removeToken('refopen_refresh_token');
-    console.log('Tokens cleared');
   }
 
   // ✅ ADDED: Missing getAuthHeaders method
@@ -249,7 +239,6 @@ class RefOpenAPI {
       this.token = result.data.tokens.accessToken;
       this.refreshToken = result.data.tokens.refreshToken;
       
-      console.log('✅ Login successful, token set and synchronized');
     }
 
     return result;
@@ -258,9 +247,6 @@ class RefOpenAPI {
   // 🆕 NEW: Google OAuth login for existing users
   async loginWithGoogle(googleTokenData) {
     try {
-      console.log('🔐 Attempting Google login with backend...');
-      console.log('📧 Email:', googleTokenData.user.email);
-      console.log('👤 Name:', googleTokenData.user.name);
 
       const result = await this.apiCall('/auth/google', {
         method: 'POST',
@@ -282,8 +268,6 @@ class RefOpenAPI {
         this.token = result.data.tokens.accessToken;
         this.refreshToken = result.data.tokens.refreshToken;
         
-        console.log('✅ Google login successful for:', googleTokenData.user.email);
-        console.log('✅ Token set and synchronized');
       }
 
       return result;
@@ -307,9 +291,6 @@ class RefOpenAPI {
   // 🆕 NEW: Register with Google for new users
   async registerWithGoogle(googleTokenData, additionalUserData) {
     try {
-      console.log('🔐 Attempting Google registration with backend...');
-      console.log('📧 Email:', googleTokenData.user.email);
-      console.log('🏷️ User Type:', additionalUserData.userType);
 
       const result = await this.apiCall('/auth/google-register', {
         method: 'POST',
@@ -328,7 +309,6 @@ class RefOpenAPI {
           result.data.tokens.accessToken,
           result.data.tokens.refreshToken
         );
-        console.log('✅ Google registration successful for:', googleTokenData.user.email);
       }
 
       return result;
@@ -357,7 +337,6 @@ class RefOpenAPI {
   async getProfile() {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 getProfile: Token not in memory, loading from storage...');
       await this.init();
     }
     
@@ -366,7 +345,6 @@ class RefOpenAPI {
       return { success: false, error: 'Authentication required' };
     }
     
-    console.log('🔧 getProfile: Token present:', !!this.token);
     return this.apiCall('/users/profile');
   }
 
@@ -379,8 +357,6 @@ class RefOpenAPI {
 
   // NEW: Update education data
   async updateEducation(educationData) {
-    console.log('🔍 === API UPDATE EDUCATION DEBUG ===');
-    console.log('🎓 Input education data:', JSON.stringify(educationData, null, 2));
     
     // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
@@ -388,13 +364,10 @@ class RefOpenAPI {
       return { success: true, data: null, message: 'Deferred until login' };
     }
     
-    console.log('🚀 Calling /users/education endpoint with:', JSON.stringify(educationData, null, 2));
     const result = await this.apiCall('/users/education', {
       method: 'PUT',
       body: JSON.stringify(educationData),
     });
-    console.log('📋 Education API result:', result);
-    console.log('🔍 === END API UPDATE EDUCATION DEBUG ===');
     return result;
   }
 
@@ -402,7 +375,6 @@ class RefOpenAPI {
   async createWorkExperience(workExp) {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init(); // Re-initialize to load token
     }
     
@@ -439,9 +411,6 @@ class RefOpenAPI {
       canContact: workExp.canContact ?? null
     };
     
-    console.log('🔧 Creating work experience with payload:', JSON.stringify(payload, null, 2));
-    console.log('🔧 Token present:', !!this.token);
-    
     return this.apiCall('/work-experiences', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -451,7 +420,6 @@ class RefOpenAPI {
   async getMyWorkExperiences() {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init(); // Re-initialize to load token
     }
     
@@ -460,14 +428,12 @@ class RefOpenAPI {
       return { success: false, error: 'Authentication required' };
     }
     
-    console.log('🔧 getMyWorkExperiences - Token present:', !!this.token);
     return this.apiCall('/work-experiences/my');
   }
 
   async updateWorkExperienceById(id, data) {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init(); // Re-initialize to load token
     }
     
@@ -476,7 +442,6 @@ class RefOpenAPI {
       return { success: false, error: 'Authentication required' };
     }
     
-    console.log('🔧 updateWorkExperienceById - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
@@ -486,7 +451,6 @@ class RefOpenAPI {
   async deleteWorkExperience(id) {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init(); // Re-initialize to load token
     }
     
@@ -495,7 +459,6 @@ class RefOpenAPI {
       return { success: false, error: 'Authentication required' };
     }
     
-    console.log('🔧 deleteWorkExperience - Token present:', !!this.token);
     return this.apiCall(`/work-experiences/${id}`, {
       method: 'DELETE'
     });
@@ -503,8 +466,6 @@ class RefOpenAPI {
 
   // NEW: Update job preferences data
   async updateJobPreferences(jobPreferencesData) {
-    console.log('🔍 === API UPDATE JOB PREFERENCES DEBUG ===');
-    console.log('🎯 Input job preferences data:', JSON.stringify(jobPreferencesData, null, 2));
     
     // 🔧 SIMPLIFIED: Just check for token - no timing hacks needed
     if (!this.token) {
@@ -549,13 +510,10 @@ class RefOpenAPI {
     }
 
     try {
-      console.log('🚀 Calling /applicants/{userId}/profile with:', JSON.stringify(payload));
       const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
-      console.log('📋 Job preferences API result:', result);
-      console.log('🔍 === END API UPDATE JOB PREFERENCES DEBUG ===');
       return result;
     } catch (error) {
       console.error('❌ Job preferences update failed:', error.message);
@@ -623,11 +581,30 @@ class RefOpenAPI {
     }
 
     const params = new URLSearchParams(cleaned);
+    
+    // 🔍 DEBUG: Log full request details
+    console.log('🌐 [API] getJobs Request:');
+    console.log('   Base URL:', this.baseURL);
+    console.log('   Endpoint:', `/jobs?${params}`);
+    console.log('   Full URL:', `${this.baseURL}/jobs?${params}`);
+    console.log('   Filters before cleaning:', filters);
+    console.log('   Filters after cleaning:', cleaned);
+    if (filters.organizationIds) {
+      console.log('   ⚠️ Organization Filter:', filters.organizationIds);
+      console.log('   ⚠️ Organization IDs in URL:', cleaned.organizationIds);
+    }
+    
     return this.apiCall(`/jobs?${params}`, fetchOptions);
   }
 
   async getJobById(jobId) {
     return this.apiCall(`/jobs/${jobId}`);
+  }
+
+  // NEW: Get AI-recommended jobs (deducts ₹100 from wallet)
+  async getAIRecommendedJobs(limit = 50) {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    return this.apiCall(`/jobs/ai-recommendations?${params}`);
   }
 
   async searchJobs(query, filters = {}, fetchOptions = {}) {
@@ -668,7 +645,6 @@ class RefOpenAPI {
 
   // 🔧 NEW: Support both old and new apply methods for resume integration
   async applyForJob(applicationData) {
-    console.log('📝 applyForJob called with:', applicationData);
     
     if (!this.token) {
       throw new Error('Authentication required');
@@ -684,7 +660,6 @@ class RefOpenAPI {
       throw new Error('Job ID is required');
     }
 
-    console.log('📝 Submitting application:', applicationData);
     
     return this.apiCall('/applications', {
       method: 'POST',
@@ -710,21 +685,16 @@ class RefOpenAPI {
 
   // NEW: Withdraw application
   async withdrawApplication(applicationId) {
-    console.log('📡 withdrawApplication API method called with:', applicationId);
     if (!this.token) return { success: false, error: 'Authentication required' };
     if (!applicationId) return { success: false, error: 'Application ID is required' };
     
-    console.log('📡 Making DELETE request to:', `/applications/${applicationId}`);
-    console.log('📡 Token present:', !!this.token);
     
     try {
       const result = await this.apiCall(`/applications/${applicationId}`, {
         method: 'DELETE',
       });
-      console.log('📡 API call completed successfully:', result);
       return result;
     } catch (error) {
-      console.log('📡 API call failed:', error);
       throw error;
     }
   }
@@ -933,22 +903,12 @@ class RefOpenAPI {
   // NEW: Update applicant profile (FIXED: Add comprehensive debugging)
   async updateApplicantProfile(userId, profileData) {
     try {
-      console.log('🔄 =========================');
-      console.log('🔄 UPDATEAPPLICANTPROFILE DEBUG');
-      console.log('🔄 =========================');
-      console.log('🆔 User ID:', userId);
-      console.log('📝 Profile Data Keys:', Object.keys(profileData));
-      console.log('📝 Full Profile Data:', JSON.stringify(profileData, null, 2));
-      console.log('🌐 API URL:', `${API_BASE_URL}/applicants/${userId}/profile`);
-      console.log('🔑 Token present:', !!this.token);
       
       const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData),
       });
       
-      console.log('✅ API Response:', JSON.stringify(result, null, 2));
-      console.log('🔄 =========================');
       return result;
     } catch (error) {
       console.error('❌ =========================');
@@ -1034,18 +994,24 @@ class RefOpenAPI {
     }
   }
 
-  // NEW: Get organizations for employer registration - FIXED to use real database
+  // NEW: Get organizations for employer registration - Optimized with database index
   async getOrganizations(searchTerm = '', limit = null, offset = 0) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (limit !== null) params.append('limit', limit.toString());
+      // 🚀 OPTIMIZED: Only add limit if explicitly provided, otherwise fetch ALL
+      if (limit !== null && limit !== undefined) {
+        params.append('limit', limit.toString());
+      }
       if (offset > 0) params.append('offset', offset.toString());
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      const startTime = performance.now();
+      
       const response = await this.apiCall(endpoint);
       
-      console.log('🏢 Organizations API Response:', JSON.stringify(response, null, 2));
+      const duration = (performance.now() - startTime).toFixed(2);
       
       if (response.success && response.data) {
         // Handle the specific backend response format
@@ -1062,7 +1028,6 @@ class RefOpenAPI {
           organizationsArray = [];
         }
         
-        console.log('🏢 Processing organizations array:', organizationsArray.length, 'items');
         
         // The backend already transforms the data correctly, so we can use it directly
         // Just ensure we have the "My company is not listed" option
@@ -1071,15 +1036,11 @@ class RefOpenAPI {
           organizationsArray.push({
             id: 999999,
             name: 'My company is not listed',
-            industry: 'Other',
-            size: 'Unknown',
-            type: 'Other',
             logoURL: null,
-            website: null
+            industry: 'Other'
           });
         }
         
-        console.log('🏢 Final organizations count:', organizationsArray.length);
         
         return {
           success: true,
@@ -1092,20 +1053,37 @@ class RefOpenAPI {
       console.warn('🏢 Failed to load organizations from database:', error.message);
       
       // Only use fallback if backend is completely unavailable
-      console.log('🏢 Using fallback organizations due to backend error');
       return {
         success: true,
         data: [
           {
             id: 999999,
             name: 'My company is not listed',
-            industry: 'Other',
-            size: 'Unknown',
-            type: 'Other',
             logoURL: null,
-            website: null
+            industry: 'Other'
           }
         ]
+      };
+    }
+  }
+
+  // NEW: Get organization by ID with all details
+  async getOrganizationById(organizationId) {
+    try {
+      if (!organizationId || organizationId === 999999) {
+        return {
+          success: false,
+          error: 'Invalid organization ID'
+        };
+      }
+
+      const response = await this.apiCall(`/reference/organizations/${organizationId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to load organization details:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to load organization details'
       };
     }
   }
@@ -1131,10 +1109,6 @@ class RefOpenAPI {
 
   // ✅ CONFIRMED WORKING: Salary breakdown functionality  
   async updateSalaryBreakdown(userId, salaryBreakdown) {
-    console.log('💰 === SALARY BREAKDOWN UPDATE DEBUG ===');
-    console.log('💰 User ID:', userId);
-    console.log('💰 Auth token present:', !!this.token);
-    console.log('💰 Input data:', JSON.stringify(salaryBreakdown, null, 2));
     
     // Validate input data
     if (!salaryBreakdown || typeof salaryBreakdown !== 'object') {
@@ -1148,15 +1122,12 @@ class RefOpenAPI {
     }
     
     try {
-      console.log('💰 Making API call to:', `/applicants/${userId}/profile`);
       
       const result = await this.apiCall(`/applicants/${userId}/profile`, {
         method: 'PUT',
         body: JSON.stringify({ salaryBreakdown }),
       });
       
-      console.log('✅ Salary breakdown update result:', JSON.stringify(result, null, 2));
-      console.log('💰 === END SALARY BREAKDOWN UPDATE DEBUG ===');
       
       return result;
     } catch (error) {
@@ -1180,9 +1151,6 @@ class RefOpenAPI {
       const result = await this.apiCall(`/applicants/${userId}/profile`);
       
       if (result.success && result.data.salaryBreakdown) {
-        console.log('✅ Profile with salary breakdown retrieved');
-        console.log('💰 Current components:', result.data.salaryBreakdown.current.length);
-        console.log('💰 Expected components:', result.data.salaryBreakdown.expected.length);
       }
       
       return result;
@@ -1229,14 +1197,6 @@ class RefOpenAPI {
   // ✨ CROSS-PLATFORM: Upload profile image to Azure Storage  
   async uploadProfileImage(imageData) {
     try {
-      console.log('📸 === CROSS-PLATFORM IMAGE UPLOAD START ===');
-      console.log('📸 Platform:', Platform.OS);
-      console.log('📸 Image data:', {
-        fileName: imageData.fileName,
-        mimeType: imageData.mimeType,
-        userId: imageData.userId,
-        fileDataLength: imageData.fileData?.length || 0
-      });
 
       // Validate required fields
       if (!imageData.fileName || !imageData.fileData || !imageData.mimeType || !imageData.userId) {
@@ -1266,10 +1226,6 @@ class RefOpenAPI {
         userId: imageData.userId
       });
 
-      console.log('🌐 Making upload request...');
-      console.log('📡 URL:', url);
-      console.log('📡 Content-Length:', requestBody.length);
-      console.log('📡 Headers:', Object.keys(headers));
 
       // Make the request with explicit configuration
       const response = await fetch(url, {
@@ -1281,8 +1237,6 @@ class RefOpenAPI {
         redirect: 'follow'
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       // Read response
       let result;
@@ -1305,12 +1259,6 @@ class RefOpenAPI {
         throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('✅ Backend upload successful:', {
-        imageUrl: result.data?.imageUrl,
-        fileName: result.data?.fileName,
-        uploadDate: result.data?.uploadDate
-      });
-      console.log('📸 === CROSS-PLATFORM IMAGE UPLOAD END ===');
 
       return result;
     } catch (error) {
@@ -1327,14 +1275,6 @@ class RefOpenAPI {
   // Resume upload method - FIXED: Better file handling + timeout + more debugging
   async uploadResume(file, userId, resumeLabel = 'Default Resume') {
     try {
-      console.log('📄 === RESUME UPLOAD START ===');
-      console.log('📄 Platform:', Platform.OS);
-      console.log('📄 File object type:', typeof file, file instanceof File);
-      console.log('📄 File details:', {
-        name: file?.name,
-        size: file?.size,
-        type: file?.type
-      });
 
       let fileData;
       let mimeType;
@@ -1343,17 +1283,13 @@ class RefOpenAPI {
       if (Platform.OS === 'web') {
         // Web: Handle different file types
         if (file instanceof File) {
-          console.log('📄 Processing File object...');
           // Direct File object from input
-          console.log('📄 Starting FileReader...');
           fileData = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
-              console.log('📄 File read complete, result length:', reader.result?.length);
               try {
                 const result = reader.result;
                 const base64 = result.split(',')[1]; // Remove data:type;base64, prefix
-                console.log('📄 Base64 conversion complete, length:', base64?.length);
                 resolve(base64);
               } catch (error) {
                 console.error('📄 Error processing FileReader result:', error);
@@ -1367,21 +1303,13 @@ class RefOpenAPI {
             reader.onprogress = (e) => {
               if (e.lengthComputable) {
                 const percent = (e.loaded / e.total * 100).toFixed(0);
-                console.log(`📄 File reading progress: ${percent}%`);
               }
             };
-            console.log('📄 Starting readAsDataURL...');
             reader.readAsDataURL(file);
           });
           mimeType = file.type;
           fileName = file.name;
-          console.log('📄 File processing complete:', {
-            fileName,
-            mimeType,
-            base64Length: fileData?.length
-          });
         } else if (file.uri) {
-          console.log('📄 Processing URI-based file...');
           // Expo DocumentPicker result on web
           const response = await fetch(file.uri);
           const blob = await response.blob();
@@ -1412,12 +1340,6 @@ class RefOpenAPI {
         fileName = file.name;
       }
 
-      console.log('📄 Final processed file data:', {
-        fileName,
-        mimeType,
-        fileDataLength: fileData?.length || 0,
-        fileSizeEstimate: fileData ? `${((fileData.length * 3) / 4 / 1024 / 1024).toFixed(2)} MB` : 'Unknown'
-      });
 
       // ✅ VALIDATE all required fields before sending
       if (!fileName || typeof fileName !== 'string') {
@@ -1436,7 +1358,6 @@ class RefOpenAPI {
         throw new Error('Invalid resume label');
       }
 
-      console.log('📄 ✅ All fields validated successfully');
 
       // Validate file size before upload
       const fileSizeBytes = (fileData.length * 3) / 4;
@@ -1445,18 +1366,15 @@ class RefOpenAPI {
         throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
       }
 
-      console.log('📄 File validation passed, preparing upload...');
 
       // ✅ CORRECTED: Use the exact same endpoint as our working PowerShell test
       const url = `${API_BASE_URL}/users/resume`;
-      console.log('📄 Upload URL:', url);
       
       const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...(await this.getAuthHeaders())
       };
-      console.log('📄 Headers prepared:', Object.keys(headers));
 
       // Create request body following the same pattern as profile image
       const requestPayload = {
@@ -1467,18 +1385,9 @@ class RefOpenAPI {
         resumeLabel: resumeLabel
       };
 
-      console.log('📄 Request payload structure:', {
-        fileName: typeof requestPayload.fileName,
-        fileData: typeof requestPayload.fileData + ` (length: ${requestPayload.fileData?.length})`,
-        mimeType: typeof requestPayload.mimeType,
-        userId: typeof requestPayload.userId,
-        resumeLabel: typeof requestPayload.resumeLabel
-      });
 
       const requestBody = JSON.stringify(requestPayload);
 
-      console.log('📄 Request body prepared, size:', requestBody.length);
-      console.log('📄 Making upload request...');
 
       // 🔧 NEW: Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
@@ -1498,22 +1407,16 @@ class RefOpenAPI {
         redirect: 'follow'
       });
 
-      console.log('📄 Waiting for upload response...');
       const response = await Promise.race([uploadPromise, timeoutPromise]);
 
-      console.log('📄 Response received, status:', response.status);
-      console.log('📄 Response headers:', Object.fromEntries(response.headers.entries()));
 
       // Read response
       let result;
       const contentType = response.headers.get('content-type');
       
       if (contentType && contentType.includes('application/json')) {
-        console.log('📄 Reading JSON response...');
         result = await response.json();
-        console.log('📄 JSON response parsed:', JSON.stringify(result, null, 2));
       } else {
-        console.log('📄 Non-JSON response detected, reading as text...');
         const text = await response.text();
         console.error('❌ Non-JSON response:', text);
         throw new Error(`Server returned non-JSON response: ${response.status}`);
@@ -1542,12 +1445,6 @@ class RefOpenAPI {
         throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('✅ Upload successful:', {
-        resumeURL: result.data?.resumeURL,
-        fileName: result.data?.fileName,
-        resumeID: result.data?.resumeID || result.data?.resumeId
-      });
-      console.log('📄 === RESUME UPLOAD END ===');
 
       return result;
     } catch (error) {
@@ -1574,11 +1471,9 @@ class RefOpenAPI {
   // NEW: Get all resumes for current user
   async getMyResumes() {
     try {
-      console.log('📄 API: Getting user resumes...');
       
       // ✅ FIXED: Check authentication first
       if (!this.token) {
-        console.log('📄 No authentication token, returning empty resumes list');
         return {
           success: true,
           data: []
@@ -1588,7 +1483,6 @@ class RefOpenAPI {
       const url = `${API_BASE_URL}/users/resumes`;
       const headers = await this.getAuthHeaders();
       
-      console.log('📄 API: Making GET request to:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -1597,7 +1491,6 @@ class RefOpenAPI {
         credentials: 'omit'
       });
       
-      console.log('📄 API: Response status:', response.status);
       
       // ✅ FIXED: Handle non-JSON responses
       let result;
@@ -1615,7 +1508,6 @@ class RefOpenAPI {
         };
       }
       
-      console.log('📄 API: Response data:', result);
       
       if (!response.ok) {
         console.error('❌ Get resumes request failed:', {
@@ -1630,7 +1522,6 @@ class RefOpenAPI {
         };
       }
       
-      console.log('✅ Get resumes request successful');
       return result;
     } catch (error) {
       console.error('❌ Get resumes API error:', error);
@@ -1650,11 +1541,9 @@ class RefOpenAPI {
 
   // ✅ NEW: Set a resume as primary
   async setPrimaryResume(resumeId) {
-    console.log('📝 API: Setting primary resume:', resumeId);
     
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init();
     }
     
@@ -1669,13 +1558,11 @@ if (!resumeId) {
   }
     
     try {
-      console.log('📝 Making PUT request to:', `/users/resume/${resumeId}/primary`);
       
       const result = await this.apiCall(`/users/resume/${resumeId}/primary`, {
         method: 'PUT',
       });
   
-      console.log('✅ Set primary resume successful:', result);
       return result;
     } catch (error) {
       console.error('❌ Set primary resume failed:', error.message);
@@ -1688,11 +1575,9 @@ if (!resumeId) {
 
   // ✅ NEW: Delete a resume
   async deleteResume(resumeId) {
-    console.log('🗑️ API: Deleting resume:', resumeId);
     
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init();
     }
     
@@ -1707,9 +1592,7 @@ if (!resumeId) {
     }
     
     try {
-      console.log('🗑️ Making DELETE request to:', `/users/resume/${resumeId}`);
       const result = await this.apiCall(`/users/resume/${resumeId}`, { method: 'DELETE' });
-      console.log('✅ Raw delete resume response:', result);
 
       // Normalize response shape (backend returns success + softDelete flags)
       const normalized = {
@@ -1753,7 +1636,6 @@ if (!resumeId) {
   async getWalletBalance() {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init();
     }
     
@@ -1763,7 +1645,6 @@ if (!resumeId) {
     }
     
     try {
-      console.log('💰 Loading wallet balance...');
       return await this.apiCall('/wallet/balance');
     } catch (error) {
       console.error('❌ Failed to load wallet balance:', error);
@@ -1774,7 +1655,6 @@ if (!resumeId) {
   // 💰 NEW: Get full wallet details
   async getWallet() {
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init();
     }
     
@@ -1784,7 +1664,6 @@ if (!resumeId) {
     }
     
     try {
-      console.log('💰 Loading wallet details...');
       return await this.apiCall('/wallet');
     } catch (error) {
       console.error('❌ Failed to load wallet:', error);
@@ -1847,7 +1726,6 @@ if (!resumeId) {
   // Create referral request (supports both internal and external)
   async createReferralRequest(requestData) {
     try {
-      console.log('🤝 Creating referral request:', requestData);
       
       if (!this.token) {
         throw new Error('Authentication required');
@@ -1876,7 +1754,6 @@ if (!resumeId) {
           referralMessage: requestData.referralMessage,
           // For external referrals, include job details
           jobTitle: requestData.jobTitle,
-          companyName: requestData.companyName,
           organizationId: requestData.organizationId,
           jobUrl: requestData.jobUrl,
         };
@@ -1885,8 +1762,9 @@ if (!resumeId) {
           throw new Error('Resume ID is required');
         }
         
-        if (hasExtJobID && (!payload.jobTitle || !payload.companyName)) {
-          throw new Error('Job title and company name are required for external referrals');
+        // ✅ FIXED: Only require jobTitle and organizationId (no companyName)
+        if (hasExtJobID && (!payload.jobTitle || !payload.organizationId)) {
+          throw new Error('Job title and organization ID are required for external referrals');
         }
       } else {
         // 🔄 OLD FORMAT: String jobID means internal referral (backward compatibility)
@@ -1904,7 +1782,6 @@ if (!resumeId) {
         };
       }
 
-      console.log('🤝 Final payload:', payload);
 
       return this.apiCall('/referral/requests', {
         method: 'POST',
@@ -2011,7 +1888,6 @@ if (!resumeId) {
   async getReferralPointsHistory() {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
-      console.log('🔧 Token not in memory, loading from storage...');
       await this.init(); // Re-initialize to load token
     }
     
@@ -2021,16 +1897,12 @@ if (!resumeId) {
     }
     
     try {
-      console.log('🏆 Loading referral points history...');
-      console.log('🔧 Token present:', !!this.token);
       
       // This endpoint should return detailed points history with breakdown by type
       const result = await this.apiCall('/referral/points-history');
-      console.log('🏆 Points history API response:', result);
       
       // 🔧 UPDATED: Include metadata in the response
       if (result.success && result.data) {
-        console.log('✅ Points history loaded successfully:', result.data);
         return {
           success: true,
           data: {
@@ -2094,7 +1966,6 @@ if (!resumeId) {
 
   // ✅ NEW: Cancel a referral request (by seeker)
   async cancelReferralRequest(requestId) {
-    console.log('🚫 API: Cancelling referral request:', requestId);
     
     if (!this.token) {
       console.error('❌ No authentication token');
@@ -2107,17 +1978,44 @@ if (!resumeId) {
     }
     
     try {
-      console.log('🚫 Making POST request to:', `/referral/requests/${requestId}/cancel`);
       
       const result = await this.apiCall(`/referral/requests/${requestId}/cancel`, {
         method: 'POST',
       });
       
-      console.log('✅ Cancel request successful:', result);
       return result;
     } catch (error) {
       console.error('❌ Cancel request failed:', error.message);
       throw error;
+    }
+  }
+
+  // ✅ NEW: Convert referral points to wallet balance
+  async convertPointsToWallet() {
+    
+    // Ensure token is loaded
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    try {
+      
+      const result = await this.apiCall(`/referral/points/convert-to-wallet`, {
+        method: 'POST',
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Points conversion failed:', error.message);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to convert points to wallet'
+      };
     }
   }
 
@@ -2210,7 +2108,6 @@ if (!resumeId) {
       const queryString = new URLSearchParams(cleaned).toString();
       const endpoint = `/organizations/${organizationId}/jobs${queryString ? `?${queryString}` : ''}`;
       
-      console.log('🏢 Fetching organization jobs:', endpoint);
       return await this.apiCall(endpoint, fetchOptions);
     } catch (error) {
       console.error('❌ getOrganizationJobs error:', error);
@@ -2220,7 +2117,6 @@ if (!resumeId) {
 
   // ✅ NEW: Publish a draft job
   async publishJob(jobId) {
-    console.log('📢 API: Publishing job:', jobId);
     
     if (!this.token) {
       console.error('❌ No authentication token');
@@ -2233,13 +2129,11 @@ if (!resumeId) {
     }
     
     try {
-      console.log('📢 Making POST request to:', `/jobs/${jobId}/publish`);
       
       const result = await this.apiCall(`/jobs/${jobId}/publish`, {
         method: 'POST',
       });
       
-      console.log('✅ Publish job successful:', result);
       return result;
     } catch (error) {
       console.error('❌ Publish job failed:', error.message);
@@ -2249,7 +2143,6 @@ if (!resumeId) {
 
   // ✅ NEW: Update a job
   async updateJob(jobId, jobData) {
-    console.log('📝 API: Updating job:', jobId);
     
     if (!this.token) {
       console.error('❌ No authentication token');
@@ -2262,14 +2155,12 @@ if (!resumeId) {
     }
     
     try {
-      console.log('📝 Making PUT request to:', `/jobs/${jobId}`);
       
       const result = await this.apiCall(`/jobs/${jobId}`, {
         method: 'PUT',
         body: JSON.stringify(jobData),
       });
       
-      console.log('✅ Update job successful:', result);
       return result;
     } catch (error) {
       console.error('❌ Update job failed:', error.message);
@@ -2279,7 +2170,6 @@ if (!resumeId) {
 
   // ✅ NEW: Delete a job
   async deleteJob(jobId) {
-    console.log('🗑️ API: Deleting job:', jobId);
     
     if (!this.token) {
       console.error('❌ No authentication token');
@@ -2292,18 +2182,151 @@ if (!resumeId) {
     }
     
     try {
-      console.log('🗑️ Making DELETE request to:', `/jobs/${jobId}`);
       
       const result = await this.apiCall(`/jobs/${jobId}`, {
         method: 'DELETE',
       });
       
-      console.log('✅ Delete job successful:', result);
       return result;
     } catch (error) {
       console.error('❌ Delete job failed:', error.message);
       return { success: false, error: error.message || 'Failed to delete job' };
     }
+  }
+
+  async uploadFile(fileUri, containerName = 'referral-proofs') {
+    try {
+
+      if (!this.token) {
+        throw new Error('Authentication required');
+      }
+
+      const userId = this.getUserIdFromToken();
+      if (!userId) {
+        throw new Error('Unable to identify user');
+      }
+
+      let fileData;
+      let mimeType;
+      let fileName;
+
+      // Handle different file sources
+      if (Platform.OS === 'web') {
+        // Web: Handle data URLs or blob URLs
+        if (fileUri.startsWith('data:')) {
+          // Data URL (from image picker on web)
+          const matches = fileUri.match(/^data:([^;]+);base64,(.+)$/);
+          if (!matches) {
+            throw new Error('Invalid data URL format');
+          }
+          mimeType = matches[1];
+          fileData = matches[2];
+          fileName = `proof-${Date.now()}.${this.getExtensionFromMimeType(mimeType)}`;
+        } else if (fileUri.startsWith('blob:')) {
+          // Blob URL
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+
+          fileData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              const base64 = result.split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          mimeType = blob.type || 'image/jpeg';
+          fileName = `proof-${Date.now()}.${this.getExtensionFromMimeType(mimeType)}`;
+        } else {
+          throw new Error('Unsupported file URI format on web');
+        }
+      } else {
+        // React Native: Read file using Expo FileSystem
+        const { FileSystem } = require('expo-file-system');
+
+        fileData = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Determine MIME type from URI
+        const extension = fileUri.split('.').pop()?.toLowerCase();
+        mimeType = this.getMimeTypeFromExtension(extension);
+        fileName = `proof-${Date.now()}.${extension}`;
+      }
+
+      // Validate file size (10MB limit)
+      const fileSizeBytes = (fileData.length * 3) / 4;
+      const maxSizeBytes = 10 * 1024 * 1024;
+      if (fileSizeBytes > maxSizeBytes) {
+        throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
+      }
+
+      // Prepare upload request
+      const url = `${this.baseURL}/storage/upload`;
+
+      const headers = await this.getAuthHeaders();
+
+      const requestPayload = {
+        fileName,
+        fileData,
+        mimeType,
+        containerName,
+        userId
+      };
+
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestPayload),
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
+
+      let result;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('? Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
+
+      if (!response.ok) {
+        console.error('? Upload failed:', result);
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+
+
+      return result;
+    } catch (error) {
+      console.error('? === FILE UPLOAD ERROR ===');
+      console.error('? Error type:', error.constructor.name);
+      console.error('? Error message:', error.message);
+      console.error('? === END ERROR LOG ===');
+      throw error;
+    }
+  }
+
+  // Helper: Get file extension from MIME type
+  getExtensionFromMimeType(mimeType) {
+    const mimeToExt = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+    };
+    return mimeToExt[mimeType] || 'jpg';
   }
 }
 

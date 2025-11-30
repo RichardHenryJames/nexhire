@@ -577,7 +577,6 @@ export default function ProfileScreen({ navigation }) {
   const saveEmployerData = async (updatedData) => {
     try {
       setLoading(true);
-      console.log('Saving employer data...');
       const result = await refopenAPI.updateEmployerProfile(user.UserID, updatedData);
       if (result.success) {
         Alert.alert('Success', 'Employer information updated successfully!');
@@ -600,8 +599,6 @@ export default function ProfileScreen({ navigation }) {
    */
   const handlePrivacyToggle = async (setting, value) => {
     try {
-      console.log(`?Toggling ${setting} to ${value} using smart update...`);
-      
       const result = await togglePrivacySetting(setting, value);
       
       if (result.success) {
@@ -738,9 +735,6 @@ export default function ProfileScreen({ navigation }) {
   // 🔧 NEW: Handle direct navigation and screen focus
   useFocusEffect(
     useCallback(() => {
-      console.log('🎯 ProfileScreen focused');
-      console.log('🎯 User at focus:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
-      
       // ? NEW: Always scroll to top when screen gains focus
       try {
         if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
@@ -755,49 +749,30 @@ export default function ProfileScreen({ navigation }) {
       }
       
       if (user && user.UserID) {
-        console.log('🎯 User found on focus, loading profile...');
         loadExtendedProfile();
-      } else if (!loading) {
-        console.log('🎯 No user found on focus, auth loading state:', loading);
       }
     }, [user, loading])
   );
 
   // 🔧 NEW: Force profile load on component mount (for direct URL navigation)
   useEffect(() => {
-    console.log('🔍 ProfileScreen mounted, user present:', !!user);
-    console.log('🔍 User data:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
-    console.log('🔍 Auth loading state:', loading);
-    
     if (user && user.UserID) {
-      console.log('🔍 Triggering loadExtendedProfile for direct navigation...');
       loadExtendedProfile();
-    } else if (!loading) {
-      console.log('🔍 No user found but auth not loading - user might not be logged in');
     }
   }, []); // Empty dependency - runs once on mount
 
   const loadExtendedProfile = async () => {
-    console.log('📡 loadExtendedProfile called');
-    console.log('📡 User data:', user ? { UserID: user.UserID, UserType: user.UserType } : 'No user');
-    
     if (!user || !user.UserID) {
-      console.log('❌ No user or UserID found, skipping profile load');
       return;
     }
     
     try {
-      console.log('🔄 Starting profile data load...');
       setRefreshing(true);
       
       if (userType === 'JobSeeker') {
-        console.log('👤 Loading JobSeeker profile for UserID:', user.UserID);
-        
         const response = await refopenAPI.getApplicantProfile(user.UserID);
-        console.log('📊 JobSeeker profile API response:', response.success ? 'Success' : 'Failed');
         
         if (response.success) {
-          console.log('✅ Profile data loaded successfully');
           const months = response.data.TotalExperienceMonths != null ? Number(response.data.TotalExperienceMonths) : null;
           const derivedYears = months != null && !isNaN(months) ? Math.round(months / 12) : (response.data.YearsOfExperience || 0);
           setJobSeekerProfile({
@@ -891,17 +866,11 @@ export default function ProfileScreen({ navigation }) {
             bio: response.data.Summary || '',
             industries: response.data.PreferredIndustries ? response.data.PreferredIndustries.split(',').map(s => s.trim()).filter(s => s) : [],
           });
-        } else {
-          console.log('❌ Failed to load JobSeeker profile:', response.error);
         }
       } else if (userType === 'Employer') {
-        console.log('🏢 Loading Employer profile for UserID:', user.UserID);
-        
         const response = await refopenAPI.getEmployerProfile(user.UserID);
-        console.log('📊 Employer profile API response:', response.success ? 'Success' : 'Failed');
         
         if (response.success) {
-          console.log('✅ Employer profile data loaded successfully');
           setEmployerProfile({
             jobTitle: response.data.JobTitle || '',
             department: response.data.Department || '',
@@ -915,16 +884,11 @@ export default function ProfileScreen({ navigation }) {
             linkedInProfile: response.data.LinkedInProfile || '',
             bio: response.data.Bio || '',
           });
-        } else {
-          console.log('❌ Failed to load Employer profile:', response.error);
         }
       }
     } catch (error) {
       console.error('❌ Error loading extended profile:', error);
-      console.error('❌ Error details:', error.message);
-      console.error('❌ Stack trace:', error.stack);
     } finally {
-      console.log('🔄 Profile load completed, setting refreshing to false');
       setRefreshing(false);
     }
   };
@@ -949,8 +913,6 @@ export default function ProfileScreen({ navigation }) {
     try {
       setLoading(true);
       
-      console.log('Starting smart profile save...');
-      
       // Combine all profile data (Users + Applicants table fields)
       const completeProfileData = {
         // Users table fields
@@ -971,8 +933,6 @@ export default function ProfileScreen({ navigation }) {
           ? jobSeekerProfile.secondarySkills.join(', ') 
           : jobSeekerProfile.secondarySkills, // ? UPDATED: Handle secondary skills array
       };
-      
-      console.log('Complete profile data:', Object.keys(completeProfileData));
       
       const result = await updateCompleteProfile(completeProfileData);
       
@@ -1156,7 +1116,6 @@ export default function ProfileScreen({ navigation }) {
   const handleReferralNavigation = useCallback(() => {
     // TODO: Navigate to ReferralScreen
     // navigation.navigate('Referrals');
-    console.log('Navigate to Referrals Screen');
   }, []);
 
   // Helper to show referral points details
@@ -1295,7 +1254,7 @@ activeOpacity={0.8}
               title="Professional Information" 
               icon="briefcase"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Professional info updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => saveProfessionalInfo(jobSeekerProfile)}
               defaultCollapsed={false}
             >
@@ -1343,7 +1302,7 @@ activeOpacity={0.8}
                 }));
               }}
               onUpdate={(updatedEducation) => {
-                console.log('Education updated:', updatedEducation);
+                // Education updated
               }}
             />
 
@@ -1364,7 +1323,7 @@ activeOpacity={0.8}
               title="Skills & Expertise" 
               icon="bulb"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Skills updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => saveSkillsExpertise(jobSeekerProfile)}
               defaultCollapsed={!hasData('skills', jobSeekerProfile)}
             >
@@ -1389,7 +1348,7 @@ activeOpacity={0.8}
               title="Work Preferences" 
               icon="settings"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Preferences updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => saveWorkPreferences(jobSeekerProfile)}
               defaultCollapsed={!hasData('workPreferences', jobSeekerProfile)}
             >
@@ -1456,7 +1415,7 @@ activeOpacity={0.8}
               title="Resumes & Documents" 
               icon="document-text"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Resumes updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => Promise.resolve(true)}
               defaultCollapsed={!hasData('resumes', jobSeekerProfile)}
             >
@@ -1469,7 +1428,6 @@ activeOpacity={0.8}
                   }));
                 }}
                 onUpdate={(updatedData) => {
-                  console.log('Resume section updated:', updatedData);
                   // ✅ REMOVED: if (onUpdate) call since onUpdate doesn't exist in ProfileScreen scope
                   // The resume upload success is already handled by the ResumeSection internally
                 }}
@@ -1481,7 +1439,7 @@ activeOpacity={0.8}
               title="Online Presence" 
               icon="link"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Online presence updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => saveOnlinePresence(jobSeekerProfile)}
               defaultCollapsed={!hasData('onlinePresence', jobSeekerProfile)}
             >
@@ -1505,7 +1463,7 @@ activeOpacity={0.8}
               title="Personal Information" 
               icon="person"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Personal info updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => savePersonalInfo({ ...profile, ...jobSeekerProfile })}
               defaultCollapsed={!hasData('personalInfo', profile)}
             >
@@ -1537,7 +1495,7 @@ activeOpacity={0.8}
               title="Account Settings" 
               icon="cog"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Account settings updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => saveAccountSettings(profile)}
               defaultCollapsed={!hasData('accountSettings', profile)}
             >
@@ -1561,7 +1519,7 @@ activeOpacity={0.8}
               title="Privacy Settings" 
               icon="shield-checkmark"
               editing={editing}
-              onUpdate={(updatedData) => console.log('Privacy settings updated:', updatedData)}
+              onUpdate={() => {}}
               onSave={() => Promise.resolve(true)}
               defaultCollapsed={!hasData('privacySettings', jobSeekerProfile)}
               hideHeaderActions

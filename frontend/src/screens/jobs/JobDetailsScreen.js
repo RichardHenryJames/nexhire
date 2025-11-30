@@ -22,7 +22,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
-  const { jobId } = route.params || {};
+const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
@@ -62,18 +62,41 @@ export default function JobDetailsScreen({ route, navigation }) {
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
 
-  // ✅ UPDATED: Navigation header - remove save button for employers
+  // ✅ Navigation header with smart back button
   useEffect(() => {
     navigation.setOptions({
       title: 'Job Details',
       headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
       headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerLeft: () => (
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={() => {
+            // ✅ Smart back navigation - check if we have meaningful navigation history
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            
+            // If we have more than 1 route in the stack, go back normally
+            // This handles: Jobs -> JobDetails (back should go to Jobs)
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              // Hard refresh scenario - navigate to Home tab
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Home'
+                }
+              });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
-      // ✅ FIXED: Only show save button for job seekers (not employers)
+      // ✅ Only show save button for job seekers (not employers)
       headerRight: (hasApplied || isEmployer) ? undefined : () => (
         <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
@@ -183,7 +206,6 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleApply = async () => {
-    console.log('NEW handleApply called - code is updated!');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -213,7 +235,6 @@ export default function JobDetailsScreen({ route, navigation }) {
   };
 
   const handleAskReferral = async () => {
-    console.log('handleAskReferral called in JobDetailsScreen');
     
     if (!user) {
       if (Platform.OS === 'web') {
@@ -249,17 +270,13 @@ export default function JobDetailsScreen({ route, navigation }) {
     
     // ✅ Check wallet balance
     try {
-      console.log('Checking wallet balance...');
       const walletBalance = await refopenAPI.getWalletBalance();
-      console.log('Wallet balance result:', walletBalance);
       
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('Current balance:', balance);
         
         // Check if balance >= ₹50
         if (balance < 50) {
-          console.log('Insufficient wallet balance:', balance);
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
@@ -267,7 +284,6 @@ export default function JobDetailsScreen({ route, navigation }) {
           return;
         }
         
-        console.log('✅ Sufficient balance - proceeding with referral');
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
@@ -309,9 +325,6 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   // REQUIREMENT 3: Improved subscription modal with better logic
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-    console.log('showSubscriptionModal called in JobDetailsScreen');
-    console.log('Navigation object:', navigation);
-    console.log('Available routes:', navigation.getState?.());
     
     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
@@ -320,7 +333,6 @@ export default function JobDetailsScreen({ route, navigation }) {
       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
     if (Platform.OS === 'web') {
-      console.log('Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
       return;
     }
@@ -333,17 +345,14 @@ export default function JobDetailsScreen({ route, navigation }) {
           { 
             text: 'Maybe Later', 
             style: 'cancel',
-            onPress: () => console.log('User selected Maybe Later')
+            onPress: () => {}
           },
           { 
             text: 'View Plans', 
             onPress: () => {
-              console.log('User selected View Plans - attempting navigation...');
               try {
                 navigation.navigate('ReferralPlans');
-                console.log('Navigation successful!');
               } catch (navError) {
-                console.error('Navigation error:', navError);
                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
               }
             }
@@ -355,18 +364,15 @@ export default function JobDetailsScreen({ route, navigation }) {
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-          console.log('Fallback navigation to ReferralPlans after Alert timeout');
-            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
+            try { navigation.navigate('ReferralPlans'); } catch (e) { }
         }
       }, 3000);
     } catch (error) {
-      console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
   }, [navigation, referralEligibility]);
 
   const handlePlanSelection = async (plan) => {
-    console.log('Plan selected:', plan);
     
     Alert.alert(
       'Confirm Subscription',
@@ -645,32 +651,21 @@ export default function JobDetailsScreen({ route, navigation }) {
 
   // ✅ NEW: Handle publish job for employers
   const handlePublishJob = async () => {
-    console.log('🚀 handlePublishJob called!');
-    console.log('🚀 Job ID:', job?.JobID);
-    console.log('🚀 Job Status:', job?.Status);
-    console.log('🚀 Is Employer:', isEmployer);
-    
     if (!job?.JobID) {
-      console.error('❌ No job ID found');
       return;
     }
     
     try {
       setPublishing(true);
-      console.log('📡 Calling publishJob API with JobID:', job.JobID);
       
       const result = await refopenAPI.publishJob(job.JobID);
       
-      console.log('📡 API Response:', result);
-      
       if (result.success) {
-        console.log('✅ Publish successful!');
         showToast('Job published successfully!', 'success');
         // Update job status locally to reflect the change
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
         // Navigate back with parameters to switch to Published tab
         setTimeout(() => {
-          console.log('🔄 Navigating to MainTabs/Jobs with Published tab...');
           // Navigate to MainTabs and then to Jobs screen with parameters
           navigation.navigate('MainTabs', {
             screen: 'Jobs',
@@ -682,11 +677,9 @@ export default function JobDetailsScreen({ route, navigation }) {
           });
         }, 1500);
       } else {
-        console.error('❌ Publish failed:', result.error);
         Alert.alert('Error', result.error || 'Failed to publish job');
       }
     } catch (error) {
-      console.error('❌ Publish job error:', error);
       Alert.alert('Error', error.message || 'Failed to publish job');
     } finally {
       setPublishing(false);
@@ -859,21 +852,44 @@ export default function JobDetailsScreen({ route, navigation }) {
         <View style={styles.companyHeader}>
           {/* 🏢 Company Logo and Details */}
           <View style={styles.companyInfo}>
-            {job.OrganizationLogo ? (
-              <Image 
-                source={{ uri: job.OrganizationLogo }} 
-                style={styles.companyLogo}
-                onError={() => console.log('Company logo load error for:', job.OrganizationName)}
-              />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={32} color="#666" />
-              </View>
-            )}
+            <TouchableOpacity 
+              onPress={() => {
+                if (job.OrganizationID) {
+                  navigation.navigate('OrganizationDetails', { 
+                    organizationId: job.OrganizationID 
+                  });
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {job.OrganizationLogo ? (
+                <Image 
+                  source={{ uri: job.OrganizationLogo }} 
+                  style={styles.companyLogo}
+                  onError={() => {}}
+                />
+              ) : (
+                <View style={styles.logoPlaceholder}>
+                  <Ionicons name="business-outline" size={32} color="#666" />
+                </View>
+              )}
+            </TouchableOpacity>
             
             <View style={styles.companyDetails}>
               <Text style={styles.title}>{job.Title}</Text>
-              <Text style={styles.company}>{job.OrganizationName || 'Company Name'}</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  if (job.OrganizationID) {
+                    navigation.navigate('OrganizationDetails', { 
+                      organizationId: job.OrganizationID 
+                    });
+                  }
+                }}
+              >
+                <Text style={[styles.company, { textDecorationLine: 'underline' }]}>
+                  {job.OrganizationName || 'Company Name'}
+                </Text>
+              </TouchableOpacity>
               
               {/* Company Links Container */}
               <View style={styles.companyLinksContainer}>
@@ -1210,69 +1226,72 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       )}
 
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
-      <View style={styles.actionContainer}>        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
-              styles.referralButton,
-              (hasReferred || referralRequesting) && styles.referralButtonDisabled
-            ]}
-            onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
-            disabled={hasReferred || referralRequesting}
-          >
-            <Ionicons 
-              name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
-              size={20} 
-              color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
-            />
-            <Text style={[
-              styles.referralButtonText, 
-              hasReferred && { color: "#10b981" }
-            ]}>
-              {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {isJobSeeker && (
-          <TouchableOpacity 
-            style={[
+      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab */}
+      {!fromReferralRequest && (
+        <View style={styles.actionContainer}>        
+          {isJobSeeker && (
+            <TouchableOpacity 
+              style={[
+                styles.referralButton,
+                (hasReferred || referralRequesting) && styles.referralButtonDisabled
+              ]}
+              onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
+              disabled={hasReferred || referralRequesting}
+            >
+              <Ionicons 
+                name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
+                size={20} 
+                color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
+              />
+              <Text style={[
+                styles.referralButtonText, 
+                hasReferred && { color: "#10b981" }
+              ]}>
+                {hasReferred ? "Ref. Asked" : referralRequesting ? 'Requesting' : "Ask Referral"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {isJobSeeker && (
+            <TouchableOpacity 
+              style={[
 
-              styles.applyButton, 
-              (hasApplied || applying) && styles.applyButtonDisabled
-            ]} 
-            onPress={handleApply}
-            disabled={hasApplied || applying}
-          >
-            {applying && <ActivityIndicator size="small" color={colors.white} />}
-            <Text style={styles.applyButtonText}>
-              {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
-            </Text>
-          </TouchableOpacity>
-        )}
+                styles.applyButton, 
+                (hasApplied || applying) && styles.applyButtonDisabled
+              ]} 
+              onPress={handleApply}
+              disabled={hasApplied || applying}
+            >
+              {applying && <ActivityIndicator size="small" color={colors.white} />}
+              <Text style={styles.applyButtonText}>
+                {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
+              </Text>
+            </TouchableOpacity>
+          )}
         
-        {/* ✅ NEW: Publish button for employers viewing draft jobs */}
-        {isEmployer && job.Status === 'Draft' && (
-          <TouchableOpacity
-            style={[
+          {/* ✅ NEW: Publish button for employers viewing draft jobs */}
+          {isEmployer && job.Status === 'Draft' && (
+            <TouchableOpacity
+              style={[
 
-              styles.publishButton,
-              publishing && styles.publishButtonDisabled
-            ]}
-            onPress={handlePublishJob}
-            disabled={publishing}
-          >
-            {publishing ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
-            )}
-            <Text style={styles.publishButtonText}>
-              {publishing ? 'Publishing...' : 'Publish Job'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+                styles.publishButton,
+                publishing && styles.publishButtonDisabled
+              ]}
+              onPress={handlePublishJob}
+              disabled={publishing}
+            >
+              {publishing ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
+              )}
+              <Text style={styles.publishButtonText}>
+                {publishing ? 'Publishing...' : 'Publish Job'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       
       {/* Resume Upload Modal */}
       <ResumeUploadModal

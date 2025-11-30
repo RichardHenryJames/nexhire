@@ -78,7 +78,8 @@ export default function UserProfileHeader({
   employerProfile,
   userType,
   onProfileUpdate,
-  showStats = false // NEW: hide right-side Education/Skills/% Complete by default
+  showStats = false, // NEW: hide right-side Education/Skills/% Complete by default
+  showProgress = true // NEW: hide circular progress ring when viewing others' profiles
 }) {
   const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
@@ -586,41 +587,79 @@ export default function UserProfileHeader({
       <View style={styles.mainContent}>
         {/* Profile Picture with Progress Ring */}
         <View style={styles.profileSection}>
-          <View style={styles.profileImageWrapper}>
-            <CircularProgress percentage={profileCompleteness} size={100} />
-            
+          {showProgress ? (
+            <View style={styles.profileImageWrapper}>
+              <CircularProgress percentage={profileCompleteness} size={100} />
+              
+              <TouchableOpacity 
+                style={styles.profileImageTouchable}
+                onPress={onProfileUpdate ? () => setShowImagePickerModal(true) : undefined}
+                activeOpacity={onProfileUpdate ? 0.8 : 1}
+                disabled={!onProfileUpdate}
+              >
+                <View style={styles.profileImageInner}>
+                  {profile?.profilePictureURL ? (
+                    <Image 
+                      source={{ uri: profile.profilePictureURL }} 
+                      style={styles.profileImage}
+                      onError={() => console.log('Failed to load profile image')}
+                    />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <Text style={styles.initialsText}>
+                        {getInitials()}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {uploading && (
+                    <View style={styles.uploadingOverlay}>
+                      <ActivityIndicator size="small" color={colors.white} />
+                    </View>
+                  )}
+                  
+                  {onProfileUpdate && (
+                    <View style={styles.cameraIcon}>
+                      <MaterialIcons name="camera-alt" size={14} color={colors.white} />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : (
             <TouchableOpacity 
-              style={styles.profileImageTouchable}
-              onPress={() => setShowImagePickerModal(true)}
-              activeOpacity={0.8}
+              style={styles.profileImageStandalone}
+              onPress={onProfileUpdate ? () => setShowImagePickerModal(true) : undefined}
+              activeOpacity={onProfileUpdate ? 0.8 : 1}
+              disabled={!onProfileUpdate}
             >
-              <View style={styles.profileImageInner}>
-                {profile?.profilePictureURL ? (
-                  <Image 
-                    source={{ uri: profile.profilePictureURL }} 
-                    style={styles.profileImage}
-                    onError={() => console.log('Failed to load profile image')}
-                  />
-                ) : (
-                  <View style={styles.profileImagePlaceholder}>
-                    <Text style={styles.initialsText}>
-                      {getInitials()}
-                    </Text>
-                  </View>
-                )}
-                
-                {uploading && (
-                  <View style={styles.uploadingOverlay}>
-                    <ActivityIndicator size="small" color={colors.white} />
-                  </View>
-                )}
-                
+              {profile?.profilePictureURL ? (
+                <Image 
+                  source={{ uri: profile.profilePictureURL }} 
+                  style={styles.profileImageStandaloneImg}
+                  onError={() => console.log('Failed to load profile image')}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholderStandalone}>
+                  <Text style={styles.initialsText}>
+                    {getInitials()}
+                  </Text>
+                </View>
+              )}
+              
+              {uploading && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="small" color={colors.white} />
+                </View>
+              )}
+              
+              {onProfileUpdate && (
                 <View style={styles.cameraIcon}>
                   <MaterialIcons name="camera-alt" size={14} color={colors.white} />
                 </View>
-              </View>
+              )}
             </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* User Info */}
@@ -851,6 +890,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
+  },
+
+  // Standalone Profile Image (without progress ring)
+  profileImageStandalone: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  profileImageStandaloneImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 42,
+  },
+  profileImagePlaceholderStandalone: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#3B82F6' + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Info Section

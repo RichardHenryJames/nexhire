@@ -74,7 +74,7 @@ const JobCard = ({
               <Image 
                 source={{ uri: logo }} 
                 style={styles.logo}
-                onError={() => console.log('Logo load error for:', org)}
+                
               />
             ) : (
               <View style={styles.logoPlaceholder}>

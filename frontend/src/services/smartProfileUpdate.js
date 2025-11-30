@@ -105,19 +105,11 @@ class SmartProfileUpdateService {
    */
   async updateProfile(userId, profileData) {
     try {
-      console.log('Smart Profile Update - Starting...');
-      console.log('Input data:', Object.keys(profileData));
       
       // Split data by database table
       const { usersData, applicantsData, unknownFields } = this.routeFields(profileData);
       
       // Log routing results
-      if (Object.keys(usersData).length > 0) {
-        console.log('Users table fields:', Object.keys(usersData));
-      }
-      if (Object.keys(applicantsData).length > 0) {
-        console.log('Applicants table fields:', Object.keys(applicantsData));
-      }
       if (unknownFields.length > 0) {
         console.warn('Unknown fields ignored:', unknownFields);
       }
@@ -134,13 +126,11 @@ class SmartProfileUpdateService {
       
       // Update Users table if needed
       if (Object.keys(usersData).length > 0) {
-        console.log('Updating Users table...');
         updatePromises.push(
           this.updateUsersTable(usersData)
             .then(result => {
               results.usersUpdated = true;
               results.usersData = result;
-              console.log('Users table updated successfully');
             })
             .catch(error => {
               console.error('Users table update failed:', error);
@@ -151,13 +141,11 @@ class SmartProfileUpdateService {
       
       // Update Applicants table if needed
       if (Object.keys(applicantsData).length > 0) {
-        console.log('Updating Applicants table...');
         updatePromises.push(
           this.updateApplicantsTable(userId, applicantsData)
             .then(result => {
               results.applicantsUpdated = true;
               results.applicantsData = result;
-              console.log('Applicants table updated successfully');
             })
             .catch(error => {
               console.error('Applicants table update failed:', error);
@@ -169,12 +157,6 @@ class SmartProfileUpdateService {
       // Wait for all updates to complete
       await Promise.all(updatePromises);
       
-      // Summary
-      console.log('Smart Profile Update completed:', {
-        usersUpdated: results.usersUpdated,
-        applicantsUpdated: results.applicantsUpdated,
-        errorsCount: results.errors.length
-      });
       
       return results;
       
@@ -255,7 +237,6 @@ export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
   const updateProfileSmart = async (profileData) => {
     try {
       setError(null);
-      console.log('Starting smart profile update...');
       
       const userId = refopenAPI.getUserIdFromToken();
       if (!userId) {
@@ -267,8 +248,6 @@ export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
       if (result.errors && result.errors.length > 0) {
         console.warn('Smart update completed with some issues:', result.errors);
         setError(`Profile updated with some issues: ${result.errors.join(', ')}`);
-      } else {
-        console.log('Smart profile update completed successfully');
       }
       
       // Refresh user data if Users table was updated
@@ -305,14 +284,10 @@ export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
      */
     async togglePrivacySetting(setting, value) {
       try {
-        console.log(`Toggling ${setting} to ${value}...`);
         
         const profileData = { [setting]: value };
         const result = await updateProfileSmart(profileData);
         
-        if (result.success) {
-          console.log(`? ${setting} toggled successfully to ${value}`);
-        }
         
         return result;
       } catch (error) {
@@ -325,7 +300,6 @@ export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
      * Bulk profile update with smart routing
      */
     async updateCompleteProfile(profileData) {
-      console.log('Updating complete profile with smart routing...');
       return await updateProfileSmart(profileData);
     }
   };
