@@ -257,6 +257,20 @@ export class JobScraperService {
     }
   }
 
+  // Load Clearbit API key (optional - for enhanced enrichment)
+  private static loadClearbitApiKey(): string | null {
+    try {
+      const apiKey = process.env.CLEARBIT_API_KEY;
+      if (apiKey) {
+        console.log('🔑 Using Clearbit API key for enhanced enrichment');
+        return apiKey;
+      }
+      return null;
+    } catch (error: any) {
+      return null;
+    }
+  }
+
   // 🚀 ENHANCED RemoteOK - GET ALL AVAILABLE JOBS WITH LOGOS (OPTIMIZED)
   private static async scrapeRemoteOK(): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
@@ -1155,7 +1169,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 🔄 Update existing organization with new API data
+  // 🔄 Update existing organization with new API data (ENHANCED with Clearbit data)
   private static async updateOrganizationWithApiData(organizationId: number, companyName: string, source: string, job: ScrapedJob, existingData: any): Promise<void> {
     try {
       const enhancedData = await this.getEnhancedOrganizationData(companyName, source, job);
@@ -1181,6 +1195,26 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         console.log(`🌐 Adding website to ${companyName}: ${enhancedData.website}`);
       }
       
+      // Update Description if we have better info (from Clearbit)
+      if (enhancedData.description && enhancedData.description !== `${companyName} - ${enhancedData.industry} company`) {
+        if (!existingData.Description || existingData.Description.includes('Auto-created from')) {
+          updates.push(`Description = @param${paramIndex}`);
+          params.push(enhancedData.description);
+          paramIndex++;
+          console.log(`📝 Adding description to ${companyName}`);
+        }
+      }
+      
+      // Update Size if we have employee count (from Clearbit)
+      if (enhancedData.size && enhancedData.size !== 'Unknown') {
+        if (!existingData.Size || existingData.Size === 'Unknown') {
+          updates.push(`Size = @param${paramIndex}`);
+          params.push(enhancedData.size);
+          paramIndex++;
+          console.log(`👥 Adding size to ${companyName}: ${enhancedData.size}`);
+        }
+      }
+      
       // Update Industry if existing is generic and we have better info
       if (enhancedData.industry !== 'Technology' && 
           (existingData.Industry === 'Technology' || !existingData.Industry)) {
@@ -1190,8 +1224,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         console.log(`🏭 Updating industry for ${companyName}: ${enhancedData.industry}`);
       }
       
-      // Update LinkedInProfile if we have one
-      if (enhancedData.linkedInProfile) {
+      // Update LinkedInProfile if we have one (prefer Clearbit data over generated)
+      if (enhancedData.linkedInProfile && !existingData.LinkedInProfile) {
         updates.push(`LinkedInProfile = @param${paramIndex}`);
         params.push(enhancedData.linkedInProfile);
         paramIndex++;
@@ -1215,7 +1249,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 📊 Get enhanced organization data from multiple sources
+  // 📊 Get enhanced organization data from multiple sources (SAME AS POWERSHELL)
   private static async getEnhancedOrganizationData(companyName: string, source: string, job: ScrapedJob): Promise<{
     logoUrl: string | null;
     website: string | null;
@@ -1229,9 +1263,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     let industry = 'Technology'; // Default
     let size = 'Unknown';
     let linkedInProfile: string | null = null;
+    let description = `${companyName} - ${industry} company`;
     
     // ✅ ENRICHMENT ENABLED: Using same logic as enrich-organizations.ps1
-    // Enriching only the company being scraped, not all companies
     const ENABLE_ENRICHMENT = true;
     
     // 1. Get logo from RemoteOK API if available (instant, no API call)
@@ -1246,7 +1280,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     if (ENABLE_ENRICHMENT) {
       try {
-        // 3. Try to find website using common domain patterns (fast, parallel checks)
+        // 3. Try to find website using common domain patterns
         if (!website) {
           website = await this.searchCompanyWebsiteFast(companyName);
         }
@@ -1256,15 +1290,50 @@ Apply now to join a dynamic team that's building the future! 🌟`;
           logoUrl = await this.getClearbitLogoFast(website);
         }
         
-        // 5. Generate LinkedIn URL (instant, no API call)
-        linkedInProfile = this.generateLinkedInUrl(companyName);
+        // 5. 🆕 Get comprehensive company data from Clearbit Company API (SAME AS POWERSHELL)
+        const clearbitApiKey = this.loadClearbitApiKey();
+        if (website && clearbitApiKey) {
+          console.log(`📊 Fetching Clearbit Company data for ${companyName}...`);
+          const clearbitData = await this.getClearbitCompanyInfo(website, clearbitApiKey);
+          
+          if (clearbitData) {
+            // Use Clearbit data to enhance our organization info
+            if (clearbitData.description) {
+              description = clearbitData.description;
+            }
+            
+            if (clearbitData.industry) {
+              industry = clearbitData.industry;
+            }
+            
+            if (clearbitData.employeeCount) {
+              size = clearbitData.employeeCount;
+            }
+            
+            if (clearbitData.linkedIn) {
+              linkedInProfile = clearbitData.linkedIn;
+            }
+            
+            // Use Clearbit logo if we don't have one yet and it's available
+            if (!logoUrl && clearbitData.logo) {
+              logoUrl = clearbitData.logo;
+            }
+            
+            console.log(`✅ Clearbit: Enriched ${companyName} with comprehensive data`);
+          }
+        }
+        
+        // 6. Generate LinkedIn URL if we don't have one from Clearbit (instant, no API call)
+        if (!linkedInProfile) {
+          linkedInProfile = this.generateLinkedInUrl(companyName);
+        }
         
       } catch (error) {
         console.warn(`⚠️ Enrichment failed for ${companyName}: ${error}`);
       }
     }
     
-    // 6. Enhance industry based on job title/description (instant, no API call)
+    // 7. Enhance industry based on job title/description (instant, no API call)
     industry = this.enhanceIndustryFromJob(job.title, job.description, industry);
     
     return {
@@ -1272,7 +1341,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       website,
       industry,
       size,
-      description: `${companyName} - ${industry} company`,
+      description,
       linkedInProfile
     };
   }
@@ -1380,6 +1449,77 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
     
     return null;
+  }
+
+  // 📊 Get comprehensive company info from Clearbit Company API (same as PowerShell)
+  private static async getClearbitCompanyInfo(domain: string, apiKey: string): Promise<{
+    name?: string;
+    domain?: string;
+    logo?: string;
+    description?: string;
+    foundedYear?: number;
+    industry?: string;
+    sector?: string;
+    employeeCount?: string;
+    location?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    linkedIn?: string;
+  } | null> {
+    if (!domain || !apiKey) {
+      return null;
+    }
+
+    try {
+      const cleanDomain = domain
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '')
+        .trim();
+
+      const url = `https://company.clearbit.com/v2/companies/find?domain=${cleanDomain}`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        timeout: 10000,
+        validateStatus: (status) => status === 200
+      });
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+        
+        return {
+          name: data.name,
+          domain: data.domain,
+          logo: data.logo,
+          description: data.description,
+          foundedYear: data.foundedYear,
+          industry: data.category?.industry,
+          sector: data.category?.sector,
+          employeeCount: data.metrics?.employees ? `${data.metrics.employees} employees` : undefined,
+          location: data.location ? `${data.location.city || ''}, ${data.location.country || ''}`.trim() : undefined,
+          city: data.location?.city,
+          state: data.location?.state,
+          country: data.location?.country,
+          linkedIn: data.linkedin?.handle ? `https://www.linkedin.com/company/${data.linkedin.handle}` : undefined
+        };
+      }
+      
+      return null;
+    } catch (error: any) {
+      // API error or company not found (not a critical error)
+      if (error.response?.status === 404) {
+        console.log(`📊 Clearbit: No data found for ${domain}`);
+      } else if (error.response?.status === 402) {
+        console.log('⚠️ Clearbit API quota exceeded');
+      } else {
+        console.log(`⚠️ Clearbit API error: ${error.message}`);
+      }
+      return null;
+    }
   }
 
   // 🎨 Fast Clearbit logo fetch (same as enrich-organizations.ps1)
