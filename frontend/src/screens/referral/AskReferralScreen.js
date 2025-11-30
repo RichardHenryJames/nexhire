@@ -22,7 +22,7 @@ import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 
-export default function AskReferralScreen({ navigation }) {
+export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker } = useAuth();
   
 // ⚡ NEW: Separate loading states for lazy loading
@@ -38,6 +38,9 @@ const [companies, setCompanies] = useState([]);
 const [showCompanyModal, setShowCompanyModal] = useState(false);
 const [companySearchTerm, setCompanySearchTerm] = useState('');
 const [selectedCompany, setSelectedCompany] = useState(null);
+
+// ✅ Get pre-selected organization from route params
+const preSelectedOrganization = route?.params?.preSelectedOrganization;
 
 // Form state
 const [formData, setFormData] = useState({
@@ -104,7 +107,14 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     loadWalletBalance(); // Load immediately for banner
     loadResumesLazily(); // Load resumes after a delay
     loadCompaniesInBackground(); // Load companies in background
-  }, []);
+    
+    // ✅ NEW: Auto-select organization if passed from route params
+    if (preSelectedOrganization) {
+      console.log('🔍 Pre-selected organization received:', preSelectedOrganization);
+      setSelectedCompany(preSelectedOrganization);
+      setFormData(prev => ({ ...prev, companyName: preSelectedOrganization.name }));
+    }
+  }, [preSelectedOrganization]);
 
   // Debug useEffect to log form state changes
   useEffect(() => {
@@ -506,7 +516,9 @@ const [showResumeModal, setShowResumeModal] = useState(false);
                       <Ionicons name="business" size={16} color={colors.gray400} />
                     </View>
                   )}
-                  <Text style={styles.companySelectorText}>{selectedCompany.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.companySelectorText}>{selectedCompany.name}</Text>
+                  </View>
                 </View>
               ) : (
                 <Text style={[styles.companySelectorText, styles.companySelectorPlaceholder]}>
@@ -1164,6 +1176,12 @@ const styles = StyleSheet.create({
   },
   companySelectorPlaceholder: {
     color: colors.gray500,
+  },
+  preSelectedBadge: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   // Company modal styles
   modalContainer: {

@@ -122,26 +122,85 @@ const [error, setError] = useState(null);
 
   const loadRecentJobs = async (orgId) => {
     try {
+      console.log('????????????????????????????????????????');
+      console.log('?? [OrganizationDetails] LOADING RECENT JOBS');
+      console.log('????????????????????????????????????????');
+      console.log('?? Organization ID:', orgId);
+      console.log('?? Organization ID Type:', typeof orgId);
+      
       setLoadingJobs(true);
       
       // Get jobs from this organization posted in last 24 hours
-      const result = await refopenAPI.getJobs(1, 10, {
+      const filters = {
         organizationIds: [orgId].join(','),
         postedWithinDays: 1,
         sortBy: 'PublishedAt',
         sortOrder: 'desc'
-      });
+      };
       
-      if (result.success && result.data) {
-        setRecentJobs(result.data.slice(0, 5)); // Show max 5 recent jobs
+      console.log('?? [OrganizationDetails] API Request Details:');
+      console.log('   - URL: /api/jobs');
+      console.log('   - Page: 1');
+      console.log('   - PageSize: 10');
+      console.log('   - Filters:', JSON.stringify(filters, null, 2));
+      
+      const result = await refopenAPI.getJobs(1, 10, filters);
+      
+      console.log('????????????????????????????????????????');
+      console.log('?? [OrganizationDetails] API RESPONSE RECEIVED');
+      console.log('????????????????????????????????????????');
+      console.log('? Success:', result.success);
+      console.log('? Has Data:', !!result.data);
+      console.log('? Data Type:', typeof result.data);
+      console.log('? Is Array:', Array.isArray(result.data));
+      console.log('? Data Length:', result.data?.length || 0);
+      console.log('? Error:', result.error || 'none');
+      
+      if (result.data && Array.isArray(result.data)) {
+        console.log('????????????????????????????????????????');
+        console.log('?? [OrganizationDetails] JOBS DATA DETAILS');
+        console.log('????????????????????????????????????????');
+        result.data.forEach((job, index) => {
+          console.log(`\n?? Job ${index + 1}:`);
+          console.log('   - JobID:', job.JobID);
+          console.log('   - Title:', job.Title);
+          console.log('   - OrganizationName:', job.OrganizationName);
+          console.log('   - OrganizationID:', job.OrganizationID);
+          console.log('   - PublishedAt:', job.PublishedAt);
+          console.log('   - CreatedAt:', job.CreatedAt);
+          console.log('   - Location:', job.Location);
+          console.log('   - JobTypeName:', job.JobTypeName);
+        });
       } else {
+        console.log('?? [OrganizationDetails] Data is not an array or is null');
+        console.log('   Raw data:', result.data);
+      }
+      
+      if (result.success && result.data && Array.isArray(result.data)) {
+        const jobsToShow = result.data.slice(0, 5);
+        console.log('\n? [OrganizationDetails] Setting recentJobs state');
+        console.log('   - Jobs to show:', jobsToShow.length);
+        console.log('   - Job IDs:', jobsToShow.map(j => j.JobID));
+        setRecentJobs(jobsToShow);
+      } else {
+        console.warn('?? [OrganizationDetails] No jobs found or API failed');
+        console.warn('   - Setting empty array');
         setRecentJobs([]);
       }
+      
+      console.log('????????????????????????????????????????\n');
     } catch (err) {
-      console.error('Error loading recent jobs:', err);
+      console.error('????????????????????????????????????????');
+      console.error('? [OrganizationDetails] ERROR LOADING JOBS');
+      console.error('????????????????????????????????????????');
+      console.error('Error Type:', err.constructor.name);
+      console.error('Error Message:', err.message);
+      console.error('Full Error:', err);
+      console.error('????????????????????????????????????????\n');
       setRecentJobs([]);
     } finally {
       setLoadingJobs(false);
+      console.log('?? [OrganizationDetails] loadRecentJobs completed\n');
     }
   };
 
@@ -289,7 +348,7 @@ const [error, setError] = useState(null);
           <Text style={styles.companyName}>{organization.name}</Text>
           
           {/* Verification Badge */}
-          {organization.verification && (
+          {!!organization.verification && (
             <View style={styles.verificationBadge}>
               <Ionicons 
                 name={organization.verification === 'Verified' ? 'checkmark-circle' : 'shield-outline'} 
@@ -323,7 +382,9 @@ const [error, setError] = useState(null);
             <View style={styles.recentJobsHeader}>
               <View style={styles.recentJobsHeaderLeft}>
                 <Ionicons name="time-outline" size={20} color={colors.primary} />
-                <Text style={styles.recentJobsTitle}>Posted in Last 24 Hours</Text>
+                <Text style={styles.recentJobsTitle}>
+                  Recent Jobs ({recentJobs.length})
+                </Text>
               </View>
               {recentJobs.length >= 5 && (
                 <TouchableOpacity 
@@ -338,6 +399,7 @@ const [error, setError] = useState(null);
                 </TouchableOpacity>
               )}
             </View>
+            <Text style={styles.recentJobsSubtitle}>Posted in last 24 hours</Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -434,12 +496,19 @@ const [error, setError] = useState(null);
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => {
-              // Navigate to jobs list filtered by this organization
-              navigation.navigate('Jobs', { organizationId: organization.id });
+              // Navigate to AskReferral screen with organization pre-selected
+              navigation.navigate('AskReferral', { 
+                preSelectedOrganization: {
+                  id: organization.id,
+                  name: organization.name,
+                  industry: organization.industry,
+                  logoURL: organization.logoURL
+                }
+              });
             }}
           >
-            <Ionicons name="briefcase" size={20} color={colors.white} />
-            <Text style={styles.actionButtonText}>View Open Positions</Text>
+            <Ionicons name="people" size={20} color={colors.white} />
+            <Text style={styles.actionButtonText}>Ask for Referral</Text>
           </TouchableOpacity>
         </View>
 
@@ -700,6 +769,12 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginLeft: 8,
+  },
+  recentJobsSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 12,
+    marginTop: -8,
   },
   seeAllText: {
     fontSize: typography.sizes.sm,

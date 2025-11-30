@@ -54,9 +54,9 @@ function Get-ClearbitLogo {
       # Clean the domain properly
       $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
 
-      # ✅ PREVENTION: Skip Wikipedia and other invalid domains
-      if ($cleanDomain -match 'wikipedia\.org|wikimedia\.org|wiki\.') {
-          Write-Host "         ⚠️ Skipping Wikipedia domain: $cleanDomain" -ForegroundColor Yellow
+      # ✅ PREVENTION: Skip Wikipedia, LinkedIn, and other invalid domains
+      if ($cleanDomain -match 'wikipedia\.org|wikimedia\.org|wiki\.|linkedin\.com|facebook\.com|twitter\.com|instagram\.com') {
+          Write-Host "         ⚠️ Skipping social media/wiki domain: $cleanDomain" -ForegroundColor Yellow
           return $null
       }
 
@@ -147,9 +147,9 @@ function Search-CompanyWebsite {
         if ($response.Content -match 'uddg=([^"&]+)') {
     $website = [System.Web.HttpUtility]::UrlDecode($matches[1])
 
-            # ✅ PREVENTION: Skip Wikipedia URLs
-            if ($website -match 'wikipedia\.org|wikimedia\.org|wiki\.') {
-                Write-Host "         ⚠️ Skipping Wikipedia website for $CompanyName" -ForegroundColor Yellow
+            # ✅ PREVENTION: Skip Wikipedia and LinkedIn URLs
+            if ($website -match 'wikipedia\.org|wikimedia\.org|wiki\.|linkedin\.com|facebook\.com|twitter\.com') {
+                Write-Host "         ⚠️ Skipping social media/wiki website for $CompanyName" -ForegroundColor Yellow
                 return $null
             }
 
@@ -165,6 +165,13 @@ function Search-CompanyWebsite {
 
  # Fallback: Try common domain patterns
     $companySlug = $CompanyName.ToLower() -replace '\s+', '' -replace '[^a-z0-9]', ''
+    
+    # ✅ PREVENTION: Don't try to validate social media company names
+    if ($companySlug -match 'linkedin|facebook|twitter|instagram|wikipedia|wiki') {
+        Write-Host "         ⚠️ Skipping social media company name: $CompanyName" -ForegroundColor Yellow
+        return $null
+    }
+    
     $possibleDomains = @(
       "https://www.$companySlug.com",
 "https://www.$companySlug.io",

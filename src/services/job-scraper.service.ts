@@ -1283,7 +1283,45 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return (job as any).logoUrl || null;
   }
 
-  // 🌐 Fast website search using common domain patterns (same as enrich-organizations.ps1)
+  // 🛡️ Validate if URL is a legitimate company website (not social media)
+  private static isValidCompanyWebsite(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase().replace('www.', '');
+      
+      // ❌ Block social media and wiki sites
+      const blockedDomains = [
+        'linkedin.com',
+        'facebook.com',
+        'twitter.com',
+        'x.com',
+        'instagram.com',
+        'youtube.com',
+        'tiktok.com',
+        'wikipedia.org',
+        'wikimedia.org',
+        'wiki.',
+        'github.com',  // GitHub is profile, not company website
+        'medium.com'   // Medium is blog platform, not company website
+      ];
+      
+      // Check if hostname contains any blocked domain
+      const isBlocked = blockedDomains.some(blocked => 
+        hostname.includes(blocked) || hostname.endsWith(blocked)
+      );
+      
+      if (isBlocked) {
+        console.log(`⚠️ Rejected social media/wiki URL as company website: ${url}`);
+        return false;
+      }
+      
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // 🌐 Fast website search using common domain patterns (with URL validation)
   private static async searchCompanyWebsiteFast(companyName: string): Promise<string | null> {
     try {
       // Generate domain variations
@@ -1292,6 +1330,13 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, '')
         .trim();
+      
+      // ✅ Pre-validation: Don't try to access social media domains
+      const socialMediaKeywords = ['linkedin', 'facebook', 'twitter', 'instagram', 'wikipedia', 'wiki'];
+      if (socialMediaKeywords.some(keyword => companySlug.includes(keyword))) {
+        console.log(`⚠️ Skipping social media company name: ${companyName}`);
+        return null;
+      }
       
       const possibleDomains = [
         `https://www.${companySlug}.com`,
@@ -1302,6 +1347,11 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       // Try domains in parallel with short timeout
       const domainChecks = possibleDomains.map(async (domain) => {
         try {
+          // ✅ Validate URL before checking
+          if (!this.isValidCompanyWebsite(domain)) {
+            return null;
+          }
+          
           const response = await axios.head(domain, {
             timeout: 2000, // 2 second timeout
             validateStatus: (status) => status >= 200 && status < 400

@@ -12,6 +12,8 @@ import {
   Dimensions,
   Image,
   Modal,
+  TextInput,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,6 +27,12 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker } = useAuth();
 const [refreshing, setRefreshing] = useState(false);
+
+// Organization search state
+const [searchQuery, setSearchQuery] = useState('');
+const [searchResults, setSearchResults] = useState([]);
+const [searchLoading, setSearchLoading] = useState(false);
+const [showSearchResults, setShowSearchResults] = useState(false);
   
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingStats, setLoadingStats] = useState(true);
@@ -48,7 +56,46 @@ const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
 const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
-const scrollViewRef = React.useRef(null);
+  const scrollViewRef = React.useRef(null);
+
+  // Organization search function with debounce
+  const searchOrganizations = useCallback(async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const result = await refopenAPI.getOrganizations(query.trim(), 10);
+      
+      if (result.success && result.data) {
+        // Filter out "My company is not listed" option
+        const filtered = result.data.filter(org => org.id !== 999999);
+        setSearchResults(filtered);
+        setShowSearchResults(filtered.length > 0);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Organization search error:', error);
+      setSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchOrganizations(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -445,6 +492,109 @@ const scrollViewRef = React.useRef(null);
 
   return (
     <>
+      {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
+      <View style={styles.headerCompact}>
+        {/* Left: Brand name */}
+        <Text style={styles.brandName}>RefOpen</Text>
+        
+        {/* Center: Search bar */}
+        <View style={styles.searchContainerMain}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons 
+              name="search" 
+              size={18} 
+              color={colors.gray400} 
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search companies..."
+              placeholderTextColor={colors.gray400}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => searchQuery.trim().length >= 2 && setShowSearchResults(true)}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 300)}
+            />
+            {searchLoading && (
+              <ActivityIndicator size="small" color={colors.primary} style={styles.searchLoader} />
+            )}
+          </View>
+          
+          {/* Search Results Dropdown */}
+          {showSearchResults && searchResults.length > 0 && (
+            <View style={styles.searchResultsDropdown}>
+              <FlatList
+                data={searchResults}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.searchResultItem}
+                    activeOpacity={0.7}
+                    onPressIn={() => {
+                      // Use onPressIn to trigger before onBlur
+                      console.log('🔍 [HomeScreen] Search result pressed:', {
+                        id: item.id,
+                        name: item.name,
+                        industry: item.industry
+                      });
+                      
+                      console.log('🔍 [HomeScreen] Navigating to OrganizationDetails with ID:', item.id);
+                      
+                      // Navigate immediately
+                      navigation.navigate('OrganizationDetails', { 
+                        organizationId: item.id 
+                      });
+                      
+                      // Clear state after navigation
+                      setTimeout(() => {
+                        setShowSearchResults(false);
+                        setSearchQuery('');
+                      }, 100);
+                    }}
+                  >
+                    {item.logoURL ? (
+                      <Image 
+                        source={{ uri: item.logoURL }} 
+                        style={styles.orgLogo}
+                      />
+                    ) : (
+                      <View style={styles.orgLogoPlaceholder}>
+                        <Ionicons name="business" size={20} color={colors.gray400} />
+                      </View>
+                    )}
+                    <View style={styles.orgInfo}>
+                      <Text style={styles.orgName} numberOfLines={1}>{item.name}</Text>
+                      {item.industry && (
+                        <Text style={styles.orgIndustry} numberOfLines={1}>{item.industry}</Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+                style={styles.searchResultsList}
+              />
+            </View>
+          )}
+        </View>
+        
+        {/* Right: Profile picture */}
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.7}
+        >
+          {user?.ProfilePictureURL ? (
+            <Image 
+              source={{ uri: user.ProfilePictureURL }} 
+              style={styles.profilePictureSmall}
+            />
+          ) : (
+            <View style={styles.profilePictureSmallPlaceholder}>
+              <Ionicons name="person" size={20} color={colors.white} />
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -453,31 +603,6 @@ const scrollViewRef = React.useRef(null);
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* New Header with RefOpen branding and profile picture */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>RefOpen</Text>
-            <Text style={styles.subGreeting}>
-              {isEmployer ? 'Manage your team and hiring pipeline' : 'Advance your career journey'}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.headerRight}
-            onPress={() => navigation.navigate('Profile')}
-            activeOpacity={0.7}
-          >
-            {user?.ProfilePictureURL ? (
-              <Image 
-                source={{ uri: user.ProfilePictureURL }} 
-                style={styles.profilePicture}
-              />
-            ) : (
-              <View style={styles.profilePicturePlaceholder}>
-                <Ionicons name="person" size={24} color={colors.white} />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
 
         {/* Quick Actions with Enhanced Urgency */}
         <View style={styles.actionsContainer}>
@@ -862,45 +987,154 @@ const scrollViewRef = React.useRef(null);
 }
 
 const styles = StyleSheet.create({
-  container: {
+container: {
+  flex: 1,
+  backgroundColor: colors.background,
+},
+loadingContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: colors.background,
+},
+loadingText: {
+  marginTop: 12,
+  fontSize: typography.sizes.md,
+  color: colors.gray600,
+},
+// ⚡ NEW: Section loader styles
+sectionLoader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 32,
+  backgroundColor: colors.surface,
+  borderRadius: 12,
+  marginTop: 8,
+},
+sectionLoaderText: {
+  marginLeft: 12,
+  fontSize: typography.sizes.sm,
+  color: colors.gray600,
+},
+headerCompact: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: 12,
+  paddingTop: Platform.OS === 'ios' ? 44 : 12,
+  backgroundColor: colors.surface,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  gap: 12,
+  zIndex: 10000,
+  elevation: 10,
+  position: Platform.OS === 'web' ? 'sticky' : 'relative',
+  top: 0,
+},
+  brandName: {
+    fontSize: 18,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    letterSpacing: 0.5,
+  },
+  searchContainerMain: {
     flex: 1,
-    backgroundColor: colors.background,
+    position: 'relative',
+    zIndex: 9999,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-  },
-  // ⚡ NEW: Section loader styles
-  sectionLoader: {
+  searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    padding: 0,
+    outlineStyle: 'none',
+  },
+  searchLoader: {
+    marginLeft: 8,
+  },
+  searchResultsDropdown: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    right: 0,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxHeight: 300,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 999,
+    zIndex: 9999,
   },
-  sectionLoaderText: {
-    marginLeft: 12,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+  searchResultsList: {
+    maxHeight: 300,
   },
-  header: {
+  searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    backgroundColor: colors.surface,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: 12,
+  },
+  orgLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+  },
+  orgLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  orgInfo: {
+    flex: 1,
+  },
+  orgName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  orgIndustry: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
+  },
+  profilePictureSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  profilePictureSmallPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerLeft: {
     flex: 1,
