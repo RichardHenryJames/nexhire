@@ -429,17 +429,15 @@ export default function JobsScreen({ navigation, route }) {
           if (orgs?.success) {
             console.log('JobsScreen - Organizations loaded on-demand:', orgs.data?.length);
             console.log('JobsScreen - First org sample:', orgs.data?.[0]);
-            // Pass full organization objects sorted by name
-            const sortedOrgs = orgs.data
-              .filter(org => {
-                const hasName = org.name && org.name.trim().length > 0;
-                if (!hasName) console.log('Org without name:', org);
-                return hasName;
-              })
-              .sort((a, b) => a.name.localeCompare(b.name));
-            console.log('JobsScreen - Filtered and sorted companies:', sortedOrgs.length);
-            console.log('JobsScreen - First sorted company:', sortedOrgs[0]);
-            setCompanies(sortedOrgs);
+            // Filter out organizations without names, but preserve backend sort order (Fortune 500 first, then alphabetical)
+            const filteredOrgs = orgs.data.filter(org => {
+              const hasName = org.name && org.name.trim().length > 0;
+              if (!hasName) console.log('Org without name:', org);
+              return hasName;
+            });
+            console.log('JobsScreen - Filtered companies (preserving backend sort):', filteredOrgs.length);
+            console.log('JobsScreen - First company (should be F500):', filteredOrgs[0]);
+            setCompanies(filteredOrgs);
           } else {
             console.log('JobsScreen - Organizations fetch failed:', orgs);
           }

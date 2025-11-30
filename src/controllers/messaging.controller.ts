@@ -444,6 +444,7 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         PortfolioURL: profile.PortfolioURL,
         PrimarySkills: profile.PrimarySkills,
         IsOpenToWork: profile.IsOpenToWork,
+        OpenToRefer: profile.OpenToRefer,
 
         // Conditional fields based on privacy
         CurrentCompanyName: profile.HideCurrentCompany ? null : profile.CurrentCompanyName,

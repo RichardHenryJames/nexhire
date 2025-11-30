@@ -558,77 +558,20 @@ export default function ChatScreen() {
             </div>
           </div>
 
-          {/* Menu Button */}
+          {/* Call Button */}
           <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Conversation Options", "Choose an action", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete Conversation",
-                  style: "destructive",
-                  onPress: async () => {
-                    Alert.alert(
-                      "Delete Conversation",
-                      "Are you sure you want to delete this conversation?",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              await messagingApi.archiveConversation(
-                                conversationId,
-                                true
-                              );
-                              Alert.alert("Success", "Conversation deleted");
-                              navigation.goBack();
-                            } catch (error) {
-                              Alert.alert(
-                                "Error",
-                                "Failed to delete conversation"
-                              );
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  },
-                },
-                {
-                  text: "Block User",
-                  style: "destructive",
-                  onPress: async () => {
-                    Alert.alert(
-                      "Block User",
-                      "Are you sure you want to block this user? You won't receive messages from them.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Block",
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              await messagingApi.blockUser(
-                                otherUserId,
-                                "Blocked from chat"
-                              );
-                              Alert.alert("Success", "User blocked");
-                              navigation.goBack();
-                            } catch (error) {
-                              Alert.alert("Error", "Failed to block user");
-                            }
-                          },
-                        },
-                      ]
-                    );
-                  },
-                },
-              ]);
-            }}
+            onPress={() => window.alert("Feature Coming Soon\nCall feature is under development")}
+            style={{ padding: 4, marginRight: 12 }}
+          >
+            <Ionicons name="call" size={24} color={colors.white} />
+          </TouchableOpacity>
+
+          {/* Video Call Button */}
+          <TouchableOpacity
+            onPress={() => window.alert("Feature Coming Soon\nVideo call feature is under development")}
             style={{ padding: 4 }}
           >
-            <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+            <Ionicons name="videocam" size={24} color={colors.white} />
           </TouchableOpacity>
         </div>
 
@@ -909,77 +852,20 @@ export default function ChatScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Menu Button */}
+        {/* Call Button */}
         <TouchableOpacity
-          onPress={() => {
-            Alert.alert("Conversation Options", "Choose an action", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete Conversation",
-                style: "destructive",
-                onPress: async () => {
-                  Alert.alert(
-                    "Delete Conversation",
-                    "Are you sure you want to delete this conversation?",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await messagingApi.archiveConversation(
-                              conversationId,
-                              true
-                            );
-                            Alert.alert("Success", "Conversation deleted");
-                            navigation.goBack();
-                          } catch (error) {
-                            Alert.alert(
-                              "Error",
-                              "Failed to delete conversation"
-                            );
-                          }
-                        },
-                      },
-                    ]
-                  );
-                },
-              },
-              {
-                text: "Block User",
-                style: "destructive",
-                onPress: async () => {
-                  Alert.alert(
-                    "Block User",
-                    "Are you sure you want to block this user? You won't receive messages from them.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Block",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            await messagingApi.blockUser(
-                              otherUserId,
-                              "Blocked from chat"
-                            );
-                            Alert.alert("Success", "User blocked");
-                            navigation.goBack();
-                          } catch (error) {
-                            Alert.alert("Error", "Failed to block user");
-                          }
-                        },
-                      },
-                    ]
-                  );
-                },
-              },
-            ]);
-          }}
+          onPress={() => Alert.alert("Feature Coming Soon", "Call feature is under development")}
+          style={[styles.menuButton, { marginRight: 12 }]}
+        >
+          <Ionicons name="call" size={24} color={colors.white} />
+        </TouchableOpacity>
+
+        {/* Video Call Button */}
+        <TouchableOpacity
+          onPress={() => Alert.alert("Feature Coming Soon", "Video call feature is under development")}
           style={styles.menuButton}
         >
-          <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+          <Ionicons name="videocam" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
 

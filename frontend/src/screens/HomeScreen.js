@@ -650,7 +650,7 @@ const scrollViewRef = React.useRef(null);
                 <View style={styles.aiTipContainer}>
                   <Ionicons name="information-circle" size={16} color={colors.primary} />
                   <Text style={styles.aiTipText}>
-                    Complete your profile with more details for even better recommendations
+                    Complete your profile with more details for even better AI recommendations
                   </Text>
                 </View>
               </>

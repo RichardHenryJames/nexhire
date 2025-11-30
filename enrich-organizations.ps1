@@ -44,20 +44,26 @@ Import-Module SqlServer -Force
 # ================================================================
 
 function Get-ClearbitLogo {
-    param([string]$Domain)
+  param([string]$Domain)
 
-    if ([string]::IsNullOrEmpty($Domain)) {
-        return $null
-  }
+  if ([string]::IsNullOrEmpty($Domain)) {
+      return $null
+}
 
-    try {
-        # Clean the domain properly
-        $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
+  try {
+      # Clean the domain properly
+      $cleanDomain = $Domain -replace '^https?://', '' -replace '^www\.', '' -replace '/$', '' -replace '/.*$', ''
 
-      # Skip if domain is invalid
-        if ($cleanDomain -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$') {
-            return $null
-        }
+      # ✅ PREVENTION: Skip Wikipedia and other invalid domains
+      if ($cleanDomain -match 'wikipedia\.org|wikimedia\.org|wiki\.') {
+          Write-Host "         ⚠️ Skipping Wikipedia domain: $cleanDomain" -ForegroundColor Yellow
+          return $null
+      }
+
+    # Skip if domain is invalid
+      if ($cleanDomain -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$') {
+          return $null
+      }
 
         $logoUrl = "https://logo.clearbit.com/$cleanDomain"
 
@@ -140,6 +146,12 @@ function Search-CompanyWebsite {
         # Try to extract first result URL
         if ($response.Content -match 'uddg=([^"&]+)') {
     $website = [System.Web.HttpUtility]::UrlDecode($matches[1])
+
+            # ✅ PREVENTION: Skip Wikipedia URLs
+            if ($website -match 'wikipedia\.org|wikimedia\.org|wiki\.') {
+                Write-Host "         ⚠️ Skipping Wikipedia website for $CompanyName" -ForegroundColor Yellow
+                return $null
+            }
 
             # Validate it's a proper URL
             if ($website -match '^https?://') {

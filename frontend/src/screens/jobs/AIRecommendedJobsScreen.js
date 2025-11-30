@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,48 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [aiJobs, setAiJobs] = useState([]);
   const [error, setError] = useState(null);
+  const [primaryResume, setPrimaryResume] = useState(null);
+  const primaryResumeLoadedRef = useRef(false);
+  const [referredJobIds, setReferredJobIds] = useState(new Set());
+  const [referralRequestingIds, setReferralRequestingIds] = useState(new Set());
+  const [appliedIds, setAppliedIds] = useState(new Set());
+
+  // Load primary resume once
+  const loadPrimaryResume = useCallback(async () => {
+    if (!user || !isJobSeeker) return;
+    if (primaryResumeLoadedRef.current && primaryResume) return;
+    try {
+      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      if (profile?.success) {
+        const resumes = profile.data?.resumes || [];
+        const primary = resumes.find(r => r.IsPrimary) || resumes[0];
+        if (primary) setPrimaryResume(primary);
+      }
+    } catch (e) {
+      // silent
+    } finally {
+      primaryResumeLoadedRef.current = true;
+    }
+  }, [user, isJobSeeker, primaryResume]);
+
+  useEffect(() => { loadPrimaryResume(); }, [loadPrimaryResume]);
+
+  // Load referred jobs on mount
+  useEffect(() => {
+    if (!user || !isJobSeeker) return;
+    
+    (async () => {
+      try {
+        const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
+        if (referralRes?.success && referralRes.data?.requests) {
+          const ids = new Set(referralRes.data.requests.map(r => r.JobID));
+          setReferredJobIds(ids);
+        }
+      } catch (e) {
+        console.warn('Failed to load referral data:', e.message);
+      }
+    })();
+  }, [user, isJobSeeker]);
 
   useEffect(() => {
     loadAllAIJobs();
@@ -57,6 +100,11 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       // Handle insufficient balance error
       if (error.message?.includes('Insufficient') || error.message?.includes('balance')) {
         setError({ type: 'insufficient-balance', message: 'You need ₹100 in your wallet to access AI-recommended jobs.' });
+      } else if (error.message?.includes('404') || error.message?.includes('not found')) {
+        // Hard refresh - redirect to home if context lost
+        Alert.alert('Session Lost', 'Redirecting to home screen...', [
+          { text: 'OK', onPress: () => navigation.navigate('Home') }
+        ]);
       } else {
         setError({ type: 'error', message: 'Failed to load AI recommendations. Please try again.' });
       }
@@ -66,8 +114,31 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     }
   };
 
-  // Handle Apply button - same as JobsScreen
+  // Quick apply with resume
+  const quickApply = useCallback(async (job, resumeId) => {
+    const id = job.JobID || job.id;
+    try {
+      const applicationData = { 
+        jobID: id, 
+        coverLetter: `I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`, 
+        resumeId 
+      };
+      const res = await refopenAPI.applyForJob(applicationData);
+      if (res?.success) {
+        setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
+        setAiJobs(prev => prev.filter(j => (j.JobID || j.id) !== id)); // Remove from list
+        Alert.alert('Success', 'Application submitted successfully!');
+      } else {
+        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Failed to submit application');
+    }
+  }, []);
+
+  // Handle Apply button - exactly like JobsScreen
   const handleApply = useCallback(async (job) => {
+    console.log('🔵 AI Screen - handleApply called with job:', job?.JobID, job?.Title);
     if (!job) return;
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -80,12 +151,65 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       Alert.alert('Access Denied', 'Only job seekers can apply for positions');
       return;
     }
-    // Navigate to job application screen
+    // Check for primary resume and quick apply
+    if (!primaryResumeLoadedRef.current) await loadPrimaryResume();
+    if (primaryResume?.ResumeID) { 
+      await quickApply(job, primaryResume.ResumeID); 
+      return; 
+    }
+    // No resume - navigate to job application screen
+    console.log('✅ AI Screen - Navigating to JobApplication for jobId:', job.JobID);
     navigation.navigate('JobApplication', { jobId: job.JobID });
-  }, [user, isJobSeeker, navigation]);
+  }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickApply]);
 
-  // Handle Ask Referral button - same as JobsScreen
+  // Quick referral with resume
+  const quickReferral = useCallback(async (job, resumeId) => {
+    const id = job.JobID || job.id;
+    try {
+      setReferralRequestingIds(prev => new Set([...prev, id])); // Mark requesting
+      const res = await refopenAPI.createReferralRequest({
+        jobID: id,
+        extJobID: null,
+        resumeID: resumeId
+      });
+      if (res?.success) {
+        setReferredJobIds(prev => new Set([...prev, id])); // Mark as referred
+        const amountDeducted = res.data?.amountDeducted || 50;
+        const balanceAfter = res.data?.walletBalanceAfter;
+
+        let message = 'Referral request sent successfully!';
+        if (balanceAfter !== undefined) {
+          message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+        }
+
+        Alert.alert('Success', message);
+      } else {
+        if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+          const currentBalance = res.data?.currentBalance || 0;
+          Alert.alert(
+            'Insufficient Balance',
+            `You need ₹50 to ask for a referral.\n\nYour current balance: ₹${currentBalance.toFixed(2)}`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Recharge Wallet', onPress: () => navigation.navigate('Wallet') }
+            ]
+          );
+        } else {
+          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+        }
+      }
+    } catch (e) {
+      console.error('Quick referral error:', e);
+      Alert.alert('Error', e.message || 'Failed to send referral request');
+    } finally {
+      setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); // Remove requesting state
+    }
+  }, [navigation]);
+
+  // Handle Ask Referral button - exactly like JobsScreen
   const handleAskReferral = useCallback(async (job) => {
+    console.log('🟠 AI Screen - handleAskReferral called with job:', job?.JobID, job?.Title);
+    
     if (!job) return;
     if (!user) {
       if (Platform.OS === 'web') {
@@ -107,14 +231,32 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
     const jobId = job.JobID || job.id;
 
+    // Check if already referred
+    if (referredJobIds.has(jobId)) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+          navigation.navigate('Referrals');
+        }
+        return;
+      }
+      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
+        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+        { text: 'OK' }
+      ]);
+      return;
+    }
+
     // Check wallet balance
     try {
+      console.log('✅ AI Screen - Checking wallet balance for referral');
       const walletBalance = await refopenAPI.getWalletBalance();
-      
+
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        
+        console.log('Current balance:', balance);
+
         if (balance < 50) {
+          console.log('Insufficient wallet balance:', balance);
           if (Platform.OS === 'web') {
             if (window.confirm(`Insufficient wallet balance. You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}\n\nWould you like to recharge?`)) {
               navigation.navigate('Wallet');
@@ -131,29 +273,67 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           );
           return;
         }
+
+        console.log('✅ Sufficient balance - proceeding with referral');
+      } else {
+        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        return;
       }
-    } catch (error) {
-      console.error('Error checking wallet balance:', error);
+    } catch (e) {
+      console.error('Failed to check wallet balance:', e);
+      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      return;
     }
 
-    // Navigate to Create Referral Request
+    // If user has primary resume, quick referral
+    if (!primaryResumeLoadedRef.current) await loadPrimaryResume();
+    if (primaryResume?.ResumeID) {
+      await quickReferral(job, primaryResume.ResumeID);
+      return;
+    }
+
+    // No resume - navigate to CreateReferralRequest
+    console.log('✅ AI Screen - Navigating to CreateReferralRequest for jobId:', jobId);
     navigation.navigate('CreateReferralRequest', { 
       jobId: jobId,
       job: job 
     });
-  }, [user, isJobSeeker, navigation]);
+  }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickReferral]);
 
   return (
     <View style={styles.container}>
-      {/* AI Gradient Header */}
+      {/* AI Gradient Header - Fixed */}
       <LinearGradient
         colors={['#1a1a1a', '#2d2d2d', '#404040']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradientHeader}
+        style={styles.gradientHeaderFixed}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity 
+            onPress={() => {
+              // Smart back navigation - check if we have navigation history
+              const navState = navigation.getState();
+              const routes = navState?.routes || [];
+              const currentIndex = navState?.index || 0;
+              
+              // If we have more than 1 route in the stack, go back normally
+              if (routes.length > 1 && currentIndex > 0) {
+                console.log('Going back normally - have navigation history');
+                navigation.goBack();
+              } else {
+                // Hard refresh scenario - navigate to Home
+                console.log('Hard refresh detected - navigating to Home');
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'Home'
+                  }
+                });
+              }
+            }} 
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
@@ -216,16 +396,24 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {/* Job Cards with working handlers */}
-          {aiJobs.map((job, index) => (
-            <JobCard 
-              key={job.JobID || index} 
-              job={job}
-              onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-              onApply={() => handleApply(job)}
-              onAskReferral={() => handleAskReferral(job)}
-              hideSave={true}
-            />
-          ))}
+          {aiJobs.map((job, index) => {
+            const jobKey = job.JobID || job.id;
+            const isReferred = referredJobIds.has(jobKey);
+            const isReferralRequesting = referralRequestingIds.has(jobKey);
+            
+            return (
+              <JobCard 
+                key={job.JobID || index} 
+                job={job}
+                onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+                onApply={() => handleApply(job)}
+                onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
+                hideSave={true}
+                isReferred={isReferred}
+                isReferralRequesting={isReferralRequesting}
+              />
+            );
+          })}
         </ScrollView>
       ) : (
         <View style={styles.emptyState}>
@@ -251,8 +439,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0a', // Dark theme
   },
-  gradientHeader: {
+  gradientHeaderFixed: {
     paddingTop: 16,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    elevation: 5,
   },
   header: {
     flexDirection: 'row',
@@ -290,6 +484,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    marginTop: 100, // Space for fixed header
   },
   loadingText: {
     marginTop: 16,
@@ -298,6 +493,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    marginTop: 100, // Space for fixed header
   },
   scrollContent: {
     padding: 12,
@@ -307,12 +503,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    marginTop: 100, // Space for fixed header
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    marginTop: 100, // Space for fixed header
   },
   errorIconContainer: {
     width: 80,
