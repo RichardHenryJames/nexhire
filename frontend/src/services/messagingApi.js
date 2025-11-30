@@ -188,37 +188,45 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
   // ========================================================================
 
   /**
+   * Block or unblock a user (unified endpoint)
+   */
+  async toggleBlockUser(userId, block = true, reason = '') {
+    try {
+      if (block) {
+        // Block user
+        const result = await api.apiCall('/users/block', {
+          method: 'POST',
+          body: JSON.stringify({
+            userIdToBlock: userId,
+            reason,
+          }),
+        });
+        return result;
+      } else {
+        // Unblock user - FIXED: Correct endpoint
+        const result = await api.apiCall(`/users/block/${userId}`, {
+          method: 'DELETE',
+        });
+        return result;
+      }
+    } catch (error) {
+      console.error(`? ${block ? 'Block' : 'Unblock'} user failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Block a user
    */
   async blockUser(userIdToBlock, reason = '') {
-    try {
-      const result = await api.apiCall('/users/block', {
-        method: 'POST',
-        body: JSON.stringify({
-   userIdToBlock,
-       reason,
-   }),
-      });
-   return result;
-    } catch (error) {
-      console.error('? Block user failed:', error);
-      throw error;
-    }
+    return this.toggleBlockUser(userIdToBlock, true, reason);
   }
 
   /**
    * Unblock a user
    */
   async unblockUser(userId) {
-    try {
-      const result = await api.apiCall(`/users/${userId}/unblock`, {
-        method: 'DELETE',
-      });
-      return result;
-  } catch (error) {
-      console.error('? Unblock user failed:', error);
-      throw error;
-    }
+    return this.toggleBlockUser(userId, false);
   }
 
   /**

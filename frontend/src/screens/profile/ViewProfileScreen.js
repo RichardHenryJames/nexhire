@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import messagingApi from '../../services/messagingApi';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { colors } from '../../styles/theme';
 
 export default function ViewProfileScreen() {
@@ -31,6 +32,8 @@ export default function ViewProfileScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [error, setError] = useState(null);
   const [showMenuPopup, setShowMenuPopup] = useState(false); // Instagram-style popup
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false); // Block confirmation modal
+  const [blockAction, setBlockAction] = useState(null); // 'block' or 'unblock'
 
   // Load public profile
   useEffect(() => {
@@ -119,34 +122,24 @@ export default function ViewProfileScreen() {
   };
 
   const handleBlockUser = () => {
-    Alert.alert(
-      isBlocked ? 'Unblock User' : 'Block User',
-      isBlocked 
-        ? 'Are you sure you want to unblock this user?'
-        : 'Are you sure you want to block this user? You won\'t receive messages from them.',
-      [
-    { text: 'Cancel', style: 'cancel' },
- {
-          text: isBlocked ? 'Unblock' : 'Block',
-          style: isBlocked ? 'default' : 'destructive',
-          onPress: async () => {
-            try {
-    if (isBlocked) {
-                await messagingApi.unblockUser(userId);
-         setIsBlocked(false);
-            Alert.alert('Success', 'User unblocked');
-              } else {
-      await messagingApi.blockUser(userId, 'Blocked from profile view');
-         setIsBlocked(true);
-Alert.alert('Success', 'User blocked');
+    setBlockAction(isBlocked ? 'unblock' : 'block');
+    setShowMenuPopup(false);
+    setShowBlockConfirm(true);
+  };
+
+  const confirmBlockUser = async () => {
+    setShowBlockConfirm(false);
+    try {
+      if (blockAction === 'unblock') {
+        await messagingApi.unblockUser(userId);
+        setIsBlocked(false);
+      } else {
+        await messagingApi.blockUser(userId, 'Blocked from profile view');
+        setIsBlocked(true);
       }
-     } catch (error) {
-   Alert.alert('Error', 'Failed to update block status');
-        }
-          },
-        },
- ]
-    );
+    } catch (error) {
+      console.error('Failed to update block status:', error);
+    }
   };
 
   const openLink = (url) => {
@@ -448,10 +441,7 @@ style={styles.primaryButton}
             {/* Block Option */}
             <TouchableOpacity
               style={styles.menuOption}
-              onPress={() => {
-                setShowMenuPopup(false);
-                handleBlockUser();
-              }}
+              onPress={handleBlockUser}
             >
               <Text style={[styles.menuOptionText, styles.menuOptionDanger]}>
                 {isBlocked ? 'Unblock' : 'Block'}
@@ -482,6 +472,23 @@ style={styles.primaryButton}
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Block/Unblock Confirmation Modal */}
+      <ConfirmationModal
+        visible={showBlockConfirm}
+        title={blockAction === 'unblock' ? 'Unblock User' : 'Block User'}
+        message={
+          blockAction === 'unblock'
+            ? 'Are you sure you want to unblock this user?'
+            : "Are you sure you want to block this user? You won't receive messages from them."
+        }
+        confirmText={blockAction === 'unblock' ? 'Unblock' : 'Block'}
+        cancelText="Cancel"
+        confirmStyle={blockAction === 'unblock' ? 'primary' : 'danger'}
+        icon={blockAction === 'unblock' ? 'checkmark-circle-outline' : 'ban-outline'}
+        onConfirm={confirmBlockUser}
+        onCancel={() => setShowBlockConfirm(false)}
+      />
     </View>
   );
 }
