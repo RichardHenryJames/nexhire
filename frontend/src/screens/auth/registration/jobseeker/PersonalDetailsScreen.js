@@ -33,10 +33,6 @@ const useDebounce = (value, delay = 300) => {
 export default function PersonalDetailsScreen({ navigation, route }) {
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
-  // 🔧 DEBUG: Log when component mounts
-  console.log('📱 PersonalDetailsScreen mounted!');
-  console.log('📍 Route params:', route?.params);
-  
   // 🔧 Add safety checks for route params
   const routeParams = route?.params || {};
   const { 
@@ -50,27 +46,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     skippedSteps = false, // 🔧 NEW: Check if user skipped from UserTypeSelection
   } = routeParams;
 
-  console.log('🔧 PersonalDetailsScreen config:', {
-    userType,
-    experienceType,
-    fromGoogleAuth,
-    skippedSteps,
-    hasWorkData: !!workExperienceData,
-    workDataType: Array.isArray(workExperienceData) ? 'array' : typeof workExperienceData,
-    workDataCount: Array.isArray(workExperienceData) ? workExperienceData.length : (workExperienceData ? 1 : 0),
-    hasEducationData: !!educationData,
-    hasJobPreferences: !!jobPreferences
-  });
-
   // 🔧 Check if this is a Google user
   const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
   const googleUser = pendingGoogleAuth?.user;
-
-  console.log('👤 Google user status:', {
-    isGoogleUser,
-    hasGoogleUser: !!googleUser,
-    googleUserEmail: googleUser?.email
-  });
 
   // NEW: Guard against hard refresh with lost Google data
   useEffect(() => {
@@ -79,7 +57,6 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        console.log('🌐 Using window.location redirect for web');
         window.location.href = '/login';
         return;
       }
@@ -124,7 +101,6 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('🔧 Pre-populating Google user data:', googleUser);
       
       setFormData(prev => ({
         ...prev,
@@ -151,7 +127,6 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     const currentExp = experiences.find(exp => exp.isCurrentPosition);
     
     if (currentExp && currentExp.companyName) {
-      console.log('🔧 Pre-filling current company from work experience:', currentExp);
       setFormData(prev => ({
         ...prev,
         currentCompany: currentExp.companyName || '',
@@ -375,7 +350,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       // 🔧 NEW: If user filled current company in skip flow, create workExperienceData
       // BUT only for experienced professionals, NOT for students
       if (skippedSteps && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId)) {
-        console.log('🔧 Creating work experience from skip flow company data');
         const skipFlowWorkExp = {
           companyName: formData.currentCompany?.trim() || null,
           organizationId: formData.organizationId || null,
@@ -418,33 +392,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         };
       }
 
-      // COMPREHENSIVE LOGGING FOR DEBUGGING
-      console.log('=== REGISTRATION PAYLOAD DEBUG ===');
-      console.log('Is Google User:', isGoogleUser);
-      console.log('Email:', registrationData.email);
-      console.log('User Type:', registrationData.userType);
-      console.log('Experience Type:', registrationData.experienceType);
-      console.log('Has Google Auth Data:', !!registrationData.googleAuth);
-      console.log('Skipped Steps:', skippedSteps);
-      console.log('Current Company:', formData.currentCompany);
-      console.log('Organization ID:', formData.organizationId);
-      
-      if (registrationData.workExperienceData) {
-        console.log('Work Experience Data (Array):', JSON.stringify(registrationData.workExperienceData, null, 2));
-        console.log('Work Experience Count:', registrationData.workExperienceData.length);
-      }
-      
-      if (educationData) {
-        console.log('Education Data:', educationData);
-      }
-      
-      if (jobPreferences) {
-        console.log('Job Preferences:', jobPreferences);
-      }
-      
-      console.log('Complete Registration Payload:', JSON.stringify(registrationData, null, 2));
-      console.log('=== END REGISTRATION PAYLOAD DEBUG ===');
-
       const result = await register(registrationData);
       
       if (result.success) {
@@ -460,7 +407,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
                 // FIXED: No manual navigation needed!
                 // The AuthContext will automatically handle navigation
                 // when isAuthenticated becomes true after successful registration
-                console.log('🔧 Registration successful, AuthContext will handle navigation automatically');
               }
             }
           ]
@@ -468,7 +414,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
 
         // Clear pending Google auth data
         if (isGoogleUser) {
-          console.log('🔧 Clearing pending Google auth data after successful registration');
           clearPendingGoogleAuth();
         }
       } else {
@@ -476,7 +421,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         const errorMessage = result.error || 'Unable to create account. Please try again.';
         
         if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-          console.log('⚠️ User already exists error - clearing auth data and redirecting to login');
           
           // Clear any pending Google auth data
           if (isGoogleUser) {
@@ -520,7 +464,6 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       const errorMessage = error.message || 'Registration failed. Please try again.';
       
       if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-        console.log('⚠️ User already exists error (caught) - clearing auth data and redirecting to login');
         
         // Clear any pending Google auth data
         if (isGoogleUser) {

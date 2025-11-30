@@ -101,7 +101,6 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
   // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
-    console.log('AskReferralScreen: Component mounted');
     loadWalletBalance(); // Load immediately for banner
     loadResumesLazily(); // Load resumes after a delay
     loadCompaniesInBackground(); // Load companies in background
@@ -109,17 +108,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
   // Debug useEffect to log form state changes
   useEffect(() => {
-    console.log('Form data updated:', {
-      jobId: formData.jobId,
-      jobTitle: formData.jobTitle,
-      selectedResumeId: formData.selectedResumeId,
-      referralMessage: formData.referralMessage?.length || 0,
-    });
   }, [formData]);
 
   useEffect(() => {
     if (selectedCompany) {
-      console.log('Selected company:', selectedCompany.name, selectedCompany.id);
     }
   }, [selectedCompany]);
 
@@ -174,7 +166,6 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     
     // ⏱️ START: Track API response time
     const startTime = performance.now();
-    console.log('🕐 [PERFORMANCE] Starting organizations API call at:', new Date().toISOString());
     
     try {
       // 🚀 OPTIMIZED: Fetch ALL organizations (no limit) - backend now uses covering index
@@ -184,15 +175,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       // ⏱️ END: Calculate response time
       const endTime = performance.now();
       const responseTime = (endTime - startTime).toFixed(2);
-      console.log('⏱️ [PERFORMANCE] Organizations API response time:', responseTime, 'ms');
-      console.log('⏱️ [PERFORMANCE] Response time in seconds:', (responseTime / 1000).toFixed(2), 's');
       
-      console.log('Organizations API response:', result);
       
       if (result?.success && result.data && Array.isArray(result.data)) {
         // The API service already handles the mapping, so we can use the data directly
-        console.log('Using mapped organizations from API service:', result.data.length, 'items');
-        console.log('📊 [PERFORMANCE] Loaded', result.data.length, 'organizations in', responseTime, 'ms');
         setCompanies(result.data);
       } else {
         console.error('API call failed or returned invalid data:', result);
@@ -210,20 +196,16 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       
       // ⏱️ Final timing log
       const totalTime = (performance.now() - startTime).toFixed(2);
-      console.log('✅ [PERFORMANCE] Total loadCompanies execution time:', totalTime, 'ms');
     }
   };
 
   const loadWalletBalance = async () => {
     setLoadingWallet(true);
     try {
-      console.log('Loading wallet balance...');
       const result = await refopenAPI.getWalletBalance();
-      console.log('Wallet balance result:', result);
       
       if (result?.success) {
         const balance = result.data?.balance || 0;
-        console.log('Current wallet balance:', balance);
         setWalletBalance(balance);
       } else {
         console.error('Failed to load wallet balance:', result.error);
@@ -237,7 +219,6 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
   // ✅ NEW: Handle resume upload from modal
   const handleResumeSelected = async (resumeData) => {
-    console.log('Resume selected/uploaded:', resumeData);
     
     // Update form with selected resume
     setFormData(prev => ({ ...prev, selectedResumeId: resumeData.ResumeID }));
@@ -257,71 +238,50 @@ const [showResumeModal, setShowResumeModal] = useState(false);
   };
 
   const validateForm = () => {
-    console.log('Validating form...');
     const newErrors = {};
 
     // Check company selection
     if (!selectedCompany) {
-      console.log('❌ Company not selected');
       newErrors.company = 'Company selection is required';
-    } else {
-      console.log('✅ Company selected:', selectedCompany.name);
     }
 
     // Check job ID
     if (!formData.jobId || !formData.jobId.trim()) {
-      console.log('❌ Job ID missing');
       newErrors.jobId = 'Job ID is required';
-    } else {
-      console.log('✅ Job ID provided:', formData.jobId);
     }
 
     // Check job title
     if (!formData.jobTitle || !formData.jobTitle.trim()) {
-      console.log('❌ Job title missing');
       newErrors.jobTitle = 'Job title is required';
-    } else {
-      console.log('✅ Job title provided:', formData.jobTitle);
     }
 
     // Check resume selection
     if (!formData.selectedResumeId) {
-      console.log('❌ Resume not selected');
       newErrors.resume = 'Please select a resume';
-    } else {
-      console.log('✅ Resume selected:', formData.selectedResumeId);
     }
 
     // Validate URL format if provided
     if (formData.jobUrl && formData.jobUrl.trim()) {
       try {
         new URL(formData.jobUrl);
-        console.log('✅ Valid URL provided');
       } catch {
-        console.log('❌ Invalid URL format');
         newErrors.jobUrl = 'Please enter a valid URL';
       }
     }
 
     const errorCount = Object.keys(newErrors).length;
-    console.log(`Validation complete. Errors found: ${errorCount}`);
-    if (errorCount > 0) {
-      console.log('❌ Validation errors:', newErrors);
-    }
 
     setErrors(newErrors);
     return errorCount === 0;
   };
 
   const handleSubmit = async () => {
-    console.log('Submit button clicked');
     
     try {
       setSubmitting(true);
       
       // ✅ NEW: Check wallet balance FIRST (before validation)
       if (walletBalance < 50) {
-        console.log('Insufficient wallet balance:', walletBalance);
         
         // Show beautiful wallet modal instead of ugly alert
         setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
@@ -329,15 +289,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         return;
       }
       
-      console.log('Starting form validation...');
       // Validate form
       if (!validateForm()) {
-        console.log('❌ Form validation failed');
         return;
       }
-      console.log('✅ Form validation passed');
-
-      console.log('Preparing request data...');
 
       // ✅ NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
@@ -351,13 +306,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         referralMessage: formData.referralMessage || undefined,
       };
 
-      console.log('Submitting external referral request:', requestData);
 
       const result = await refopenAPI.createReferralRequest(requestData);
-      console.log('API Response:', result);
 
       if (result?.success) {
-        console.log('✅ Referral request submitted successfully');
         
         // ✅ NEW: Show wallet deduction info
         const amountDeducted = result.data?.amountDeducted || 50;
@@ -402,7 +354,6 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
-      console.log('Resetting submitting state');
       setSubmitting(false);
     }
   };
@@ -743,10 +694,6 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
             (!isFormReady || submitting || !hasSufficientBalance) && styles.submitButtonDisabled
           ]}
           onPress={() => {
-            console.log('Submit button pressed');
-            console.log('Submitting state:', submitting);
-            console.log('Wallet balance:', walletBalance);
-            console.log('Form ready:', isFormReady);
             handleSubmit();
           }}
           disabled={!isFormReady || submitting || !hasSufficientBalance}

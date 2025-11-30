@@ -121,16 +121,12 @@ const scrollViewRef = React.useRef(null);
   // Check AI access status (24hr validity)
   const checkAIAccessStatus = async () => {
     try {
-      console.log('🔍 Checking AI access status...');
       const result = await refopenAPI.apiCall('/jobs/ai-access-status');
-      console.log('🔍 AI access status result:', result);
       
       if (result?.success) {
         const hasAccess = result.data?.hasActiveAccess || false;
-        console.log('✅ AI access status:', hasAccess ? 'ACTIVE (no payment needed)' : 'INACTIVE (payment required)');
         setHasActiveAIAccess(hasAccess);
       } else {
-        console.log('❌ Failed to get AI access status:', result);
         setHasActiveAIAccess(false);
       }
     } catch (error) {
@@ -361,21 +357,15 @@ const scrollViewRef = React.useRef(null);
   // Handle Show More AI Jobs - check 24hr access first
   const handleShowMoreAIJobs = async () => {
     try {
-      console.log('🎯 Show More AI Jobs clicked');
-      console.log('💰 Current wallet balance:', walletBalance);
-      console.log('🔓 Current hasActiveAIAccess state:', hasActiveAIAccess);
       
       // Check if user has active AI access (paid within 24 hours)
       const accessStatus = await refopenAPI.apiCall('/jobs/ai-access-status');
-      console.log('🔍 Fresh access check result:', accessStatus);
       
       if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
         // User has active access - navigate directly without payment
-        console.log('✅ User has active 24hr AI access - navigating directly without payment');
         navigation.navigate('AIRecommendedJobs');
         return;
       } else {
-        console.log('❌ No active access - payment required');
       }
     } catch (error) {
       console.error('❌ Error checking AI access status:', error);
@@ -425,11 +415,9 @@ const scrollViewRef = React.useRef(null);
         return;
       }
 
-      console.log('🤖 Loading AI personalized jobs for user:', userId);
       const result = await aiJobRecommendations.getPersonalizedJobs(userId, 5);
       
       if (result.success && result.jobs) {
-        console.log(`🤖 Loaded ${result.jobs.length} AI personalized jobs`);
         setAiJobs(result.jobs);
       } else {
         console.warn('🤖 No AI personalized jobs found');
@@ -644,7 +632,6 @@ const scrollViewRef = React.useRef(null);
                     </View>
                   )}
                   {/* Debug log */}
-                  {console.log('🎨 Rendering Show More button - hasActiveAIAccess:', hasActiveAIAccess, '| Showing badge:', !hasActiveAIAccess)}
                 </TouchableOpacity>
                 
                 <View style={styles.aiTipContainer}>

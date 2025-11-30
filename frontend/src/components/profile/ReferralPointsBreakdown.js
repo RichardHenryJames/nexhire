@@ -20,13 +20,7 @@ const ReferralPointsBreakdown = ({
   const [converting, setConverting] = useState(false);
 
   // Debug logging
-  console.log('ReferralPointsBreakdown props:', {
-    totalPoints,
-    pointsHistoryLength: pointsHistory?.length || 0,
-    pointsHistory,
-    pointTypeMetadata,
-    visible
-  });
+  
 
   React.useEffect(() => {
     if (visible) {
@@ -42,20 +36,20 @@ const ReferralPointsBreakdown = ({
   const getPointsBreakdown = () => {
     const breakdown = {};
     
-    console.log('🔧 getPointsBreakdown called with pointsHistory:', pointsHistory);
-    console.log('🔧 pointsHistory type:', typeof pointsHistory, Array.isArray(pointsHistory));
-    console.log('🔧 pointsHistory length:', pointsHistory?.length);
+    
+    
+    
     
     if (!pointsHistory || !Array.isArray(pointsHistory)) {
-      console.log('🔧 No points history or not array, returning empty breakdown');
+      
       return breakdown;
     }
     
     pointsHistory.forEach((entry, index) => {
-      console.log(`🔧 Processing entry ${index}:`, JSON.stringify(entry, null, 2));
+      
       
       if (!entry || typeof entry !== 'object') {
-        console.log(`🔧 Invalid entry ${index}, skipping`);
+        
         return;
       }
       
@@ -72,10 +66,10 @@ const ReferralPointsBreakdown = ({
         points = -Math.abs(points); // Make sure conversions are negative
       }
       
-      console.log(`🔧 Entry ${index}: type="${type}", transactionType="${transactionType}", points=${points}`);
-      console.log(`🔧 Raw entry fields:`, Object.keys(entry));
-      console.log(`🔧 PointsType field value:`, entry.PointsType);
-      console.log(`🔧 PointsAmount field value:`, entry.PointsAmount);
+      
+      
+      
+      
       
       if (!breakdown[type]) {
         breakdown[type] = {
@@ -94,34 +88,30 @@ const ReferralPointsBreakdown = ({
         isConversion: isConversion
       });
       
-      console.log(`🔧 Updated breakdown for type "${type}":`, {
-        total: breakdown[type].total,
-        count: breakdown[type].count,
-        entries: breakdown[type].entries.length
-      });
+      
     });
     
-    console.log('🔧 Final breakdown keys:', Object.keys(breakdown));
-    console.log('🔧 Final breakdown:', JSON.stringify(breakdown, null, 2));
+    
+    
     return breakdown;
   };
 
   const pointsBreakdown = getPointsBreakdown();
   
   // 🔧 Log the processed breakdown
-  console.log('🔧 Processed pointsBreakdown:', pointsBreakdown);
-  console.log('🔧 Number of breakdown categories:', Object.keys(pointsBreakdown).length);
+  
+  
 
   // 🔧 UPDATED: Get point type display info with better fallbacks
   const getPointTypeInfo = (type) => {
-    console.log(`🔧 getPointTypeInfo called for type: ${type}`);
-    console.log(`🔧 Available metadata:`, pointTypeMetadata);
+    
+    
     
     // Use backend metadata if available, with fallback to default
     const backendMetadata = pointTypeMetadata[type];
     
     if (backendMetadata) {
-      console.log(`🔧 Found backend metadata for ${type}:`, backendMetadata);
+      
       return {
         icon: backendMetadata.icon || '🎯', // 🔧 Add fallback emoji
         title: backendMetadata.title || 'Points',
@@ -171,7 +161,7 @@ const ReferralPointsBreakdown = ({
     };
     
     const defaultInfo = typeDefaults[type] || typeDefaults.general;
-    console.log(`🔧 Using default info for ${type}:`, defaultInfo);
+    
     
     return {
       icon: defaultInfo.icon,

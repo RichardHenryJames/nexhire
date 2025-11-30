@@ -107,7 +107,6 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const handleCancelRequest = async (requestId) => {
-    console.log('Cancel button clicked for request:', requestId);
     
     // Find the request object for better UX
     const request = myRequests.find(r => r.RequestID === requestId);
@@ -134,14 +133,10 @@ export default function ReferralScreen({ navigation }) {
 
   // Separate function to perform the actual cancellation
   const performCancelRequest = async (requestId) => {
-    console.log('User confirmed cancellation for request:', requestId);
     try {
-      console.log('Making API call to cancel request...');
       const res = await refopenAPI.cancelReferralRequest(requestId);
-      console.log('API response:', res);
       
       if (res.success) {
-        console.log('? Cancel request successful');
         // Optimistic update
         setMyRequests(prev => prev.map(r => r.RequestID === requestId ? { ...r, Status: 'Cancelled' } : r));
         showToast('Referral request cancelled','success');
@@ -158,7 +153,6 @@ export default function ReferralScreen({ navigation }) {
   // NEW: Enhanced claim request with immediate proof upload
   const handleClaimRequest = async (request) => {
     try {
-      console.log('Claiming request with proof:', request.RequestID);
       
       // Open proof modal instead of immediate claim
       setSelectedRequest(request);
@@ -175,7 +169,6 @@ export default function ReferralScreen({ navigation }) {
     if (!selectedRequest) return;
 
     try {
-      console.log('Submitting proof with claim:', proofData);
       
       // Use the new enhanced API that combines claim + proof
       const result = await refopenAPI.claimReferralRequestWithProof(
@@ -184,7 +177,6 @@ export default function ReferralScreen({ navigation }) {
       );
       
       if (result.success) {
-        console.log('? Claim with proof successful');
         
         // Update UI: move request from "Requests To Me" to "My Referrer Requests"
         setRequestsToMe(prev => prev.filter(r => r.RequestID !== selectedRequest.RequestID));
@@ -214,7 +206,6 @@ export default function ReferralScreen({ navigation }) {
 
   // NEW: View proof of referral
   const handleViewProof = (request) => {
-    console.log('View Proof pressed for request:', request.RequestID, 'Status:', request.Status, 'ProofURL:', request.ProofFileURL);
     if (!request.ProofFileURL) {
       Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
       return;
@@ -224,10 +215,8 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const handleVerifyReferral = async (requestId) => {
-    console.log('? Verify pressed for request:', requestId);
     try {
       const result = await refopenAPI.verifyReferralCompletion(requestId, true);
-      console.log('? Verify API result:', result);
       if (result.success) {
         showToast('Referral verified', 'success');
         // Optimistically update local state so button disappears without full reload
@@ -295,10 +284,10 @@ export default function ReferralScreen({ navigation }) {
           {/* Company Logo */}
           <View style={styles.logoContainer}>
             {request.OrganizationLogo ? (
-              <Image 
-                source={{ uri: request.OrganizationLogo }} 
+              <Image
+                source={{ uri: request.OrganizationLogo }}
                 style={styles.companyLogo}
-                onError={() => console.log('Logo load error for:', request.CompanyName)}
+                onError={() => {}}
               />
             ) : (
               <View style={styles.logoPlaceholder}>
@@ -414,7 +403,6 @@ export default function ReferralScreen({ navigation }) {
     const cardWrapperProps = isInternalJob 
       ? { 
           onPress: () => {
-            console.log('?? Navigating to internal job:', request.JobID);
             // Pass fromReferralRequest parameter to hide action buttons
             navigation.navigate('JobDetails', { 
               jobId: request.JobID,
@@ -431,10 +419,10 @@ export default function ReferralScreen({ navigation }) {
           {/* Company Logo */}
           <View style={styles.logoContainer}>
             {request.OrganizationLogo ? (
-              <Image 
-                source={{ uri: request.OrganizationLogo }} 
+              <Image
+                source={{ uri: request.OrganizationLogo }}
                 style={styles.companyLogo}
-                onError={() => console.log('Logo load error for:', request.CompanyName)}
+                onError={() => {}}
               />
             ) : (
               <View style={styles.logoPlaceholder}>
@@ -720,7 +708,6 @@ colors={['#FEB800', '#FF8C00']}
               <TouchableOpacity 
                 style={[styles.confirmBtn, styles.keepBtn]} 
                 onPress={() => {
-                  console.log('Keep request (web modal)');
                   setCancelTarget(null);
                 }}
               >
@@ -729,7 +716,6 @@ colors={['#FEB800', '#FF8C00']}
               <TouchableOpacity 
                 style={[styles.confirmBtn, styles.cancelReqBtn]} 
                 onPress={() => {
-                  console.log('Confirm cancel (web modal)');
                   const requestId = cancelTarget.requestId;
                   setCancelTarget(null);
                   performCancelRequest(requestId);

@@ -206,7 +206,6 @@ const { jobId, fromReferralRequest } = route.params || {};
   };
 
   const handleApply = async () => {
-    console.log('NEW handleApply called - code is updated!');
     
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -236,7 +235,6 @@ const { jobId, fromReferralRequest } = route.params || {};
   };
 
   const handleAskReferral = async () => {
-    console.log('handleAskReferral called in JobDetailsScreen');
     
     if (!user) {
       if (Platform.OS === 'web') {
@@ -272,17 +270,13 @@ const { jobId, fromReferralRequest } = route.params || {};
     
     // ✅ Check wallet balance
     try {
-      console.log('Checking wallet balance...');
       const walletBalance = await refopenAPI.getWalletBalance();
-      console.log('Wallet balance result:', walletBalance);
       
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('Current balance:', balance);
         
         // Check if balance >= ₹50
         if (balance < 50) {
-          console.log('Insufficient wallet balance:', balance);
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
@@ -290,7 +284,6 @@ const { jobId, fromReferralRequest } = route.params || {};
           return;
         }
         
-        console.log('✅ Sufficient balance - proceeding with referral');
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
@@ -332,9 +325,6 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   // REQUIREMENT 3: Improved subscription modal with better logic
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-    console.log('showSubscriptionModal called in JobDetailsScreen');
-    console.log('Navigation object:', navigation);
-    console.log('Available routes:', navigation.getState?.());
     
     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
@@ -343,7 +333,6 @@ const { jobId, fromReferralRequest } = route.params || {};
       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
     if (Platform.OS === 'web') {
-      console.log('Web platform detected - navigating directly to ReferralPlans');
       navigation.navigate('ReferralPlans');
       return;
     }
@@ -356,17 +345,14 @@ const { jobId, fromReferralRequest } = route.params || {};
           { 
             text: 'Maybe Later', 
             style: 'cancel',
-            onPress: () => console.log('User selected Maybe Later')
+            onPress: () => {}
           },
           { 
             text: 'View Plans', 
             onPress: () => {
-              console.log('User selected View Plans - attempting navigation...');
               try {
                 navigation.navigate('ReferralPlans');
-                console.log('Navigation successful!');
               } catch (navError) {
-                console.error('Navigation error:', navError);
                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
               }
             }
@@ -378,18 +364,15 @@ const { jobId, fromReferralRequest } = route.params || {};
         const state = navigation.getState?.();
         const currentRoute = state?.routes?.[state.index]?.name;
         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-          console.log('Fallback navigation to ReferralPlans after Alert timeout');
-            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
+            try { navigation.navigate('ReferralPlans'); } catch (e) { }
         }
       }, 3000);
     } catch (error) {
-      console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
     }
   }, [navigation, referralEligibility]);
 
   const handlePlanSelection = async (plan) => {
-    console.log('Plan selected:', plan);
     
     Alert.alert(
       'Confirm Subscription',
@@ -668,32 +651,21 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   // ✅ NEW: Handle publish job for employers
   const handlePublishJob = async () => {
-    console.log('🚀 handlePublishJob called!');
-    console.log('🚀 Job ID:', job?.JobID);
-    console.log('🚀 Job Status:', job?.Status);
-    console.log('🚀 Is Employer:', isEmployer);
-    
     if (!job?.JobID) {
-      console.error('❌ No job ID found');
       return;
     }
     
     try {
       setPublishing(true);
-      console.log('📡 Calling publishJob API with JobID:', job.JobID);
       
       const result = await refopenAPI.publishJob(job.JobID);
       
-      console.log('📡 API Response:', result);
-      
       if (result.success) {
-        console.log('✅ Publish successful!');
         showToast('Job published successfully!', 'success');
         // Update job status locally to reflect the change
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
         // Navigate back with parameters to switch to Published tab
         setTimeout(() => {
-          console.log('🔄 Navigating to MainTabs/Jobs with Published tab...');
           // Navigate to MainTabs and then to Jobs screen with parameters
           navigation.navigate('MainTabs', {
             screen: 'Jobs',
@@ -705,11 +677,9 @@ const { jobId, fromReferralRequest } = route.params || {};
           });
         }, 1500);
       } else {
-        console.error('❌ Publish failed:', result.error);
         Alert.alert('Error', result.error || 'Failed to publish job');
       }
     } catch (error) {
-      console.error('❌ Publish job error:', error);
       Alert.alert('Error', error.message || 'Failed to publish job');
     } finally {
       setPublishing(false);
@@ -896,7 +866,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                 <Image 
                   source={{ uri: job.OrganizationLogo }} 
                   style={styles.companyLogo}
-                  onError={() => console.log('Company logo load error for:', job.OrganizationName)}
+                  onError={() => {}}
                 />
               ) : (
                 <View style={styles.logoPlaceholder}>

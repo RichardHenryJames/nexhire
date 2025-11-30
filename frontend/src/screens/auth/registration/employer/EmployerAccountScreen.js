@@ -45,7 +45,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
   // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('Pre-populating Google user data for employer:', googleUser);
       
       setFirstName(googleUser.given_name || googleUser.name?.split(' ')[0] || '');
       setLastName(googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '');
@@ -104,7 +103,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
 
       // Handle Google users vs regular users differently
       if (isGoogleUser && pendingGoogleAuth) {
-        console.log('Completing Google employer registration...');
         
         // Prepare comprehensive registration data for Google user
         const registrationData = {
@@ -130,13 +128,10 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...organizationPayload,
         };
 
-        console.log('Google employer registration payload:', JSON.stringify(registrationData, null, 2));
-
         const result = await register(registrationData);
         
         if (result.success) {
           // FIXED: Clear pending Google auth and let AuthContext handle navigation
-          console.log('🔧 Employer registration successful, clearing Google auth and letting AuthContext handle navigation');
           clearPendingGoogleAuth();
           // Navigation will be handled automatically by AuthContext when isAuthenticated becomes true
           return;
@@ -145,7 +140,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
           const errorMessage = result.error || 'Google registration failed';
           
           if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-            console.log('⚠️ User already exists error - clearing auth data and redirecting to login');
             
             // Clear any pending Google auth data
             clearPendingGoogleAuth();
@@ -203,7 +197,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
           const errorMessage = reg?.error || 'Registration failed';
           
           if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-            console.log('⚠️ User already exists error - redirecting to login');
             
             Alert.alert(
               'Account Already Exists', 
@@ -266,7 +259,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
       const errorMessage = e.message || 'Failed to complete setup';
       
       if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-        console.log('⚠️ User already exists error (caught) - clearing auth data and redirecting to login');
         
         // Clear any pending Google auth data
         if (isGoogleUser) {

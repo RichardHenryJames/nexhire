@@ -161,13 +161,9 @@ export default function ProfileScreen({ navigation }) {
       const response = userType === 'JobSeeker' 
         ? await refopenAPI.getApplicantProfile(user?.UserID)
         : await refopenAPI.getProfile();
-        
-      console.log('🔍 Profile API Response:', JSON.stringify(response, null, 2));
       
       if (response.success && response.data) {
         const data = response.data;
-        console.log('📊 Salary Breakdown from API:', data.salaryBreakdown);
-        console.log('📄 Resumes from API:', data.resumes);
         
         // Update basic profile
         setProfile(prev => ({
@@ -184,9 +180,6 @@ export default function ProfileScreen({ navigation }) {
         if (userType === 'JobSeeker') {
           const salaryData = data.salaryBreakdown || { current: [], expected: [] };
           const resumeData = data.resumes || [];
-          
-          console.log('💾 Setting salaryBreakdown to state:', salaryData);
-          console.log('💾 Setting resumes to state:', resumeData);
           
           setJobSeekerProfile(prev => ({
             ...prev,
@@ -694,7 +687,6 @@ export default function ProfileScreen({ navigation }) {
               }));
             }}
             onUpdate={async (updatedEducation) => {
-              console.log('Education updated:', updatedEducation);
               await loadExtendedProfile();
             }}
           />
@@ -868,14 +860,12 @@ export default function ProfileScreen({ navigation }) {
               resumes: jobSeekerProfile.resumes || []
             }}
             setProfile={(updatedProfile) => {
-              console.log('📝 ResumeSection setProfile called:', updatedProfile);
               setJobSeekerProfile(prev => ({
                 ...prev,
                 ...updatedProfile
               }));
             }}
             onUpdate={(updatedData) => {
-              console.log('📝 Resume section updated:', updatedData);
               setJobSeekerProfile(prev => ({
                 ...prev,
                 ...updatedData

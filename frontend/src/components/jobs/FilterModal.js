@@ -28,33 +28,33 @@ const FilterModal = ({
   }, [visible, initialSection]);
 
 const isSectionActive = (section) => {
-    switch (section) {
-      case 'workMode':
-        return (filters.workplaceTypeIds || []).length > 0;
-      case 'department':
-        return !!filters.department;
-   case 'location':
-    return !!filters.location;
-      case 'company':
-        return (filters.companies || []).length > 0;
-      case 'experience':
-    return !!filters.experienceMin || !!filters.experienceMax;
-      case 'salary':
-        return !!filters.salaryMin || !!filters.salaryMax;
-      case 'postedBy':
-        return !!filters.postedWithinDays;
-      case 'jobType':
-        return (filters.jobTypeIds || []).length > 0;
- default:
-    return false;
-    }
-  };
+   switch (section) {
+     case 'workMode':
+       return (filters.workplaceTypeIds || []).length > 0;
+     case 'department':
+       return !!filters.department;
+  case 'location':
+   return !!filters.location;
+     case 'company':
+       return (filters.organizationIds || []).length > 0;
+     case 'experience':
+   return !!filters.experienceMin || !!filters.experienceMax;
+     case 'salary':
+       return !!filters.salaryMin || !!filters.salaryMax;
+     case 'postedBy':
+       return !!filters.postedWithinDays;
+     case 'jobType':
+       return (filters.jobTypeIds || []).length > 0;
+default:
+   return false;
+   }
+ };
 
   const activeFiltersCount = () => {
     let count = 0;
     if ((filters.workplaceTypeIds || []).length > 0) count += filters.workplaceTypeIds.length;
     if ((filters.jobTypeIds || []).length > 0) count += filters.jobTypeIds.length;
-    if ((filters.companies || []).length > 0) count += filters.companies.length;
+    if ((filters.organizationIds || []).length > 0) count += filters.organizationIds.length;
     if (filters.location) count++;
     if (filters.department) count++;
     if (filters.experienceMin || filters.experienceMax) count++;
@@ -173,17 +173,17 @@ const isSectionActive = (section) => {
             </View>
             <ScrollView style={styles.optionsList}>
               {displayCompanies.map((org, index) => {
-                  const active = (filters.companies || []).includes(org.name);
+                  const active = (filters.organizationIds || []).includes(org.id);
                   return (
                     <TouchableOpacity
                       key={org.id || index}
                       style={styles.optionItem}
                       onPress={() => {
-                        const has = (filters.companies || []).includes(org.name);
+                        const has = (filters.organizationIds || []).includes(org.id);
                         const next = has
-                          ? (filters.companies || []).filter(c => c !== org.name)
-                          : [...(filters.companies || []), org.name];
-                        onFiltersChange({ ...filters, companies: next });
+                          ? (filters.organizationIds || []).filter(id => id !== org.id)
+                          : [...(filters.organizationIds || []), org.id];
+                        onFiltersChange({ ...filters, organizationIds: next });
                       }}
                     >
                       <View style={[styles.checkbox, active && styles.checkboxActive]}>

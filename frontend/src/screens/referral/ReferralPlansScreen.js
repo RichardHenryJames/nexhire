@@ -22,8 +22,6 @@ export default function ReferralPlansScreen({ navigation }) {
 
   // Add navigation check at component load
   useEffect(() => {
-    console.log('? ReferralPlansScreen mounted successfully');
-    console.log('? Navigation object:', navigation);
     loadPlansAndSubscription();
   }, []);
 

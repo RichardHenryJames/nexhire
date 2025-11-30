@@ -145,7 +145,6 @@ export default function CreateJobScreen({ navigation }) {
         internalNotes: jobData.internalNotes?.trim() || undefined
       };
 
-      console.log('Create Job Payload:', payload);
       const result = await refopenAPI.createJob(payload);
       if (result.success) {
         showToast('Job created successfully!', 'success');

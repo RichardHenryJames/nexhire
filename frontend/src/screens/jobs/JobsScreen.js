@@ -49,7 +49,7 @@ const EMPTY_FILTERS = {
   location: '',
   jobTypeIds: [],
   workplaceTypeIds: [],
-  companies: [],
+  organizationIds: [],
   salaryMin: '',
   salaryMax: '',
   currencyId: null,
@@ -174,10 +174,18 @@ export default function JobsScreen({ navigation, route }) {
   }, [filters.workplaceTypeIds, workplaceTypes]);
 
   const quickCompanyLabel = useMemo(() => {
-    const companyNames = filters.companies || [];
-    if (!companyNames.length) return 'Company';
-    return companyNames.length ? companyNames.slice(0, 2).join('/') + (companyNames.length > 2 ? ` +${companyNames.length - 2}` : '') : 'Company';
-  }, [filters.companies]);
+    const orgIds = filters.organizationIds || [];
+    if (!orgIds.length) return 'Company';
+    
+    // Map IDs to names for display
+    const orgNames = orgIds
+      .map(id => companies.find(c => c.id === id)?.name)
+      .filter(Boolean);
+    
+    return orgNames.length 
+      ? orgNames.slice(0, 2).join('/') + (orgNames.length > 2 ? ` +${orgNames.length - 2}` : '') 
+      : 'Company';
+  }, [filters.organizationIds, companies]);
 
   // Toggle selection helper
   const toggleId = (arr, id) => (arr || []).some(x => String(x) === String(id))
@@ -214,12 +222,9 @@ export default function JobsScreen({ navigation, route }) {
 
     // 🔧 NEW: Remove applied job from jobs list and refresh data
     if (appliedJobId) {
-      console.log('🔄 Removing applied job from UI and refreshing data:', appliedJobId);
-
       // Remove from current jobs list immediately
       setJobs(prev => {
         const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
-        console.log(`📊 Jobs list updated: ${prev.length} -> ${filtered.length}`);
         return filtered;
       });
 
@@ -227,7 +232,6 @@ export default function JobsScreen({ navigation, route }) {
       setPagination(prev => {
         const newTotal = Math.max((prev.total || 0) - 1, 0);
         const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-        console.log(`📊 Pagination updated: total ${prev.total} -> ${newTotal}`);
         return {
           ...prev,
           total: newTotal,
@@ -241,7 +245,6 @@ export default function JobsScreen({ navigation, route }) {
 
       // Trigger a full refresh to get updated data after a short delay
       setTimeout(() => {
-        console.log('🔄 Triggering full data refresh...');
         triggerReload(); // This will refresh the jobs list
         refreshApplicationsData(); // This will refresh applications
       }, 1000);
@@ -251,13 +254,11 @@ export default function JobsScreen({ navigation, route }) {
   // 🔧 NEW: Function to refresh applications data
   const refreshApplicationsData = useCallback(async () => {
     try {
-      console.log('🔄 Refreshing applications data...');
       const r = await refopenAPI.getMyApplications(1, 500);
       if (r?.success) {
         const ids = new Set((r.data || []).map(a => a.JobID));
         setAppliedIds(ids);
         setAppliedCount(Number(r.meta?.total || r.data?.length || 0));
-        console.log('✅ Applications data refreshed successfully');
       }
     } catch (e) {
       console.error('❌ Failed to refresh applications data:', e);
@@ -295,7 +296,6 @@ export default function JobsScreen({ navigation, route }) {
   // 🔧 NEW: Add focus listener to refresh applications when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      console.log('📱 JobsScreen focused, refreshing applications data...');
       refreshApplicationsData();
     });
 
@@ -427,19 +427,12 @@ export default function JobsScreen({ navigation, route }) {
         try {
           const orgs = await refopenAPI.getOrganizations('');
           if (orgs?.success) {
-            console.log('JobsScreen - Organizations loaded on-demand:', orgs.data?.length);
-            console.log('JobsScreen - First org sample:', orgs.data?.[0]);
             // Filter out organizations without names, but preserve backend sort order (Fortune 500 first, then alphabetical)
             const filteredOrgs = orgs.data.filter(org => {
               const hasName = org.name && org.name.trim().length > 0;
-              if (!hasName) console.log('Org without name:', org);
               return hasName;
             });
-            console.log('JobsScreen - Filtered companies (preserving backend sort):', filteredOrgs.length);
-            console.log('JobsScreen - First company (should be F500):', filteredOrgs[0]);
             setCompanies(filteredOrgs);
-          } else {
-            console.log('JobsScreen - Organizations fetch failed:', orgs);
           }
         } catch (e) {
           console.warn('Failed to load organizations:', e.message);
@@ -483,7 +476,7 @@ export default function JobsScreen({ navigation, route }) {
         if (filters.location) apiFilters.location = filters.location;
 if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
     if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
-        if (filters.companies?.length) apiFilters.companies = filters.companies.join('|'); // Use pipe delimiter to avoid issues with commas in company names
+        if (filters.organizationIds?.length) apiFilters.organizationIds = filters.organizationIds.join(',');
         if (filters.salaryMin) apiFilters.salaryMin = filters.salaryMin;
         if (filters.salaryMax) apiFilters.salaryMax = filters.salaryMax;
         if (filters.currencyId) apiFilters.currencyId = filters.currencyId;
@@ -492,17 +485,25 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
 
+    // 🔍 DEBUG: Log organization filter details
+        
+        
+        
+        
+        // Map IDs to names for debugging
+        if (filters.organizationIds?.length) {
+          const selectedOrgNames = filters.organizationIds.map(id => {
+            const org = companies.find(c => c.id === id);
+            return org ? `${org.name} (ID: ${id})` : `Unknown (ID: ${id})`;
+          });
+          
+        }
+
     const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
 
    // ⏱️ START: Measure API response time
 const apiStartTime = performance.now();
-        console.log('🚀 API Request Started:', {
-          endpoint: shouldUseSearch ? 'searchJobs' : 'getJobs',
-          searchQuery: debouncedQuery.trim(),
-   filters: apiFilters,
-          smartBoosts,
-      timestamp: new Date().toISOString()
-   });
+        
 
         let result;
         if (shouldUseSearch) {
@@ -515,20 +516,32 @@ const apiStartTime = performance.now();
         // ⏱️ END: Calculate and log response time
  const apiEndTime = performance.now();
   const responseTime = apiEndTime - apiStartTime;
-        console.log('✅ API Response Received:', {
- endpoint: shouldUseSearch ? 'searchJobs' : 'getJobs',
-     responseTime: `${responseTime.toFixed(2)}ms`,
-          responseTimeSeconds: `${(responseTime / 1000).toFixed(2)}s`,
-          success: result.success,
-  jobsCount: Array.isArray(result.data) ? result.data.length : 0,
-     total: result.meta?.total,
-          timestamp: new Date().toISOString()
-        });
 
       if (controller.signal.aborted) return;
 
         if (result.success) {
        const list = Array.isArray(result.data) ? result.data : [];
+              
+              // 🔍 DEBUG: Log received jobs and their organizations
+              
+              if (list.length > 0 && filters.organizationIds?.length) {
+                
+                list.slice(0, 5).forEach((job, idx) => {
+                  
+                });
+                
+                // Check if any jobs don't match the filter
+                const unexpectedJobs = list.filter(job => 
+                  !filters.organizationIds.includes(job.OrganizationID)
+                );
+                if (unexpectedJobs.length > 0) {
+                  console.warn('⚠️ WARNING: Found jobs from organizations NOT in filter!');
+                  console.warn('⚠️ Unexpected organizations:', 
+                    unexpectedJobs.map(j => `${j.OrganizationName} (ID: ${j.OrganizationID})`).slice(0, 5)
+                  );
+                }
+              }
+              
        setJobs(list);
   const meta = result.meta || {};
           const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (meta.page ? (meta.page < (meta.totalPages || 1)) : false);
@@ -542,11 +555,7 @@ const apiStartTime = performance.now();
         }
    } catch (e) {
     if (e?.name !== 'AbortError') {
-        console.error('❌ API Error:', {
- error: e.message,
-            name: e.name,
-          timestamp: new Date().toISOString()
-          });
+        // Error handling
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -566,19 +575,16 @@ const apiStartTime = performance.now();
     if (loading || loadingMore) return;
     if (isLoadingMoreRef.current) return;
     if (!pagination.hasMore) {
-      console.log('Load more skipped - no more jobs available');
       return;
     }
 
     const nextPage = (pagination.page || 1) + 1;
     if (pagination.totalPages && nextPage > pagination.totalPages) {
-      console.log(`Skipping fetch: nextPage ${nextPage} > totalPages ${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     if (lastAutoLoadPageRef.current === nextPage) {
-      console.log(`Skipping duplicate auto-load for page ${nextPage}`);
       return;
     }
 
@@ -593,6 +599,7 @@ const apiStartTime = performance.now();
       if (filters.location) apiFilters.location = filters.location;
       if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
       if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
+      if (filters.organizationIds?.length) apiFilters.organizationIds = filters.organizationIds.join(',');
       if (filters.salaryMin) apiFilters.salaryMin = filters.salaryMin;
       if (filters.salaryMax) apiFilters.salaryMax = filters.salaryMax;
       if (filters.currencyId) apiFilters.currencyId = filters.currencyId;
@@ -603,13 +610,6 @@ const apiStartTime = performance.now();
 
       // ⏱️ START: Measure API response time for pagination
  const apiStartTime = performance.now();
-      console.log('🚀 Load More API Request Started:', {
-        page: nextPage,
-        pageSize: pagination.pageSize,
-     filters: apiFilters,
-  searchQuery: debouncedQuery.trim(),
-     timestamp: new Date().toISOString()
-      });
 
       let result;
    if (debouncedQuery.trim().length > 0 || hasBoosts) {
@@ -621,21 +621,11 @@ const apiStartTime = performance.now();
       // ⏱️ END: Calculate and log response time
       const apiEndTime = performance.now();
       const responseTime = apiEndTime - apiStartTime;
-      console.log('✅ Load More API Response:', {
-        page: nextPage,
-        responseTime: `${responseTime.toFixed(2)}ms`,
- responseTimeSeconds: `${(responseTime / 1000).toFixed(2)}s`,
-        success: result.success,
-        jobsCount: Array.isArray(result.data) ? result.data.length : 0,
-        hasMore: result.meta?.hasMore,
-        timestamp: new Date().toISOString()
-      });
 
    if (controller.signal.aborted) return;
 
     if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
-        console.log(`📊 Load more result: ${list.length} jobs, hasMore: ${result.meta?.hasMore}`);
         setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
@@ -648,7 +638,6 @@ const apiStartTime = performance.now();
         }));
 
         if (list.length === 0) {
-     console.log('📊 No more jobs returned - setting hasMore to false');
           setPagination(prev => ({ ...prev, hasMore: false }));
         } else {
           lastAutoLoadPageRef.current = meta.page || nextPage;
@@ -656,11 +645,7 @@ const apiStartTime = performance.now();
       }
     } catch (e) {
       if (e?.name !== 'AbortError') {
-        console.error('❌ Load More API Error:', {
-          error: e.message,
-          name: e.name,
-          timestamp: new Date().toISOString()
-  });
+        // Error handling
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -689,35 +674,22 @@ const apiStartTime = performance.now();
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5;
 
-    console.log(`Smart Pagination Check:`, {
-      jobsLength: jobs.length,
-      lowThreshold,
-      backendHasMore,
-      currentPage: pagination.page,
-      totalPages: pagination.totalPages,
-      total: pagination.total
-    });
-
     if (!backendHasMore) {
-      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -927,7 +899,6 @@ const apiStartTime = performance.now();
             <TouchableOpacity
               style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
               onPress={() => {
-                console.log('Manual Load More triggered');
                 setSmartPaginating(true);
                 loadMoreJobs();
                 setTimeout(() => setSmartPaginating(false), 2000);
@@ -994,7 +965,6 @@ const apiStartTime = performance.now();
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-    console.log('handleAskReferral called in JobsScreen for job:', job?.Title);
 
     if (!job) return;
     if (!user) {
@@ -1035,17 +1005,13 @@ const apiStartTime = performance.now();
 
     // ✅ NEW: Check wallet balance instead of subscription
     try {
-      console.log('Checking wallet balance...');
       const walletBalance = await refopenAPI.getWalletBalance();
-      console.log('Wallet balance result:', walletBalance);
 
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('Current balance:', balance);
 
         // Check if balance >= ₹50
         if (balance < 50) {
-          console.log('Insufficient wallet balance:', balance);
 
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
@@ -1053,7 +1019,6 @@ const apiStartTime = performance.now();
           return;
         }
 
-        console.log('✅ Sufficient balance - proceeding with referral');
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
@@ -1100,9 +1065,6 @@ const apiStartTime = performance.now();
 
   // NEW: Subscription modal for quota exhausted users
   const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-     console.log('💳 showSubscriptionModal called in JobsScreen');
-     console.log('💳 Navigation object:', navigation);
-     console.log('💳 Available routes:', navigation.getState?.());
 
      // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
      const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
@@ -1111,7 +1073,6 @@ const apiStartTime = performance.now();
        : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
 
      if (Platform.OS === 'web') {
-       console.log('💳 Web platform detected - navigating directly to ReferralPlans');
        navigation.navigate('ReferralPlans');
        return;
      }
@@ -1124,17 +1085,14 @@ const apiStartTime = performance.now();
            {
              text: 'Maybe Later',
              style: 'cancel',
-             onPress: () => console.log('💳 User selected Maybe Later')
+             onPress: () => {}
            },
            {
              text: 'View Plans',
              onPress: () => {
-               console.log('💳 User selected View Plans - attempting navigation...');
                try {
                  navigation.navigate('ReferralPlans');
-                 console.log('💳 Navigation successful!');
                } catch (navError) {
-                 console.error('💳 Navigation error:', navError);
                  Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
                }
              }
@@ -1146,19 +1104,16 @@ const apiStartTime = performance.now();
          const state = navigation.getState?.();
          const currentRoute = state?.routes?.[state.index]?.name;
          if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-           console.log('💳 Fallback navigation to ReferralPlans after Alert timeout');
-             try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
+             try { navigation.navigate('ReferralPlans'); } catch (e) { }
          }
        }, 3000);
      } catch (error) {
-       console.error('🚨 Error showing subscription modal:', error);
        Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
      }
    }, [navigation, referralEligibility]);
 
   // ? NEW: Handle plan selection and purchase
   const handlePlanSelection = useCallback(async (plan) => {
-    console.log('Plan selected in JobsScreen:', plan);
 
     Alert.alert(
       'Confirm Subscription',
@@ -1248,10 +1203,8 @@ const apiStartTime = performance.now();
           showToast('Application submitted successfully', 'success');
 
           // 🔧 FIXED: Reload primary resume after successful application
-          console.log('🔄 Reloading primary resume after successful application...');
           primaryResumeLoadedRef.current = false; // Reset the loaded flag
           await loadPrimaryResume(); // Reload primary resume
-          console.log('✅ Primary resume reloaded, next applications will auto-apply');
 
           // Only refresh applied count (lightweight)
           try {
@@ -1394,37 +1347,24 @@ const apiStartTime = performance.now();
     const backendHasMore = pagination.hasMore;
     const lowThreshold = 5; // Trigger when only 5 jobs left
 
-    console.log(`Smart Pagination Check:`, {
-      jobsLength: jobs.length,
-      lowThreshold,
-      backendHasMore,
-      currentPage: pagination.page,
-      totalPages: pagination.totalPages,
-      total: pagination.total
-    });
-
     // Don't trigger if backend says no more
     if (!backendHasMore) {
-      console.log('Smart pagination skipped - backend says no more jobs available');
       return;
     }
 
     // FIXED: Additional guard - don't trigger if current page >= totalPages
     if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      console.log(`Smart pagination skipped - already on last page ${pagination.page}/${pagination.totalPages}`);
       setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
-      console.log(`Proactive pagination: Only ${jobs.length} jobs left on page ${pagination.page}, preloading page ${pagination.page + 1}...`);
       loadMoreJobs();
     }
 
     // Emergency loading - when user has no jobs visible but backend has more
     if (jobs.length === 0 && backendHasMore && !loading) {
-      console.log('Emergency pagination: No jobs visible but backend has more available, loading immediately...');
       setSmartPaginating(true);
       setTimeout(() => {
         loadMoreJobs();
@@ -1508,13 +1448,13 @@ const apiStartTime = performance.now();
 
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.companies || []).length > 0 && styles.quickFilterActive]}
+                  style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
                   onPress={() => openFilters('company')}
                 >
-                  <Text style={[styles.quickFilterText, (filters.companies || []).length > 0 && styles.quickFilterActiveText]}>
+                  <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
                     {quickCompanyLabel}
                   </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.companies || []).length > 0 ? '#0066cc' : '#666'} />
+                  <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
                 </TouchableOpacity>
               </View>
             </ScrollView>

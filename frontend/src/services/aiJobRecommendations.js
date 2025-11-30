@@ -11,11 +11,9 @@ class AIJobRecommendationsService {
    * FREE - No wallet deduction (uses /jobs/ai-filters endpoint)
    */
   async getPersonalizedJobs(userId, pageSize = 5) {
-    console.log('🤖 AI: Fetching personalized job recommendations...');
     
     try {
       // Get AI filters from backend (FREE - no wallet deduction)
-      console.log('🤖 AI: Fetching filters from backend...');
       const filtersResult = await refopenAPI.apiCall('/jobs/ai-filters');
       
       if (!filtersResult.success || !filtersResult.data) {
@@ -24,13 +22,11 @@ class AIJobRecommendationsService {
       }
       
       const filters = filtersResult.data;
-      console.log('🤖 AI: Got filters from backend:', filters);
       
       // Fetch jobs with AI-generated filters
       const result = await refopenAPI.getJobs(1, pageSize, filters);
       
       if (result.success && result.data) {
-        console.log(`🤖 AI: Found ${result.data.length} personalized jobs`);
         return {
           success: true,
           jobs: result.data,

@@ -15,12 +15,10 @@ class MessagingAPI {
    */
   async createConversation(otherUserId) {
     try {
-      console.log('?? Creating conversation with user:', otherUserId);
       const result = await api.apiCall('/conversations', {
         method: 'POST',
         body: JSON.stringify({ otherUserId }),
       });
-      console.log('? Conversation created:', result);
     return result;
     } catch (error) {
     console.error('? Create conversation failed:', error);
@@ -87,7 +85,6 @@ class MessagingAPI {
    */
   async sendMessage(conversationId, content, messageType = 'Text') {
     try {
-      console.log('?? Sending message to conversation:', conversationId);
       const result = await api.apiCall('/messages', {
         method: 'POST',
       body: JSON.stringify({
@@ -96,7 +93,6 @@ class MessagingAPI {
        messageType,
         }),
     });
-      console.log('? Message sent:', result);
       return result;
     } catch (error) {
       console.error('? Send message failed:', error);
@@ -146,7 +142,6 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
   method: 'PUT',
       });
       
-      console.log('? Mark conversation as read result:', result);
       return result;
     } catch (error) {
       console.error('? Mark conversation as read failed:', error);

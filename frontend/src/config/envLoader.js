@@ -54,7 +54,7 @@ class EnvironmentLoader {
   }
 
   loadEnvironment() {
-    console.log(`Loading ${this.currentEnv} environment configuration`);
+    
     
     // This is conceptual - in practice, you'd copy the right .env file
     // or use a build process to select the environment
@@ -110,7 +110,7 @@ class EnvironmentLoader {
     if (missing.length > 0) {
       console.error(`? Missing required config keys: ${missing.join(', ')}`);
     } else {
-      console.log(`? Environment configuration validated for ${this.currentEnv}`);
+      
     }
   }
 

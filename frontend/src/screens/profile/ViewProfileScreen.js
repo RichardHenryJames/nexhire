@@ -48,9 +48,6 @@ export default function ViewProfileScreen() {
       setLoading(true);
     setError(null); // Reset error
       const result = await messagingApi.getPublicProfile(userId);
-      
-      console.log('?? ViewProfile - API result:', result); // DEBUG
-      console.log('?? ViewProfile - ProfilePictureURL:', result.data?.ProfilePictureURL); // DEBUG
   
       if (result.success) {
     setProfile(result.data);
@@ -301,7 +298,7 @@ style={styles.primaryButton}
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {/* Profile Header Component (NO EDIT, NO STATS) */}
+        {/* Profile Header Component (NO EDIT, NO STATS, NO PROGRESS) */}
         <UserProfileHeader
           user={{
             UserID: userId,
@@ -330,6 +327,7 @@ style={styles.primaryButton}
           userType="JobSeeker"
           onProfileUpdate={null} // Read-only - no updates allowed
           showStats={false} // Hide stats column for privacy
+          showProgress={false} // Hide circular progress ring - not relevant for viewing others
         />
 
    {/* About Section */}
@@ -485,7 +483,7 @@ style={styles.primaryButton}
         confirmText={blockAction === 'unblock' ? 'Unblock' : 'Block'}
         cancelText="Cancel"
         confirmStyle={blockAction === 'unblock' ? 'primary' : 'danger'}
-        icon={blockAction === 'unblock' ? 'checkmark-circle-outline' : 'ban-outline'}
+        icon={blockAction === 'unblock' ? 'checkmark-circle' : 'remove-circle'}
         onConfirm={confirmBlockUser}
         onCancel={() => setShowBlockConfirm(false)}
       />

@@ -11,7 +11,6 @@ class SignalRService {
    */
   async connect(token) {
     if (this.connection && this.connected) {
-      console.log('✅ Already connected to SignalR');
       return;
     }
 
@@ -19,7 +18,6 @@ class SignalRService {
       // Get SignalR connection info from negotiate endpoint
       const API_URL = process.env.REACT_APP_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
    
-      console.log('🔄 Negotiating SignalR connection...');
       
       const response = await fetch(`${API_URL}/signalr/negotiate`, {
         method: 'POST',
@@ -35,7 +33,6 @@ class SignalRService {
       }
 
       const connectionInfo = await response.json();
-      console.log('✅ SignalR connection info received:', connectionInfo.url);
 
       // Build SignalR connection
       this.connection = new signalR.HubConnectionBuilder()
@@ -43,35 +40,29 @@ class SignalRService {
           accessTokenFactory: () => connectionInfo.accessToken,
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000]) // Retry intervals
-        .configureLogging(signalR.LogLevel.Information)
+        .configureLogging(signalR.LogLevel.None)
         .build();
 
       // Connection events
       this.connection.onclose((error) => {
         this.connected = false;
-        console.log('❌ SignalR disconnected', error ? `(Error: ${error.message})` : '');
       });
 
       this.connection.onreconnecting((error) => {
-        console.log('🔄 SignalR reconnecting...', error ? `(${error.message})` : '');
       });
 
       this.connection.onreconnected((connectionId) => {
         this.connected = true;
-        console.log('✅ SignalR reconnected (Connection ID:', connectionId, ')');
       });
 
       // Re-attach all existing listeners
       this.listeners.forEach((callback, event) => {
         this.connection.on(event, callback);
-        console.log(`🎧 Re-attached listener: ${event}`);
       });
 
       // Start connection
-      console.log('🚀 Starting SignalR connection...');
       await this.connection.start();
       this.connected = true;
-      console.log('✅ SignalR connected successfully! Real-time messaging enabled.');
 
     } catch (error) {
       console.error('❌ SignalR connection error:', error);
@@ -87,7 +78,6 @@ class SignalRService {
       await this.connection.stop();
       this.connection = null;
       this.connected = false;
-      console.log('🔌 SignalR disconnected manually');
     }
   }
 
@@ -112,11 +102,9 @@ class SignalRService {
     if (this.connection) {
       this.connection.on(event, callback);
       this.listeners.set(event, callback);
-      console.log(`🎧 Now listening for: ${event}`);
     } else {
       // Store listener for when connection is established
       this.listeners.set(event, callback);
-      console.log(`📝 Queued listener for: ${event} (will attach when connected)`);
     }
   }
 
@@ -127,7 +115,6 @@ class SignalRService {
     if (this.connection) {
       this.connection.off(event);
       this.listeners.delete(event);
-      console.log(`🔇 Stopped listening for: ${event}`);
     }
   }
 
@@ -142,7 +129,6 @@ class SignalRService {
 
     try {
       // Azure SignalR automatically manages groups - client just needs to listen
-      console.log(`✅ Ready to receive messages for conversation: ${conversationId}`);
     } catch (error) {
       console.error('❌ Error joining conversation group:', error);
     }
@@ -157,7 +143,7 @@ class SignalRService {
     }
 
     try {
-      console.log(`👋 Left conversation group: ${conversationId}`);
+      // Logic to leave group if needed
     } catch (error) {
       console.error('❌ Error leaving conversation group:', error);
     }

@@ -278,6 +278,7 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         location: query.get('location') || undefined,
         jobTypeIds: (query.get('jobTypeIds') || undefined) as any,
         workplaceTypeIds: (query.get('workplaceTypeIds') || undefined) as any,
+        organizationIds: (query.get('organizationIds') || undefined) as any,
         department: query.get('department') || undefined,
         currencyId: (parseNumber(query.get('currencyId'), 0) || undefined) as any,
         experienceMin: (parseNumber(query.get('experienceMin'), 0) || undefined) as any,

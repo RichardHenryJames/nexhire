@@ -81,13 +81,10 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         return;
       }
 
-      console.log('🤖 Loading AI personalized jobs (₹100 will be deducted)');
-      
       // Call the backend API that deducts ₹100 and returns AI jobs
       const result = await refopenAPI.getAIRecommendedJobs(50);
       
       if (result.success && result.data) {
-        console.log(`🤖 Loaded ${result.data.length} AI personalized jobs`);
         setAiJobs(result.data);
         setError(null);
       } else {
@@ -95,8 +92,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         setAiJobs([]);
       }
     } catch (error) {
-      console.error('🤖 Error loading AI personalized jobs:', error);
-      
       // Handle insufficient balance error
       if (error.message?.includes('Insufficient') || error.message?.includes('balance')) {
         setError({ type: 'insufficient-balance', message: 'You need ₹100 in your wallet to access AI-recommended jobs.' });
@@ -138,7 +133,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   // Handle Apply button - exactly like JobsScreen
   const handleApply = useCallback(async (job) => {
-    console.log('🔵 AI Screen - handleApply called with job:', job?.JobID, job?.Title);
     if (!job) return;
     if (!user) {
       Alert.alert('Login Required', 'Please login to apply for jobs', [
@@ -158,7 +152,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       return; 
     }
     // No resume - navigate to job application screen
-    console.log('✅ AI Screen - Navigating to JobApplication for jobId:', job.JobID);
     navigation.navigate('JobApplication', { jobId: job.JobID });
   }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickApply]);
 
@@ -208,7 +201,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   // Handle Ask Referral button - exactly like JobsScreen
   const handleAskReferral = useCallback(async (job) => {
-    console.log('🟠 AI Screen - handleAskReferral called with job:', job?.JobID, job?.Title);
     
     if (!job) return;
     if (!user) {
@@ -248,15 +240,12 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
     // Check wallet balance
     try {
-      console.log('✅ AI Screen - Checking wallet balance for referral');
       const walletBalance = await refopenAPI.getWalletBalance();
 
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('Current balance:', balance);
 
         if (balance < 50) {
-          console.log('Insufficient wallet balance:', balance);
           if (Platform.OS === 'web') {
             if (window.confirm(`Insufficient wallet balance. You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}\n\nWould you like to recharge?`)) {
               navigation.navigate('Wallet');
@@ -274,7 +263,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           return;
         }
 
-        console.log('✅ Sufficient balance - proceeding with referral');
       } else {
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
         return;
@@ -293,7 +281,6 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     }
 
     // No resume - navigate to CreateReferralRequest
-    console.log('✅ AI Screen - Navigating to CreateReferralRequest for jobId:', jobId);
     navigation.navigate('CreateReferralRequest', { 
       jobId: jobId,
       job: job 
@@ -319,11 +306,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
               
               // If we have more than 1 route in the stack, go back normally
               if (routes.length > 1 && currentIndex > 0) {
-                console.log('Going back normally - have navigation history');
                 navigation.goBack();
               } else {
                 // Hard refresh scenario - navigate to Home
-                console.log('Hard refresh detected - navigating to Home');
                 navigation.navigate('Main', {
                   screen: 'MainTabs',
                   params: {

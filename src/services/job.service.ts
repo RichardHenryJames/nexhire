@@ -128,19 +128,32 @@ export class JobService {
             paramIndex++;
         }
 
-        // Company filter (multiple companies support)
-        if (f.companies) {
-            const companiesStr = String(f.companies).trim();
-            if (companiesStr) {
-                const companyNames = companiesStr.split('|').map(s => s.trim()).filter(s => s.length > 0);
-                if (companyNames.length > 0) {
-                    const companyConditions = companyNames.map(() => {
-                        const condition = `o.Name = @param${paramIndex}`;
+        // Organization filter (multiple organizations support) - uses OrganizationID from Jobs table
+        if (f.organizationIds) {
+            const orgIdsStr = String(f.organizationIds).trim();
+            console.log('🔍 [BACKEND] Organization filter received:', { orgIdsStr });
+            
+            if (orgIdsStr) {
+                // Parse comma-separated organization IDs and convert to integers
+                const orgIds = orgIdsStr.split(',')
+                    .map(s => parseInt(s.trim(), 10))  // ✅ FIXED: Convert to integers
+                    .filter(n => !isNaN(n) && n > 0);   // ✅ FIXED: Filter out invalid numbers
+                
+                console.log('🔍 [BACKEND] Parsed organization IDs:', orgIds);
+                
+                if (orgIds.length > 0) {
+                    // Build IN clause with parameterized values
+                    const placeholders = orgIds.map(() => {
+                        const placeholder = `@param${paramIndex}`;
                         paramIndex++;
-                        return condition;
-                    });
-                    whereClause += ` AND (${companyConditions.join(' OR ')})`;
-                    queryParams.push(...companyNames);
+                        return placeholder;
+                    }).join(',');
+                    
+                    whereClause += ` AND j.OrganizationID IN (${placeholders})`;
+                    queryParams.push(...orgIds);  // Now pushing integers instead of strings
+                    
+                    console.log('🔍 [BACKEND] WHERE clause addition:', `j.OrganizationID IN (${placeholders})`);
+                    console.log('🔍 [BACKEND] Query params added:', orgIds);
                 }
             }
         }
@@ -346,23 +359,22 @@ export class JobService {
         const pageNum = Math.max(Number(page) || 1, 1);
         const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-        // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
+        // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
         let dataQuery = `
             SELECT
-                j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
-                j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
-                j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
+                j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                j.OrganizationID,
+                j.Location, j.City, j.State, j.Country, j.IsRemote, 
+                j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+                j.PublishedAt, j.CreatedAt,
                 jt.Type as JobTypeName,
                 wt.Type as WorkplaceTypeName,
                 o.Name as OrganizationName,
-                ISNULL(o.LogoURL, '') as OrganizationLogo,
-                ISNULL(c.Symbol, '$') as CurrencySymbol
+                ISNULL(o.LogoURL, '') as OrganizationLogo
             FROM Jobs j
             INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
-            LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             ${whereClause}
         `;
 
@@ -704,24 +716,23 @@ export class JobService {
             const pageNum = Math.max(Number(page) || 1, 1);
             const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
 
-            // 🚀 OPTIMIZATION: Select only needed columns (not j.* with large text fields)
+            // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
             const dataStartTime = Date.now();
             let dataQuery = `
                 SELECT
-                    j.JobID, j.OrganizationID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                    j.Location, j.City, j.Country, j.IsRemote, j.SalaryRangeMin, j.SalaryRangeMax,
-                    j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.PublishedAt, 
-                    j.CreatedAt, j.ApplicationDeadline, j.Status, j.Tags,
+                    j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+                    j.OrganizationID,
+                    j.Location, j.City, j.Country, j.IsRemote, 
+                    j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+                    j.PublishedAt, j.CreatedAt,
                     jt.Type as JobTypeName,
                     wt.Type as WorkplaceTypeName,
                     o.Name as OrganizationName,
-                    ISNULL(o.LogoURL, '') as OrganizationLogo,
-                    ISNULL(c.Symbol, '$') as CurrencySymbol
+                    ISNULL(o.LogoURL, '') as OrganizationLogo
                 FROM Jobs j
                 INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
-                LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
                 ${whereClause}
             `;
 

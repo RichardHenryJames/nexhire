@@ -35,11 +35,11 @@ const ResumeUploadModal = ({
   const [hasCheckedResumes, setHasCheckedResumes] = useState(false);
 
   // DEBUG: Log when component is rendered
-  console.log('ResumeUploadModal rendered with visible:', visible);
+  
 
   useEffect(() => {
     if (visible && !hasCheckedResumes) {
-      console.log('Modal is visible, checking existing resumes...');
+      
       checkExistingResumes();
     }
   }, [visible]);
@@ -64,7 +64,7 @@ const ResumeUploadModal = ({
     try {
       // WEB FALLBACK: use native file input because DocumentPicker can silently fail on web
       if (Platform.OS === 'web') {
-        console.log('Web platform detected, using <input type=file> fallback');
+        
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -76,7 +76,7 @@ const ResumeUploadModal = ({
             document.body.removeChild(input);
             return;
           }
-          console.log('File selected (web fallback):', file.name, file.type, file.size);
+          
           if (file.size > 10 * 1024 * 1024) {
             Alert.alert('File Too Large', 'Please select a file smaller than 10MB');
             document.body.removeChild(input);

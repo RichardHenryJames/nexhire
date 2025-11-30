@@ -450,7 +450,7 @@ export default function EducationSection({
   const cancelEducation = () => {
     // ? REMOVED: setLocalEditing(false) - ProfileSection will handle this
     // Reload data for safety (optional)
-    console.log('Education editing cancelled');
+    
   };
 
   // ? MOVED: Define helper functions before using them

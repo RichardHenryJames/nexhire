@@ -219,18 +219,12 @@ function EmployerFlow() {
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
 
-  console.log("AuthStack state:", {
-    hasPendingGoogleAuth,
-    googleUserEmail: pendingGoogleAuth?.user?.email,
-  });
 
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      console.log("Google auth pending - starting at UserTypeSelection");
       return "UserTypeSelection";
     }
-    console.log("No pending auth - starting at Login");
     return "Login";
   };
 
@@ -502,11 +496,6 @@ function MainStack() {
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
 
-  console.log("AppNavigator state check:", {
-    loading,
-    isAuthenticated,
-    hasPendingGoogleAuth,
-  });
 
   // Show loading screen while checking authentication state
   if (loading) {
@@ -543,9 +532,6 @@ export default function AppNavigator() {
           focus: () => {
             // Redirect to Auth if not authenticated
             if (!isAuthenticated) {
-              console.log(
-                "Main screen accessed without auth, redirecting to Auth"
-              );
               navigation.navigate("Auth");
             }
           },

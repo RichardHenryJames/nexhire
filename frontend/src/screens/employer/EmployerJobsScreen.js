@@ -33,12 +33,10 @@ export default function EmployerJobsScreen({ navigation, route }) {
   // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
   useEffect(() => {
     if (route.params?.switchToTab) {
-      console.log('?? Switching to tab:', route.params.switchToTab);
       const publishedJobId = route.params.publishedJobId;
       
       // Proactively remove the job from the draft list
       if (publishedJobId) {
-        console.log('??? Removing job from draft list:', publishedJobId);
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== publishedJobId));
       }
       
@@ -75,25 +73,9 @@ export default function EmployerJobsScreen({ navigation, route }) {
         postedByUserId: onlyMine ? (user.userId || user.id || user.sub || user.UserID) : undefined
       };
       
-      // ?? DEBUG: Log the params being sent
-      console.log('?? EmployerJobsScreen loading jobs with params:', {
-        activeTab,
-        status: params.status,
-        page: params.page,
-        onlyMine,
-        postedByUserId: params.postedByUserId,
-        search: params.search
-      });
       
       const res = await refopenAPI.getOrganizationJobs(params, { signal: controller.signal });
       
-      // ?? DEBUG: Log the response
-      console.log('?? API response:', {
-        success: res?.success,
-        jobsCount: res?.data?.length,
-        firstJobStatus: res?.data?.[0]?.Status,
-        allStatuses: res?.data?.map(j => j.Status)
-      });
       
       if (res?.success) {
         setJobs(res.data || []);
@@ -113,7 +95,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const publishJob = async (jobId) => {
     try {
-      console.log('?? Publishing job:', jobId);
       const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
         showToast('Job published', 'success');
@@ -122,7 +103,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
         
         // ? CRITICAL FIX: Reload BOTH tabs to ensure data is fresh
-        console.log('?? Reloading jobs after publish...');
         await load(1);
         
         // ? OPTIONAL: Auto-switch to Published tab to show the newly published job
@@ -145,7 +125,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
     const shouldShow = (activeTab === 'draft' && isDraft) || (activeTab === 'published' && !isDraft);
     
     if (!shouldShow) {
-      console.log(`?? Filtering out job "${job.Title}" (Status: ${job.Status}) from ${activeTab} tab`);
       return null;
     }
     

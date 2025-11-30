@@ -38,6 +38,8 @@ const getOrganizationId = () => {
 const organizationId = getOrganizationId();
 const [loading, setLoading] = useState(true);
 const [organization, setOrganization] = useState(null);
+const [recentJobs, setRecentJobs] = useState([]);
+const [loadingJobs, setLoadingJobs] = useState(false);
 const [error, setError] = useState(null);
 
   // ? Navigation header with smart back button
@@ -68,11 +70,9 @@ const [error, setError] = useState(null);
             // If we have more than 1 route in the stack, go back normally
             // This handles: Jobs -> OrganizationDetails (back should go to Jobs)
             if (routes.length > 1 && currentIndex > 0) {
-              console.log('? Going back normally - have navigation history');
               navigation.goBack();
             } else {
               // Hard refresh scenario - navigate to Home tab
-              console.log('?? Hard refresh detected - navigating to Home');
               navigation.navigate('Main', {
                 screen: 'MainTabs',
                 params: {
@@ -107,6 +107,8 @@ const [error, setError] = useState(null);
       
       if (result.success && result.data) {
         setOrganization(result.data);
+        // Load recent jobs after organization details
+        loadRecentJobs(result.data.id);
       } else {
         setError(result.error || 'Failed to load organization details');
       }
@@ -115,6 +117,31 @@ const [error, setError] = useState(null);
       setError(err.message || 'An error occurred while loading organization details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRecentJobs = async (orgId) => {
+    try {
+      setLoadingJobs(true);
+      
+      // Get jobs from this organization posted in last 24 hours
+      const result = await refopenAPI.getJobs(1, 10, {
+        organizationIds: [orgId].join(','),
+        postedWithinDays: 1,
+        sortBy: 'PublishedAt',
+        sortOrder: 'desc'
+      });
+      
+      if (result.success && result.data) {
+        setRecentJobs(result.data.slice(0, 5)); // Show max 5 recent jobs
+      } else {
+        setRecentJobs([]);
+      }
+    } catch (err) {
+      console.error('Error loading recent jobs:', err);
+      setRecentJobs([]);
+    } finally {
+      setLoadingJobs(false);
     }
   };
 
@@ -161,6 +188,54 @@ const [error, setError] = useState(null);
     }
 
     return content;
+  };
+
+  const JobCard = ({ job }) => {
+    const formatDate = (job) => {
+      const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
+      
+      if (!dateString) return 'Recently posted';
+      
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Recently posted';
+      
+      const now = new Date();
+      const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+      
+      if (hours < 1) return 'Just posted';
+      if (hours < 24) return `${hours} hours ago`;
+      
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days} days ago`;
+      
+      const weeks = Math.floor(days / 7);
+      if (weeks < 4) return `${weeks} weeks ago`;
+      
+      return date.toLocaleDateString();
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.jobCard}
+        onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+      >
+        <View style={styles.jobHeader}>
+          <Text style={styles.jobTitle} numberOfLines={1}>
+            {job.Title}
+          </Text>
+          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
+        </View>
+        <Text style={styles.jobLocation}>{job.Location}</Text>
+        <View style={styles.jobMeta}>
+          <View style={styles.jobTypeTag}>
+            <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+          </View>
+          <Text style={styles.jobDate}>
+            {formatDate(job)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   if (loading) {
@@ -213,14 +288,8 @@ const [error, setError] = useState(null);
         <View style={styles.headerInfo}>
           <Text style={styles.companyName}>{organization.name}</Text>
           
-          {console.log('Organization Data:', {
-            verification: organization.verification,
-            isFortune500: organization.isFortune500,
-            isFortune500Type: typeof organization.isFortune500,
-            allData: organization
-          })}
-          
-          {organization.verification ? (
+          {/* Verification Badge */}
+          {organization.verification && (
             <View style={styles.verificationBadge}>
               <Ionicons 
                 name={organization.verification === 'Verified' ? 'checkmark-circle' : 'shield-outline'} 
@@ -234,19 +303,62 @@ const [error, setError] = useState(null);
                 {organization.verification}
               </Text>
             </View>
-          ) : null}
+          )}
 
-          {(organization.isFortune500 === true || organization.isFortune500 === 1) ? (
+          {/* Fortune 500 Badge */}
+          {(organization.isFortune500 === true || organization.isFortune500 === 1) && (
             <View style={styles.fortune500Badge}>
               <Ionicons name="trophy" size={16} color="#FFD700" />
               <Text style={styles.fortune500Text}>Fortune 500</Text>
             </View>
-          ) : null}
+          )}
         </View>
       </View>
 
       {/* Main Content */}
       <View style={styles.content}>
+        {/* Recent Jobs Section - Posted in Last 24 Hours */}
+        {!loadingJobs && recentJobs.length > 0 && (
+          <View style={styles.recentJobsSection}>
+            <View style={styles.recentJobsHeader}>
+              <View style={styles.recentJobsHeaderLeft}>
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
+                <Text style={styles.recentJobsTitle}>Posted in Last 24 Hours</Text>
+              </View>
+              {recentJobs.length >= 5 && (
+                <TouchableOpacity 
+                  onPress={() => {
+                    navigation.navigate('Jobs', { 
+                      organizationId: organization.id,
+                      postedWithinDays: 1
+                    });
+                  }}
+                >
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {recentJobs.map((job, index) => (
+                <JobCard key={job.JobID || index} job={job} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {loadingJobs && (
+          <View style={styles.recentJobsSection}>
+            <View style={styles.loadingJobsContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingJobsText}>Loading recent jobs...</Text>
+            </View>
+          </View>
+        )}
+
         {/* Description Section */}
         {organization.description && !organization.description.includes('Auto-created') && (
           <View style={styles.section}>
@@ -569,5 +681,99 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+  },
+  recentJobsSection: {
+    marginBottom: 24,
+  },
+  recentJobsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  recentJobsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recentJobsTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginLeft: 8,
+  },
+  seeAllText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+  horizontalScroll: {
+    paddingRight: 20,
+  },
+  jobCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginRight: 12,
+    width: 280,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  jobHeader: {
+    marginBottom: 8,
+  },
+  jobTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  jobCompany: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    fontWeight: typography.weights.medium,
+  },
+  jobLocation: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    marginBottom: 12,
+  },
+  jobMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  jobTypeTag: {
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  jobTypeText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+  jobDate: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray400,
+  },
+  loadingJobsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+  },
+  loadingJobsText: {
+    marginLeft: 12,
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
   },
 });
