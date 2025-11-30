@@ -56,7 +56,6 @@ export default function WalletScreen({ navigation, route }) {
   // Listen for route params to refresh after payment
   useEffect(() => {
     if (route.params?.refresh) {
-      console.log('🔄 Refreshing wallet after payment');
       loadWalletData(false);
     }
   }, [route.params?.refresh, route.params?.timestamp, loadWalletData]);

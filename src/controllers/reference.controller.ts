@@ -48,39 +48,62 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const country = url.searchParams.get('country') || 'US';
         const limitParam = url.searchParams.get('limit');
         const offsetParam = url.searchParams.get('offset');
-        const limit = limitParam ? parseInt(limitParam) : null; // null means no limit
-        const offset = offsetParam ? parseInt(offsetParam) : 0; // default offset is 0
+        const searchParam = url.searchParams.get('search') || '';
+        
+        // Fetch ALL organizations by default (performance optimized with covering index)
+        // Only apply limit if explicitly requested via query parameter
+        const limit = limitParam ? parseInt(limitParam) : 10000;
+        const offset = offsetParam ? parseInt(offsetParam) : 0;
 
         let organizations: any[] = [];
 
-        // Always get database organizations first
-        const query = `
+        // 🚀 OPTIMIZED: Minimal fields for dropdown performance
+        // Only fetch what's absolutely needed for display
+        let query = `
             SELECT 
                 OrganizationID as id,
                 Name as name,
-                Industry as industry,
-                CASE 
-                    WHEN Size = 'Small' THEN '1-50'
-                    WHEN Size = 'Medium' THEN '51-200'
-                    WHEN Size = 'Large' THEN '201-1000'
-                    WHEN Size = 'Enterprise' THEN '1000+'
-                    ELSE Size
-                END as size,
-                Type as type,
                 LogoURL as logoURL,
-                Website as website,
-                LinkedInProfile as linkedIn,
-                VerificationStatus as verification
+                Industry as industry,
+                IsFortune500 as isFortune500
             FROM Organizations 
             WHERE IsActive = 1
-            ORDER BY Name ASC
         `;
+        
+        const queryParams: any[] = [];
+        let paramIndex = 0;
+        
+        // Add search filter if provided
+        if (searchParam) {
+            query += ` AND Name LIKE @param${paramIndex}`;
+            queryParams.push(`%${searchParam}%`);
+            paramIndex++;
+        }
+        
+        query += `
+            ORDER BY IsFortune500 DESC, Name ASC
+            OFFSET @param${paramIndex} ROWS
+            FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+        `;
+        
+        queryParams.push(offset, limit);
 
-        const result = await dbService.executeQuery(query);
+        const result = await dbService.executeQuery(query, queryParams);
         organizations = result.recordset || [];
+        
+        // Get total count for pagination
+        const countQuery = `
+            SELECT COUNT(*) as total
+            FROM Organizations 
+            WHERE IsActive = 1
+            ${searchParam ? `AND Name LIKE @param0` : ''}
+        `;
+        const countParams = searchParam ? [`%${searchParam}%`] : [];
+        const countResult = await dbService.executeQuery(countQuery, countParams);
+        const totalCount = countResult.recordset[0]?.total || 0;
 
-        // If requested, also fetch from external APIs
-        if (source === 'external' || source === 'all') {
+        // If requested, also fetch from external APIs (only for first page)
+        if ((source === 'external' || source === 'all') && offset === 0) {
             try {
                 console.log('Fetching companies from external APIs...');
                 
@@ -105,48 +128,33 @@ export const getOrganizations = async (req: any): Promise<any> => {
             }
         }
 
-        // Remove duplicates based on name
+        // Remove duplicates based on name (shouldn't be needed with good data, but keep as safety)
         const uniqueOrganizations: any[] = organizations.filter((org: any, index: number, self: any[]) => 
             index === self.findIndex((o: any) => o.name?.toLowerCase() === org.name?.toLowerCase())
         );
 
-        // Apply offset and limit for pagination
-        let paginatedOrganizations: any[];
-        if (limit) {
-            // If limit is specified, apply offset + limit
-            paginatedOrganizations = uniqueOrganizations.slice(offset, offset + limit);
-        } else if (offset > 0) {
-            // If only offset is specified (no limit), get all from offset onwards
-            paginatedOrganizations = uniqueOrganizations.slice(offset);
-        } else {
-            // No offset, no limit - return all
-            paginatedOrganizations = uniqueOrganizations;
-        }
-
         // Add "My company is not listed" option at the end
-        paginatedOrganizations.push({
+        uniqueOrganizations.push({
             id: 999999,
             name: 'My company is not listed',
-            industry: 'Other',
-            size: 'Unknown',
-            type: 'Other',
             logoURL: null,
-            website: null,
-            verification: 'Manual'
+            industry: 'Other',
+            type: 'Other',
+            isFortune500: false
         });
 
         return {
             status: 200,
             jsonBody: successResponse({
-                organizations: paginatedOrganizations,
-                total: uniqueOrganizations.length,
+                organizations: uniqueOrganizations,
+                total: totalCount,
                 offset: offset,
                 limit: limit,
-                hasMore: limit ? (offset + limit < uniqueOrganizations.length) : false,
+                hasMore: offset + limit < totalCount,
                 source: source,
-                fromDatabase: organizations.length > 0,
+                fromDatabase: true,
                 fromExternal: source !== 'database'
-            }, `Organizations retrieved successfully (${paginatedOrganizations.length - 1} companies)`)
+            }, `Organizations retrieved successfully (${uniqueOrganizations.length - 1} companies)`)
         };
     } catch (error) {
         console.error('Error getting organizations:', error);
@@ -155,6 +163,80 @@ export const getOrganizations = async (req: any): Promise<any> => {
             jsonBody: { 
                 success: false, 
                 error: 'Failed to retrieve organizations',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            }
+        };
+    }
+};
+
+// Get organization by ID with all details
+export const getOrganizationById = async (req: any): Promise<any> => {
+    try {
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
+        const organizationId = pathParts[pathParts.length - 1];
+
+        if (!organizationId || organizationId === 'undefined') {
+            return {
+                status: 400,
+                jsonBody: {
+                    success: false,
+                    error: 'Organization ID is required'
+                }
+            };
+        }
+
+        const query = `
+            SELECT 
+                OrganizationID as id,
+                Name as name,
+                Industry as industry,
+                Type as type,
+                CASE 
+                    WHEN Size = 'Small' THEN '1-50'
+                    WHEN Size = 'Medium' THEN '51-200'
+                    WHEN Size = 'Large' THEN '201-1000'
+                    WHEN Size = 'Enterprise' THEN '1000+'
+                    ELSE Size
+                END as size,
+                LogoURL as logoURL,
+                Website as website,
+                LinkedInProfile as linkedIn,
+                Description as description,
+                VerificationStatus as verification,
+                IsFortune500 as isFortune500,
+                CreatedAt as createdAt,
+                UpdatedAt as updatedAt
+            FROM Organizations 
+            WHERE OrganizationID = @param0 AND IsActive = 1
+        `;
+
+        const result = await dbService.executeQuery(query, [organizationId]);
+        
+        if (!result.recordset || result.recordset.length === 0) {
+            return {
+                status: 404,
+                jsonBody: {
+                    success: false,
+                    error: 'Organization not found'
+                }
+            };
+        }
+
+        return {
+            status: 200,
+            jsonBody: successResponse(
+                result.recordset[0],
+                'Organization details retrieved successfully'
+            )
+        };
+    } catch (error) {
+        console.error('Error getting organization by ID:', error);
+        return {
+            status: 500,
+            jsonBody: {
+                success: false,
+                error: 'Failed to retrieve organization details',
                 message: error instanceof Error ? error.message : 'Unknown error'
             }
         };

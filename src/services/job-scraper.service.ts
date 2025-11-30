@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import * as cheerio from 'cheerio';
+import { findFortune500Match } from '../data/fortune500-companies';
 
 console.log('🚀 Enhanced Job Scraper - 10x Mode Active');
 
@@ -252,6 +253,20 @@ export class JobScraperService {
       
     } catch (error: any) {
       console.error('❌ Error loading Adzuna API keys:', error.message);
+      return null;
+    }
+  }
+
+  // Load Clearbit API key (optional - for enhanced enrichment)
+  private static loadClearbitApiKey(): string | null {
+    try {
+      const apiKey = process.env.CLEARBIT_API_KEY;
+      if (apiKey) {
+        console.log('🔑 Using Clearbit API key for enhanced enrichment');
+        return apiKey;
+      }
+      return null;
+    } catch (error: any) {
       return null;
     }
   }
@@ -681,11 +696,262 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return simpleMatch ? simpleMatch[1].trim() : '';
   }
 
+  // 🧹 SMART COMPANY NAME NORMALIZATION
+  /**
+   * Removes noise, leading numbers (smartly), and normalizes company names
+   * to prevent duplicate organizations in the database
+   */
+  private static normalizeCompanyName(rawName: string): string {
+    if (!rawName) return '';
+    
+    // Step 1: Preserve original and create working copy
+    const original = rawName.trim();
+    let normalized = original.toLowerCase();
+    
+    // Step 2: Define brand patterns FIRST (check against original before modifications)
+    // These patterns identify company names where numbers are part of the brand
+    const brandPatterns = [
+      /^\d{1,3}[a-z]{2,8}$/i,   // 360bet, 99acres, 1mg (1-3 digits + 2-8 letters, likely a brand)
+      /^\d+x\d+/i,              // 24x7services
+      /^\d{1,2}[A-Z][a-z]+/,    // 7Eleven, 8Base (1-2 digits + capital - likely a brand, not 2100Microsoft)
+      /^[0-9]{1,2}[A-Z]+$/,     // 3M, 4U (1-2 digits + all capitals)
+      /^\d+\/\d+/,              // 24/7
+    ];
+    
+    const isBrandName = brandPatterns.some(pattern => pattern.test(original));
+    
+    // Step 3: Remove office codes and location-specific suffixes (e.g., "- A19", "- Hyderabad")
+    // This must happen BEFORE noise word removal to catch patterns like "Amazon Dev Center - Hyderabad"
+    normalized = normalized.replace(/\s*-\s*[a-z]\d+$/i, ''); // Remove "- A19", "- B52" style office codes
+    normalized = normalized.replace(/\s*-\s*(hyderabad|bangalore|mumbai|chennai|delhi|pune|gurgaon|noida)$/i, ''); // Remove city suffixes
+    normalized = normalized.replace(/\s*-\s*(us|usa|uk|india)$/i, ''); // Remove country suffixes
+    
+    // Step 4: Remove generic organizational terms that don't identify the brand
+    const genericTerms = [
+      'development center', 'development centre', 'dev center', 'dev centre',
+      'data center', 'data centre', 'data services',
+      'research center', 'research centre',
+      'manufacturing enterprises',
+      'retail operations'
+    ];
+    
+    for (const term of genericTerms) {
+      const pattern = new RegExp(`\\s+${term.replace(/\s/g, '\\s+')}`, 'gi');
+      normalized = normalized.replace(pattern, '');
+    }
+    
+    // Step 5: Remove noise words/suffixes (order matters - remove longer phrases first)
+    const noiseWords = [
+      'private limited', 'pvt ltd', 'pvt. ltd', 'pvt ltd.', 'pvt. ltd.',
+      'private ltd', 'private', 'pvt', 'limited', 'ltd',
+      'incorporated', 'corporation', 'corp', 'inc',
+      'llc', 'l.l.c', 'l.l.c.', 'company', 'co',
+      'technologies', 'technology', 'tech', 'software', 'systems',
+      'services', 'solutions', 'group', 'international', 'global',
+      'india', 'usa', 'uk', 'us'
+    ];
+    
+    // Remove noise words at the end of the name
+    for (const noise of noiseWords) {
+      const pattern = new RegExp(`\\s+${noise.replace(/\./g, '\\.')}$`, 'gi');
+      normalized = normalized.replace(pattern, '');
+    }
+    
+    // Step 6: Remove all punctuation except spaces (before number handling)
+    normalized = normalized.replace(/[^\w\s]/g, '');
+    
+    // Step 7: Smart leading number removal (SKIP if brand name)
+    if (!isBrandName) {
+      // Pattern 1: Leading numbers followed by space (e.g., "2100 Microsoft" -> "microsoft")
+      normalized = normalized.replace(/^(\d+)\s+/, '');
+      
+      // Pattern 2: Leading numbers with 4+ digits followed by letters (e.g., "2100Microsoft" -> "microsoft")
+      // This catches noise like "2100Microsoft" but preserves "360bet", "99acres", "7Eleven"
+      // Only remove if: (a) 4+ leading digits OR (b) remaining text is 4+ chars
+      const longNumberMatch = normalized.match(/^(\d{4,})([a-z]+)/);
+      if (longNumberMatch) {
+        normalized = longNumberMatch[2];
+      } else {
+        // For shorter numbers (1-3 digits), only remove if remaining text is substantial (4+ chars)
+        const shortNumberMatch = normalized.match(/^(\d{1,3})([a-z]{4,})/);
+        if (shortNumberMatch) {
+          normalized = shortNumberMatch[2];
+        }
+      }
+    }
+    
+    // Step 8: Token filtering - split into words and filter
+    const tokens = normalized
+      .split(/\s+/)
+      .filter(token => {
+        // Remove empty tokens
+        if (!token) return false;
+        
+        // Remove tokens shorter than 2 characters (unless it's the only token)
+        if (token.length < 2) return false;
+        
+        // Remove noise words that might appear mid-string
+        if (noiseWords.includes(token.toLowerCase())) return false;
+        
+        return true;
+      });
+    
+    // Step 9: Join tokens and clean up extra spaces
+    normalized = tokens.join(' ').trim().replace(/\s+/g, ' ');
+    
+    // Step 10: Final safety check - if result is empty or too short, use original cleaned
+    if (!normalized || normalized.length < 2) {
+      normalized = original.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    }
+    
+    return normalized;
+  }
+
+  /**
+   * 🎯 Calculate similarity between two strings using Levenshtein distance
+   * Returns a similarity score between 0 and 1 (1 = identical)
+   */
+  private static calculateSimilarity(str1: string, str2: string): number {
+    if (str1 === str2) return 1.0;
+    if (!str1 || !str2) return 0.0;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    // Calculate Levenshtein distance
+    const distance = this.levenshteinDistance(longer, shorter);
+    
+    // Convert to similarity score (0-1)
+    return (longer.length - distance) / longer.length;
+  }
+
+  /**
+   * 📏 Calculate Levenshtein distance between two strings
+   */
+  private static levenshteinDistance(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+    
+    // Initialize matrix
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    // Fill matrix
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * 🔍 Find existing organization by normalized name with similarity matching
+   * Returns organization if found, null otherwise
+   */
+  private static async findSimilarOrganization(normalizedName: string, originalName?: string): Promise<any | null> {
+    try {
+      // FIRST: Try exact match on original name (prevents duplicates)
+      if (originalName) {
+        const exactNameQuery = `
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        
+        const exactNameMatch = await dbService.executeQuery(exactNameQuery, [originalName]);
+        if (exactNameMatch.recordset.length > 0) {
+          console.log(`✅ Exact name match found: "${originalName}"`);
+          return exactNameMatch.recordset[0];
+        }
+      }
+      
+      // SECOND: Try exact match on normalized name (case-insensitive, no spaces)
+      const exactQuery = `
+        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE LOWER(REPLACE(Name, ' ', '')) = @param0
+          AND IsActive = 1
+      `;
+      
+      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '').toLowerCase()]);
+      if (exactMatch.recordset.length > 0) {
+        console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
+        return exactMatch.recordset[0];
+      }
+      
+      // Second, fetch potential matches and calculate similarity
+      const candidatesQuery = `
+        SELECT TOP 20 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE LEN(Name) BETWEEN @param0 AND @param1
+          AND IsActive = 1
+        ORDER BY Name
+      `;
+      
+      const minLen = Math.max(3, normalizedName.length - 5);
+      const maxLen = normalizedName.length + 10;
+      
+      const candidates = await dbService.executeQuery(candidatesQuery, [minLen, maxLen]);
+      
+      // Calculate similarity for each candidate
+      const SIMILARITY_THRESHOLD = 0.85;
+      let bestMatch: any = null;
+      let bestScore = 0;
+      
+      for (const candidate of candidates.recordset) {
+        const candidateNormalized = this.normalizeCompanyName(candidate.Name);
+        const similarity = this.calculateSimilarity(normalizedName, candidateNormalized);
+        
+        if (similarity >= SIMILARITY_THRESHOLD && similarity > bestScore) {
+          bestScore = similarity;
+          bestMatch = candidate;
+        }
+      }
+      
+      if (bestMatch) {
+        console.log(`🎯 Similar match found for "${normalizedName}": ${bestMatch.Name} (score: ${bestScore.toFixed(2)})`);
+        return bestMatch;
+      }
+      
+      return null;
+      
+    } catch (error: any) {
+      console.error(`Error finding similar organization: ${error.message}`);
+      return null;
+    }
+  }
+
   // 💾 Enhanced database insertion with organization logo updates
   private static async insertJobIntoRefOpenDB(job: ScrapedJob): Promise<void> {
     try {
-      // Get or create organization WITH enhanced data
-      const organizationId = await this.getOrCreateOrganizationWithEnhancements(job.company, job.source, job);
+      // Get or create organization WITH enhanced data and validation
+      let organizationId: number;
+      try {
+        organizationId = await this.getOrCreateOrganizationWithEnhancements(job.company, job.source, job);
+      } catch (validationError: any) {
+        // If company name is invalid, skip this job but don't crash the whole flow
+        if (validationError.message.includes('Invalid company name')) {
+          console.warn(`⏭️  Skipping job "${job.title}" due to invalid company: ${validationError.message}`);
+          return; // Exit gracefully, continue with next job
+        }
+        // Re-throw other errors
+        throw validationError;
+      }
       
       const jobTypeId = this.getJobTypeId(job.jobType);
       const workplaceTypeId = this.getWorkplaceTypeId(job.workplaceType);
@@ -737,51 +1003,173 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 🏢 ENHANCED: Get or create organization with API data enrichment
+  /**
+   * 🛡️ VALIDATION: Check if company name is valid before adding to database
+   * Rejects junk/test data, Excel errors, malformed names, etc.
+   */
+  private static isValidCompanyName(companyName: string): { valid: boolean; reason?: string } {
+    if (!companyName || companyName.trim().length === 0) {
+      return { valid: false, reason: 'Empty name' };
+    }
+
+    const trimmed = companyName.trim();
+
+    // Reject: Excel errors
+    if (/^#(REF|NAME|VALUE|DIV|N\/A|NULL|NUM)!?/i.test(trimmed)) {
+      return { valid: false, reason: 'Excel error' };
+    }
+
+    // Reject: Test/placeholder data
+    if (/(test|sample|demo|placeholder|example|abc|xyz).*company/i.test(trimmed)) {
+      return { valid: false, reason: 'Test data' };
+    }
+
+    // Reject: Malformed (starts with *, ., or weird patterns)
+    if (/^[*.]|\.$/i.test(trimmed)) {
+      return { valid: false, reason: 'Malformed name' };
+    }
+
+    // Reject: Too short (1-2 characters) UNLESS known company
+    const knownShort = /^(3M|HP|GE|EA|AT&T|IBM|AMD)$/i;
+    if (!knownShort.test(trimmed) && trimmed.length <= 2) {
+      return { valid: false, reason: 'Too short' };
+    }
+
+    // Reject: Generic operators/addresses
+    if (/main.*street.*operator|^\d+\s+main\s+street|operator$/i.test(trimmed)) {
+      return { valid: false, reason: 'Generic address/operator' };
+    }
+
+    // Reject: Just "Company", "Inc", "LLC", etc.
+    if (/^(company|inc|llc|ltd|org|organization|business|enterprise|firm)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Generic business term' };
+    }
+
+    // Reject: Non-printable or control characters
+    if (/[\x00-\x1F]|[^\x20-\x7E\u00A0-\uFFFF]/.test(trimmed)) {
+      return { valid: false, reason: 'Invalid characters' };
+    }
+
+    // Reject: Obvious placeholder patterns
+    if (/^(webdesigner.*\d+|\d+.*webdesigner)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Placeholder pattern' };
+    }
+
+    return { valid: true };
+  }
+
+  // 🏢 ENHANCED: Get or create organization with Fortune 500 matching AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
     const cleanName = companyName.trim().substring(0, 100);
     
-    // Check if organization exists
-    const checkQuery = 'SELECT OrganizationID, LogoURL, Website, Industry FROM Organizations WHERE Name = @param0 AND IsActive = 1';
-    const checkResult = await dbService.executeQuery(checkQuery, [cleanName]);
+    // 🛡️ STEP 0: Validate company name BEFORE any processing
+    const validation = this.isValidCompanyName(cleanName);
+    if (!validation.valid) {
+      console.warn(`⚠️ Skipping invalid company name "${cleanName}": ${validation.reason}`);
+      throw new Error(`Invalid company name: ${validation.reason}`);
+    }
     
-    if (checkResult.recordset.length > 0) {
-      const existingOrg = checkResult.recordset[0];
+    // 🌟 STEP 1: Check Fortune 500 list first for canonical name
+    const fortune500Match = findFortune500Match(cleanName);
+    const canonicalName = fortune500Match ? fortune500Match.canonicalName : cleanName;
+    const isFortune500 = !!fortune500Match;
+    
+    console.log(`🔍 Processing company: "${cleanName}"${fortune500Match ? ` → Fortune 500: "${canonicalName}"` : ''}`);
+    
+    // 🧹 STEP 2: Normalize for matching (use canonical name if Fortune 500)
+    const normalizedName = this.normalizeCompanyName(canonicalName);
+    
+    // 🎯 STEP 3: Try to find similar organization using smart matching (pass original name for exact match)
+    const similarOrg = await this.findSimilarOrganization(normalizedName, canonicalName);
+    if (similarOrg) {
+      // If it's a Fortune 500 company, update the name to canonical
+      if (isFortune500 && similarOrg.Name !== canonicalName) {
+        await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+      }
       
       // 🔄 UPDATE existing organization with new data from APIs
-      await this.updateOrganizationWithApiData(existingOrg.OrganizationID, cleanName, source, job, existingOrg);
-      
-      return existingOrg.OrganizationID;
+      await this.updateOrganizationWithApiData(similarOrg.OrganizationID, canonicalName, source, job, similarOrg);
+      return similarOrg.OrganizationID;
     }
 
-    // Create new organization with enhanced data
-    const enhancedOrgData = await this.getEnhancedOrganizationData(cleanName, source, job);
+    // STEP 4: No similar organization found, create new one with enhanced data
+    const enhancedOrgData = await this.getEnhancedOrganizationData(canonicalName, source, job);
+    
+    // Override industry if Fortune 500 match provides better data
+    const finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
     
     const insertQuery = `
-      INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, LogoURL, Website, LinkedInProfile)
+      INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, IsFortune500, LogoURL, Website, LinkedInProfile)
       OUTPUT INSERTED.OrganizationID
-      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, 1, @param7, @param8, @param9)
+      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, 1, @param7, @param8, @param9, @param10)
     `;
     
     const now = new Date().toISOString();
-    const result = await dbService.executeQuery(insertQuery, [
-      cleanName,
-      'Company',
-      enhancedOrgData.industry,
-      enhancedOrgData.size,
-      `${enhancedOrgData.description} (Auto-created from ${source} job scraping)`,
-      now,
-      now,
-      enhancedOrgData.logoUrl,
-      enhancedOrgData.website,
-      enhancedOrgData.linkedInProfile
-    ]);
+    
+    try {
+      const result = await dbService.executeQuery(insertQuery, [
+        canonicalName,  // Use canonical name from Fortune 500 list
+        'Company',
+        finalIndustry,
+        enhancedOrgData.size,
+        `${enhancedOrgData.description}${isFortune500 ? ' (Fortune 500 Company)' : ''} (Auto-created from ${source} job scraping)`,
+        now,
+        now,
+        isFortune500 ? 1 : 0,  // IsFortune500 flag
+        enhancedOrgData.logoUrl,
+        enhancedOrgData.website,
+        enhancedOrgData.linkedInProfile
+      ]);
 
-    console.log(`🏢 Created new organization: ${cleanName} with logo: ${enhancedOrgData.logoUrl ? 'Yes' : 'No'}`);
-    return result.recordset[0].OrganizationID;
+      console.log(`🏢 Created new organization: ${canonicalName}${isFortune500 ? ' ⭐ (Fortune 500)' : ''}`);
+      return result.recordset[0].OrganizationID;
+      
+    } catch (insertError: any) {
+      // Handle race condition: Another process inserted the same organization
+      if (insertError.message && insertError.message.includes('UNIQUE KEY constraint')) {
+        console.log(`🔄 Organization "${canonicalName}" was just created by another process, retrieving it...`);
+        
+        // Retrieve the organization that was just created
+        const retrieveQuery = `
+          SELECT OrganizationID 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        const retrieveResult = await dbService.executeQuery(retrieveQuery, [canonicalName]);
+        
+        if (retrieveResult.recordset.length > 0) {
+          console.log(`✅ Retrieved existing organization: ${canonicalName}`);
+          return retrieveResult.recordset[0].OrganizationID;
+        }
+      }
+      
+      // Re-throw if it's a different error
+      throw insertError;
+    }
   }
 
-  // 🔄 Update existing organization with new API data
+  // 📝 Update organization name to canonical Fortune 500 name
+  private static async updateOrganizationName(organizationId: number, canonicalName: string, isFortune500: boolean, industry?: string): Promise<void> {
+    try {
+      const updates: string[] = ['Name = @param0', 'IsFortune500 = @param1', 'UpdatedAt = @param2'];
+      const params: any[] = [canonicalName, isFortune500 ? 1 : 0, new Date().toISOString()];
+      
+      if (industry) {
+        updates.push('Industry = @param3');
+        params.push(industry);
+      }
+      
+      const updateQuery = `UPDATE Organizations SET ${updates.join(', ')} WHERE OrganizationID = @param${params.length}`;
+      params.push(organizationId);
+      
+      await dbService.executeQuery(updateQuery, params);
+      console.log(`✅ Updated organization ${organizationId} to canonical name: "${canonicalName}" (Fortune 500: ${isFortune500})`);
+    } catch (error: any) {
+      console.warn(`⚠️ Failed to update organization name: ${error.message}`);
+    }
+  }
+
+  // 🔄 Update existing organization with new API data (ENHANCED with Clearbit data)
   private static async updateOrganizationWithApiData(organizationId: number, companyName: string, source: string, job: ScrapedJob, existingData: any): Promise<void> {
     try {
       const enhancedData = await this.getEnhancedOrganizationData(companyName, source, job);
@@ -807,6 +1195,26 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         console.log(`🌐 Adding website to ${companyName}: ${enhancedData.website}`);
       }
       
+      // Update Description if we have better info (from Clearbit)
+      if (enhancedData.description && enhancedData.description !== `${companyName} - ${enhancedData.industry} company`) {
+        if (!existingData.Description || existingData.Description.includes('Auto-created from')) {
+          updates.push(`Description = @param${paramIndex}`);
+          params.push(enhancedData.description);
+          paramIndex++;
+          console.log(`📝 Adding description to ${companyName}`);
+        }
+      }
+      
+      // Update Size if we have employee count (from Clearbit)
+      if (enhancedData.size && enhancedData.size !== 'Unknown') {
+        if (!existingData.Size || existingData.Size === 'Unknown') {
+          updates.push(`Size = @param${paramIndex}`);
+          params.push(enhancedData.size);
+          paramIndex++;
+          console.log(`👥 Adding size to ${companyName}: ${enhancedData.size}`);
+        }
+      }
+      
       // Update Industry if existing is generic and we have better info
       if (enhancedData.industry !== 'Technology' && 
           (existingData.Industry === 'Technology' || !existingData.Industry)) {
@@ -816,8 +1224,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         console.log(`🏭 Updating industry for ${companyName}: ${enhancedData.industry}`);
       }
       
-      // Update LinkedInProfile if we have one
-      if (enhancedData.linkedInProfile) {
+      // Update LinkedInProfile if we have one (prefer Clearbit data over generated)
+      if (enhancedData.linkedInProfile && !existingData.LinkedInProfile) {
         updates.push(`LinkedInProfile = @param${paramIndex}`);
         params.push(enhancedData.linkedInProfile);
         paramIndex++;
@@ -841,7 +1249,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
   }
 
-  // 📊 Get enhanced organization data from multiple sources
+  // 📊 Get enhanced organization data from multiple sources (SAME AS POWERSHELL)
   private static async getEnhancedOrganizationData(companyName: string, source: string, job: ScrapedJob): Promise<{
     logoUrl: string | null;
     website: string | null;
@@ -855,43 +1263,77 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     let industry = 'Technology'; // Default
     let size = 'Unknown';
     let linkedInProfile: string | null = null;
+    let description = `${companyName} - ${industry} company`;
     
-    // ⚡ CRITICAL FIX: Disable logo enrichment to prevent 5-minute timeout
-    // Logo API calls take 5-15 seconds per company causing function to timeout
-    // before other sources (Adzuna, WeWorkRemotely, HackerNews) can be inserted
-    const ENABLE_LOGO_ENRICHMENT = false;
+    // ✅ ENRICHMENT ENABLED: Using same logic as enrich-organizations.ps1
+    const ENABLE_ENRICHMENT = true;
     
-    // 1. Get data from RemoteOK API if source is RemoteOK
-    if (source === 'RemoteOK' && ENABLE_LOGO_ENRICHMENT) {
+    // 1. Get logo from RemoteOK API if available (instant, no API call)
+    if (source === 'RemoteOK') {
       logoUrl = await this.getRemoteOKLogo(job);
-      // RemoteOK doesn't provide website/other info directly in job data
     }
     
-    // 2. Try to get additional company data from external APIs
-    if (ENABLE_LOGO_ENRICHMENT) {
+    // 2. Get industry from job data if available (instant, no API call)
+    if (job.companyIndustry) {
+      industry = job.companyIndustry;
+    }
+    
+    if (ENABLE_ENRICHMENT) {
       try {
-        const companyData = await this.fetchCompanyDataFromAPIs(companyName);
-        if (companyData) {
-          website = website || companyData.website || null;
-          industry = companyData.industry || industry;
-          size = companyData.size || size;
-          linkedInProfile = companyData.linkedInProfile || null;
-          // Don't override RemoteOK logo with generic ones
-          if (!logoUrl) {
-            logoUrl = companyData.logoUrl || null;
+        // 3. Try to find website using common domain patterns
+        if (!website) {
+          website = await this.searchCompanyWebsiteFast(companyName);
+        }
+        
+        // 4. Get Clearbit logo if we have a website (single fast API call)
+        if (!logoUrl && website) {
+          logoUrl = await this.getClearbitLogoFast(website);
+        }
+        
+        // 5. 🆕 Get comprehensive company data from Clearbit Company API (SAME AS POWERSHELL)
+        const clearbitApiKey = this.loadClearbitApiKey();
+        if (website && clearbitApiKey) {
+          console.log(`📊 Fetching Clearbit Company data for ${companyName}...`);
+          const clearbitData = await this.getClearbitCompanyInfo(website, clearbitApiKey);
+          
+          if (clearbitData) {
+            // Use Clearbit data to enhance our organization info
+            if (clearbitData.description) {
+              description = clearbitData.description;
+            }
+            
+            if (clearbitData.industry) {
+              industry = clearbitData.industry;
+            }
+            
+            if (clearbitData.employeeCount) {
+              size = clearbitData.employeeCount;
+            }
+            
+            if (clearbitData.linkedIn) {
+              linkedInProfile = clearbitData.linkedIn;
+            }
+            
+            // Use Clearbit logo if we don't have one yet and it's available
+            if (!logoUrl && clearbitData.logo) {
+              logoUrl = clearbitData.logo;
+            }
+            
+            console.log(`✅ Clearbit: Enriched ${companyName} with comprehensive data`);
           }
         }
+        
+        // 6. Generate LinkedIn URL if we don't have one from Clearbit (instant, no API call)
+        if (!linkedInProfile) {
+          linkedInProfile = this.generateLinkedInUrl(companyName);
+        }
+        
       } catch (error) {
-        console.warn(`⚠️ Failed to fetch external company data for ${companyName}`);
-      }
-    
-      // 3. Try Clearbit Logo API as fallback
-      if (!logoUrl) {
-        logoUrl = await this.getClearbitLogo(companyName, website);
+        console.warn(`⚠️ Enrichment failed for ${companyName}: ${error}`);
       }
     }
     
-    // 4. Enhance industry based on job title/description (fast, no API calls)
+    // 7. Enhance industry based on job title/description (instant, no API call)
     industry = this.enhanceIndustryFromJob(job.title, job.description, industry);
     
     return {
@@ -899,7 +1341,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       website,
       industry,
       size,
-      description: `${companyName} - ${industry} company`,
+      description,
       linkedInProfile
     };
   }
@@ -910,242 +1352,221 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return (job as any).logoUrl || null;
   }
 
-  // 🌐 Fetch additional company data from external APIs
-  private static async fetchCompanyDataFromAPIs(companyName: string): Promise<{
-    website?: string;
-    industry?: string;
-    size?: string;
-    logoUrl?: string;
-    linkedInProfile?: string;
-  } | null> {
+  // 🛡️ Validate if URL is a legitimate company website (not social media)
+  private static isValidCompanyWebsite(url: string): boolean {
     try {
-      // Try multiple external APIs for company data
-      const results = await Promise.allSettled([
-        this.fetchFromClearbitAPI(companyName),
-        this.fetchFromOpenCorporatesAPI(companyName),
-        this.fetchCompanyFromLinkedInSearch(companyName)
-      ]);
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase().replace('www.', '');
       
-      // Combine results from different APIs
-      let combinedData: any = {};
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          combinedData = { ...combinedData, ...result.value };
-          console.log(`📊 API ${index + 1} provided data for ${companyName}`);
+      // ❌ Block social media and wiki sites
+      const blockedDomains = [
+        'linkedin.com',
+        'facebook.com',
+        'twitter.com',
+        'x.com',
+        'instagram.com',
+        'youtube.com',
+        'tiktok.com',
+        'wikipedia.org',
+        'wikimedia.org',
+        'wiki.',
+        'github.com',  // GitHub is profile, not company website
+        'medium.com'   // Medium is blog platform, not company website
+      ];
+      
+      // Check if hostname contains any blocked domain
+      const isBlocked = blockedDomains.some(blocked => 
+        hostname.includes(blocked) || hostname.endsWith(blocked)
+      );
+      
+      if (isBlocked) {
+        console.log(`⚠️ Rejected social media/wiki URL as company website: ${url}`);
+        return false;
+      }
+      
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // 🌐 Fast website search using common domain patterns (with URL validation)
+  private static async searchCompanyWebsiteFast(companyName: string): Promise<string | null> {
+    try {
+      // Generate domain variations
+      const companySlug = companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+      
+      // ✅ Pre-validation: Don't try to access social media domains
+      const socialMediaKeywords = ['linkedin', 'facebook', 'twitter', 'instagram', 'wikipedia', 'wiki'];
+      if (socialMediaKeywords.some(keyword => companySlug.includes(keyword))) {
+        console.log(`⚠️ Skipping social media company name: ${companyName}`);
+        return null;
+      }
+      
+      const possibleDomains = [
+        `https://www.${companySlug}.com`,
+        `https://www.${companySlug}.io`,
+        `https://www.${companySlug}.co`
+      ];
+      
+      // Try domains in parallel with short timeout
+      const domainChecks = possibleDomains.map(async (domain) => {
+        try {
+          // ✅ Validate URL before checking
+          if (!this.isValidCompanyWebsite(domain)) {
+            return null;
+          }
+          
+          const response = await axios.head(domain, {
+            timeout: 2000, // 2 second timeout
+            validateStatus: (status) => status >= 200 && status < 400
+          });
+          
+          if (response.status >= 200 && response.status < 400) {
+            return domain;
+          }
+        } catch {
+          return null;
         }
+        return null;
       });
       
-      return Object.keys(combinedData).length > 0 ? combinedData : null;
+      // Wait for all checks, return first successful one
+      const results = await Promise.all(domainChecks);
+      const validDomain = results.find(d => d !== null);
+      
+      if (validDomain) {
+        console.log(`🌐 Found website for ${companyName}: ${validDomain}`);
+        return validDomain;
+      }
       
     } catch (error) {
-      console.warn(`Failed to fetch external company data for ${companyName}`);
+      // Silent fail
+    }
+    
+    return null;
+  }
+
+  // 📊 Get comprehensive company info from Clearbit Company API (same as PowerShell)
+  private static async getClearbitCompanyInfo(domain: string, apiKey: string): Promise<{
+    name?: string;
+    domain?: string;
+    logo?: string;
+    description?: string;
+    foundedYear?: number;
+    industry?: string;
+    sector?: string;
+    employeeCount?: string;
+    location?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    linkedIn?: string;
+  } | null> {
+    if (!domain || !apiKey) {
+      return null;
+    }
+
+    try {
+      const cleanDomain = domain
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '')
+        .trim();
+
+      const url = `https://company.clearbit.com/v2/companies/find?domain=${cleanDomain}`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        timeout: 10000,
+        validateStatus: (status) => status === 200
+      });
+
+      if (response.status === 200 && response.data) {
+        const data = response.data;
+        
+        return {
+          name: data.name,
+          domain: data.domain,
+          logo: data.logo,
+          description: data.description,
+          foundedYear: data.foundedYear,
+          industry: data.category?.industry,
+          sector: data.category?.sector,
+          employeeCount: data.metrics?.employees ? `${data.metrics.employees} employees` : undefined,
+          location: data.location ? `${data.location.city || ''}, ${data.location.country || ''}`.trim() : undefined,
+          city: data.location?.city,
+          state: data.location?.state,
+          country: data.location?.country,
+          linkedIn: data.linkedin?.handle ? `https://www.linkedin.com/company/${data.linkedin.handle}` : undefined
+        };
+      }
+      
+      return null;
+    } catch (error: any) {
+      // API error or company not found (not a critical error)
+      if (error.response?.status === 404) {
+        console.log(`📊 Clearbit: No data found for ${domain}`);
+      } else if (error.response?.status === 402) {
+        console.log('⚠️ Clearbit API quota exceeded');
+      } else {
+        console.log(`⚠️ Clearbit API error: ${error.message}`);
+      }
       return null;
     }
   }
 
-  // 🔍 Clearbit API for company data
-  private static async fetchFromClearbitAPI(companyName: string): Promise<any> {
-    // Clearbit would require API key - placeholder for now
-    // return await fetch(`https://company.clearbit.com/v2/companies/find?name=${encodeURIComponent(companyName)}`);
-    return null;
-  }
-
-  // 🏢 OpenCorporates API for basic company info
-  private static async fetchFromOpenCorporatesAPI(companyName: string): Promise<any> {
+  // 🎨 Fast Clearbit logo fetch (same as enrich-organizations.ps1)
+  private static async getClearbitLogoFast(website: string): Promise<string | null> {
     try {
-      const apiUrl = `https://api.opencorporates.com/v0.4/companies/search?q=${encodeURIComponent(companyName)}&format=json&limit=1`;
+      const cleanDomain = website
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '')
+        .trim();
       
-      const response = await this.makeStealthRequest(apiUrl, {
-        json: true,
-        timeout: 10000
+      // Validate domain format
+      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!domainRegex.test(cleanDomain)) {
+        return null;
+      }
+      
+      const logoUrl = `https://logo.clearbit.com/${cleanDomain}`;
+      
+      // Quick HEAD request to check if logo exists
+      const response = await axios.head(logoUrl, {
+        timeout: 3000, // 3 second timeout
+        validateStatus: (status) => status === 200
       });
       
-      if (response.status === 200 && response.data?.results?.companies?.[0]) {
-        const company = response.data.results.companies[0].company;
-        return {
-          industry: company.company_type || 'Technology',
-          website: company.registry_url
-        };
+      if (response.status === 200) {
+        console.log(`🎨 Found Clearbit logo for ${cleanDomain}`);
+        return logoUrl;
       }
-    } catch (error) {
-      console.warn(`OpenCorporates API failed for ${companyName}`);
+      
+    } catch {
+      // Silent fail
     }
+    
     return null;
   }
 
-  // 💼 LinkedIn search for company profiles (placeholder)
-  private static async fetchCompanyFromLinkedInSearch(companyName: string): Promise<any> {
-    // LinkedIn would require complex scraping or API access
-    // For now, generate LinkedIn profile URL guess
-    const linkedInSlug = companyName.toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
+  // 🔗 Generate LinkedIn URL (same as enrich-organizations.ps1)
+  private static generateLinkedInUrl(companyName: string): string {
+    const sanitized = companyName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
-    return {
-      linkedInProfile: `https://www.linkedin.com/company/${linkedInSlug}`
-    };
-  }
-
-  // 🎨 Enhanced Logo API with multiple free fallbacks
-  private static async getClearbitLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      // Method 1: Clearbit with website domain
-      if (website) {
-        const domain = new URL(website).hostname.replace('www.', '');
-        const logoUrl = `https://logo.clearbit.com/${domain}`;
-        
-        const response = await this.makeStealthRequest(logoUrl, { timeout: 5000 });
-        if (response.status === 200) {
-          console.log(`🎨 Found Clearbit logo for ${companyName}: ${logoUrl}`);
-          return logoUrl;
-        }
-      }
-      
-      // Method 2: Try multiple domain variations
-      const domainVariations = this.generateDomainVariations(companyName);
-      for (const domain of domainVariations) {
-        try {
-          const logoUrl = `https://logo.clearbit.com/${domain}`;
-          const response = await this.makeStealthRequest(logoUrl, { timeout: 3000 });
-          if (response.status === 200) {
-            console.log(`🎨 Found Clearbit logo for ${companyName}: ${logoUrl}`);
-            return logoUrl;
-          }
-        } catch (error) {
-          // Continue to next variation
-        }
-      }
-
-      // Method 3: Brandfetch API (free tier)
-      const brandfetchLogo = await this.getBrandfetchLogo(companyName);
-      if (brandfetchLogo) {
-        console.log(`🎨 Found Brandfetch logo for ${companyName}: ${brandfetchLogo}`);
-        return brandfetchLogo;
-      }
-
-      // Method 4: Logo.dev API (free)
-      const logoDevLogo = await this.getLogoDevLogo(companyName, website);
-      if (logoDevLogo) {
-        console.log(`🎨 Found Logo.dev logo for ${companyName}: ${logoDevLogo}`);
-        return logoDevLogo;
-      }
-
-      // Method 5: Google Favicon fallback
-      const faviconLogo = await this.getGoogleFaviconLogo(companyName, website);
-      if (faviconLogo) {
-        console.log(`🎨 Found Favicon logo for ${companyName}: ${faviconLogo}`);
-        return faviconLogo;
-      }
-
-      console.log(`⚠️ No logo found for ${companyName} after trying all methods`);
-      
-    } catch (error) {
-      console.warn(`Logo search failed for ${companyName}: ${error}`);
-    }
-    return null;
-  }
-
-  // Generate domain variations for company names
-  private static generateDomainVariations(companyName: string): string[] {
-    const cleanName = companyName.toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .replace(/inc|corp|llc|ltd|company|co|technologies|tech|software|systems/g, '')
-      .trim();
-    
-    const variations = [
-      `${cleanName}.com`,
-      `${cleanName}.io`,
-      `${cleanName}.net`,
-      `${cleanName}.org`,
-    ];
-
-    // Add variations with common suffixes removed
-    if (cleanName.length > 4) {
-      const shortName = cleanName.substring(0, cleanName.length - 1);
-      variations.push(
-        `${shortName}.com`,
-        `${shortName}.io`
-      );
-    }
-
-    return [...new Set(variations)]; // Remove duplicates
-  }
-
-  // Brandfetch API (free tier)
-  private static async getBrandfetchLogo(companyName: string): Promise<string | null> {
-    try {
-      // Brandfetch free API endpoint
-      const apiUrl = `https://api.brandfetch.io/v2/search/${encodeURIComponent(companyName)}`;
-      
-      const response = await this.makeStealthRequest(apiUrl, { 
-        timeout: 5000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RefOpen/1.0)'
-        }
-      });
-      
-      if (response.status === 200 && response.data) {
-        const brands = Array.isArray(response.data) ? response.data : [];
-        if (brands.length > 0 && brands[0].logos && brands[0].logos.length > 0) {
-          return brands[0].logos[0].image;
-        }
-      }
-    } catch (error) {
-      console.warn(`Brandfetch failed for ${companyName}`);
-    }
-    return null;
-  }
-
-  // Logo.dev API (free)
-  private static async getLogoDevLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      if (!website) return null;
-      
-      const domain = new URL(website).hostname.replace('www.', '');
-      const logoUrl = `https://img.logo.dev/${domain}?token=pk_free&format=png&size=200`;
-      
-      const response = await this.makeStealthRequest(logoUrl, { timeout: 5000 });
-      if (response.status === 200) {
-        return logoUrl;
-      }
-    } catch (error) {
-      console.warn(`Logo.dev failed for ${companyName}`);
-    }
-    return null;
-  }
-
-  // Google Favicon API fallback
-  private static async getGoogleFaviconLogo(companyName: string, website: string | null): Promise<string | null> {
-    try {
-      // Try with website first
-      if (website) {
-        const domain = new URL(website).hostname;
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        
-        const response = await this.makeStealthRequest(faviconUrl, { timeout: 3000 });
-        if (response.status === 200) {
-          return faviconUrl;
-        }
-      }
-
-      // Try with generated domains
-      const domainVariations = this.generateDomainVariations(companyName);
-      for (const domain of domainVariations.slice(0, 2)) { // Try top 2 variations
-        try {
-          const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-          const response = await this.makeStealthRequest(faviconUrl, { timeout: 3000 });
-          if (response.status === 200) {
-            return faviconUrl;
-          }
-        } catch (error) {
-          // Continue to next domain
-        }
-      }
-    } catch (error) {
-      console.warn(`Google Favicon failed for ${companyName}`);
-    }
-    return null;
+    return `https://www.linkedin.com/company/${sanitized}`;
   }
 
   // 🏭 Enhance industry classification from job data
@@ -1490,6 +1911,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       let insertedCount = 0;
       let indiaJobsCount = 0;
       let organizationsEnhanced = 0;
+      let skippedInvalidCompanies = 0;
       
       for (const [index, job] of jobsToInsert.entries()) {
         try {
@@ -1505,11 +1927,17 @@ Apply now to join a dynamic team that's building the future! 🌟`;
           }
           
           if ((index + 1) % 50 === 0) {
-            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted`);
+            console.log(`📈 Progress: ${index + 1}/${jobsToInsert.length} jobs inserted (${skippedInvalidCompanies} skipped)`);
           }
         } catch (error: any) {
-          console.error(`❌ Failed to insert "${job.title}": ${error.message}`);
-          result.errors.push(`Insert failed: ${job.title} - ${error.message}`);
+          // Check if it's an invalid company that was skipped
+          if (error.message && error.message.includes('Invalid company name')) {
+            skippedInvalidCompanies++;
+            console.warn(`⏭️  Skipped job "${job.title}" at ${job.company}: Invalid company name`);
+          } else {
+            console.error(`❌ Failed to insert "${job.title}": ${error.message}`);
+            result.errors.push(`Insert failed: ${job.title} - ${error.message}`);
+          }
         }
       }
 
@@ -1520,6 +1948,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       console.log(`🎊 Job scraping completed!`);
       console.log(`📊 Results: ${insertedCount} jobs added (${indiaJobsCount} from India)`);
       console.log(`🏢 Organizations enhanced: ${organizationsEnhanced} with logos/data`);
+      if (skippedInvalidCompanies > 0) {
+        console.log(`⏭️  Skipped: ${skippedInvalidCompanies} jobs with invalid company names`);
+      }
       console.log(`⏱️ Execution time: ${Math.round(result.summary.executionTime / 1000)}s`);
 
     } catch (error: any) {

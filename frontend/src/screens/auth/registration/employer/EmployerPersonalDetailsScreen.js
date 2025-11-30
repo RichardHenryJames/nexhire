@@ -32,7 +32,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   // Pre-populate some data for Google users
   useEffect(() => {
     if (isGoogleUser && googleUser) {
-      console.log('Setting up employer details for Google user:', googleUser.name);
+      
       
       // You could potentially derive job title from LinkedIn data if available
       // For now, we'll keep the defaults but could enhance this

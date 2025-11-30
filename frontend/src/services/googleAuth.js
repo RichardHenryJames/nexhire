@@ -17,7 +17,6 @@ class GoogleAuthService {
     
     // Log configuration status on initialization
     if (frontendConfig.shouldLog('debug')) {
-      console.log('Google Auth Service initialized');
       this.logConfigStatus();
     }
   }
@@ -53,13 +52,10 @@ class GoogleAuthService {
       clientId: this.getClientId()?.substring(0, 20) + '...',
       featureEnabled: frontendConfig.isFeatureEnabled('googleSignIn'),
     };
-    console.log('Google OAuth Status:', summary);
   }
 
   async signIn() {
     try {
-      console.log('Starting Google Sign-In flow...');
-      console.log('Platform:', this.getCurrentPlatform());
       
       // Check if feature is enabled
       if (!frontendConfig.isFeatureEnabled('googleSignIn')) {
@@ -82,7 +78,6 @@ class GoogleAuthService {
       }
 
       const clientId = this.getClientId();
-      console.log('Using client ID configuration for:', this.getCurrentPlatform());
 
       // Create redirect URI
       const redirectUri = AuthSession.makeRedirectUri({ 
@@ -90,11 +85,6 @@ class GoogleAuthService {
         useProxy: false
       });
 
-      console.log('=== DETAILED REDIRECT DEBUG ===');
-      console.log('Current window.location.href:', window.location.href);
-      console.log('Current window.location.origin:', window.location.origin);
-      console.log('Generated redirect URI:', redirectUri);
-      console.log('=== END REDIRECT DEBUG ===');
 
       // Manual OAuth URL construction without PKCE
       const authParams = new URLSearchParams({
@@ -108,18 +98,12 @@ class GoogleAuthService {
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
       
-      console.log('Manual OAuth URL (no PKCE):', authUrl);
-      console.log('Auth URL includes response_type=token:', authUrl.includes('response_type=token'));
-      console.log('Auth URL does NOT include code_challenge:', !authUrl.includes('code_challenge'));
 
       // FIXED: Use WebBrowser.openAuthSessionAsync instead of AuthSession.startAsync
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      console.log('Auth result:', result);
-      console.log('Auth result type:', result.type);
 
       if (result.type === 'success') {
-        console.log('? Google authorization successful with manual implicit flow');
         
         // Parse tokens from the URL
         let accessToken, idToken;
@@ -136,19 +120,12 @@ class GoogleAuthService {
         
         if (!accessToken) {
           console.error('No access token in result URL:', result.url);
-          console.log('Full result object:', result);
           throw new Error('No access token received from Google');
         }
 
-        console.log('? Tokens extracted from URL successfully');
         
         const userInfo = await this.getUserInfo(accessToken);
         
-        console.log('? User info retrieved:', {
-          email: userInfo.email,
-          name: userInfo.name,
-          verified: userInfo.verified_email
-        });
 
         return {
           success: true,
@@ -160,14 +137,12 @@ class GoogleAuthService {
           }
         };
       } else if (result.type === 'cancel') {
-        console.log('User cancelled Google Sign-In');
         return { 
           success: false, 
           error: 'User cancelled', 
           cancelled: true 
         };
       } else if (result.type === 'dismiss') {
-        console.log('User dismissed Google Sign-In popup');
         return { 
           success: false, 
           error: 'Authentication popup was closed', 
@@ -187,7 +162,6 @@ class GoogleAuthService {
   }
 
   async getUserInfo(accessToken) {
-    console.log('Fetching user info from Google...');
     
     const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { 
@@ -203,7 +177,6 @@ class GoogleAuthService {
       throw new Error('Failed to fetch user info');
     }
     
-    console.log('? User info fetched successfully');
     
     return {
       id: data.id,
@@ -219,13 +192,11 @@ class GoogleAuthService {
 
   async signOut(accessToken) {
     try {
-      console.log('Revoking Google tokens...');
       
       if (accessToken) {
         await fetch(`https://oauth2.googleapis.com/revoke?token=${accessToken}`, {
           method: 'POST',
         });
-        console.log('? Google tokens revoked');
       }
       
       return { success: true };
