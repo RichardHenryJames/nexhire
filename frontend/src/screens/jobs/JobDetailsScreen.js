@@ -1226,8 +1226,8 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       )}
 
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
-      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab */}
-      {!fromReferralRequest && (
+      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab OR when job is archived */}
+      {!fromReferralRequest && !job.IsArchived && (
         <View style={styles.actionContainer}>        
           {isJobSeeker && (
             <TouchableOpacity 
@@ -1290,6 +1290,14 @@ Highlight your relevant experience, skills, and why you're excited about this sp
               </Text>
             </TouchableOpacity>
           )}
+        </View>
+      )}
+      
+      {/* Show archived job notice */}
+      {job.IsArchived && (
+        <View style={styles.archivedNotice}>
+          <Ionicons name="archive-outline" size={24} color={colors.gray600} />
+          <Text style={styles.archivedNoticeText}>This job has been archived and is no longer accepting applications</Text>
         </View>
       )}
       
@@ -1751,5 +1759,21 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     marginLeft: 8,
+  },
+  archivedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: colors.gray100,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 12,
+  },
+  archivedNoticeText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    fontWeight: typography.weights.medium,
   },
 });

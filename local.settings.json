@@ -26,6 +26,7 @@
     "AZURE_STORAGE_CONTAINER_RESUMES": "resumes",
     "AZURE_STORAGE_CONTAINER_REFERRAL_PROOFS": "referral-proofs",
     "AZURE_STORAGE_CONTAINER_COMPANY_LOGOS": "company-logos",
+    "AZURE_STORAGE_CONTAINER_ARCHIVED_JOBS": "archived-jobs",
     
     "CORS_ORIGINS": "http://localhost:3000,http://localhost:19006,https://refopen-frontend-web.azurestaticapps.net",
     "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:19006,https://refopen-frontend-web.azurestaticapps.net",

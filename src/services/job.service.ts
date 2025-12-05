@@ -402,8 +402,9 @@ export class JobService {
         return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
     }
 
-    // Get job by ID - unchanged
+    // Get job by ID - ENHANCED: Search SQL first, then archived jobs in blob storage
     static async getJobById(jobId: string): Promise<Job | null> {
+        // First, try to get from SQL database
         const query = `
             SELECT
                 j.*,
@@ -428,7 +429,34 @@ export class JobService {
         `;
 
         const result = await dbService.executeQuery<Job>(query, [jobId]);
-        return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+        
+        if (result.recordset && result.recordset.length > 0) {
+            console.log(`[JobService] Job ${jobId} found in SQL database`);
+            return result.recordset[0];
+        }
+
+        // If not found in SQL, search in archived jobs (blob storage)
+        try {
+            console.log(`[JobService] Job ${jobId} not found in SQL, searching archives...`);
+            const { JobArchiveService } = await import('./job-archive.service');
+            const archivedJob = await JobArchiveService.getArchivedJob(jobId);
+            
+            if (archivedJob) {
+                console.log(`[JobService] Job ${jobId} found in archive`);
+                // Add flag that this is an archived job
+                // Frontend uses IsArchived flag to hide Apply/Refer buttons
+                return {
+                    ...archivedJob,
+                    IsArchived: true,
+                    Status: 'Archived'
+                } as Job;
+            }
+        } catch (archiveError: any) {
+            console.error(`[JobService] Error searching archives for job ${jobId}:`, archiveError.message);
+        }
+
+        console.log(`[JobService] Job ${jobId} not found in SQL or archives`);
+        return null;
     }
 
     // Update job - unchanged
