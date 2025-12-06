@@ -396,26 +396,27 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
-          const [jt, wt, cur] = await Promise.all([
-            refopenAPI.getReferenceMetadata('JobType'),
-            refopenAPI.getReferenceMetadata('WorkplaceType'),
+          const [refData, cur] = await Promise.all([
+            refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
             refopenAPI.getCurrencies()
           ]);
-          if (jt?.success && jt.data) {
-            // Transform ReferenceMetadata format
-            const transformedJobTypes = jt.data.map(item => ({
-              JobTypeID: item.ReferenceID,
-              Type: item.Value
-            }));
-            setJobTypes(transformedJobTypes);
-          }
-          if (wt?.success && wt.data) {
-            // Transform ReferenceMetadata format
-            const transformedWorkplaceTypes = wt.data.map(item => ({
-              WorkplaceTypeID: item.ReferenceID,
-              Type: item.Value
-            }));
-            setWorkplaceTypes(transformedWorkplaceTypes);
+          if (refData?.success && refData.data) {
+            // Transform JobType data
+            if (refData.data.JobType) {
+              const transformedJobTypes = refData.data.JobType.map(item => ({
+                JobTypeID: item.ReferenceID,
+                Type: item.Value
+              }));
+              setJobTypes(transformedJobTypes);
+            }
+            // Transform WorkplaceType data
+            if (refData.data.WorkplaceType) {
+              const transformedWorkplaceTypes = refData.data.WorkplaceType.map(item => ({
+                WorkplaceTypeID: item.ReferenceID,
+                Type: item.Value
+              }));
+              setWorkplaceTypes(transformedWorkplaceTypes);
+            }
           }
           if (cur?.success) setCurrencies(cur.data);
         } catch (e) {
