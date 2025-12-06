@@ -2,12 +2,6 @@ import { dbService } from '../services/database.service';
 import { successResponse } from '../utils/validation';
 
 // Define interfaces for better type safety
-interface ExternalAPIResponse {
-    results?: {
-        companies?: any[];
-    };
-}
-
 interface University {
     name?: string;
     country?: string;
@@ -17,26 +11,21 @@ interface University {
     alpha_two_code?: string;
 }
 
-// Get all organizations for registration dropdown
+// Get all organizations for registration dropdown - SIMPLIFIED
 export const getOrganizations = async (req: any): Promise<any> => {
     try {
-        // Parse query parameters
         const url = new URL(req.url);
-        const source = url.searchParams.get('source') || 'database';
-        const country = url.searchParams.get('country') || 'US';
         const limitParam = url.searchParams.get('limit');
         const offsetParam = url.searchParams.get('offset');
         const searchParam = url.searchParams.get('search') || '';
         
-        // Fetch ALL organizations by default (performance optimized with covering index)
-        // Only apply limit if explicitly requested via query parameter
-        const limit = limitParam ? parseInt(limitParam) : 10000;
+        // 🔥 NO DEFAULT LIMIT - Return ALL organizations if not specified
+        // Frontend should specify limit for optimal performance (e.g., limit=50)
+        const hasLimit = limitParam !== null;
+        const limit = hasLimit ? parseInt(limitParam) : null;
         const offset = offsetParam ? parseInt(offsetParam) : 0;
 
-        let organizations: any[] = [];
-
-        // 🚀 OPTIMIZED: Minimal fields for dropdown performance
-        // Only fetch what's absolutely needed for display
+        // 🚀 SIMPLE QUERY: Just get what we need from database
         let query = `
             SELECT 
                 OrganizationID as id,
@@ -58,16 +47,21 @@ export const getOrganizations = async (req: any): Promise<any> => {
             paramIndex++;
         }
         
-        query += `
-            ORDER BY IsFortune500 DESC, Name ASC
-            OFFSET @param${paramIndex} ROWS
-            FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-        `;
+        // Order Fortune 500 companies first, then alphabetically
+        query += ` ORDER BY IsFortune500 DESC, Name ASC`;
         
-        queryParams.push(offset, limit);
+        // Add pagination only if limit is specified
+        if (hasLimit) {
+            query += `
+                OFFSET @param${paramIndex} ROWS
+                FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+            `;
+            queryParams.push(offset, limit);
+        }
 
+        // Execute query
         const result = await dbService.executeQuery(query, queryParams);
-        organizations = result.recordset || [];
+        const organizations = result.recordset || [];
         
         // Get total count for pagination
         const countQuery = `
@@ -80,59 +74,24 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const countResult = await dbService.executeQuery(countQuery, countParams);
         const totalCount = countResult.recordset[0]?.total || 0;
 
-        // If requested, also fetch from external APIs (only for first page)
-        if ((source === 'external' || source === 'all') && offset === 0) {
-            try {
-                console.log('Fetching companies from external APIs...');
-                
-                const externalCompanies = await Promise.allSettled([
-                    fetchFromOpenCorporates(country, 50),
-                    fetchFromFortuneAPI(50),
-                    fetchFromUnicornAPI(50)
-                ]);
-
-                externalCompanies.forEach((result, index) => {
-                    if (result.status === 'fulfilled' && result.value) {
-                        const companies = result.value as any[];
-                        organizations.push(...companies);
-                        console.log(`✅ External API ${index + 1}: ${companies.length} companies`);
-                    } else {
-                        console.log(`External API ${index + 1} failed:`, result.status === 'rejected' ? result.reason : 'No data');
-                    }
-                });
-
-            } catch (error) {
-                console.warn('Error fetching external companies:', error);
-            }
-        }
-
-        // Remove duplicates based on name (shouldn't be needed with good data, but keep as safety)
-        const uniqueOrganizations: any[] = organizations.filter((org: any, index: number, self: any[]) => 
-            index === self.findIndex((o: any) => o.name?.toLowerCase() === org.name?.toLowerCase())
-        );
-
-        // Add "My company is not listed" option at the end
-        uniqueOrganizations.push({
+        // Add "My company is not listed" option
+        organizations.push({
             id: 999999,
             name: 'My company is not listed',
             logoURL: null,
             industry: 'Other',
-            type: 'Other',
             isFortune500: false
         });
 
         return {
             status: 200,
             jsonBody: successResponse({
-                organizations: uniqueOrganizations,
+                organizations: organizations,
                 total: totalCount,
                 offset: offset,
-                limit: limit,
-                hasMore: offset + limit < totalCount,
-                source: source,
-                fromDatabase: true,
-                fromExternal: source !== 'database'
-            }, `Organizations retrieved successfully (${uniqueOrganizations.length - 1} companies)`)
+                limit: limit || totalCount,
+                hasMore: hasLimit && (offset + (limit || 0) < totalCount)
+            }, `${organizations.length - 1} organizations retrieved`)
         };
     } catch (error) {
         console.error('Error getting organizations:', error);
@@ -220,135 +179,6 @@ export const getOrganizationById = async (req: any): Promise<any> => {
         };
     }
 };
-
-// External API integration functions
-async function fetchFromOpenCorporates(country: string, limit: number): Promise<any[]> {
-    try {
-        const apiUrl = `https://api.opencorporates.com/v0.4/companies/search?jurisdiction_code=${country.toLowerCase()}&per_page=${limit}&format=json`;
-        
-        const response = await fetch(apiUrl, {
-            headers: {
-                'User-Agent': 'RefOpen-Platform/1.0',
-                'Accept': 'application/json'
-            },
-            signal: AbortSignal.timeout(10000)
-        });
-
-        if (!response.ok) {
-            throw new Error(`OpenCorporates API error: ${response.status}`);
-        }
-
-        const data = await response.json() as ExternalAPIResponse;
-        
-        if (data && data.results && Array.isArray(data.results.companies)) {
-            return data.results.companies.map((item: any) => {
-                const company = item?.company || {};
-                return {
-                    id: `oc_${company.company_number || Math.random()}`,
-                    name: company.name || 'Unknown Company',
-                    industry: company.company_type || 'Unknown',
-                    size: 'Unknown',
-                    type: 'Corporation',
-                    logoURL: null,
-                    website: company.registry_url || null,
-                    verification: 'External API',
-                    source: 'OpenCorporates'
-                };
-            });
-        }
-        
-        return [];
-    } catch (error) {
-        console.error('OpenCorporates API error:', error);
-        return [];
-    }
-}
-
-async function fetchFromFortuneAPI(limit: number): Promise<any[]> {
-    try {
-        const apiUrl = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv';
-        
-        const response = await fetch(apiUrl, {
-            signal: AbortSignal.timeout(10000)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Fortune API error: ${response.status}`);
-        }
-
-        const csvData = await response.text();
-        const lines = csvData.split('\n').slice(1);
-        
-        const companies: any[] = [];
-        for (let i = 0; i < Math.min(lines.length, limit); i++) {
-            const line = lines[i].trim();
-            if (line) {
-                const fields = line.split(',');
-                if (fields.length >= 3) {
-                    companies.push({
-                        id: `sp500_${i}`,
-                        name: fields[1]?.replace(/"/g, '') || 'Unknown Company',
-                        industry: fields[3]?.replace(/"/g, '') || 'Technology',
-                        size: 'Enterprise',
-                        type: 'Corporation',
-                        logoURL: null,
-                        website: fields[7] ? `https://${fields[7].replace(/"/g, '')}` : null,
-                        verification: 'S&P 500',
-                        source: 'Fortune 500'
-                    });
-                }
-            }
-        }
-        
-        return companies;
-    } catch (error) {
-        console.error('Fortune API error:', error);
-        return [];
-    }
-}
-
-async function fetchFromUnicornAPI(limit: number): Promise<any[]> {
-    try {
-        const apiUrl = 'https://raw.githubusercontent.com/datasets/unicorns/master/data/unicorns.csv';
-        
-        const response = await fetch(apiUrl, {
-            signal: AbortSignal.timeout(10000)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Unicorn API error: ${response.status}`);
-        }
-
-        const csvData = await response.text();
-        const lines = csvData.split('\n').slice(1);
-        
-        const companies: any[] = [];
-        for (let i = 0; i < Math.min(lines.length, limit); i++) {
-            const line = lines[i].trim();
-            if (line) {
-                const fields = line.split(',');
-                if (fields.length >= 2) {
-                    companies.push({
-                        id: `unicorn_${i}`,
-                        name: fields[0]?.replace(/"/g, '') || 'Unknown Company',
-                        industry: fields[2]?.replace(/"/g, '') || 'Technology',
-                        size: 'Large',
-                        type: 'Corporation',
-                        logoURL: null,
-                        website: null,
-                        verification: 'Unicorn',
-                        source: 'Unicorn Startups'
-                    });
-                }
-            }
-        }
-        
-        return companies;
-    } catch (error) {
-        console.error('Unicorn API error:', error);
-        return [];
-    }
-}
 
 // Get currencies
 export const getCurrencies = async (req: any): Promise<any> => {
