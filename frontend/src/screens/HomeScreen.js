@@ -914,7 +914,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
               <>
                 {/* AI Jobs confirmation modal */}
                 <View style={styles.aiConfirmHeader}>
-                  <Ionicons name="sparkles" size={32} color="#FFD700" />
+                  <Ionicons name="bulb" size={32} color="#FFD700" />
                   <Text style={styles.aiConfirmHeaderTitle}>AI Recommended Jobs</Text>
                 </View>
                 

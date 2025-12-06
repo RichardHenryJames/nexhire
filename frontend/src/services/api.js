@@ -716,42 +716,81 @@ class RefOpenAPI {
     return this.apiCall(`/my/saved-jobs?${params}`);
   }
 
-  // Reference Data APIs with error handling
-  async getJobTypes() {
-    try {
-      return await this.apiCall('/reference/job-types');
-    } catch (error) {
-      console.warn('Failed to load job types:', error.message);
-      // Return fallback data
-      return {
-        success: true,
-        data: [
-          { JobTypeID: 1, Type: 'Full-time' },
-          { JobTypeID: 2, Type: 'Contract' },
-          { JobTypeID: 3, Type: 'Part-time' },
-          { JobTypeID: 4, Type: 'Internship' },
-          { JobTypeID: 5, Type: 'Freelance' },
-          { JobTypeID: 6, Type: 'Temporary' }
-        ]
-      };
-    }
+  // ========================================================================
+  // REFERENCE METADATA APIs - UNIFIED ENDPOINT
+  // ========================================================================
+  
+  /**
+   * Get reference metadata by type
+   * @param {string} refType - Type of reference (JobType, WorkplaceType, JobRole, Skill, etc.)
+   * @param {string} category - Optional category filter
+   * @returns {Promise} API response
+   */
+  async getReferenceMetadata(refType, category = null) {
+    const params = new URLSearchParams({ type: refType });
+    if (category) params.append('category', category);
+    
+    return await this.apiCall(`/reference/metadata?${params}`);
   }
 
-  // UPDATED: Workplace types reference -> call backend, fallback on error
-  async getWorkplaceTypes() {
-    try {
-      return await this.apiCall('/reference/workplace-types');
-    } catch (error) {
-      console.warn('Failed to load workplace types from backend, using fallback:', error.message);
+  /**
+   * Get multiple reference types in one call (efficient)
+   * @param {string[]} types - Array of reference types to fetch
+   * @returns {Promise} API response with all types
+   */
+  async getBulkReferenceMetadata(types) {
+    return await this.apiCall('/reference/metadata/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ types }),
+    });
+  }
+
+  /**
+   * Legacy method - Get job types (uses new unified endpoint)
+   * @deprecated Use getReferenceMetadata('JobType') instead
+   */
+  async getJobTypes() {
+    const result = await this.getReferenceMetadata('JobType');
+    
+    // Transform new format to old format for backward compatibility
+    if (result.success && result.data) {
       return {
         success: true,
-        data: [
-          { WorkplaceTypeID: 1, Type: 'Onsite' },
-          { WorkplaceTypeID: 2, Type: 'Remote' },
-          { WorkplaceTypeID: 3, Type: 'Hybrid' }
-        ]
+        data: result.data.map(item => ({
+          JobTypeID: item.ReferenceID,
+          Type: item.Value,
+          Description: item.Description,
+          Category: item.Category,
+          IsActive: item.IsActive
+        }))
       };
     }
+    
+    return result;
+  }
+
+  /**
+   * Legacy method - Get workplace types (uses new unified endpoint)
+   * @deprecated Use getReferenceMetadata('WorkplaceType') instead
+   */
+  async getWorkplaceTypes() {
+    const result = await this.getReferenceMetadata('WorkplaceType');
+    
+    // Transform new format to old format for backward compatibility
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: result.data.map(item => ({
+          WorkplaceTypeID: item.ReferenceID,
+          Type: item.Value,
+          Description: item.Description,
+          Category: item.Category,
+          IsActive: item.IsActive
+        }))
+      };
+    }
+    
+    return result;
   }
 
   async getCurrencies() {

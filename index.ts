@@ -57,6 +57,14 @@ import {
 } from "./src/controllers/reference.controller";
 import { initializeEmployer } from "./src/controllers/employer.controller";
 
+// NEW: Reference Metadata controller
+import {
+  getReferenceMetadata,
+  getCategoriesByType,
+  getBulkReferenceMetadata,
+  getReferenceById,
+} from "./src/controllers/reference-metadata.controller";
+
 // NEW: Work experience controllers
 import {
   getMyWorkExperiences,
@@ -688,6 +696,42 @@ app.http("reference-salary-components", {
       };
     }
   }),
+});
+
+// ========================================================================
+// REFERENCE METADATA ENDPOINTS - Job Roles, Skills, Certifications, etc.
+// ========================================================================
+
+// Get reference metadata (all types, by type, or search)
+app.http("reference-metadata", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata",
+  handler: withErrorHandling(getReferenceMetadata),
+});
+
+// Get categories for a specific reference type
+app.http("reference-metadata-categories", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/{type}/categories",
+  handler: withErrorHandling(getCategoriesByType),
+});
+
+// Bulk fetch multiple reference types
+app.http("reference-metadata-bulk", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/bulk",
+  handler: withErrorHandling(getBulkReferenceMetadata),
+});
+
+// Get reference metadata by ID (admin/debugging)
+app.http("reference-metadata-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/item/{id}",
+  handler: withErrorHandling(getReferenceById),
 });
 
 app.http("users-profile-image", {
