@@ -313,7 +313,7 @@ export default function SkillsSelectionModal({
         ) : (
           <View style={styles.instructionContainer}>
             <Ionicons name="information-circle-outline" size={48} color="#ccc" />
-            <Text style={styles.instructionText}>Start typing to search from {allSkills.length} available skills</Text>
+            <Text style={styles.instructionText}>Start typing to search and add skills</Text>
           </View>
         )}
       </View>

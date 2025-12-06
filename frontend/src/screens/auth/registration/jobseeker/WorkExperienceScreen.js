@@ -42,6 +42,12 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
   const [loadingReferenceData, setLoadingReferenceData] = useState(true);
+  
+  // Job Roles for dropdown
+  const [jobRoles, setJobRoles] = useState([]);
+  const [loadingJobRoles, setLoadingJobRoles] = useState(false);
+  const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
+  const [jobTitleSearch, setJobTitleSearch] = useState('');
 
   // NEW: Separate state for current and previous work experiences
   const [currentWorkData, setCurrentWorkData] = useState({
@@ -97,7 +103,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
     const loadReferenceData = async () => {
       try {
         setLoadingReferenceData(true);
-        const refData = await refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']);
+        const [refData, jobRolesData] = await Promise.all([
+          refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
+          refopenAPI.getReferenceMetadata('JobRole')
+        ]);
         
         if (refData?.success && refData.data) {
           // Transform JobType data
@@ -111,6 +120,13 @@ export default function WorkExperienceScreen({ navigation, route }) {
             const transformedWorkplaceTypes = refData.data.WorkplaceType.map(item => item.Value);
             setWorkplaceTypes(transformedWorkplaceTypes);
           }
+        }
+        
+        // Load job roles for dropdown
+        if (jobRolesData?.success && Array.isArray(jobRolesData.data)) {
+          setJobRoles(jobRolesData.data.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          ));
         }
       } catch (error) {
         console.error('Failed to load reference data:', error);
@@ -413,17 +429,71 @@ export default function WorkExperienceScreen({ navigation, route }) {
               </View>
             </View>
 
-            {/* Job Title (required) */}
-            <InputField
-              label={activeTab === 'current' ? "Current Job Title" : "Most Recent Job Title"}
-              value={formData.currentJobTitle}
-              onChangeText={(text) => updateField('currentJobTitle', text)}
-              placeholder="e.g. Software Engineer, Marketing Manager"
-              required
-            />
+            {/* Job Title (required) - with searchable dropdown */}
+            <View style={[styles.inputContainer, { position: 'relative', zIndex: 1000 }]}>
+              <Text style={styles.inputLabel}>
+                {activeTab === 'current' ? "Current Job Title" : "Most Recent Job Title"} <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Software Engineer, Marketing Manager"
+                placeholderTextColor={colors.gray400}
+                value={jobTitleSearch || formData.currentJobTitle}
+                onChangeText={(text) => {
+                  setJobTitleSearch(text);
+                  updateField('currentJobTitle', text);
+                  setShowJobTitleDropdown(text.length > 0);
+                }}
+                onFocus={() => {
+                  if (formData.currentJobTitle) {
+                    setJobTitleSearch('');
+                  }
+                }}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                autoCorrect={false}
+                spellCheck={false}
+              />
+              {showJobTitleDropdown && jobTitleSearch.length > 0 && (
+                <View style={styles.dropdownContainer}>
+                  {loadingJobRoles ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {jobRoles
+                        .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
+                        .slice(0, 15)
+                        .map((role) => (
+                          <TouchableOpacity
+                            key={role.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              updateField('currentJobTitle', role.Value);
+                              setJobTitleSearch('');
+                              setShowJobTitleDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                          </TouchableOpacity>
+                        ))
+                      }
+                      {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - keep typing</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+            </View>
 
             {/* Company (Org Picker + manual) */}
-            <OrgPickerButton />
+            <View style={{ position: 'relative', zIndex: 1 }}>
+              <OrgPickerButton />
+            </View>
 
             {/* Start/End Dates - ? REPLACED with DatePicker */}
             <DatePicker
@@ -798,5 +868,48 @@ const styles = StyleSheet.create({
   },
   companyInfo: {
     flex: 1,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 250,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  dropdownScroll: {
+    maxHeight: 250,
+  },
+  dropdownLoading: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  dropdownEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
