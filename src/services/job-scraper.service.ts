@@ -74,7 +74,8 @@ export class JobScraperService {
         rateLimit: 1000 
       }
     },
-    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid']
+    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid'],
+    excludeCompanies: ['Turing'] // Company blacklist - jobs from these companies will be skipped
   };
 
   // 🎭 ENHANCED USER AGENTS - MORE REALISTIC PATTERNS
@@ -2001,6 +2002,20 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return jobs.filter(job => {
       // Skip duplicates
       if (existingIds.has(job.externalJobId)) return false;
+
+      // Company blacklist filtering (case-insensitive)
+      const normalizedCompany = job.company.toLowerCase().trim();
+      const isBlacklisted = this.config.excludeCompanies.some(blacklistedCompany => {
+        const normalizedBlacklisted = blacklistedCompany.toLowerCase().trim();
+        // Exact match or company name contains blacklisted name
+        return normalizedCompany === normalizedBlacklisted || 
+               normalizedCompany.includes(normalizedBlacklisted);
+      });
+      
+      if (isBlacklisted) {
+        console.log(`⛔ Skipping job from blacklisted company: ${job.company} - "${job.title}"`);
+        return false;
+      }
 
       // Enhanced keyword filtering
       const content = `${job.title} ${job.description} ${job.company}`.toLowerCase();
