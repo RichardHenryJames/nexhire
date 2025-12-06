@@ -84,10 +84,12 @@ export default function SkillsSelectionModal({
     }
   };
   
-  // Filter skills based on search query
-  const filteredSkills = allSkills.filter(skill =>
-    skill && skill.Value && skill.Value.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter skills based on search query - only show when searching
+  const filteredSkills = searchQuery.trim().length > 0 
+    ? allSkills.filter(skill =>
+        skill && skill.Value && skill.Value.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 20) // Limit to 20 results
+    : [];
   
   // Check if a skill is selected
   const isSkillSelected = (skillValue) => {
@@ -97,6 +99,11 @@ export default function SkillsSelectionModal({
       return selectedSecondarySkills.includes(skillValue);
     }
   };
+  
+  // Get current selected skills for active tab
+  const currentSelectedSkills = activeTab === 'primary' 
+    ? selectedPrimarySkills 
+    : selectedSecondarySkills;
   
   // Toggle skill selection
   const toggleSkill = (skillValue) => {
@@ -215,10 +222,11 @@ export default function SkillsSelectionModal({
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search skills..."
+            placeholder="Type to search and add skills..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"
+            autoCapitalize="none"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearch}>
@@ -226,13 +234,70 @@ export default function SkillsSelectionModal({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Selected Skills Display */}
+        <View style={styles.selectedSkillsContainer}>
+          <Text style={styles.selectedSkillsTitle}>
+            Selected {activeTab === 'primary' ? 'Primary' : 'Secondary'} Skills ({currentSelectedSkills.length})
+          </Text>
+          {currentSelectedSkills.length === 0 ? (
+            <Text style={styles.noSelectionText}>No skills selected yet. Search and tap to add.</Text>
+          ) : (
+            <View style={styles.selectedSkillsGrid}>
+              {currentSelectedSkills.map((skillValue, index) => (
+                <View key={index} style={styles.selectedSkillChip}>
+                  <Text style={styles.selectedSkillText}>{skillValue}</Text>
+                  <TouchableOpacity
+                    onPress={() => toggleSkill(skillValue)}
+                    style={styles.removeSkillButton}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
         
-        {/* Skills List */}
+        {/* Search Results Dropdown */}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading skills...</Text>
           </View>
+        ) : searchQuery.trim().length > 0 ? (
+          <ScrollView style={styles.dropdownList} showsVerticalScrollIndicator={false}>
+            {filteredSkills.length === 0 ? (
+              <View style={styles.emptyDropdown}>
+                <Ionicons name="search-outline" size={32} color="#ccc" />
+                <Text style={styles.emptyText}>No skills found matching "{searchQuery}"</Text>
+              </View>
+            ) : (
+              <View>
+                {filteredSkills.map((skill) => {
+                  const isSelected = isSkillSelected(skill.Value);
+                  return (
+                    <TouchableOpacity
+                      key={skill.ReferenceID}
+                      style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                      onPress={() => {
+                        toggleSkill(skill.Value);
+                        setSearchQuery(''); // Clear search after selection
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]}>
+                        {skill.Value}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
         ) : allSkills.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="warning-outline" size={48} color="#ff9500" />
@@ -246,51 +311,11 @@ export default function SkillsSelectionModal({
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView style={styles.skillsList} showsVerticalScrollIndicator={false}>
-            {filteredSkills.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'No skills found matching your search' : 'No skills available'}
-                </Text>
-                <Text style={styles.emptySubtext}>
-                  {allSkills.length} total skills loaded
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.skillsGrid}>
-                {filteredSkills.map((skill) => {
-                  const isSelected = isSkillSelected(skill.Value);
-                  return (
-                    <TouchableOpacity
-                      key={skill.ReferenceID}
-                      style={[styles.skillChip, isSelected && styles.skillChipSelected]}
-                      onPress={() => toggleSkill(skill.Value)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.skillChipText, isSelected && styles.skillChipTextSelected]}>
-                        {skill.Value}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={16} color={colors.primary} style={styles.checkIcon} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
+          <View style={styles.instructionContainer}>
+            <Ionicons name="information-circle-outline" size={48} color="#ccc" />
+            <Text style={styles.instructionText}>Start typing to search from {allSkills.length} available skills</Text>
+          </View>
         )}
-        
-        {/* Selected Skills Summary */}
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>Selected:</Text>
-          <Text style={styles.summaryText}>
-            {activeTab === 'primary' 
-              ? `${selectedPrimarySkills.length} primary skill${selectedPrimarySkills.length !== 1 ? 's' : ''}`
-              : `${selectedSecondarySkills.length} secondary skill${selectedSecondarySkills.length !== 1 ? 's' : ''}`}
-          </Text>
-        </View>
       </View>
     </Modal>
   );
@@ -470,6 +495,94 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  selectedSkillsContainer: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedSkillsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  noSelectionText: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  selectedSkillsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  selectedSkillChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+  },
+  selectedSkillText: {
+    fontSize: 13,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  removeSkillButton: {
+    padding: 2,
+  },
+  dropdownList: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginTop: 12,
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#f0f7ff',
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  emptyDropdown: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  instructionText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: '#999',
+    textAlign: 'center',
   },
   summaryContainer: {
     flexDirection: 'row',

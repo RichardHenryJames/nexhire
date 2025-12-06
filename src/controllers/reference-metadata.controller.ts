@@ -15,7 +15,11 @@ export async function getReferenceMetadata(
     context: InvocationContext
 ): Promise<HttpResponseInit> {
     try {
-        const { type, category, search, limit } = req.query as any;
+        // Azure Functions v4: req.query is URLSearchParams
+        const type = req.query.get('type') || undefined;
+        const category = req.query.get('category') || undefined;
+        const search = req.query.get('search') || undefined;
+        const limit = req.query.get('limit') || undefined;
 
         // Search mode
         if (search && type) {

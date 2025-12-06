@@ -303,22 +303,22 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleSkillsSave = async (primarySkills, secondarySkills) => {
+  const handleSkillsSave = async (skillsData) => {
     try {
       const payload = {
-        primarySkills: primarySkills.join(', '),
-        secondarySkills: secondarySkills.join(', '),
+        primarySkills: skillsData.primarySkills,
+        secondarySkills: skillsData.secondarySkills,
       };
 
       const response = await refopenAPI.updateApplicantProfile(user?.UserID, payload);
       
       if (response.success) {
-        // Update local state
+        // Update local state - split strings back into arrays
         setJobSeekerProfile(prev => ({
           ...prev,
           skills: {
-            primary: primarySkills,
-            secondary: secondarySkills,
+            primary: skillsData.primarySkills.split(',').map(s => s.trim()).filter(Boolean),
+            secondary: skillsData.secondarySkills.split(',').map(s => s.trim()).filter(Boolean),
           },
         }));
         Alert.alert('Success', 'Skills updated successfully');
