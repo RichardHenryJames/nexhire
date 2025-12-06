@@ -313,15 +313,6 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
 }, ['read:jobs']);
 
 // References
-export const getJobTypes = withErrorHandling(async (): Promise<HttpResponseInit> => {
-    try {
-        const jobTypes = await JobService.getJobTypes();
-        return { status: 200, jsonBody: successResponse(jobTypes, 'Job types retrieved successfully') };
-    } catch (error) {
-        console.error('Error in getJobTypes:', error);
-        return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve job types' } };
-    }
-});
 
 export const getCurrencies = withErrorHandling(async (): Promise<HttpResponseInit> => {
     try {

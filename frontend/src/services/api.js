@@ -745,54 +745,6 @@ class RefOpenAPI {
     });
   }
 
-  /**
-   * Legacy method - Get job types (uses new unified endpoint)
-   * @deprecated Use getReferenceMetadata('JobType') instead
-   */
-  async getJobTypes() {
-    const result = await this.getReferenceMetadata('JobType');
-    
-    // Transform new format to old format for backward compatibility
-    if (result.success && result.data) {
-      return {
-        success: true,
-        data: result.data.map(item => ({
-          JobTypeID: item.ReferenceID,
-          Type: item.Value,
-          Description: item.Description,
-          Category: item.Category,
-          IsActive: item.IsActive
-        }))
-      };
-    }
-    
-    return result;
-  }
-
-  /**
-   * Legacy method - Get workplace types (uses new unified endpoint)
-   * @deprecated Use getReferenceMetadata('WorkplaceType') instead
-   */
-  async getWorkplaceTypes() {
-    const result = await this.getReferenceMetadata('WorkplaceType');
-    
-    // Transform new format to old format for backward compatibility
-    if (result.success && result.data) {
-      return {
-        success: true,
-        data: result.data.map(item => ({
-          WorkplaceTypeID: item.ReferenceID,
-          Type: item.Value,
-          Description: item.Description,
-          Category: item.Category,
-          IsActive: item.IsActive
-        }))
-      };
-    }
-    
-    return result;
-  }
-
   async getCurrencies() {
     try {
       return await this.apiCall('/reference/currencies');

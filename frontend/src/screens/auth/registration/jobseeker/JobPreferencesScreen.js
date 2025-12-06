@@ -86,21 +86,22 @@ export default function JobPreferencesScreen({ navigation, route }) {
     try {
       setLoading(true);
       
-      const response = await refopenAPI.getJobTypes();
-      if (response.success) {
-        setJobTypes(response.data);
-        
+      const response = await refopenAPI.getReferenceMetadata('JobType');
+      if (response.success && response.data) {
+        // Transform ReferenceMetadata format to legacy format
+        const transformedData = response.data.map(item => ({
+          JobTypeID: item.ReferenceID,
+          Type: item.Value,
+          Description: item.Description
+        }));
+        setJobTypes(transformedData);
+      } else {
+        console.error('Failed to load job types:', response.error);
+        setJobTypes([]);
       }
     } catch (error) {
       console.error('Error loading job types:', error);
-      // Use fallback data
-      setJobTypes([
-        { JobTypeID: 1, Type: 'Full-Time' },
-        { JobTypeID: 2, Type: 'Contract' },
-        { JobTypeID: 3, Type: 'Part-Time' },
-        { JobTypeID: 4, Type: 'Internship' },
-        { JobTypeID: 5, Type: 'Freelance' },
-      ]);
+      setJobTypes([]);
     } finally {
       setLoading(false);
     }

@@ -397,12 +397,26 @@ export default function JobsScreen({ navigation, route }) {
       (async () => {
         try {
           const [jt, wt, cur] = await Promise.all([
-            refopenAPI.getJobTypes(),
-            refopenAPI.getWorkplaceTypes(),
+            refopenAPI.getReferenceMetadata('JobType'),
+            refopenAPI.getReferenceMetadata('WorkplaceType'),
             refopenAPI.getCurrencies()
           ]);
-          if (jt?.success) setJobTypes(jt.data);
-          if (wt?.success) setWorkplaceTypes(wt.data);
+          if (jt?.success && jt.data) {
+            // Transform ReferenceMetadata format
+            const transformedJobTypes = jt.data.map(item => ({
+              JobTypeID: item.ReferenceID,
+              Type: item.Value
+            }));
+            setJobTypes(transformedJobTypes);
+          }
+          if (wt?.success && wt.data) {
+            // Transform ReferenceMetadata format
+            const transformedWorkplaceTypes = wt.data.map(item => ({
+              WorkplaceTypeID: item.ReferenceID,
+              Type: item.Value
+            }));
+            setWorkplaceTypes(transformedWorkplaceTypes);
+          }
           if (cur?.success) setCurrencies(cur.data);
         } catch (e) {
           console.warn('Failed to load reference data:', e.message);

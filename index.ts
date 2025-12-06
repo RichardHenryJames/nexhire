@@ -31,7 +31,6 @@ import {
   closeJob,
   searchJobs,
   getJobsByOrganization,
-  getJobTypes,
   getCurrencies,
   getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
   getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
@@ -53,7 +52,6 @@ import {
   getUniversitiesByCountry,
   getIndustries,
   getCountries, // NEW: Add countries import
-  getWorkplaceTypes, // NEW: Workplace types
 } from "./src/controllers/reference.controller";
 import { initializeEmployer } from "./src/controllers/employer.controller";
 
@@ -604,20 +602,6 @@ app.http("applications-details", {
 // ========================================================================
 // REFERENCE DATA ENDPOINTS
 // ========================================================================
-
-app.http("reference-job-types", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "reference/job-types",
-  handler: withErrorHandling(getJobTypes),
-});
-
-app.http("reference-workplace-types", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "reference/workplace-types",
-  handler: withErrorHandling(getWorkplaceTypes),
-});
 
 app.http("reference-currencies", {
   methods: ["GET", "OPTIONS"],

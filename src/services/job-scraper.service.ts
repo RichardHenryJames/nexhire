@@ -1661,19 +1661,21 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   }
 
   // All the missing helper methods
+  // 🔄 UPDATED: Use ReferenceMetadata IDs (correct mapping from database)
   private static getJobTypeId(jobType: string): number {
     const mapping: { [key: string]: number } = {
-      'Full-time': 1, 'Part-time': 2, 'Contract': 3,
-      'Internship': 4, 'Freelance': 5, 'Temporary': 6
+      'Full-time': 438, 'Part-time': 440, 'Contract': 436,
+      'Internship': 439, 'Freelance': 437, 'Temporary': 441
     };
-    return mapping[jobType] || 1;
+    return mapping[jobType] || 438; // Default to Full-time (ReferenceID 438)
   }
 
+  // 🔄 UPDATED: Use ReferenceMetadata IDs (correct mapping from database)
   private static getWorkplaceTypeId(workplaceType: string): number {
     const mapping: { [key: string]: number } = {
-      'Onsite': 1, 'Remote': 2, 'Hybrid': 3
+      'Onsite': 443, 'Remote': 444, 'Hybrid': 442
     };
-    return mapping[workplaceType] || 2;
+    return mapping[workplaceType] || 444; // Default to Remote (ReferenceID 444)
   }
 
   private static extractDepartment(title: string): string {
