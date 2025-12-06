@@ -213,8 +213,8 @@ export class AIJobRecommendationService {
 
     // For students or fresh graduates with no experience
     if ((isStudent || yearsOfExperience === 0 || isRecentGrad) && workExperience.length === 0) {
-      jobTypeIds.push(5); // Internship
-      jobTypeIds.push(1); // Full-time
+      jobTypeIds.push(437); // Internship - NEW ReferenceMetadata ID (was 5)
+      jobTypeIds.push(438); // Full-time - NEW ReferenceMetadata ID (was 1)
       return jobTypeIds;
     }
 
@@ -227,7 +227,7 @@ export class AIJobRecommendationService {
     }
 
     // Default to Full-time for experienced professionals
-    jobTypeIds.push(1); // Full-time
+    jobTypeIds.push(438); // Full-time - NEW ReferenceMetadata ID (was 1)
     
     return jobTypeIds;
   }
@@ -244,8 +244,8 @@ export class AIJobRecommendationService {
       }
     }
 
-    // Default: All types
-    return [1, 2, 3]; // On-site, Hybrid, Remote
+    // Default: All types - NEW ReferenceMetadata IDs
+    return [443, 444, 442]; // Onsite (443), Remote (444), Hybrid (442) - was [1, 2, 3]
   }
 
   /**
@@ -641,8 +641,8 @@ export class AIJobRecommendationService {
    */
   private static getSmartDefaultFilters() {
     return {
-      jobTypeIds: '1,5', // Full-time and Internship
-      workplaceTypeIds: '1,2,3', // All workplace types
+      jobTypeIds: '438,437', // Full-time (438) and Internship (437) - NEW ReferenceMetadata IDs
+      workplaceTypeIds: '443,444,442', // Onsite (443), Remote (444), Hybrid (442) - NEW ReferenceMetadata IDs
       experienceMin: 0,
       experienceMax: 2, // Entry level
       postedWithinDays: 30

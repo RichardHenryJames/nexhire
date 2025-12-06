@@ -59,53 +59,79 @@ const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => {
 });
 
 export default function JobPreferencesScreen({ navigation, route }) {
-  // CRITICAL FIX: Use useRef to prevent unnecessary re-renders
-  const [formData, setFormData] = useState({
-    preferredJobTypes: [],
-    workplaceType: '',
-    preferredLocations: '',
-  });
+// CRITICAL FIX: Use useRef to prevent unnecessary re-renders
+const [formData, setFormData] = useState({
+  preferredJobTypes: [],
+  workplaceType: '',
+  preferredLocations: '',
+});
   
-  const [jobTypes, setJobTypes] = useState([]);
-  const [showJobTypesModal, setShowJobTypesModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+const [jobTypes, setJobTypes] = useState([]);
+const [workplaceTypes, setWorkplaceTypes] = useState([]);
+const [showJobTypesModal, setShowJobTypesModal] = useState(false);
+const [loading, setLoading] = useState(true);
 
-  const { userType, experienceType, workExperienceData, educationData } = route.params;
+const { userType, experienceType, workExperienceData, educationData } = route.params;
 
-  const WORKPLACE_TYPES = React.useMemo(() => [
-    { id: 'remote', name: 'Remote', icon: 'home', description: 'Work from anywhere' },
-    { id: 'hybrid', name: 'Hybrid', icon: 'swap-horizontal', description: 'Mix of office and remote' },
-    { id: 'onsite', name: 'On-site', icon: 'business', description: 'Work from office' },
-  ], []);
+useEffect(() => {
+  loadReferenceData();
+}, []);
 
-  useEffect(() => {
-    loadJobTypes();
-  }, []);
-
-  const loadJobTypes = async () => {
-    try {
-      setLoading(true);
+const loadReferenceData = async () => {
+  try {
+    setLoading(true);
       
-      const response = await refopenAPI.getReferenceMetadata('JobType');
-      if (response.success && response.data) {
-        // Transform ReferenceMetadata format to legacy format
-        const transformedData = response.data.map(item => ({
-          JobTypeID: item.ReferenceID,
-          Type: item.Value,
-          Description: item.Description
-        }));
-        setJobTypes(transformedData);
-      } else {
-        console.error('Failed to load job types:', response.error);
-        setJobTypes([]);
-      }
-    } catch (error) {
-      console.error('Error loading job types:', error);
+    // ? Load both JobType and WorkplaceType from ReferenceMetadata
+    const [jobTypeResponse, workplaceResponse] = await Promise.all([
+      refopenAPI.getReferenceMetadata('JobType'),
+      refopenAPI.getReferenceMetadata('WorkplaceType')
+    ]);
+
+    // Handle JobType data
+    if (jobTypeResponse.success && jobTypeResponse.data) {
+      const transformedData = jobTypeResponse.data.map(item => ({
+        JobTypeID: item.ReferenceID,
+        Type: item.Value,
+        Description: item.Description
+      }));
+      setJobTypes(transformedData);
+    } else {
+      console.error('Failed to load job types:', jobTypeResponse.error);
       setJobTypes([]);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // Handle WorkplaceType data
+    if (workplaceResponse.success && workplaceResponse.data) {
+      const transformedData = workplaceResponse.data.map(item => ({
+        WorkplaceTypeID: item.ReferenceID,
+        Type: item.Value,
+        // Map icons based on type name
+        icon: item.Value.toLowerCase().includes('remote') ? 'home' : 
+              item.Value.toLowerCase().includes('hybrid') ? 'swap-horizontal' : 'business',
+        description: item.Description || getWorkplaceDescription(item.Value)
+      }));
+      setWorkplaceTypes(transformedData);
+    } else {
+      console.error('Failed to load workplace types:', workplaceResponse.error);
+      setWorkplaceTypes([]);
+    }
+  } catch (error) {
+    console.error('Error loading reference data:', error);
+    setJobTypes([]);
+    setWorkplaceTypes([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Helper function to provide descriptions for workplace types
+const getWorkplaceDescription = (typeName) => {
+  const type = typeName.toLowerCase();
+  if (type.includes('remote')) return 'Work from anywhere';
+  if (type.includes('hybrid')) return 'Mix of office and remote';
+  if (type.includes('on-site') || type.includes('onsite') || type.includes('office')) return 'Work from office';
+  return 'Work style';
+};
 
   // CRITICAL FIX: Ultra-stable handlers with useCallback and dependency control
   const handleJobTypeToggle = useCallback((jobType) => {
@@ -199,7 +225,7 @@ export default function JobPreferencesScreen({ navigation, route }) {
         styles.workplaceTitle,
         isSelected && styles.workplaceTitleSelected
       ]}>
-        {type.name}
+        {type.Type}
       </Text>
       <Text style={styles.workplaceDescription}>{type.description}</Text>
       {isSelected && (
@@ -290,12 +316,12 @@ export default function JobPreferencesScreen({ navigation, route }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Work Style Preference *</Text>
             <View style={styles.workplaceGrid}>
-              {WORKPLACE_TYPES.map((type) => (
+              {workplaceTypes.map((type) => (
                 <WorkplaceCard
-                  key={type.id}
+                  key={type.WorkplaceTypeID}
                   type={type}
-                  isSelected={formData.workplaceType === type.id}
-                  onPress={() => setFormData({ ...formData, workplaceType: type.id })}
+                  isSelected={formData.workplaceType === type.Type}
+                  onPress={() => setFormData({ ...formData, workplaceType: type.Type })}
                 />
               ))}
             </View>

@@ -37,22 +37,12 @@ const EXPERIENCE_LEVELS = [
   '10+ years'
 ];
 
-const JOB_TYPES = [
-  'Full-time',
-  'Part-time', 
-  'Contract',
-  'Freelance',
-  'Internship',
-  'Temporary'
-];
-
-const WORK_ARRANGEMENTS = [
-  'On-site',
-  'Remote',
-  'Hybrid'
-];
-
 export default function WorkExperienceScreen({ navigation, route }) {
+  // Load job types and workplace types from database
+  const [jobTypes, setJobTypes] = useState([]);
+  const [workplaceTypes, setWorkplaceTypes] = useState([]);
+  const [loadingReferenceData, setLoadingReferenceData] = useState(true);
+
   // NEW: Separate state for current and previous work experiences
   const [currentWorkData, setCurrentWorkData] = useState({
     currentJobTitle: '',
@@ -101,6 +91,39 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const [manualOrgMode, setManualOrgMode] = useState(false);
 
   const { userType, experienceType } = route.params;
+
+  // Load reference data from database on mount
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      try {
+        setLoadingReferenceData(true);
+        const refData = await refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']);
+        
+        if (refData?.success && refData.data) {
+          // Transform JobType data
+          if (refData.data.JobType) {
+            const transformedJobTypes = refData.data.JobType.map(item => item.Value);
+            setJobTypes(transformedJobTypes);
+          }
+          
+          // Transform WorkplaceType data
+          if (refData.data.WorkplaceType) {
+            const transformedWorkplaceTypes = refData.data.WorkplaceType.map(item => item.Value);
+            setWorkplaceTypes(transformedWorkplaceTypes);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load reference data:', error);
+        // Set default values as fallback
+        setJobTypes(['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship', 'Temporary']);
+        setWorkplaceTypes(['On-site', 'Remote', 'Hybrid']);
+      } finally {
+        setLoadingReferenceData(false);
+      }
+    };
+
+    loadReferenceData();
+  }, []);
 
   const updateField = useCallback((field, value) => {
     setFormData(prevData => ({
@@ -555,7 +578,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         visible={showJobTypeModal}
         onClose={() => setShowJobTypeModal(false)}
         title="Select Job Type"
-        data={JOB_TYPES}
+        data={jobTypes}
         currentValue={formData.jobType}
         onSelect={(value) => {
           updateField('jobType', value);
@@ -567,7 +590,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         visible={showWorkArrangementModal}
         onClose={() => setShowWorkArrangementModal(false)}
         title="Select Work Arrangement"
-        data={WORK_ARRANGEMENTS}
+        data={workplaceTypes}
         currentValue={formData.workArrangement}
         onSelect={(value) => {
           updateField('workArrangement', value);
