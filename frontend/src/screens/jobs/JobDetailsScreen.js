@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
@@ -45,6 +46,10 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  
+  // 💎 NEW: Referral confirmation modal state
+  const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -268,21 +273,17 @@ const { jobId, fromReferralRequest } = route.params || {};
       return;
     }
     
-    // ✅ Check wallet balance
+    // ✅ Check wallet balance and show confirmation modal
     try {
       const walletBalance = await refopenAPI.getWalletBalance();
       
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
         
-        // Check if balance >= ₹50
-        if (balance < 50) {
-          
-          // 💎 NEW: Show beautiful modal instead of ugly alert
-          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
-          setShowWalletModal(true);
-          return;
-        }
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setReferralConfirmData({ currentBalance: balance, requiredAmount: 50 });
+        setShowReferralConfirmModal(true);
+        return;
         
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
@@ -292,6 +293,22 @@ const { jobId, fromReferralRequest } = route.params || {};
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
       Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      return;
+    }
+  };
+
+  // ✅ NEW: Handle referral confirmation proceed
+  const handleReferralConfirmProceed = async () => {
+    setShowReferralConfirmModal(false);
+    
+    // Check if balance is insufficient
+    if (referralConfirmData.currentBalance < referralConfirmData.requiredAmount) {
+      // Show recharge modal
+      setWalletModalData({ 
+        currentBalance: referralConfirmData.currentBalance, 
+        requiredAmount: referralConfirmData.requiredAmount 
+      });
+      setShowWalletModal(true);
       return;
     }
     
@@ -316,11 +333,13 @@ const { jobId, fromReferralRequest } = route.params || {};
       }
     } catch (e) { console.warn('Referral pre-check failed:', e.message); }
     
+    // Proceed with referral request
     if (primaryResume?.ResumeID) {
       await quickReferral(primaryResume.ResumeID);
       return;
     }
-    setReferralMode(true); setShowResumeModal(true);
+    setReferralMode(true); 
+    setShowResumeModal(true);
   };
 
   // REQUIREMENT 3: Improved subscription modal with better logic
@@ -584,7 +603,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
         
-        let message = 'Referral request sent successfully!';
+        let message = 'Referral sent to ALL employees who can refer!';
         if (balanceAfter !== undefined) {
           message += `\n\n₹${amountDeducted} deducted from wallet.\nNew balance: ₹${balanceAfter.toFixed(2)}`;
         }
@@ -1320,6 +1339,20 @@ Highlight your relevant experience, skills, and why you're excited about this sp
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowWalletModal(false)}
+      />
+      
+      {/* 💎 NEW: Referral Confirmation Modal */}
+      <ReferralConfirmModal
+        visible={showReferralConfirmModal}
+        currentBalance={referralConfirmData.currentBalance}
+        requiredAmount={referralConfirmData.requiredAmount}
+        jobTitle={job?.Title || 'this job'}
+        onProceed={handleReferralConfirmProceed}
+        onAddMoney={() => {
+          setShowReferralConfirmModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowReferralConfirmModal(false)}
       />
     </ScrollView>
   );

@@ -458,9 +458,9 @@ export default function ApplicationsScreen({ navigation }) {
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
         
-        let message = 'Referral request sent';
+        let message = 'Referral request sent to ALL employees who can refer!';
         if (balanceAfter !== undefined) {
-          message = `Referral sent! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+          message = `Referral sent to ALL employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
         }
         
         showToast(message, 'success');
