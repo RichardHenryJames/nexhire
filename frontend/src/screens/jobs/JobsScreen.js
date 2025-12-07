@@ -104,12 +104,6 @@ export default function JobsScreen({ navigation, route }) {
   // ✅ NEW: Referral tracking state
   const [referredJobIds, setReferredJobIds] = useState(new Set());
   const [referralRequestingIds, setReferralRequestingIds] = useState(new Set()); // NEW
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null
-  });
   // Cache primary resume (or fallback first resume) so we can auto-apply without showing modal every time
   const [primaryResume, setPrimaryResume] = useState(null);
   const primaryResumeLoadedRef = useRef(false);
@@ -314,18 +308,11 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
-          const [referralRes, eligibilityRes] = await Promise.all([
-            refopenAPI.getMyReferralRequests(1, 500),
-            refopenAPI.checkReferralEligibility()
-          ]);
+          const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
 
           if (referralRes?.success && referralRes.data?.requests) {
             const ids = new Set(referralRes.data.requests.map(r => r.JobID));
             setReferredJobIds(ids);
-          }
-
-          if (eligibilityRes?.success) {
-            setReferralEligibility(eligibilityRes.data);
           }
         } catch (e) {
           console.warn('Failed to load referral data:', e.message);
@@ -1049,98 +1036,7 @@ const apiStartTime = performance.now();
       Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
       return;
     }
-  }, [user, isJobSeeker, navigation, referredJobIds, showSubscriptionModal, primaryResume, loadPrimaryResume]);
-
-  // NEW: Subscription modal for quota exhausted users
-  const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-
-     // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
-     const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
-     const body = hasActiveSubscription
-       ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
-       : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
-
-     if (Platform.OS === 'web') {
-       navigation.navigate('ReferralPlans');
-       return;
-     }
-
-     try {
-       Alert.alert(
-         '🚀 Upgrade Required',
-         body,
-         [
-           {
-             text: 'Maybe Later',
-             style: 'cancel',
-             onPress: () => {}
-           },
-           {
-             text: 'View Plans',
-             onPress: () => {
-               try {
-                 navigation.navigate('ReferralPlans');
-               } catch (navError) {
-                 Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
-               }
-             }
-           }
-         ]
-       );
-       // Fallback: ensure navigation if user does not pick (defensive – some platforms auto-dismiss custom buttons)
-       setTimeout(() => {
-         const state = navigation.getState?.();
-         const currentRoute = state?.routes?.[state.index]?.name;
-         if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-             try { navigation.navigate('ReferralPlans'); } catch (e) { }
-         }
-       }, 3000);
-     } catch (error) {
-       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
-     }
-   }, [navigation, referralEligibility]);
-
-  // ? NEW: Handle plan selection and purchase
-  const handlePlanSelection = useCallback(async (plan) => {
-
-    Alert.alert(
-      'Confirm Subscription',
-      `Subscribe to ${plan.Name} for ?${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Subscribe Now',
-          onPress: async () => {
-            try {
-              // For demo - simulate successful purchase
-              Alert.alert(
-                'Subscription Successful!',
-                `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
-                [
-                  {
-                    text: 'Start Referring!',
-                    onPress: async () => {
-                      // Refresh eligibility after "purchase"
-                      const eligibilityRes = await refopenAPI.checkReferralEligibility();
-                      if (eligibilityRes?.success) {
-                        setReferralEligibility(eligibilityRes.data);
-                      }
-                    }
-                  }
-                ]
-              );
-
-              // TODO: Implement real payment processing
-              // const purchaseResult = await refopenAPI.purchaseReferralPlan(plan.PlanID);
-
-            } catch (error) {
-              Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
-            }
-          }
-        }
-      ]
-    );
-  }, []);
+  }, [user, isJobSeeker, navigation, referredJobIds, primaryResume, loadPrimaryResume]);
 
   // ? UPDATED: Resume selected handler supports both apply & referral flows
   const handleResumeSelected = useCallback(async (resumeData) => {
@@ -1251,9 +1147,8 @@ const apiStartTime = performance.now();
       });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id]));
-        setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
 
-        // ✅ NEW: Show wallet deduction info
+        // ✅ Show wallet deduction info
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
 

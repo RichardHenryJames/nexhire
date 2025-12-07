@@ -74,13 +74,17 @@ export default function ReferralConfirmModal({
                     ₹{currentBalance.toFixed(2)}
                   </Text>
                 </View>
-                <View style={styles.divider} />
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabelBold}>Balance After</Text>
-                  <Text style={[styles.costValueBold, { color: hasInsufficientBalance ? '#ef4444' : colors.text }]}>
-                    ₹{balanceAfter.toFixed(2)}
-                  </Text>
-                </View>
+                {!hasInsufficientBalance && (
+                  <>
+                    <View style={styles.divider} />
+                    <View style={styles.costRow}>
+                      <Text style={styles.costLabelBold}>Balance After</Text>
+                      <Text style={[styles.costValueBold, { color: colors.text }]}>
+                        ₹{balanceAfter.toFixed(2)}
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
 
               {hasInsufficientBalance ? (
