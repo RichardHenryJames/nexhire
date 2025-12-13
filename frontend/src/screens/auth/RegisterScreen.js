@@ -326,7 +326,10 @@ export default function RegisterScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              // Always navigate to Login screen directly (handles hard refresh)
+              navigation.navigate('Login');
+            }}
           >
             <Text style={styles.linkText}>
               Already have an account? Sign In

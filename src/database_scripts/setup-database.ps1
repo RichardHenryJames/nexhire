@@ -286,19 +286,6 @@ CREATE TABLE ApplicationStatuses (
 CREATE INDEX IDX_ApplicationStatuses_Status ON ApplicationStatuses (Status);
 END
 
--- Create Skills table (New: Normalized skills for jobs)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Skills')
-BEGIN
-CREATE TABLE Skills (
-    SkillID INT IDENTITY(1,1) PRIMARY KEY,
-    Name NVARCHAR(100) UNIQUE NOT NULL,
-    Category NVARCHAR(100),
-    IsActive BIT DEFAULT 1,
-    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
-);
-CREATE INDEX IDX_Skills_Name ON Skills (Name);
-END
-
 -- Create Jobs table
     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Jobs')
     BEGIN
@@ -374,21 +361,6 @@ END
         FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID),
     );
 CREATE INDEX IDX_Jobs_Search ON Jobs (Title, Location, Status, JobTypeID, WorkplaceTypeID);
-END
-
--- Create JobSkills table (New: Links jobs to required/preferred skills)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobSkills')
-BEGIN
-CREATE TABLE JobSkills (
-    JobSkillID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    JobID UNIQUEIDENTIFIER NOT NULL,
-    SkillID INT NOT NULL,
-    IsRequired BIT DEFAULT 1,
-    CreatedAt DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
-    FOREIGN KEY (JobID) REFERENCES Jobs(JobID),
-    FOREIGN KEY (SkillID) REFERENCES Skills(SkillID)
-);
-CREATE INDEX IDX_JobSkills_JobID ON JobSkills (JobID);
 END
 
 -- New: ApplicantResumes table
@@ -619,14 +591,6 @@ UNION SELECT 'Offer Extended', 'Job offer has been extended' WHERE NOT EXISTS (S
 UNION SELECT 'Offer Accepted', 'Job offer has been accepted' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Accepted')
 UNION SELECT 'Offer Declined', 'Job offer has been declined' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Offer Declined')
 UNION SELECT 'Withdrawn', 'Application has been withdrawn' WHERE NOT EXISTS (SELECT 1 FROM ApplicationStatuses WHERE Status = 'Withdrawn');
-
--- Sample Skills
-INSERT INTO Skills (Name, Category, IsActive)
-SELECT 'Python', 'Programming', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Python')
-UNION SELECT 'JavaScript', 'Programming', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'JavaScript')
-UNION SELECT 'SQL', 'Database', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'SQL')
-UNION SELECT 'Project Management', 'Management', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Project Management')
-UNION SELECT 'Communication', 'Soft Skills', 1 WHERE NOT EXISTS (SELECT 1 FROM Skills WHERE Name = 'Communication');
 
 "@
 

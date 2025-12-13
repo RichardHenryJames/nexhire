@@ -31,7 +31,6 @@ import {
   closeJob,
   searchJobs,
   getJobsByOrganization,
-  getJobTypes,
   getCurrencies,
   getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
   getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
@@ -53,9 +52,16 @@ import {
   getUniversitiesByCountry,
   getIndustries,
   getCountries, // NEW: Add countries import
-  getWorkplaceTypes, // NEW: Workplace types
 } from "./src/controllers/reference.controller";
 import { initializeEmployer } from "./src/controllers/employer.controller";
+
+// NEW: Reference Metadata controller
+import {
+  getReferenceMetadata,
+  getCategoriesByType,
+  getBulkReferenceMetadata,
+  getReferenceById,
+} from "./src/controllers/reference-metadata.controller";
 
 // NEW: Work experience controllers
 import {
@@ -597,20 +603,6 @@ app.http("applications-details", {
 // REFERENCE DATA ENDPOINTS
 // ========================================================================
 
-app.http("reference-job-types", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "reference/job-types",
-  handler: withErrorHandling(getJobTypes),
-});
-
-app.http("reference-workplace-types", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "reference/workplace-types",
-  handler: withErrorHandling(getWorkplaceTypes),
-});
-
 app.http("reference-currencies", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
@@ -688,6 +680,42 @@ app.http("reference-salary-components", {
       };
     }
   }),
+});
+
+// ========================================================================
+// REFERENCE METADATA ENDPOINTS - Job Roles, Skills, Certifications, etc.
+// ========================================================================
+
+// Get reference metadata (all types, by type, or search)
+app.http("reference-metadata", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata",
+  handler: withErrorHandling(getReferenceMetadata),
+});
+
+// Get categories for a specific reference type
+app.http("reference-metadata-categories", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/{type}/categories",
+  handler: withErrorHandling(getCategoriesByType),
+});
+
+// Bulk fetch multiple reference types
+app.http("reference-metadata-bulk", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/bulk",
+  handler: withErrorHandling(getBulkReferenceMetadata),
+});
+
+// Get reference metadata by ID (admin/debugging)
+app.http("reference-metadata-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/metadata/item/{id}",
+  handler: withErrorHandling(getReferenceById),
 });
 
 app.http("users-profile-image", {
@@ -1915,6 +1943,213 @@ app.http("scheduler-stop", {
 });
 
 // ========================================================================
+// JOB ARCHIVAL ENDPOINTS - Manual Control & Monitoring
+// ========================================================================
+
+app.http("job-archival-trigger", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/archive/trigger",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      // Admin auth check
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Authorization header required" },
+        };
+      }
+
+      const token = authHeader.substring(7);
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(token);
+
+      if (payload.userType !== "Admin") {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Admin access required" },
+        };
+      }
+
+      console.log("Manual job archival triggered by admin:", payload.userId);
+
+      // Get daysOld parameter (default: 30)
+      const { daysOld = 30 } = (await req.json().catch(() => ({}))) as any;
+
+      if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
+        return {
+          status: 400,
+          jsonBody: {
+            success: false,
+            error: "daysOld must be between 1 and 365",
+          },
+        };
+      }
+
+      const runId = `manual_${Date.now()}`;
+      const startTime = new Date();
+
+      // Import and run archive service
+      const { JobArchiveService } = await import(
+        "./src/services/job-archive.service"
+      );
+      await JobArchiveService.initializeArchiveLogs();
+      const result = await JobArchiveService.archiveOldJobs(daysOld);
+
+      const endTime = new Date();
+
+      // Log to database
+      await JobArchiveService.logArchiveOperation(
+        result,
+        runId,
+        startTime,
+        endTime,
+        daysOld,
+        "Manual"
+      );
+
+      return {
+        status: result.success ? 200 : 500,
+        jsonBody: {
+          success: result.success,
+          message: `Archival completed. ${result.totalJobsArchived} jobs archived, ${result.totalJobsDeleted} deleted from SQL.`,
+          data: {
+            totalJobsFound: result.totalJobsFound,
+            totalJobsArchived: result.totalJobsArchived,
+            totalJobsDeleted: result.totalJobsDeleted,
+            errors: result.errors,
+            archivedJobIds: result.archivedJobIds.slice(0, 20), // Limit to first 20 IDs
+            daysOld: daysOld,
+          },
+        },
+      };
+    } catch (error: any) {
+      console.error("Job archival trigger failed:", error);
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: "Archival service failed",
+          details: error.message,
+        },
+      };
+    }
+  }),
+});
+
+app.http("job-archival-logs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/archive/logs",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      // Admin auth check
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Authorization header required" },
+        };
+      }
+
+      const token = authHeader.substring(7);
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(token);
+
+      if (payload.userType !== "Admin") {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Admin access required" },
+        };
+      }
+
+      const { limit = 50, offset = 0 } = req.query as any;
+
+      const { JobArchiveService } = await import(
+        "./src/services/job-archive.service"
+      );
+      const logs = await JobArchiveService.getArchiveLogs(
+        Number(limit),
+        Number(offset)
+      );
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          data: logs,
+          message: "Archive logs retrieved successfully",
+        },
+      };
+    } catch (error: any) {
+      console.error("Get archive logs failed:", error);
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: "Failed to get archive logs",
+          details: error.message,
+        },
+      };
+    }
+  }),
+});
+
+app.http("job-archival-stats", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/archive/stats",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      // Admin auth check
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Authorization header required" },
+        };
+      }
+
+      const token = authHeader.substring(7);
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(token);
+
+      if (payload.userType !== "Admin") {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Admin access required" },
+        };
+      }
+
+      const { JobArchiveService } = await import(
+        "./src/services/job-archive.service"
+      );
+      const stats = await JobArchiveService.getArchiveStats();
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          data: stats,
+          message: "Archive statistics retrieved successfully",
+        },
+      };
+    } catch (error: any) {
+      console.error("Get archive stats failed:", error);
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: "Failed to get archive statistics",
+          details: error.message,
+        },
+      };
+    }
+  }),
+});
+
+// ========================================================================
 // STARTUP LOG
 // ========================================================================
 
@@ -1927,7 +2162,121 @@ console.log(
 console.log("API Base URL: https://refopen-api-func.azurewebsites.net/api");
 
 // ========================================================================
-// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours) - COMMENTED OUT FOR TESTING
+// TIMER TRIGGER - JOB ARCHIVAL (Every 24 hours at midnight)
+// ========================================================================
+
+app.timer("jobArchivalTimer", {
+  schedule: "0 0 0 * * *", // Every day at midnight (00:00:00)
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `archive_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("           JOB ARCHIVAL TIMER TRIGGER STARTED");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("WARNING: This execution is past its scheduled time!");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      context.log("\nStarting job archival process (jobs older than 90 days, batch 100)...\n");
+
+      // Import and initialize archive service
+      const { JobArchiveService } = await import("./src/services/job-archive.service");
+
+      // Initialize archive logs table if needed
+      await JobArchiveService.initializeArchiveLogs();
+
+      // Archive jobs older than 90 days, max 100 per run
+      const daysOld = 90;
+      const result = await JobArchiveService.archiveOldJobs(daysOld);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      const durationSeconds = Math.round(duration / 1000);
+      const durationMinutes = Math.floor(durationSeconds / 60);
+      const remainingSeconds = durationSeconds % 60;
+
+      if (result.success) {
+        context.log("\n========================================================================");
+        context.log("        JOB ARCHIVAL COMPLETED SUCCESSFULLY");
+        context.log("========================================================================");
+        context.log(`\nEXECUTION SUMMARY:`);
+        context.log(`   Jobs Found: ${result.totalJobsFound}`);
+        context.log(`   Jobs Archived: ${result.totalJobsArchived}`);
+        context.log(`   Jobs Deleted from SQL: ${result.totalJobsDeleted}`);
+        context.log(`   Time: ${durationMinutes}m ${remainingSeconds}s`);
+
+        if (result.archivedJobIds.length > 0) {
+          context.log(`\nARCHIVED JOB IDs (sample):`);
+          const sampleIds = result.archivedJobIds.slice(0, 10);
+          sampleIds.forEach(id => context.log(`   - ${id}`));
+          if (result.archivedJobIds.length > 10) {
+            context.log(`   ... and ${result.archivedJobIds.length - 10} more`);
+          }
+        }
+      } else {
+        context.error("\nJob archival completed with errors");
+        context.error(`   Jobs Found: ${result.totalJobsFound}`);
+        context.error(`   Jobs Archived: ${result.totalJobsArchived}`);
+        context.error(`   Jobs Deleted: ${result.totalJobsDeleted}`);
+        context.error(`   Errors: ${result.errors.length}`);
+        result.errors.forEach((error, i) => context.error(`   ${i + 1}. ${error}`));
+      }
+
+      // Log to database
+      await JobArchiveService.logArchiveOperation(
+        result,
+        executionId,
+        runStartTime,
+        runEndTime,
+        daysOld,
+        'TimerTrigger'
+      );
+      context.log("\nLogged to database successfully");
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      context.error("\nJOB ARCHIVAL TIMER TRIGGER FAILED");
+      context.error(`   Error: ${error.message}`);
+      context.error(`   Duration: ${Math.round(duration / 1000)}s`);
+
+      // Log failure
+      try {
+        const { JobArchiveService } = await import("./src/services/job-archive.service");
+        await JobArchiveService.logArchiveOperation(
+          {
+            success: false,
+            totalJobsFound: 0,
+            totalJobsArchived: 0,
+            totalJobsDeleted: 0,
+            errors: [error.message],
+            archivedJobIds: []
+          },
+          executionId,
+          runStartTime,
+          runEndTime,
+          30,
+          'TimerTrigger'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours)
 // ========================================================================
 
 app.timer("jobScraperTimer", {
@@ -2100,155 +2449,161 @@ app.http("test-endpoint", {
 export {};
 
 /*
- * ========================================================================
- * UPDATED API ENDPOINT LIST (62 total - Added Timer Trigger):
- * ========================================================================
- *
- * AUTHENTICATION (7 endpoints): +2 Google OAuth
- * POST   /auth/register - User registration
- * POST   /auth/login    - User login
- * POST   /auth/google   - Google OAuth login
- * POST   /auth/google-register  - Google OAuth registration
- * POST   /auth/logout   - User logout
- * POST   /auth/refresh  - Refresh JWT token
- * GET    /health        - Health check
- *
- * USER MANAGEMENT (12 endpoints):
- * GET    /users/profile - Get user profile
- * PUT    /users/profile - Update user profile
- * POST   /users/change-password - User password update
- * POST   /users/verify-email - User email verification
- * GET    /users/dashboard-stats - User dashboard statistics
- * POST   /users/deactivate - User account deactivation
- * POST   /users/profile-image - Upload profile image
- * POST   /users/resume - Upload resume document
- * GET    /users/resumes - Get user's resumes
- * PUT    /users/resume/{id}/primary - Set resume as primary
- * DELETE /users/resume/{id} - Delete a resume
- * GET    /users/referral-code - Get my referral code and stats
- * POST   /employers/initialize - Initialize employer profile
- *
- * WORK EXPERIENCES (4 endpoints):
- * GET    /work-experiences/my - Get my work experiences
- * GET    /work-experiences/applicant/{id} - Get applicant work experiences
- * POST   /work-experiences - Create work experience
- * GET    /work-experiences/{id} - Get work experience by ID
- * PUT    /work-experiences/{id} - Update work experience
- * DELETE /work-experiences/{id} - Delete work experience
- *
- * APPLICANT/EMPLOYER PROFILE (4 endpoints):
- * GET    /applicants/{userId}/profile - Get applicant profile
- * PUT    /applicants/{userId}/profile - Update applicant profile
- * GET    /employers/{userId}/profile - Get employer profile
- * PUT    /employers/{userId}/profile - Update employer profile
- *
- * JOB MANAGEMENT (9 endpoints):
- * GET    /jobs - List all jobs
- * POST   /jobs - Create new job
- * GET    /jobs/{id} - Get job details
- * PUT    /jobs/{id} - Update job
- * DELETE /jobs/{id} - Delete job
- * POST   /jobs/{id}/publish - Publish job
- * POST   /jobs/{id}/close - Close job
- * GET    /search/jobs - Search jobs
- * GET    /organizations/{id}/jobs - Get organization jobs
- * GET    /jobs/ai-recommendations - Get AI-recommended jobs (₹100 wallet deduction)
- *
- * JOB APPLICATIONS (6 endpoints):
- * POST   /applications - Apply for job
- * GET    /my/applications - Get my applications
- * GET    /jobs/{jobId}/applications - Get job applications
- * PUT    /applications/{id}/status - Update application status
- * DELETE /applications/{id} - Withdraw application
- * GET    /applications/{id} - Get application details
- *
- * JOB SCRAPING SYSTEM (7 endpoints): AUTOMATED JOB POPULATION
- * POST   /jobs/scrape/trigger - Manually trigger job scraping (Admin)
- * GET    /jobs/scrape/config - Get scraping configuration (Admin)
- * PUT    /jobs/scrape/config - Update scraping configuration (Admin)
- * GET    /jobs/scrape/stats - Get scraping statistics (Admin)
- * DELETE /jobs/scrape/cleanup - Clean up old scraped jobs (Admin)
- * GET    /jobs/scrape/health - Scraper service health check
- * GET    /jobs/scrape/ping - Simple ping test endpoint
- * TIMER  /jobScraperTimer - Automated scraping every 2 hours
- *
- * REFERRAL SYSTEM (15 endpoints): EXPANDED
- * GET    /referral/plans - Get all referral plans
- * POST   /referral/plans/purchase - Purchase a referral plan
- * GET    /referral/subscription - Get current subscription
- * POST   /referral/requests - Create referral request
- * GET    /referral/my-requests - Get my referral requests (seeker)
- * GET    /referral/available - Get available requests (referrer)
- * POST   /referral/requests/{id}/claim - Claim a referral request
- * POST   /referral/requests/{id}/proof - NEW - Submit proof of referral
- * POST   /referral/requests/{id}/verify - NEW - Verify referral completion
- * POST   /referral/requests/{id}/cancel - NEW - Cancel referral request
- * GET    /referral/my-referrer-requests - NEW - Get my requests as referrer
- * GET    /referral/analytics - Get referral analytics
- * GET    /referral/eligibility - Check referral eligibility
- * GET    /referral/stats - Get referrer badge stats
- * GET    /referral/points-history - Get detailed referral points history
- *
- * REFERENCE DATA (9 endpoints):
- * GET    /reference/job-types - Get job types
- * GET    /reference/workplace-types - Get workplace types
- * GET    /reference/currencies - Get currencies
- * GET    /reference/organizations - Get organizations
- * GET    /reference/colleges - Get colleges/universities
- * GET    /reference/industries - Get industries
- * GET    /reference/universities-by-country - Get universities by country and state
- * GET    /reference/countries - Get countries
- * GET    /reference/salary-components - Get salary components
- *
- * SAVED JOBS (3 endpoints):
- * POST   /saved-jobs - Save a job
- * DELETE /saved-jobs/{jobId} - Unsave a job
- * GET    /my/saved-jobs - Get my saved jobs
- *
- * PAYMENT SYSTEM (3 endpoints): RAZORPAY INTEGRATION
- * POST   /payments/razorpay/create-order - Create Razorpay payment order
- * POST   /payments/razorpay/verify-and-activate - Verify payment and activate subscription
- * GET    /payments/history - Get payment transaction history
- *
- * WALLET SYSTEM (8 endpoints): NEW - Wallet Management
- * GET    /wallet - Get wallet details
- * GET    /wallet/balance - Get wallet balance
- * POST   /wallet/recharge/create-order - Create recharge order (Razorpay)
- * POST   /wallet/recharge/verify - Verify payment and credit wallet
- * GET    /wallet/transactions - Get transaction history (paginated)
- * GET    /wallet/recharge/history - Get recharge order history
- * GET    /wallet/stats - Get wallet statistics
- * POST   /wallet/debit - Debit wallet (internal use)
- *
- * STORAGE & FILES (2 endpoints): AZURE BLOB STORAGE
- * POST   /storage/upload - Upload files to Azure Blob Storage
- * DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
- *
- * JOB SCRAPING SCHEDULER (3 endpoints): MANUAL SCHEDULER CONTROL
- * GET    /scheduler/status - Get scheduler status
- * POST   /scheduler/start - Start scheduler (admin)
- * POST   /scheduler/stop - Stop scheduler (admin)
- *
- * MESSAGING SYSTEM (13 endpoints): NEW - Real-time Messaging
- * POST   /messages/conversation - Get or create conversation
- * GET    /messages/conversations - Get my conversations
- * GET    /messages/conversation/{id} - Get conversation messages
- * POST   /messages - Send message
- * POST   /messages/{id}/read - Mark message as read
- * POST   /messages/conversation/{id}/read - Mark entire conversation as read
- * GET    /messages/unread-count - Get unread message count
- * POST   /messages/conversation/{id}/archive - Archive conversation
- * POST   /messages/conversation/{id}/mute - Mute conversation
- * DELETE /messages/{id} - Delete message
- * POST   /messages/user/{userId}/block - Block user
- * DELETE /messages/user/{userId}/unblock - Unblock user
- * GET    /messages/user/{userId}/blocked - Check if user is blocked
- * GET    /messages/blocked-users - Get blocked users list
- * POST   /messages/profile-view - Record profile view
- * GET    /messages/profile-views - Get my profile views
- * GET    /messages/public-profile/{userId} - Get public profile details
- *
- * ========================================================================
- * TOTAL: 62 HTTP endpoints + 1 Timer Trigger = 63 functions
- * ========================================================================
- */
+* ========================================================================
+* UPDATED API ENDPOINT LIST (68 total - Added Job Archival System):
+* ========================================================================
+*
+* AUTHENTICATION (7 endpoints): +2 Google OAuth
+* POST   /auth/register - User registration
+* POST   /auth/login    - User login
+* POST   /auth/google   - Google OAuth login
+* POST   /auth/google-register  - Google OAuth registration
+* POST   /auth/logout   - User logout
+* POST   /auth/refresh  - Refresh JWT token
+* GET    /health        - Health check
+*
+* USER MANAGEMENT (12 endpoints):
+* GET    /users/profile - Get user profile
+* PUT    /users/profile - Update user profile
+* POST   /users/change-password - User password update
+* POST   /users/verify-email - User email verification
+* GET    /users/dashboard-stats - User dashboard statistics
+* POST   /users/deactivate - User account deactivation
+* POST   /users/profile-image - Upload profile image
+* POST   /users/resume - Upload resume document
+* GET    /users/resumes - Get user's resumes
+* PUT    /users/resume/{id}/primary - Set resume as primary
+* DELETE /users/resume/{id} - Delete a resume
+* GET    /users/referral-code - Get my referral code and stats
+* POST   /employers/initialize - Initialize employer profile
+*
+* WORK EXPERIENCES (4 endpoints):
+* GET    /work-experiences/my - Get my work experiences
+* GET    /work-experiences/applicant/{id} - Get applicant work experiences
+* POST   /work-experiences - Create work experience
+* GET    /work-experiences/{id} - Get work experience by ID
+* PUT    /work-experiences/{id} - Update work experience
+* DELETE /work-experiences/{id} - Delete work experience
+*
+* APPLICANT/EMPLOYER PROFILE (4 endpoints):
+* GET    /applicants/{userId}/profile - Get applicant profile
+* PUT    /applicants/{userId}/profile - Update applicant profile
+* GET    /employers/{userId}/profile - Get employer profile
+* PUT    /employers/{userId}/profile - Update employer profile
+*
+* JOB MANAGEMENT (9 endpoints):
+* GET    /jobs - List all jobs
+* POST   /jobs - Create new job
+* GET    /jobs/{id} - Get job details (now searches SQL first, then archives)
+* PUT    /jobs/{id} - Update job
+* DELETE /jobs/{id} - Delete job
+* POST   /jobs/{id}/publish - Publish job
+* POST   /jobs/{id}/close - Close job
+* GET    /search/jobs - Search jobs
+* GET    /organizations/{id}/jobs - Get organization jobs
+* GET    /jobs/ai-recommendations - Get AI-recommended jobs (₹100 wallet deduction)
+*
+* JOB APPLICATIONS (6 endpoints):
+* POST   /applications - Apply for job
+* GET    /my/applications - Get my applications
+* GET    /jobs/{jobId}/applications - Get job applications
+* PUT    /applications/{id}/status - Update application status
+* DELETE /applications/{id} - Withdraw application
+* GET    /applications/{id} - Get application details
+*
+* JOB SCRAPING SYSTEM (7 endpoints): AUTOMATED JOB POPULATION
+* POST   /jobs/scrape/trigger - Manually trigger job scraping (Admin)
+* GET    /jobs/scrape/config - Get scraping configuration (Admin)
+* PUT    /jobs/scrape/config - Update scraping configuration (Admin)
+* GET    /jobs/scrape/stats - Get scraping statistics (Admin)
+* DELETE /jobs/scrape/cleanup - Clean up old scraped jobs (Admin)
+* GET    /jobs/scrape/health - Scraper service health check
+* GET    /jobs/scrape/ping - Simple ping test endpoint
+* TIMER  /jobScraperTimer - Automated scraping every 2 hours
+*
+* JOB ARCHIVAL SYSTEM (3 endpoints): NEW - Automated Job Archival
+* POST   /jobs/archive/trigger - Manually trigger archival (Admin)
+* GET    /jobs/archive/logs - Get archival logs (Admin)
+* GET    /jobs/archive/stats - Get archival statistics (Admin)
+* TIMER  /jobArchivalTimer - Automated archival every 24 hours at midnight
+*
+* REFERRAL SYSTEM (15 endpoints): EXPANDED
+* GET    /referral/plans - Get all referral plans
+* POST   /referral/plans/purchase - Purchase a referral plan
+* GET    /referral/subscription - Get current subscription
+* POST   /referral/requests - Create referral request
+* GET    /referral/my-requests - Get my referral requests (seeker)
+* GET    /referral/available - Get available requests (referrer)
+* POST   /referral/requests/{id}/claim - Claim a referral request
+* POST   /referral/requests/{id}/proof - Submit proof of referral
+* POST   /referral/requests/{id}/verify - Verify referral completion
+* POST   /referral/requests/{id}/cancel - Cancel referral request
+* GET    /referral/my-referrer-requests - Get my requests as referrer
+* GET    /referral/analytics - Get referral analytics
+* GET    /referral/eligibility - Check referral eligibility
+* GET    /referral/stats - Get referrer badge stats
+* GET    /referral/points-history - Get detailed referral points history
+*
+* REFERENCE DATA (9 endpoints):
+* GET    /reference/job-types - Get job types
+* GET    /reference/workplace-types - Get workplace types
+* GET    /reference/currencies - Get currencies
+* GET    /reference/organizations - Get organizations
+* GET    /reference/colleges - Get colleges/universities
+* GET    /reference/industries - Get industries
+* GET    /reference/universities-by-country - Get universities by country and state
+* GET    /reference/countries - Get countries
+* GET    /reference/salary-components - Get salary components
+*
+* SAVED JOBS (3 endpoints):
+* POST   /saved-jobs - Save a job
+* DELETE /saved-jobs/{jobId} - Unsave a job
+* GET    /my/saved-jobs - Get my saved jobs
+*
+* PAYMENT SYSTEM (3 endpoints): RAZORPAY INTEGRATION
+* POST   /payments/razorpay/create-order - Create Razorpay payment order
+* POST   /payments/razorpay/verify-and-activate - Verify payment and activate subscription
+* GET    /payments/history - Get payment transaction history
+*
+* WALLET SYSTEM (8 endpoints): Wallet Management
+* GET    /wallet - Get wallet details
+* GET    /wallet/balance - Get wallet balance
+* POST   /wallet/recharge/create-order - Create recharge order (Razorpay)
+* POST   /wallet/recharge/verify - Verify payment and credit wallet
+* GET    /wallet/transactions - Get transaction history (paginated)
+* GET    /wallet/recharge/history - Get recharge order history
+* GET    /wallet/stats - Get wallet statistics
+* POST   /wallet/debit - Debit wallet (internal use)
+*
+* STORAGE & FILES (2 endpoints): AZURE BLOB STORAGE
+* POST   /storage/upload - Upload files to Azure Blob Storage
+* DELETE /storage/{containerName}/{fileName} - Delete files from Azure Blob Storage
+*
+* JOB SCRAPING SCHEDULER (3 endpoints): MANUAL SCHEDULER CONTROL
+* GET    /scheduler/status - Get scheduler status
+* POST   /scheduler/start - Start scheduler (admin)
+* POST   /scheduler/stop - Stop scheduler (admin)
+*
+* MESSAGING SYSTEM (13 endpoints): Real-time Messaging
+* POST   /messages/conversation - Get or create conversation
+* GET    /messages/conversations - Get my conversations
+* GET    /messages/conversation/{id} - Get conversation messages
+* POST   /messages - Send message
+* POST   /messages/{id}/read - Mark message as read
+* POST   /messages/conversation/{id}/read - Mark entire conversation as read
+* GET    /messages/unread-count - Get unread message count
+* POST   /messages/conversation/{id}/archive - Archive conversation
+* POST   /messages/conversation/{id}/mute - Mute conversation
+* DELETE /messages/{id} - Delete message
+* POST   /messages/user/{userId}/block - Block user
+* DELETE /messages/user/{userId}/unblock - Unblock user
+* GET    /messages/user/{userId}/blocked - Check if user is blocked
+* GET    /messages/blocked-users - Get blocked users list
+* POST   /messages/profile-view - Record profile view
+* GET    /messages/profile-views - Get my profile views
+* GET    /messages/public-profile/{userId} - Get public profile details
+*
+* ========================================================================
+* TOTAL: 68 HTTP endpoints + 2 Timer Triggers = 70 functions
+* ========================================================================
+*/

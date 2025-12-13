@@ -74,7 +74,8 @@ export class JobScraperService {
         rateLimit: 1000 
       }
     },
-    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid']
+    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid'],
+    excludeCompanies: ['Turing'] // Company blacklist - jobs from these companies will be skipped
   };
 
   // 🎭 ENHANCED USER AGENTS - MORE REALISTIC PATTERNS
@@ -260,12 +261,18 @@ export class JobScraperService {
   // Load Clearbit API key (optional - for enhanced enrichment)
   private static loadClearbitApiKey(): string | null {
     try {
-      const apiKey = process.env.CLEARBIT_API_KEY;
-      if (apiKey) {
-        console.log('🔑 Using Clearbit API key for enhanced enrichment');
-        return apiKey;
+      // Try environment variable first
+      let apiKey = process.env.CLEARBIT_API_KEY;
+      
+      // 🔑 FALLBACK: Use hardcoded key if env var not available (same as PowerShell script)
+      if (!apiKey) {
+        apiKey = 'sk_2c8c9b5e8f5a4c5d9b3a7f1e2d4c6b8a'; // Clearbit API key
+        console.log('🔑 Using hardcoded Clearbit API key for enrichment');
+      } else {
+        console.log('🔑 Using environment Clearbit API key for enhanced enrichment');
       }
-      return null;
+      
+      return apiKey;
     } catch (error: any) {
       return null;
     }
@@ -1655,19 +1662,21 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   }
 
   // All the missing helper methods
+  // 🔄 UPDATED: Use ReferenceMetadata IDs (correct mapping from database)
   private static getJobTypeId(jobType: string): number {
     const mapping: { [key: string]: number } = {
-      'Full-time': 1, 'Part-time': 2, 'Contract': 3,
-      'Internship': 4, 'Freelance': 5, 'Temporary': 6
+      'Full-time': 438, 'Part-time': 440, 'Contract': 436,
+      'Internship': 439, 'Freelance': 437, 'Temporary': 441
     };
-    return mapping[jobType] || 1;
+    return mapping[jobType] || 438; // Default to Full-time (ReferenceID 438)
   }
 
+  // 🔄 UPDATED: Use ReferenceMetadata IDs (correct mapping from database)
   private static getWorkplaceTypeId(workplaceType: string): number {
     const mapping: { [key: string]: number } = {
-      'Onsite': 1, 'Remote': 2, 'Hybrid': 3
+      'Onsite': 443, 'Remote': 444, 'Hybrid': 442
     };
-    return mapping[workplaceType] || 2;
+    return mapping[workplaceType] || 444; // Default to Remote (ReferenceID 444)
   }
 
   private static extractDepartment(title: string): string {
@@ -1993,6 +2002,20 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return jobs.filter(job => {
       // Skip duplicates
       if (existingIds.has(job.externalJobId)) return false;
+
+      // Company blacklist filtering (case-insensitive)
+      const normalizedCompany = job.company.toLowerCase().trim();
+      const isBlacklisted = this.config.excludeCompanies.some(blacklistedCompany => {
+        const normalizedBlacklisted = blacklistedCompany.toLowerCase().trim();
+        // Exact match or company name contains blacklisted name
+        return normalizedCompany === normalizedBlacklisted || 
+               normalizedCompany.includes(normalizedBlacklisted);
+      });
+      
+      if (isBlacklisted) {
+        console.log(`⛔ Skipping job from blacklisted company: ${job.company} - "${job.title}"`);
+        return false;
+      }
 
       // Enhanced keyword filtering
       const content = `${job.title} ${job.description} ${job.company}`.toLowerCase();

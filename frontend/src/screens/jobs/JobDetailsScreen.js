@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
@@ -34,7 +35,6 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
-  const [referralEligibility, setReferralEligibility] = useState({ isEligible: true, dailyQuotaRemaining: 5, hasActiveSubscription: false, reason: null });
   const [primaryResume, setPrimaryResume] = useState(null);
   const [referralMessage, setReferralMessage] = useState('');
   const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
@@ -45,6 +45,10 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  
+  // 💎 NEW: Referral confirmation modal state
+  const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -187,18 +191,11 @@ const { jobId, fromReferralRequest } = route.params || {};
     if (!user || !isJobSeeker || !jobId) return;
     
     try {
-      const [referralRes, eligibilityRes] = await Promise.all([
-        refopenAPI.getMyReferralRequests(1, 100),
-        refopenAPI.checkReferralEligibility()
-      ]);
+      const referralRes = await refopenAPI.getMyReferralRequests(1, 100);
       
       if (referralRes?.success && referralRes.data?.requests) {
         const hasReferred = referralRes.data.requests.some(r => r.JobID === jobId);
         setHasReferred(hasReferred);
-      }
-      
-      if (eligibilityRes?.success) {
-        setReferralEligibility(eligibilityRes.data);
       }
     } catch (error) {
       console.warn('Failed to load referral status:', error.message);
@@ -268,21 +265,17 @@ const { jobId, fromReferralRequest } = route.params || {};
       return;
     }
     
-    // ✅ Check wallet balance
+    // ✅ Check wallet balance and show confirmation modal
     try {
       const walletBalance = await refopenAPI.getWalletBalance();
       
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
         
-        // Check if balance >= ₹50
-        if (balance < 50) {
-          
-          // 💎 NEW: Show beautiful modal instead of ugly alert
-          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
-          setShowWalletModal(true);
-          return;
-        }
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setReferralConfirmData({ currentBalance: balance, requiredAmount: 50 });
+        setShowReferralConfirmModal(true);
+        return;
         
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
@@ -292,6 +285,22 @@ const { jobId, fromReferralRequest } = route.params || {};
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
       Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      return;
+    }
+  };
+
+  // ✅ NEW: Handle referral confirmation proceed
+  const handleReferralConfirmProceed = async () => {
+    setShowReferralConfirmModal(false);
+    
+    // Check if balance is insufficient
+    if (referralConfirmData.currentBalance < referralConfirmData.requiredAmount) {
+      // Show recharge modal
+      setWalletModalData({ 
+        currentBalance: referralConfirmData.currentBalance, 
+        requiredAmount: referralConfirmData.requiredAmount 
+      });
+      setShowWalletModal(true);
       return;
     }
     
@@ -316,101 +325,13 @@ const { jobId, fromReferralRequest } = route.params || {};
       }
     } catch (e) { console.warn('Referral pre-check failed:', e.message); }
     
+    // Proceed with referral request
     if (primaryResume?.ResumeID) {
       await quickReferral(primaryResume.ResumeID);
       return;
     }
-    setReferralMode(true); setShowResumeModal(true);
-  };
-
-  // REQUIREMENT 3: Improved subscription modal with better logic
-  const showSubscriptionModal = useCallback(async (reasonOverride = null, hasActiveSubscription = false) => {
-    
-    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
-    const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
-    const body = hasActiveSubscription
-      ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
-      : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
-
-    if (Platform.OS === 'web') {
-      navigation.navigate('ReferralPlans');
-      return;
-    }
-    
-    try {
-      Alert.alert(
-        'Upgrade Required',
-        body,
-        [
-          { 
-            text: 'Maybe Later', 
-            style: 'cancel',
-            onPress: () => {}
-          },
-          { 
-            text: 'View Plans', 
-            onPress: () => {
-              try {
-                navigation.navigate('ReferralPlans');
-              } catch (navError) {
-                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
-              }
-            }
-          }
-        ]
-      );
-      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
-      setTimeout(() => {
-        const state = navigation.getState?.();
-        const currentRoute = state?.routes?.[state.index]?.name;
-        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-            try { navigation.navigate('ReferralPlans'); } catch (e) { }
-        }
-      }, 3000);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
-    }
-  }, [navigation, referralEligibility]);
-
-  const handlePlanSelection = async (plan) => {
-    
-    Alert.alert(
-      'Confirm Subscription',
-      `Subscribe to ${plan.Name} for $${plan.Price}/month?\n\nThis will give you unlimited referral requests!`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Subscribe Now', 
-          onPress: async () => {
-            try {
-              // For demo - simulate successful purchase
-              Alert.alert(
-                'Subscription Successful!',
-                `Welcome to ${plan.Name}! You now have unlimited referral requests.`,
-                [
-                  { 
-                    text: 'Start Referring!', 
-                    onPress: async () => {
-                      // Refresh eligibility after "purchase"
-                      const eligibilityRes = await refopenAPI.checkReferralEligibility();
-                      if (eligibilityRes?.success) {
-                        setReferralEligibility(eligibilityRes.data);
-                      }
-                    }
-                  }
-                ]
-              );
-              
-              // TODO: Implement real payment processing
-              // const purchaseResult = await refopenAPI.purchaseReferralPlan(plan.PlanID);
-              
-            } catch (error) {
-              Alert.alert('Purchase Failed', error.message || 'Failed to purchase subscription');
-            }
-          }
-        }
-      ]
-    );
+    setReferralMode(true); 
+    setShowResumeModal(true);
   };
 
   // REQUIREMENT 2: Refresh page after resume submission to reload primary resume
@@ -426,11 +347,6 @@ const { jobId, fromReferralRequest } = route.params || {};
         });
         if (res.success) {
           setHasReferred(true);
-          setReferralEligibility(prev => ({
-            ...prev,
-            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-            isEligible: prev.dailyQuotaRemaining > 1
-          }));
           
           const amountDeducted = res.data?.amountDeducted || 50;
           const balanceAfter = res.data?.walletBalanceAfter;
@@ -579,12 +495,11 @@ const { jobId, fromReferralRequest } = route.params || {};
       });
       if (res?.success) {
         setHasReferred(true);
-        setReferralEligibility(prev => ({ ...prev, dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1) }));
         
         const amountDeducted = res.data?.amountDeducted || 50;
         const balanceAfter = res.data?.walletBalanceAfter;
         
-        let message = 'Referral request sent successfully!';
+        let message = 'Referral sent to ALL employees who can refer!';
         if (balanceAfter !== undefined) {
           message += `\n\n₹${amountDeducted} deducted from wallet.\nNew balance: ₹${balanceAfter.toFixed(2)}`;
         }
@@ -1226,8 +1141,8 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       )}
 
       {/* Action Buttons - REMOVED Save Job button since it's in the header */}
-      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab */}
-      {!fromReferralRequest && (
+      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab OR when job is archived */}
+      {!fromReferralRequest && !job.IsArchived && (
         <View style={styles.actionContainer}>        
           {isJobSeeker && (
             <TouchableOpacity 
@@ -1293,6 +1208,14 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         </View>
       )}
       
+      {/* Show archived job notice */}
+      {job.IsArchived && (
+        <View style={styles.archivedNotice}>
+          <Ionicons name="archive-outline" size={24} color={colors.gray600} />
+          <Text style={styles.archivedNoticeText}>This job has been archived and is no longer accepting applications</Text>
+        </View>
+      )}
+      
       {/* Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
@@ -1312,6 +1235,20 @@ Highlight your relevant experience, skills, and why you're excited about this sp
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowWalletModal(false)}
+      />
+      
+      {/* 💎 NEW: Referral Confirmation Modal */}
+      <ReferralConfirmModal
+        visible={showReferralConfirmModal}
+        currentBalance={referralConfirmData.currentBalance}
+        requiredAmount={referralConfirmData.requiredAmount}
+        jobTitle={job?.Title || 'this job'}
+        onProceed={handleReferralConfirmProceed}
+        onAddMoney={() => {
+          setShowReferralConfirmModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowReferralConfirmModal(false)}
       />
     </ScrollView>
   );
@@ -1751,5 +1688,21 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     marginLeft: 8,
+  },
+  archivedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: colors.gray100,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 12,
+  },
+  archivedNoticeText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    fontWeight: typography.weights.medium,
   },
 });

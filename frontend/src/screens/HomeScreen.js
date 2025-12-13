@@ -603,7 +603,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Quick Actions with Enhanced Urgency */}
+        {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           
@@ -644,38 +644,65 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
             </>
           ) : (
             <>
-              <QuickAction
-                title="Get Referrals"
-                description="Request referrals for job opportunities"
-                icon="people"
-                color="#FEB800"
+              {/* Get Referrals Card - Premium Design */}
+              <TouchableOpacity 
+                style={styles.premiumActionCard}
                 onPress={() => navigation.navigate('AskReferral')}
-              />
-              <QuickAction
-                title="Browse Jobs"
-                description="Discover new opportunities"
-                icon="search"
-                color={colors.primary}
-                onPress={() => navigation.navigate('Jobs')}
-              />
-              <QuickAction
-                title="My Applications"
-                description="Track your job applications"
-                icon="document-text"
-                color={colors.success}
-                badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-                urgent={stats.pendingApplications > 5}
-                onPress={() => navigation.navigate('Applications')}
-              />
-              <QuickAction
-                title="Complete Profile"
-                description="Improve your profile to stand out"
-                icon="person"
-                color={stats.profileCompleteness >= 80 ? colors.success : colors.warning}
-                badge={stats.profileCompleteness < 80 ? `${stats.profileCompleteness || 0}%` : null}
-                urgent={stats.profileCompleteness < 60}
+                activeOpacity={0.8}
+              >
+                <View style={styles.premiumCardGradient}>
+                  <View style={styles.premiumCardHeader}>
+                    <View style={[styles.premiumIcon, { backgroundColor: '#FEB800' + '20' }]}>
+                      <Ionicons name="people" size={28} color="#FEB800" />
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color="#FEB800" />
+                  </View>
+                  <Text style={styles.premiumActionTitle}>Get Referrals</Text>
+                  <Text style={styles.premiumActionDescription}>
+                    Request referrals for job opportunities
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Complete Profile Card - With Circular Progress */}
+              <TouchableOpacity 
+                style={styles.profileActionCard}
                 onPress={() => navigation.navigate('Profile')}
-              />
+                activeOpacity={0.8}
+              >
+                <View style={styles.profileCardContent}>
+                  <View style={styles.profileCardLeft}>
+                    <View style={styles.profileCardHeader}>
+                      <View style={[styles.profileIcon, { 
+                        backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                      }]}>
+                        <Ionicons 
+                          name="person" 
+                          size={28} 
+                          color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                        />
+                      </View>
+                    </View>
+                    <Text style={styles.profileActionTitle}>Complete Profile</Text>
+                    <Text style={styles.profileActionDescription}>
+                      Improve your profile to stand out
+                    </Text>
+                  </View>
+                  
+                  {/* Circular Progress Indicator */}
+                  <View style={styles.profileCardRight}>
+                    <View style={styles.circularProgress}>
+                      <Text style={[
+                        styles.progressPercentage,
+                        { color: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                      ]}>
+                        {stats.profileCompleteness || 0}%
+                      </Text>
+                      <Text style={styles.progressLabel}>Complete</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -914,7 +941,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
               <>
                 {/* AI Jobs confirmation modal */}
                 <View style={styles.aiConfirmHeader}>
-                  <Ionicons name="sparkles" size={32} color="#FFD700" />
+                  <Ionicons name="bulb" size={32} color="#FFD700" />
                   <Text style={styles.aiConfirmHeaderTitle}>AI Recommended Jobs</Text>
                 </View>
                 
@@ -1304,6 +1331,134 @@ headerCompact: {
   actionsContainer: {
     padding: 20,
     paddingTop: 0,
+  },
+  // Premium Get Referrals Card
+  premiumActionCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#FEB800',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  premiumCardGradient: {
+    backgroundColor: colors.surface,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#FEB800' + '30',
+    borderRadius: 16,
+  },
+  premiumCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  premiumIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumActionTitle: {
+    fontSize: 20,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 6,
+  },
+  premiumActionDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    lineHeight: 20,
+  },
+  // Profile Completion Card
+  profileActionCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  profileCardContent: {
+    backgroundColor: colors.surface,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileCardLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
+  profileCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  profileIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileActionTitle: {
+    fontSize: 20,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 6,
+  },
+  profileActionDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    lineHeight: 20,
+  },
+  profileCardRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circularProgress: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.background,
+    borderWidth: 6,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  progressPercentage: {
+    fontSize: 20,
+    fontWeight: typography.weights.bold,
+    marginBottom: 2,
+  },
+  progressLabel: {
+    fontSize: 10,
+    color: colors.gray500,
+    fontWeight: typography.weights.medium,
   },
   actionCard: {
     backgroundColor: colors.surface,

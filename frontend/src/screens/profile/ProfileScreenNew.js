@@ -25,6 +25,7 @@ import SalaryBreakdownSection from '../../components/profile/SalaryBreakdownSect
 import EducationSection from '../../components/profile/EducationSection';
 import ResumeSection from '../../components/profile/ResumeSection';
 import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBreakdown';
+import SkillsSelectionModal from '../../components/profile/SkillsSelectionModal';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -52,9 +53,10 @@ export default function ProfileScreen({ navigation }) {
   
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // 'personal', 'professional', 'workexp', 'salary', 'education', 'preferences'
+  const [activeModal, setActiveModal] = useState(null); // 'personal', 'professional', 'workexp', 'salary', 'education', 'preferences', 'skills'
   const [editingModal, setEditingModal] = useState(false); // Track if modal is in edit mode
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSkillsModal, setShowSkillsModal] = useState(false);
   
   // Wallet state
   const [walletBalance, setWalletBalance] = useState(null);
@@ -203,6 +205,10 @@ export default function ProfileScreen({ navigation }) {
             preferredCompanySize: data.PreferredCompanySize || data.preferredCompanySize || prev.preferredCompanySize,
             salaryBreakdown: salaryData,
             resumes: resumeData,
+            skills: {
+              primary: data.PrimarySkills ? data.PrimarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+              secondary: data.SecondarySkills ? data.SecondarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+            },
           }));
         }
       }
@@ -289,13 +295,42 @@ export default function ProfileScreen({ navigation }) {
       });
       if (response.success) {
         Alert.alert('Success', 'Personal details updated successfully');
-        setEditingModal(false);
+        setActiveModal(null);
         await loadExtendedProfile();
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update personal details');
     }
   };
+
+  const handleSkillsSave = async (skillsData) => {
+    try {
+      const payload = {
+        primarySkills: skillsData.primarySkills,
+        secondarySkills: skillsData.secondarySkills,
+      };
+
+      const response = await refopenAPI.updateApplicantProfile(user?.UserID, payload);
+      
+      if (response.success) {
+        // Update local state - split strings back into arrays
+        setJobSeekerProfile(prev => ({
+          ...prev,
+          skills: {
+            primary: skillsData.primarySkills.split(',').map(s => s.trim()).filter(Boolean),
+            secondary: skillsData.secondarySkills.split(',').map(s => s.trim()).filter(Boolean),
+          },
+        }));
+        Alert.alert('Success', 'Skills updated successfully');
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update skills');
+      }
+    } catch (error) {
+      console.error('Error saving skills:', error);
+      Alert.alert('Error', 'Failed to update skills. Please try again.');
+    }
+  };
+
 
   const saveProfessionalDetails = async () => {
     try {
@@ -533,6 +568,44 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.subsectionSummary}>
               Manage your salary components and expectations
             </Text>
+          </TouchableOpacity>
+
+          {/* Skills Card */}
+          <TouchableOpacity 
+            style={styles.subsectionCard}
+            onPress={() => setShowSkillsModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.subsectionHeader}>
+              <View style={styles.subsectionHeaderLeft}>
+                <Ionicons name="code-slash" size={20} color={colors.primary} />
+                <Text style={styles.subsectionTitle}>Skills</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
+            {jobSeekerProfile.skills.primary.length > 0 || jobSeekerProfile.skills.secondary.length > 0 ? (
+              <View>
+                {jobSeekerProfile.skills.primary.length > 0 && (
+                  <View style={{marginTop: 8}}>
+                    <Text style={{fontSize: 12, color: '#666', marginBottom: 4}}>Primary:</Text>
+                    <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 4}}>
+                      {jobSeekerProfile.skills.primary.slice(0, 3).map((skill, idx) => (
+                        <View key={idx} style={{backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12}}>
+                          <Text style={{fontSize: 12, color: '#0066cc'}}>{skill}</Text>
+                        </View>
+                      ))}
+                      {jobSeekerProfile.skills.primary.length > 3 && (
+                        <View style={{backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12}}>
+                          <Text style={{fontSize: 12, color: '#666'}}>+{jobSeekerProfile.skills.primary.length - 3} more</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.subsectionSummary}>Add your skills</Text>
+            )}
           </TouchableOpacity>
 
           {/* Auto-Calculated Summary */}
@@ -1219,6 +1292,16 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Skills Selection Modal */}
+      <SkillsSelectionModal
+        visible={showSkillsModal}
+        onClose={() => setShowSkillsModal(false)}
+        onSave={handleSkillsSave}
+        initialPrimarySkills={jobSeekerProfile.skills.primary}
+        initialSecondarySkills={jobSeekerProfile.skills.secondary}
+        title="Manage Your Skills"
+      />
     </View>
   );
 }

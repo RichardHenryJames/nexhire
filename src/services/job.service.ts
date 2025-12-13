@@ -210,13 +210,13 @@ export class JobService {
         const department = validated.department?.trim() || 'General';
         // Location NOT NULL – fallback if missing (prefer explicit location else remote marker)
         const location = validated.location?.trim() || (validated.isRemote ? 'Remote' : 'Unspecified');
-        // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to 1 (Onsite) if not found
-        let workplaceTypeId: number = 1;
+        // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to first WorkplaceType if not found
+        let workplaceTypeId: number = 443; // Default to Onsite (ReferenceID from ReferenceMetadata)
         if (validated.workplaceType) {
-            const wtQuery = 'SELECT WorkplaceTypeID FROM WorkplaceTypes WHERE Type = @param0';
-            const wtResult = await dbService.executeQuery(wtQuery, [validated.workplaceType]);
+            const wtQuery = 'SELECT ReferenceID FROM ReferenceMetadata WHERE RefType = @param0 AND Value = @param1';
+            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', validated.workplaceType]);
             if (wtResult.recordset && wtResult.recordset.length > 0) {
-                workplaceTypeId = wtResult.recordset[0].WorkplaceTypeID;
+                workplaceTypeId = wtResult.recordset[0].ReferenceID;
             }
         }
         // ExternalJobID (NOT NULL): prefix to distinguish manually posted jobs
@@ -291,9 +291,9 @@ export class JobService {
         const insertQuery = `
             INSERT INTO Jobs (${fields.join(', ')})
             VALUES (${placeholders.join(', ')});
-            SELECT j.*, jt.Type as JobTypeName, o.Name as OrganizationName
+            SELECT j.*, jt.Value as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             WHERE j.JobID = @param0;
         `;
@@ -367,14 +367,14 @@ export class JobService {
                 j.Location, j.City, j.State, j.Country, j.IsRemote, 
                 j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                 j.PublishedAt, j.CreatedAt,
-                jt.Type as JobTypeName,
-                wt.Type as WorkplaceTypeName,
+                jt.Value as JobTypeName,
+                wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo
             FROM Jobs j
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
+            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
             ${whereClause}
         `;
 
@@ -402,12 +402,13 @@ export class JobService {
         return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
     }
 
-    // Get job by ID - unchanged
+    // Get job by ID - ENHANCED: Search SQL first, then archived jobs in blob storage
     static async getJobById(jobId: string): Promise<Job | null> {
+        // First, try to get from SQL database
         const query = `
             SELECT
                 j.*,
-                jt.Type as JobTypeName,
+                jt.Value as JobTypeName,
                 o.Name as OrganizationName,
                 o.LogoURL as OrganizationLogo,
                 o.LinkedInProfile as OrganizationLinkedIn,
@@ -421,14 +422,41 @@ export class JobService {
                 END as PostedByName
             FROM Jobs j
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             LEFT JOIN Users u ON j.PostedByUserID = u.UserID
             LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
             WHERE j.JobID = @param0
         `;
 
         const result = await dbService.executeQuery<Job>(query, [jobId]);
-        return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+        
+        if (result.recordset && result.recordset.length > 0) {
+            console.log(`[JobService] Job ${jobId} found in SQL database`);
+            return result.recordset[0];
+        }
+
+        // If not found in SQL, search in archived jobs (blob storage)
+        try {
+            console.log(`[JobService] Job ${jobId} not found in SQL, searching archives...`);
+            const { JobArchiveService } = await import('./job-archive.service');
+            const archivedJob = await JobArchiveService.getArchivedJob(jobId);
+            
+            if (archivedJob) {
+                console.log(`[JobService] Job ${jobId} found in archive`);
+                // Add flag that this is an archived job
+                // Frontend uses IsArchived flag to hide Apply/Refer buttons
+                return {
+                    ...archivedJob,
+                    IsArchived: true,
+                    Status: 'Archived'
+                } as Job;
+            }
+        } catch (archiveError: any) {
+            console.error(`[JobService] Error searching archives for job ${jobId}:`, archiveError.message);
+        }
+
+        console.log(`[JobService] Job ${jobId} not found in SQL or archives`);
+        return null;
     }
 
     // Update job - unchanged
@@ -644,9 +672,9 @@ export class JobService {
         const offset = (page - 1) * pageSize;
         const dataQuery = `
             SELECT
-                j.*, jt.Type as JobTypeName, o.Name as OrganizationName
+                j.*, jt.Value as JobTypeName, o.Name as OrganizationName
             FROM Jobs j
-            INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             ${whereClause}
             ORDER BY ${normalizedSort} ${normalizedOrder}
@@ -655,13 +683,6 @@ export class JobService {
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
         return { jobs: dataResult.recordset || [], total, totalPages };
-    }
-
-    // Get job types (reference data) - unchanged
-    static async getJobTypes(): Promise<any[]> {
-        const query = 'SELECT * FROM JobTypes WHERE IsActive = 1 ORDER BY Type';
-        const result = await dbService.executeQuery(query);
-        return result.recordset || [];
     }
 
     // Get currencies (reference data) - unchanged
@@ -725,14 +746,14 @@ export class JobService {
                     j.Location, j.City, j.Country, j.IsRemote, 
                     j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                     j.PublishedAt, j.CreatedAt,
-                    jt.Type as JobTypeName,
-                    wt.Type as WorkplaceTypeName,
+                    jt.Value as JobTypeName,
+                    wt.Value as WorkplaceTypeName,
                     o.Name as OrganizationName,
                     ISNULL(o.LogoURL, '') as OrganizationLogo
                 FROM Jobs j
-                INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                LEFT JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
+                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
                 ${whereClause}
             `;
 
