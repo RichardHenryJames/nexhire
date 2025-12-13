@@ -24,6 +24,7 @@ export interface EnhancedScraperConfig {
     priority: 'high' | 'medium' | 'low';
   }>;
   excludeKeywords: string[];
+  excludeCompanies: string[];
   humanBehavior: {
     minDelay: number;
     maxDelay: number;
@@ -142,6 +143,11 @@ export const ENHANCED_SCRAPER_CONFIG: EnhancedScraperConfig = {
   excludeKeywords: [
     'adult entertainment', 'gambling', 'crypto scam', 'mlm', 'pyramid scheme',
     'get rich quick', 'work from home scam', 'investment scheme', 'binary options'
+  ],
+
+  // Company blacklist - exclude jobs from these companies
+  excludeCompanies: [
+    'Turing'
   ],
 
   // ?? Human-like behavior settings

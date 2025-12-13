@@ -213,8 +213,8 @@ export class AIJobRecommendationService {
 
     // For students or fresh graduates with no experience
     if ((isStudent || yearsOfExperience === 0 || isRecentGrad) && workExperience.length === 0) {
-      jobTypeIds.push(5); // Internship
-      jobTypeIds.push(1); // Full-time
+      jobTypeIds.push(437); // Internship - NEW ReferenceMetadata ID (was 5)
+      jobTypeIds.push(438); // Full-time - NEW ReferenceMetadata ID (was 1)
       return jobTypeIds;
     }
 
@@ -227,7 +227,7 @@ export class AIJobRecommendationService {
     }
 
     // Default to Full-time for experienced professionals
-    jobTypeIds.push(1); // Full-time
+    jobTypeIds.push(438); // Full-time - NEW ReferenceMetadata ID (was 1)
     
     return jobTypeIds;
   }
@@ -244,8 +244,8 @@ export class AIJobRecommendationService {
       }
     }
 
-    // Default: All types
-    return [1, 2, 3]; // On-site, Hybrid, Remote
+    // Default: All types - NEW ReferenceMetadata IDs
+    return [443, 444, 442]; // Onsite (443), Remote (444), Hybrid (442) - was [1, 2, 3]
   }
 
   /**
@@ -310,37 +310,278 @@ export class AIJobRecommendationService {
   }
 
   /**
-   * Extract skills and keywords for search
+   * 🧠 ENHANCED: Intelligently extract skills, job domains, and keywords from:
+   * - ALL job titles in work history (not just current)
+   * - Job descriptions/responsibilities from work experience
+   * - Education branch/major to infer domain expertise
+   * - PrimarySkills field
+   * - Preferred roles
    */
-  private static extractSkillsAndKeywords(profile: any, workExperience: any[]): string[] {
-    const keywords: string[] = [];
+  private static extractSkillsAndKeywords(profile: any, workExperience: any[], education: any[]): string[] {
+    const keywordsSet = new Set<string>();
     
-    // Add skills from profile (PrimarySkills field)
+    // 1️⃣ Extract from ALL job titles in work history (weighted by recency)
+    if (workExperience && workExperience.length > 0) {
+      workExperience.forEach((exp, index) => {
+        if (exp.JobTitle) {
+          // Add full job title
+          keywordsSet.add(exp.JobTitle.trim());
+          
+          // Extract role keywords from job title (e.g., "Senior Software Engineer" → "Software Engineer", "Senior")
+          const titleTokens = this.extractRoleTokens(exp.JobTitle);
+          titleTokens.forEach(token => keywordsSet.add(token));
+        }
+        
+        // Extract skills from job description/responsibilities
+        if (exp.Responsibilities) {
+          const techSkills = this.extractTechSkillsFromText(exp.Responsibilities);
+          techSkills.forEach(skill => keywordsSet.add(skill));
+        }
+        
+        // Add company domain if recognizable (e.g., Google → Software, Goldman Sachs → Finance)
+        if (exp.CompanyName) {
+          const domain = this.inferCompanyDomain(exp.CompanyName);
+          if (domain) keywordsSet.add(domain);
+        }
+      });
+    }
+    
+    // 2️⃣ Analyze education branch/major to infer job domains
+    if (education && education.length > 0) {
+      education.forEach(edu => {
+        // Extract from Field of Study (e.g., "Computer Science", "Electrical Engineering")
+        if (edu.FieldOfStudy) {
+          const domains = this.mapEducationToDomains(edu.FieldOfStudy);
+          domains.forEach(domain => keywordsSet.add(domain));
+        }
+        
+        // Extract from Specialization (e.g., "Machine Learning", "Data Science")
+        if (edu.Specialization) {
+          keywordsSet.add(edu.Specialization.trim());
+          
+          // Also extract tech keywords from specialization
+          const techSkills = this.extractTechSkillsFromText(edu.Specialization);
+          techSkills.forEach(skill => keywordsSet.add(skill));
+        }
+        
+        // Extract from University/College name for domain hints
+        if (edu.InstitutionName) {
+          const domain = this.inferInstitutionDomain(edu.InstitutionName);
+          if (domain) keywordsSet.add(domain);
+        }
+      });
+    }
+    
+    // 3️⃣ Add explicit skills from profile (PrimarySkills field)
     if (profile.Skills) {
       const skills = profile.Skills.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
-      keywords.push(...skills.slice(0, 5)); // Top 5 skills
+      skills.forEach(skill => keywordsSet.add(skill));
     }
     
-    // Add current job title from profile
+    // 4️⃣ Add current job title from profile (highest weight)
     if (profile.CurrentJobTitle) {
-      keywords.push(profile.CurrentJobTitle);
+      keywordsSet.add(profile.CurrentJobTitle.trim());
+      const titleTokens = this.extractRoleTokens(profile.CurrentJobTitle);
+      titleTokens.forEach(token => keywordsSet.add(token));
     }
     
-    // Add current/latest job title from work experience
-    if (workExperience.length > 0) {
-      const latest = workExperience[0];
-      if (latest.JobTitle) {
-        keywords.push(latest.JobTitle);
-      }
-    }
-    
-    // Add preferred roles
+    // 5️⃣ Add preferred roles (explicit user intent)
     if (profile.PreferredRoles) {
       const roles = profile.PreferredRoles.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
-      keywords.push(...roles.slice(0, 2)); // Top 2 preferred roles
+      roles.forEach(role => {
+        keywordsSet.add(role);
+        const roleTokens = this.extractRoleTokens(role);
+        roleTokens.forEach(token => keywordsSet.add(token));
+      });
     }
     
-    return keywords;
+    // Convert Set to Array and filter out noise
+    return Array.from(keywordsSet)
+      .filter(kw => kw.length >= 2) // Remove single-char noise
+      .filter(kw => !this.isNoiseWord(kw)) // Remove common noise words
+      .slice(0, 20); // Limit to top 20 most relevant keywords
+  }
+  
+  /**
+   * Extract role tokens from job title
+   * E.g., "Senior Software Engineer" → ["Senior", "Software Engineer", "Software", "Engineer"]
+   */
+  private static extractRoleTokens(title: string): string[] {
+    const tokens: string[] = [];
+    const normalized = title.trim();
+    
+    // Common role modifiers
+    const modifiers = ['Senior', 'Junior', 'Lead', 'Principal', 'Staff', 'Associate', 'Chief', 'Head of', 'VP of', 'Director of'];
+    modifiers.forEach(mod => {
+      if (normalized.includes(mod)) {
+        tokens.push(mod);
+      }
+    });
+    
+    // Core role (remove modifiers)
+    let coreRole = normalized;
+    modifiers.forEach(mod => {
+      coreRole = coreRole.replace(new RegExp(mod, 'gi'), '').trim();
+    });
+    
+    if (coreRole && coreRole.length > 3) {
+      tokens.push(coreRole);
+      
+      // Also split core role into components (e.g., "Software Engineer" → "Software", "Engineer")
+      const components = coreRole.split(/\s+/).filter(c => c.length > 3);
+      tokens.push(...components);
+    }
+    
+    return tokens;
+  }
+  
+  /**
+   * Extract technical skills from text (job description, responsibilities, education)
+   * Matches common tech keywords
+   */
+  private static extractTechSkillsFromText(text: string): string[] {
+    const skills: string[] = [];
+    const lowerText = text.toLowerCase();
+    
+    // Tech skill patterns (comprehensive list)
+    const techKeywords = [
+      // Programming Languages
+      'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'ruby', 'go', 'rust', 'kotlin', 'swift', 'php', 'scala', 'r',
+      // Frontend
+      'react', 'angular', 'vue', 'nextjs', 'svelte', 'html', 'css', 'sass', 'tailwind', 'bootstrap', 'webpack',
+      // Backend
+      'nodejs', 'node.js', 'express', 'django', 'flask', 'spring', 'asp.net', 'laravel', 'fastapi', 'graphql', 'rest', 'api',
+      // Databases
+      'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'cassandra', 'dynamodb', 'oracle',
+      // Cloud & DevOps
+      'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'terraform', 'ansible', 'ci/cd', 'devops',
+      // Data Science & AI
+      'machine learning', 'deep learning', 'ai', 'tensorflow', 'pytorch', 'pandas', 'numpy', 'scikit-learn', 'nlp', 'computer vision',
+      // Mobile
+      'ios', 'android', 'react native', 'flutter', 'xamarin', 'mobile development',
+      // Other
+      'git', 'agile', 'scrum', 'microservices', 'blockchain', 'security', 'testing', 'automation'
+    ];
+    
+    techKeywords.forEach(keyword => {
+      const pattern = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (pattern.test(lowerText)) {
+        // Capitalize first letter for consistency
+        skills.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+      }
+    });
+    
+    return skills;
+  }
+  
+  /**
+   * Map education field of study to relevant job domains
+   * E.g., "Computer Science" → ["Software Development", "IT", "Programming", "Tech"]
+   */
+  private static mapEducationToDomains(fieldOfStudy: string): string[] {
+    const domains: string[] = [];
+    const field = fieldOfStudy.toLowerCase();
+    
+    // CS/IT related
+    if (field.includes('computer') || field.includes('software') || field.includes('information technology')) {
+      domains.push('Software Development', 'IT', 'Tech', 'Programming');
+    }
+    
+    // Data Science/Analytics
+    if (field.includes('data science') || field.includes('analytics') || field.includes('statistics')) {
+      domains.push('Data Science', 'Analytics', 'Machine Learning', 'AI');
+    }
+    
+    // Electronics/Electrical
+    if (field.includes('electronic') || field.includes('electrical')) {
+      domains.push('Electronics', 'Hardware', 'Embedded Systems', 'IoT');
+    }
+    
+    // Mechanical
+    if (field.includes('mechanical')) {
+      domains.push('Mechanical Engineering', 'Manufacturing', 'CAD', 'Design');
+    }
+    
+    // Business/Management
+    if (field.includes('business') || field.includes('management') || field.includes('mba')) {
+      domains.push('Management', 'Business Analysis', 'Strategy', 'Operations');
+    }
+    
+    // Finance/Economics
+    if (field.includes('finance') || field.includes('economics') || field.includes('accounting')) {
+      domains.push('Finance', 'Accounting', 'Banking', 'Investment');
+    }
+    
+    // Marketing/Sales
+    if (field.includes('marketing') || field.includes('sales')) {
+      domains.push('Marketing', 'Sales', 'Digital Marketing', 'Growth');
+    }
+    
+    // Design
+    if (field.includes('design') || field.includes('arts') || field.includes('ui') || field.includes('ux')) {
+      domains.push('Design', 'UX', 'UI', 'Graphics', 'Creative');
+    }
+    
+    return domains;
+  }
+  
+  /**
+   * Infer company domain from company name
+   * E.g., "Google" → "Tech", "Goldman Sachs" → "Finance"
+   */
+  private static inferCompanyDomain(companyName: string): string | null {
+    const name = companyName.toLowerCase();
+    
+    // Tech giants
+    if (name.includes('google') || name.includes('microsoft') || name.includes('amazon') || 
+        name.includes('facebook') || name.includes('meta') || name.includes('apple') ||
+        name.includes('netflix') || name.includes('uber') || name.includes('airbnb')) {
+      return 'Tech';
+    }
+    
+    // Finance
+    if (name.includes('goldman') || name.includes('jpmorgan') || name.includes('morgan stanley') ||
+        name.includes('bank') || name.includes('capital') || name.includes('finance')) {
+      return 'Finance';
+    }
+    
+    // Consulting
+    if (name.includes('mckinsey') || name.includes('bain') || name.includes('bcg') ||
+        name.includes('deloitte') || name.includes('accenture') || name.includes('consulting')) {
+      return 'Consulting';
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Infer domain from institution name
+   * E.g., "MIT" → "Tech", "IIT" → "Tech", "IIM" → "Management"
+   */
+  private static inferInstitutionDomain(institutionName: string): string | null {
+    const name = institutionName.toLowerCase();
+    
+    // Top tech schools
+    if (name.includes('iit') || name.includes('mit') || name.includes('stanford') ||
+        name.includes('carnegie') || name.includes('berkeley') || name.includes('caltech')) {
+      return 'Tech';
+    }
+    
+    // Top business schools
+    if (name.includes('iim') || name.includes('harvard business') || name.includes('wharton') ||
+        name.includes('insead') || name.includes('kellogg')) {
+      return 'Management';
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Check if word is noise (common filler words to exclude)
+   */
+  private static isNoiseWord(word: string): boolean {
+    const noiseWords = ['and', 'or', 'the', 'of', 'in', 'at', 'to', 'for', 'with', 'on', 'as', 'by', 'from', 'up', 'about', 'into', 'through', 'during'];
+    return noiseWords.includes(word.toLowerCase());
   }
 
   /**
@@ -373,8 +614,8 @@ export class AIJobRecommendationService {
       // Location preference
       location: profile.PreferredLocations?.split(',')[0]?.trim() || profile.City,
       
-      // Skills and role-based search
-      search: this.extractSkillsAndKeywords(profile, workExperience).join(' '),
+      // Skills and role-based search (ENHANCED: includes education analysis)
+      search: this.extractSkillsAndKeywords(profile, workExperience, education).join(' '),
       
       // Recent jobs (last 30 days)
       postedWithinDays: 30
@@ -400,8 +641,8 @@ export class AIJobRecommendationService {
    */
   private static getSmartDefaultFilters() {
     return {
-      jobTypeIds: '1,5', // Full-time and Internship
-      workplaceTypeIds: '1,2,3', // All workplace types
+      jobTypeIds: '438,437', // Full-time (438) and Internship (437) - NEW ReferenceMetadata IDs
+      workplaceTypeIds: '443,444,442', // Onsite (443), Remote (444), Hybrid (442) - NEW ReferenceMetadata IDs
       experienceMin: 0,
       experienceMax: 2, // Entry level
       postedWithinDays: 30

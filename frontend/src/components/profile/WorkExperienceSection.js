@@ -147,6 +147,12 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [saving, setSaving] = useState(false);
   // validation state
   const [validationErrors, setValidationErrors] = useState({});
+  
+  // Job Title dropdown
+  const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
+  const [jobTitleSearch, setJobTitleSearch] = useState('');
+  const [jobRoles, setJobRoles] = useState([]);
+  const [loadingJobRoles, setLoadingJobRoles] = useState(false);
 
   // Extended form fields
   const [form, setForm] = useState({
@@ -210,6 +216,23 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       (o.name && o.name.toLowerCase().includes(s))
     );
   };
+
+  const loadJobRoles = useCallback(async () => {
+    try {
+      setLoadingJobRoles(true);
+      const response = await refopenAPI.getReferenceMetadata('JobRole');
+      if (response.success && Array.isArray(response.data)) {
+        const sorted = response.data.sort((a, b) => 
+          (a.Value || '').localeCompare(b.Value || '')
+        );
+        setJobRoles(sorted);
+      }
+    } catch (error) {
+      console.error('Error loading job roles:', error);
+    } finally {
+      setLoadingJobRoles(false);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -279,7 +302,10 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setOrgResults([]);
     setManualOrgMode(false);
     setShowOrgPicker(false);
+    setJobTitleSearch('');
+    setShowJobTitleDropdown(false);
     setShowModal(true);
+    loadJobRoles();
   };
 
   const openEdit = (item) => {
@@ -310,7 +336,10 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setOrgResults([]);
     setManualOrgMode(false);
     setShowOrgPicker(false);
+    setJobTitleSearch('');
+    setShowJobTitleDropdown(false);
     setShowModal(true);
+    loadJobRoles();
   };
 
   const handleDeletePress = (item) => { setPendingDelete(item); setShowDeleteModal(true); };
@@ -494,27 +523,76 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
 
           <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Job Title *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.jobTitle && styles.errorInput]}
-              value={form.jobTitle}
-              onChangeText={(t) => { setForm({ ...form, jobTitle: t }); if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined })); }}
-              placeholder="e.g., Software Engineer"
-              placeholderTextColor={colors.gray400}
-              autoCapitalize="words"
-            />
+            <View style={{ position: 'relative', zIndex: 1000 }}>
+              <TextInput
+                style={[styles.input, validationErrors.jobTitle && styles.errorInput]}
+                value={jobTitleSearch || form.jobTitle}
+                onChangeText={(t) => { 
+                  setJobTitleSearch(t);
+                  setShowJobTitleDropdown(t.length > 0);
+                  setForm({ ...form, jobTitle: t }); 
+                  if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined })); 
+                }}
+                onFocus={() => {
+                  if (form.jobTitle) {
+                    setJobTitleSearch('');
+                  }
+                }}
+                placeholder="e.g., Software Engineer"
+                placeholderTextColor={colors.gray400}
+                autoCapitalize="words"
+              />
+              {showJobTitleDropdown && jobTitleSearch.length > 0 && (
+                <View style={styles.jobTitleDropdown}>
+                  {loadingJobRoles ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {jobRoles
+                        .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
+                        .slice(0, 15)
+                        .map((role) => (
+                          <TouchableOpacity
+                            key={role.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setForm({ ...form, jobTitle: role.Value });
+                              setJobTitleSearch('');
+                              setShowJobTitleDropdown(false);
+                              if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined }));
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                          </TouchableOpacity>
+                        ))
+                      }
+                      {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+            </View>
             {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
 
             {/* Company picker with inline manual entry */}
-            <Text style={styles.label}>Company</Text>
-            <TouchableOpacity
-              style={styles.orgPicker}
-              onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}
-            >
-              <Text style={styles.orgPickerText}>
-                {form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}
-              </Text>
-              <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray600} />
-            </TouchableOpacity>
+            <View style={{ position: 'relative', zIndex: 1 }}>
+              <Text style={styles.label}>Company</Text>
+              <TouchableOpacity
+                style={styles.orgPicker}
+                onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}
+              >
+                <Text style={styles.orgPickerText}>
+                  {form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}
+                </Text>
+                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray600} />
+              </TouchableOpacity>
+            </View>
 
             {showOrgPicker ? (
               <View style={styles.orgPickerModal}>
@@ -1038,5 +1116,48 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
     color: colors.white || '#FFFFFF',
     fontWeight: typography.weights?.bold || 'bold',
+  },
+  jobTitleDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 250,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  dropdownScroll: {
+    maxHeight: 250,
+  },
+  dropdownLoading: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  dropdownEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });

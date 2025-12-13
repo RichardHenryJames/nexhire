@@ -34,13 +34,13 @@ export class SavedJobsService {
         j.*, 
         o.Name as OrganizationName, 
         o.LogoURL as OrganizationLogo,
-        jt.Type as JobTypeName, 
-        wt.Type as WorkplaceTypeName
+        jt.Value as JobTypeName, 
+        wt.Value as WorkplaceTypeName
       FROM SavedJobs sj
       INNER JOIN Jobs j ON sj.JobID = j.JobID
       INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-      INNER JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
+      INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+      INNER JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
       WHERE sj.JobID = @param0 AND sj.ApplicantID = @param1;
     `;
     const res = await dbService.executeQuery(q, [jobId, applicantId]);
@@ -65,13 +65,13 @@ export class SavedJobsService {
         j.*, 
         o.Name as OrganizationName, 
         o.LogoURL as OrganizationLogo,
-        jt.Type as JobTypeName, 
-        wt.Type as WorkplaceTypeName
+        jt.Value as JobTypeName, 
+        wt.Value as WorkplaceTypeName
       FROM SavedJobs sj
       INNER JOIN Jobs j ON sj.JobID = j.JobID
       INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      INNER JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
-      INNER JOIN WorkplaceTypes wt ON j.WorkplaceTypeID = wt.WorkplaceTypeID
+      INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+      INNER JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
       WHERE sj.ApplicantID = @param0
       ORDER BY sj.SavedAt DESC
       OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY

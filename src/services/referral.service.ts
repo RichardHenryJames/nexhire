@@ -172,11 +172,7 @@ export class ReferralService {
                 });
             }
 
-            // Check if user has quota available
-            const eligibility = await this.checkReferralEligibility(applicantId);
-            if (!eligibility.isEligible) {
-                throw new ValidationError(eligibility.reason || 'Not eligible for referrals');
-            }
+            // ✅ REMOVED: No longer checking eligibility (daily quota) - wallet-based model only
 
             // ✅ NEW SCHEMA: Determine referral type from presence of ExtJobID vs JobID
             const isExternal = !!dto.extJobID && !dto.jobID; // External if ExtJobID provided and JobID is null
@@ -905,42 +901,27 @@ export class ReferralService {
 
     /**
      * Check if applicant is eligible for referrals
+     * ✅ UPDATED: Wallet-based model - no daily quota checks
      */
     static async checkReferralEligibility(applicantId: string): Promise<ReferralEligibility> {
         try {
-            // Get current subscription
-            const subscription = await this.getCurrentSubscription(applicantId);
-            
-            if (!subscription) {
-                // Check if they have any free quota left (default 5 per day)
-                const todayUsage = await this.getTodayReferralUsage(applicantId);
-                return {
-                    isEligible: todayUsage < 5,
-                    reason: todayUsage >= 5 ? 'Daily free quota (5) exceeded. Please upgrade your plan.' : undefined,
-                    hasActiveSubscription: false,
-                    dailyQuotaRemaining: Math.max(0, 5 - todayUsage),
-                    canRefer: false // No subscription means they can't refer others
-                };
-            }
-            
-            // Check subscription quota
-            const todayUsage = await this.getTodayReferralUsage(applicantId);
-            const quotaRemaining = (subscription.ReferralsPerDay || 0) - todayUsage;
+            // ✅ NEW: Wallet-based model - always eligible (wallet check done separately in createReferralRequest)
+            // No subscription or daily quota checks needed
             
             return {
-                isEligible: quotaRemaining > 0,
-                reason: quotaRemaining <= 0 ? `Daily quota (${subscription.ReferralsPerDay}) exceeded` : undefined,
-                hasActiveSubscription: true,
-                dailyQuotaRemaining: quotaRemaining,
-                canRefer: true // Active subscription allows referring
+                isEligible: true, // Eligibility is based on wallet balance, checked during request creation
+                reason: undefined,
+                hasActiveSubscription: false, // Subscriptions no longer used
+                dailyQuotaRemaining: 999, // Unlimited - wallet-based
+                canRefer: false // canRefer refers to being a referrer, not a requester
             };
         } catch (error) {
             console.error('Error checking referral eligibility:', error);
             return {
-                isEligible: false,
-                reason: 'Error checking eligibility',
+                isEligible: true, // Default to true - wallet check will handle it
+                reason: undefined,
                 hasActiveSubscription: false,
-                dailyQuotaRemaining: 0,
+                dailyQuotaRemaining: 999,
                 canRefer: false
             };
         }

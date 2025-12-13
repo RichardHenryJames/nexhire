@@ -98,6 +98,12 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [orgLoading, setOrgLoading] = useState(false);
   const [manualOrgMode, setManualOrgMode] = useState(false);
 
+  // NEW: Job title dropdown state
+  const [jobRoles, setJobRoles] = useState([]);
+  const [loadingJobRoles, setLoadingJobRoles] = useState(false);
+  const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
+  const [jobTitleSearch, setJobTitleSearch] = useState('');
+
   // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
@@ -113,6 +119,27 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }));
     }
   }, [isGoogleUser, googleUser]);
+
+  // NEW: Load job roles from ReferenceMetadata
+  useEffect(() => {
+    const loadJobRoles = async () => {
+      try {
+        setLoadingJobRoles(true);
+        const response = await refopenAPI.getReferenceMetadata('JobRole');
+        if (response.success && Array.isArray(response.data)) {
+          const sorted = response.data.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          );
+          setJobRoles(sorted);
+        }
+      } catch (error) {
+        console.error('Error loading job roles:', error);
+      } finally {
+        setLoadingJobRoles(false);
+      }
+    };
+    loadJobRoles();
+  }, []);
 
   // NEW: Pre-populate current company from work experience data
   useEffect(() => {
@@ -646,16 +673,16 @@ styles.selectionButton,
 
             {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
             
-            {/* 🎁 NEW: Referral Code Input (Optional) */}
+            {/* 🎁 NEW: Invite Code Input (Optional) */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
-                Referral Code (Optional)
+                Invite Code (Optional)
               </Text>
               <View style={styles.referralCodeContainer}>
                 <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.referralCodeIcon} />
                 <TextInput
                   style={[styles.input, styles.referralCodeInput, errors.referralCode && styles.inputError]}
-                  placeholder="Enter referral code"
+                  placeholder="Enter invite code"
                   placeholderTextColor={colors.gray400}
                   value={formData.referralCode}
                   onChangeText={(text) => {
@@ -677,7 +704,7 @@ styles.selectionButton,
               <View style={styles.referralCodeHint}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.success} />
                 <Text style={styles.referralCodeHintText}>
-                  Have a referral code? Get ₹50 bonus when you sign up!
+                  Have an invite code? Get ₹50 bonus when you sign up!
                 </Text>
               </View>
             </View>
@@ -729,23 +756,92 @@ styles.selectionButton,
                   </Text>
                 </View>
                 
-                {renderInput('jobTitle', 'Job Title', false, 'default', true)}
+                {/* Job Title with searchable dropdown */}
+                <View style={[styles.inputContainer, { position: 'relative', zIndex: 1000 }]}>
+                  <Text style={styles.inputLabel}>
+                    Job Title <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input, 
+                      errors.jobTitle && styles.inputError
+                    ]}
+                    placeholder="e.g., Software Engineer, Marketing Manager"
+                    placeholderTextColor={colors.gray400}
+                    value={jobTitleSearch || formData.jobTitle}
+                    onChangeText={(text) => {
+                      setJobTitleSearch(text);
+                      setFormData({ ...formData, jobTitle: text });
+                      setShowJobTitleDropdown(text.length > 0);
+                      if (errors.jobTitle) {
+                        setErrors({ ...errors, jobTitle: null });
+                      }
+                    }}
+                    onFocus={() => {
+                      if (formData.jobTitle) {
+                        setJobTitleSearch('');
+                      }
+                    }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                  {showJobTitleDropdown && jobTitleSearch.length > 0 && (
+                    <View style={styles.dropdownContainer}>
+                      {loadingJobRoles ? (
+                        <View style={styles.dropdownLoading}>
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        </View>
+                      ) : (
+                        <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                          {jobRoles
+                            .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
+                            .slice(0, 15)
+                            .map((role) => (
+                              <TouchableOpacity
+                                key={role.ReferenceID}
+                                style={styles.dropdownItem}
+                                onPress={() => {
+                                  setFormData({ ...formData, jobTitle: role.Value });
+                                  setJobTitleSearch('');
+                                  setShowJobTitleDropdown(false);
+                                  if (errors.jobTitle) {
+                                    setErrors({ ...errors, jobTitle: null });
+                                  }
+                                }}
+                              >
+                                <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                              </TouchableOpacity>
+                            ))
+                          }
+                          {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+                            <View style={styles.dropdownEmpty}>
+                              <Text style={styles.dropdownEmptyText}>No matches - keep typing</Text>
+                            </View>
+                          )}
+                        </ScrollView>
+                      )}
+                    </View>
+                  )}
+                  {errors.jobTitle && <Text style={styles.errorText}>{errors.jobTitle}</Text>}
+                </View>
                 
                 {/* ✅ REPLACED: DatePicker for start date */}
-                <DatePicker
-                  label="Start Date"
-                  value={formData.startDate}
-                  onChange={(date) => {
-                    setFormData({ ...formData, startDate: date });
-                    if (errors.startDate) {
-                      setErrors({ ...errors, startDate: null });
-                    }
-                  }}
-                  placeholder="Select start date"
-                  maximumDate={new Date()} // Can't start in the future
-                  required={true}
-                  error={errors.startDate}
-                />
+                <View style={{ position: 'relative', zIndex: 1 }}>
+                  <DatePicker
+                    label="Start Date"
+                    value={formData.startDate}
+                    onChange={(date) => {
+                      setFormData({ ...formData, startDate: date });
+                      if (errors.startDate) {
+                        setErrors({ ...errors, startDate: null });
+                      }
+                    }}
+                    placeholder="Select start date"
+                    maximumDate={new Date()} // Can't start in the future
+                    required={true}
+                    error={errors.startDate}
+                  />
+                </View>
               </>
             )}
 
@@ -1371,5 +1467,49 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Job title dropdown styles
+  dropdownContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 250,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  dropdownScroll: {
+    maxHeight: 250,
+  },
+  dropdownLoading: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  dropdownEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });

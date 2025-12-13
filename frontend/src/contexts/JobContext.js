@@ -32,12 +32,17 @@ export const JobProvider = ({ children }) => {
   const loadReferenceData = async () => {
     try {
       const [jobTypesResult, currenciesResult] = await Promise.all([
-        refopenAPI.getJobTypes(),
+        refopenAPI.getReferenceMetadata('JobType'),
         refopenAPI.getCurrencies(),
       ]);
 
-      if (jobTypesResult.success) {
-        setJobTypes(jobTypesResult.data);
+      if (jobTypesResult.success && jobTypesResult.data) {
+        // Transform ReferenceMetadata format
+        const transformedJobTypes = jobTypesResult.data.map(item => ({
+          JobTypeID: item.ReferenceID,
+          Type: item.Value
+        }));
+        setJobTypes(transformedJobTypes);
       }
 
       if (currenciesResult.success) {

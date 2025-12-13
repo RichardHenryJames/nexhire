@@ -233,7 +233,7 @@ export class JobApplicationService {
                     ja.AvailableFromDate,
                     j.Title as JobTitle,
                     j.JobTypeID,
-                    jt.Type as JobTypeName,
+                    jt.Value as JobTypeName,
                     o.Name as CompanyName,
                     o.LogoURL as OrganizationLogo,
                     o.Website as OrganizationWebsite,
@@ -245,7 +245,7 @@ export class JobApplicationService {
                 INNER JOIN Jobs j ON ja.JobID = j.JobID
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-                LEFT JOIN JobTypes jt ON j.JobTypeID = jt.JobTypeID
+                LEFT JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
                 LEFT JOIN Currencies c ON ja.ExpectedCurrencyID = c.CurrencyID
                 WHERE a.UserID = '${userId}' AND ja.StatusID != 6
                 ORDER BY ja.SubmittedAt DESC

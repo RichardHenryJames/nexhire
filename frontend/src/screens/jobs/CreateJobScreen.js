@@ -59,25 +59,38 @@ export default function CreateJobScreen({ navigation }) {
 
   const loadReferenceData = async () => {
     try {
-      const [jt, wt, cur] = await Promise.all([
-        refopenAPI.getJobTypes(),
-        refopenAPI.getWorkplaceTypes(),
+      // ✅ OPTIMIZED: Use bulk endpoint to fetch multiple types in one call
+      const [refData, cur] = await Promise.all([
+        refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
         refopenAPI.getCurrencies()
       ]);
 
-      if (jt?.success) {
-        setJobTypes(jt.data);
-        if (!jobData.jobTypeID && jt.data.length) {
-          setJobData(prev => ({ ...prev, jobTypeID: jt.data[0].JobTypeID }));
+      // Handle JobType data
+      if (refData?.success && refData.data?.JobType) {
+        const transformedJobTypes = refData.data.JobType.map(item => ({
+          JobTypeID: item.ReferenceID,
+          Type: item.Value
+        }));
+        setJobTypes(transformedJobTypes);
+        if (!jobData.jobTypeID && transformedJobTypes.length) {
+          setJobData(prev => ({ ...prev, jobTypeID: transformedJobTypes[0].JobTypeID }));
         }
       }
-      if (wt?.success) {
-        const list = wt.data.map(w => ({ ...w, Normalized: (w.Type || '').trim() }));
-        setWorkplaceTypes(list);
-        if (!jobData.workplaceType && list.length) {
-          setJobData(prev => ({ ...prev, workplaceType: list[0].Normalized }));
+
+      // Handle WorkplaceType data
+      if (refData?.success && refData.data?.WorkplaceType) {
+        const transformedWorkplaceTypes = refData.data.WorkplaceType.map(item => ({
+          WorkplaceTypeID: item.ReferenceID,
+          Type: item.Value,
+          Normalized: item.Value.trim()
+        }));
+        setWorkplaceTypes(transformedWorkplaceTypes);
+        if (!jobData.workplaceType && transformedWorkplaceTypes.length) {
+          setJobData(prev => ({ ...prev, workplaceType: transformedWorkplaceTypes[0].Normalized }));
         }
       }
+
+      // Handle currencies
       if (cur?.success) {
         const sorted = [...cur.data].sort((a,b)=>a.Code.localeCompare(b.Code));
         setCurrencies(sorted);
