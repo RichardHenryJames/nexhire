@@ -460,16 +460,6 @@ export default function ChatScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
   // Handle back navigation - works even after hard refresh
   const handleBackPress = () => {
     // Check if we can go back in the navigation history
@@ -520,7 +510,11 @@ export default function ChatScreen() {
               cursor: "pointer",
             }}
             onClick={() =>
-              navigation.navigate("ViewProfile", { userId: otherUserId })
+              navigation.navigate("ViewProfile", { 
+                userId: otherUserId,
+                userName: otherUserName,
+                userProfilePic: otherUserProfile?.profilePictureUrl || otherUserProfilePic
+              })
             }
           >
             {/* Profile Picture */}
@@ -585,7 +579,24 @@ export default function ChatScreen() {
             backgroundColor: colors.gray50,
           }}
         >
-          {messages.length === 0 ? (
+          {loading ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+              }}
+            >
+              <ActivityIndicator size="large" color={colors.primary} />
+              <div
+                style={{ fontSize: 14, color: colors.gray500, marginTop: 16 }}
+              >
+                Loading messages...
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <div
               style={{
                 display: "flex",
@@ -831,7 +842,11 @@ export default function ChatScreen() {
         <TouchableOpacity
           style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
           onPress={() =>
-            navigation.navigate("ViewProfile", { userId: otherUserId })
+            navigation.navigate("ViewProfile", { 
+              userId: otherUserId,
+              userName: otherUserName,
+              userProfilePic: otherUserProfile?.profilePictureUrl || otherUserProfilePic
+            })
           }
         >
           {/* Profile Picture */}
@@ -886,17 +901,24 @@ export default function ChatScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="chatbubbles-outline"
-              size={64}
-              color={colors.gray300}
-            />
-            <Text style={styles.emptyText}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>
-              Send a message to start the conversation
-            </Text>
-          </View>
+          loading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.emptySubtext}>Loading messages...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="chatbubbles-outline"
+                size={64}
+                color={colors.gray300}
+              />
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>
+                Send a message to start the conversation
+              </Text>
+            </View>
+          )
         }
       />
 

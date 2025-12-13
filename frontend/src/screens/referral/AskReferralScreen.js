@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
   Image,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,6 +33,11 @@ const [loadingCompanies, setLoadingCompanies] = useState(false);
 const [submitting, setSubmitting] = useState(false);
   
 const [resumes, setResumes] = useState([]);
+
+// 🎯 NEW: Dynamic Fortune 500 company showcase
+const [fortune500Companies, setFortune500Companies] = useState([]);
+const [currentCompanyIndex, setCurrentCompanyIndex] = useState(0);
+const fadeAnim = useState(new Animated.Value(1))[0];
 
 // NEW: Company/Organization state
 const [companies, setCompanies] = useState([]);
@@ -106,7 +112,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
   useEffect(() => {
     loadWalletBalance(); // Load immediately for banner
     loadResumesLazily(); // Load resumes after a delay
-    loadCompaniesInBackground(); // Load companies in background
+    loadCompaniesInBackground(); // Load companies in background (includes Fortune 500)
     
     // ✅ NEW: Auto-select organization if passed from route params
     if (preSelectedOrganization) {
@@ -115,6 +121,65 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       setFormData(prev => ({ ...prev, companyName: preSelectedOrganization.name }));
     }
   }, [preSelectedOrganization]);
+
+  // 🎯 NEW: Filter and rotate Fortune 500 company logos with random timing
+  useEffect(() => {
+    // Filter Fortune 500 companies with logos from already loaded companies
+    const f500WithLogos = companies
+      .filter(org => org.isFortune500 && org.logoURL);
+    
+    if (f500WithLogos.length === 0) return;
+    
+    // Check if current time is between 9 AM and 1 AM (active hours)
+    const checkActiveHours = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      // Show between 9 AM (9) and 1 AM (1) - that's 9-23 (11 PM) and 0 (midnight)
+      return hour >= 9 || hour <= 1;
+    };
+    
+    // Only show during active hours
+    if (!checkActiveHours()) return;
+    
+    // Shuffle for random display (only once when companies load)
+    if (fortune500Companies.length === 0) {
+      const shuffled = [...f500WithLogos].sort(() => Math.random() - 0.5);
+      setFortune500Companies(shuffled);
+    }
+
+    const rotateCompany = () => {
+      // Check active hours before rotating
+      if (!checkActiveHours()) return;
+      
+      // Fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        // Change company
+        setCurrentCompanyIndex((prevIndex) => 
+          (prevIndex + 1) % fortune500Companies.length
+        );
+        // Fade in
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+        
+        // Schedule next rotation with random delay (0.5-5 seconds)
+        const randomDelay = Math.floor(Math.random() * 4500) + 500; // 500-5000ms
+        setTimeout(rotateCompany, randomDelay);
+      });
+    };
+
+    // Start first rotation with random delay (0.5-5 seconds)
+    const initialDelay = Math.floor(Math.random() * 4500) + 500; // 500-5000ms
+    const timeout = setTimeout(rotateCompany, initialDelay);
+
+    return () => clearTimeout(timeout);
+  }, [companies, fortune500Companies, fadeAnim]);
 
   // Debug useEffect to log form state changes
   useEffect(() => {
@@ -470,26 +535,43 @@ const [showResumeModal, setShowResumeModal] = useState(false);
           </View>
         )}
 
-        {/* ✅ IMPROVED: More compelling and catchy description */}
+        {/* ✅ NEW: Dynamic Fortune 500 Company Showcase */}
         <View style={styles.introSection}>
-          <Text style={styles.introTitle}>🚀 Boost Your Job Application Success Rate</Text>
-          <Text style={styles.introText}>
-            Get referred by current employees and increase your chances of landing your dream job by up to 5x! Our platform connects you with professionals who can advocate for your skills and help you stand out from hundreds of other applicants.
+          <Text style={styles.introTitle}>🚀 Join Thousands Getting Referred</Text>
+          <Text style={styles.introSubtitle}>
+            Top companies accept referrals every day
           </Text>
-          <View style={styles.benefitsContainer}>
-            <View style={styles.benefitItem}>
-              <Ionicons name="trending-up" size={16} color={colors.success} />
-              <Text style={styles.benefitText}>5x higher interview rate</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="people" size={16} color={colors.primary} />
-              <Text style={styles.benefitText}>Skip the ATS black hole</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="flash" size={16} color={colors.warning} />
-              <Text style={styles.benefitText}>Faster hiring process</Text>
-            </View>
-          </View>
+          
+          {/* Animated Company Logo Display */}
+          {fortune500Companies.length > 0 && (
+            <Animated.View style={[styles.companyShowcase, { opacity: fadeAnim }]}>
+              <View style={styles.showcaseContent}>
+                <View style={styles.showcaseLogoContainer}>
+                  <Image
+                    source={{ uri: fortune500Companies[currentCompanyIndex]?.logoURL }}
+                    style={styles.showcaseLogo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.showcaseTextContainer}>
+                  <Text style={styles.showcaseText}>
+                    Referral submitted for
+                  </Text>
+                  <Text style={styles.showcaseCompanyName}>
+                    {fortune500Companies[currentCompanyIndex]?.name}
+                  </Text>
+                </View>
+                <View style={styles.showcaseCheckmark}>
+                  <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+                </View>
+              </View>
+            </Animated.View>
+          )}
+          
+          {/* Value Proposition - Short & Impactful */}
+          <Text style={styles.valueText}>
+            Get referrals from employees working at your dream company who are ready to refer candidates. <Text style={styles.valueHighlight}>Increase your chances by 5x.</Text>
+          </Text>
         </View>
 
         {/* Form */}
@@ -532,85 +614,86 @@ const [showResumeModal, setShowResumeModal] = useState(false);
             )}
           </View>
 
-          {/* Job ID */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Job ID <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.jobId && styles.inputError]}
-              placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobId}
-              onChangeText={(value) => updateFormData('jobId', value)}
-              maxLength={100}
-            />
-            {errors.jobId && (
-              <Text style={styles.errorText}>{errors.jobId}</Text>
-            )}
-            <Text style={styles.helperText}>
-              Enter the job ID or reference number from the company's job posting
-            </Text>
+          {/* Show rest of form only after company is selected */}
+          {selectedCompany && (
+            <>
+              {/* Job ID */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Job ID <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.jobId && styles.inputError]}
+                  placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobId}
+                  onChangeText={(value) => updateFormData('jobId', value)}
+                  maxLength={100}
+                />
+                {errors.jobId && (
+                  <Text style={styles.errorText}>{errors.jobId}</Text>
+                )}
+                <Text style={styles.helperText}>
+                  Enter the job ID or reference number from the company's job posting
+                </Text>
+              </View>
+
+              {/* Job Title */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Job Title <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.jobTitle && styles.inputError]}
+                  placeholder="e.g., Senior Software Engineer, Product Manager"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobTitle}
+                  onChangeText={(value) => updateFormData('jobTitle', value)}
+                  maxLength={200}
+                />
+                {errors.jobTitle && (
+                  <Text style={styles.errorText}>{errors.jobTitle}</Text>
+                )}
+              </View>
+
+              {/* Job URL */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Job URL</Text>
+                <TextInput
+                  style={[styles.input, errors.jobUrl && styles.inputError]}
+                  placeholder="https://careers.company.com/job/12345"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobUrl}
+                  onChangeText={(value) => updateFormData('jobUrl', value)}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                />
+                {errors.jobUrl && (
+                  <Text style={styles.errorText}>{errors.jobUrl}</Text>
+                )}
           </View>
 
-          {/* Job Title */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Job Title <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.jobTitle && styles.inputError]}
-              placeholder="e.g., Senior Software Engineer, Product Manager"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobTitle}
-              onChangeText={(value) => updateFormData('jobTitle', value)}
-              maxLength={200}
-            />
-            {errors.jobTitle && (
-              <Text style={styles.errorText}>{errors.jobTitle}</Text>
-            )}
-          </View>
-
-          {/* Job URL (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Job URL (Optional)</Text>
-            <TextInput
-              style={[styles.input, errors.jobUrl && styles.inputError]}
-              placeholder="https://careers.company.com/job/12345"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobUrl}
-              onChangeText={(value) => updateFormData('jobUrl', value)}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-            {errors.jobUrl && (
-              <Text style={styles.errorText}>{errors.jobUrl}</Text>
-            )}
-          </View>
-
-          {/* Referral Message */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Referral Message</Text>
-            <TextInput
-              style={[styles.textArea, errors.referralMessage && styles.inputError]}
-              placeholder="Tell the referrer about yourself and why you're interested in this role... 
-              
-Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns with my passion for building scalable web applications. I'd be grateful for any referral help!'"
-              placeholderTextColor={colors.gray500}
-              value={formData.referralMessage}
-              onChangeText={(value) => updateFormData('referralMessage', value)}
-              multiline
-              numberOfLines={4}
-              maxLength={1000}
-              textAlignVertical="top"
-            />
-            {errors.referralMessage && (
-              <Text style={styles.errorText}>{errors.referralMessage}</Text>
-            )}
-            <Text style={styles.helperText}>
-              Optional: Help referrers understand your background and interest in the role (max 1000 characters)
-            </Text>
-          </View>
+              {/* Referral Message */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Referral Message</Text>
+                <TextInput
+                  style={[styles.textArea, errors.referralMessage && styles.inputError]}
+                  placeholder="Tell the referrer about yourself and why you're interested in this role..."
+                  placeholderTextColor={colors.gray500}
+                  value={formData.referralMessage}
+                  onChangeText={(value) => updateFormData('referralMessage', value)}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={1000}
+                  textAlignVertical="top"
+                />
+                {errors.referralMessage && (
+                  <Text style={styles.errorText}>{errors.referralMessage}</Text>
+                )}
+                <Text style={styles.helperText}>
+                  Help referrers understand your background and interest in the role (max 1000 characters)
+                </Text>
+              </View>
 
           {/* Resume Selection - ✅ Shows loading state */}
           <View style={styles.inputGroup}>
@@ -680,6 +763,8 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
               <Text style={styles.errorText}>{errors.resume}</Text>
             )}
           </View>
+            </>
+          )}
         </View>
 
         {/* Enhanced Info Card */}
@@ -688,11 +773,10 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>How our referral system works:</Text>
             <Text style={styles.infoText}>
-              1. Submit your request with job details (₹50 deducted from wallet){'\n'}
-              2. Employees get notified and can review your profile{'\n'}
-              3. They refer you internally and earn rewards{'\n'}
-              4. You get fast-tracked in the hiring process{'\n'}
-              5. Land the job with insider advocacy!
+              1. Submit your referral request{'\n'}
+              2. Employees at that company get notified instantly{'\n'}
+              3. Increase your chances with employees ready to refer{'\n'}
+              4. Get fast-tracked in the hiring process through internal referrals
             </Text>
           </View>
         </View>
@@ -901,17 +985,88 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   introTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.primary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  introText: {
+  introSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  
+  // 🎯 NEW: Company showcase styles
+  companyShowcase: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  showcaseContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  showcaseLogoContainer: {
+    width: 56,
+    height: 56,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  showcaseLogo: {
+    width: 48,
+    height: 48,
+  },
+  showcaseTextContainer: {
+    flex: 1,
+  },
+  showcaseText: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
+    marginBottom: 2,
+  },
+  showcaseCompanyName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+  },
+  showcaseCheckmark: {
+    marginLeft: 8,
+  },
+  
+  valueText: {
     fontSize: typography.sizes.md,
     color: colors.gray700,
     textAlign: 'center',
+    marginTop: 16,
     lineHeight: 22,
+  },
+  
+  valueHighlight: {
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+  },
+  
+  introText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray700,
+    textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 16,
   },
   
@@ -1221,6 +1376,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+    outlineStyle: 'none',
   },
   modalLoadingContainer: {
     flex: 1,
@@ -1347,3 +1503,4 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
 });
+

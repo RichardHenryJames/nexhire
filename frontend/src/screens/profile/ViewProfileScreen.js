@@ -20,11 +20,11 @@ import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { colors } from '../../styles/theme';
 
 export default function ViewProfileScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { user } = useAuth();
+const navigation = useNavigation();
+const route = useRoute();
+const { user } = useAuth();
   
-  const { userId, userName: initialUserName } = route.params;
+const { userId, userName: initialUserName, userProfilePic: initialProfilePic } = route.params;
   
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -148,11 +148,49 @@ export default function ViewProfileScreen() {
   };
 
   if (loading) {
+    // Show header and basic profile info immediately while loading details
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerMenuButton}>
+            <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.scrollView}>
+          {/* Show basic profile header immediately with available data */}
+          <UserProfileHeader
+            user={{
+              UserID: userId,
+              FirstName: initialUserName?.split(' ')[0] || '',
+              LastName: initialUserName?.split(' ').slice(1).join(' ') || '',
+              ProfilePictureURL: initialProfilePic || null,
+            }}
+            profile={{
+              firstName: initialUserName?.split(' ')[0] || '',
+              lastName: initialUserName?.split(' ').slice(1).join(' ') || '',
+              profilePictureURL: initialProfilePic || null,
+            }}
+            jobSeekerProfile={{}}
+            userType="JobSeeker"
+            onProfileUpdate={null}
+            showStats={false}
+            showProgress={false}
+          />
+
+          {/* Loading indicator for the rest of the profile */}
+          <View style={styles.loadingDetailsContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingDetailsText}>Loading profile details...</Text>
+          </View>
+        </ScrollView>
       </View>
-  );
+    );
   }
 
   // ?? NEW: Beautiful error screens
@@ -501,6 +539,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.white,
+  },
+  loadingDetailsContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    marginTop: 12,
+  },
+  loadingDetailsText: {
+    fontSize: 16,
+    color: colors.gray600,
+    marginTop: 16,
   },
   errorContainer: {
     flex: 1,

@@ -199,6 +199,60 @@ function Get-LinkedInUrl {
         return $null
     }
 
+    # Generate LinkedIn company URL
+    $companySlug = $CompanyName.ToLower() -replace '\s+', '-' -replace '[^a-z0-9\-]', ''
+    return "https://www.linkedin.com/company/$companySlug"
+}
+
+# 🛡️ NEW: Validate if website URL matches company name
+function Test-WebsiteMatchesCompany {
+    param(
+        [string]$WebsiteUrl,
+        [string]$CompanyName
+    )
+
+    if ([string]::IsNullOrEmpty($WebsiteUrl) -or [string]::IsNullOrEmpty($CompanyName)) {
+        return $false
+    }
+
+    try {
+        $uri = [System.Uri]$WebsiteUrl
+        $hostname = $uri.Host.ToLower() -replace '^www\.', ''
+        
+        # ❌ Block search engines and wrong domains
+        $blockedDomains = @('duckduckgo.com', 'google.com', 'bing.com', 'yahoo.com')
+        if ($blockedDomains -contains $hostname) {
+            Write-Host "         ⚠️ Blocked search engine domain: $hostname" -ForegroundColor Yellow
+            return $false
+        }
+        
+        # ✅ Validate domain matches company name
+        $companySlug = $CompanyName.ToLower() -replace '[^a-z0-9]', ''
+        $domainSlug = $hostname -replace '\.(com|io|co|net|org|ai|app)$', '' -replace '[^a-z0-9]', ''
+        
+        # Check if domain contains at least first 4 chars of company name
+        $minMatchLength = [Math]::Min($companySlug.Length, 4)
+        $hasMatch = $domainSlug.Contains($companySlug.Substring(0, $minMatchLength)) -or 
+                    $companySlug.Contains($domainSlug.Substring(0, [Math]::Min($domainSlug.Length, 4)))
+        
+        if (-not $hasMatch -and $companySlug.Length -gt 3) {
+            Write-Host "         ⚠️ Domain '$hostname' doesn't match company '$CompanyName'" -ForegroundColor Yellow
+            return $false
+        }
+        
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Get-LinkedInUrl {
+    param([string]$CompanyName)
+
+  if ([string]::IsNullOrEmpty($CompanyName)) {
+        return $null
+    }
+
     $sanitized = $CompanyName.ToLower() `
         -replace '[^a-z0-9\s]', '' `
         -replace '\s+', '-' `
@@ -218,30 +272,9 @@ function Get-OrganizationsToEnrich {
         [bool]$OnlyMissing
     )
 
-    $query = if ($OnlyMissing) {
-  @"
-SELECT
-    OrganizationID,
-    Name,
-Website,
-    LogoURL,
-    LinkedInProfile,
-    Description,
-    Industry,
-    Headquarters
-FROM Organizations
-WHERE IsActive = 1
-  AND (
-    Website IS NULL OR
-    LogoURL IS NULL OR
-    LinkedInProfile IS NULL OR
-    Description IS NULL OR
-    Industry IS NULL
-  )
-ORDER BY CreatedAt DESC
-"@
-    } else {
-        @"
+    # ✅ OPTIMIZED: Always filter to only organizations with missing data
+    # No need to iterate over fully enriched organizations
+    $query = @"
 SELECT
     OrganizationID,
     Name,
@@ -253,9 +286,15 @@ SELECT
     Headquarters
 FROM Organizations
 WHERE IsActive = 1
+  AND (
+    Website IS NULL OR Website = '' OR
+    LogoURL IS NULL OR LogoURL = '' OR
+    LinkedInProfile IS NULL OR LinkedInProfile = '' OR
+    Description IS NULL OR Description = '' OR
+    Industry IS NULL OR Industry = ''
+  )
 ORDER BY CreatedAt DESC
 "@
-    }
 
     return Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -QueryTimeout 60
 }
@@ -384,10 +423,15 @@ function Enrich-Organization {
 
         $website = Search-CompanyWebsite -CompanyName $Organization.Name
         if ($website) {
-     $updates.Website = $website
-    Write-Host "         ✅ Found: $website" -ForegroundColor Green
-          $enrichmentCount++
-   }
+            # ✅ NEW: Validate website matches company name before saving
+            if (Test-WebsiteMatchesCompany -WebsiteUrl $website -CompanyName $Organization.Name) {
+                $updates.Website = $website
+                Write-Host "         ✅ Found: $website" -ForegroundColor Green
+                $enrichmentCount++
+            } else {
+                Write-Host "         ❌ Rejected mismatched website: $website" -ForegroundColor Red
+            }
+        }
 
         Start-Sleep -Milliseconds $ApiRateLimitDelayMs
     }
@@ -398,18 +442,26 @@ function Enrich-Organization {
     if ([string]::IsNullOrEmpty($Organization.LogoURL) -and -not $SkipLogos -and $websiteToUse) {
         Write-Host "      🎨 Fetching logo..." -ForegroundColor Gray
 
-$logo = Get-ClearbitLogo -Domain $websiteToUse
+        $logo = Get-ClearbitLogo -Domain $websiteToUse
+
         if ($logo) {
-          $updates.LogoURL = $logo
-    Write-Host "         ✅ Found: Logo" -ForegroundColor Green
-        $enrichmentCount++
+            $updates.LogoURL = $logo
+            Write-Host "         ✅ Found: $logo" -ForegroundColor Green
+            $enrichmentCount++
+        } else {
+            Write-Host "         ℹ️ No logo found" -ForegroundColor Yellow
         }
 
         Start-Sleep -Milliseconds 500
     }
 
-    # 3. Get comprehensive data from Clearbit if API key provided
-    if ($websiteToUse -and -not [string]::IsNullOrEmpty($ClearbitApiKey)) {
+    # 3. Get comprehensive data from Clearbit if API key provided AND we need data
+    $needsClearbitData = ([string]::IsNullOrEmpty($Organization.Description) -or 
+                          [string]::IsNullOrEmpty($Organization.Industry) -or 
+                          [string]::IsNullOrEmpty($Organization.Headquarters) -or
+                          [string]::IsNullOrEmpty($Organization.LinkedInProfile))
+    
+    if ($websiteToUse -and -not [string]::IsNullOrEmpty($ClearbitApiKey) -and $needsClearbitData) {
    Write-Host "      📊 Fetching company data from Clearbit..." -ForegroundColor Gray
         Start-Sleep -Milliseconds $ApiRateLimitDelayMs
 
@@ -531,7 +583,39 @@ for ($i = 0; $i -lt $organizations.Count; $i += $BatchSize) {
 
     foreach ($org in $batch) {
         try {
+            # ✅ SMART SKIP: Check if organization needs enrichment
+            $needsEnrichment = $false
+            $missingFields = @()
+            
+            if ([string]::IsNullOrWhiteSpace($org.Website) -and -not $SkipWebsites) { 
+                $needsEnrichment = $true
+                $missingFields += "Website"
+            }
+            if ([string]::IsNullOrWhiteSpace($org.LogoURL) -and -not $SkipLogos) { 
+                $needsEnrichment = $true
+                $missingFields += "Logo"
+            }
+            if ([string]::IsNullOrWhiteSpace($org.LinkedInProfile) -and -not $SkipLinkedIn) { 
+                $needsEnrichment = $true
+                $missingFields += "LinkedIn"
+            }
+            if ([string]::IsNullOrWhiteSpace($org.Description)) { 
+                $needsEnrichment = $true
+                $missingFields += "Description"
+            }
+            if ([string]::IsNullOrWhiteSpace($org.Industry)) { 
+                $needsEnrichment = $true
+                $missingFields += "Industry"
+            }
+            
+            if (-not $needsEnrichment) {
+                Write-Host "      ⏭️ $($org.Name) - Already complete, skipping" -ForegroundColor DarkGray
+                $skippedCount++
+                continue
+            }
+            
             Write-Host "      🏢 $($org.Name)" -ForegroundColor White
+            Write-Host "         Missing: $($missingFields -join ', ')" -ForegroundColor DarkGray
 
       # Enrich the organization
           $result = Enrich-Organization `

@@ -887,15 +887,36 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         }
       }
       
-      // SECOND: Try exact match on normalized name (case-insensitive, no spaces)
+      // SECOND: Try normalized match - strip common suffixes from BOTH sides
+      // This catches "Databricks" vs "Databricks Inc." duplicates
       const exactQuery = `
         SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
         FROM Organizations 
-        WHERE LOWER(REPLACE(Name, ' ', '')) = @param0
+        WHERE LOWER(
+          REPLACE(
+            REPLACE(
+              REPLACE(
+                REPLACE(
+                  REPLACE(REPLACE(Name, ' ', ''), ',', ''),
+                '.', ''),
+              'inc', ''),
+            'llc', ''),
+          'ltd', '')
+        ) = @param0
           AND IsActive = 1
       `;
       
-      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '').toLowerCase()]);
+      // Strip same suffixes from search term
+      const strippedNormalized = normalizedName
+        .replace(/\s/g, '')
+        .replace(/,/g, '')
+        .replace(/\./g, '')
+        .replace(/inc$/i, '')
+        .replace(/llc$/i, '')
+        .replace(/ltd$/i, '')
+        .toLowerCase();
+      
+      const exactMatch = await dbService.executeQuery(exactQuery, [strippedNormalized]);
       if (exactMatch.recordset.length > 0) {
         console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
         return exactMatch.recordset[0];
@@ -1289,7 +1310,13 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       try {
         // 3. Try to find website using common domain patterns
         if (!website) {
-          website = await this.searchCompanyWebsiteFast(companyName);
+          const foundWebsite = await this.searchCompanyWebsiteFast(companyName);
+          // ✅ NEW: Validate website matches company name before using
+          if (foundWebsite && this.isValidCompanyWebsite(foundWebsite, companyName)) {
+            website = foundWebsite;
+          } else if (foundWebsite) {
+            console.log(`⚠️ Rejected mismatched website for ${companyName}: ${foundWebsite}`);
+          }
         }
         
         // 4. Get Clearbit logo if we have a website (single fast API call)
@@ -1360,7 +1387,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   }
 
   // 🛡️ Validate if URL is a legitimate company website (not social media)
-  private static isValidCompanyWebsite(url: string): boolean {
+  private static isValidCompanyWebsite(url: string, companyName?: string): boolean {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.toLowerCase().replace('www.', '');
@@ -1378,7 +1405,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         'wikimedia.org',
         'wiki.',
         'github.com',  // GitHub is profile, not company website
-        'medium.com'   // Medium is blog platform, not company website
+        'medium.com',  // Medium is blog platform, not company website
+        'duckduckgo.com',  // Search engine, not company website
+        'google.com',
+        'bing.com'
       ];
       
       // Check if hostname contains any blocked domain
@@ -1387,8 +1417,30 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       );
       
       if (isBlocked) {
-        console.log(`⚠️ Rejected social media/wiki URL as company website: ${url}`);
+        console.log(`⚠️ Rejected blocked domain as company website: ${url}`);
         return false;
+      }
+      
+      // ✅ NEW: If company name provided, validate domain matches company name
+      if (companyName) {
+        const companySlug = companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        
+        const domainSlug = hostname
+          .replace(/\.(com|io|co|net|org|ai|app)$/, '')
+          .replace(/[^a-z0-9]/g, '');
+        
+        // Check if domain contains at least 50% of company name characters
+        // This prevents "duckduckgo.com" from being assigned to "LinkedIn"
+        const minMatchLength = Math.min(companySlug.length, 4);
+        const hasMatch = domainSlug.includes(companySlug.substring(0, minMatchLength)) || 
+                        companySlug.includes(domainSlug.substring(0, minMatchLength));
+        
+        if (!hasMatch && companySlug.length > 3) {
+          console.log(`⚠️ Domain "${hostname}" doesn't match company "${companyName}"`);
+          return false;
+        }
       }
       
       return true;

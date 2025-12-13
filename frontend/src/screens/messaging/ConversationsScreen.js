@@ -35,7 +35,11 @@ export default function ConversationsScreen() {
     try {
       const result = await messagingApi.getMyConversations();
  if (result.success) {
-        setConversations(result.data || []);
+        // Filter out conversations with no messages
+        const validConversations = (result.data || []).filter(
+          conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
+        );
+        setConversations(validConversations);
       }
 
       // Load unread count
