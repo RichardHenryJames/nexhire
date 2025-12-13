@@ -1,9 +1,11 @@
 import React from "react";
+import { TouchableOpacity } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../contexts/AuthContext";
+import { colors } from "../styles/theme";
 import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
@@ -60,8 +62,6 @@ import ContactUsScreen from "../screens/legal/ContactUsScreen";
 import AboutUsScreen from "../screens/legal/AboutUsScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
-
-import { colors } from "../styles/theme";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -128,7 +128,7 @@ const linking = {
               Home: "",
               Jobs: "jobs",
               CreateJob: "create-job",
-              Messages: "messages",
+              AskReferral: "ask-referral",
               Referrals: "referrals",
               Profile: "profile",
             },
@@ -139,9 +139,9 @@ const linking = {
           AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
+          Messages: "messages",
           ViewProfile: "profile/:userId",
           Chat: "chat/:conversationId",
-          AskReferral: "ask-referral",
           ReferralPlans: "plans",
           Payment: "payment",
           
@@ -284,8 +284,8 @@ function MainTabNavigator() {
             iconName = focused ? "briefcase" : "briefcase-outline";
           } else if (route.name === "CreateJob") {
             iconName = focused ? "add-circle" : "add-circle-outline";
-          } else if (route.name === "Messages") {
-            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+          } else if (route.name === "AskReferral") {
+            iconName = focused ? "person-add" : "person-add-outline";
           } else if (route.name === "Referrals") {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Profile") {
@@ -332,11 +332,13 @@ function MainTabNavigator() {
         />
       )}
 
-      <Tab.Screen
-        name="Messages"
-        component={ConversationsScreen}
-        options={{ title: "Messages" }}
-      />
+      {isJobSeeker && (
+        <Tab.Screen
+          name="AskReferral"
+          component={AskReferralScreen}
+          options={{ title: "Ask Referral" }}
+        />
+      )}
 
       {isJobSeeker && (
         <Tab.Screen
@@ -405,6 +407,42 @@ function MainStack() {
         options={{
           headerShown: false, // Custom header in component
         }}
+      />
+      {/* ?? NEW: Messages/Conversations screen */}
+      <Stack.Screen
+        name="Messages"
+        component={ConversationsScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          title: "Messages",
+          headerBackTitleVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                const navState = navigation.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+                
+                // If we have more than 1 route in the stack, go back normally
+                if (routes.length > 1 && currentIndex > 0) {
+                  navigation.goBack();
+                } else {
+                  // Hard refresh scenario - navigate to Home tab
+                  navigation.navigate('Main', {
+                    screen: 'MainTabs',
+                    params: {
+                      screen: 'Home'
+                    }
+                  });
+                }
+              }}
+              style={{ paddingLeft: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
       {/* ?? NEW: View other user's profile */}
       <Stack.Screen

@@ -576,21 +576,13 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
           )}
         </View>
         
-        {/* Right: Profile picture */}
+        {/* Right: Messages button */}
         <TouchableOpacity 
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => navigation.navigate('Messages')}
           activeOpacity={0.7}
+          style={styles.messagesButton}
         >
-          {user?.ProfilePictureURL ? (
-            <Image 
-              source={{ uri: user.ProfilePictureURL }} 
-              style={styles.profilePictureSmall}
-            />
-          ) : (
-            <View style={styles.profilePictureSmallPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.white} />
-            </View>
-          )}
+          <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -1147,18 +1139,11 @@ headerCompact: {
     fontSize: typography.sizes.xs,
     color: colors.gray600,
   },
-  profilePictureSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  profilePictureSmallPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
+  messagesButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },

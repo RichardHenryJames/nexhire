@@ -219,24 +219,6 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-   <Text style={styles.headerTitle}>Messages</Text>
-        {unreadCount > 0 && (
-          <View style={styles.headerBadge}>
-    <Text style={styles.headerBadgeText}>{unreadCount}</Text>
-          </View>
-    )}
-     
-      {/* ?? NEW: Add New Message Button */}
-        <TouchableOpacity 
- style={styles.newMessageButton}
-          onPress={() => setShowNewMessageModal(true)}
-        >
-          <Ionicons name="create-outline" size={24} color={colors.white} />
-  </TouchableOpacity>
-      </View>
-
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
@@ -357,6 +339,15 @@ onRequestClose={() => {
    )}
       </View>
    </Modal>
+      
+      {/* Floating New Message Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowNewMessageModal(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -371,42 +362,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.white,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.primary,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-  },
-  headerBadge: {
-    backgroundColor: colors.error,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    marginRight: 12,
-  },
-  headerBadgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  newMessageButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -424,6 +379,7 @@ backgroundColor: colors.gray100,
     flex: 1,
     fontSize: 16,
     color: colors.gray900,
+    outlineStyle: 'none',
   },
   conversationItem: {
     flexDirection: 'row',
@@ -568,6 +524,7 @@ paddingHorizontal: 20,
     flex: 1,
     fontSize: 16,
     color: colors.gray900,
+    outlineStyle: 'none',
   },
   modalLoadingContainer: {
     flex: 1,
@@ -632,5 +589,22 @@ paddingHorizontal: 20,
     color: colors.gray500,
   marginTop: 8,
   textAlign: 'center',
+  },
+  // Floating Action Button
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });
