@@ -440,7 +440,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
       </ScrollView>
 
       {/* Simple picker without filtering */}
-      <Modal visible={pickerState.visible} transparent animationType="fade" onRequestClose={closePicker}>
+      <Modal visible={pickerState.visible} transparent onRequestClose={closePicker}>
         <View style={styles.pickerOverlay}>
           <View style={styles.pickerCard}>
             <View style={styles.pickerHeader}>

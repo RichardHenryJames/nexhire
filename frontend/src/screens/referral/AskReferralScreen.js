@@ -928,6 +928,17 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         }}
         onCancel={() => setShowWalletModal(false)}
       />
+
+      {/* Floating My Requests Button */}
+      <View style={styles.fabContainer} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('MyReferralRequests')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="document-text-outline" size={20} color={colors.white} />
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -969,6 +980,29 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+  },
+
+  // Floating Action Button (My Requests)
+  fabContainer: {
+    position: 'absolute',
+    right: 16,
+    // Sit above the bottom submit bar so it never overlaps
+    bottom: 104,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  fab: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
   
   // ✅ ADDED: Header button style for navigation

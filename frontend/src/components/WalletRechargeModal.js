@@ -28,7 +28,6 @@ export default function WalletRechargeModal({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
       onRequestClose={onCancel}
     >
       <TouchableOpacity 

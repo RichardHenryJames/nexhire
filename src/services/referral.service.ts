@@ -480,6 +480,8 @@ export class ReferralService {
                     COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
+                    u.UserID as ApplicantUserID,
+                    u.ProfilePictureURL as ApplicantProfilePictureURL,
                     ar.ResumeLabel,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,

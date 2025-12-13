@@ -41,6 +41,7 @@ import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
 import ProfileScreen from "../screens/profile/ProfileScreenNew";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
+import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
 import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 // ?? NEW: Messaging screens
@@ -144,6 +145,7 @@ const linking = {
           Chat: "chat/:conversationId",
           ReferralPlans: "plans",
           Payment: "payment",
+          MyReferralRequests: "referrals/my-requests",
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
@@ -399,6 +401,40 @@ function MainStack() {
           title: "My Applications",
           headerBackTitleVisible: false,
         }}
+      />
+      <Stack.Screen
+        name="MyReferralRequests"
+        component={MyReferralRequestsScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          title: "My Requests",
+          headerBackTitleVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                const navState = navigation.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+
+                if (navigation.canGoBack() && routes.length > 1 && currentIndex > 0) {
+                  navigation.goBack();
+                  return;
+                }
+
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'AskReferral',
+                  },
+                });
+              }}
+              style={{ paddingLeft: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
       {/* ?? NEW: Chat screen for messaging */}
       <Stack.Screen

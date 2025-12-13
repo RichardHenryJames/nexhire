@@ -8,9 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  Modal,
   Image,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,27 +17,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import ReferralProofModal from '../../components/ReferralProofModal';
 import { showToast } from '../../components/Toast';
-import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ReferralScreen({ navigation }) {
-  const { user, isJobSeeker } = useAuth();
-  const [activeTab, setActiveTab] = useState(0); // 0: My Requests, 1: Requests To Me
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [myRequests, setMyRequests] = useState([]);
   const [requestsToMe, setRequestsToMe] = useState([]);
   const [stats, setStats] = useState({ pendingCount: 0 });
 
   // Proof upload modal state
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-
-  // NEW: Proof viewer modal state
-  const [showProofViewer, setShowProofViewer] = useState(false);
-  const [viewingProof, setViewingProof] = useState(null);
-
-  // NEW: Cancel confirmation modal state
-  const [cancelTarget, setCancelTarget] = useState(null);
 
   // Refresh data when screen is focused
   useFocusEffect(
@@ -54,7 +42,6 @@ export default function ReferralScreen({ navigation }) {
     setLoading(true);
     try {
       await Promise.all([
-        loadMyRequests(),
         loadRequestsToMe(),
         loadStats()
       ]);
@@ -62,18 +49,6 @@ export default function ReferralScreen({ navigation }) {
       console.error('Error loading referral data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadMyRequests = async () => {
-    try {
-      const result = await refopenAPI.getMyReferralRequests(1, 50);
-      if (result.success) {
-        setMyRequests(result.data?.requests || []);
-      }
-    } catch (error) {
-      console.error('Error loading my requests:', error);
-      setMyRequests([]);
     }
   };
 
@@ -104,50 +79,6 @@ export default function ReferralScreen({ navigation }) {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
-
-  const handleCancelRequest = async (requestId) => {
-    
-    // Find the request object for better UX
-    const request = myRequests.find(r => r.RequestID === requestId);
-    
-    if (Platform.OS === 'web') {
-      // Use custom modal for web (RN Alert unreliable on web)
-      setCancelTarget({ requestId, request });
-      return;
-    }
-    
-    Alert.alert(
-      'Cancel Referral Request',
-      `Are you sure you want to cancel your referral request for ${request?.JobTitle || 'this job'}? This action cannot be undone.`,
-      [
-        { text: 'Keep', style: 'cancel' },
-        {
-          text: 'Cancel',
-          style: 'destructive',
-          onPress: () => performCancelRequest(requestId)
-        }
-      ]
-    );
-  };
-
-  // Separate function to perform the actual cancellation
-  const performCancelRequest = async (requestId) => {
-    try {
-      const res = await refopenAPI.cancelReferralRequest(requestId);
-      
-      if (res.success) {
-        // Optimistic update
-        setMyRequests(prev => prev.map(r => r.RequestID === requestId ? { ...r, Status: 'Cancelled' } : r));
-        showToast('Referral request cancelled','success');
-      } else {
-        console.error('? Cancel request failed:', res.error);
-        Alert.alert('Error', res.error || 'Failed to cancel');
-      }
-    } catch (e) {
-      console.error('? Cancel request error:', e);
-      Alert.alert('Error', e.message || 'Failed to cancel');
-    }
   };
 
   // NEW: Enhanced claim request with immediate proof upload
@@ -204,55 +135,6 @@ export default function ReferralScreen({ navigation }) {
     setShowProofModal(true);
   };
 
-  // NEW: View proof of referral
-  const handleViewProof = (request) => {
-    if (!request.ProofFileURL) {
-      Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
-      return;
-    }
-    setViewingProof(request);
-    setShowProofViewer(true);
-  };
-
-  const handleVerifyReferral = async (requestId) => {
-    try {
-      const result = await refopenAPI.verifyReferralCompletion(requestId, true);
-      if (result.success) {
-        showToast('Referral verified', 'success');
-        // Optimistically update local state so button disappears without full reload
-        setMyRequests(prev => prev.map(r => r.RequestID === requestId ? { ...r, Status: 'Verified', VerifiedByApplicant: 1 } : r));
-        // Also refresh in background
-        loadMyRequests();
-      } else {
-        Alert.alert('Error', result.error || 'Failed to verify referral');
-      }
-    } catch (e) {
-      console.error('? Verify error:', e);
-      Alert.alert('Error', e.message || 'Failed to verify referral');
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Pending': return colors.gray500;
-      case 'Claimed': return colors.primary;
-      case 'Completed': return colors.success;
-      case 'Verified': return '#ffd700'; // Gold
-      case 'Cancelled': return colors.danger;
-      default: return colors.gray500;
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Pending': return 'time-outline';
-      case 'Claimed': return 'checkmark-circle-outline';
-      case 'Completed': return 'checkmark-circle';
-      case 'Verified': return 'trophy';
-      case 'Cancelled': return 'close-circle';
-      default: return 'help-outline';
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -273,130 +155,49 @@ export default function ReferralScreen({ navigation }) {
     return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
-  const renderMyRequestCard = (request) => {
-    // Determine if this is an external or internal referral
-    const isExternalJob = !!request.ExtJobID;
-    const isInternalJob = !!request.JobID && !request.ExtJobID;
-    
-    return (
-      <View key={request.RequestID} style={styles.requestCard}>
-        <View style={styles.requestHeader}>
-          {/* Company Logo */}
-          <View style={styles.logoContainer}>
-            {request.OrganizationLogo ? (
-              <Image
-                source={{ uri: request.OrganizationLogo }}
-                style={styles.companyLogo}
-                onError={() => {}}
-              />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={24} color={colors.gray500} />
-              </View>
-            )}
-          </View>
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pending':
+        return colors.gray600;
+      case 'Claimed':
+        return colors.primary;
+      case 'Completed':
+        return colors.success;
+      case 'Verified':
+        return '#ffd700';
+      case 'Cancelled':
+        return colors.danger;
+      default:
+        return colors.gray600;
+    }
+  };
 
-          <View style={styles.requestInfo}>
-            {/* Job Type Badge */}
-            <View style={styles.jobTypeBadgeContainer}>
-              <Text style={styles.jobTitle} numberOfLines={1}>
-                {request.JobTitle || 'Job Title'}
-              </Text>
-              {isExternalJob && (
-                <View style={styles.externalBadge}>
-                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
-                  <Text style={styles.externalBadgeText}>External</Text>
-                </View>
-              )}
-              {isInternalJob && (
-                <View style={styles.internalBadge}>
-                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
-                  <Text style={styles.internalBadgeText}>Internal</Text>
-                </View>
-              )}
-            </View>
-            
-            <Text style={styles.companyName} numberOfLines={1}>
-              {request.CompanyName || 'Company'}
-            </Text>
-            
-            {/* Show External Job ID for external referrals */}
-            {isExternalJob && request.ExtJobID && (
-              <View style={styles.externalJobIdRow}>
-                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
-                <Text style={styles.externalJobIdText} numberOfLines={1}>
-                  Job ID: {request.ExtJobID}
-                </Text>
-              </View>
-            )}
-          <View style={styles.timestampRow}>
-            <Ionicons name="time-outline" size={14} color={colors.gray500} />
-            <Text style={styles.requestDate}>
-              Requested on {formatDate(request.RequestedAt)}
-            </Text>
-          </View>
-          {request.ReferrerName && (
-            <View style={styles.referrerRow}>
-              <Ionicons name="person-circle-outline" size={14} color={colors.success} />
-              <Text style={styles.referrerName}>
-                Referred by {request.ReferrerName}
-              </Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.statusBadge}>
-          <Ionicons 
-            name={getStatusIcon(request.Status)} 
-            size={16} 
-            color={getStatusColor(request.Status)} 
-          />
-          <Text style={[styles.statusText, { color: getStatusColor(request.Status) }]}
-            numberOfLines={1}
-          >
-            {request.Status}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.requestActions}>
-        {request.Status === 'Completed' && (
-          <>
-            <TouchableOpacity style={styles.viewProofBtn} onPress={() => handleViewProof(request)}>
-              <Ionicons name="eye-outline" size={16} color={colors.primary} />
-              <Text style={styles.viewProofText}>View Proof</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.verifyBtn} onPress={() => handleVerifyReferral(request.RequestID)}>
-              <Ionicons name="checkmark-done" size={16} color={colors.white} />
-              <Text style={styles.verifyText}>Verify</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {request.Status === 'Verified' && request.ProofFileURL && (
-          <TouchableOpacity style={styles.viewProofBtn} onPress={() => handleViewProof(request)}>
-            <Ionicons name="eye-outline" size={16} color={colors.primary} />
-            <Text style={styles.viewProofText}>View Proof</Text>
-          </TouchableOpacity>
-        )}
-        
-        {request.Status === 'Pending' && (
-          <TouchableOpacity 
-            style={styles.cancelBtn}
-            onPress={() => handleCancelRequest(request.RequestID)}
-          >
-            <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-    );
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'time-outline';
+      case 'Claimed':
+        return 'checkmark-circle-outline';
+      case 'Completed':
+        return 'checkmark-circle';
+      case 'Verified':
+        return 'trophy-outline';
+      case 'Cancelled':
+        return 'close-circle-outline';
+      default:
+        return 'help-outline';
+    }
   };
 
   const renderRequestToMeCard = (request) => {
     // ? NEW: Determine if this is an external or internal referral
     const isExternalJob = !!request.ExtJobID;
     const isInternalJob = !!request.JobID && !request.ExtJobID;
+
+    // Confirmed from backend `/referral/available` response (ReferralService.getAvailableRequests)
+    const applicantUserId = request.ApplicantUserID ?? null;
+    const applicantName = request.ApplicantName || 'Job Seeker';
+    const applicantPhotoUrl = request.ApplicantProfilePictureURL ?? null;
     
     // For internal jobs, make the card clickable
     const CardWrapper = isInternalJob ? TouchableOpacity : View;
@@ -464,13 +265,40 @@ export default function ReferralScreen({ navigation }) {
                 </Text>
               </View>
             )}
-            
-            <View style={styles.seekerRow}>
-              <Ionicons name="person-outline" size={14} color={colors.primary} />
-              <Text style={styles.seekerInfo}>
-                Requested by {request.ApplicantName || 'Job Seeker'}
+
+            <TouchableOpacity
+              style={styles.requesterRow}
+              activeOpacity={applicantUserId ? 0.7 : 1}
+              disabled={!applicantUserId}
+              onPress={() =>
+                applicantUserId
+                  ? navigation.navigate('ViewProfile', {
+                      userId: applicantUserId,
+                      userName: applicantName,
+                    })
+                  : undefined
+              }
+            >
+              {applicantPhotoUrl ? (
+                <Image
+                  source={{ uri: applicantPhotoUrl }}
+                  style={styles.requesterAvatar}
+                  onError={() => {}}
+                />
+              ) : (
+                <View style={styles.requesterAvatarPlaceholder}>
+                  <Ionicons name="person" size={14} color={colors.gray500} />
+                </View>
+              )}
+              <Text style={styles.requesterPrefix}>Requested by</Text>
+              <Text
+                style={styles.requesterName}
+                numberOfLines={1}
+              >
+                {applicantName}
               </Text>
-            </View>
+            </TouchableOpacity>
+
             <View style={styles.timestampRow}>
               <Ionicons name="time-outline" size={14} color={colors.gray500} />
               <Text style={styles.requestDate}>
@@ -478,15 +306,22 @@ export default function ReferralScreen({ navigation }) {
               </Text>
             </View>
           </View>
-        </View>
-        
-        {/* ? NEW: Click hint for internal jobs */}
-        {isInternalJob && (
-          <View style={styles.clickHintRow}>
-            <Ionicons name="hand-left-outline" size={14} color={colors.primary} />
-            <Text style={styles.clickHintText}>Tap to view full job details</Text>
+
+          <View style={[styles.statusBadge, { backgroundColor: colors.gray100 }]}
+          >
+            <Ionicons
+              name={getStatusIcon(request.Status)}
+              size={14}
+              color={getStatusColor(request.Status)}
+            />
+            <Text
+              style={[styles.statusText, { color: getStatusColor(request.Status) }]}
+              numberOfLines={1}
+            >
+              {request.Status || 'Pending'}
+            </Text>
           </View>
-        )}
+        </View>
         
         <View style={styles.requestActions}>
           {request.Status === 'Pending' && (
@@ -529,61 +364,34 @@ export default function ReferralScreen({ navigation }) {
       );
     }
 
-    if (activeTab === 0) {
-      // My Requests Tab
-      return (
-        <ScrollView 
-          style={styles.tabContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <Text style={styles.tabDescription}>
-            Referral requests you have asked for
-          </Text>
-          
-          {myRequests.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="document-outline" size={64} color={colors.gray400} />
-              <Text style={styles.emptyTitle}>No Referral Requests</Text>
-              <Text style={styles.emptyText}>
-                You haven't requested any referrals yet. Find jobs and click "Ask Referral" to get started.
-              </Text>
-            </View>
-          ) : (
-            myRequests.map(renderMyRequestCard)
-          )}
-        </ScrollView>
-      );
-    } else {
-      // Requests To Me Tab
-      return (
-        <ScrollView 
-          style={styles.tabContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <Text style={styles.tabDescription}>
-            Referral requests where you can help others and earn rewards
-          </Text>
-          
-          {requestsToMe.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={64} color={colors.gray400} />
-              <Text style={styles.emptyTitle}>No Referral Opportunities</Text>
-              <Text style={styles.emptyText}>
-                No referral requests are available for your current companies. 
-                Make sure your work experience is up to date.
-              </Text>
-            </View>
-          ) : (
-            requestsToMe.map(renderRequestToMeCard)
-          )}
-        </ScrollView>
-      );
-    }
+    return (
+      <ScrollView 
+        style={styles.tabContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text style={styles.tabDescription}>
+          Referral requests where you can help others and earn rewards
+        </Text>
+        
+        {requestsToMe.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={64} color={colors.gray400} />
+            <Text style={styles.emptyTitle}>No Referral Opportunities</Text>
+            <Text style={styles.emptyText}>
+              No referral requests are available for your current companies. 
+              Make sure your work experience is up to date.
+            </Text>
+          </View>
+        ) : (
+          requestsToMe.map(renderRequestToMeCard)
+        )}
+      </ScrollView>
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Header with Get Your Custom Referral Button */}
+      {/* Header */}
       <View style={styles.header}>
     <View style={styles.headerLeft}>
  <Text style={styles.headerTitle}>Referrals</Text>
@@ -591,69 +399,6 @@ export default function ReferralScreen({ navigation }) {
             Connect job seekers with opportunities
    </Text>
  </View>
-   
-        {/* NEW: Get Your Custom Referral Button */}
-        {isJobSeeker && (
-          <TouchableOpacity
-            style={styles.getReferralBtn}
-   onPress={() => navigation.navigate('AskReferral')}
-         activeOpacity={0.8}
-   >
-      <LinearGradient
-colors={['#FEB800', '#FF8C00']}
-  start={{ x: 0, y: 0 }}
-     end={{ x: 1, y: 1 }}
-    style={styles.getReferralGradient}
-            >
-   <Ionicons name="gift" size={18} color={colors.white} />
-      <Text style={styles.getReferralText}>Get Your{'\n'}Custom Referral</Text>
-     <Ionicons name="arrow-forward" size={16} color={colors.white} />
-        </LinearGradient>
-          </TouchableOpacity>
-)}
-      </View>
-
-      {/* Tab Navigation */}
-      <View style={styles.tabNavigation}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 0 && styles.activeTabButton
-          ]}
-          onPress={() => setActiveTab(0)}
-        >
-          <Text style={[
-            styles.tabButtonText,
-            activeTab === 0 && styles.activeTabButtonText
-          ]}>
-            My Requests
-          </Text>
-          {myRequests.length > 0 && (
-            <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{myRequests.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 1 && styles.activeTabButton
-          ]}
-          onPress={() => setActiveTab(1)}
-        >
-          <Text style={[
-            styles.tabButtonText,
-            activeTab === 1 && styles.activeTabButtonText
-          ]}>
-            Requests To Me
-          </Text>
-          {stats.pendingCount > 0 && (
-            <View style={[styles.tabBadge, styles.notificationBadge]}>
-              <Text style={styles.tabBadgeText}>{stats.pendingCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
 
       {/* Tab Content */}
@@ -671,63 +416,6 @@ colors={['#FEB800', '#FF8C00']}
         jobTitle={selectedRequest?.JobTitle}
       />
 
-      {/* Proof Viewer Modal */}
-      {showProofViewer && viewingProof && (
-        <Modal visible={showProofViewer} animationType="slide" onRequestClose={() => setShowProofViewer(false)}>
-          <View style={{ flex:1, backgroundColor:'#000' }}>
-            <TouchableOpacity style={{ position:'absolute', top:40, right:20, zIndex:10 }} onPress={() => setShowProofViewer(false)}>
-              <Ionicons name="close" size={32} color="#fff" />
-            </TouchableOpacity>
-            <Image source={{ uri: viewingProof.ProofFileURL }} style={{ flex:1, resizeMode:'contain' }} />
-            <View style={{ padding:16, backgroundColor:'rgba(0,0,0,0.6)' }}>
-              <Text style={{ color:'#fff', fontWeight:'bold', marginBottom:8 }}>Proof Description</Text>
-              <Text style={{ color:'#fff' }}>{viewingProof.ProofDescription || 'No description provided'}</Text>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* Cancel Referral Confirmation Modal */}
-      {cancelTarget && (
-        <View style={styles.confirmOverlay} pointerEvents="auto">
-          <View style={styles.confirmBox}>
-            <View style={styles.confirmHeader}>
-              <View style={styles.confirmIconContainer}>
-                <Ionicons name="warning" size={24} color="#f59e0b" />
-              </View>
-              <Text style={styles.confirmTitle}>Cancel Referral Request</Text>
-            </View>
-            
-            <Text style={styles.confirmMessage}>
-              Are you sure you want to cancel your referral request for{' '}
-              <Text style={styles.jobTitleInModal}>{cancelTarget.request?.JobTitle || 'this job'}</Text>?
-              {'\n\n'}This action cannot be undone and you'll need to create a new request if you change your mind.
-            </Text>
-            
-            <View style={styles.confirmActions}>
-              <TouchableOpacity 
-                style={[styles.confirmBtn, styles.keepBtn]} 
-                onPress={() => {
-                  setCancelTarget(null);
-                }}
-              >
-                <Text style={styles.keepBtnText}>Keep</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.confirmBtn, styles.cancelReqBtn]} 
-                onPress={() => {
-                  const requestId = cancelTarget.requestId;
-                  setCancelTarget(null);
-                  performCancelRequest(requestId);
-                }}
-              >
-                <Ionicons name="close-circle" size={16} color="#dc2626" style={{ marginRight: 6 }} />
-                <Text style={styles.cancelReqBtnText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -758,36 +446,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
-  },
-  // NEW: Get Your Custom Referral Button Styles
-  getReferralBtn: {
-    marginLeft: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#FF8C00',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
- shadowRadius: 8,
-    elevation: 8,
-  },
-  getReferralGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
-  },
-  getReferralText: {
- fontSize: typography.sizes.xs,
-  fontWeight: typography.weights.bold,
- color: colors.white,
-    textAlign: 'center',
-    lineHeight: 14,
-    letterSpacing: 0.3,
   },
   tabNavigation: {
     flexDirection: 'row',
@@ -936,6 +594,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 2, // Reduced from 4
+  },
+  requesterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+    maxWidth: '100%',
+  },
+  requesterAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+  },
+  requesterAvatarPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  requesterPrefix: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+  },
+  requesterName: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+    flexShrink: 1,
+    textDecorationLine: 'underline',
   },
   referrerRow: {
     flexDirection: 'row',

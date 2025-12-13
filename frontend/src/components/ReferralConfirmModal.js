@@ -31,7 +31,6 @@ export default function ReferralConfirmModal({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
       onRequestClose={onCancel}
     >
       <TouchableOpacity 
@@ -98,29 +97,29 @@ export default function ReferralConfirmModal({
               ) : (
                 /* Benefits Section */
                 <View style={styles.benefitsSection}>
-                  <Text style={styles.benefitsTitle}>What you'll get:</Text>
+                  <Text style={styles.benefitsTitle}>What happens next:</Text>
+                  <View style={styles.benefitItem}>
+                    <Ionicons name="flash" size={16} color="#10b981" />
+                    <Text style={styles.benefitText}>
+                      Submit your referral request immediately
+                    </Text>
+                  </View>
+                  <View style={styles.benefitItem}>
+                    <Ionicons name="notifications" size={16} color="#10b981" />
+                    <Text style={styles.benefitText}>
+                      Employees at that company get notified instantly
+                    </Text>
+                  </View>
                   <View style={styles.benefitItem}>
                     <Ionicons name="people" size={16} color="#10b981" />
                     <Text style={styles.benefitText}>
-                      Request sent to ALL employees who can refer you
-                    </Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Multiple employees can refer you simultaneously
-                    </Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="briefcase" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Higher chance of getting interview callback
+                      Increase your chances with employees ready to refer
                     </Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <Ionicons name="trending-up" size={16} color="#10b981" />
                     <Text style={styles.benefitText}>
-                      Your application stands out to recruiters
+                      Get fast-tracked in the hiring process through internal referrals
                     </Text>
                   </View>
                 </View>

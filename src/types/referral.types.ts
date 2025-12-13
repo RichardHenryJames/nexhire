@@ -34,6 +34,10 @@ export interface ReferralRequest {
     AssignedReferrerID?: string;
     ReferredAt?: Date;
     VerifiedByApplicant: boolean;
+
+    // Joined user identity (for UI profile link)
+    ApplicantUserID?: string;
+    ApplicantProfilePictureURL?: string;
     
     // ?? NEW: Minimal external referral support
     ReferralType: 'internal' | 'external';

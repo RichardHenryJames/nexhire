@@ -25,7 +25,6 @@ export default function ConfirmationModal({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
       onRequestClose={onCancel}
     >
       <Pressable style={styles.overlay} onPress={onCancel}>
