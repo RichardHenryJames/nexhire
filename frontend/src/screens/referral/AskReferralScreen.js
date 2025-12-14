@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,9 @@ const [resumes, setResumes] = useState([]);
 const [fortune500Companies, setFortune500Companies] = useState([]);
 const [currentCompanyIndex, setCurrentCompanyIndex] = useState(0);
 const fadeAnim = useState(new Animated.Value(1))[0];
+const [showRotationTick, setShowRotationTick] = useState(false);
+const rotationTimeoutRef = useRef(null);
+const tickTimeoutRef = useRef(null);
 
 // NEW: Company/Organization state
 const [companies, setCompanies] = useState([]);
@@ -142,14 +145,28 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     if (!checkActiveHours()) return;
     
     // Shuffle for random display (only once when companies load)
-    if (fortune500Companies.length === 0) {
-      const shuffled = [...f500WithLogos].sort(() => Math.random() - 0.5);
-      setFortune500Companies(shuffled);
+    let rotationCompanies = fortune500Companies;
+    if (rotationCompanies.length === 0) {
+      rotationCompanies = [...f500WithLogos].sort(() => Math.random() - 0.5);
+      setFortune500Companies(rotationCompanies);
     }
+
+    const getRandomDelayMs = () => {
+      // 1s to 10s
+      return Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+    };
+
+    const scheduleNextRotation = () => {
+      if (rotationTimeoutRef.current) {
+        clearTimeout(rotationTimeoutRef.current);
+      }
+      rotationTimeoutRef.current = setTimeout(rotateCompany, getRandomDelayMs());
+    };
 
     const rotateCompany = () => {
       // Check active hours before rotating
       if (!checkActiveHours()) return;
+      if (!rotationCompanies || rotationCompanies.length === 0) return;
       
       // Fade out
       Animated.timing(fadeAnim, {
@@ -159,26 +176,43 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       }).start(() => {
         // Change company
         setCurrentCompanyIndex((prevIndex) => 
-          (prevIndex + 1) % fortune500Companies.length
+          (prevIndex + 1) % rotationCompanies.length
         );
+
+        // Show tick briefly on every company change
+        setShowRotationTick(true);
+        if (tickTimeoutRef.current) {
+          clearTimeout(tickTimeoutRef.current);
+        }
+        tickTimeoutRef.current = setTimeout(() => {
+          setShowRotationTick(false);
+        }, 2000);
+
         // Fade in
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 500,
           useNativeDriver: true,
         }).start();
-        
-        // Schedule next rotation with random delay (0.5-5 seconds)
-        const randomDelay = Math.floor(Math.random() * 4500) + 500; // 500-5000ms
-        setTimeout(rotateCompany, randomDelay);
+
+        // Schedule next rotation with random delay (0.5-10 seconds)
+        scheduleNextRotation();
       });
     };
 
-    // Start first rotation with random delay (0.5-5 seconds)
-    const initialDelay = Math.floor(Math.random() * 4500) + 500; // 500-5000ms
-    const timeout = setTimeout(rotateCompany, initialDelay);
+    // Start first rotation
+    scheduleNextRotation();
 
-    return () => clearTimeout(timeout);
+    return () => {
+      if (rotationTimeoutRef.current) {
+        clearTimeout(rotationTimeoutRef.current);
+        rotationTimeoutRef.current = null;
+      }
+      if (tickTimeoutRef.current) {
+        clearTimeout(tickTimeoutRef.current);
+        tickTimeoutRef.current = null;
+      }
+    };
   }, [companies, fortune500Companies, fadeAnim]);
 
   // Debug useEffect to log form state changes
@@ -562,7 +596,15 @@ const [showResumeModal, setShowResumeModal] = useState(false);
                   </Text>
                 </View>
                 <View style={styles.showcaseCheckmark}>
-                  <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+                  <View style={styles.tickSlot}>
+                    {showRotationTick ? (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+                    ) : null}
+                  </View>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>LIVE</Text>
+                  </View>
                 </View>
               </View>
             </Animated.View>
@@ -1104,6 +1146,38 @@ const styles = StyleSheet.create({
   },
   showcaseCheckmark: {
     marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tickSlot: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.success + '15',
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success,
+    marginRight: 6,
+  },
+  liveText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+    letterSpacing: 0.6,
   },
   
   valueText: {
@@ -1511,7 +1585,7 @@ const styles = StyleSheet.create({
   // ✅ NEW: Enhanced wallet balance banner styles
   quotaBanner: {
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
@@ -1528,7 +1602,8 @@ const styles = StyleSheet.create({
   quotaBannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   quotaBannerIcon: {
     marginRight: 12,

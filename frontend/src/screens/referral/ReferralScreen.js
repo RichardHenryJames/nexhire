@@ -394,9 +394,9 @@ export default function ReferralScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
     <View style={styles.headerLeft}>
- <Text style={styles.headerTitle}>Referrals</Text>
-      <Text style={styles.headerSubtitle}>
-            Connect job seekers with opportunities
+ <Text style={styles.headerTitle}>Referral requests to me</Text>
+   <Text style={styles.headerSubtitle}>
+      Incoming referral requests
    </Text>
  </View>
       </View>

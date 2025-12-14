@@ -346,7 +346,7 @@ function MainTabNavigator() {
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
-          options={{ title: "Referrals" }}
+          options={{ title: "Requests" }}
         />
       )}
 

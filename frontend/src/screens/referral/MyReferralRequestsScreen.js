@@ -257,15 +257,15 @@ export default function MyReferralRequestsScreen() {
               </Text>
             </View>
 
-            {request.ReferrerName && (
+            {request.ReferrerName && request.CompanyName && (
               <View style={styles.referrerRow}>
                 <Ionicons
-                  name="person-circle-outline"
+                  name="checkmark-circle"
                   size={14}
                   color={colors.success}
                 />
                 <Text style={styles.referrerName}>
-                  Referred by {request.ReferrerName}
+                  Referred by {request.CompanyName} employee
                 </Text>
               </View>
             )}

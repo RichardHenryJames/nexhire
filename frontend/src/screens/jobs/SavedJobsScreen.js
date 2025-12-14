@@ -41,12 +41,38 @@ const SavedJobsScreen = ({ navigation }) => {
 
   // Update navigation header with count
   useEffect(() => {
-    if (savedCount > 0) {
-      navigation.setOptions({
-        headerTitle: `Saved Jobs (${savedCount})`,
-      });
-    }
+    navigation.setOptions({
+      headerTitle: savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs',
+    });
   }, [savedCount, navigation]);
+
+  // ✅ Smart back navigation (hard-refresh safe) - same as JobDetails/Applications
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            const navState = navigation.getState?.();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: { screen: 'Profile' },
+              });
+            }
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1e293b" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   // Refresh handler
   const onRefresh = () => {
