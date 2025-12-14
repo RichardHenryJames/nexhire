@@ -399,7 +399,6 @@ export default function MyReferralRequestsScreen() {
       <Modal
         visible={!!cancelTarget}
         transparent
-        animationType="fade"
         onRequestClose={() => setCancelTarget(null)}
       >
         <Pressable style={styles.confirmOverlay} onPress={() => setCancelTarget(null)}>

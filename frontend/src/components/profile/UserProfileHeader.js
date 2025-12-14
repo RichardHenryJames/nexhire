@@ -753,7 +753,6 @@ export default function UserProfileHeader({
       <Modal
         visible={showImagePickerModal}
         transparent={true}
-        animationType="fade"
         onRequestClose={() => setShowImagePickerModal(false)}
       >
         <View style={styles.modalOverlay}>

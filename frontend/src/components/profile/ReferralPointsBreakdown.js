@@ -417,7 +417,6 @@ const ReferralPointsBreakdown = ({
       <Modal
         visible={showConversionModal}
         transparent
-        animationType="fade"
         onRequestClose={() => !converting && setShowConversionModal(false)}
       >
         <View style={styles.conversionModalOverlay}>

@@ -466,7 +466,6 @@ style={styles.primaryButton}
       <Modal
         visible={showMenuPopup}
         transparent={true}
-        animationType="fade"
         onRequestClose={() => setShowMenuPopup(false)}
       >
         <Pressable 

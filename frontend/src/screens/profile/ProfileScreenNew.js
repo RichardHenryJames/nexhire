@@ -1095,6 +1095,37 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
+        {/* My Activity Section: applications, saved jobs, referrals */}
+        {userType === 'JobSeeker' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionIndicator} />
+              <Text style={styles.sectionHeading}>My Activity</Text>
+            </View>
+
+            {renderSectionCard(
+              'My Applications',
+              'clipboard-outline',
+              () => navigation.navigate('Applications'),
+              'Track jobs you have applied to'
+            )}
+
+            {renderSectionCard(
+              'Saved Jobs',
+              'bookmark-outline',
+              () => navigation.navigate('SavedJobs'),
+              'View and manage saved jobs'
+            )}
+
+            {renderSectionCard(
+              'Referral Requests',
+              'people-circle-outline',
+              () => navigation.navigate('MyReferralRequests'),
+              'See referrals you have asked for'
+            )}
+          </View>
+        )}
+
         {/* Preferences Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
@@ -1273,7 +1304,7 @@ export default function ProfileScreen({ navigation }) {
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
+      <Modal visible={showLogoutModal} transparent onRequestClose={() => setShowLogoutModal(false)}>
         <View style={styles.logoutModalOverlay}>
           <View style={styles.logoutModalContent}>
             <View style={styles.logoutModalIconContainer}>

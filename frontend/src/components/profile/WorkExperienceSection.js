@@ -855,7 +855,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+      <Modal visible={showDeleteModal} transparent onRequestClose={() => setShowDeleteModal(false)}>
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmCard}>
             <Ionicons name="trash-outline" size={36} color={colors.danger} />

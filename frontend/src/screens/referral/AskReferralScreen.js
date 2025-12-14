@@ -929,14 +929,19 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         onCancel={() => setShowWalletModal(false)}
       />
 
-      {/* Floating My Requests Button */}
+      {/* Floating Referral Requests Button */}
       <View style={styles.fabContainer} pointerEvents="box-none">
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('MyReferralRequests')}
           activeOpacity={0.8}
         >
-          <Ionicons name="document-text-outline" size={20} color={colors.white} />
+          <View style={styles.fabIconWrap}>
+            <Ionicons name="people" size={18} color={colors.primary} />
+          </View>
+          <Text style={styles.fabLabel} numberOfLines={1}>
+            Referral Requests
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -992,17 +997,35 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   fab: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    height: 48,
+    paddingLeft: 10,
+    paddingRight: 16,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 6,
+  },
+
+  fabIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+
+  fabLabel: {
+    color: colors.white,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 0.2,
   },
   
   // ✅ ADDED: Header button style for navigation

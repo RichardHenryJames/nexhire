@@ -859,7 +859,6 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
       <Modal 
         visible={showAIConfirmModal} 
         transparent 
-        animationType="fade" 
         onRequestClose={() => setShowAIConfirmModal(false)}
       >
         <View style={styles.aiModalOverlay}>
