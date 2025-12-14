@@ -141,12 +141,18 @@ $token = Invoke-Login -BaseUrl $BaseUrl -Email $Email -Password $Password
 $headers = @{ Authorization = "Bearer $token" }
 
 $jobsUrl = "$BaseUrl/jobs?page=1&pageSize=$PageSize"
+$jobsUrlNoRole = "$BaseUrl/jobs?page=1&pageSize=$PageSize&roleTitlePersonalization=false"
 $jobsSearchUrl = "$BaseUrl/jobs?page=1&pageSize=$PageSize&search=$([uri]::EscapeDataString($SearchText))"
 $searchJobsUrl = "$BaseUrl/search/jobs?page=1&pageSize=$PageSize&search=$([uri]::EscapeDataString($SearchText))"
 
 $results = @()
 $results += Benchmark-Endpoint -Name "GET /jobs (default)" -Url $jobsUrl -Headers $headers -Iterations $Iterations
+$results += Benchmark-Endpoint -Name "GET /jobs (no role-title)" -Url $jobsUrlNoRole -Headers $headers -Iterations $Iterations
 $results += Benchmark-Endpoint -Name "GET /jobs?search=..." -Url $jobsSearchUrl -Headers $headers -Iterations $Iterations
 $results += Benchmark-Endpoint -Name "GET /search/jobs?search=..." -Url $searchJobsUrl -Headers $headers -Iterations $Iterations
 
-$results | Select-Object Endpoint, WarmupMs, WarmupStatus, Iter, AvgMs, P50Ms, P95Ms, MinMs, MaxMs, Non2xx | Format-Table -AutoSize
+$table = $results | Select-Object Endpoint, WarmupMs, WarmupStatus, Iter, AvgMs, P50Ms, P95Ms, MinMs, MaxMs, Non2xx |
+  Format-Table -AutoSize |
+  Out-String -Width 240
+
+Write-Output $table

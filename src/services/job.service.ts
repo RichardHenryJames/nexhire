@@ -543,9 +543,15 @@ export class JobService {
         const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
         const roleTitleScoreSql = this.buildRoleTitleScoreSql(latestTitleParam);
         const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
+        const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
+            || f.roleTitlePersonalization === false
+            || f.roleTitlePersonalization === 0;
+        const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
+        const useRoleTitleScore = !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
+
         const orderPrefix = hasSearchText
             ? `${preferenceScoreSql} DESC, `
-            : `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, `;
+            : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `);
 
         // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
         const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
@@ -914,9 +920,15 @@ export class JobService {
             const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
             const roleTitleScoreSql = this.buildRoleTitleScoreSql(latestTitleParam);
             const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
+            const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
+                || f.roleTitlePersonalization === false
+                || f.roleTitlePersonalization === 0;
+            const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
+            const useRoleTitleScore = !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
+
             const orderPrefix = hasSearchText
                 ? `${preferenceScoreSql} DESC, `
-                : `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, `;
+                : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `);
 
             // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;

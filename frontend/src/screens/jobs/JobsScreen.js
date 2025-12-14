@@ -496,8 +496,8 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
 
     const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
 
-   // ⏱️ START: Measure API response time
-const apiStartTime = performance.now();
+  // ⏱️ START: Measure API response time
+const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         
 
         let result;
@@ -509,8 +509,13 @@ const apiStartTime = performance.now();
         }
 
         // ⏱️ END: Calculate and log response time
- const apiEndTime = performance.now();
+ const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const responseTime = apiEndTime - apiStartTime;
+
+  try {
+    const backendMs = result?.meta?._performanceMs;
+    console.log(`⏱️ [JobsScreen] ${shouldUseSearch ? 'searchJobs' : 'getJobs'} page=1 size=${pagination.pageSize} clientMs=${Math.round(responseTime)} backendMs=${backendMs ?? 'n/a'}`);
+  } catch {}
 
       if (controller.signal.aborted) return;
 
@@ -601,8 +606,8 @@ const apiStartTime = performance.now();
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
 
-      // ⏱️ START: Measure API response time for pagination
- const apiStartTime = performance.now();
+       // ⏱️ START: Measure API response time for pagination
+     const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 
       let result;
    if (debouncedQuery.trim().length > 0 || hasBoosts) {
@@ -612,8 +617,13 @@ const apiStartTime = performance.now();
       }
 
       // ⏱️ END: Calculate and log response time
-      const apiEndTime = performance.now();
+      const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const responseTime = apiEndTime - apiStartTime;
+
+      try {
+        const backendMs = result?.meta?._performanceMs;
+        console.log(`⏱️ [JobsScreen] ${debouncedQuery.trim().length > 0 || hasBoosts ? 'searchJobs' : 'getJobs'} page=${nextPage} size=${pagination.pageSize} clientMs=${Math.round(responseTime)} backendMs=${backendMs ?? 'n/a'}`);
+      } catch {}
 
    if (controller.signal.aborted) return;
 
