@@ -53,11 +53,11 @@ export class JobArchiveService {
 
     /**
      * Archive jobs older than specified days
-     * @param daysOld - Number of days old to archive (default: 90)
+     * @param daysOld - Number of days old to archive (default: 60)
      * @param batchSize - Maximum number of jobs to archive per batch (default: 100)
      * @returns Archive operation result
      */
-    static async archiveOldJobs(daysOld: number = 90, batchSize: number = 100): Promise<{
+    static async archiveOldJobs(daysOld: number = 60, batchSize: number = 100): Promise<{
         success: boolean;
         totalJobsFound: number;
         totalJobsArchived: number;
