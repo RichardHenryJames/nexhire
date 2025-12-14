@@ -82,7 +82,7 @@ export default function JobsScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 30, total: 0, totalPages: 0, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 30, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -225,18 +225,6 @@ export default function JobsScreen({ navigation, route }) {
       setJobs(prev => {
         const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
         return filtered;
-      });
-
-      // Update pagination totals to reflect removal
-      setPagination(prev => {
-        const newTotal = Math.max((prev.total || 0) - 1, 0);
-        const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-        return {
-          ...prev,
-          total: newTotal,
-          totalPages: newTotalPages,
-          hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
-        };
       });
 
       // Add to applied IDs
@@ -551,14 +539,16 @@ const apiStartTime = performance.now();
               
        setJobs(list);
   const meta = result.meta || {};
-          const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (meta.page ? (meta.page < (meta.totalPages || 1)) : false);
-          setPagination(prev => ({
-    ...prev,
-        page: meta.page || 1,
- total: meta.total || list.length,
-            totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
-     hasMore
- }));
+          setPagination(prev => {
+            const nextPageSize = meta.pageSize || prev.pageSize;
+            const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (list.length === nextPageSize);
+            return {
+              ...prev,
+              page: meta.page || 1,
+              pageSize: nextPageSize,
+              hasMore
+            };
+          });
         }
    } catch (e) {
     if (e?.name !== 'AbortError') {
@@ -586,10 +576,6 @@ const apiStartTime = performance.now();
     }
 
     const nextPage = (pagination.page || 1) + 1;
-    if (pagination.totalPages && nextPage > pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
-      return;
-    }
 
     if (lastAutoLoadPageRef.current === nextPage) {
       return;
@@ -636,13 +622,16 @@ const apiStartTime = performance.now();
         setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
-   setPagination(prev => ({
-          ...prev,
-          page: meta.page || nextPage,
-      total: meta.total ?? prev.total,
-  totalPages: meta.totalPages ?? prev.totalPages,
-     hasMore: Boolean(meta.hasMore)
-        }));
+        setPagination(prev => {
+          const nextPageSize = meta.pageSize || prev.pageSize;
+          const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (list.length === nextPageSize);
+          return {
+            ...prev,
+            page: meta.page || nextPage,
+            pageSize: nextPageSize,
+            hasMore
+          };
+        });
 
         if (list.length === 0) {
           setPagination(prev => ({ ...prev, hasMore: false }));
@@ -660,7 +649,7 @@ const apiStartTime = performance.now();
         isLoadingMoreRef.current = false;
       }
     }
-  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, pagination.totalPages, debouncedQuery, filters, hasBoosts]);
+  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, debouncedQuery, filters, hasBoosts]);
 
   // ===== Infinite scroll =====
   const onScrollNearEnd = useCallback((e) => {
@@ -682,11 +671,6 @@ const apiStartTime = performance.now();
     const lowThreshold = 5;
 
     if (!backendHasMore) {
-      return;
-    }
-
-    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
@@ -1079,11 +1063,6 @@ const apiStartTime = performance.now();
           // Always remove from saved locally (backend auto-removes later)
             removeSavedJobLocally(id);
           setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          setPagination(prev => {
-            const newTotal = Math.max((prev.total || 0) - 1, 0);
-            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-          });
           showToast('Application submitted successfully', 'success');
 
           // 🔧 FIXED: Reload primary resume after successful application
@@ -1119,11 +1098,6 @@ const apiStartTime = performance.now();
         setAppliedCount(c => (Number(c) || 0) + 1);
         removeSavedJobLocally(id); // ensure removal if it was saved
         setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-        setPagination(prev => {
-          const newTotal = Math.max((prev.total || 0) - 1, 0);
-          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-          return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-        });
         showToast('Application submitted', 'success');
         try {
           const appliedRes = await refopenAPI.getMyApplications(1, 1);
@@ -1238,12 +1212,6 @@ const apiStartTime = performance.now();
       return;
     }
 
-    // FIXED: Additional guard - don't trigger if current page >= totalPages
-    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
-      return;
-    }
-
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
       loadMoreJobs();
@@ -1351,13 +1319,6 @@ const apiStartTime = performance.now();
               </TouchableOpacity>
             )}
           </View>
-        </View>
-
-      {/* Summary - only show when jobs are loaded */}
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryText}>
-            {formatCount(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
-          </Text>
         </View>
 
       {/* Job List */}

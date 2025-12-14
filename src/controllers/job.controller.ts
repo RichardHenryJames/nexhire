@@ -75,8 +75,6 @@ export const getJobs = withAuth(async (req: HttpRequest, context: InvocationCont
             jsonBody: successResponse(result.jobs, 'Jobs retrieved successfully', {
                 page: combined.page,
                 pageSize: combined.pageSize,
-                total: result.total,
-                totalPages: result.totalPages,
                 hasMore: result.hasMore,
                 nextCursor: result.nextCursor
             })
@@ -195,11 +193,8 @@ const serviceStartTime = Date.now();
         console.log('? JobService.searchJobs completed:', {
        serviceTime: `${serviceTime}ms`,
  jobsReturned: result.jobs.length,
-      total: result.total,
   timestamp: new Date().toISOString()
         });
-
-        const totalPages = Math.max(Math.ceil((result.total || 0) / (Number(safeParams.pageSize) || 20)), 1);
      const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
         
         const totalTime = Date.now() - apiStartTime;
@@ -215,8 +210,6 @@ const serviceStartTime = Date.now();
             jsonBody: successResponse(result.jobs, 'Jobs search completed', {
     page: safeParams.page,
     pageSize: safeParams.pageSize,
-      total: result.total,
-    totalPages,
      hasMore: result.hasMore,
                 nextCursor: result.nextCursor,
         searchQuery,

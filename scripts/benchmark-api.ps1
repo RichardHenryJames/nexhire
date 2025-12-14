@@ -4,7 +4,8 @@ param(
   [string]$Password = "12345678",
   [int]$Iterations = 15,
   [int]$PageSize = 20,
-  [string]$SearchText = "software"
+  [string]$SearchText = "software",
+  [switch]$NoWarmup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -97,8 +98,13 @@ function Benchmark-Endpoint {
     [int]$Iterations
   )
 
-  # Warmup (don’t count)
-  $null = Invoke-TimedGet -Url $Url -Headers $Headers
+  $warmupMs = $null
+  $warmupStatus = $null
+  if (-not $NoWarmup) {
+    $warm = Invoke-TimedGet -Url $Url -Headers $Headers
+    $warmupMs = [Math]::Round($warm.ElapsedMs, 1)
+    $warmupStatus = $warm.StatusCode
+  }
 
   $times = New-Object System.Collections.Generic.List[double]
   $non2xx = 0
@@ -116,6 +122,8 @@ function Benchmark-Endpoint {
   return [pscustomobject]@{
     Endpoint = $Name
     Url = $Url
+    WarmupMs = $warmupMs
+    WarmupStatus = $warmupStatus
     Iter = $stats.Count
     AvgMs = $stats.AvgMs
     P50Ms = $stats.P50Ms
@@ -141,4 +149,4 @@ $results += Benchmark-Endpoint -Name "GET /jobs (default)" -Url $jobsUrl -Header
 $results += Benchmark-Endpoint -Name "GET /jobs?search=..." -Url $jobsSearchUrl -Headers $headers -Iterations $Iterations
 $results += Benchmark-Endpoint -Name "GET /search/jobs?search=..." -Url $searchJobsUrl -Headers $headers -Iterations $Iterations
 
-$results | Select-Object Endpoint, Iter, AvgMs, P50Ms, P95Ms, MinMs, MaxMs, Non2xx | Format-Table -AutoSize
+$results | Select-Object Endpoint, WarmupMs, WarmupStatus, Iter, AvgMs, P50Ms, P95Ms, MinMs, MaxMs, Non2xx | Format-Table -AutoSize

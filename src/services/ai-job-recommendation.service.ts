@@ -82,7 +82,7 @@ export class AIJobRecommendationService {
       return {
         jobs: result.jobs,
         filters,
-        total: result.total,
+        total: result.jobs.length,
         alreadyPaid: hasAccess // Let frontend know if this was free access
       };
     } catch (error) {
