@@ -69,6 +69,19 @@ export const AuthProvider = ({ children }) => {
     checkAuthState();
   }, []);
 
+  // Global session-expired hook: any API call that detects expired/invalid token forces user back to Login
+  useEffect(() => {
+    refopenAPI.setOnSessionExpired(() => {
+      setUser(null);
+      setError(null);
+      setPendingGoogleAuth(null);
+    });
+
+    return () => {
+      refopenAPI.setOnSessionExpired(null);
+    };
+  }, []);
+
   // DEBUG: Track pendingGoogleAuth state changes
   useEffect(() => {
   }, [pendingGoogleAuth]);

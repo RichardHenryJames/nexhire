@@ -560,6 +560,7 @@ export class UserService {
             updateFields.push(`PreferredJobTypes=@param${idx}`); params.push(jobTypes); idx++; }
         if (jobPreferencesData.workplaceType) { updateFields.push(`PreferredWorkTypes=@param${idx}`); params.push(jobPreferencesData.workplaceType); idx++; }
         if (jobPreferencesData.preferredLocations) { const locations = Array.isArray(jobPreferencesData.preferredLocations) ? jobPreferencesData.preferredLocations.join(', ') : jobPreferencesData.preferredLocations; updateFields.push(`PreferredLocations=@param${idx}`); params.push(locations); idx++; }
+        if (jobPreferencesData.preferredCompanySize) { updateFields.push(`PreferredCompanySize=@param${idx}`); params.push(jobPreferencesData.preferredCompanySize); idx++; }
         if (!updateFields.length) throw new ValidationError('No job preferences data provided');
         updateFields.push('UpdatedAt=GETUTCDATE()');
         await dbService.executeQuery(`UPDATE Applicants SET ${updateFields.join(', ')} WHERE ApplicantID=@param0`, params);

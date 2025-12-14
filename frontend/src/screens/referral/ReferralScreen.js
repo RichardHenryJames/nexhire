@@ -279,6 +279,7 @@ export default function ReferralScreen({ navigation }) {
                   : undefined
               }
             >
+              <Text style={styles.requesterPrefix}>Requested by</Text>
               {applicantPhotoUrl ? (
                 <Image
                   source={{ uri: applicantPhotoUrl }}
@@ -290,7 +291,6 @@ export default function ReferralScreen({ navigation }) {
                   <Ionicons name="person" size={14} color={colors.gray500} />
                 </View>
               )}
-              <Text style={styles.requesterPrefix}>Requested by</Text>
               <Text
                 style={styles.requesterName}
                 numberOfLines={1}

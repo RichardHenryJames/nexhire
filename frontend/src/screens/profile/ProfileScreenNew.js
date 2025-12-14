@@ -374,6 +374,9 @@ export default function ProfileScreen({ navigation }) {
         isOpenToWork: jobSeekerProfile.isOpenToWork,
         openToRefer: jobSeekerProfile.openToRefer,
         profileVisibility: profile.profileVisibility,
+        preferredJobTypes: jobSeekerProfile.preferredJobTypes,
+        preferredLocations: jobSeekerProfile.preferredLocations,
+        preferredCompanySize: jobSeekerProfile.preferredCompanySize,
       });
       if (response.success) {
         Alert.alert('Success', 'Preferences updated successfully');
@@ -768,6 +771,44 @@ export default function ProfileScreen({ navigation }) {
     </Modal>
   );
 
+  // State for dropdowns
+  const [jobTypes, setJobTypes] = useState([]);
+  const [companySizes, setCompanySizes] = useState([]);
+  const [showJobTypesModal, setShowJobTypesModal] = useState(false);
+  const [showCompanySizeModal, setShowCompanySizeModal] = useState(false);
+  const [selectedJobTypes, setSelectedJobTypes] = useState([]);
+  const [selectedCompanySize, setSelectedCompanySize] = useState('');
+
+  // Load reference data when preferences modal opens
+  useEffect(() => {
+    if (activeModal === 'preferences') {
+      loadPreferencesReferenceData();
+      // Initialize selected values from profile
+      if (jobSeekerProfile.preferredJobTypes) {
+        const types = jobSeekerProfile.preferredJobTypes.split(',').map(t => t.trim()).filter(Boolean);
+        setSelectedJobTypes(types);
+      }
+      if (jobSeekerProfile.preferredCompanySize) {
+        setSelectedCompanySize(jobSeekerProfile.preferredCompanySize);
+      }
+    }
+  }, [activeModal, jobSeekerProfile.preferredJobTypes, jobSeekerProfile.preferredCompanySize]);
+
+  const loadPreferencesReferenceData = async () => {
+    try {
+      // Load Job Types
+      const jobTypeResponse = await refopenAPI.getReferenceMetadata('JobType');
+      if (jobTypeResponse.success && jobTypeResponse.data) {
+        setJobTypes(jobTypeResponse.data.map(item => item.Value));
+      }
+
+      // Company sizes - use hardcoded values (not in ReferenceMetadata)
+      setCompanySizes(['Startup', 'Small', 'Medium', 'Large', 'Enterprise']);
+    } catch (error) {
+      console.error('Error loading preferences reference data:', error);
+    }
+  };
+
   // Preferences Modal
   const renderPreferencesModal = () => (
     <Modal
@@ -856,17 +897,26 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <Text style={styles.sectionHeader}>Job Preferences</Text>
+          
+          {/* Preferred Job Types - Dropdown */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Preferred Job Types</Text>
             {editingModal ? (
-              <TextInput
-                style={styles.fieldInput}
-                value={jobSeekerProfile.preferredJobTypes}
-                onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, preferredJobTypes: text }))}
-                placeholder="e.g., Full-time, Contract"
-              />
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowJobTypesModal(true)}
+              >
+                <Text style={[styles.dropdownButtonText, selectedJobTypes.length === 0 && styles.placeholderText]}>
+                  {selectedJobTypes.length > 0 
+                    ? selectedJobTypes.join(', ') 
+                    : 'Select job types'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+              </TouchableOpacity>
             ) : (
-              <Text style={styles.fieldValue}>{jobSeekerProfile.preferredJobTypes || 'Not set'}</Text>
+              <Text style={styles.fieldValue}>
+                {jobSeekerProfile.preferredJobTypes || 'Not set'}
+              </Text>
             )}
           </View>
 
@@ -884,21 +934,123 @@ export default function ProfileScreen({ navigation }) {
             )}
           </View>
 
+          {/* Preferred Company Size - Dropdown */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Preferred Company Size</Text>
             {editingModal ? (
-              <TextInput
-                style={styles.fieldInput}
-                value={jobSeekerProfile.preferredCompanySize}
-                onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, preferredCompanySize: text }))}
-                placeholder="e.g., Startup, Enterprise"
-              />
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowCompanySizeModal(true)}
+              >
+                <Text style={[styles.dropdownButtonText, !selectedCompanySize && styles.placeholderText]}>
+                  {selectedCompanySize || 'Select company size'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={colors.gray500} />
+              </TouchableOpacity>
             ) : (
-              <Text style={styles.fieldValue}>{jobSeekerProfile.preferredCompanySize || 'Not set'}</Text>
+              <Text style={styles.fieldValue}>
+                {jobSeekerProfile.preferredCompanySize || 'Not set'}
+              </Text>
             )}
           </View>
         </ScrollView>
       </View>
+
+      {/* Job Types Modal */}
+      <Modal
+        visible={showJobTypesModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowJobTypesModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowJobTypesModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Job Types</Text>
+            <TouchableOpacity onPress={() => {
+              setJobSeekerProfile(prev => ({ 
+                ...prev, 
+                preferredJobTypes: selectedJobTypes.join(', ') 
+              }));
+              setShowJobTypesModal(false);
+            }}>
+              <Text style={styles.doneButton}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            {jobTypes.map((type, index) => {
+              const isSelected = selectedJobTypes.includes(type);
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.optionItem, isSelected && styles.optionItemSelected]}
+                  onPress={() => {
+                    setSelectedJobTypes(prev => 
+                      isSelected 
+                        ? prev.filter(t => t !== type)
+                        : [...prev, type]
+                    );
+                  }}
+                >
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {type}
+                  </Text>
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Company Size Modal */}
+      <Modal
+        visible={showCompanySizeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCompanySizeModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowCompanySizeModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Company Size</Text>
+            <TouchableOpacity onPress={() => {
+              setJobSeekerProfile(prev => ({ 
+                ...prev, 
+                preferredCompanySize: selectedCompanySize 
+              }));
+              setShowCompanySizeModal(false);
+            }}>
+              <Text style={styles.doneButton}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            {companySizes.map((size, index) => {
+              const isSelected = selectedCompanySize === size;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.optionItem, isSelected && styles.optionItemSelected]}
+                  onPress={() => setSelectedCompanySize(size)}
+                >
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {size}
+                  </Text>
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
     </Modal>
   );
 
@@ -2012,5 +2164,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     fontFamily: 'monospace',
+  },
+  // Dropdown Styles
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F5F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    flex: 1,
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  optionItemSelected: {
+    backgroundColor: colors.primary + '10',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#1C1C1E',
+  },
+  optionTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  doneButton: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
   },
 });

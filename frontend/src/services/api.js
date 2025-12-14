@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
+import { resetToLogin } from '../navigation/navigationRef';
 
 // FIXED: Use environment variable or fallback to production API
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
@@ -10,6 +11,8 @@ class RefOpenAPI {
   constructor() {
     this.token = null;
     this.refreshToken = null;
+    this.onSessionExpired = null;
+    this._handlingSessionExpired = false;
     this.baseURL = frontendConfig.api.baseUrl;
     this.timeout = frontendConfig.api.timeout;
     
@@ -124,8 +127,38 @@ class RefOpenAPI {
         });
       }
 
+      // Global session-expired handling: redirect to Login instead of leaving the app in a broken state
+      try {
+        const status = error?.status;
+        const message = (error?.message || '').toString();
+        const dataMessage = (error?.data?.message || error?.data?.error || '').toString();
+        const isTokenExpired = /token\s*expired/i.test(message) || /token\s*expired/i.test(dataMessage);
+        const isAuthStatus = status === 401 || status === 403;
+
+        if ((isAuthStatus || isTokenExpired) && !this._handlingSessionExpired) {
+          this._handlingSessionExpired = true;
+
+          await this.clearTokens();
+          if (typeof this.onSessionExpired === 'function') {
+            await this.onSessionExpired({ status, message: dataMessage || message });
+          }
+          resetToLogin();
+
+          // Allow future expiries after a short delay (prevents many parallel calls from spamming)
+          setTimeout(() => {
+            this._handlingSessionExpired = false;
+          }, 1000);
+        }
+      } catch (e) {
+        // Never block the original error path
+      }
+
       throw error;
     }
+  }
+
+  setOnSessionExpired(handler) {
+    this.onSessionExpired = handler;
   }
 
   // Token management
@@ -155,11 +188,8 @@ class RefOpenAPI {
 
   async removeToken(key) {
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem(key);
-      } else {
-        await SecureStore.deleteItemAsync(key);
-      }
+      // Tokens are stored in AsyncStorage in this codebase; remove them from the same store.
+      await AsyncStorage.removeItem(key);
     } catch (error) {
       console.error('Error removing token:', error);
     }
@@ -503,6 +533,10 @@ class RefOpenAPI {
       payload.preferredLocations = Array.isArray(jobPreferencesData.preferredLocations)
         ? jobPreferencesData.preferredLocations.join(', ')
         : jobPreferencesData.preferredLocations;
+    }
+
+    if (jobPreferencesData.preferredCompanySize) {
+      payload.preferredCompanySize = jobPreferencesData.preferredCompanySize;
     }
 
     if (jobPreferencesData.minimumSalary != null) {

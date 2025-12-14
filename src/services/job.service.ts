@@ -15,6 +15,47 @@ const MAX_PAGE_SIZE = 100;
 const MAX_UNPAGED_TOTAL = 500; // only allow all=true when total <= this
 
 export class JobService {
+    private static buildPreferenceScoreSql(): string {
+        // Scores are additive; higher means better match.
+        // Weights (simple + stable): JobType=3, WorkplaceType=2, Location=2, CompanySize=1
+        return `(
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(pref.PreferredJobTypes)), '') IS NOT NULL
+                 AND (',' + LOWER(REPLACE(pref.PreferredJobTypes, ' ', '')) + ',') LIKE '%,' + LOWER(REPLACE(jt.Value, ' ', '')) + ',%'
+                THEN 3 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(pref.PreferredWorkTypes)), '') IS NOT NULL
+                 AND NULLIF(LTRIM(RTRIM(wt.Value)), '') IS NOT NULL
+                 AND (',' + LOWER(REPLACE(pref.PreferredWorkTypes, ' ', '')) + ',') LIKE '%,' + LOWER(REPLACE(wt.Value, ' ', '')) + ',%'
+                THEN 2 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(pref.PreferredLocations)), '') IS NOT NULL
+                 AND EXISTS (
+                    SELECT 1
+                    FROM STRING_SPLIT(pref.PreferredLocations, ',') loc
+                    WHERE NULLIF(LTRIM(RTRIM(loc.value)), '') IS NOT NULL
+                      AND (
+                        j.Location LIKE '%' + LTRIM(RTRIM(loc.value)) + '%'
+                        OR j.City LIKE '%' + LTRIM(RTRIM(loc.value)) + '%'
+                        OR j.Country LIKE '%' + LTRIM(RTRIM(loc.value)) + '%'
+                      )
+                 )
+                THEN 2 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(pref.PreferredCompanySize)), '') IS NOT NULL
+                 AND NULLIF(LTRIM(RTRIM(o.Size)), '') IS NOT NULL
+                 AND LOWER(LTRIM(RTRIM(o.Size))) = LOWER(LTRIM(RTRIM(pref.PreferredCompanySize)))
+                THEN 1 ELSE 0
+            END)
+        )`;
+    }
+
     /**
      * \ud83d\ude80 OPTIMIZATION: Shared filter builder to avoid code duplication between getJobs and searchJobs
      * Builds WHERE clause and parameters for job queries with common filters
@@ -375,22 +416,37 @@ export class JobService {
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+            OUTER APPLY (
+                SELECT TOP 1
+                    a.PreferredJobTypes,
+                    a.PreferredWorkTypes,
+                    a.PreferredLocations,
+                    a.PreferredCompanySize
+                FROM Applicants a
+                WHERE a.UserID = @param${paramIndex}
+            ) pref
             ${whereClause}
         `;
 
         const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
         const dataParams: any[] = [...queryParams];
 
+        // Add current user id for preference scoring (also used for applied-job exclusion earlier)
+        dataParams.push(excludeUserApplications);
+        paramIndex += 1;
+
+        const preferenceScoreSql = this.buildPreferenceScoreSql();
+
         if (!noPaging) {
             const offset = (pageNum - 1) * pageSizeNum;
             // 🚀 OPTIMIZATION: Use indexed PublishedAt column for sorting
-            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
+            dataQuery += ` ORDER BY ${preferenceScoreSql} DESC, ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
                           OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
                           OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
             dataParams.push(offset, pageSizeNum);
             paramIndex += 2;
         } else {
-            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
+            dataQuery += ` ORDER BY ${preferenceScoreSql} DESC, ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
         }
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
@@ -754,22 +810,37 @@ export class JobService {
                 INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
                 LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                OUTER APPLY (
+                    SELECT TOP 1
+                        a.PreferredJobTypes,
+                        a.PreferredWorkTypes,
+                        a.PreferredLocations,
+                        a.PreferredCompanySize
+                    FROM Applicants a
+                    WHERE a.UserID = @param${paramIndex}
+                ) pref
                 ${whereClause}
             `;
 
             const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
             const dataParams: any[] = [...queryParams];
 
+            // Add current user id for preference scoring (also used for applied-job exclusion earlier)
+            dataParams.push(excludeUserApplications);
+            paramIndex += 1;
+
+            const preferenceScoreSql = this.buildPreferenceScoreSql();
+
             if (!noPaging) {
                 const offset = (pageNum - 1) * pageSizeNum;
                 // 🚀 OPTIMIZATION: Use indexed PublishedAt instead of PublishedDate
-                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC 
+                dataQuery += ` ORDER BY ${preferenceScoreSql} DESC, j.PublishedAt DESC, j.JobID DESC 
                               OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
                               OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
                 dataParams.push(offset, pageSizeNum);
                 paramIndex += 2;
             } else {
-                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC`;
+                dataQuery += ` ORDER BY ${preferenceScoreSql} DESC, j.PublishedAt DESC, j.JobID DESC`;
             }
 
             console.log('🔍 Executing data query');
