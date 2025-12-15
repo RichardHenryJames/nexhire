@@ -1,6 +1,16 @@
 {
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": [
+      "/bundles/*",
+      "/assets/*",
+      "/favicon.ico",
+      "/favicon.svg",
+      "/manifest.json",
+      "/robots.txt",
+      "/*.js",
+      "/*.css"
+    ]
   },
   "globalHeaders": {
     "cache-control": "no-cache, no-store, must-revalidate",
@@ -8,6 +18,11 @@
     "expires": "0"
   },
   "routes": [
+    {
+      "route": "/favicon.ico",
+      "redirect": "/favicon.svg",
+      "statusCode": 302
+    },
     {
       "route": "/index.html",
       "headers": {

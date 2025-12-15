@@ -225,7 +225,7 @@ function AuthStack() {
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      return "UserTypeSelection";
+      return "JobSeekerFlow";
     }
     return "Login";
   };
@@ -252,8 +252,38 @@ function AuthStack() {
             : undefined
         }
       />
-      <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
-      <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
+      <Stack.Screen
+        name="JobSeekerFlow"
+        component={JobSeekerFlow}
+        initialParams={
+          hasPendingGoogleAuth
+            ? {
+                screen: "ExperienceTypeSelection",
+                params: {
+                  userType: "JobSeeker",
+                  fromGoogleAuth: true,
+                  googleUser: pendingGoogleAuth?.user,
+                },
+              }
+            : undefined
+        }
+      />
+      <Stack.Screen
+        name="EmployerFlow"
+        component={EmployerFlow}
+        initialParams={
+          hasPendingGoogleAuth
+            ? {
+                screen: "EmployerTypeSelection",
+                params: {
+                  userType: "Employer",
+                  fromGoogleAuth: true,
+                  googleUser: pendingGoogleAuth?.user,
+                },
+              }
+            : undefined
+        }
+      />
 
       {/* NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
       <Stack.Screen

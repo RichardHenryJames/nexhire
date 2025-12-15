@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
   StyleSheet, 
   KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
   Alert, 
-  Image 
+  Image,
+  Modal,
+  FlatList,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { colors, typography } from '../../../../styles/theme';
+import refopenAPI from '../../../../services/api';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const { pendingGoogleAuth } = useAuth();
@@ -29,6 +33,16 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const [bio, setBio] = useState('');
   const [errors, setErrors] = useState({});
 
+  // Reference dropdowns
+  const [jobRoles, setJobRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [loadingRef, setLoadingRef] = useState(true);
+
+  const [showJobTitleModal, setShowJobTitleModal] = useState(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [jobTitleSearch, setJobTitleSearch] = useState('');
+  const [departmentSearch, setDepartmentSearch] = useState('');
+
   // Pre-populate some data for Google users
   useEffect(() => {
     if (isGoogleUser && googleUser) {
@@ -38,6 +52,40 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
       // For now, we'll keep the defaults but could enhance this
     }
   }, [isGoogleUser, googleUser]);
+
+  // Load JobRole + Department from ReferenceMetadata
+  useEffect(() => {
+    const loadReference = async () => {
+      try {
+        setLoadingRef(true);
+        const res = await refopenAPI.getBulkReferenceMetadata(['JobRole', 'Department']);
+        if (res?.success && res.data) {
+          const jobRoleItems = Array.isArray(res.data.JobRole) ? res.data.JobRole : [];
+          const departmentItems = Array.isArray(res.data.Department) ? res.data.Department : [];
+
+          setJobRoles(jobRoleItems);
+          setDepartments(departmentItems);
+        } else {
+          setJobRoles([]);
+          setDepartments([]);
+        }
+      } catch (e) {
+        setJobRoles([]);
+        setDepartments([]);
+      } finally {
+        setLoadingRef(false);
+      }
+    };
+    loadReference();
+  }, []);
+
+  const filteredJobRoles = jobTitleSearch.trim()
+    ? jobRoles.filter(r => (r?.Value || '').toLowerCase().includes(jobTitleSearch.trim().toLowerCase()))
+    : jobRoles;
+
+  const filteredDepartments = departmentSearch.trim()
+    ? departments.filter(d => (d?.Value || '').toLowerCase().includes(departmentSearch.trim().toLowerCase()))
+    : departments;
 
   const validateForm = () => {
     const newErrors = {};
@@ -115,18 +163,21 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           <Text style={styles.label}>
             Job Title <Text style={styles.required}>*</Text>
           </Text>
-          <TextInput 
-            style={[styles.input, errors.jobTitle && styles.inputError]} 
-            value={jobTitle} 
-            onChangeText={(text) => {
-              setJobTitle(text);
-              if (errors.jobTitle) {
-                setErrors({ ...errors, jobTitle: null });
-              }
-            }}
-            placeholder="e.g., CEO, HR Manager, Talent Acquisition Specialist"
-            placeholderTextColor={colors.gray400}
-          />
+          <TouchableOpacity
+            style={[styles.selectInput, errors.jobTitle && styles.inputError]}
+            onPress={() => setShowJobTitleModal(true)}
+            activeOpacity={0.8}
+            disabled={loadingRef}
+          >
+            <Text style={[styles.selectInputText, !jobTitle && styles.selectInputPlaceholder]}>
+              {loadingRef ? 'Loading job titles...' : (jobTitle || 'Select your job title')}
+            </Text>
+            {loadingRef ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chevron-down" size={18} color={colors.gray500} />
+            )}
+          </TouchableOpacity>
           {errors.jobTitle && (
             <Text style={styles.errorText}>{errors.jobTitle}</Text>
           )}
@@ -136,18 +187,21 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           <Text style={styles.label}>
             Department <Text style={styles.required}>*</Text>
           </Text>
-          <TextInput 
-            style={[styles.input, errors.department && styles.inputError]} 
-            value={department} 
-            onChangeText={(text) => {
-              setDepartment(text);
-              if (errors.department) {
-                setErrors({ ...errors, department: null });
-              }
-            }}
-            placeholder="e.g., Human Resources, Engineering, Marketing"
-            placeholderTextColor={colors.gray400}
-          />
+          <TouchableOpacity
+            style={[styles.selectInput, errors.department && styles.inputError]}
+            onPress={() => setShowDepartmentModal(true)}
+            activeOpacity={0.8}
+            disabled={loadingRef}
+          >
+            <Text style={[styles.selectInputText, !department && styles.selectInputPlaceholder]}>
+              {loadingRef ? 'Loading departments...' : (department || 'Select your department')}
+            </Text>
+            {loadingRef ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chevron-down" size={18} color={colors.gray500} />
+            )}
+          </TouchableOpacity>
           {errors.department && (
             <Text style={styles.errorText}>{errors.department}</Text>
           )}
@@ -183,6 +237,124 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           <Ionicons name="arrow-forward" size={18} color={colors.white} />
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Job Title Picker */}
+      <Modal
+        visible={showJobTitleModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowJobTitleModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowJobTitleModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Job Title</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.modalSearchRow}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, styles.modalSearchInput]}
+              placeholder="Search job titles..."
+              placeholderTextColor={colors.gray400}
+              value={jobTitleSearch}
+              onChangeText={setJobTitleSearch}
+            />
+          </View>
+
+          <FlatList
+            data={filteredJobRoles}
+            keyExtractor={(item) => String(item.ReferenceID ?? item.Value)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const value = item?.Value || '';
+              const selected = value === jobTitle;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalItem, selected && styles.modalItemSelected]}
+                  onPress={() => {
+                    setJobTitle(value);
+                    setJobTitleSearch('');
+                    setShowJobTitleModal(false);
+                    if (errors.jobTitle) setErrors({ ...errors, jobTitle: null });
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selected && styles.modalItemTextSelected]}>{value}</Text>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="briefcase" size={48} color={colors.gray400} />
+                <Text style={styles.emptyText}>No job titles found</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
+
+      {/* Department Picker */}
+      <Modal
+        visible={showDepartmentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDepartmentModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowDepartmentModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Department</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.modalSearchRow}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, styles.modalSearchInput]}
+              placeholder="Search departments..."
+              placeholderTextColor={colors.gray400}
+              value={departmentSearch}
+              onChangeText={setDepartmentSearch}
+            />
+          </View>
+
+          <FlatList
+            data={filteredDepartments}
+            keyExtractor={(item) => String(item.ReferenceID ?? item.Value)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const value = item?.Value || '';
+              const selected = value === department;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalItem, selected && styles.modalItemSelected]}
+                  onPress={() => {
+                    setDepartment(value);
+                    setDepartmentSearch('');
+                    setShowDepartmentModal(false);
+                    if (errors.department) setErrors({ ...errors, department: null });
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selected && styles.modalItemTextSelected]}>{value}</Text>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="layers" size={48} color={colors.gray400} />
+                <Text style={styles.emptyText}>No departments found</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -242,7 +414,7 @@ const styles = StyleSheet.create({
   subtitle: { 
     color: colors.gray600, 
     marginTop: 6, 
-    marginBottom: 16 
+    marginBottom: 16,
   },
   field: { 
     marginTop: 12 
@@ -261,10 +433,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, 
     borderWidth: 1, 
     borderColor: colors.border, 
-    borderRadius: 8, 
-    padding: 12, 
+    borderRadius: 12, 
+    padding: 14, 
     color: colors.text,
     fontSize: typography.sizes.md,
+  },
+  selectInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectInputText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  selectInputPlaceholder: {
+    color: colors.gray400,
   },
   inputError: {
     borderColor: colors.danger,
@@ -273,6 +464,69 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: typography.sizes.sm,
     marginTop: 4,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  modalSearchRow: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalSearchInput: {
+    flex: 1,
+    paddingVertical: 12,
+  },
+  modalItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalItemSelected: {
+    backgroundColor: colors.primaryLight,
+  },
+  modalItemText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  modalItemTextSelected: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginTop: 16,
   },
   primaryBtn: { 
     marginTop: 24, 

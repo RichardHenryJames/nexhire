@@ -18,7 +18,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
   
   const { 
-    userType, 
+    userType = 'JobSeeker', 
     fromGoogleAuth: fromGoogleAuthParam = false, 
     googleUser: routeGoogleUser = null 
   } = route.params || {};
@@ -32,20 +32,42 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   // 🔧 IMPROVED: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !googleUser && !pendingGoogleAuth) {
-      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to user type selection');
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        window.location.href = '/register';
+        window.location.href = '/login';
         return;
       }
       
-      // For native: Use navigation replace to UserTypeSelection
+      // For native: Reset to Login
       setTimeout(() => {
-        navigation.replace('UserTypeSelectionScreen');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
       }, 100);
     }
   }, [fromGoogleAuth, googleUser, pendingGoogleAuth, navigation]);
+
+  const handleSwitchToEmployer = () => {
+    const parentNav = navigation.getParent?.();
+    const target = {
+      screen: 'EmployerTypeSelection',
+      params: {
+        userType: 'Employer',
+        fromGoogleAuth,
+        googleUser,
+      },
+    };
+
+    if (parentNav?.replace) {
+      parentNav.replace('EmployerFlow', target);
+      return;
+    }
+
+    navigation.navigate('EmployerFlow', target);
+  };
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -225,12 +247,16 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             Skip to Profile Register
           </Text>
         </TouchableOpacity>
-        
-        {!selectedType && (
-          <Text style={styles.skipHintText}>
-            💡 Select your experience level above to enable skip option
-          </Text>
-        )}
+
+        <TouchableOpacity
+          style={styles.switchFlowButton}
+          onPress={handleSwitchToEmployer}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="business-outline" size={18} color={colors.primary} />
+          <Text style={styles.switchFlowButtonText}>I want to hire talent</Text>
+        </TouchableOpacity>
+       
       </View>
     </KeyboardAvoidingView>
   );
@@ -405,5 +431,24 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 16,
     fontStyle: 'italic',
+  },
+  switchFlowButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  switchFlowButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
 });

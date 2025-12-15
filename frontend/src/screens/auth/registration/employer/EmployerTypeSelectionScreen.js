@@ -29,7 +29,7 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
-  const { userType = 'Employer' } = route?.params || {};
+  const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
   // Employer type selection
   const [selectedType, setSelectedType] = useState(null); // 'company' | 'startup' | 'freelancer'
@@ -92,13 +92,15 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       setSelectedCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown'
+        industry: org.industry || 'Unknown',
+        logoURL: org.logoURL || null,
       });
     } else if (orgPickerContext === 'startup') {
       setStartupCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown'
+        industry: org.industry || 'Unknown',
+        logoURL: org.logoURL || null,
       });
     }
     closeOrgModal();
@@ -108,9 +110,9 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
     const name = (orgQuery || '').trim();
     if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
     if (orgPickerContext === 'established') {
-      setSelectedCompany({ id: null, name });
+      setSelectedCompany({ id: null, name, logoURL: null });
     } else if (orgPickerContext === 'startup') {
-      setStartupCompany({ id: null, name });
+      setStartupCompany({ id: null, name, logoURL: null });
     }
     closeOrgModal();
   };
@@ -142,6 +144,25 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
     }
   };
 
+  const handleSwitchToJobSeeker = () => {
+    const parentNav = navigation.getParent?.();
+    const target = {
+      screen: 'ExperienceTypeSelection',
+      params: {
+        userType: 'JobSeeker',
+        fromGoogleAuth,
+        googleUser,
+      },
+    };
+
+    if (parentNav?.replace) {
+      parentNav.replace('JobSeekerFlow', target);
+      return;
+    }
+
+    navigation.navigate('JobSeekerFlow', target);
+  };
+
   const EmployerTypeCard = ({ type, title, subtitle, icon, description, showOrgButton = false, orgContext }) => (
     <TouchableOpacity
       style={[styles.card, selectedType === type && styles.cardSelected]}
@@ -163,11 +184,35 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
           style={styles.companySelector}
             onPress={() => openOrgModal(orgContext)}
         >
-          <Text style={styles.companySelectorLabel}>
-            {orgContext === 'established'
-              ? (selectedCompany ? selectedCompany.name : 'Select or search company')
-              : (startupCompany ? startupCompany.name : 'Select or search company (optional)')}
-          </Text>
+          <View style={styles.companySelectorLeft}>
+            {orgContext === 'established' ? (
+              selectedCompany?.name ? (
+                selectedCompany?.logoURL ? (
+                  <Image source={{ uri: selectedCompany.logoURL }} style={styles.selectedCompanyLogo} resizeMode="contain" />
+                ) : (
+                  <View style={styles.selectedCompanyLogoPlaceholder}>
+                    <Ionicons name="business" size={14} color={colors.gray400} />
+                  </View>
+                )
+              ) : null
+            ) : (
+              startupCompany?.name ? (
+                startupCompany?.logoURL ? (
+                  <Image source={{ uri: startupCompany.logoURL }} style={styles.selectedCompanyLogo} resizeMode="contain" />
+                ) : (
+                  <View style={styles.selectedCompanyLogoPlaceholder}>
+                    <Ionicons name="business" size={14} color={colors.gray400} />
+                  </View>
+                )
+              ) : null
+            )}
+
+            <Text style={styles.companySelectorLabel}>
+              {orgContext === 'established'
+                ? (selectedCompany ? selectedCompany.name : 'Select or search company')
+                : (startupCompany ? startupCompany.name : 'Select or search company (optional)')}
+            </Text>
+          </View>
           <Ionicons name="chevron-forward" size={20} color={colors.primary} />
         </TouchableOpacity>
       )}
@@ -226,6 +271,15 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               size={20}
               color={(!selectedType || (selectedType === 'company' && !selectedCompany)) ? colors.gray400 : colors.white}
             />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.switchFlowButton}
+            onPress={handleSwitchToJobSeeker}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="search-outline" size={18} color={colors.primary} />
+            <Text style={styles.switchFlowButtonText}>I'm looking for jobs</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -339,11 +393,33 @@ const styles = StyleSheet.create({
   cardSubtitle: { fontSize: typography.sizes.sm, color: colors.gray500, fontWeight: typography.weights.medium },
   cardDescription: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 20, marginBottom: 8 },
   companySelector: { backgroundColor: colors.background, borderRadius: 8, padding: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.primary },
-  companySelectorLabel: { fontSize: typography.sizes.sm, color: colors.primary, fontWeight: typography.weights.medium },
+  companySelectorLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 10 },
+  selectedCompanyLogo: { width: 22, height: 22, borderRadius: 6 },
+  selectedCompanyLogoPlaceholder: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center' },
+  companySelectorLabel: { fontSize: typography.sizes.sm, color: colors.primary, fontWeight: typography.weights.medium, flexShrink: 1 },
   continueButton: { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 12, gap: 8 },
   continueButtonDisabled: { backgroundColor: colors.gray300 },
   continueButtonText: { color: colors.white, fontSize: typography.sizes.md, fontWeight: typography.weights.bold },
   continueButtonTextDisabled: { color: colors.gray400 },
+  switchFlowButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  switchFlowButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
   modalContainer: { flex: 1, backgroundColor: colors.background },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
