@@ -98,59 +98,70 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
-    try {
-      // ⚡ Load stats first (for Quick Actions badges)
-      setLoadingStats(true);
-      const dashboardRes = await refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} }));
-      const stats = dashboardRes.success ? dashboardRes.data : {};
-      
-      setDashboardData(prev => ({ ...prev, stats }));
-      setLoadingStats(false);
+    // ⚡ Start all fetches in parallel for better performance
+    
+    // 1. Dashboard Stats
+    setLoadingStats(true);
+    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats')
+      .then(res => {
+        const stats = res.success ? res.data : {};
+        setDashboardData(prev => ({ ...prev, stats }));
+      })
+      .catch(err => {
+        console.warn('Dashboard stats failed:', err);
+        // Don't alert for stats failure as it's non-critical
+      })
+      .finally(() => setLoadingStats(false));
 
-      // ⚡ Load jobs in parallel (non-blocking)
-      setLoadingJobs(true);
-      const recentJobsRes = isEmployer 
-        ? await refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
-        : await refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] }));
-      
-      let recentJobs = [];
-      if (recentJobsRes.success) {
-        if (isEmployer) {
-          recentJobs = (recentJobsRes.data || []).slice(0, 5);
-        } else {
+    // 2. Recent Jobs
+    setLoadingJobs(true);
+    const jobsPromise = (async () => {
+      try {
+        const recentJobsRes = isEmployer 
+          ? await refopenAPI.getOrganizationJobs({ 
+              page: 1, 
+              pageSize: 5, 
+              status: 'Published', 
+              postedByUserId: user?.UserID || user?.userId || user?.id 
+            })
+          : await refopenAPI.getJobs(1, 5);
+        
+        let recentJobs = [];
+        if (recentJobsRes.success) {
           recentJobs = (recentJobsRes.data || []).slice(0, 5);
         }
+        setDashboardData(prev => ({ ...prev, recentJobs }));
+      } catch (err) {
+        console.warn('Recent jobs fetch failed:', err);
+      } finally {
+        setLoadingJobs(false);
       }
-      
-      setDashboardData(prev => ({ ...prev, recentJobs }));
-      setLoadingJobs(false);
+    })();
 
-      // ⚡ Load applications (for job seekers)
-      if (isJobSeeker) {
-        setLoadingApplications(true);
-        const applicationsRes = await refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] }));
-        const recentApplications = applicationsRes.success ? applicationsRes.data.slice(0, 3) : [];
-        
-        setDashboardData(prev => ({ ...prev, recentApplications }));
-        setLoadingApplications(false);
-
-        // 🤖 Load AI personalized jobs (non-critical, can load last)
-        loadAIPersonalizedJobs();
-        
-        // Load wallet balance for AI feature
-        loadWalletBalance();
-        
-        // Check AI access status (24hr validity)
-        checkAIAccessStatus();
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
-      setLoadingStats(false);
-      setLoadingJobs(false);
-      setLoadingApplications(false);
+    // 3. Applications (Job Seeker only)
+    let applicationsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      setLoadingApplications(true);
+      applicationsPromise = refopenAPI.getMyApplications(1, 3)
+        .then(res => {
+          const recentApplications = res.success ? res.data.slice(0, 3) : [];
+          setDashboardData(prev => ({ ...prev, recentApplications }));
+          
+          // Load secondary data after applications
+          loadAIPersonalizedJobs();
+          loadWalletBalance();
+          checkAIAccessStatus();
+        })
+        .catch(err => console.warn('Applications fetch failed:', err))
+        .finally(() => setLoadingApplications(false));
     }
+
+    // We don't await here to allow UI to update progressively
+    // But we catch any unhandled promise rejections just in case
+    Promise.all([statsPromise, jobsPromise, applicationsPromise]).catch(err => {
+      console.error('Error in dashboard data fetch:', err);
+    });
+
   }, [isJobSeeker, isEmployer, user]);
 
   // Load wallet balance
@@ -713,7 +724,7 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
