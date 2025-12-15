@@ -1641,7 +1641,7 @@ app.http("scraping-cleanup", {
         };
       }
 
-      const { daysOld = 90, source = null } = req.query as any;
+      const { daysOld = 60, source = null } = req.query as any;
 
       if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
         return {
@@ -1974,8 +1974,8 @@ app.http("job-archival-trigger", {
 
       console.log("Manual job archival triggered by admin:", payload.userId);
 
-      // Get daysOld parameter (default: 30)
-      const { daysOld = 30 } = (await req.json().catch(() => ({}))) as any;
+      // Get daysOld parameter (default: 60)
+      const { daysOld = 60 } = (await req.json().catch(() => ({}))) as any;
 
       if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
         return {
@@ -2185,7 +2185,7 @@ app.timer("jobArchivalTimer", {
     const runStartTime = new Date();
 
     try {
-      context.log("\nStarting job archival process (jobs older than 90 days, batch 100)...\n");
+      context.log("\nStarting job archival process (jobs older than 60 days, batch 100)...\n");
 
       // Import and initialize archive service
       const { JobArchiveService } = await import("./src/services/job-archive.service");
@@ -2193,8 +2193,8 @@ app.timer("jobArchivalTimer", {
       // Initialize archive logs table if needed
       await JobArchiveService.initializeArchiveLogs();
 
-      // Archive jobs older than 90 days, max 100 per run
-      const daysOld = 90;
+      // Archive jobs older than 60 days, max 100 per run
+      const daysOld = 60;
       const result = await JobArchiveService.archiveOldJobs(daysOld);
 
       const runEndTime = new Date();

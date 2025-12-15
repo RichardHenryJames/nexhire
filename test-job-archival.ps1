@@ -46,10 +46,10 @@ try {
 }
 
 # Step 2: Trigger Archival
-Write-Host "`n2. Triggering job archival (90 days, batch 100)..." -ForegroundColor Yellow
+Write-Host "`n2. Triggering job archival (60 days, batch 100)..." -ForegroundColor Yellow
 
 $archiveData = @{
-    daysOld = 90
+    daysOld = 60
 }
 $archiveJson = $archiveData | ConvertTo-Json
 
@@ -85,7 +85,7 @@ try {
         
         if ($result.data.archivedJobIds -and $result.data.archivedJobIds.Count -gt 0) {
             Write-Host "`nArchived Job IDs (showing first 5):" -ForegroundColor Cyan
-            $result.data.archivedJobIds | Select-Object -First 5 | ForEach-Object { Write-Host "  • $_" -ForegroundColor Gray }
+            $result.data.archivedJobIds | Select-Object -First 5 | ForEach-Object { Write-Host "  ï¿½ $_" -ForegroundColor Gray }
             if ($result.data.archivedJobIds.Count -gt 5) {
                 Write-Host "  ... and $($result.data.archivedJobIds.Count - 5) more" -ForegroundColor Gray
             }
