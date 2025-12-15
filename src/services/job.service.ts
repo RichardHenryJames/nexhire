@@ -4,11 +4,13 @@ import { Job, PaginationParams, QueryParams, JobCreateRequest } from '../types';
 import {
     ValidationError,
     NotFoundError,
+    InsufficientBalanceError,
     validateRequest,
     jobCreateSchema,
     paginationSchema
 } from '../utils/validation';
 import { appConstants } from '../config';
+import { WalletService } from './wallet.service';
 
 // Pagination caps
 const MAX_PAGE_SIZE = 100;
@@ -376,8 +378,16 @@ export class JobService {
         // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to first WorkplaceType if not found
         let workplaceTypeId: number = 443; // Default to Onsite (ReferenceID from ReferenceMetadata)
         if (validated.workplaceType) {
+            const rawWorkplaceType = String(validated.workplaceType).trim();
+            const workplaceTypeNormalized = (() => {
+                const lower = rawWorkplaceType.toLowerCase();
+                if (lower === 'onsite' || lower === 'on-site' || lower === 'on site') return 'Onsite';
+                if (lower === 'remote') return 'Remote';
+                if (lower === 'hybrid') return 'Hybrid';
+                return rawWorkplaceType;
+            })();
             const wtQuery = 'SELECT ReferenceID FROM ReferenceMetadata WHERE RefType = @param0 AND Value = @param1';
-            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', validated.workplaceType]);
+            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', workplaceTypeNormalized]);
             if (wtResult.recordset && wtResult.recordset.length > 0) {
                 workplaceTypeId = wtResult.recordset[0].ReferenceID;
             }
@@ -698,6 +708,10 @@ export class JobService {
             throw new NotFoundError('Job not found');
         }
 
+        if (job.Status !== 'Draft') {
+            throw new ValidationError('Only draft jobs can be published');
+        }
+
         // Check permissions
         if (job.PostedByUserID !== userId) {
             const permissionQuery = `
@@ -709,6 +723,13 @@ export class JobService {
             if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
+        }
+
+        // Charge ₹50 to publish a draft job
+        const PUBLISH_JOB_FEE = 50;
+        const wallet = await WalletService.getOrCreateWallet(userId);
+        if (wallet.Balance < PUBLISH_JOB_FEE) {
+            throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
         }
 
         // Update job status to Published
@@ -725,6 +746,31 @@ export class JobService {
         `;
 
         await dbService.executeQuery(query, [jobId]);
+
+        // Deduct fee after successful publish; if debit fails, revert publish.
+        try {
+            await WalletService.debitWallet(
+                userId,
+                PUBLISH_JOB_FEE,
+                'JOB_PUBLISH',
+                `Publish job - ${job.Title || jobId}`
+            );
+        } catch (error) {
+            try {
+                await dbService.executeQuery(
+                    `UPDATE Jobs
+                     SET Status = 'Draft',
+                         PublishedAt = NULL,
+                         ExpiresAt = NULL,
+                         UpdatedAt = GETUTCDATE()
+                     WHERE JobID = @param0`,
+                    [jobId]
+                );
+            } catch (revertError) {
+                console.error('Failed to revert job after wallet debit failure:', revertError);
+            }
+            throw error;
+        }
 
         const publishedJob = await this.getJobById(jobId);
         if (!publishedJob) {

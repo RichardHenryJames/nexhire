@@ -76,6 +76,16 @@ class RefOpenAPI {
         ...options,
       };
 
+      // Targeted debug logging for job creation (do not log tokens)
+      if (endpoint === '/jobs' && String(config.method).toUpperCase() === 'POST') {
+        try {
+          const body = options.body ? JSON.parse(options.body) : null;
+          console.log('➡️ [API] POST /jobs', body);
+        } catch {
+          console.log('➡️ [API] POST /jobs (non-JSON body)');
+        }
+      }
+
       // Log the API call
       this.logApiCall(config.method, endpoint, options.body ? JSON.parse(options.body) : null);
 
@@ -107,6 +117,10 @@ class RefOpenAPI {
         const error = new Error(data.message || data.error || `HTTP ${response.status}`);
         error.status = response.status;
         error.data = data;
+
+        if (endpoint === '/jobs' && String(config.method).toUpperCase() === 'POST') {
+          console.log('⬅️ [API] POST /jobs error', { status: response.status, data });
+        }
         throw error;
       }
 
@@ -2161,8 +2175,14 @@ if (!resumeId) {
       
       return result;
     } catch (error) {
-      console.error('❌ Publish job failed:', error.message);
-      return { success: false, error: error.message || 'Failed to publish job' };
+      const serverMessage = error?.data?.error || error?.data?.message;
+      console.error('❌ Publish job failed:', serverMessage || error.message);
+      return {
+        success: false,
+        error: serverMessage || error.message || 'Failed to publish job',
+        status: error?.status,
+        data: error?.data,
+      };
     }
   }
 

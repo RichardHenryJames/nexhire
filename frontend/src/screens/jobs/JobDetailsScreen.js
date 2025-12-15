@@ -20,6 +20,7 @@ import { colors, typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
@@ -49,6 +50,10 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
+
+  // 💎 NEW: Publish confirmation modal state
+  const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -569,33 +574,65 @@ const { jobId, fromReferralRequest } = route.params || {};
     if (!job?.JobID) {
       return;
     }
-    
+
+    const PUBLISH_JOB_FEE = 50;
+
+    try {
+      // Check wallet balance
+      const walletBalance = await refopenAPI.getWalletBalance();
+      
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setPublishConfirmData({ currentBalance: balance, requiredAmount: PUBLISH_JOB_FEE });
+        setShowPublishConfirmModal(true);
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance?.error);
+        showToast('Unable to check wallet balance', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to check wallet balance:', error);
+      showToast('Unable to check wallet balance', 'error');
+    }
+  };
+
+  const handlePublishConfirmProceed = async () => {
+    setShowPublishConfirmModal(false);
+    const { currentBalance, requiredAmount } = publishConfirmData;
+
+    // Double check balance
+    if (currentBalance < requiredAmount) {
+      setWalletModalData({ currentBalance, requiredAmount });
+      setShowWalletModal(true);
+      return;
+    }
+
     try {
       setPublishing(true);
-      
       const result = await refopenAPI.publishJob(job.JobID);
-      
+
       if (result.success) {
         showToast('Job published successfully!', 'success');
-        // Update job status locally to reflect the change
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
-        // Navigate back with parameters to switch to Published tab
         setTimeout(() => {
-          // Navigate to MainTabs and then to Jobs screen with parameters
           navigation.navigate('MainTabs', {
             screen: 'Jobs',
-            params: { 
+            params: {
               switchToTab: 'published',
               publishedJobId: job.JobID,
               successMessage: `${job.Title} has been published successfully!`
             }
           });
         }, 1500);
-      } else {
-        Alert.alert('Error', result.error || 'Failed to publish job');
+        return;
       }
+
+      const message = result?.error || result?.message || 'Failed to publish job';
+      showToast(message, 'error');
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to publish job');
+      const message = error?.message || 'Failed to publish job';
+      showToast(message, 'error');
     } finally {
       setPublishing(false);
     }
@@ -1201,7 +1238,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
                 <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
               )}
               <Text style={styles.publishButtonText}>
-                {publishing ? 'Publishing...' : 'Publish Job'}
+                {publishing ? 'Publishing...' : 'Publish Job (₹50)'}
               </Text>
             </TouchableOpacity>
           )}
@@ -1249,6 +1286,24 @@ Highlight your relevant experience, skills, and why you're excited about this sp
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* 💎 NEW: Publish Confirmation Modal */}
+      <PublishJobConfirmModal
+        visible={showPublishConfirmModal}
+        currentBalance={publishConfirmData.currentBalance}
+        requiredAmount={publishConfirmData.requiredAmount}
+        jobTitle={job?.Title || 'this job'}
+        onProceed={handlePublishConfirmProceed}
+        onCancel={() => setShowPublishConfirmModal(false)}
+        onAddMoney={() => {
+          setShowPublishConfirmModal(false);
+          setWalletModalData({ 
+            currentBalance: publishConfirmData.currentBalance, 
+            requiredAmount: publishConfirmData.requiredAmount 
+          });
+          setShowWalletModal(true);
+        }}
       />
     </ScrollView>
   );

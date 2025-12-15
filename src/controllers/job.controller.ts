@@ -13,7 +13,8 @@ import {
     validateRequest,
     paginationSchema,
     isValidGuid,
-    InsufficientBalanceError
+    InsufficientBalanceError,
+    ValidationError
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
@@ -42,6 +43,16 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
         return { status: 201, jsonBody: successResponse(job, 'Job created successfully') };
     } catch (error) {
         console.error('Error in createJob:', error);
+        if (error instanceof ValidationError) {
+            return {
+                status: 400,
+                jsonBody: {
+                    success: false,
+                    error: 'Validation failed',
+                    details: error.details
+                }
+            };
+        }
         if (error instanceof Error && error.message.includes('Invalid column name')) {
             return { status: 500, jsonBody: { success: false, error: 'Database schema error', message: 'Please contact support - database schema needs updating' } };
         }
@@ -125,6 +136,17 @@ export const publishJob = withAuth(async (req: HttpRequest, context: InvocationC
         return { status: 200, jsonBody: successResponse(published, 'Job published successfully') };
     } catch (error) {
         console.error('Error in publishJob:', error);
+        // Mirror createJob behavior: validation/insufficient funds -> 400
+        if (error instanceof ValidationError || error instanceof InsufficientBalanceError) {
+            return {
+                status: 400,
+                jsonBody: {
+                    success: false,
+                    error: (error as any).name || 'ValidationError',
+                    message: (error as any).message || 'Validation failed'
+                }
+            };
+        }
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to publish job' } };
     }
 }, ['write:jobs']);

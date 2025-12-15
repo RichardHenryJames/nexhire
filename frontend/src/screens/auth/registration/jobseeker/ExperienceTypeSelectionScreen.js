@@ -150,12 +150,22 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.topBar}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerSwitchButton}
+              onPress={handleSwitchToEmployer}
+            >
+              <Text style={styles.headerSwitchButtonText}>I want to hire talent</Text>
+              <Ionicons name="business-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
 
           {/* Show Google user info if available */}
           {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
@@ -246,15 +256,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           ]}>
             Skip to Profile Register
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.switchFlowButton}
-          onPress={handleSwitchToEmployer}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="business-outline" size={18} color={colors.primary} />
-          <Text style={styles.switchFlowButtonText}>I want to hire talent</Text>
         </TouchableOpacity>
        
       </View>
@@ -447,6 +448,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   switchFlowButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerSwitchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '10',
+  },
+  headerSwitchButtonText: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.bold,

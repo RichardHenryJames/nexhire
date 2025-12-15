@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
+import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
 import { styles as jobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 
@@ -25,6 +27,13 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(true);
   const [pagination, setPagination] = useState({ page:1, pageSize:50, total:0, totalPages:1 });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  
+  // 💎 NEW: Publish confirmation modal state
+  const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: 50, jobId: null, jobTitle: '' });
+  
   const abortRef = useRef(null);
 
   // Redirect job seekers
@@ -93,25 +102,63 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const onSearchSubmit = () => load(1);
 
-  const publishJob = async (jobId) => {
+  const initiatePublishJob = async (jobId, jobTitle) => {
+    const PUBLISH_JOB_FEE = 50;
+
+    try {
+      // Check wallet balance
+      const walletBalance = await refopenAPI.getWalletBalance();
+      
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setPublishConfirmData({ 
+          currentBalance: balance, 
+          requiredAmount: PUBLISH_JOB_FEE,
+          jobId: jobId,
+          jobTitle: jobTitle || 'this job'
+        });
+        setShowPublishConfirmModal(true);
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance?.error);
+        showToast('Unable to check wallet balance', 'error');
+      }
+    } catch (e) {
+      console.error('Failed to check wallet balance:', e);
+      showToast('Unable to check wallet balance', 'error');
+    }
+  };
+
+  const handlePublishConfirmProceed = async () => {
+    setShowPublishConfirmModal(false);
+    const { jobId, currentBalance, requiredAmount } = publishConfirmData;
+
+    // Double check balance (though modal handles UI, logic safety)
+    if (currentBalance < requiredAmount) {
+      setWalletModalData({ currentBalance, requiredAmount });
+      setShowWalletModal(true);
+      return;
+    }
+
     try {
       const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
-        showToast('Job published', 'success');
+        showToast('Job published successfully', 'success');
         
-        // ? CRITICAL FIX: Remove published job from current list immediately
+        // Remove published job from current list immediately
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
         
-        // ? CRITICAL FIX: Reload BOTH tabs to ensure data is fresh
+        // Reload BOTH tabs to ensure data is fresh
         await load(1);
-        
-        // ? OPTIONAL: Auto-switch to Published tab to show the newly published job
-        // setTimeout(() => setActiveTab('published'), 500);
+        return;
       }
-      else Alert.alert('Error', res.error || 'Publish failed');
+
+      const message = res?.error || res?.message || 'Publish failed';
+      showToast(message, 'error');
     } catch(e) { 
-      console.error('? Publish error:', e);
-      Alert.alert('Error', e.message || 'Publish failed'); 
+      console.error('Publish error:', e);
+      showToast(e?.message || 'Publish failed', 'error');
     }
   };
 
@@ -138,7 +185,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
           hideSave
           // ? NEW: Pass publish props to JobCard
           showPublish={isDraft}
-          onPublish={isDraft ? () => publishJob(job.JobID) : null}
+          onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title) : null}
         />
       </View>
     );
@@ -186,7 +233,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
         })}
       </View>
 
-      <ScrollView style={jobStyles.jobList} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>        
+      <ScrollView style={jobStyles.jobList} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {loading && jobs.length===0 ? (
           <View style={jobStyles.loadingContainer}><Text style={jobStyles.loadingText}>Loading...</Text></View>
         ) : jobs.length===0 ? (
@@ -234,6 +281,34 @@ export default function EmployerJobsScreen({ navigation, route }) {
           jobs.map(renderJob).filter(Boolean)
         )}
       </ScrollView>
+
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
+      />
+
+      <PublishJobConfirmModal
+        visible={showPublishConfirmModal}
+        currentBalance={publishConfirmData.currentBalance}
+        requiredAmount={publishConfirmData.requiredAmount}
+        jobTitle={publishConfirmData.jobTitle}
+        onProceed={handlePublishConfirmProceed}
+        onCancel={() => setShowPublishConfirmModal(false)}
+        onAddMoney={() => {
+          setShowPublishConfirmModal(false);
+          setWalletModalData({ 
+            currentBalance: publishConfirmData.currentBalance, 
+            requiredAmount: publishConfirmData.requiredAmount 
+          });
+          setShowWalletModal(true);
+        }}
+      />
     </View>
   );
 }

@@ -65,6 +65,12 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
 
           setJobRoles(jobRoleItems);
           setDepartments(departmentItems);
+
+          // Default Department: Human Resources (only if user hasn't picked one)
+          const defaultHrDept = departmentItems.find(d => (d?.Value || '').trim().toLowerCase() === 'human resources')?.Value;
+          if (defaultHrDept) {
+            setDepartment(current => (current ? current : defaultHrDept));
+          }
         } else {
           setJobRoles([]);
           setDepartments([]);
@@ -79,9 +85,14 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
     loadReference();
   }, []);
 
-  const filteredJobRoles = jobTitleSearch.trim()
-    ? jobRoles.filter(r => (r?.Value || '').toLowerCase().includes(jobTitleSearch.trim().toLowerCase()))
+  const normalizedDepartment = (department || '').trim().toLowerCase();
+  const jobRolesForDepartment = normalizedDepartment === 'human resources'
+    ? jobRoles.filter(item => (item?.Category || '').trim().toLowerCase() === 'human resources')
     : jobRoles;
+
+  const filteredJobRoles = jobTitleSearch.trim()
+    ? jobRolesForDepartment.filter(r => (r?.Value || '').toLowerCase().includes(jobTitleSearch.trim().toLowerCase()))
+    : jobRolesForDepartment;
 
   const filteredDepartments = departmentSearch.trim()
     ? departments.filter(d => (d?.Value || '').toLowerCase().includes(departmentSearch.trim().toLowerCase()))

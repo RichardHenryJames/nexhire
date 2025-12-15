@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -128,7 +129,11 @@ export default function LoadingScreen() {
         >
           <View style={styles.logoOuter}>
             <View style={styles.logoBackground}>
-              <Ionicons name="briefcase" size={72} color={colors.white} />
+              <Image
+                source={require('../../assets/refopen-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
           </View>
         </Animated.View>
@@ -332,6 +337,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 12,
+  },
+  logoImage: {
+    width: 92,
+    height: 36,
   },
   brandName: {
     fontSize: 56,

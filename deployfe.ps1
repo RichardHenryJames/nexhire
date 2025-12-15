@@ -142,6 +142,14 @@ if (-not (Test-Path "web-build/index.html")) {
     exit 1
 }
 
+# Ensure Azure Static Web Apps routing config is included in the deployed output
+if (Test-Path "staticwebapp.config.json") {
+    Copy-Item "staticwebapp.config.json" "web-build/staticwebapp.config.json" -Force
+    Write-Host "Azure SWA config copied to web-build/staticwebapp.config.json" -ForegroundColor Green
+} else {
+    Write-Host "Warning: staticwebapp.config.json not found in frontend/. SPA deep links may 404." -ForegroundColor Yellow
+}
+
 $buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "Build completed successfully" -ForegroundColor Green
 Write-Host "   Build size: $([math]::Round($buildSize, 2)) MB" -ForegroundColor Gray

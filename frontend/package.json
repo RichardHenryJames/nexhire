@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web --output-dir web-build --clear",
+    "build:web": "expo export --platform web --output-dir web-build --clear && node scripts/postbuild-web.js",
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "deploy:web": "npm run build:web && swa deploy --app-location . --output-location web-build",

@@ -224,9 +224,20 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.topBar}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Login')}>
+                <Ionicons name="arrow-back" size={24} color={colors.primary} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.headerSwitchButton}
+                onPress={handleSwitchToJobSeeker}
+              >
+                <Text style={styles.headerSwitchButtonText}>I'm looking for jobs</Text>
+                <Ionicons name="search-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.title}>What type of organization are you with?</Text>
             <Text style={styles.subtitle}>This helps us set up your hiring profile correctly</Text>
           </View>
@@ -271,15 +282,6 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               size={20}
               color={(!selectedType || (selectedType === 'company' && !selectedCompany)) ? colors.gray400 : colors.white}
             />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.switchFlowButton}
-            onPress={handleSwitchToJobSeeker}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="search-outline" size={18} color={colors.primary} />
-            <Text style={styles.switchFlowButtonText}>I'm looking for jobs</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -416,6 +418,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   switchFlowButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerSwitchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '10',
+  },
+  headerSwitchButtonText: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.bold,

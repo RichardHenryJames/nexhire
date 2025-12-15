@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,17 +151,18 @@ export default function LoginScreen({ navigation }) {
           {/* Header */}
           <View style={screenStyles.header}>
             <View style={screenStyles.logoContainer}>
-              <Ionicons name="briefcase" size={64} color={colors.primary} />
+              <Image
+                source={require('../../../assets/refopen-logo.png')}
+                style={screenStyles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
-            <Text style={screenStyles.title}>Welcome to RefOpen!</Text>
+            <Text style={screenStyles.title}>Referrals that open doors</Text>
 
-           {/*
-           <Text style={screenStyles.subtitle}>
-             India’s first job referral app — making referrals effortless.
-             Sign in to get started.
-           </Text>
-           */}
+            <Text style={screenStyles.subtitle}>
+              Sign in to continue.
+            </Text>
 
           </View>
 
@@ -341,13 +343,17 @@ const screenStyles = StyleSheet.create({
   logoContainer: {
     marginBottom: spacing.md,
   },
+  logoImage: {
+    width: 160,
+    height: 56,
+  },
   title: {
-    ...styles.heading1,
+    ...styles.heading2,
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
   subtitle: {
-    ...styles.bodyLarge,
+    ...styles.body,
     color: colors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,

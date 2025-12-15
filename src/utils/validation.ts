@@ -123,7 +123,8 @@ export const jobCreateSchema = Joi.object({
     city: Joi.string().max(100).optional(),
     postalCode: Joi.string().max(20).optional(),
     isRemote: Joi.boolean().default(false),
-    workplaceType: Joi.string().valid('On-site', 'Hybrid', 'Remote').optional(),
+    // Accept both legacy DB value ('Onsite') and UI/normalized variant ('On-site')
+    workplaceType: Joi.string().valid('Onsite', 'On-site', 'Hybrid', 'Remote').optional().allow(''),
     remoteRestrictions: Joi.string().max(200).optional(),
     salaryRangeMin: Joi.number().positive().optional(),
     salaryRangeMax: Joi.number().positive().optional(),

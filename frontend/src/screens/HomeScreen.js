@@ -494,8 +494,12 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
       <View style={styles.headerCompact}>
-        {/* Left: Brand name */}
-        <Text style={styles.brandName}>RefOpen</Text>
+        {/* Left: Brand logo */}
+        <Image
+          source={require('../../assets/refopen-logo.png')}
+          style={styles.brandLogo}
+          resizeMode="contain"
+        />
         
         {/* Center: Search bar */}
         <View style={styles.searchContainerMain}>
@@ -1054,6 +1058,10 @@ headerCompact: {
     fontWeight: typography.weights.bold,
     color: colors.primary,
     letterSpacing: 0.5,
+  },
+  brandLogo: {
+    width: 92,
+    height: 24,
   },
   searchContainerMain: {
     flex: 1,

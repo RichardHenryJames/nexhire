@@ -148,8 +148,8 @@ export default function ProfileScreen({ navigation }) {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       
       loadExtendedProfile();
+      loadWallet();
       if (userType === 'JobSeeker') {
-        loadWallet();
         loadReferralPoints();
       }
     }, [])
@@ -254,8 +254,8 @@ export default function ProfileScreen({ navigation }) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadExtendedProfile();
+    await loadWallet();
     if (userType === 'JobSeeker') {
-      await loadWallet();
       await loadReferralPoints();
     }
     setRefreshing(false);
@@ -1159,7 +1159,7 @@ export default function ProfileScreen({ navigation }) {
         />
 
         {/* Wallet, Referral Points, and Invite & Earn Buttons */}
-        {userType === 'JobSeeker' && (
+        {(userType === 'JobSeeker' || userType === 'Employer') && (
           <View style={styles.actionButtonsContainer}>
             {/* Wallet Button */}
             <TouchableOpacity 
@@ -1180,41 +1180,45 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            {/* Referral Points Button */}
-            <TouchableOpacity 
-              style={styles.actionButtonThird}
-              onPress={() => setShowReferralBreakdown(true)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionButtonIcon, { backgroundColor: '#E6F4FF' }]}>
-                <Ionicons name="star" size={20} color="#00A3EE" />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonLabel}>Points</Text>
-                {loadingReferralPoints ? (
-                  <ActivityIndicator size="small" color="#00A3EE" />
-                ) : (
-                  <Text style={[styles.actionButtonAmount, { color: '#00A3EE' }]}>
-                    {referralPointsData.totalPoints || 0}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
+            {userType === 'JobSeeker' && (
+              <>
+                {/* Referral Points Button */}
+                <TouchableOpacity 
+                  style={styles.actionButtonThird}
+                  onPress={() => setShowReferralBreakdown(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.actionButtonIcon, { backgroundColor: '#E6F4FF' }]}>
+                    <Ionicons name="star" size={20} color="#00A3EE" />
+                  </View>
+                  <View style={styles.actionButtonContent}>
+                    <Text style={styles.actionButtonLabel}>Points</Text>
+                    {loadingReferralPoints ? (
+                      <ActivityIndicator size="small" color="#00A3EE" />
+                    ) : (
+                      <Text style={[styles.actionButtonAmount, { color: '#00A3EE' }]}>
+                        {referralPointsData.totalPoints || 0}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
 
-            {/* Invite & Earn Button */}
-            <TouchableOpacity 
-              style={styles.actionButtonThird}
-              onPress={() => setActiveModal('invite')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
-                <Ionicons name="gift" size={20} color="#FF9500" />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonLabel}>Invite</Text>
-                <Text style={styles.actionButtonSubtext}>Get ₹50</Text>
-              </View>
-            </TouchableOpacity>
+                {/* Invite & Earn Button */}
+                <TouchableOpacity 
+                  style={styles.actionButtonThird}
+                  onPress={() => setActiveModal('invite')}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
+                    <Ionicons name="gift" size={20} color="#FF9500" />
+                  </View>
+                  <View style={styles.actionButtonContent}>
+                    <Text style={styles.actionButtonLabel}>Invite</Text>
+                    <Text style={styles.actionButtonSubtext}>Get ₹50</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
