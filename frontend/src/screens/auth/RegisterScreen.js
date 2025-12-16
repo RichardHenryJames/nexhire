@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,68 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, typography } from '../../styles/theme';
 import DatePicker from '../../components/DatePicker';
+
+const { width, height } = Dimensions.get('window');
+
+// Floating particle component for background effect
+function FloatingParticle({ delay }) {
+  const translateY = useRef(new Animated.Value(height)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -100,
+          duration: 8000 + Math.random() * 4000,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0.6,
+            duration: 1000,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 1000,
+            delay: 6000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.floatingParticle,
+        {
+          transform: [{ translateY }, { translateX }],
+          opacity,
+        },
+      ]}
+    />
+  );
+}
 
 export default function RegisterScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -158,7 +215,7 @@ export default function RegisterScreen({ navigation }) {
       <TextInput
         style={[styles.input, errors[key] && styles.inputError]}
         placeholder={placeholder}
-        placeholderTextColor={colors.gray400}
+        placeholderTextColor="rgba(255, 255, 255, 0.6)"
         value={formData[key]}
         onChangeText={(text) => {
           setFormData({ ...formData, [key]: text });
@@ -179,14 +236,35 @@ export default function RegisterScreen({ navigation }) {
   const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.form}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join RefOpen to find your dream job or hire top talent</Text>
+    <View style={styles.mainContainer}>
+      <LinearGradient
+        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+        style={Platform.OS === 'web' ? styles.webBackground : StyleSheet.absoluteFill}
+      />
+      
+      {/* Floating Particles */}
+      <FloatingParticle delay={0} />
+      <FloatingParticle delay={1000} />
+      <FloatingParticle delay={2000} />
+      
+      {/* Bottom Decoration */}
+      <View style={styles.bottomDecoration}>
+        <View style={styles.decorationCircle1} />
+        <View style={styles.decorationCircle2} />
+        <View style={styles.decorationCircle3} />
+      </View>
+
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join RefOpen to find your dream job or hire top talent</Text>
 
           {/* Required Fields */}
           {renderInput('firstName', 'First Name', 'e.g., John', false, 'default', false, true)}
@@ -199,11 +277,11 @@ export default function RegisterScreen({ navigation }) {
               Invite Code (Optional)
             </Text>
             <View style={styles.inviteCodeContainer}>
-              <Ionicons name="gift-outline" size={20} color={colors.primary} style={styles.inviteCodeIcon} />
+              <Ionicons name="gift-outline" size={20} color="rgba(255, 255, 255, 0.8)" style={styles.inviteCodeIcon} />
               <TextInput
                 style={[styles.input, styles.inviteCodeInput, errors.inviteCode && styles.inputError]}
                 placeholder="Enter invite code"
-                placeholderTextColor={colors.gray400}
+                placeholderTextColor="rgba(255, 255, 255, 0.6)"
                 value={formData.inviteCode}
                 onChangeText={(text) => {
                   // Convert to uppercase and remove spaces
@@ -222,7 +300,7 @@ export default function RegisterScreen({ navigation }) {
               <Text style={styles.errorText}>{errors.inviteCode}</Text>
             )}
             <View style={styles.inviteCodeHint}>
-              <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+              <Ionicons name="information-circle-outline" size={14} color="#4ADE80" />
               <Text style={styles.inviteCodeHintText}>
                 Have an invite code? Get ₹50 bonus when you sign up!
               </Text>
@@ -288,6 +366,21 @@ export default function RegisterScreen({ navigation }) {
             placeholder="Select your date of birth"
             maximumDate={new Date()} // Can't be born in the future
             error={errors.dateOfBirth}
+            labelStyle={{ color: colors.white }}
+            requiredStyle={{ color: '#FFD700' }}
+            textColor={colors.white}
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
+            iconColor="rgba(255, 255, 255, 0.8)"
+            placeholderIconColor="rgba(255, 255, 255, 0.6)"
+            pickerTextColor={colors.white}
+            errorTextStyle={{ color: '#FFD700', fontWeight: '600' }}
+            buttonStyle={{
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderRadius: 8,
+              padding: 16,
+            }}
           />
 
           {/* Gender Selection */}
@@ -335,41 +428,123 @@ export default function RegisterScreen({ navigation }) {
               Already have an account? Sign In
             </Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+  },
+  webBackground: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollContainer: {
     flex: 1,
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+    margin: 16,
+    marginTop: 40,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    marginHorizontal: 20,
+    marginVertical: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   form: {
     padding: 20,
     paddingTop: 40,
   },
+  floatingParticle: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.white,
+    zIndex: 1,
+  },
+  bottomDecoration: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    zIndex: 0,
+  },
+  decorationCircle1: {
+    position: 'absolute',
+    bottom: -80,
+    right: -60,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: colors.white + '12',
+    borderWidth: 1,
+    borderColor: colors.white + '20',
+  },
+  decorationCircle2: {
+    position: 'absolute',
+    bottom: -120,
+    left: -100,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: colors.white + '08',
+    borderWidth: 1,
+    borderColor: colors.white + '15',
+  },
+  decorationCircle3: {
+    position: 'absolute',
+    bottom: 50,
+    right: 30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.white + '10',
+    borderWidth: 2,
+    borderColor: colors.white + '25',
+  },
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     marginBottom: 32,
   },
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: colors.white,
     marginTop: 20,
     marginBottom: 16,
   },
@@ -379,29 +554,31 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
+    color: colors.white,
     marginBottom: 8,
   },
   required: {
-    color: colors.danger,
+    color: '#FFD700',
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     padding: 16,
     fontSize: typography.sizes.md,
-    color: colors.text,
+    color: colors.white,
   },
   inputError: {
     borderColor: colors.danger,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   errorText: {
-    color: colors.danger,
+    color: '#FFD700',
     fontSize: typography.sizes.sm,
     marginTop: 4,
     marginLeft: 4,
+    fontWeight: '600',
   },
   // ?? NEW: Invite code styles
   inviteCodeContainer: {
@@ -412,6 +589,7 @@ const styles = StyleSheet.create({
     left: 12,
     top: 16,
     zIndex: 1,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   inviteCodeInput: {
     paddingLeft: 40, // Make room for the icon
@@ -422,13 +600,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: colors.success + '10',
+    backgroundColor: 'rgba(74, 222, 128, 0.1)',
     padding: 8,
     borderRadius: 6,
   },
   inviteCodeHintText: {
     fontSize: typography.sizes.xs,
-    color: colors.success,
+    color: '#4ADE80',
     marginLeft: 6,
     flex: 1,
   },
@@ -438,7 +616,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    color: colors.text,
+    color: colors.white,
     marginBottom: 12,
   },
   userTypeContainer: {
@@ -450,30 +628,30 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
   },
   userTypeButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    borderColor: colors.white,
   },
   userTypeButtonText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  userTypeButtonTextActive: {
     color: colors.white,
   },
+  userTypeButtonTextActive: {
+    color: colors.primary,
+  },
   datePicker: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 8,
     padding: 16,
     fontSize: typography.sizes.md,
-    color: colors.text,
+    color: colors.white,
   },
   dateInput: {
     borderWidth: 0,
@@ -482,10 +660,10 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: typography.sizes.md,
-    color: colors.text,
+    color: colors.white,
   },
   placeholderText: {
-    color: colors.gray400,
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   genderContainer: {
     flexDirection: 'row',
@@ -497,43 +675,52 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   genderButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    borderColor: colors.white,
   },
   genderButtonText: {
     fontSize: typography.sizes.sm,
-    color: colors.text,
-  },
-  genderButtonTextActive: {
     color: colors.white,
   },
+  genderButtonTextActive: {
+    color: colors.primary,
+  },
   button: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.white,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 16,
     marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   buttonText: {
-    color: colors.white,
+    color: colors.primary,
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.bold,
   },
   linkButton: {
     alignItems: 'center',
     padding: 12,
   },
   linkText: {
-    color: colors.primary,
+    color: colors.white,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
+    textDecorationLine: 'underline',
   },
 });

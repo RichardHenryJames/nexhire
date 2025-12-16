@@ -31,7 +31,18 @@ export default function DatePicker({
   mode = 'date',
   error,
   noMargin = false,
-  buttonStyle
+  buttonStyle,
+  labelStyle,
+  requiredStyle,
+  textStyle,
+  placeholderStyle,
+  errorTextStyle,
+  textColor,
+  placeholderTextColor,
+  iconColor,
+  placeholderIconColor,
+  pickerTextColor,
+  containerStyle,
 }) {
   const [show, setShow] = useState(false);
   const webInputRef = useRef(null);
@@ -85,15 +96,63 @@ export default function DatePicker({
   };
 
   const displayValue = dateValue ? formatDate(dateValue) : '';
+  const resolvedTextColor = displayValue
+    ? (textColor ?? colors.textPrimary)
+    : (placeholderTextColor ?? colors.textLight);
+  const resolvedIconColor = displayValue
+    ? (iconColor ?? colors.textPrimary)
+    : (placeholderIconColor ?? colors.textLight);
+
+  const toPx = (value) => (typeof value === 'number' ? `${value}px` : value);
+
+  const normalizeWebButtonStyle = (style) => {
+    if (!style || typeof style !== 'object') return {};
+
+    // Allow passing either web CSS style keys or RN style keys.
+    const web = { ...style };
+
+    // Convert RN border props into CSS border shorthand.
+    const borderWidth = style.borderWidth;
+    const borderColor = style.borderColor;
+    if (borderWidth != null || borderColor != null) {
+      const width = borderWidth ?? 1;
+      const color = borderColor ?? colors.border;
+      web.border = `${width}px solid ${color}`;
+      delete web.borderWidth;
+      delete web.borderColor;
+    }
+
+    if (style.borderRadius != null) {
+      web.borderRadius = toPx(style.borderRadius);
+    }
+    if (style.padding != null) {
+      web.padding = toPx(style.padding);
+    }
+    if (style.paddingVertical != null) {
+      web.paddingTop = toPx(style.paddingVertical);
+      web.paddingBottom = toPx(style.paddingVertical);
+      delete web.paddingVertical;
+    }
+    if (style.paddingHorizontal != null) {
+      web.paddingLeft = toPx(style.paddingHorizontal);
+      web.paddingRight = toPx(style.paddingHorizontal);
+      delete web.paddingHorizontal;
+    }
+
+    // RN uses backgroundColor; CSS accepts it too.
+    return web;
+  };
 
   // ? FIX: For web, render actual HTML input that's clickable
   if (Platform.OS === 'web') {
+    const normalizedWebButtonStyle = normalizeWebButtonStyle(buttonStyle);
+
     return (
-      <View style={[styles.container, noMargin && { marginBottom: 0 }]}>
+      <View style={[styles.container, noMargin && { marginBottom: 0 }, containerStyle]}>
         {label && (
-          <Text style={styles.label}>
+          <Text style={[styles.label, labelStyle]}>
             {label}
-            {required && <Text style={styles.required}> *</Text>}
+            {required && <Text style={[styles.required, requiredStyle]}> *</Text>}
           </Text>
         )}
         
@@ -110,9 +169,7 @@ export default function DatePicker({
             cursor: 'pointer',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
             // ? Apply custom styles (will override defaults like padding)
-            ...(buttonStyle && typeof buttonStyle.padding === 'number' 
-              ? { padding: `${buttonStyle.padding}px` }
-              : buttonStyle),
+            ...normalizedWebButtonStyle,
           }}
           onClick={() => webInputRef.current?.showPicker?.()}
         >
@@ -120,14 +177,16 @@ export default function DatePicker({
             <Ionicons 
               name="calendar-outline" 
               size={20} 
-              color={displayValue ? colors.textPrimary : colors.textLight} 
+              color={resolvedIconColor} 
             />
             <span style={{
               fontSize: `${typography.sizes.base}px`,
               fontWeight: typography.weights.normal,
-              color: displayValue ? colors.textPrimary : colors.textLight,
+              color: resolvedTextColor,
               flex: 1,
               fontFamily: 'inherit',
+              ...(textStyle || {}),
+              ...(!displayValue ? (placeholderStyle || {}) : {}),
             }}>
               {displayValue || placeholder}
             </span>
@@ -163,7 +222,7 @@ export default function DatePicker({
         </div>
 
         {error && (
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, errorTextStyle]}>{error}</Text>
         )}
       </View>
     );
@@ -171,11 +230,11 @@ export default function DatePicker({
 
   // Native mobile rendering (iOS/Android)
   return (
-    <View style={[styles.container, noMargin && { marginBottom: 0 }]}>
+    <View style={[styles.container, noMargin && { marginBottom: 0 }, containerStyle]}>
       {label && (
-        <Text style={styles.label}>
+        <Text style={[styles.label, labelStyle]}>
           {label}
-          {required && <Text style={styles.required}> *</Text>}
+          {required && <Text style={[styles.required, requiredStyle]}> *</Text>}
         </Text>
       )}
       
@@ -191,11 +250,14 @@ export default function DatePicker({
           <Ionicons 
             name="calendar-outline" 
             size={20} 
-            color={displayValue ? colors.textPrimary : colors.textLight} 
+            color={resolvedIconColor} 
           />
           <Text style={[
             styles.buttonText,
-            !displayValue && styles.placeholder
+            !displayValue && styles.placeholder,
+            textStyle,
+            !displayValue && placeholderStyle,
+            { color: resolvedTextColor },
           ]}>
             {displayValue || placeholder}
           </Text>
@@ -204,7 +266,7 @@ export default function DatePicker({
       </TouchableOpacity>
 
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, errorTextStyle]}>{error}</Text>
       )}
 
       {show && (
@@ -226,7 +288,7 @@ export default function DatePicker({
                 onChange={handleChange}
                 minimumDate={minimumDate}
                 maximumDate={maximumDate}
-                textColor={colors.textPrimary}
+                textColor={pickerTextColor ?? colors.textPrimary}
               />
             </View>
           )}
