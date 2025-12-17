@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border || '#E5E7EB',
   },

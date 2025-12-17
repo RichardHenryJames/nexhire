@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
@@ -10,6 +10,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import { styles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
+import { colors, typography } from '../../styles/theme';
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -71,6 +72,141 @@ const isFiltersDirty = (f) => {
   });
 };
 
+const aiModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerAI: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.danger,
+  },
+  headerTitleAI: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  headerTitleDanger: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+  },
+  body: {
+    padding: 16,
+  },
+  subtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 12,
+  },
+  benefits: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  benefitsTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+    marginBottom: 8,
+  },
+  benefitItem: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginBottom: 6,
+  },
+  benefitNote: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginTop: 8,
+  },
+  kvRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  kvLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+  },
+  kvValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  kvDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+  kvLabelBold: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.bold,
+  },
+  kvValueBold: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.bold,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  btnSecondary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  btnSecondaryText: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  btnPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  btnPrimaryText: {
+    color: colors.white,
+    fontWeight: typography.weights.semibold,
+  },
+});
+
 export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   
@@ -115,6 +251,111 @@ export default function JobsScreen({ navigation, route }) {
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50, jobTitle: '' });
+
+  // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
+  const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
+  const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
+
+  const loadWalletBalance = useCallback(async () => {
+    try {
+      const result = await refopenAPI.getWalletBalance();
+      if (result?.success) {
+        setWalletBalance(result.data?.balance || 0);
+      }
+    } catch (e) {
+      // silent
+    }
+  }, []);
+
+  const checkAIAccessStatus = useCallback(async () => {
+    try {
+      const result = await refopenAPI.apiCall('/jobs/ai-access-status');
+      if (result?.success) {
+        setHasActiveAIAccess(!!result.data?.hasActiveAccess);
+      } else {
+        setHasActiveAIAccess(false);
+      }
+    } catch (e) {
+      setHasActiveAIAccess(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user || !isJobSeeker) return;
+    loadWalletBalance();
+    checkAIAccessStatus();
+  }, [user, isJobSeeker, loadWalletBalance, checkAIAccessStatus]);
+
+  const handleSearchWithAI = useCallback(async () => {
+    if (!user) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to view AI recommended jobs.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
+      Alert.alert('Login Required', 'Please login to view AI recommended jobs', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') },
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can use AI job recommendations');
+      return;
+    }
+
+    try {
+      const accessStatus = await refopenAPI.apiCall('/jobs/ai-access-status');
+      if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
+        navigation.navigate('AIRecommendedJobs');
+        return;
+      }
+    } catch (e) {
+      // fall through to payment flow
+    }
+
+    const requiredAmount = 100;
+    // Ensure we have latest wallet balance before deciding
+    try {
+      const bal = await refopenAPI.getWalletBalance();
+      const current = bal?.success ? (bal.data?.balance || 0) : walletBalance;
+      setWalletBalance(current);
+      if (current < requiredAmount) {
+        setIsInsufficientBalance(true);
+        setShowAIConfirmModal(true);
+        return;
+      }
+      setIsInsufficientBalance(false);
+      setShowAIConfirmModal(true);
+    } catch (e) {
+      // fallback: show modal with current cached balance
+      const current = walletBalance || 0;
+      if (current < requiredAmount) setIsInsufficientBalance(true);
+      else setIsInsufficientBalance(false);
+      setShowAIConfirmModal(true);
+    }
+  }, [user, isJobSeeker, navigation, walletBalance]);
+
+  const handleAIJobsConfirm = useCallback(() => {
+    setShowAIConfirmModal(false);
+    if (!isInsufficientBalance) {
+      navigation.navigate('AIRecommendedJobs');
+      setTimeout(() => {
+        loadWalletBalance();
+        checkAIAccessStatus();
+      }, 1000);
+    }
+  }, [isInsufficientBalance, navigation, loadWalletBalance, checkAIAccessStatus]);
+
+  const handleAIJobsCancel = useCallback(() => {
+    setShowAIConfirmModal(false);
+    if (isInsufficientBalance) {
+      navigation.navigate('WalletRecharge');
+    }
+  }, [isInsufficientBalance, navigation]);
 
   // Load primary resume once (or first resume as fallback)
   const loadPrimaryResume = useCallback(async () => {
@@ -1276,6 +1517,22 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
+                  style={[styles.quickFilterDropdown, hasActiveAIAccess && styles.quickFilterActive]}
+                  onPress={handleSearchWithAI}
+                >
+                  <Text style={[styles.quickFilterText, hasActiveAIAccess && styles.quickFilterActiveText]}>
+                    AI Jobs
+                  </Text>
+                  <Ionicons
+                    name={hasActiveAIAccess ? 'bulb' : 'bulb-outline'}
+                    size={14}
+                    color={hasActiveAIAccess ? '#0066cc' : '#666'}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.quickFilterItem}>
+                <TouchableOpacity
                   style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
                   onPress={() => openFilters('jobType')}
                 >
@@ -1385,6 +1642,83 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         }}
         onCancel={() => setShowWalletModal(false)}
       />
+
+      {/* AI Jobs Confirmation Modal (moved from Home) */}
+      <Modal
+        visible={showAIConfirmModal}
+        transparent
+        onRequestClose={() => setShowAIConfirmModal(false)}
+      >
+        <View style={aiModalStyles.overlay}>
+          <View style={aiModalStyles.card}>
+            {isInsufficientBalance ? (
+              <>
+                <View style={aiModalStyles.headerDanger}>
+                  <Ionicons name="wallet-outline" size={28} color={colors.white} />
+                  <Text style={aiModalStyles.headerTitleDanger}>Wallet Recharge Required</Text>
+                </View>
+                <View style={aiModalStyles.body}>
+                  <Text style={aiModalStyles.subtitle}>Insufficient wallet balance</Text>
+                  <Text style={aiModalStyles.benefitNote}>Unlock 50 AI-matched jobs for 24 hours.</Text>
+                  <View style={aiModalStyles.kvRow}>
+                    <Text style={aiModalStyles.kvLabel}>Current</Text>
+                    <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={aiModalStyles.kvRow}>
+                    <Text style={aiModalStyles.kvLabel}>Required</Text>
+                    <Text style={aiModalStyles.kvValue}>₹100.00</Text>
+                  </View>
+                  <View style={aiModalStyles.actions}>
+                    <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
+                      <Text style={aiModalStyles.btnSecondaryText}>Maybe Later</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsCancel}>
+                      <Text style={aiModalStyles.btnPrimaryText}>Add Money</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={aiModalStyles.headerAI}>
+                  <Ionicons name="bulb" size={28} color="#FFD700" />
+                  <Text style={aiModalStyles.headerTitleAI}>AI Recommended Jobs</Text>
+                </View>
+                <View style={aiModalStyles.body}>
+                  <Text style={aiModalStyles.subtitle}>Get 50 personalized job matches</Text>
+                  <View style={aiModalStyles.benefits}>
+                    <Text style={aiModalStyles.benefitsTitle}>Why this helps</Text>
+                    <Text style={aiModalStyles.benefitItem}>• Jobs matched to your profile and skills</Text>
+                    <Text style={aiModalStyles.benefitItem}>• Saves time—no need to search manually</Text>
+                    <Text style={aiModalStyles.benefitItem}>• 24-hour access after purchase</Text>
+                  </View>
+                  <View style={aiModalStyles.kvRow}>
+                    <Text style={aiModalStyles.kvLabel}>Cost</Text>
+                    <Text style={aiModalStyles.kvValue}>₹100.00</Text>
+                  </View>
+                  <View style={aiModalStyles.kvRow}>
+                    <Text style={aiModalStyles.kvLabel}>Current Balance</Text>
+                    <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={aiModalStyles.kvDivider} />
+                  <View style={aiModalStyles.kvRow}>
+                    <Text style={aiModalStyles.kvLabelBold}>Balance After</Text>
+                    <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - 100).toFixed(2)}</Text>
+                  </View>
+                  <View style={aiModalStyles.actions}>
+                    <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
+                      <Text style={aiModalStyles.btnSecondaryText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsConfirm}>
+                      <Text style={aiModalStyles.btnPrimaryText}>Proceed</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* 💎 NEW: Referral Confirmation Modal */}
       <ReferralConfirmModal

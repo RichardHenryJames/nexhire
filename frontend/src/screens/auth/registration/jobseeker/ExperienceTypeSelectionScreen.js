@@ -215,48 +215,38 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           />
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedType && styles.continueButtonDisabled
-          ]}
-          onPress={handleContinue}
-          disabled={!selectedType}
-        >
-          <Text style={[
-            styles.continueButtonText,
-            !selectedType && styles.continueButtonTextDisabled
-          ]}>
-            Continue with Full Setup
-          </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={!selectedType ? colors.gray400 : colors.white} 
-          />
-        </TouchableOpacity>
+        {!!selectedType && (
+          <>
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={handleContinue}
+            >
+              <Text style={styles.continueButtonText}>
+                Continue with Full Setup
+              </Text>
+              <Ionicons 
+                name="arrow-forward" 
+                size={20} 
+                color={colors.white} 
+              />
+            </TouchableOpacity>
 
-        {/* FIXED: Single "Skip to Profile Register" button - always shown */}
-        <TouchableOpacity
-          style={[
-            styles.skipButton,
-            !selectedType && styles.skipButtonFaded
-          ]}
-          onPress={handleSkipToFinal}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name="flash-outline" 
-            size={20} 
-            color={!selectedType ? colors.gray500 : colors.primary} 
-          />
-          <Text style={[
-            styles.skipButtonText,
-            !selectedType && styles.skipButtonTextFaded
-          ]}>
-            Skip to Profile Register
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleSkipToFinal}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="flash-outline" 
+                size={20} 
+                color={colors.primary} 
+              />
+              <Text style={styles.skipButtonText}>
+                Skip to Profile Register
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
        
       </View>
     </KeyboardAvoidingView>

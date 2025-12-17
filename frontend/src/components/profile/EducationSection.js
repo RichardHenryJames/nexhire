@@ -9,6 +9,7 @@ import {
   FlatList,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
@@ -911,7 +912,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

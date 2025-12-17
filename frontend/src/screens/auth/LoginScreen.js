@@ -235,7 +235,7 @@ export default function LoginScreen({ navigation }) {
               resizeMode="contain"
             />
 
-            <Text style={screenStyles.title}>Referrals that open doors</Text>
+            <Text style={screenStyles.title}>Your next career opportunity awaits</Text>
           </View>
 
 
@@ -498,13 +498,15 @@ const screenStyles = StyleSheet.create({
     tintColor: colors.white,
   },
   title: {
-    ...styles.heading2,
-    marginBottom: spacing.xs,
+    fontSize: typography.sizes.lg,
+    color: colors.white + 'E6',
     textAlign: 'center',
-    color: colors.white,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    lineHeight: 26,
+    fontWeight: typography.weights.medium,
+    maxWidth: 320,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   // NEW: Google Sign-In styles
   googleSection: {

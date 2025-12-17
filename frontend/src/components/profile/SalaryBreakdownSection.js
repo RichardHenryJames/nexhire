@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../styles/theme';
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
   noDataText: { fontSize: typography.sizes?.sm || 14, color: colors.gray500 || '#9CA3AF', textAlign: 'center', padding: 20, fontStyle: 'italic' },
 
   modalContainer: { flex: 1, backgroundColor: colors.background || '#FFFFFF' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text || '#000000' },
 
   segmented: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
