@@ -17,7 +17,7 @@ export default function App() {
 
     // Match the auth/loading background so any uncovered area
     // doesn't show as a different color on web.
-    const fallbackGradient = 'linear-gradient(135deg, #1E40AF, #3B82F6, #60A5FA)';
+    const fallbackGradient = `linear-gradient(135deg, ${colors.primaryLight}, ${colors.primary}, ${colors.primaryLight})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;

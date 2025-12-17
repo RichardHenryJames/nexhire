@@ -97,7 +97,7 @@ export default function LoadingScreen() {
     <View style={styles.container}>
       {/* Modern Gradient Background - Purple/Indigo to match brand */}
       <LinearGradient
-        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}

@@ -24,6 +24,7 @@ const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker } = useAuth();
+const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
 // Organization search state
@@ -47,6 +48,14 @@ const [dashboardData, setDashboardData] = useState({
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
   const scrollViewRef = React.useRef(null);
+
+  // Ensure the fixed header never overlays stack screens on web.
+  useFocusEffect(
+    useCallback(() => {
+      setShowHeader(true);
+      return () => setShowHeader(false);
+    }, [])
+  );
 
   // Organization search function with debounce
   const searchOrganizations = useCallback(async (query) => {
@@ -379,17 +388,27 @@ const [dashboardData, setDashboardData] = useState({
   // ⚡ Remove the global loading screen - show content immediately
 
   const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
+  const profilePhotoUrl =
+    user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
   return (
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
+      {showHeader && (
       <View style={styles.headerCompact}>
-        {/* Left: Brand logo */}
-        <Image
-          source={require('../../assets/refopen-logo.png')}
-          style={styles.brandLogo}
-          resizeMode="contain"
-        />
+        {/* Left: Profile avatar */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('ProfileFromHome')}
+        >
+          {profilePhotoUrl ? (
+            <Image source={{ uri: profilePhotoUrl }} style={styles.profilePicture} />
+          ) : (
+            <View style={styles.profilePicturePlaceholder}>
+              <Ionicons name="person" size={22} color={colors.white} />
+            </View>
+          )}
+        </TouchableOpacity>
         
         {/* Center: Search bar */}
         <View style={styles.searchContainerMain}>
@@ -479,6 +498,7 @@ const [dashboardData, setDashboardData] = useState({
           <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
+      )}
 
       <ScrollView
         ref={scrollViewRef}

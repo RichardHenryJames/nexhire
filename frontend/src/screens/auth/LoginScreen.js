@@ -197,7 +197,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={screenStyles.mainContainer}>
       <LinearGradient
-        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         pointerEvents="none"
@@ -492,8 +492,8 @@ const screenStyles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   logoImage: {
-    width: 160,
-    height: 56,
+    width: 190,
+    height: 66,
     marginBottom: spacing.md,
     tintColor: colors.white,
   },

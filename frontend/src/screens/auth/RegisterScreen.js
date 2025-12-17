@@ -238,7 +238,7 @@ export default function RegisterScreen({ navigation }) {
   return (
     <View style={styles.mainContainer}>
       <LinearGradient
-        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         pointerEvents="none"

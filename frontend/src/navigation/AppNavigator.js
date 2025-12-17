@@ -1,6 +1,6 @@
 import React from "react";
-import { TouchableOpacity } from "react-native";
-import { createStackNavigator } from "@react-navigation/stack";
+import { TouchableOpacity, Platform } from "react-native";
+import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -335,6 +335,14 @@ function MainTabNavigator() {
           paddingBottom: 8,
           paddingTop: 8,
           height: 70,
+          ...(Platform.OS === 'web'
+            ? {
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }
+            : null),
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -398,6 +406,17 @@ function MainStack() {
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+      <Stack.Screen
+        name="ProfileFromHome"
+        component={ProfileScreen}
+        initialParams={{ openedFromHome: true }}
+        options={{
+          headerShown: false,
+          gestureEnabled: true,
+          gestureDirection: "horizontal-inverted",
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
       <Stack.Screen
         name="JobDetails"
         component={JobDetailsScreen}

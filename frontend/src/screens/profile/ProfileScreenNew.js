@@ -48,8 +48,10 @@ const EDUCATION_LEVELS = [
   'Other'
 ];
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
+
+  const openedFromHome = route?.params?.openedFromHome === true;
   
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -1135,10 +1137,20 @@ export default function ProfileScreen({ navigation }) {
 
         <View style={styles.headerSpacer} />
         <Text style={styles.title}>Profile</Text>
-        <View style={styles.headerSpacer} />
+        {openedFromHome ? (
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            activeOpacity={0.7}
+            style={styles.headerCloseButton}
+          >
+            <Ionicons name="close" size={24} color={colors.text || '#000'} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         style={styles.scrollView}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
@@ -1314,7 +1326,7 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Compliance Footer */}
         <ComplianceFooter navigation={navigation} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Modals */}
       {renderPersonalModal()}
@@ -1544,6 +1556,12 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  headerCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 18,
