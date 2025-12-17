@@ -1,120 +1,51 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../styles/theme';
 
-/**
- * Beautiful custom modal for wallet recharge prompts
- * Replaces ugly window.confirm() with a styled, branded modal
- */
 export default function WalletRechargeModal({
   visible,
+  title = 'Wallet Recharge Required',
+  subtitle = 'Insufficient wallet balance',
+  note = '',
   currentBalance = 0,
   requiredAmount = 50,
   onAddMoney,
   onCancel,
+  primaryLabel = 'Add Money',
+  secondaryLabel = 'Maybe Later',
 }) {
-  const amountNeeded = Math.max(requiredAmount - currentBalance, 0);
-
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      onRequestClose={onCancel}
-    >
-      <TouchableOpacity 
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onCancel}
-      >
-        <TouchableOpacity 
-          style={styles.modalContainer}
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-            bounces={false}
-          >
-            {/* Header with Icon - Red background, more compact */}
-            <View style={styles.header}>
-              <Ionicons name="wallet" size={32} color="#fff"/>
-              <Text style={styles.title}>Wallet Recharge Required</Text>
+    <Modal visible={visible} transparent onRequestClose={onCancel}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity style={styles.card} activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.headerDanger}>
+            <Ionicons name="wallet-outline" size={28} color={colors.white} />
+            <Text style={styles.headerTitle}>{title}</Text>
+          </View>
+
+          <View style={styles.body}>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+            {!!note && <Text style={styles.note}>{note}</Text>}
+
+            <View style={styles.kvRow}>
+              <Text style={styles.kvLabel}>Current</Text>
+              <Text style={styles.kvValue}>₹{Number(currentBalance || 0).toFixed(2)}</Text>
+            </View>
+            <View style={styles.kvRow}>
+              <Text style={styles.kvLabel}>Required</Text>
+              <Text style={styles.kvValue}>₹{Number(requiredAmount || 0).toFixed(2)}</Text>
             </View>
 
-            {/* Content - More compact */}
-            <View style={styles.content}>
-              <Text style={styles.message}>
-                Insufficient wallet balance
-              </Text>
-
-              {/* Balance Info Cards - More compact */}
-              <View style={styles.balanceCards}>
-                <View style={[styles.balanceCard, styles.currentBalanceCard]}>
-                  <Ionicons name="cash-outline" size={16} color="#ef4444" />
-                  <Text style={styles.balanceLabel}>Current</Text>
-                  <Text style={styles.balanceAmount}>₹{currentBalance.toFixed(2)}</Text>
-                </View>
-
-                <View style={[styles.balanceCard, styles.requiredBalanceCard]}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
-                  <Text style={styles.balanceLabel}>Required</Text>
-                  <Text style={styles.balanceAmount}>₹{requiredAmount.toFixed(2)}</Text>
-                </View>
-              </View>
-
-              {/* Why Section - Smaller and more compact */}
-              <View style={styles.whySection}>
-                <Text style={styles.whyTitle}>Why is this needed?</Text>
-                <View style={styles.whyItem}>
-                  <Ionicons name="shield-checkmark" size={12} color="#6366f1" />
-                  <Text style={styles.whyText}>
-                    Maintains quality and serious job seekers
-                  </Text>
-                </View>
-                <View style={styles.whyItem}>
-                  <Ionicons name="people" size={12} color="#6366f1" />
-                  <Text style={styles.whyText}>
-                    Fair compensation for referrers
-                  </Text>
-                </View>
-                <View style={styles.whyItem}>
-                  <Ionicons name="repeat" size={12} color="#6366f1" />
-                  <Text style={styles.whyText}>
-                    Reusable for multiple referral requests
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Action Buttons - More compact */}
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onCancel}
-              >
-                <Text style={styles.cancelButtonText}>Maybe Later</Text>
+              <TouchableOpacity style={styles.btnSecondary} onPress={onCancel}>
+                <Text style={styles.btnSecondaryText}>{secondaryLabel}</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={onAddMoney}
-              >
-                <Ionicons name="card" size={16} color="#fff" />
-                <Text style={styles.primaryButtonText}>Add Money</Text>
+              <TouchableOpacity style={styles.btnPrimary} onPress={onAddMoney}>
+                <Text style={styles.btnPrimaryText}>{primaryLabel}</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -124,178 +55,92 @@ export default function WalletRechargeModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+  card: {
     width: '100%',
-    maxWidth: 380,
-    maxHeight: '75%',
+    maxWidth: 420,
+    backgroundColor: colors.background,
+    borderRadius: 14,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
-      },
-    }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    backgroundColor: '#dc2626', // Red background (red-600)
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    alignItems: 'center',
+  headerDanger: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  headerIcon: {
-    marginTop: 2,
-  },
-  iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.danger,
   },
-  title: {
+  headerTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: '#fff',
-    textAlign: 'center',
-    flex: 1,
+    color: colors.white,
   },
-  content: {
+  body: {
     padding: 16,
   },
-  message: {
+  subtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 20,
+    color: colors.gray600,
+    marginBottom: 10,
+  },
+  note: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
     marginBottom: 12,
   },
-  balanceCards: {
+  kvRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
-  balanceCard: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    gap: 4,
-  },
-  currentBalanceCard: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  requiredBalanceCard: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
-  balanceLabel: {
-    fontSize: 10,
+  kvLabel: {
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
-    fontWeight: typography.weights.medium,
   },
-  balanceAmount: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-  },
-  whySection: {
-    backgroundColor: '#f8f9fa',
-    padding: 10,
-    borderRadius: 8,
-    gap: 6,
-  },
-  whyTitle: {
-    fontSize: 12,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  whyItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  whyText: {
-    flex: 1,
-    fontSize: 10,
-    color: colors.gray600,
-    lineHeight: 14,
+  kvValue: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
-    padding: 12,
-    paddingTop: 0,
+    gap: 10,
+    marginTop: 16,
   },
-  button: {
+  btnSecondary: {
     flex: 1,
-    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    gap: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.gray100,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
   },
-  cancelButtonText: {
+  btnSecondaryText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.gray700,
+    color: colors.textPrimary,
   },
-  primaryButton: {
+  btnPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 3px 10px rgba(0, 102, 204, 0.25)',
-      },
-    }),
   },
-  primaryButtonText: {
+  btnPrimaryText: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: '#fff',
+    fontWeight: typography.weights.semibold,
+    color: colors.white,
   },
 });

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../styles/theme';
+import WalletRechargeModal from './WalletRechargeModal';
 
 /**
  * 🎨 Premium Publish Job Confirmation Modal
@@ -27,6 +28,23 @@ export default function PublishJobConfirmModal({
 }) {
   const balanceAfter = currentBalance - requiredAmount;
   const hasInsufficientBalance = currentBalance < requiredAmount;
+
+  if (hasInsufficientBalance) {
+    return (
+      <WalletRechargeModal
+        visible={visible}
+        currentBalance={currentBalance}
+        requiredAmount={requiredAmount}
+        title="Wallet Recharge Required"
+        subtitle="Insufficient wallet balance"
+        note={`Recharge your wallet to publish \"${jobTitle}\".`}
+        primaryLabel="Add Money"
+        secondaryLabel="Cancel"
+        onAddMoney={onAddMoney}
+        onCancel={onCancel}
+      />
+    );
+  }
 
   return (
     <Modal
@@ -94,40 +112,29 @@ export default function PublishJobConfirmModal({
               )}
             </View>
 
-            {hasInsufficientBalance ? (
-              /* ⚠️ Insufficient Balance Alert */
-              <View style={styles.insufficientAlert}>
-                <Ionicons name="alert-circle" size={18} color="#f59e0b" />
-                <Text style={styles.insufficientText}>
-                  Insufficient balance. Please add money to continue.
-                </Text>
-              </View>
-            ) : (
-              /* ✨ Benefits Section - Numbered Steps Only (No Icons) */
-              <View style={styles.benefitsBox}>
-                <Text style={styles.benefitsHeading}>What happens next:</Text>
-                
-                <Text style={styles.benefitLabel}>
-                  <Text style={styles.benefitNumber}>1. </Text>
-                  Your job will be visible to thousands of candidates
-                </Text>
+            <View style={styles.benefitsBox}>
+              <Text style={styles.benefitsHeading}>What happens next:</Text>
+              
+              <Text style={styles.benefitLabel}>
+                <Text style={styles.benefitNumber}>1. </Text>
+                Your job will be visible to thousands of candidates
+              </Text>
 
-                <Text style={styles.benefitLabel}>
-                  <Text style={styles.benefitNumber}>2. </Text>
-                  Candidates can apply immediately
-                </Text>
+              <Text style={styles.benefitLabel}>
+                <Text style={styles.benefitNumber}>2. </Text>
+                Candidates can apply immediately
+              </Text>
 
-                <Text style={styles.benefitLabel}>
-                  <Text style={styles.benefitNumber}>3. </Text>
-                  Shareable link generated for social media
-                </Text>
+              <Text style={styles.benefitLabel}>
+                <Text style={styles.benefitNumber}>3. </Text>
+                Shareable link generated for social media
+              </Text>
 
-                <Text style={styles.benefitLabel}>
-                  <Text style={styles.benefitNumber}>4. </Text>
-                  Track applications in real-time
-                </Text>
-              </View>
-            )}
+              <Text style={styles.benefitLabel}>
+                <Text style={styles.benefitNumber}>4. </Text>
+                Track applications in real-time
+              </Text>
+            </View>
           </ScrollView>
 
           {/* 🎯 Action Buttons - Clean Design */}
@@ -142,16 +149,16 @@ export default function PublishJobConfirmModal({
 
             <TouchableOpacity
               style={styles.proceedBtn}
-              onPress={hasInsufficientBalance ? onAddMoney : onProceed}
+              onPress={onProceed}
               activeOpacity={0.8}
             >
               <Ionicons 
-                name={hasInsufficientBalance ? "add-circle" : "cloud-upload"} 
+                name={"cloud-upload"} 
                 size={18} 
                 color="#fff" 
               />
               <Text style={styles.proceedBtnText}>
-                {hasInsufficientBalance ? 'Add Money' : 'Publish Now'}
+                Publish Now
               </Text>
             </TouchableOpacity>
           </View>

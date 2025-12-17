@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { colors, typography } from '../../styles/theme';
 
 export default function AIRecommendedJobsScreen({ navigation }) {
@@ -27,6 +28,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   const [referredJobIds, setReferredJobIds] = useState(new Set());
   const [referralRequestingIds, setReferralRequestingIds] = useState(new Set());
   const [appliedIds, setAppliedIds] = useState(new Set());
+
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50, note: '' });
 
   // Load primary resume once
   const loadPrimaryResume = useCallback(async () => {
@@ -246,20 +250,12 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         const balance = walletBalance.data?.balance || 0;
 
         if (balance < 50) {
-          if (Platform.OS === 'web') {
-            if (window.confirm(`Insufficient wallet balance. You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}\n\nWould you like to recharge?`)) {
-              navigation.navigate('Wallet');
-            }
-            return;
-          }
-          Alert.alert(
-            'Insufficient Balance',
-            `You need ₹50 to ask for a referral.\n\nYour current balance: ₹${balance.toFixed(2)}`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Recharge Wallet', onPress: () => navigation.navigate('Wallet') }
-            ]
-          );
+          setWalletModalData({
+            currentBalance: balance,
+            requiredAmount: 50,
+            note: 'Recharge your wallet to ask for a referral.',
+          });
+          setShowWalletModal(true);
           return;
         }
 
@@ -332,6 +328,22 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           </View>
         </View>
       </LinearGradient>
+
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        title="Wallet Recharge Required"
+        subtitle="Insufficient wallet balance"
+        note={walletModalData.note}
+        primaryLabel="Add Money"
+        secondaryLabel="Cancel"
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
+      />
 
       <View style={styles.container}>
         {loading ? (

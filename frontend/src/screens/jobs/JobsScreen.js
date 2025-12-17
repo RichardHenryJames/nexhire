@@ -1517,16 +1517,16 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
               <View style={styles.quickFilterItem}>
                 <TouchableOpacity
-                  style={[styles.quickFilterDropdown, hasActiveAIAccess && styles.quickFilterActive]}
+                  style={styles.quickFilterDropdown}
                   onPress={handleSearchWithAI}
                 >
-                  <Text style={[styles.quickFilterText, hasActiveAIAccess && styles.quickFilterActiveText]}>
+                  <Text style={styles.quickFilterText}>
                     AI Jobs
                   </Text>
                   <Ionicons
-                    name={hasActiveAIAccess ? 'bulb' : 'bulb-outline'}
+                    name={'bulb-outline'}
                     size={14}
-                    color={hasActiveAIAccess ? '#0066cc' : '#666'}
+                    color={'#666'}
                   />
                 </TouchableOpacity>
               </View>
@@ -1644,81 +1644,65 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       />
 
       {/* AI Jobs Confirmation Modal (moved from Home) */}
-      <Modal
-        visible={showAIConfirmModal}
-        transparent
-        onRequestClose={() => setShowAIConfirmModal(false)}
-      >
-        <View style={aiModalStyles.overlay}>
-          <View style={aiModalStyles.card}>
-            {isInsufficientBalance ? (
-              <>
-                <View style={aiModalStyles.headerDanger}>
-                  <Ionicons name="wallet-outline" size={28} color={colors.white} />
-                  <Text style={aiModalStyles.headerTitleDanger}>Wallet Recharge Required</Text>
+      {isInsufficientBalance ? (
+        <WalletRechargeModal
+          visible={showAIConfirmModal}
+          currentBalance={Number(walletBalance || 0)}
+          requiredAmount={100}
+          title="Wallet Recharge Required"
+          subtitle="Insufficient wallet balance"
+          note="Unlock 50 AI-matched jobs for 24 hours."
+          primaryLabel="Add Money"
+          secondaryLabel="Maybe Later"
+          onAddMoney={handleAIJobsCancel}
+          onCancel={() => setShowAIConfirmModal(false)}
+        />
+      ) : (
+        <Modal
+          visible={showAIConfirmModal}
+          transparent
+          onRequestClose={() => setShowAIConfirmModal(false)}
+        >
+          <View style={aiModalStyles.overlay}>
+            <View style={aiModalStyles.card}>
+              <View style={aiModalStyles.headerAI}>
+                <Ionicons name="bulb" size={28} color="#FFD700" />
+                <Text style={aiModalStyles.headerTitleAI}>AI Recommended Jobs</Text>
+              </View>
+              <View style={aiModalStyles.body}>
+                <Text style={aiModalStyles.subtitle}>Get 50 personalized job matches</Text>
+                <View style={aiModalStyles.benefits}>
+                  <Text style={aiModalStyles.benefitsTitle}>Why this helps</Text>
+                  <Text style={aiModalStyles.benefitItem}>• Jobs matched to your profile and skills</Text>
+                  <Text style={aiModalStyles.benefitItem}>• Saves time—no need to search manually</Text>
+                  <Text style={aiModalStyles.benefitItem}>• 24-hour access after purchase</Text>
                 </View>
-                <View style={aiModalStyles.body}>
-                  <Text style={aiModalStyles.subtitle}>Insufficient wallet balance</Text>
-                  <Text style={aiModalStyles.benefitNote}>Unlock 50 AI-matched jobs for 24 hours.</Text>
-                  <View style={aiModalStyles.kvRow}>
-                    <Text style={aiModalStyles.kvLabel}>Current</Text>
-                    <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
-                  </View>
-                  <View style={aiModalStyles.kvRow}>
-                    <Text style={aiModalStyles.kvLabel}>Required</Text>
-                    <Text style={aiModalStyles.kvValue}>₹100.00</Text>
-                  </View>
-                  <View style={aiModalStyles.actions}>
-                    <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
-                      <Text style={aiModalStyles.btnSecondaryText}>Maybe Later</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsCancel}>
-                      <Text style={aiModalStyles.btnPrimaryText}>Add Money</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabel}>Cost</Text>
+                  <Text style={aiModalStyles.kvValue}>₹100.00</Text>
                 </View>
-              </>
-            ) : (
-              <>
-                <View style={aiModalStyles.headerAI}>
-                  <Ionicons name="bulb" size={28} color="#FFD700" />
-                  <Text style={aiModalStyles.headerTitleAI}>AI Recommended Jobs</Text>
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabel}>Current Balance</Text>
+                  <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
                 </View>
-                <View style={aiModalStyles.body}>
-                  <Text style={aiModalStyles.subtitle}>Get 50 personalized job matches</Text>
-                  <View style={aiModalStyles.benefits}>
-                    <Text style={aiModalStyles.benefitsTitle}>Why this helps</Text>
-                    <Text style={aiModalStyles.benefitItem}>• Jobs matched to your profile and skills</Text>
-                    <Text style={aiModalStyles.benefitItem}>• Saves time—no need to search manually</Text>
-                    <Text style={aiModalStyles.benefitItem}>• 24-hour access after purchase</Text>
-                  </View>
-                  <View style={aiModalStyles.kvRow}>
-                    <Text style={aiModalStyles.kvLabel}>Cost</Text>
-                    <Text style={aiModalStyles.kvValue}>₹100.00</Text>
-                  </View>
-                  <View style={aiModalStyles.kvRow}>
-                    <Text style={aiModalStyles.kvLabel}>Current Balance</Text>
-                    <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
-                  </View>
-                  <View style={aiModalStyles.kvDivider} />
-                  <View style={aiModalStyles.kvRow}>
-                    <Text style={aiModalStyles.kvLabelBold}>Balance After</Text>
-                    <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - 100).toFixed(2)}</Text>
-                  </View>
-                  <View style={aiModalStyles.actions}>
-                    <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
-                      <Text style={aiModalStyles.btnSecondaryText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsConfirm}>
-                      <Text style={aiModalStyles.btnPrimaryText}>Proceed</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View style={aiModalStyles.kvDivider} />
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabelBold}>Balance After</Text>
+                  <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - 100).toFixed(2)}</Text>
                 </View>
-              </>
-            )}
+                <View style={aiModalStyles.actions}>
+                  <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
+                    <Text style={aiModalStyles.btnSecondaryText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsConfirm}>
+                    <Text style={aiModalStyles.btnPrimaryText}>Proceed</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
       {/* 💎 NEW: Referral Confirmation Modal */}
       <ReferralConfirmModal
