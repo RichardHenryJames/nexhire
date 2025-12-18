@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 
 export default function OrganizationDetailsScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { employerType = 'startup', selectedCompany = null } = route.params || {};
 
   const [organizationName, setOrganizationName] = useState(selectedCompany?.name || '');
@@ -88,7 +91,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginTop: 8 },

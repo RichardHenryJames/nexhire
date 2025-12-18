@@ -165,13 +165,13 @@ export default function DatePicker({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: colors.white,
+            backgroundColor: colors.surface,
             border: `1px solid ${error ? colors.error : colors.border}`,
             borderRadius: '8px',
             padding: '16px', // Default padding
             cursor: 'pointer',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-            // ? Apply custom styles (will override defaults like padding)
+            // ✅ Apply custom styles (will override defaults like padding)
             ...normalizedWebButtonStyle,
           }}
           onClick={() => webInputRef.current?.showPicker?.()}

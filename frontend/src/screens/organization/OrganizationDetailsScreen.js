@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function OrganizationDetailsScreen({ route, navigation }) {
+const { colors } = useTheme();
+const styles = useMemo(() => createStyles(colors), [colors]);
+
 // ? Handle both route params and URL query params (for web deep linking)
 const getOrganizationId = () => {
   // First try route.params
@@ -532,7 +536,7 @@ const [error, setError] = useState(null);
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -547,7 +551,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   errorTitle: {
     fontSize: typography.sizes.xl,
@@ -558,7 +562,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -589,7 +593,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -598,7 +602,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: colors.surface,
   },
   logo: {
     width: 80,
@@ -609,7 +613,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -676,7 +680,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: typography.sizes.md,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 24,
   },
   infoRow: {
@@ -772,7 +776,7 @@ const styles = StyleSheet.create({
   },
   recentJobsSubtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 12,
     marginTop: -8,
   },
@@ -810,12 +814,12 @@ const styles = StyleSheet.create({
   },
   jobCompany: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
   jobLocation: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   jobMeta: {
@@ -836,7 +840,7 @@ const styles = StyleSheet.create({
   },
   jobDate: {
     fontSize: typography.sizes.xs,
-    color: colors.gray400,
+    color: colors.textSecondary,
   },
   loadingJobsContainer: {
     flexDirection: 'row',
@@ -849,6 +853,6 @@ const styles = StyleSheet.create({
   loadingJobsText: {
     marginLeft: 12,
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
 });

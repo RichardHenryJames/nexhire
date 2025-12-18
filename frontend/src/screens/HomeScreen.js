@@ -39,12 +39,14 @@ const [showSearchResults, setShowSearchResults] = useState(false);
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingStats, setLoadingStats] = useState(true);
 const [loadingJobs, setLoadingJobs] = useState(true);
+const [loadingF500Jobs, setLoadingF500Jobs] = useState(true);
 const [loadingApplications, setLoadingApplications] = useState(true);
   
 const [dashboardData, setDashboardData] = useState({
   // Enhanced stats from backend
   stats: {},
   recentJobs: [],
+  f500Jobs: [],
   recentApplications: [],
   referralStats: {}
 });
@@ -115,7 +117,7 @@ const [dashboardData, setDashboardData] = useState({
       })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recent Jobs
+    // 2. Recommended Jobs
     setLoadingJobs(true);
     const jobsPromise = (async () => {
       try {
@@ -134,9 +136,28 @@ const [dashboardData, setDashboardData] = useState({
         }
         setDashboardData(prev => ({ ...prev, recentJobs }));
       } catch (err) {
-        console.warn('Recent jobs fetch failed:', err);
+        console.warn('Recommended jobs fetch failed:', err);
       } finally {
         setLoadingJobs(false);
+      }
+    })();
+
+    // 3. Jobs from Top MNCs (Fortune 500)
+    setLoadingF500Jobs(true);
+    const f500JobsPromise = (async () => {
+      try {
+        if (!isEmployer) {
+          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
+          let f500Jobs = [];
+          if (f500JobsRes.success) {
+            f500Jobs = (f500JobsRes.data || []).slice(0, 5);
+          }
+          setDashboardData(prev => ({ ...prev, f500Jobs }));
+        }
+      } catch (err) {
+        console.warn('F500 jobs fetch failed:', err);
+      } finally {
+        setLoadingF500Jobs(false);
       }
     })();
 
@@ -155,7 +176,7 @@ const [dashboardData, setDashboardData] = useState({
 
     // We don't await here to allow UI to update progressively
     // But we catch any unhandled promise rejections just in case
-    Promise.all([statsPromise, jobsPromise, applicationsPromise]).catch(err => {
+    Promise.all([statsPromise, jobsPromise, f500JobsPromise, applicationsPromise]).catch(err => {
       console.error('Error in dashboard data fetch:', err);
     });
 
@@ -506,6 +527,7 @@ const [dashboardData, setDashboardData] = useState({
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -514,7 +536,6 @@ const [dashboardData, setDashboardData] = useState({
 
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
           
           {isEmployer ? (
             <>
@@ -616,16 +637,16 @@ const [dashboardData, setDashboardData] = useState({
           )}
         </View>
 
-        {/* Recent Jobs Section */}
+        {/* Recommended Jobs Section */}
         {loadingJobs ? (
           <View style={styles.recentContainer}>
-            <Text style={styles.sectionTitle}>Recent Jobs</Text>
+            <Text style={styles.sectionTitle}>Recommended Jobs</Text>
             <SectionLoader />
           </View>
         ) : recentJobs.length > 0 ? (
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Jobs</Text>
+              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
@@ -641,6 +662,34 @@ const [dashboardData, setDashboardData] = useState({
             </ScrollView>
           </View>
         ) : null}
+
+        {/* Jobs from Top MNCs (Fortune 500) - Job Seekers only */}
+        {isJobSeeker && (
+          loadingF500Jobs ? (
+            <View style={styles.recentContainer}>
+              <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
+              <SectionLoader />
+            </View>
+          ) : dashboardData.f500Jobs?.length > 0 ? (
+            <View style={styles.recentContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Jobs', { filterF500: true })}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {dashboardData.f500Jobs.map((job, index) => (
+                  <JobCard key={job.JobID || index} job={job} />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null
+        )}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (
@@ -691,9 +740,6 @@ const [dashboardData, setDashboardData] = useState({
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
       </ScrollView>
     </>
   );
@@ -1388,6 +1434,6 @@ headerCompact: {
     fontWeight: typography.weights.semibold,
   },
   bottomSpacing: {
-    height: 20,
+    height: 100,
   },
 });

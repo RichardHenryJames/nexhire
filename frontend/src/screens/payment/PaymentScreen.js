@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { frontendConfig } from '../../config/appConfig'; // Added
 
@@ -32,8 +33,10 @@ const formatINR = (value) => {
 export default function PaymentScreen({ route, navigation }) {
   const { plan, returnScreen = 'ReferralPlans' } = route.params || {};
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (!plan) {
@@ -229,7 +232,7 @@ export default function PaymentScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -243,7 +246,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   content: {
     padding: 20,
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
   },
   planDuration: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   features: {
     marginBottom: 24,
@@ -324,7 +327,7 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: typography.sizes.xs,
-    color: colors.gray500,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },

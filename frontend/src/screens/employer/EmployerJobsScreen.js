@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
-import { styles as jobStyles } from '../jobs/JobsScreen.styles';
+import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 
 /*
@@ -20,6 +21,10 @@ const TABS = [ 'draft', 'published' ];
 
 export default function EmployerJobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
+  const jobStyles = useMemo(() => createJobStyles(colors), [colors]);
+  const localStyles = useMemo(() => createLocalStyles(colors), [colors]);
+  
   const [activeTab, setActiveTab] = useState('draft');
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,19 +226,19 @@ export default function EmployerJobsScreen({ navigation, route }) {
       </View>
 
       {/* Tabs */}
-      <View style={{ flexDirection:'row', backgroundColor:'#fff', borderBottomWidth:1, borderBottomColor:'#e9ecef' }}>
+      <View style={{ flexDirection:'row', backgroundColor:colors.surface, borderBottomWidth:1, borderBottomColor:colors.border }}>
         {TABS.map(t => {
           const active = (activeTab === t);
           const label = t === 'draft' ? 'Draft' : 'Published';
           return (
-            <TouchableOpacity key={t} onPress={()=> setActiveTab(t)} style={{ flex:1, paddingVertical:12, alignItems:'center', borderBottomWidth:2, borderBottomColor: active? '#0066cc':'transparent' }}>
-              <Text style={{ color: active? '#0066cc':'#555', fontWeight: active? '700':'600' }}>{label}</Text>
+            <TouchableOpacity key={t} onPress={()=> setActiveTab(t)} style={{ flex:1, paddingVertical:12, alignItems:'center', borderBottomWidth:2, borderBottomColor: active? colors.primary:'transparent' }}>
+              <Text style={{ color: active? colors.primary:colors.textSecondary, fontWeight: active? '700':'600' }}>{label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <ScrollView style={jobStyles.jobList} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <ScrollView style={jobStyles.jobList} contentContainerStyle={{ paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {loading && jobs.length===0 ? (
           <View style={jobStyles.loadingContainer}><Text style={jobStyles.loadingText}>Loading...</Text></View>
         ) : jobs.length===0 ? (
@@ -313,20 +318,20 @@ export default function EmployerJobsScreen({ navigation, route }) {
   );
 }
 
-const localStyles = {
+const createLocalStyles = (colors) => ({
   toggleScope:{
     marginLeft:8,
-    backgroundColor:'#fff',
+    backgroundColor:colors.surface,
     flexDirection:'row',
     alignItems:'center',
     paddingHorizontal:12,
     borderRadius:8,
     borderWidth:1,
-    borderColor:'#e1e5e9'
+    borderColor:colors.border
   },
   toggleText:{
     marginLeft:6,
-    color:'#555'
+    color:colors.textSecondary
   },
   actionBtn:{
     flexDirection:'row',
@@ -363,17 +368,17 @@ const localStyles = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#0066cc',
+    borderColor: colors.primary,
   },
   viewDraftsButtonText: {
-    color: '#0066cc',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   }
-};
+});

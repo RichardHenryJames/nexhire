@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -16,10 +16,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { pendingGoogleAuth } = useAuth();
   const { employerType = 'startup', selectedCompany, fromGoogleAuth, skipEmailPassword } = route.params || {};
 
@@ -370,7 +373,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: colors.background 

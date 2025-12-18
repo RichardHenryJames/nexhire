@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -12,12 +12,15 @@ import {
   Image 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
 
 export default function EmployerAccountScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { 
     employerType = 'startup', 
     selectedCompany, 
@@ -503,7 +506,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: colors.background 

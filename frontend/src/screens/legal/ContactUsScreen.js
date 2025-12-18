@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
-import { colors } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function ContactUsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const handleEmailPress = (email) => {
     Linking.openURL(`mailto:${email}`);
   };
@@ -238,10 +240,10 @@ export default function ContactUsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
- backgroundColor: colors.white,
+ backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -255,19 +257,19 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   intro: {
     fontSize: 16,
-    color: colors.gray800,
+    color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
- color: colors.gray900,
+ color: colors.text,
     marginTop: 24,
     marginBottom: 12,
   },
@@ -284,17 +286,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   contactCard: {
-backgroundColor: colors.white,
+backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: colors.border,
   },
   contactLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginBottom: 6,
   },
   contactValue: {
@@ -305,27 +307,27 @@ backgroundColor: colors.white,
   },
   contactDescription: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   responseTime: {
 fontSize: 13,
-    color: colors.gray500,
+    color: colors.textMuted,
     fontStyle: 'italic',
     marginTop: 6,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   bold: {
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   note: {
     fontSize: 13,
-    color: colors.gray500,
+    color: colors.textMuted,
     fontStyle: 'italic',
     marginTop: 8,
   },
@@ -338,7 +340,7 @@ socialBox: {
   },
   socialItem: {
  fontSize: 14,
-    color: colors.gray700,
+    color: colors.textSecondary,
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -348,8 +350,22 @@ socialBox: {
   },
   bulletItem: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 24,
     marginBottom: 4,
+  },
+  acknowledgment: {
+    backgroundColor: colors.primary + '10',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 24,
+    marginBottom: 30,
+  },
+  acknowledgmentText: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '500',
+    lineHeight: 22,
+    textAlign: 'center',
   },
 });

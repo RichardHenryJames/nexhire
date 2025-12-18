@@ -12,11 +12,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 
 // CRITICAL FIX: Move JobTypeItem outside main component to prevent re-renders
-const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => {
+// Now accepts colors and styles as props for theme support
+const JobTypeItem = React.memo(({ jobType, isSelected, onToggle, colors, styles }) => {
   // Use a stable handler that doesn't change
   const handlePress = useCallback(() => {
     onToggle(jobType);
@@ -59,6 +61,8 @@ const JobTypeItem = React.memo(({ jobType, isSelected, onToggle }) => {
 });
 
 export default function JobPreferencesScreen({ navigation, route }) {
+const { colors } = useTheme();
+const styles = useMemo(() => createStyles(colors), [colors]);
 // CRITICAL FIX: Use useRef to prevent unnecessary re-renders
 const [formData, setFormData] = useState({
   preferredJobTypes: [],
@@ -412,6 +416,8 @@ const getWorkplaceDescription = (typeName) => {
                   jobType={jobType}
                   isSelected={isSelected}
                   onToggle={handleJobTypeToggle}
+                  colors={colors}
+                  styles={styles}
                 />
               );
             })}
@@ -447,7 +453,7 @@ const getWorkplaceDescription = (typeName) => {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

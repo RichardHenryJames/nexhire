@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 
 // Add debounce hook for smooth search
@@ -40,6 +41,8 @@ const useDebounce = (value, delay) => {
 //  - FieldOfStudy (Category = degreeKey)
 
 export default function EducationDetailsScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [formData, setFormData] = useState({
     college: null,
     customCollege: '',
@@ -834,7 +837,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

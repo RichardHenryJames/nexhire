@@ -1596,7 +1596,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         return null;
       }
       
-      const logoUrl = `https://logo.clearbit.com/${cleanDomain}`;
+      // 🔄 UPDATED: Use Google's favicon API instead of Clearbit (blocked in India)
+      const logoUrl = `https://www.google.com/s2/favicons?domain=${cleanDomain}&sz=128`;
       
       // Quick HEAD request to check if logo exists
       const response = await axios.head(logoUrl, {
@@ -1605,7 +1606,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       });
       
       if (response.status === 200) {
-        console.log(`🎨 Found Clearbit logo for ${cleanDomain}`);
+        console.log(`🎨 Found Google favicon for ${cleanDomain}`);
         return logoUrl;
       }
       

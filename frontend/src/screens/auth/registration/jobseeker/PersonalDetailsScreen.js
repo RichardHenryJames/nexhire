@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -31,6 +32,8 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function PersonalDetailsScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
   // 🔧 Add safety checks for route params
@@ -1112,7 +1115,7 @@ styles.selectionButton,
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import ReferralPointsBreakdown from './ReferralPointsBreakdown';
 
 const ReferralPointsHeader = ({ 
@@ -12,6 +13,8 @@ const ReferralPointsHeader = ({
   onPress,
   compact = false 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   console.log('ReferralPointsHeader rendered with:', {
@@ -137,7 +140,7 @@ const ReferralPointsHeader = ({
         {/* Tap to Detail Hint */}
         <View style={styles.hintSection}>
           <Text style={styles.hintText}>Tap to view detailed breakdown</Text>
-          <Ionicons name="information-circle-outline" size={16} color={colors.gray500} />
+          <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
         </View>
       </TouchableOpacity>
 
@@ -157,7 +160,7 @@ const ReferralPointsHeader = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface || colors.background,
     borderRadius: 16,
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
   },
   pointsLabel: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   detailArrow: {
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -240,7 +243,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginRight: 4,
   },
   compactContainer: {
@@ -281,11 +284,11 @@ const styles = StyleSheet.create({
   },
   compactLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   tapHint: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 2,
   },
 });

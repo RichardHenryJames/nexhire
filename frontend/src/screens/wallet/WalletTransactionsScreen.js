@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 
 export default function WalletTransactionsScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -19,6 +24,33 @@ export default function WalletTransactionsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'Credit', 'Debit'
   const [currentBalance, setCurrentBalance] = useState(0);
+
+  // ✅ Smart back navigation for hard refresh scenarios
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Transaction History',
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16, padding: 4 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   const loadTransactions = useCallback(async (pageNum = 1, filterType = filter, showLoader = true) => {
     try {
@@ -234,21 +266,21 @@ export default function WalletTransactionsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
   },
   listContent: {
     paddingBottom: 20,
@@ -300,29 +332,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     gap: 6,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   filterTextActive: {
     color: '#FFF',
   },
   transactionCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     marginHorizontal: 16,
     marginBottom: 12,
     padding: 16,
@@ -349,7 +381,7 @@ const styles = StyleSheet.create({
   transactionType: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
   },
   transactionAmount: {
@@ -359,7 +391,7 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
+    color: colors.text,
     marginBottom: 8,
   },
   transactionFooter: {
@@ -374,7 +406,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
   },
   balanceInfo: {
     flexDirection: 'row',
@@ -382,12 +414,12 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
   },
   balanceValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   statusBadge: {
     position: 'absolute',
@@ -416,13 +448,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#CCC',
+    color: colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -435,6 +467,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
 });

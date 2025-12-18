@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function ComplianceFooter({ currentPage }) {
   const navigation = useNavigation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const links = [
     { id: 'terms', label: 'Terms & Conditions', screen: 'Terms' },
@@ -91,14 +93,14 @@ export default function ComplianceFooter({ currentPage }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   footer: {
-  marginTop: 40,
+    marginTop: 40,
     paddingTop: 20,
-},
+  },
   divider: {
     height: 2,
-    backgroundColor: colors.gray200,
+    backgroundColor: colors.border,
     marginBottom: 20,
   },
   footerContent: {
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
   },
   footerTagline: {
     fontSize: 14,
- color: colors.gray600,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 20,
   },
@@ -122,8 +124,8 @@ const styles = StyleSheet.create({
   },
   linksTitle: {
     fontSize: 16,
- fontWeight: '600',
-    color: colors.gray900,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 12,
   },
   linksGrid: {
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   linkTextActive: {
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontWeight: '600',
     textDecorationLine: 'none',
   },
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
   contactTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginBottom: 8,
   },
   contactLink: {
@@ -165,32 +167,32 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.gray800,
+    color: colors.text,
     marginBottom: 4,
   },
   companyDetails: {
     fontSize: 13,
-color: colors.gray600,
+    color: colors.textSecondary,
   },
   copyright: {
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.gray200,
+    borderTopColor: colors.border,
     marginBottom: 12,
   },
   copyrightText: {
     fontSize: 12,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   compliance: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.gray100,
     padding: 12,
     borderRadius: 6,
   },
   complianceText: {
     fontSize: 11,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
   },

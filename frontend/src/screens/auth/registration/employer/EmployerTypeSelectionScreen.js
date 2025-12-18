@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
@@ -29,6 +30,8 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
   // Employer type selection
@@ -377,7 +380,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flex: 1 },
   content: { padding: 20, paddingTop: 20 },

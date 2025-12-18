@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 
 export default function CreateJobScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [loading, setLoading] = useState(false);
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
@@ -597,7 +601,7 @@ export default function CreateJobScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container:{flex:1,backgroundColor:colors.background},
   scrollContainer:{flex:1},
   content:{padding:20},
@@ -608,7 +612,7 @@ const styles = StyleSheet.create({
   fieldContainer:{marginBottom:20},
   fieldLabel:{fontSize:typography.sizes.md,fontWeight:typography.weights.medium,color:colors.text,marginBottom:8},
   required:{color:colors.danger},
-  input:{backgroundColor:colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,fontSize:typography.sizes.md,color:colors.text},
+  input:{backgroundColor:colors.inputBackground || colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,fontSize:typography.sizes.md,color:colors.text},
   inputError:{borderColor:colors.danger},
   textArea:{height:100,textAlignVertical:'top'},
   errorText:{color:colors.danger,fontSize:typography.sizes.sm,marginTop:4},

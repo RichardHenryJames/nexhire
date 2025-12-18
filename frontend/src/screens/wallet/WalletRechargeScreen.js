@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,42 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 
 export default function WalletRechargeScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // ✅ Smart back navigation for hard refresh scenarios
+  React.useEffect(() => {
+    navigation.setOptions({
+      title: 'Add Money to Wallet',
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16, padding: 4 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   // Quick amount buttons
   const quickAmounts = [100, 200, 300, 500, 1000];
@@ -310,10 +342,10 @@ export default function WalletRechargeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
   contentContainer: {
     padding: 16,
@@ -321,19 +353,19 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 24,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.text,
     marginTop: 12,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -342,7 +374,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
     marginBottom: 12,
   },
   quickAmountsContainer: {
@@ -351,23 +383,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickAmountButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     minWidth: 100,
     alignItems: 'center',
   },
   quickAmountButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   quickAmountText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   quickAmountTextSelected: {
     color: '#FFF',
@@ -375,23 +407,23 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     paddingHorizontal: 16,
   },
   currencySymbol: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginRight: 8,
   },
   input: {
     flex: 1,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.text,
     paddingVertical: 16,
   },
   errorText: {
@@ -401,30 +433,32 @@ const styles = StyleSheet.create({
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
     gap: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#1976D2',
+    color: colors.text,
     lineHeight: 20,
   },
   rechargeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
     marginBottom: 24,
   },
   rechargeButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: colors.gray400 || '#6B7280',
   },
   rechargeButtonText: {
     fontSize: 18,
@@ -432,14 +466,14 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   paymentMethods: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
   },
   paymentMethodsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -453,6 +487,6 @@ const styles = StyleSheet.create({
   },
   paymentMethodText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
   },
 });

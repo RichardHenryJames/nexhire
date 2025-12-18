@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,14 +17,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker } = useAuth();
+const { colors } = useTheme();
+const styles = useMemo(() => createStyles(colors), [colors]);
   
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingWallet, setLoadingWallet] = useState(true);
@@ -88,7 +91,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       },
       headerLeft: () => (
         <TouchableOpacity 
-          style={styles.headerButton}
+          style={{ marginLeft: 16, padding: 4 }}
           onPress={() => {
             // ✅ Smart back navigation - go back if possible, otherwise go to Home tab
             if (navigation.canGoBack()) {
@@ -105,11 +108,11 @@ const [showResumeModal, setShowResumeModal] = useState(false);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text || colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors]);
 
   // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
@@ -523,7 +526,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* ✅ Wallet Balance Banner - Shows immediately with loading state */}
         {loadingWallet ? (
           <View style={styles.quotaBanner}>
@@ -990,7 +993,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1004,7 +1007,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -1034,7 +1037,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     // Sit above the bottom submit bar so it never overlaps
-    bottom: 104,
+    bottom: 170,
     alignItems: 'center',
     zIndex: 20,
   },
@@ -1100,7 +1103,7 @@ const styles = StyleSheet.create({
   
   // 🎯 NEW: Company showcase styles
   companyShowcase: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1247,8 +1250,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
-    backgroundColor: colors.white,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   inputError: {
     borderColor: colors.danger,
@@ -1260,8 +1263,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
-    backgroundColor: colors.white,
+    color: colors.text,
+    backgroundColor: colors.surface,
     minHeight: 100,
   },
   charCount: {
@@ -1316,7 +1319,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   resumeItem: {
     flexDirection: 'row',
@@ -1397,6 +1400,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     padding: 16,
+    paddingBottom: 90,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -1432,7 +1436,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   companySelectorContent: {
     flexDirection: 'row',
@@ -1444,7 +1448,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   companySelectorLogoPlaceholder: {
     width: 24,
@@ -1500,13 +1504,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
+    color: colors.text,
     outlineStyle: 'none',
   },
   modalLoadingContainer: {
@@ -1533,7 +1537,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1623,7 +1627,7 @@ const styles = StyleSheet.create({
   addMoneyChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,

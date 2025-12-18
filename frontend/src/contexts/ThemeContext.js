@@ -18,13 +18,17 @@ const lightTheme = {
   
   // Text colors
   text: '#1F2937',
+  textPrimary: '#1F2937',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
+  textLight: '#9CA3AF',
+  textInverse: '#FFFFFF',
   
   // Status colors
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
+  danger: '#EF4444',
   info: '#3B82F6',
   
   // Neutral colors
@@ -44,6 +48,9 @@ const lightTheme = {
   // Border colors
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
+  
+  // Input colors
+  inputBackground: '#F5F5F7',
   
   // Shadow colors
   shadow: '#000000',
@@ -66,13 +73,17 @@ const darkTheme = {
   
   // Text colors
   text: '#F9FAFB',
+  textPrimary: '#F9FAFB',
   textSecondary: '#D1D5DB',
   textMuted: '#9CA3AF',
+  textLight: '#9CA3AF',
+  textInverse: '#111827',
   
   // Status colors
   success: '#34D399',
   warning: '#FBBF24',
   error: '#F87171',
+  danger: '#F87171',
   info: '#60A5FA',
   
   // Neutral colors
@@ -92,6 +103,9 @@ const darkTheme = {
   // Border colors
   border: '#374151',
   borderLight: '#4B5563',
+  
+  // Input colors
+  inputBackground: '#374151',
   
   // Shadow colors
   shadow: '#000000',

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
-const FAQItem = ({ question, answer }) => {
+const FAQItem = ({ question, answer, colors, styles }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -31,6 +31,8 @@ const FAQItem = ({ question, answer }) => {
 };
 
 export default function FAQScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const faqData = [
     {
       category: 'Getting Started',
@@ -123,6 +125,8 @@ question: 'Can I provide referrals and earn rewards?',
          key={faqIndex}
      question={faq.question}
               answer={faq.answer}
+              colors={colors}
+              styles={styles}
   />
     ))}
       </View>
@@ -146,10 +150,10 @@ question: 'Can I provide referrals and earn rewards?',
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -163,7 +167,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   searchTip: {
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
   searchTipText: {
     flex: 1,
     fontSize: 14,
-    color: colors.gray700,
+    color: colors.textSecondary,
     marginLeft: 8,
     lineHeight: 20,
   },
@@ -187,17 +191,17 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
   },
   faqCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: colors.border,
     marginBottom: 8,
     overflow: 'hidden',
   },
@@ -211,7 +215,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginRight: 8,
   lineHeight: 22,
   },
@@ -219,12 +223,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
+    borderTopColor: colors.borderLight,
  backgroundColor: colors.gray50,
   },
   answer: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   paddingTop: 12,
   },
@@ -243,18 +247,18 @@ color: colors.primary,
   },
   helpText: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
   },
   contactOptions: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     padding: 12,
  borderRadius: 6,
   },
   contactItem: {
     fontSize: 14,
-    color: colors.gray800,
+    color: colors.text,
     marginBottom: 8,
     lineHeight: 20,
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLinkTo } from '@react-navigation/native';
 import { useAuth } from '../../../contexts/AuthContext';
-import { colors, typography } from '../../../styles/theme';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { typography } from '../../../styles/theme';
 
 export default function UserTypeSelectionScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
   const linkTo = useLinkTo();
@@ -228,7 +231,7 @@ export default function UserTypeSelectionScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

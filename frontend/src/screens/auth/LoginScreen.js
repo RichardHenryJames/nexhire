@@ -417,21 +417,11 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'transparent',
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
     marginHorizontal: spacing.md,
     marginVertical: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   keyboardContainer: {
     flex: 1,

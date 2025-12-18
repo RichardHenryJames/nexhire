@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,17 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 
 export default function AIRecommendedJobsScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [loading, setLoading] = useState(true);
   const [aiJobs, setAiJobs] = useState([]);
   const [error, setError] = useState(null);
@@ -433,10 +437,10 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
 container: {
   flex: 1,
-  backgroundColor: '#1E1E26',
+  backgroundColor: colors.background,
 },
 headerFixed: {
   paddingTop: Platform.OS === 'ios' ? 44 : 16,

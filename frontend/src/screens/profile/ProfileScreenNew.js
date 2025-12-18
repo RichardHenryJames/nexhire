@@ -1175,6 +1175,7 @@ export default function ProfileScreen({ navigation, route }) {
       <Animated.ScrollView
         ref={scrollRef}
         style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: 100 }}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -1727,13 +1728,13 @@ const createStyles = (colors) => StyleSheet.create({
     letterSpacing: 0.5,
   },
   componentWrapper: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   subsectionCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1752,7 +1753,7 @@ const createStyles = (colors) => StyleSheet.create({
   subsectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
   },
   subsectionHint: {
     fontSize: 12,
@@ -1778,7 +1779,7 @@ const createStyles = (colors) => StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     flex: 1,
     textAlign: 'right',
   },
@@ -1789,7 +1790,7 @@ const createStyles = (colors) => StyleSheet.create({
     fontStyle: 'italic',
   },
   fieldGroup: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -1801,7 +1802,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   fieldValue: {
     fontSize: 16,
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     fontWeight: '500',
   },
   fieldHint: {
@@ -1812,10 +1813,10 @@ const createStyles = (colors) => StyleSheet.create({
   },
   fieldInput: {
     fontSize: 16,
-    color: '#1C1C1E',
-    backgroundColor: '#F5F5F7',
+    color: colors.text || '#1C1C1E',
+    backgroundColor: colors.inputBackground || '#F5F5F7',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.border || '#E5E5EA',
     borderRadius: 8,
     padding: 12,
     marginTop: 4,
@@ -1824,7 +1825,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -1836,14 +1837,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 16,
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     marginLeft: 12,
   },
   toggle: {
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: colors.border || '#E5E5EA',
   },
   toggleActive: {
     backgroundColor: colors.primary + '20',
@@ -1851,7 +1852,7 @@ const createStyles = (colors) => StyleSheet.create({
   toggleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
   },
   // Education dropdown styles
   educationOptionsScroll: {
@@ -1867,9 +1868,9 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#F5F5F7',
+    backgroundColor: colors.inputBackground || '#F5F5F7',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.border || '#E5E5EA',
     marginRight: 8,
   },
   educationOptionActive: {
@@ -1878,7 +1879,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   educationOptionText: {
     fontSize: 14,
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     fontWeight: '500',
   },
   educationOptionTextActive: {
@@ -2022,7 +2023,7 @@ const createStyles = (colors) => StyleSheet.create({
   actionButtonLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     marginBottom: 2,
   },
   actionButtonAmount: {
@@ -2241,7 +2242,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
@@ -2251,7 +2252,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
   },
   optionTextSelected: {
     color: colors.primary,

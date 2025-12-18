@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { colors } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function TermsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -169,10 +171,10 @@ Refopen is a career networking platform that provides:
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
  flex: 1,
-  backgroundColor: colors.white,
+  backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -186,25 +188,25 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   intro: {
     fontSize: 16,
-    color: colors.gray800,
+    color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -217,7 +219,7 @@ const styles = StyleSheet.create({
   },
   acknowledgmentText: {
     fontSize: 15,
-    color: colors.gray800,
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',

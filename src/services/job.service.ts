@@ -362,6 +362,14 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🏢 Fortune 500 filter - filter jobs from Fortune 500 companies
+        if (f.isFortune500 !== undefined && f.isFortune500 !== null) {
+            const isFortune500Value = f.isFortune500 === true || f.isFortune500 === 'true' || f.isFortune500 === 1 || f.isFortune500 === '1';
+            whereClause += ` AND o.IsFortune500 = @param${paramIndex}`;
+            queryParams.push(isFortune500Value ? 1 : 0);
+            paramIndex++;
+        }
+
         return { whereClause, queryParams, paramIndex };
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection'; // ? Import the editing context
 
@@ -29,6 +30,9 @@ const ResumeSection = ({
   editing: editingProp, // ? Accept editing prop for standalone usage
   onUpdate 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   // ? Determine editing state: Prop takes priority over context
   let editing = true; // Default to true
   
@@ -713,7 +717,7 @@ const ResumeSection = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     marginVertical: 8,
   },
@@ -736,12 +740,12 @@ const styles = StyleSheet.create({
   },
   resumeCount: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
   },
   primaryIndicator: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     marginTop: 2,
   },
   addButton: {
@@ -808,7 +812,7 @@ const styles = StyleSheet.create({
   },
   fileType: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Smaller file type text
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
     marginTop: 2, // ? REDUCED: Less margin
   },
@@ -825,7 +829,7 @@ const styles = StyleSheet.create({
   },
   resumeDate: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Even smaller date text
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   resumeActions: {
     flexDirection: 'row',
@@ -835,7 +839,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     paddingHorizontal: 10, // ? SLIGHTLY INCREASED: Better button size
     paddingVertical: 5, // ? SLIGHTLY INCREASED: Better button size
     borderRadius: 6,
@@ -843,7 +847,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: typography.sizes?.xs || 11, // ? SLIGHTLY INCREASED: Better readability
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
     fontWeight: typography.weights?.medium || '500',
   },
   primaryButton: {
@@ -901,7 +905,7 @@ const styles = StyleSheet.create({
   },
   deleteModalMessage: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
@@ -913,7 +917,7 @@ const styles = StyleSheet.create({
   },
   deleteModalCancelButton: {
     flex: 1,
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -923,7 +927,7 @@ const styles = StyleSheet.create({
   deleteModalCancelText: {
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.semibold || '600',
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
   },
   deleteModalDeleteButton: {
     flex: 1,
@@ -954,14 +958,14 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: typography.sizes?.lg || 18,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
     marginTop: 16, // ? INCREASED: More space from icon
     marginBottom: 8, // ? INCREASED: More space before description
   },
   emptyStateText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 32, // ? INCREASED: More space before button
@@ -997,7 +1001,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     marginTop: 8,
   },
   uploadingIndicator: {
@@ -1037,21 +1041,21 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights?.medium || '500',
   },
   uploadButtonDisabled: {
-    color: colors.gray400 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   modalContent: {
     padding: 20,
   },
   modalDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     lineHeight: 20,
     marginBottom: 20,
   },
   selectedFile: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
@@ -1065,16 +1069,16 @@ const styles = StyleSheet.create({
   },
   selectedFileSize: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   labelInputLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
     fontWeight: typography.weights?.medium || '500',
     marginBottom: 8,
   },
   labelInput: {
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.surface || '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.border || '#E5E7EB',
     borderRadius: 8,
@@ -1085,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   labelHint: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     marginBottom: 20,
   },
   uploadingContainer: {

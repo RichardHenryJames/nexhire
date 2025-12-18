@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection';
 
@@ -47,6 +48,9 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
   { profile, setProfile, editing, onUpdate, embedded = false, compact = true },
   ref
 ) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [currencies, setCurrencies] = useState([]);
@@ -582,7 +586,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
 export default SalaryBreakdownSection;
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { backgroundColor: colors.surface || '#FFFFFF', margin: 16, marginBottom: 8, padding: 20, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },

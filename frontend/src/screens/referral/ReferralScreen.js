@@ -371,6 +371,7 @@ export default function ReferralScreen({ navigation }) {
       <ScrollView 
         style={styles.tabContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
         <Text style={styles.tabDescription}>
           Referral requests where you can help others and earn rewards

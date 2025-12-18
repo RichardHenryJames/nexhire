@@ -65,7 +65,9 @@ function Get-ClearbitLogo {
           return $null
       }
 
-        $logoUrl = "https://logo.clearbit.com/$cleanDomain"
+        # 🔄 UPDATED: Use Google's favicon API instead of Clearbit (blocked in India)
+        # Google's high-res favicon API works globally
+        $logoUrl = "https://www.google.com/s2/favicons?domain=$cleanDomain&sz=128"
 
      # Test if logo exists
         $response = Invoke-WebRequest -Uri $logoUrl -Method Head -TimeoutSec 5 -ErrorAction SilentlyContinue

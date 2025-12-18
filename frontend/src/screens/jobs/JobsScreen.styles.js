@@ -159,7 +159,7 @@ export const createStyles = (colors) => StyleSheet.create({
   jobList: {
     flex: 1,
     paddingTop: 8,
-    paddingBottom: 16,
+    paddingBottom: 100,
   },
   loadingContainer: {
     minHeight: 200,
@@ -259,7 +259,7 @@ export const createStyles = (colors) => StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 20,
+    bottom: 100,
     alignItems: 'center',
     gap: 8,
   },

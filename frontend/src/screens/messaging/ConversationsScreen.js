@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
 
 export default function ConversationsScreen() {
@@ -32,6 +33,16 @@ export default function ConversationsScreen() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // ✅ Set dark theme header
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Messages',
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerTintColor: colors.text,
+    });
+  }, [navigation, colors]);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -243,6 +254,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
       data={filteredConversations}
         renderItem={renderConversation}
         keyExtractor={(item) => item.ConversationID}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -599,7 +611,7 @@ const createStyles = (colors) => StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 16,
-    bottom: 20,
+    bottom: 100,
     width: 56,
     height: 56,
     borderRadius: 28,

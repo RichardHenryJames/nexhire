@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function AboutUsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -222,10 +224,10 @@ export default function AboutUsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   content: {
     padding: 20,
@@ -239,32 +241,32 @@ title: {
   },
   tagline: {
  fontSize: 18,
-  color: colors.gray600,
+  color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 16,
   },
   intro: {
     fontSize: 16,
- color: colors.gray800,
+ color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
 fontSize: 20,
     fontWeight: '600',
-  color: colors.gray900,
+  color: colors.text,
     marginTop: 24,
     marginBottom: 12,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 12,
   },
   bold: {
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   highlightBox: {
     backgroundColor: colors.primary + '15',
@@ -276,27 +278,27 @@ fontSize: 20,
   },
   highlightText: {
     fontSize: 16,
-    color: colors.gray900,
+    color: colors.text,
     lineHeight: 24,
     fontWeight: '500',
   },
   featureCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 8,
 marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: colors.border,
   },
 featureTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   marginBottom: 8,
   },
   featureText: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   valueCard: {
@@ -312,7 +314,7 @@ fontWeight: '600',
   },
   valueText: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   audienceCard: {
@@ -329,7 +331,7 @@ marginBottom: 12,
   },
   audienceText: {
   fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   statsBox: {
@@ -354,7 +356,7 @@ alignItems: 'center',
   },
   statLabel: {
     fontSize: 13,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   infoBox: {

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
 export default function MyReferralRequestsScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -452,7 +455,7 @@ export default function MyReferralRequestsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -543,7 +546,7 @@ const styles = StyleSheet.create({
   externalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3E8FF',
+    backgroundColor: colors.primaryLight || '#F3E8FF',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -552,12 +555,12 @@ const styles = StyleSheet.create({
   externalBadgeText: {
     fontSize: 11,
     fontWeight: typography.weights.bold,
-    color: '#8B5CF6',
+    color: colors.primary,
   },
   internalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E0F2FE',
+    backgroundColor: colors.primaryLight || '#E0F2FE',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -566,7 +569,7 @@ const styles = StyleSheet.create({
   internalBadgeText: {
     fontSize: 11,
     fontWeight: typography.weights.bold,
-    color: '#3B82F6',
+    color: colors.primary,
   },
   companyName: {
     marginTop: 4,
@@ -581,7 +584,7 @@ const styles = StyleSheet.create({
   },
   externalJobIdText: {
     fontSize: typography.sizes.xs,
-    color: '#8B5CF6',
+    color: colors.primary,
     flexShrink: 1,
   },
   timestampRow: {
@@ -703,7 +706,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warningLight || '#FFFBEB',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -743,10 +746,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   cancelReqBtn: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.dangerLight || '#FEE2E2',
   },
   cancelReqBtnText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontWeight: typography.weights.semibold,
   },
 });

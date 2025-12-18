@@ -230,7 +230,7 @@ export default function LoadingScreen() {
           },
         ]}
       >
-        {/* Animated Logo with Glassmorphism */}
+        {/* Logo directly without circular container */}
         <Animated.View
           style={[
             styles.logoContainer,
@@ -239,19 +239,14 @@ export default function LoadingScreen() {
             },
           ]}
         >
-          <View style={styles.logoOuter}>
-            <View style={styles.logoBackground}>
-              <Image
-                source={require('../../assets/refopen-logo.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
+          <Image
+            source={require('../../assets/refopen-logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
-        {/* Brand Name */}
-        <Text style={styles.brandName}>RefOpen</Text>
+        {/* Tagline */}
         <Text style={styles.tagline}>Your next career opportunity awaits</Text>
 
         {/* Modern Loading Progress Bar */}
@@ -313,48 +308,12 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 20,
   },
   logoContainer: {
-    marginBottom: 40,
-  },
-  logoOuter: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.white + '15',
-    justifyContent: 'center',
+    marginBottom: 30,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.white + '30',
-  },
-  logoBackground: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: colors.white + '25',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
   },
   logoImage: {
-    width: 92,
-    height: 36,
-  },
-  brandName: {
-    fontSize: 56,
-    fontWeight: typography.weights.extrabold,
-    color: colors.white,
-    marginBottom: 12,
-    textAlign: 'center',
-    letterSpacing: -2,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+    width: 220,
+    height: 80,
   },
   tagline: {
     fontSize: typography.sizes.lg,

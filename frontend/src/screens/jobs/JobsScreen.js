@@ -1596,11 +1596,20 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       <ScrollView
         style={styles.jobList}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onScroll={onScrollNearEnd}
         scrollEventThrottle={16}
       >
         {renderList()}
+        
+        {/* Loading More Indicator */}
+        {loadingMore && (
+          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Filter Modal */}

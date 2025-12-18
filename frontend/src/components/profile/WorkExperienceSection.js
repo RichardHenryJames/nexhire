@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useEditing } from './ProfileSection';
 import DatePicker from '../DatePicker';
 
@@ -64,7 +65,7 @@ const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperie
   return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
 };
 
-const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
+const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast, colors, styles }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
   const isCurrent = item.IsCurrent || !end;
@@ -139,6 +140,8 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
 export default function WorkExperienceSection({ editing, showHeader = false }) {
   const ctxEditing = useEditing();
   const isEditing = typeof editing === 'boolean' ? editing : ctxEditing;
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -503,6 +506,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             onEdit={openEdit}
             onDelete={handleDeletePress}
             isLast={index === validExperiences.length - 1}
+            colors={colors}
+            styles={styles}
           />
         )}
         ListEmptyComponent={renderEmpty}
@@ -876,7 +881,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   sectionContainer: { marginHorizontal: 4 },
   inlineHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   inlineAddButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, backgroundColor: colors.background },
@@ -1122,9 +1127,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface || '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border || '#e0e0e0',
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -1145,11 +1150,12 @@ const styles = StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border || '#f0f0f0',
+    backgroundColor: colors.surface || '#fff',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text || '#333',
   },
   dropdownEmpty: {
     padding: 20,
@@ -1157,7 +1163,7 @@ const styles = StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted || '#999',
     fontStyle: 'italic',
   },
 });

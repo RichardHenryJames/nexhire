@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import WalletRechargeModal from './WalletRechargeModal';
 
 /**
@@ -25,6 +26,9 @@ export default function ReferralConfirmModal({
   onAddMoney,
   jobTitle = 'this job',
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const balanceAfter = currentBalance - requiredAmount;
   const hasInsufficientBalance = currentBalance < requiredAmount;
 
@@ -133,7 +137,7 @@ export default function ReferralConfirmModal({
 }
 
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',

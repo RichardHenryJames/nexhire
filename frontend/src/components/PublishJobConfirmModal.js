@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import WalletRechargeModal from './WalletRechargeModal';
 
 /**
@@ -26,6 +27,9 @@ export default function PublishJobConfirmModal({
   onAddMoney,
   jobTitle = 'this job',
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const balanceAfter = currentBalance - requiredAmount;
   const hasInsufficientBalance = currentBalance < requiredAmount;
 
@@ -169,7 +173,7 @@ export default function PublishJobConfirmModal({
 }
 
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
@@ -178,7 +182,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     width: '100%',
     maxWidth: 450,
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
 
   // 🎨 Premium Header - Purple with Icon
   header: {
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.primary,
     paddingVertical: 18,
     paddingHorizontal: 20,
   },
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#1f2937',
+    color: colors.text,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
   // 💰 Cost Card - Clean & Tight
   costCard: {
     marginHorizontal: 20,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.inputBackground || colors.background,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -261,12 +265,12 @@ const styles = StyleSheet.create({
   },
   costLabel: {
     fontSize: 15,
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   costAmount: {
     fontSize: 15,
-    color: '#1f2937',
+    color: colors.text,
     fontWeight: '600',
   },
   balanceAmount: {
@@ -275,7 +279,7 @@ const styles = StyleSheet.create({
   },
   costDivider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     marginVertical: 10,
   },
   balanceAfterRow: {
@@ -287,12 +291,12 @@ const styles = StyleSheet.create({
   balanceAfterLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   balanceAfterAmount: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
 
   // ⚠️ Insufficient Balance Alert
@@ -301,18 +305,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 20,
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningLight || '#fef3c7',
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fcd34d',
+    borderColor: colors.warning || '#fcd34d',
     marginBottom: 16,
   },
   insufficientText: {
     flex: 1,
     fontSize: 13,
-    color: '#92400e',
+    color: colors.warningText || '#92400e',
     fontWeight: '500',
     lineHeight: 18,
   },
@@ -320,30 +324,30 @@ const styles = StyleSheet.create({
   // ✨ Benefits Box - Numbered Steps Only
   benefitsBox: {
     marginHorizontal: 20,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.primaryLight || '#eff6ff',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: colors.primaryBorder || '#dbeafe',
     marginBottom: 20,
   },
   benefitsHeading: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1e3a8a',
+    color: colors.primary,
     marginBottom: 12,
   },
   benefitLabel: {
     fontSize: 13,
-    color: '#1e40af',
+    color: colors.primary,
     lineHeight: 20,
     fontWeight: '500',
     marginBottom: 8,
   },
   benefitNumber: {
     fontWeight: '700',
-    color: '#1e3a8a',
+    color: colors.primary,
   },
 
   // 🎯 Footer Actions - Clean Buttons
@@ -352,25 +356,25 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    borderTopColor: colors.border,
   },
   cancelBtn: {
     flex: 1,
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.inputBackground || colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
   },
   cancelBtnText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#4b5563',
+    color: colors.textSecondary,
   },
   proceedBtn: {
     flex: 1,
@@ -381,10 +385,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.primary,
     ...Platform.select({
       ios: {
-        shadowColor: '#6366f1',
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.35,
         shadowRadius: 8,

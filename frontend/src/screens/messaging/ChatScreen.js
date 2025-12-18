@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,12 +16,14 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
-import { colors } from "../../styles/theme";
+import { useTheme } from "../../contexts/ThemeContext";
 
 export default function ChatScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -951,13 +953,13 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.gray50 },
+const createStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   header: {
     flexDirection: "row",
@@ -990,14 +992,14 @@ const styles = StyleSheet.create({
   messagesList: {
     paddingHorizontal: 8,
     paddingVertical: 8,
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.background,
   },
   messageContainer: { marginVertical: 2, maxWidth: "75%" },
   myMessageContainer: { alignSelf: "flex-end" },
   theirMessageContainer: { alignSelf: "flex-start" },
   senderName: {
     fontSize: 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 2,
     marginLeft: 8,
     fontWeight: "600",
@@ -1017,11 +1019,11 @@ const styles = StyleSheet.create({
   messageSending: { opacity: 0.7 },
   messageFailed: { opacity: 0.5, borderWidth: 1, borderColor: colors.danger },
   myMessageBubble: { backgroundColor: colors.primary },
-  theirMessageBubble: { backgroundColor: colors.white },
-  messageText: { fontSize: 14, lineHeight: 20, color: colors.gray900, fontFamily: "System" },
+  theirMessageBubble: { backgroundColor: colors.surface },
+  messageText: { fontSize: 14, lineHeight: 20, color: colors.text, fontFamily: "System" },
   messageTextFaded: { opacity: 0.8 },
   myMessageText: { color: colors.white },
-  theirMessageText: { color: colors.gray900 },
+  theirMessageText: { color: colors.text },
   messageFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -1031,7 +1033,7 @@ const styles = StyleSheet.create({
   },
   messageTime: { fontSize: 11, fontWeight: "400" },
   myMessageTime: { color: colors.gray100 },
-  theirMessageTime: { color: colors.gray500 },
+  theirMessageTime: { color: colors.textSecondary },
   readReceipt: { marginLeft: 3 },
   readReceiptContainer: { marginLeft: 3 },
   sendingIndicator: { width: 16, height: 16 },
@@ -1040,19 +1042,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   input: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.background,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,
     marginRight: 8,
+    color: colors.text,
   },
   sendButton: {
     width: 44,
@@ -1074,12 +1077,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 8,
     textAlign: "center",
     paddingHorizontal: 40,

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 
@@ -14,6 +15,8 @@ const ReferralPointsBreakdown = ({
   visible,
   onConversionSuccess // NEW: Callback to refresh data after conversion
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation();
   const [showConversionModal, setShowConversionModal] = useState(false);
@@ -473,7 +476,7 @@ const ReferralPointsBreakdown = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -531,7 +534,7 @@ const styles = StyleSheet.create({
   },
   totalPointsLabel: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   quickStatsRow: {
@@ -549,7 +552,7 @@ const styles = StyleSheet.create({
   },
   quickStatLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -594,7 +597,7 @@ const styles = StyleSheet.create({
   },
   breakdownDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   breakdownPointsColumn: {
@@ -606,7 +609,7 @@ const styles = StyleSheet.create({
   },
   breakdownCount: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   entryRow: {
@@ -620,7 +623,7 @@ const styles = StyleSheet.create({
   },
   entryDate: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   entryPoints: {
     fontSize: typography.sizes?.sm || 14,
@@ -646,7 +649,7 @@ const styles = StyleSheet.create({
   },
   emptyStateDescription: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -673,7 +676,7 @@ const styles = StyleSheet.create({
   },
   tipDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   conversionSection: {
     marginTop: 8,
@@ -791,7 +794,7 @@ const styles = StyleSheet.create({
   },
   conversionModalDescription: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
@@ -823,7 +826,7 @@ const styles = StyleSheet.create({
   },
   conversionLabel: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   conversionValue: {
     fontSize: 16,
