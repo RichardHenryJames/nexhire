@@ -3,7 +3,7 @@
  * API endpoint to expose pricing settings to frontend
  */
 
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { PricingService } from '../services/pricing.service';
 
 /**
@@ -46,13 +46,5 @@ async function getPricing(request: HttpRequest, context: InvocationContext): Pro
     };
   }
 }
-
-// Register the endpoint
-app.http('getPricing', {
-  methods: ['GET'],
-  authLevel: 'anonymous',
-  route: 'pricing',
-  handler: getPricing
-});
 
 export { getPricing };

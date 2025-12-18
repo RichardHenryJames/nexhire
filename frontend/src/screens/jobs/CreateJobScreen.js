@@ -339,7 +339,7 @@ export default function CreateJobScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={styles.title}>Post a New Job</Text>
           <Text style={styles.subtitle}>Provide core details only – simplified form</Text>
@@ -604,6 +604,7 @@ export default function CreateJobScreen({ navigation }) {
 const createStyles = (colors) => StyleSheet.create({
   container:{flex:1,backgroundColor:colors.background},
   scrollContainer:{flex:1},
+  scrollContent:{paddingBottom:100},
   content:{padding:20},
   title:{fontSize:typography.sizes.xxl,fontWeight:typography.weights.bold,color:colors.text,marginBottom:8},
   subtitle:{fontSize:typography.sizes.md,color:colors.gray600,marginBottom:32},

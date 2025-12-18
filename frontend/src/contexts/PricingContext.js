@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { refopenAPI } from '../services/api';
+import refopenAPI from '../services/api';
 
 // Default pricing values (fallback if API fails)
 const DEFAULT_PRICING = {

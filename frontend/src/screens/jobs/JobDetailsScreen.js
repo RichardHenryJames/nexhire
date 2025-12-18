@@ -827,7 +827,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                 />
               ) : (
                 <View style={styles.logoPlaceholder}>
-                  <Ionicons name="business-outline" size={32} color="#666" />
+                  <Ionicons name="business-outline" size={32} color={colors.textSecondary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -864,7 +864,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                       }
                     }}
                   >
-                    <Ionicons name="globe-outline" size={16} color="#0066cc" />
+                    <Ionicons name="globe-outline" size={16} color={colors.primary} />
                     <Text style={styles.websiteText}>Visit Website</Text>
                   </TouchableOpacity>
                 )}
@@ -883,7 +883,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                       }
                     }}
                   >
-                    <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
+                    <Ionicons name="logo-linkedin" size={16} color={colors.primary} />
                     <Text style={styles.linkedinText}>LinkedIn Profile</Text>
                   </TouchableOpacity>
                 )}
@@ -1395,6 +1395,17 @@ const createStyles = (colors) => StyleSheet.create({
   },
   companyDetails: {
     flex: 1,
+  },
+  title: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  company: {
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   companyLinksContainer: {
     flexDirection: 'row',

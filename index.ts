@@ -146,6 +146,9 @@ import {
 // ?? Import SignalR controller
 import "./src/controllers/signalr.controller";
 
+// Import pricing controller
+import { getPricing } from "./src/controllers/pricing.controller";
+
 // Import profile services
 import {
   ApplicantService,
@@ -1201,6 +1204,17 @@ app.http("wallet-debit", {
   authLevel: "anonymous",
   route: "wallet/debit",
   handler: withErrorHandling(debitWallet),
+});
+
+// ========================================================================
+// PRICING ENDPOINTS - DB-driven pricing settings
+// ========================================================================
+
+app.http("pricing-get", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "pricing",
+  handler: withErrorHandling(getPricing),
 });
 
 // ========================================================================
