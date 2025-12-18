@@ -12,11 +12,13 @@ import {
   Alert,
   Animated,
   Image,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import ComplianceFooter from '../../components/ComplianceFooter';
@@ -50,6 +52,8 @@ const EDUCATION_LEVELS = [
 
 export default function ProfileScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const openedFromHome = route?.params?.openedFromHome === true;
   
@@ -281,8 +285,26 @@ export default function ProfileScreen({ navigation, route }) {
         <Text style={styles.sectionTitle}>{title}</Text>
         {summary && <Text style={styles.sectionSummary}>{summary}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
+  );
+
+  const renderToggleCard = (title, icon, value, onValueChange, summary) => (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={24} color={colors.primary} />
+      </View>
+      <View style={styles.sectionContent}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {summary && <Text style={styles.sectionSummary}>{summary}</Text>}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.gray300, true: colors.primaryLight }}
+        thumbColor={value ? colors.primary : colors.gray100}
+      />
+    </View>
   );
 
   // Save handlers
@@ -1301,6 +1323,14 @@ export default function ProfileScreen({ navigation, route }) {
             <Text style={styles.sectionHeading}>Preferences</Text>
           </View>
 
+          {renderToggleCard(
+            'Dark Mode',
+            'moon-outline',
+            isDark,
+            toggleTheme,
+            'Use a darker theme across the app'
+          )}
+
           {renderSectionCard(
             'Job Preferences',
             'settings-outline',
@@ -1505,7 +1535,7 @@ export default function ProfileScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background || '#F5F5F7',
@@ -1604,12 +1634,12 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
   },
   sectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     paddingVertical: 16,
     paddingHorizontal: 16,
     marginHorizontal: 16,
@@ -1636,36 +1666,36 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
     marginBottom: 2,
   },
   sectionSummary: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textSecondary || '#8E8E93',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     paddingVertical: 14,
     marginHorizontal: 16,
     marginTop: 32,
     marginBottom: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderColor: colors.error || '#FF3B30',
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF3B30',
+    color: colors.error || '#FF3B30',
     marginLeft: 8,
   },
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F5F5F7',
+    backgroundColor: colors.background || '#F5F5F7',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1674,14 +1704,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingTop: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface || '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.border || '#E5E5EA',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: colors.text || '#1C1C1E',
   },
   modalContent: {
     flex: 1,

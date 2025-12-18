@@ -18,12 +18,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker } = useAuth();
+const { colors } = useTheme();
+const styles = React.useMemo(() => createStyles(colors), [colors]);
 const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
@@ -696,7 +699,7 @@ const [dashboardData, setDashboardData] = useState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
 container: {
   flex: 1,
   backgroundColor: colors.background,

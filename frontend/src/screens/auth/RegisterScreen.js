@@ -15,13 +15,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import DatePicker from '../../components/DatePicker';
 
 const { width, height } = Dimensions.get('window');
 
 // Floating particle component for background effect
-function FloatingParticle({ delay }) {
+function FloatingParticle({ delay, style }) {
   const translateY = useRef(new Animated.Value(height)).current;
   const translateX = useRef(new Animated.Value(Math.random() * width)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -62,7 +63,7 @@ function FloatingParticle({ delay }) {
   return (
     <Animated.View
       style={[
-        styles.floatingParticle,
+        style,
         {
           transform: [{ translateY }, { translateX }],
           opacity,
@@ -89,6 +90,8 @@ export default function RegisterScreen({ navigation }) {
   const [errors, setErrors] = useState({});
 
   const { register } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   // Validation functions
   const validateEmail = (email) => {
@@ -238,7 +241,7 @@ export default function RegisterScreen({ navigation }) {
   return (
     <View style={styles.mainContainer}>
       <LinearGradient
-        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
+        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         pointerEvents="none"
@@ -246,9 +249,9 @@ export default function RegisterScreen({ navigation }) {
       />
       
       {/* Floating Particles */}
-      <FloatingParticle delay={0} />
-      <FloatingParticle delay={1000} />
-      <FloatingParticle delay={2000} />
+      <FloatingParticle delay={0} style={styles.floatingParticle} />
+      <FloatingParticle delay={1000} style={styles.floatingParticle} />
+      <FloatingParticle delay={2000} style={styles.floatingParticle} />
       
       {/* Bottom Decoration */}
       <View style={styles.bottomDecoration}>
@@ -435,7 +438,7 @@ export default function RegisterScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   mainContainer: {
     flex: 1,
   },

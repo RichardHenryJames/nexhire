@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import ReferralProofModal from '../../components/ReferralProofModal';
 import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [requestsToMe, setRequestsToMe] = useState([]);
@@ -420,7 +423,7 @@ export default function ReferralScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -440,12 +443,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   tabNavigation: {
     flexDirection: 'row',
@@ -458,8 +461,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12, // Reduced from 16
-    paddingHorizontal: 8, // Reduced from 12
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     position: 'relative',
   },
   activeTabButton: {
@@ -469,23 +472,23 @@ const styles = StyleSheet.create({
   tabButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   activeTabButtonText: {
     color: colors.primary,
     fontWeight: typography.weights.bold,
   },
   tabBadge: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    marginLeft: 6, // Reduced from 8
-    minWidth: 18, // Reduced from 20
+    marginLeft: 6,
+    minWidth: 18,
     alignItems: 'center',
   },
   notificationBadge: {
-    backgroundColor: colors.danger,
+    backgroundColor: colors.error,
   },
   tabBadgeText: {
     color: colors.white,
@@ -496,72 +499,72 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32, // Reduced from 40
+    padding: 32,
   },
   loadingText: {
-    marginTop: 10, // Reduced from 12
+    marginTop: 10,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   tabContent: {
     flex: 1,
-    padding: 12, // Reduced from 16
+    padding: 12,
   },
   tabDescription: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    marginBottom: 12, // Reduced from 16
+    color: colors.textSecondary,
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48, // Reduced from 60
-    paddingHorizontal: 32, // Reduced from 40
+    paddingVertical: 48,
+    paddingHorizontal: 32,
   },
   emptyTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginTop: 12, // Reduced from 16
-    marginBottom: 6, // Reduced from 8
+    color: colors.text,
+    marginTop: 12,
+    marginBottom: 6,
   },
   emptyText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20, // Reduced from 22
+    lineHeight: 20,
   },
   requestCard: {
     backgroundColor: colors.surface,
-    padding: 12, // Reduced from 16
-    marginBottom: 10, // Reduced from 12
-    borderRadius: 10, // Reduced from 12
-    shadowColor: '#000',
-    shadowOpacity: 0.04, // Reduced from 0.05
-    shadowRadius: 6, // Reduced from 8
-    shadowOffset: { width: 0, height: 1 }, // Reduced from height: 2
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 10,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10, // Reduced from 12
+    marginBottom: 10,
   },
   logoContainer: {
-    marginRight: 10, // Reduced from 12
-    marginTop: 0, // Reduced from 2
+    marginRight: 10,
+    marginTop: 0,
   },
   companyLogo: {
-    width: 42, // Reduced from 48
-    height: 42, // Reduced from 48
-    borderRadius: 8, // Reduced from 10
+    width: 42,
+    height: 42,
+    borderRadius: 8,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 42, // Reduced from 48
-    height: 42, // Reduced from 48
-    borderRadius: 8, // Reduced from 10
+    width: 42,
+    height: 42,
+    borderRadius: 8,
     backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
@@ -570,30 +573,30 @@ const styles = StyleSheet.create({
   },
   requestInfo: {
     flex: 1,
-    marginRight: 8, // Reduced from 12
+    marginRight: 8,
   },
   jobTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: 2, // Reduced from 4
-    lineHeight: 18, // Added for better compactness
+    color: colors.text,
+    marginBottom: 2,
+    lineHeight: 18,
   },
   companyName: {
-    fontSize: typography.sizes.sm, // Reduced from md
-    color: colors.gray700,
-    marginBottom: 4, // Reduced from 6
-    lineHeight: 16, // Added for better compactness
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: 4,
+    lineHeight: 16,
   },
   timestampRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2, // Reduced from 4
+    marginBottom: 2,
   },
   seekerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2, // Reduced from 4
+    marginBottom: 2,
   },
   requesterRow: {
     flexDirection: 'row',
@@ -620,7 +623,7 @@ const styles = StyleSheet.create({
   },
   requesterPrefix: {
     fontSize: typography.sizes.xs,
-    color: colors.gray500,
+    color: colors.textMuted,
   },
   requesterName: {
     fontSize: typography.sizes.xs,
@@ -635,47 +638,47 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   seekerInfo: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.primary,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
-    lineHeight: 14, // Added for better compactness
+    lineHeight: 14,
   },
   requestDate: {
-    fontSize: typography.sizes.xs, // Reduced from sm
-    color: colors.gray500,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
     marginLeft: 4,
-    lineHeight: 14, // Added for better compactness
+    lineHeight: 14,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6, // Reduced from 8
-    paddingVertical: 3, // Reduced from 4
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     backgroundColor: colors.gray100,
-    borderRadius: 10, // Reduced from 12
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   statusText: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.medium,
-    marginLeft: 3, // Reduced from 4
+    marginLeft: 3,
   },
   requestActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 6, // Reduced from 8
+    gap: 6,
   },
   viewProofBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10, // Reduced from 12
-    paddingVertical: 6, // Reduced from 8
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: colors.primary + '20',
     borderRadius: 6,
   },
   viewProofText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.primary,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
@@ -683,74 +686,74 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10, // Reduced from 12
-    paddingVertical: 6, // Reduced from 8
-    backgroundColor: colors.danger + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.error + '20',
     borderRadius: 6,
   },
   cancelText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
-    color: colors.danger,
+    fontSize: typography.sizes.xs,
+    color: colors.error,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
   },
   referBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12, // Reduced from 16
-    paddingVertical: 6, // Reduced from 8
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: colors.success,
     borderRadius: 6,
   },
   referText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
   },
   dismissBtn: {
-    paddingHorizontal: 10, // Reduced from 12
-    paddingVertical: 6, // Reduced from 8
-    backgroundColor: colors.gray200,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.gray100,
     borderRadius: 6,
   },
   dismissText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
-    color: colors.gray600,
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
   proofBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12, // Reduced from 16
-    paddingVertical: 6, // Reduced from 8
-    backgroundColor: '#ff6600',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.warning,
     borderRadius: 6,
   },
   proofText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
   },
   referrerName: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.success,
     fontWeight: typography.weights.medium,
     marginLeft: 4,
-    lineHeight: 14, // Added for better compactness
+    lineHeight: 14,
   },
   verifyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10, // Reduced from 12
-    paddingVertical: 6, // Reduced from 8
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: colors.success,
     borderRadius: 6,
-    marginLeft: 6, // Reduced from 8
+    marginLeft: 6,
   },
   verifyText: {
-    fontSize: typography.sizes.xs, // Reduced from sm
+    fontSize: typography.sizes.xs,
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
@@ -772,10 +775,10 @@ const styles = StyleSheet.create({
   confirmBox: {
     width: '100%',
     maxWidth: 450,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.2,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -789,7 +792,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warning + '30',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -797,19 +800,19 @@ const styles = StyleSheet.create({
   confirmTitle: {
     fontSize: 20,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
     textAlign: 'center',
   },
   confirmMessage: {
     fontSize: 16,
     lineHeight: 24,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 28,
   },
   jobTitleInModal: {
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   confirmActions: {
     flexDirection: 'row',
@@ -830,22 +833,22 @@ const styles = StyleSheet.create({
     borderColor: colors.gray300,
   },
   keepBtnText: {
-    color: colors.gray700,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: typography.weights.semibold,
   },
   cancelReqBtn: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.error + '15',
     borderWidth: 1,
-    borderColor: '#dc2626',
+    borderColor: colors.error,
   },
   cancelReqBtnText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 16,
     fontWeight: typography.weights.bold,
   },
   
-  // ? NEW: Job Type Badge Styles
+  // Job Type Badge Styles
   jobTypeBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -870,7 +873,7 @@ const styles = StyleSheet.create({
   internalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DBEAFE',
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -878,17 +881,17 @@ const styles = StyleSheet.create({
   },
   internalBadgeText: {
     fontSize: typography.sizes.xxs,
-    color: '#3B82F6',
+    color: colors.primary,
     fontWeight: typography.weights.semibold,
     letterSpacing: 0.3,
   },
   
-  // ? NEW: External Job ID Row
+  // External Job ID Row
   externalJobIdRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray50,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -902,14 +905,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   
-  // ? NEW: Tap Hint for Internal Jobs
+  // Tap Hint for Internal Jobs
   clickHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primaryLight,
     borderRadius: 6,
     marginBottom: 10,
   },

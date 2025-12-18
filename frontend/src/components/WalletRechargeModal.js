@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { typography } from '../styles/theme';
 
 export default function WalletRechargeModal({
   visible,
@@ -15,6 +16,9 @@ export default function WalletRechargeModal({
   primaryLabel = 'Add Money',
   secondaryLabel = 'Maybe Later',
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   return (
     <Modal visible={visible} transparent onRequestClose={onCancel}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onCancel}>
@@ -52,7 +56,7 @@ export default function WalletRechargeModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -63,7 +67,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
@@ -74,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 16,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.error,
   },
   headerTitle: {
     fontSize: typography.sizes.lg,
@@ -86,12 +90,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 10,
   },
   note: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   kvRow: {
@@ -101,12 +105,12 @@ const styles = StyleSheet.create({
   },
   kvLabel: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   kvValue: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   actions: {
     flexDirection: 'row',
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
   btnSecondaryText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   btnPrimary: {
     flex: 1,

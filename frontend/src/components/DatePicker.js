@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Cross-platform DatePicker component
@@ -44,6 +45,8 @@ export default function DatePicker({
   pickerTextColor,
   containerStyle,
 }) {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [show, setShow] = useState(false);
   const webInputRef = useRef(null);
   
@@ -309,7 +312,7 @@ export default function DatePicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     marginBottom: 16, // ? RESTORED: Default margin for standalone usage
     position: 'relative',

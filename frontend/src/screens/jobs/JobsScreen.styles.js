@@ -1,24 +1,24 @@
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+export const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: colors.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.gray100,
     borderRadius: 12,
     paddingHorizontal: 12,
     marginRight: 12,
@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     paddingVertical: 8,
   },
   clearButton: {
@@ -39,14 +39,14 @@ export const styles = StyleSheet.create({
   filterButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.gray100,
   },
   
   // Quick Filters Styles
   quickFiltersContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: colors.border,
     paddingVertical: 8,
   },
   quickFiltersScroll: {
@@ -58,7 +58,7 @@ export const styles = StyleSheet.create({
   },
   quickFilterLabel: {
     fontSize: 11,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     fontWeight: '500',
@@ -66,41 +66,41 @@ export const styles = StyleSheet.create({
   quickFilterDropdown: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.gray100,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: colors.border,
     minWidth: 70,
   },
   quickFilterActive: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#0066cc',
+    backgroundColor: colors.primaryLight + '30',
+    borderColor: colors.primary,
   },
   quickFilterText: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
     marginRight: 4,
     fontWeight: '500',
   },
   quickFilterActiveText: {
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: '600',
   },
   clearAllButton: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: colors.warning + '20',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#ffc107',
+    borderColor: colors.warning,
     alignSelf: 'center',
     marginHorizontal: 8,
   },
   clearAllText: {
     fontSize: 13,
-    color: '#856404',
+    color: colors.warning,
     fontWeight: '500',
   },
 
@@ -110,13 +110,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: colors.border,
   },
   summaryText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     flex: 1,
   },
   smartContainer: {
@@ -126,26 +126,26 @@ export const styles = StyleSheet.create({
   smartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.primaryLight + '30',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginLeft: 8,
   },
   smartButtonActive: {
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
   },
   smartButtonText: {
     fontSize: 12,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: '600',
     marginLeft: 4,
   },
   smartButtonTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   clearFiltersButtonInSummary: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.gray100,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -153,7 +153,7 @@ export const styles = StyleSheet.create({
   },
   clearFiltersTextInSummary: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   jobList: {
@@ -169,7 +169,7 @@ export const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 8,
   },
   emptyContainer: {
@@ -182,25 +182,25 @@ export const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyMessage: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
   clearFiltersButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   clearFiltersText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -213,8 +213,8 @@ export const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#f8fafc',
+    borderColor: colors.border,
+    backgroundColor: colors.gray50,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -222,24 +222,24 @@ export const styles = StyleSheet.create({
     minWidth: 60,
   },
   chipActive: {
-    borderColor: '#0066cc',
-    backgroundColor: '#e3f2fd',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight + '30',
   },
   chipText: {
-    color: '#374151',
+    color: colors.text,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
   },
   chipTextActive: {
-    color: '#0066cc',
+    color: colors.primary,
   },
 
   // Next-line container for the expanded quick filter
   sliderBar: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: colors.border,
     paddingTop: 8,
     paddingBottom: 6,
   },
@@ -251,7 +251,7 @@ export const styles = StyleSheet.create({
   sectionHeaderText: {
     fontSize: 11,
     letterSpacing: 0.8,
-    color: '#6b7280',
+    color: colors.textMuted,
     fontWeight: '700',
   },
 
@@ -259,34 +259,34 @@ export const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 20, // ?? FIXED: Reduced from 80 to 20 to sit just above Profile tab
+    bottom: 20,
     alignItems: 'center',
-    gap: 8, // ?? REDUCED: From 12 to 8 for tighter spacing
+    gap: 8,
   },
   fab: {
-    width: 48, // ?? REDUCED: From 56 to 48 (smaller)
-    height: 48, // ?? REDUCED: From 56 to 48 (smaller)
-    borderRadius: 24, // ?? UPDATED: From 28 to 24 (matches new size)
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, // ?? REDUCED: Softer shadow
-    shadowOpacity: 0.25, // ?? REDUCED: From 0.3 to 0.25
-    shadowRadius: 6, // ?? REDUCED: From 8 to 6
-    elevation: 6, // ?? REDUCED: From 8 to 6
-    marginVertical: 4, // ?? REDUCED: From 6 to 4
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+    marginVertical: 4,
   },
   fabSaved: {
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
   },
   fabApplications: {
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
   },
   fabBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#ff3b30',
+    backgroundColor: colors.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -294,11 +294,29 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.surface,
   },
   fabBadgeText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 11,
     fontWeight: '700',
   },
+});
+
+// For backward compatibility
+export const styles = createStyles({
+  primary: '#3B82F6',
+  primaryLight: '#60A5FA',
+  surface: '#FFFFFF',
+  background: '#F9FAFB',
+  text: '#1F2937',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  border: '#E5E7EB',
+  gray50: '#F9FAFB',
+  gray100: '#F3F4F6',
+  white: '#FFFFFF',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  shadow: '#000000',
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,15 +14,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
-import { colors } from '../../styles/theme';
 
 export default function ViewProfileScreen() {
 const navigation = useNavigation();
 const route = useRoute();
 const { user } = useAuth();
+const { colors } = useTheme();
+const styles = useMemo(() => createStyles(colors), [colors]);
   
 const { userId, userName: initialUserName, userProfilePic: initialProfilePic } = route.params;
   
@@ -528,7 +530,7 @@ style={styles.primaryButton}
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background || '#F5F5F7',

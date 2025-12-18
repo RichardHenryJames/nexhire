@@ -7,7 +7,7 @@
  * 3. Smart handling of resume limits and error states
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import refopenAPI from '../services/api';
-import { colors, typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { typography } from '../styles/theme';
 
 const ResumeUploadModal = ({ 
   visible, 
@@ -30,6 +31,9 @@ const ResumeUploadModal = ({
   user,
   jobTitle 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [uploading, setUploading] = useState(false);
   const [existingResumes, setExistingResumes] = useState([]);
   const [hasCheckedResumes, setHasCheckedResumes] = useState(false);
@@ -351,7 +355,7 @@ const ResumeUploadModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -360,7 +364,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     width: '100%',
     maxWidth: 400,
@@ -380,7 +384,7 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -400,7 +404,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
+    marginLeft: 8,
   },
   resumeOption: {
     flexDirection: 'row',
@@ -431,7 +435,7 @@ const styles = StyleSheet.create({
   },
   resumeDate: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
   },
   uploadNewOption: {
     flexDirection: 'row',
@@ -450,14 +454,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
+    marginLeft: 8,
   },
   cancelButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   cancelButtonText: {
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
   },

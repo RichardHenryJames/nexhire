@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
@@ -26,6 +27,8 @@ import { showToast } from '../../components/Toast';
 export default function JobDetailsScreen({ route, navigation }) {
 const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1309,7 +1312,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1323,7 +1326,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -1341,7 +1344,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -1402,12 +1405,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#e8f4fd',
+    backgroundColor: colors.primaryLight,
     borderRadius: 16,
   },
   websiteText: {
     fontSize: typography.sizes.sm,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: typography.weights.medium,
     marginLeft: 6,
   },
@@ -1454,8 +1457,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning + '20',
   },
   statusTag: {
-    color: colors.gray600,
-    backgroundColor: colors.gray200,
+    color: colors.textSecondary,
+    backgroundColor: colors.gray100,
   },
   infoSection: {
     padding: 20,
@@ -1473,7 +1476,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   infoValue: {
@@ -1515,7 +1518,7 @@ const styles = StyleSheet.create({
   additionalLabel: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   additionalValue: {
@@ -1538,7 +1541,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   applyButtonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
   },
   applyButtonText: {
     fontSize: typography.sizes.md,
@@ -1564,16 +1567,15 @@ const styles = StyleSheet.create({
   },
   referralButtonDisabled: {
     opacity: 0.7,
-    backgroundColor: '#f3f4f6',
-    borderColor: '#d1d5db',
+    backgroundColor: colors.gray100,
+    borderColor: colors.gray300,
   },
   headerButton: {
     padding: 8,
   },
-  // 🆕 MOVED: Referral message styles - updated margin since now above buttons
   referralMessageSection: {
     margin: 20,
-    marginBottom: 8, // Reduced margin since action buttons come after this
+    marginBottom: 8,
   },
   addMessageButton: {
     flexDirection: 'row',
@@ -1621,7 +1623,6 @@ const styles = StyleSheet.create({
     maxHeight: 160,
     textAlignVertical: 'top',
   },
-  // 🆕 NEW: Cover letter section styles
   coverLetterSection: {
     margin: 20,
     marginTop: 0,
@@ -1648,15 +1649,14 @@ const styles = StyleSheet.create({
   },
   referralMessageHint: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
     flex: 1,
   },
   characterCount: {
     fontSize: typography.sizes.sm,
-    color: colors.gray400,
+    color: colors.textMuted,
     fontWeight: typography.weights.medium,
   },
-  // ✅ NEW: External application styles
   externalApplicationSection: {
     padding: 20,
     borderTopWidth: 1,
@@ -1677,7 +1677,7 @@ const styles = StyleSheet.create({
   },
   externalApplicationDescription: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   externalApplicationButton: {
@@ -1695,7 +1695,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     marginLeft: 8,
   },
-  // ✅ NEW: Job tags styles
   jobTagsSection: {
     padding: 20,
     backgroundColor: colors.surface,
@@ -1725,7 +1724,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
-  // ✅ NEW: Publish button styles
   publishButton: {
     flex: 1,
     flexDirection: 'row',
@@ -1736,7 +1734,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   publishButtonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
   },
   publishButtonText: {
     color: colors.white,
@@ -1757,7 +1755,7 @@ const styles = StyleSheet.create({
   archivedNoticeText: {
     flex: 1,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
 });

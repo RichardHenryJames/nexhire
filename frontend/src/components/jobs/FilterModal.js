@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const FilterModal = ({ 
   visible, 
@@ -16,6 +17,9 @@ const FilterModal = ({
   loadingCompanies = false,
   initialSection = null
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [selectedCategory, setSelectedCategory] = useState('workMode');
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(100); // Show first 100 companies initially
@@ -430,10 +434,10 @@ const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobType
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff'
+    backgroundColor: colors.surface
   },
   header: {
     flexDirection: 'row',
@@ -443,21 +447,21 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb'
+    borderBottomColor: colors.border
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827'
+    color: colors.text
   },
   clearAll: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#fef2f2'
+    backgroundColor: colors.error + '15'
   },
   clearAllText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '600'
   },
@@ -468,40 +472,40 @@ const styles = StyleSheet.create({
   leftColumn: {
     width: '30%',
     borderRightWidth: 1,
- borderRightColor: '#e5e7eb',
-    backgroundColor: '#f9fafb'
+    borderRightColor: colors.border,
+    backgroundColor: colors.gray50
   },
   categoryItem: {
     paddingVertical: 16,
-  paddingHorizontal: 20,
+    paddingHorizontal: 20,
     borderLeftWidth: 3,
     borderLeftColor: 'transparent',
     flexDirection: 'row',
- alignItems: 'center',
+    alignItems: 'center',
     justifyContent: 'space-between'
   },
   categoryItemActive: {
-    borderLeftColor: '#0066cc',
-    backgroundColor: '#ffffff'
+    borderLeftColor: colors.primary,
+    backgroundColor: colors.surface
   },
   categoryLabel: {
     fontSize: 15,
-    color: '#6b7280',
- fontWeight: '500'
+    color: colors.textMuted,
+    fontWeight: '500'
   },
   categoryLabelActive: {
-    color: '#111827',
+    color: colors.text,
     fontWeight: '600'
   },
   activeDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#0066cc'
+    backgroundColor: colors.primary
   },
   rightColumn: {
- flex: 1,
-    backgroundColor: '#ffffff'
+    flex: 1,
+    backgroundColor: colors.surface
   },
   rightContent: {
     padding: 20
@@ -509,7 +513,7 @@ const styles = StyleSheet.create({
   rightTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 16
   },
   optionsList: {
@@ -520,31 +524,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6'
+    borderBottomColor: colors.gray100
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.gray300,
     marginRight: 12,
-alignItems: 'center',
+    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff'
+    backgroundColor: colors.surface
   },
   checkboxActive: {
-    borderColor: '#0066cc',
-    backgroundColor: '#e3f2fd'
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight
   },
   optionLabel: {
     flex: 1,
     fontSize: 15,
-    color: '#374151'
+    color: colors.textSecondary
   },
   optionCount: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textMuted,
     fontWeight: '600'
   },
   searchInput: {
@@ -552,15 +556,15 @@ alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,
     fontSize: 15,
-    color: '#111827',
+    color: colors.text,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.gray50,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     marginBottom: 16,
     paddingHorizontal: 12,
   },
@@ -573,7 +577,7 @@ alignItems: 'center',
     flex: 1,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
+    color: colors.text,
   },
   clearSearchButton: {
     padding: 4,
@@ -588,21 +592,21 @@ alignItems: 'center',
   },
   rangeLabel: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     marginBottom: 6
   },
   rangeTextInput: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.gray50,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
+    color: colors.text,
     borderWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: colors.border
   },
   rangeSeparator: {
-    color: '#9ca3af',
+    color: colors.textMuted,
     fontSize: 18,
     marginTop: 20
   },
@@ -617,20 +621,20 @@ alignItems: 'center',
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#ffffff'
+    borderColor: colors.gray300,
+    backgroundColor: colors.surface
   },
   currencyPillActive: {
-    borderColor: '#0066cc',
-    backgroundColor: '#e3f2fd'
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight
   },
   currencyPillText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: '600'
   },
   currencyPillTextActive: {
-    color: '#0066cc'
+    color: colors.primary
   },
   footer: {
     flexDirection: 'row',
@@ -638,8 +642,8 @@ alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: '#ffffff'
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface
   },
   cancelButton: {
     flex: 1,
@@ -647,11 +651,11 @@ alignItems: 'center',
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0066cc',
-    backgroundColor: '#ffffff'
+    borderColor: colors.primary,
+    backgroundColor: colors.surface
   },
   cancelButtonText: {
-    color: '#0066cc',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '700'
   },
@@ -660,10 +664,10 @@ alignItems: 'center',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#0066cc'
+    backgroundColor: colors.primary
   },
   applyButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700'
   },
@@ -676,7 +680,7 @@ alignItems: 'center',
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -684,7 +688,7 @@ alignItems: 'center',
   },
   chipText: {
     fontSize: 14,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: '500',
   },
   companyLogo: {
@@ -692,14 +696,14 @@ alignItems: 'center',
     height: 32,
     borderRadius: 6,
     marginRight: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.gray50,
   },
   companyLogoPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 6,
     marginRight: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -709,7 +713,7 @@ alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.gray50,
     borderRadius: 8,
     marginTop: 8,
     marginHorizontal: 8,
@@ -717,7 +721,7 @@ alignItems: 'center',
   },
   loadMoreText: {
     fontSize: 14,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: '500',
   },
   loaderContainer: {
@@ -729,7 +733,7 @@ alignItems: 'center',
   loaderText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textMuted,
   },
 });
 

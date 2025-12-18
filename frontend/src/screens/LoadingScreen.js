@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,119 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
+
+// Floating particle component for background effect
+function FloatingParticle({ delay, style }) {
+  const translateY = useRef(new Animated.Value(height)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -100,
+          duration: 8000 + Math.random() * 4000,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0.6,
+            duration: 1000,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 1000,
+            delay: 6000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ translateY }, { translateX }],
+          opacity,
+        },
+      ]}
+    />
+  );
+}
+
+// Individual loading dot component
+function LoadingDot({ delay, style }) {
+  const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const opacityAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: 1.2,
+            duration: 600,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 600,
+            delay,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: 0.5,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        },
+      ]}
+    />
+  );
+}
 
 export default function LoadingScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -19,6 +129,8 @@ export default function LoadingScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     // Initial fade in animation
@@ -97,16 +209,16 @@ export default function LoadingScreen() {
     <View style={styles.container}>
       {/* Modern Gradient Background - Purple/Indigo to match brand */}
       <LinearGradient
-        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
+        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
       />
       
       {/* Floating Particles */}
-      <FloatingParticle delay={0} />
-      <FloatingParticle delay={1000} />
-      <FloatingParticle delay={2000} />
+      <FloatingParticle delay={0} style={styles.floatingParticle} />
+      <FloatingParticle delay={1000} style={styles.floatingParticle} />
+      <FloatingParticle delay={2000} style={styles.floatingParticle} />
       
       {/* Main Content */}
       <Animated.View
@@ -162,9 +274,9 @@ export default function LoadingScreen() {
         {/* Loading Dots */}
         <View style={styles.loadingContainer}>
           <View style={styles.loadingDots}>
-            <LoadingDot delay={0} />
-            <LoadingDot delay={200} />
-            <LoadingDot delay={400} />
+            <LoadingDot delay={0} style={styles.loadingDot} />
+            <LoadingDot delay={200} style={styles.loadingDot} />
+            <LoadingDot delay={400} style={styles.loadingDot} />
           </View>
           <Text style={styles.loadingText}>Setting up your experience...</Text>
         </View>
@@ -180,116 +292,7 @@ export default function LoadingScreen() {
   );
 }
 
-// Floating particle component for background effect
-function FloatingParticle({ delay }) {
-  const translateY = useRef(new Animated.Value(height)).current;
-  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: -100,
-          duration: 8000 + Math.random() * 4000,
-          delay,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(opacity, {
-            toValue: 0.6,
-            duration: 1000,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 1000,
-            delay: 6000,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [delay]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.floatingParticle,
-        {
-          transform: [{ translateY }, { translateX }],
-          opacity,
-        },
-      ]}
-    />
-  );
-}
-
-// Individual loading dot component
-function LoadingDot({ delay }) {
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const opacityAnim = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 1.2,
-            duration: 600,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 1,
-            duration: 600,
-            delay,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 0.5,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 0.3,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [delay]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.loadingDot,
-        {
-          transform: [{ scale: scaleAnim }],
-          opacity: opacityAnim,
-        },
-      ]}
-    />
-  );
-}
-
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',

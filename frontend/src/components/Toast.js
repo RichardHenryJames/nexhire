@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Text, StyleSheet, View } from 'react-native';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 let queue = [];
 let updateRef = null;
@@ -14,6 +15,7 @@ export function showToast(message, type = 'success', duration = 2500) {
 }
 
 export const ToastHost = () => {
+  const { colors } = useTheme();
   const anim = useRef(new Animated.Value(0)).current;
   const [toast, setToast] = React.useState(null);
   const hideTimeout = useRef(null);
@@ -46,7 +48,7 @@ export const ToastHost = () => {
   }, [toast]);
 
   if (!toast) return null;
-  const bg = toast.type === 'error' ? colors.danger : toast.type === 'warning' ? colors.warning : colors.success;
+  const bg = toast.type === 'error' ? (colors.error || colors.danger) : toast.type === 'warning' ? colors.warning : colors.success;
 
   return (
     <View pointerEvents="none" style={styles.wrapper}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -82,6 +82,7 @@ export default function UserProfileHeader({
   showProgress = true // NEW: hide circular progress ring when viewing others' profiles
 }) {
   const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
@@ -794,15 +795,15 @@ export default function UserProfileHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   // Main Header Card
   headerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 16,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -857,14 +858,14 @@ const styles = StyleSheet.create({
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#3B82F6' + '20',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
   initialsText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: colors.primary,
   },
   uploadingOverlay: {
     position: 'absolute',
@@ -881,14 +882,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
   },
 
   // Standalone Profile Image (without progress ring)
@@ -896,7 +897,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -910,7 +911,7 @@ const styles = StyleSheet.create({
   profileImagePlaceholderStandalone: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#3B82F6' + '20',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -923,12 +924,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.text,
     marginBottom: 4,
   },
   jobTitle: {
     fontSize: 16,
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginBottom: 6,
     lineHeight: 20,
   },
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginLeft: 4,
   },
 
@@ -972,12 +973,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: colors.primary,
     lineHeight: 20,
   },
   statLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -990,7 +991,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imagePickerModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     width: '80%',
@@ -999,7 +1000,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1010,11 +1011,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
   },
   pickerOptionText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: colors.text,
     marginLeft: 10,
     fontWeight: '500',
   },
@@ -1022,12 +1023,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     alignItems: 'center',
   },
   cancelOptionText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '500',
   },
 });

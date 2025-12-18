@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,15 +15,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import { showToast } from '../../components/Toast';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 
 export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1001,7 +1005,7 @@ export default function ApplicationsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1019,7 +1023,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   header: {
     padding: 20,
@@ -1035,7 +1039,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   listContainer: {
     padding: 16,
@@ -1048,7 +1052,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: colors.black,
+    shadowColor: colors.shadow,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -1112,7 +1116,7 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   websiteButton: {
@@ -1120,14 +1124,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: '#e8f4fd',
+    backgroundColor: colors.primaryLight,
     borderRadius: 12,
     alignSelf: 'flex-start',
     marginBottom: 4,
   },
   websiteText: {
     fontSize: typography.sizes.xs,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: typography.weights.medium,
     marginLeft: 4,
   },
@@ -1174,12 +1178,12 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginLeft: 6,
   },
   coverLetterPreview: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 12,
     lineHeight: 18,
@@ -1195,11 +1199,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: colors.error,
   },
   withdrawButtonText: {
     fontSize: typography.sizes.sm,
-    color: colors.danger,
+    color: colors.error,
     fontWeight: typography.weights.medium,
   },
   // MATCH JobsScreen: Referral button styles (exact match)
@@ -1226,14 +1230,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 8,
     borderRadius: 6,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.success + '15',
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: colors.success,
     gap: 4,
   },
   referredText: {
     fontSize: typography.sizes.sm,
-    color: '#10b981',
+    color: colors.success,
     fontWeight: typography.weights.medium,
   },
   // Empty state styles
@@ -1252,7 +1256,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
@@ -1281,7 +1285,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   // Withdraw confirm styles (web)
@@ -1307,10 +1311,10 @@ const styles = StyleSheet.create({
   confirmBox: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.15,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -1325,7 +1329,7 @@ const styles = StyleSheet.create({
   confirmMessage: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   confirmActions: {
@@ -1340,20 +1344,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cancelBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderColor: colors.border,
   },
   dangerBtn: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#dc2626',
+    backgroundColor: colors.error + '15',
+    borderColor: colors.error,
   },
   cancelBtnText: {
-    color: colors.gray700,
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   dangerBtnText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '700',
   },

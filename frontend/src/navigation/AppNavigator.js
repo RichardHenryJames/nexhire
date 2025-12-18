@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../contexts/AuthContext";
-import { colors } from "../styles/theme";
+import { useTheme } from "../contexts/ThemeContext";
 import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
@@ -303,6 +303,7 @@ function AuthStack() {
 // Main App Tab Navigator
 function MainTabNavigator() {
   const { userType, isEmployer, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
 
   return (
     <Tab.Navigator
@@ -329,9 +330,9 @@ function MainTabNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray500,
         tabBarStyle: {
-          backgroundColor: colors.white,
+          backgroundColor: colors.surface,
           borderTopWidth: 1,
-          borderTopColor: colors.gray200,
+          borderTopColor: colors.border,
           paddingBottom: 8,
           paddingTop: 8,
           height: 70,
@@ -399,6 +400,8 @@ function MainTabNavigator() {
 
 // Main Stack Navigator with nested Tab Navigator
 function MainStack() {
+  const { colors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{

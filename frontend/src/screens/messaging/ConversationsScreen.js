@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,11 +15,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
-import { colors } from '../../styles/theme';
 
 export default function ConversationsScreen() {
   const navigation = useNavigation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -356,25 +359,25 @@ onRequestClose={() => {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-backgroundColor: colors.gray100,
- borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: colors.gray100,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   searchIcon: {
     marginRight: 8,
@@ -382,16 +385,16 @@ backgroundColor: colors.gray100,
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.gray900,
+    color: colors.text,
     outlineStyle: 'none',
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   avatar: {
     width: 56,
@@ -411,7 +414,7 @@ paddingHorizontal: 20,
     borderRadius: 28,
     backgroundColor: colors.gray300,
     justifyContent: 'center',
-  alignItems: 'center',
+    alignItems: 'center',
   },
   avatarUnread: {
     backgroundColor: colors.primary,
@@ -430,7 +433,7 @@ paddingHorizontal: 20,
     borderRadius: 8,
     backgroundColor: colors.error,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: colors.surface,
   },
   conversationInfo: {
     flex: 1,
@@ -439,28 +442,28 @@ paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
- marginBottom: 4,
+    marginBottom: 4,
   },
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   userNameUnread: {
     fontWeight: 'bold',
-    color: colors.gray900,
+    color: colors.text,
   },
   timestamp: {
     fontSize: 12,
-    color: colors.gray500,
+    color: colors.textMuted,
   },
   messagePreview: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   messagePreviewUnread: {
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   unreadBadge: {
     backgroundColor: colors.primary,
@@ -486,20 +489,19 @@ paddingHorizontal: 20,
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
+    color: colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
- paddingHorizontal: 40,
+    paddingHorizontal: 40,
   },
-  // ?? NEW: Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -508,26 +510,26 @@ paddingHorizontal: 20,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
- fontSize: 18,
- fontWeight: 'bold',
-    color: colors.gray900,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
- paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-  backgroundColor: colors.gray100,
- borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: colors.gray100,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.gray900,
+    color: colors.text,
     outlineStyle: 'none',
   },
   modalLoadingContainer: {
@@ -537,7 +539,7 @@ paddingHorizontal: 20,
   },
   modalLoadingText: {
     fontSize: 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 12,
   },
   userResultItem: {
@@ -551,10 +553,10 @@ paddingHorizontal: 20,
     height: 48,
     borderRadius: 24,
     marginRight: 12,
-},
+  },
   userResultAvatarImage: {
     width: 48,
-  height: 48,
+    height: 48,
     borderRadius: 24,
   },
   userResultAvatarPlaceholder: {
@@ -571,30 +573,29 @@ paddingHorizontal: 20,
     color: colors.white,
   },
   userResultName: {
-  flex: 1,
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   modalEmptyState: {
     flex: 1,
     justifyContent: 'center',
- alignItems: 'center',
+    alignItems: 'center',
     paddingHorizontal: 40,
   },
   modalEmptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   modalEmptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
-  marginTop: 8,
-  textAlign: 'center',
+    color: colors.textMuted,
+    marginTop: 8,
+    textAlign: 'center',
   },
-  // Floating Action Button
   fab: {
     position: 'absolute',
     right: 16,
@@ -605,7 +606,7 @@ paddingHorizontal: 20,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,

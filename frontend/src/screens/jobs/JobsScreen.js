@@ -2,15 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
-import { styles } from './JobsScreen.styles';
+import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -72,7 +73,7 @@ const isFiltersDirty = (f) => {
   });
 };
 
-const aiModalStyles = StyleSheet.create({
+const createAiModalStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -103,12 +104,12 @@ const aiModalStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 16,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.error,
   },
   headerTitleAI: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   headerTitleDanger: {
     fontSize: typography.sizes.lg,
@@ -120,7 +121,7 @@ const aiModalStyles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   benefits: {
@@ -133,18 +134,18 @@ const aiModalStyles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: typography.sizes.sm,
-    color: colors.textPrimary,
+    color: colors.text,
     fontWeight: typography.weights.semibold,
     marginBottom: 8,
   },
   benefitItem: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   benefitNote: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 8,
   },
   kvRow: {
@@ -154,11 +155,11 @@ const aiModalStyles = StyleSheet.create({
   },
   kvLabel: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   kvValue: {
     fontSize: typography.sizes.sm,
-    color: colors.textPrimary,
+    color: colors.text,
     fontWeight: typography.weights.semibold,
   },
   kvDivider: {
@@ -168,12 +169,12 @@ const aiModalStyles = StyleSheet.create({
   },
   kvLabelBold: {
     fontSize: typography.sizes.sm,
-    color: colors.textPrimary,
+    color: colors.text,
     fontWeight: typography.weights.bold,
   },
   kvValueBold: {
     fontSize: typography.sizes.sm,
-    color: colors.textPrimary,
+    color: colors.text,
     fontWeight: typography.weights.bold,
   },
   actions: {
@@ -191,7 +192,7 @@ const aiModalStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   btnSecondaryText: {
-    color: colors.textPrimary,
+    color: colors.text,
     fontWeight: typography.weights.semibold,
   },
   btnPrimary: {
@@ -209,6 +210,9 @@ const aiModalStyles = StyleSheet.create({
 
 export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
   const { successMessage, appliedJobId } = route.params || {};

@@ -17,13 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, typography, borderRadius, styles } from '../../styles/theme';
+import { spacing, typography, borderRadius, styles as themeStyles } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
 
 const { width, height } = Dimensions.get('window');
 
 // Floating particle component for background effect
-function FloatingParticle({ delay }) {
+function FloatingParticle({ delay, style }) {
   const translateY = useRef(new Animated.Value(height)).current;
   const translateX = useRef(new Animated.Value(Math.random() * width)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -64,7 +65,7 @@ function FloatingParticle({ delay }) {
   return (
     <Animated.View
       style={[
-        screenStyles.floatingParticle,
+        style,
         {
           transform: [{ translateY }, { translateX }],
           opacity,
@@ -83,6 +84,8 @@ export default function LoginScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
+  const { colors, isDark } = useTheme();
+  const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles), [colors]);
 
   // FIXED: Clear error state when screen mounts or comes into focus
   useEffect(() => {
@@ -197,7 +200,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={screenStyles.mainContainer}>
       <LinearGradient
-        colors={[colors.primaryLight, colors.primary, colors.primaryLight]}
+        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.primaryLight, colors.primary, colors.primaryLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         pointerEvents="none"
@@ -205,9 +208,9 @@ export default function LoginScreen({ navigation }) {
       />
       
       {/* Floating Particles */}
-      <FloatingParticle delay={0} />
-      <FloatingParticle delay={1000} />
-      <FloatingParticle delay={2000} />
+      <FloatingParticle delay={0} style={screenStyles.floatingParticle} />
+      <FloatingParticle delay={1000} style={screenStyles.floatingParticle} />
+      <FloatingParticle delay={2000} style={screenStyles.floatingParticle} />
       
       {/* Bottom Decoration */}
       <View style={screenStyles.bottomDecoration}>
@@ -398,7 +401,7 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const screenStyles = StyleSheet.create({
+const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
@@ -535,7 +538,7 @@ const screenStyles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    ...styles.body,
+    ...themeStyles.body,
     fontWeight: typography.weights.medium,
     marginBottom: spacing.xs,
     color: colors.white,
@@ -567,7 +570,7 @@ const screenStyles = StyleSheet.create({
     padding: spacing.sm,
   },
   errorText: {
-    ...styles.caption,
+    ...themeStyles.caption,
     color: '#FFD700', // Gold/Yellow for errors on blue background
     marginTop: spacing.xs,
     fontWeight: '600',
@@ -614,7 +617,7 @@ const screenStyles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.5)',
   },
   globalError: {
-    ...styles.bodySmall,
+    ...themeStyles.bodySmall,
     color: '#FFD700',
     marginLeft: spacing.xs,
   },
@@ -624,11 +627,11 @@ const screenStyles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    ...styles.body,
+    ...themeStyles.body,
     color: 'rgba(255, 255, 255, 0.9)',
   },
   linkText: {
-    ...styles.body,
+    ...themeStyles.body,
     color: colors.white,
     fontWeight: typography.weights.bold,
     textDecorationLine: 'underline',
@@ -642,7 +645,7 @@ const screenStyles = StyleSheet.create({
     alignItems: 'center',
   },
   devHelperTitle: {
-    ...styles.bodySmall,
+    ...themeStyles.bodySmall,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: spacing.sm,
   },
@@ -653,7 +656,7 @@ const screenStyles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   devButtonText: {
-    ...styles.caption,
+    ...themeStyles.caption,
     color: colors.white,
   },
 });
