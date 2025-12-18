@@ -649,7 +649,7 @@ class RefOpenAPI {
     return this.apiCall(`/jobs/${jobId}`);
   }
 
-  // NEW: Get AI-recommended jobs (deducts ₹100 from wallet)
+  // NEW: Get AI-recommended jobs (deducts ₹99 from wallet, 15-day access)
   async getAIRecommendedJobs(limit = 50) {
     const params = new URLSearchParams({ limit: limit.toString() });
     return this.apiCall(`/jobs/ai-recommendations?${params}`);
@@ -1665,6 +1665,52 @@ if (!resumeId) {
       console.error('❌ Delete resume failed:', error.message);
       return { success: false, error: error.message || 'Failed to delete resume' };
     }
+  }
+
+  // ========================================================================
+  // PRICING SYSTEM APIs - DB-driven pricing
+  // ========================================================================
+  
+  // 💰 Get all pricing settings from database (cached for 5 mins on server)
+  async getPricing() {
+    try {
+      const response = await this.apiCall('/pricing');
+      if (response.success && response.data) {
+        // Cache pricing locally for quick access
+        this._pricingCache = response.data;
+        this._pricingCacheTime = Date.now();
+      }
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to load pricing:', error);
+      // Return cached values if available
+      if (this._pricingCache) {
+        return { success: true, data: this._pricingCache };
+      }
+      // Return defaults if no cache
+      return { 
+        success: true, 
+        data: {
+          aiJobsCost: 99,
+          aiAccessDurationHours: 360,
+          aiAccessDurationDays: 15,
+          referralRequestCost: 39,
+          jobPublishCost: 50,
+          welcomeBonus: 100,
+          referralSignupBonus: 50
+        }
+      };
+    }
+  }
+  
+  // Get cached pricing or fetch if not available
+  async getCachedPricing() {
+    // Return cache if less than 5 minutes old
+    if (this._pricingCache && this._pricingCacheTime && (Date.now() - this._pricingCacheTime) < 5 * 60 * 1000) {
+      return this._pricingCache;
+    }
+    const response = await this.getPricing();
+    return response.data;
   }
 
   // ========================================================================

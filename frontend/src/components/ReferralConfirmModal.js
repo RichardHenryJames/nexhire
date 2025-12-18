@@ -20,7 +20,7 @@ import WalletRechargeModal from './WalletRechargeModal';
 export default function ReferralConfirmModal({
   visible,
   currentBalance = 0,
-  requiredAmount = 50,
+  requiredAmount = 39,
   onProceed,
   onCancel,
   onAddMoney,

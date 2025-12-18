@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Al
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import FilterModal from '../../components/jobs/FilterModal';
@@ -211,6 +212,7 @@ const createAiModalStyles = (colors) => StyleSheet.create({
 export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
   const styles = useMemo(() => createStyles(colors), [colors]);
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
@@ -261,11 +263,11 @@ export default function JobsScreen({ navigation, route }) {
 
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50, jobTitle: '' });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '' });
 
   // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
   const [walletBalance, setWalletBalance] = useState(0);
@@ -332,7 +334,7 @@ export default function JobsScreen({ navigation, route }) {
       // fall through to payment flow
     }
 
-    const requiredAmount = 100;
+    const requiredAmount = pricing.aiJobsCost;
     // Ensure we have latest wallet balance before deciding
     try {
       const bal = await refopenAPI.getWalletBalance();
@@ -1276,7 +1278,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         // 💎 NEW: Show confirmation modal (whether sufficient balance or not)
         setReferralConfirmData({
           currentBalance: balance,
-          requiredAmount: 50,
+          requiredAmount: pricing.referralRequestCost,
           jobTitle: job.Title || 'this job'
         });
         setShowReferralConfirmModal(true);
@@ -1395,7 +1397,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         setReferredJobIds(prev => new Set([...prev, id]));
 
         // ✅ Show wallet deduction info
-        const amountDeducted = res.data?.amountDeducted || 50;
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
 
         let message = 'Referral request sent to ALL employees who can refer!';
@@ -1411,7 +1413,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         // ✅ NEW: Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
 
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -1694,10 +1696,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         <WalletRechargeModal
           visible={showAIConfirmModal}
           currentBalance={Number(walletBalance || 0)}
-          requiredAmount={100}
+          requiredAmount={pricing.aiJobsCost}
           title="Wallet Recharge Required"
           subtitle="Insufficient wallet balance"
-          note="Unlock 50 AI-matched jobs for 24 hours."
+          note={`Unlock 50 AI-matched jobs for ${pricing.aiAccessDurationDays} days.`}
           primaryLabel="Add Money"
           secondaryLabel="Maybe Later"
           onAddMoney={handleAIJobsCancel}
@@ -1721,11 +1723,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   <Text style={aiModalStyles.benefitsTitle}>Why this helps</Text>
                   <Text style={aiModalStyles.benefitItem}>• Jobs matched to your profile and skills</Text>
                   <Text style={aiModalStyles.benefitItem}>• Saves time—no need to search manually</Text>
-                  <Text style={aiModalStyles.benefitItem}>• 24-hour access after purchase</Text>
+                  <Text style={aiModalStyles.benefitItem}>• {pricing.aiAccessDurationDays}-day access after purchase</Text>
                 </View>
                 <View style={aiModalStyles.kvRow}>
                   <Text style={aiModalStyles.kvLabel}>Cost</Text>
-                  <Text style={aiModalStyles.kvValue}>₹100.00</Text>
+                  <Text style={aiModalStyles.kvValue}>₹{pricing.aiJobsCost.toFixed(2)}</Text>
                 </View>
                 <View style={aiModalStyles.kvRow}>
                   <Text style={aiModalStyles.kvLabel}>Current Balance</Text>
@@ -1734,7 +1736,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 <View style={aiModalStyles.kvDivider} />
                 <View style={aiModalStyles.kvRow}>
                   <Text style={aiModalStyles.kvLabelBold}>Balance After</Text>
-                  <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - 100).toFixed(2)}</Text>
+                  <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - pricing.aiJobsCost).toFixed(2)}</Text>
                 </View>
                 <View style={aiModalStyles.actions}>
                   <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>

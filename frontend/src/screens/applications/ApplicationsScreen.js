@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -26,6 +27,7 @@ import { typography } from '../../styles/theme';
 export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
   const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const [applications, setApplications] = useState([]);
@@ -59,14 +61,14 @@ export default function ApplicationsScreen({ navigation }) {
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({
     currentBalance: 0,
-    requiredAmount: 50,
+    requiredAmount: pricing.referralRequestCost,
     jobTitle: 'this job',
     job: null,
   });
 
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -327,7 +329,7 @@ export default function ApplicationsScreen({ navigation }) {
         // ✅ Match Jobs/JobDetails: always show the same confirmation popup
         setReferralConfirmData({
           currentBalance: balance,
-          requiredAmount: 50,
+          requiredAmount: pricing.referralRequestCost,
           jobTitle: job.JobTitle || job.Title || 'this job',
           job,
         });
@@ -420,7 +422,7 @@ export default function ApplicationsScreen({ navigation }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           
-          const amountDeducted = res.data?.amountDeducted || 50;
+          const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
           let message = 'Referral request sent successfully';
@@ -434,7 +436,7 @@ export default function ApplicationsScreen({ navigation }) {
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || 50;
+            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance, requiredAmount });
@@ -470,7 +472,7 @@ export default function ApplicationsScreen({ navigation }) {
           isEligible: prev.dailyQuotaRemaining > 1
         }));
         
-        const amountDeducted = res.data?.amountDeducted || 50;
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
         let message = 'Referral request sent to ALL employees who can refer!';
@@ -483,7 +485,7 @@ export default function ApplicationsScreen({ navigation }) {
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -911,7 +913,7 @@ export default function ApplicationsScreen({ navigation }) {
           }
 
           // Safety: if balance is insufficient, route to wallet recharge
-          if ((referralConfirmData.currentBalance || 0) < (referralConfirmData.requiredAmount || 50)) {
+          if ((referralConfirmData.currentBalance || 0) < (referralConfirmData.requiredAmount || pricing.referralRequestCost)) {
             navigation.navigate('WalletRecharge');
             return;
           }

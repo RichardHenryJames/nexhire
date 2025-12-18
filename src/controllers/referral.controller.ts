@@ -22,6 +22,7 @@ import {
 import { 
     ReferralService
 } from '../services/referral.service';
+import { PricingService } from '../services/pricing.service';
 import { 
     PurchaseReferralPlanDto, 
     ReferralRequestsFilter,
@@ -186,9 +187,12 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
         const applicantId = applicantResult.recordset[0].ApplicantID;
         const request = await ReferralService.createReferralRequest(applicantId, requestData);
         
+        // Get referral cost from DB for response message
+        const referralCost = await PricingService.getReferralCost();
+        
         return {
             status: 201,
-            jsonBody: successResponse(request, `Referral request created successfully. ₹50 deducted from wallet.`)
+            jsonBody: successResponse(request, `Referral request created successfully. ₹${referralCost} deducted from wallet.`)
         };
     } catch (error: any) {
         // ? NEW: Handle insufficient wallet balance error

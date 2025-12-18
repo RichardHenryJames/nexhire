@@ -10,7 +10,7 @@ export default function WalletRechargeModal({
   subtitle = 'Insufficient wallet balance',
   note = '',
   currentBalance = 0,
-  requiredAmount = 50,
+  requiredAmount = 39,
   onAddMoney,
   onCancel,
   primaryLabel = 'Add Money',

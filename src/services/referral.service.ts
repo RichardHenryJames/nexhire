@@ -6,6 +6,7 @@
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import { WalletService } from './wallet.service'; // ✅ NEW: Import wallet service
+import { PricingService } from './pricing.service'; // ✅ NEW: DB-driven pricing
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -26,8 +27,7 @@ import {
     PaginatedReferralRequests
 } from '../types/referral.types';
 
-// ✅ NEW: Referral cost constant
-const REFERRAL_REQUEST_COST = 50; // ₹50 per referral request
+// Note: Pricing now fetched from DB via PricingService
 
 export class ReferralService {
     
@@ -150,6 +150,9 @@ export class ReferralService {
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
+            // ✅ DB-DRIVEN: Get referral cost from database
+            const REFERRAL_REQUEST_COST = await PricingService.getReferralCost();
+            
             // ✅ NEW: Get user ID for wallet operations
             const userQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
             const userResult = await dbService.executeQuery(userQuery, [applicantId]);

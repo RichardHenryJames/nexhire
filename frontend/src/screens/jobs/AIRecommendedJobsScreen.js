@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -22,6 +23,7 @@ import { typography } from '../../styles/theme';
 export default function AIRecommendedJobsScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   const [appliedIds, setAppliedIds] = useState(new Set());
 
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50, note: '' });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, note: '' });
 
   // Load primary resume once
   const loadPrimaryResume = useCallback(async () => {
@@ -89,7 +91,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         return;
       }
 
-      // Call the backend API that deducts ₹100 and returns AI jobs
+      // Call the backend API that deducts wallet balance and returns AI jobs
       const result = await refopenAPI.getAIRecommendedJobs(50);
       
       if (result.success && result.data) {
@@ -108,7 +110,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     } catch (error) {
       // Handle insufficient balance error
       if (error.message?.includes('Insufficient') || error.message?.includes('balance')) {
-        setError({ type: 'insufficient-balance', message: 'You need ₹100 in your wallet to access AI-recommended jobs.' });
+        setError({ type: 'insufficient-balance', message: `You need ₹${pricing.aiJobsCost} in your wallet to access AI-recommended jobs.` });
       } else if (error.message?.includes('404') || error.message?.includes('not found')) {
         // Hard refresh - redirect to home if context lost
         Alert.alert('Session Lost', 'Redirecting to home screen...', [
@@ -181,7 +183,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id])); // Mark as referred
-        const amountDeducted = res.data?.amountDeducted || 50;
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
 
         let message = 'Referral sent to ALL employees who can refer!';
@@ -195,7 +197,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           const currentBalance = res.data?.currentBalance || 0;
           Alert.alert(
             'Insufficient Balance',
-            `You need ₹50 to ask for a referral.\n\nYour current balance: ₹${currentBalance.toFixed(2)}`,
+            `You need ₹${pricing.referralRequestCost} to ask for a referral.\n\nYour current balance: ₹${currentBalance.toFixed(2)}`,
             [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Recharge Wallet', onPress: () => navigation.navigate('Wallet') }
@@ -259,10 +261,10 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
 
-        if (balance < 50) {
+        if (balance < pricing.referralRequestCost) {
           setWalletModalData({
             currentBalance: balance,
-            requiredAmount: 50,
+            requiredAmount: pricing.referralRequestCost,
             note: 'Recharge your wallet to ask for a referral.',
           });
           setShowWalletModal(true);
@@ -295,9 +297,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   return (
     <>
-      {/* AI Gradient Header - OUTSIDE content for proper z-index */}
+      {/* AI Premium Black Gradient Header - Unique dark theme, same in light/dark mode */}
       <LinearGradient
-        colors={['#2C2C34', '#3A3A44', '#4A4A54']}
+        colors={['#0D0D0D', '#1A1A1A', '#262626']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerFixed}

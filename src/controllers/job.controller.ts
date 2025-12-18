@@ -1,6 +1,7 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { JobService } from '../services/job.service';
 import { AIJobRecommendationService } from '../services/ai-job-recommendation.service';
+import { PricingService } from '../services/pricing.service';
 import { dbService } from '../services/database.service';
 import { 
     withErrorHandling, 
@@ -342,10 +343,13 @@ export const getCurrencies = withErrorHandling(async (): Promise<HttpResponseIni
 /**
  * Get AI-recommended jobs with wallet deduction
  * GET /jobs/ai-recommendations
- * Deducts ₹100 from wallet and returns personalized job recommendations
+ * Deducts cost from wallet (DB-driven) and returns personalized job recommendations
  */
 export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
+        // Get pricing from DB
+        const aiJobsCost = await PricingService.getAIJobsCost();
+        
         // Extract limit from query params (default 50)
         const url = new URL(req.url);
         const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '50')));
@@ -358,12 +362,15 @@ export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: I
             jsonBody: successResponse(result.jobs, 'AI-recommended jobs retrieved successfully', {
                 filters: result.filters,
                 total: result.total,
-                cost: 100, // ₹100 deducted
+                cost: aiJobsCost, // DB-driven cost
                 limit: limit
             })
         };
     } catch (error: any) {
         console.error('Error in getAIRecommendedJobs:', error);
+        
+        // Get pricing from DB for error response
+        const aiJobsCost = await PricingService.getAIJobsCost();
         
         // Handle insufficient balance error
         if (error instanceof InsufficientBalanceError || error?.name === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -374,7 +381,7 @@ export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: I
                     error: 'Insufficient wallet balance',
                     errorCode: 'INSUFFICIENT_WALLET_BALANCE',
                     message: 'Please recharge your wallet to access AI-recommended jobs',
-                    requiredAmount: 100
+                    requiredAmount: aiJobsCost
                 }
             };
         }

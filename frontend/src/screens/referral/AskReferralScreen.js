@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -27,6 +28,7 @@ import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker } = useAuth();
 const { colors } = useTheme();
+const { pricing } = usePricing(); // 💰 DB-driven pricing
 const styles = useMemo(() => createStyles(colors), [colors]);
   
 // ⚡ NEW: Separate loading states for lazy loading
@@ -67,7 +69,7 @@ const [errors, setErrors] = useState({});
   
 // Wallet-based eligibility instead of subscription
 const [walletBalance, setWalletBalance] = useState(0);
-const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 const [showWalletModal, setShowWalletModal] = useState(false);
   
 // ✅ NEW: Resume Upload Modal state
@@ -393,10 +395,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       setSubmitting(true);
       
       // ✅ NEW: Check wallet balance FIRST (before validation)
-      if (walletBalance < 50) {
+      if (walletBalance < pricing.referralRequestCost) {
         
         // Show beautiful wallet modal instead of ugly alert
-        setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
+        setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
         setShowWalletModal(true);
         return;
       }
@@ -424,7 +426,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       if (result?.success) {
         
         // ✅ NEW: Show wallet deduction info
-        const amountDeducted = result.data?.amountDeducted || 50;
+        const amountDeducted = result.data?.amountDeducted || 39;
         const balanceAfter = result.data?.walletBalanceAfter;
         
         let message = 'Referral request submitted successfully!';
@@ -450,7 +452,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         // ✅ NEW: Handle insufficient balance error
         if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = result.data?.currentBalance || 0;
-          const requiredAmount = result.data?.requiredAmount || 50;
+          const requiredAmount = result.data?.requiredAmount || pricing.referralRequestCost;
           
           // Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -560,7 +562,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
                 <TouchableOpacity
                   style={styles.addMoneyChip}
                   onPress={() => {
-                    setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
+                    setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
                     setShowWalletModal(true);
                   }}
                 >
@@ -851,7 +853,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
             ]}>
               {submitting ? 'Submitting...' : 
                !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
-               'Ask Referral (₹50)'}
+               `Ask Referral (₹${pricing.referralRequestCost})`}
             </Text>
           )}
         </TouchableOpacity>

@@ -21,7 +21,7 @@ import WalletRechargeModal from './WalletRechargeModal';
 export default function PublishJobConfirmModal({
   visible,
   currentBalance = 0,
-  requiredAmount = 50,
+  requiredAmount = 39,
   onProceed,
   onCancel,
   onAddMoney,

@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { JobProvider } from './src/contexts/JobContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { PricingProvider } from './src/contexts/PricingContext';
 import AppNavigator, { linking } from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import { ToastHost } from './src/components/Toast';
@@ -39,16 +40,18 @@ function ThemedAppRoot() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider style={{ flex: 1 }}>
-        <AuthProvider>
-          <JobProvider>
-            <NavigationContainer ref={navigationRef} linking={linking}>
-              <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
-              <AppNavigator />
-              {/* Global toast overlay */}
-              <ToastHost />
-            </NavigationContainer>
-          </JobProvider>
-        </AuthProvider>
+        <PricingProvider>
+          <AuthProvider>
+            <JobProvider>
+              <NavigationContainer ref={navigationRef} linking={linking}>
+                <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+                <AppNavigator />
+                {/* Global toast overlay */}
+                <ToastHost />
+              </NavigationContainer>
+            </JobProvider>
+          </AuthProvider>
+        </PricingProvider>
       </SafeAreaProvider>
     </View>
   );

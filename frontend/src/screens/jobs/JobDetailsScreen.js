@@ -17,6 +17,7 @@ import RenderHtml from 'react-native-render-html';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -28,6 +29,7 @@ export default function JobDetailsScreen({ route, navigation }) {
 const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
@@ -48,15 +50,15 @@ const { jobId, fromReferralRequest } = route.params || {};
   
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
   
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 
   // 💎 NEW: Publish confirmation modal state
   const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
-  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -281,7 +283,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         const balance = walletBalance.data?.balance || 0;
         
         // Show confirmation modal (works for both sufficient and insufficient balance)
-        setReferralConfirmData({ currentBalance: balance, requiredAmount: 50 });
+        setReferralConfirmData({ currentBalance: balance, requiredAmount: pricing.referralRequestCost });
         setShowReferralConfirmModal(true);
         return;
         
@@ -356,7 +358,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (res.success) {
           setHasReferred(true);
           
-          const amountDeducted = res.data?.amountDeducted || 50;
+          const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
           let message = 'Referral request sent';
@@ -372,7 +374,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || 50;
+            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance, requiredAmount });
@@ -504,7 +506,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (res?.success) {
         setHasReferred(true);
         
-        const amountDeducted = res.data?.amountDeducted || 50;
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
         let message = 'Referral sent to ALL employees who can refer!';
@@ -519,7 +521,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });

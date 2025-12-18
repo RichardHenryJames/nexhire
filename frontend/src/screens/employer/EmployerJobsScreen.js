@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl } f
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -22,6 +23,7 @@ const TABS = [ 'draft', 'published' ];
 export default function EmployerJobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
   const jobStyles = useMemo(() => createJobStyles(colors), [colors]);
   const localStyles = useMemo(() => createLocalStyles(colors), [colors]);
   
@@ -33,11 +35,11 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const [onlyMine, setOnlyMine] = useState(true);
   const [pagination, setPagination] = useState({ page:1, pageSize:50, total:0, totalPages:1 });
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
   
   // 💎 NEW: Publish confirmation modal state
   const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
-  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: 50, jobId: null, jobTitle: '' });
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost, jobId: null, jobTitle: '' });
   
   const abortRef = useRef(null);
 
