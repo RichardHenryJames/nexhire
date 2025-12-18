@@ -11,11 +11,9 @@ export default function ComplianceFooter({ currentPage }) {
   const links = [
     { id: 'terms', label: 'Terms & Conditions', screen: 'Terms' },
     { id: 'privacy', label: 'Privacy Policy', screen: 'PrivacyPolicy' },
-    { id: 'refund', label: 'Refund Policy', screen: 'RefundPolicy' },
-    { id: 'shipping', label: 'Shipping & Delivery', screen: 'ShippingDelivery' },
     { id: 'disclaimer', label: 'Disclaimer', screen: 'Disclaimer' },
     { id: 'about', label: 'About Us', screen: 'AboutUs' },
-  { id: 'contact', label: 'Contact Us', screen: 'ContactUs' },
+    { id: 'contact', label: 'Contact Us', screen: 'ContactUs' },
     { id: 'faq', label: 'FAQ', screen: 'FAQ' },
   ];
 
@@ -32,62 +30,45 @@ export default function ComplianceFooter({ currentPage }) {
   };
 
   return (
-  <View style={styles.footer}>
+    <View style={styles.footer}>
       <View style={styles.divider} />
       
-  <View style={styles.footerContent}>
-    <Text style={styles.footerTitle}>Refopen</Text>
-        <Text style={styles.footerTagline}>Connecting Careers, Opening Doors</Text>
+      <View style={styles.footerContent}>
+        <View style={styles.headerRow}>
+          <Text style={styles.footerTitle}>Refopen</Text>
+          <Text style={styles.footerTagline}>Your next career opportunity awaits</Text>
+        </View>
 
-      <View style={styles.linksSection}>
-          <Text style={styles.linksTitle}>Quick Links</Text>
-          <View style={styles.linksGrid}>
-            {links.map((link) => (
-   <TouchableOpacity
-      key={link.id}
-    onPress={() => handleLinkPress(link.screen)}
-       style={styles.linkItem}
-        disabled={currentPage === link.id}
-              >
-            <Text 
-                  style={[
-  styles.linkText,
-        currentPage === link.id && styles.linkTextActive
-             ]}
-         >
-        {link.label}
-        </Text>
-              </TouchableOpacity>
-     ))}
-    </View>
-     </View>
+        <View style={styles.linksGrid}>
+          {links.map((link) => (
+            <TouchableOpacity
+              key={link.id}
+              onPress={() => handleLinkPress(link.screen)}
+              style={styles.linkItem}
+              disabled={currentPage === link.id}
+            >
+              <Text style={[styles.linkText, currentPage === link.id && styles.linkTextActive]}>
+                {link.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Contact</Text>
+        <View style={styles.contactRow}>
           <TouchableOpacity onPress={handleEmailPress}>
- <Text style={styles.contactLink}>support@refopen.com</Text>
+            <Text style={styles.contactLink}>support@refopen.com</Text>
           </TouchableOpacity>
-    <TouchableOpacity onPress={handleWebsitePress}>
+          <Text style={styles.separator}>•</Text>
+          <TouchableOpacity onPress={handleWebsitePress}>
             <Text style={styles.contactLink}>www.refopen.com</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.companyInfo}>
- <Text style={styles.companyName}>Refopen Technologies Pvt. Ltd.</Text>
-          <Text style={styles.companyDetails}>Bangalore, Karnataka, India</Text>
-        </View>
+        <Text style={styles.companyLine}>Refopen Solutions • Bangalore, India</Text>
 
-        <View style={styles.copyright}>
-     <Text style={styles.copyrightText}>
-     • {new Date().getFullYear()} Refopen Technologies Pvt. Ltd. All rights reserved.
-          </Text>
-      </View>
-
-        <View style={styles.compliance}>
-          <Text style={styles.complianceText}>
-   By using Refopen, you agree to our Terms and Conditions and Privacy Policy.
-   </Text>
-   </View>
+        <Text style={styles.copyrightText}>
+          © {new Date().getFullYear()} Refopen Solutions. All rights reserved.
+        </Text>
       </View>
     </View>
   );
@@ -95,49 +76,46 @@ export default function ComplianceFooter({ currentPage }) {
 
 const createStyles = (colors) => StyleSheet.create({
   footer: {
-    marginTop: 40,
-    paddingTop: 20,
+    marginTop: 16,
+    paddingTop: 8,
   },
   divider: {
-    height: 2,
+    height: 1,
     backgroundColor: colors.border,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   footerContent: {
-    paddingBottom: 20,
-    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingHorizontal: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   footerTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.primary,
-    marginBottom: 4,
   },
   footerTagline: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSecondary,
     fontStyle: 'italic',
-    marginBottom: 20,
-  },
-  linksSection: {
-    marginBottom: 20,
-  },
-  linksTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
   },
   linksGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 10,
   },
   linkItem: {
     width: '50%',
-    paddingVertical: 6,
+    paddingVertical: 3,
   },
   linkText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.primary,
     textDecorationLine: 'underline',
   },
@@ -146,54 +124,33 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
     textDecorationLine: 'none',
   },
-  contactSection: {
-    marginBottom: 20,
-  },
-  contactTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   contactLink: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.primary,
     textDecorationLine: 'underline',
-    marginBottom: 4,
   },
-  companyInfo: {
-    marginBottom: 16,
-  },
-  companyName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  companyDetails: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  copyright: {
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginBottom: 12,
-  },
-  copyrightText: {
+  separator: {
     fontSize: 12,
     color: colors.textSecondary,
-    textAlign: 'center',
+    marginHorizontal: 8,
   },
-  compliance: {
-    backgroundColor: colors.gray100,
-    padding: 12,
-    borderRadius: 6,
+  companyLine: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginBottom: 6,
   },
-  complianceText: {
+  copyrightText: {
     fontSize: 11,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 16,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
 });

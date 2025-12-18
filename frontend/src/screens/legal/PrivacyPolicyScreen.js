@@ -1,11 +1,42 @@
-import React, { useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function PrivacyPolicyScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
     <ScrollView style={styles.container}>
    <View style={styles.content}>
@@ -13,7 +44,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
         <Text style={styles.intro}>
-        Refopen Technologies Pvt. Ltd. ("Refopen", "we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Refopen platform.
+        Refopen Solutions ("Refopen", "we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Refopen platform.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Information We Collect</Text>
@@ -211,7 +242,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.sectionTitle}>13. Contact Us</Text>
         <Text style={styles.text}>
         For privacy-related questions or to exercise your privacy rights, contact us at:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
           {'\n'}Email: privacy@refopen.com
    {'\n'}Data Protection Officer: dpo@refopen.com
       {'\n'}Support: support@refopen.com

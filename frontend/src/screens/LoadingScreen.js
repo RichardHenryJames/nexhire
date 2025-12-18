@@ -314,6 +314,7 @@ const createStyles = (colors) => StyleSheet.create({
   logoImage: {
     width: 220,
     height: 80,
+    tintColor: colors.white,
   },
   tagline: {
     fontSize: typography.sizes.lg,

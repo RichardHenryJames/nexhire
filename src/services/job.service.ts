@@ -564,12 +564,16 @@ export class JobService {
         const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
             || f.roleTitlePersonalization === false
             || f.roleTitlePersonalization === 0;
+        // NEW: Skip personalization if dontPersonalize=true is passed from frontend
+        const skipPersonalization = f.dontPersonalize === true;
         const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
-        const useRoleTitleScore = !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
+        const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
-        const orderPrefix = hasSearchText
-            ? `${preferenceScoreSql} DESC, `
-            : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `);
+        const orderPrefix = skipPersonalization
+            ? '' // No personalization ordering
+            : (hasSearchText
+                ? `${preferenceScoreSql} DESC, `
+                : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `));
 
         // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
         const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
@@ -977,12 +981,16 @@ export class JobService {
             const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
                 || f.roleTitlePersonalization === false
                 || f.roleTitlePersonalization === 0;
+            // NEW: Skip personalization if dontPersonalize=true is passed from frontend
+            const skipPersonalization = f.dontPersonalize === true;
             const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
-            const useRoleTitleScore = !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
+            const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
-            const orderPrefix = hasSearchText
-                ? `${preferenceScoreSql} DESC, `
-                : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `);
+            const orderPrefix = skipPersonalization
+                ? '' // No personalization ordering
+                : (hasSearchText
+                    ? `${preferenceScoreSql} DESC, `
+                    : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `));
 
             // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;

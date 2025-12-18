@@ -1,11 +1,42 @@
-import React, { useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function RefundPolicyScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -13,7 +44,7 @@ export default function RefundPolicyScreen() {
         <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
   <Text style={styles.intro}>
-      This Refund and Cancellation Policy outlines the terms under which Refopen Technologies Pvt. Ltd. ("Refopen") processes refunds and cancellations for services purchased on our platform.
+      This Refund and Cancellation Policy outlines the terms under which Refopen Solutions ("Refopen") processes refunds and cancellations for services purchased on our platform.
         </Text>
 
         <Text style={styles.sectionTitle}>1. General Refund Policy</Text>
@@ -206,7 +237,7 @@ export default function RefundPolicyScreen() {
    <Text style={styles.sectionTitle}>15. Contact for Refund Queries</Text>
         <Text style={styles.text}>
      For questions about refunds or cancellations:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
   {'\n'}Email: support@refopen.com
    {'\n'}Refund Department: refunds@refopen.com
           {'\n'}Phone: Available through app support

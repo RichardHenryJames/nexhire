@@ -1,11 +1,42 @@
-import React, { useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function DisclaimerScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -155,7 +186,7 @@ export default function DisclaimerScreen() {
 
   <Text style={styles.sectionTitle}>15. Indemnification</Text>
         <Text style={styles.text}>
-        You agree to indemnify and hold harmless Refopen Technologies Pvt. Ltd., its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including legal fees) arising from:
+        You agree to indemnify and hold harmless Refopen Solutions, its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including legal fees) arising from:
       {'\n\n'}• Your use of the platform
  {'\n'}• Your violation of these terms or disclaimers
        {'\n'}• Your violation of any rights of third parties
@@ -205,7 +236,7 @@ export default function DisclaimerScreen() {
       <Text style={styles.sectionTitle}>23. Contact</Text>
         <Text style={styles.text}>
           For questions about this disclaimer:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
   {'\n'}Email: legal@refopen.com
        {'\n'}Website: www.refopen.com
      </Text>

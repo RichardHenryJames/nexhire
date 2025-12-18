@@ -135,11 +135,13 @@ const [error, setError] = useState(null);
       setLoadingJobs(true);
       
       // Get jobs from this organization posted in last 24 hours
+      // dontPersonalize: true ensures we see ALL jobs from this org without user preference filtering
       const filters = {
         organizationIds: [orgId].join(','),
         postedWithinDays: 1,
         sortBy: 'PublishedAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        dontPersonalize: true
       };
       
       console.log('?? [OrganizationDetails] API Request Details:');

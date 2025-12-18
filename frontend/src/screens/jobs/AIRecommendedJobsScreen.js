@@ -93,7 +93,13 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       const result = await refopenAPI.getAIRecommendedJobs(50);
       
       if (result.success && result.data) {
-        setAiJobs(result.data);
+        // Randomize the jobs array using Fisher-Yates shuffle
+        const shuffledJobs = [...result.data];
+        for (let i = shuffledJobs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledJobs[i], shuffledJobs[j]] = [shuffledJobs[j], shuffledJobs[i]];
+        }
+        setAiJobs(shuffledJobs);
         setError(null);
       } else {
         setError({ type: 'no-data', message: result.message || 'No jobs found' });

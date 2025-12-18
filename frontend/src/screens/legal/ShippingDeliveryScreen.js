@@ -13,7 +13,7 @@ export default function ShippingDeliveryScreen() {
       <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
         <Text style={styles.intro}>
-          Refopen Technologies Pvt. Ltd. ("Refopen") provides digital services exclusively. This policy explains how our digital products and services are delivered to users.
+          Refopen Solutions ("Refopen") provides digital services exclusively. This policy explains how our digital products and services are delivered to users.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Nature of Services</Text>
@@ -256,7 +256,7 @@ export default function ShippingDeliveryScreen() {
         <Text style={styles.sectionTitle}>17. Contact for Delivery Issues</Text>
      <Text style={styles.text}>
           For any service delivery concerns:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
        {'\n'}Email: support@refopen.com
           {'\n'}Technical Support: tech@refopen.com
           {'\n'}Website: www.refopen.com

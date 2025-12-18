@@ -293,7 +293,8 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         company: query.get('company') || undefined,
         datePosted: query.get('datePosted') || undefined,
         workType: query.get('workType') || undefined,
-        isFortune500: parseBoolean(query.get('isFortune500'))
+        isFortune500: parseBoolean(query.get('isFortune500')),
+        dontPersonalize: parseBoolean(query.get('dontPersonalize'))
     } as any;
 };
 
