@@ -5,6 +5,29 @@ export const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  
+  // Fortune 500 Mode Header
+  f500Header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  f500BackButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
+  f500Title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',

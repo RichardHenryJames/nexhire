@@ -637,33 +637,7 @@ const [dashboardData, setDashboardData] = useState({
           )}
         </View>
 
-        {/* Recommended Jobs Section */}
-        {loadingJobs ? (
-          <View style={styles.recentContainer}>
-            <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-            <SectionLoader />
-          </View>
-        ) : recentJobs.length > 0 ? (
-          <View style={styles.recentContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {recentJobs.map((job, index) => (
-                <JobCard key={job.JobID || index} job={job} />
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        {/* Jobs from Top MNCs (Fortune 500) - Job Seekers only */}
+        {/* Jobs from Top MNCs (Fortune 500) - Job Seekers only - MOVED ABOVE Recommended Jobs */}
         {isJobSeeker && (
           loadingF500Jobs ? (
             <View style={styles.recentContainer}>
@@ -690,6 +664,32 @@ const [dashboardData, setDashboardData] = useState({
             </View>
           ) : null
         )}
+
+        {/* Recommended Jobs Section */}
+        {loadingJobs ? (
+          <View style={styles.recentContainer}>
+            <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+            <SectionLoader />
+          </View>
+        ) : recentJobs.length > 0 ? (
+          <View style={styles.recentContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {recentJobs.map((job, index) => (
+                <JobCard key={job.JobID || index} job={job} />
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (

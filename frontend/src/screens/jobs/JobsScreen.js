@@ -215,7 +215,18 @@ export default function JobsScreen({ navigation, route }) {
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
-  const { successMessage, appliedJobId } = route.params || {};
+  const { successMessage, appliedJobId, filterF500 } = route.params || {};
+
+  // 🔧 Reset filterF500 when Jobs tab is pressed directly (not from HomeScreen's "See All")
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress', (e) => {
+      // When tab is pressed, clear the filterF500 param so it shows all jobs
+      if (filterF500) {
+        navigation.setParams({ filterF500: undefined });
+      }
+    });
+    return unsubscribe;
+  }, [navigation, filterF500]);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -724,6 +735,9 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
+    
+        // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
+        if (filterF500) apiFilters.isFortune500 = true;
 
     // 🔍 DEBUG: Log organization filter details
         
@@ -814,7 +828,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
     run();
     return () => { try { controller.abort(); } catch {} };
-  }, [debouncedQuery, filters, reloadKey, personalizationApplied, smartBoosts, pagination.pageSize]);
+  }, [debouncedQuery, filters, reloadKey, personalizationApplied, smartBoosts, pagination.pageSize, filterF500]);
 
   // ===== LOAD MORE =====
   const loadMoreJobs = useCallback(async () => {
@@ -850,6 +864,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
+      
+      // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
+      if (filterF500) apiFilters.isFortune500 = true;
 
        // ⏱️ START: Measure API response time for pagination
      const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -1485,112 +1502,128 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   // ===== Render =====
   return (
     <View style={styles.container}>
-      {/* Search Header */}
-      <View style={styles.searchHeader}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search jobs..."
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              // Clear jobs immediately when user starts typing
-              if (text.trim().length > 0) {
-                setJobs([]);
-                setLoading(true);
-              }
-            }}
-            onSubmitEditing={handleSearchSubmit}
-            placeholderTextColor="#999"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+      {/* Fortune 500 Mode: Show custom header instead of search/filters */}
+      {filterF500 ? (
+        <View style={styles.f500Header}>
+          <TouchableOpacity 
+            style={styles.f500BackButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.f500Title}>Jobs by Top MNCs</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      ) : (
+        <>
+          {/* Search Header */}
+          <View style={styles.searchHeader}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  // Clear jobs immediately when user starts typing
+                  if (text.trim().length > 0) {
+                    setJobs([]);
+                    setLoading(true);
+                  }
+                }}
+                onSubmitEditing={handleSearchSubmit}
+                placeholderTextColor="#999"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+              <Ionicons name="options-outline" size={24} color="#0066cc" />
             </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-          <Ionicons name="options-outline" size={24} color="#0066cc" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Filters Row */}
-        <View style={styles.quickFiltersContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={styles.quickFilterDropdown}
-                  onPress={handleSearchWithAI}
-                >
-                  <Text style={styles.quickFilterText}>
-                    AI Jobs
-                  </Text>
-                  <Ionicons
-                    name={'bulb-outline'}
-                    size={14}
-                    color={'#666'}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('jobType')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickJobTypeLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('workMode')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickWorkplaceLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
-                  onPress={() => openFilters('postedBy')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
-                    {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('company')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickCompanyLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-
-            {isFiltersDirty(filters) && (
-              <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
-                <Text style={styles.clearAllText}>Clear All</Text>
-              </TouchableOpacity>
-            )}
           </View>
-        </View>
+
+          {/* Quick Filters Row */}
+          <View style={styles.quickFiltersContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={styles.quickFilterDropdown}
+                    onPress={handleSearchWithAI}
+                  >
+                    <Text style={styles.quickFilterText}>
+                      AI Jobs
+                    </Text>
+                    <Ionicons
+                      name={'bulb-outline'}
+                      size={14}
+                      color={'#666'}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('jobType')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickJobTypeLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('workMode')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickWorkplaceLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
+                    onPress={() => openFilters('postedBy')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
+                      {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('company')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickCompanyLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+
+              {isFiltersDirty(filters) && (
+                <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Job List */}
       <ScrollView
