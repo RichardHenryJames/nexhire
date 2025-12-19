@@ -1034,7 +1034,7 @@ class RefOpenAPI {
   }
 
   // NEW: Get organizations for employer registration - Optimized with database index
-  async getOrganizations(searchTerm = '', limit = null, offset = 0) {
+  async getOrganizations(searchTerm = '', limit = null, offset = 0, options = {}) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
@@ -1043,6 +1043,11 @@ class RefOpenAPI {
         params.append('limit', limit.toString());
       }
       if (offset > 0) params.append('offset', offset.toString());
+      
+      // Add isFortune500 filter if provided
+      if (options.isFortune500) {
+        params.append('isFortune500', 'true');
+      }
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
       
@@ -1069,15 +1074,17 @@ class RefOpenAPI {
         
         
         // The backend already transforms the data correctly, so we can use it directly
-        // Just ensure we have the "My company is not listed" option
-        const hasNotListedOption = organizationsArray.some(org => org.id === 999999);
-        if (!hasNotListedOption) {
-          organizationsArray.push({
-            id: 999999,
-            name: 'My company is not listed',
-            logoURL: null,
-            industry: 'Other'
-          });
+        // Just ensure we have the "My company is not listed" option (not for F500 filter)
+        if (!options.isFortune500) {
+          const hasNotListedOption = organizationsArray.some(org => org.id === 999999);
+          if (!hasNotListedOption) {
+            organizationsArray.push({
+              id: 999999,
+              name: 'My company is not listed',
+              logoURL: null,
+              industry: 'Other'
+            });
+          }
         }
         
         

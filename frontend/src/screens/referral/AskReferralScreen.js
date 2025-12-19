@@ -251,12 +251,28 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       const resumesRes = await refopenAPI.getUserResumes();
       if (resumesRes?.success && resumesRes.data) {
         const resumeList = resumesRes.data || [];
-        setResumes(resumeList);
         
-        // Auto-select primary resume if available
-        const primaryResume = resumeList.find(r => r?.IsPrimary);
-        if (primaryResume?.ResumeID) {
-          setFormData(prev => ({ ...prev, selectedResumeId: primaryResume.ResumeID }));
+        // Sort resumes: Primary first, then by upload date (newest first)
+        const sortedResumes = [...resumeList].sort((a, b) => {
+          // Primary always comes first in the list
+          if (a.IsPrimary && !b.IsPrimary) return -1;
+          if (!a.IsPrimary && b.IsPrimary) return 1;
+          // Then sort by upload date (newest first)
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        });
+        setResumes(sortedResumes);
+        
+        // Auto-select the most recently uploaded resume (by date, not primary)
+        const mostRecentResume = [...resumeList].sort((a, b) => {
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        })[0];
+        
+        if (mostRecentResume?.ResumeID) {
+          setFormData(prev => ({ ...prev, selectedResumeId: mostRecentResume.ResumeID }));
         }
       } else {
         setResumes([]);

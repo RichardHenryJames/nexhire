@@ -18,6 +18,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const limitParam = url.searchParams.get('limit');
         const offsetParam = url.searchParams.get('offset');
         const searchParam = url.searchParams.get('search') || '';
+        const isFortune500Param = url.searchParams.get('isFortune500');
         
         // 🔥 NO DEFAULT LIMIT - Return ALL organizations if not specified
         // Frontend should specify limit for optimal performance (e.g., limit=50)
@@ -47,6 +48,11 @@ export const getOrganizations = async (req: any): Promise<any> => {
             paramIndex++;
         }
         
+        // Add Fortune 500 filter if provided
+        if (isFortune500Param === 'true' || isFortune500Param === '1') {
+            query += ` AND IsFortune500 = 1`;
+        }
+        
         // Order Fortune 500 companies first, then alphabetically
         query += ` ORDER BY IsFortune500 DESC, Name ASC`;
         
@@ -64,24 +70,37 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const organizations = result.recordset || [];
         
         // Get total count for pagination
-        const countQuery = `
+        let countQuery = `
             SELECT COUNT(*) as total
             FROM Organizations 
             WHERE IsActive = 1
-            ${searchParam ? `AND Name LIKE @param0` : ''}
         `;
-        const countParams = searchParam ? [`%${searchParam}%`] : [];
+        const countParams: any[] = [];
+        let countParamIndex = 0;
+        
+        if (searchParam) {
+            countQuery += ` AND Name LIKE @param${countParamIndex}`;
+            countParams.push(`%${searchParam}%`);
+            countParamIndex++;
+        }
+        
+        if (isFortune500Param === 'true' || isFortune500Param === '1') {
+            countQuery += ` AND IsFortune500 = 1`;
+        }
+        
         const countResult = await dbService.executeQuery(countQuery, countParams);
         const totalCount = countResult.recordset[0]?.total || 0;
 
-        // Add "My company is not listed" option
-        organizations.push({
-            id: 999999,
-            name: 'My company is not listed',
-            logoURL: null,
-            industry: 'Other',
-            isFortune500: false
-        });
+        // Add "My company is not listed" option (only if not filtering for F500)
+        if (!(isFortune500Param === 'true' || isFortune500Param === '1')) {
+            organizations.push({
+                id: 999999,
+                name: 'My company is not listed',
+                logoURL: null,
+                industry: 'Other',
+                isFortune500: false
+            });
+        }
 
         return {
             status: 200,

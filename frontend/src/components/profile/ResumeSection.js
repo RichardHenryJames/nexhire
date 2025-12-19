@@ -428,7 +428,12 @@ const ResumeSection = ({
   };
 
   const renderResumeCard = (resume, index) => (
-    <View key={resume.ResumeID} style={styles.resumeCard}>
+    <TouchableOpacity 
+      key={resume.ResumeID} 
+      style={styles.resumeCard}
+      onPress={() => openResume(resume.ResumeURL)}
+      activeOpacity={0.7}
+    >
       {/* Primary Badge */}
       {resume.IsPrimary && (
         <View style={styles.primaryBadge}>
@@ -461,20 +466,15 @@ const ResumeSection = ({
 
       {/* Actions */}
       <View style={styles.resumeActions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => openResume(resume.ResumeURL)}
-        >
-          <Ionicons name="eye" size={12} color={colors.primary} />
-          <Text style={styles.actionButtonText}>View</Text>
-        </TouchableOpacity>
-
         {editing && (
           <>
             {!resume.IsPrimary && (
               <TouchableOpacity 
                 style={[styles.actionButton, styles.primaryButton]}
-                onPress={() => setPrimaryResume(resume.ResumeID)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setPrimaryResume(resume.ResumeID);
+                }}
                 disabled={loading}
               >
                 <Ionicons name="star-outline" size={12} color={colors.warning} />
@@ -484,11 +484,14 @@ const ResumeSection = ({
               </TouchableOpacity>
             )}
 
-            {/* ? FIXED: Only show delete button for non-primary resumes */}
+            {/* ✅ FIXED: Only show delete button for non-primary resumes */}
             {!resume.IsPrimary && (
               <TouchableOpacity 
                 style={[styles.actionButton, styles.deleteButton]}
-                onPress={() => deleteResume(resume.ResumeID, resume.ResumeLabel)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  deleteResume(resume.ResumeID, resume.ResumeLabel);
+                }}
                 disabled={loading || resumes.length <= 1 || deleting}
               >
                 <Ionicons name="trash" size={12} color={colors.danger} />
@@ -500,7 +503,7 @@ const ResumeSection = ({
           </>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (

@@ -54,7 +54,17 @@ const ResumeUploadModal = ({
       const response = await refopenAPI.getMyResumes();
       
       if (response && response.success && Array.isArray(response.data)) {
-        setExistingResumes(response.data);
+        // Sort resumes: Primary first, then by upload date (newest first)
+        const sortedResumes = [...response.data].sort((a, b) => {
+          // Primary always comes first
+          if (a.IsPrimary && !b.IsPrimary) return -1;
+          if (!a.IsPrimary && b.IsPrimary) return 1;
+          // Then sort by upload date (newest first)
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        });
+        setExistingResumes(sortedResumes);
       } else {
         setExistingResumes([]);
       }
@@ -90,9 +100,10 @@ const ResumeUploadModal = ({
           try {
             console.log('Starting upload process...');
             
-            // TEMPORARY: Skip prompt and use default label for testing
-            console.log('STEP 1: Using default resume label...');
-            const resumeLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
+            // Use actual file name as the resume label
+            console.log('STEP 1: Using file name as resume label...');
+            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
             console.log('STEP 2: Resume label set to:', resumeLabel);
             
             console.log('STEP 3: Calling uploadResume API...');
@@ -162,7 +173,9 @@ const ResumeUploadModal = ({
           setUploading(false);
           return;
         }
-        const resumeLabel = await promptForResumeLabel(jobTitle);
+        // Use actual file name as the resume label
+        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+        const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
         const uploadResult = await refopenAPI.uploadResume({
           name: file.name,
           size: file.size,

@@ -193,18 +193,18 @@ const [dashboardData, setDashboardData] = useState({
     if (isJobSeeker) {
       f500CompaniesPromise = (async () => {
         try {
-          const result = await refopenAPI.getOrganizations('', 100);
+          // Fetch only Fortune 500 companies with the backend filter
+          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true });
           if (result.success && result.data) {
-            // Filter only Fortune 500 companies with logos
+            // Filter only companies with logos (already F500 from backend)
             const f500WithLogos = result.data
-              .filter(org => org.isFortune500 && org.logoURL)
+              .filter(org => org.logoURL)
               .map(org => ({
                 ...org,
                 // Generate random referrer count (0-99, or 99+)
                 referrerCount: Math.floor(Math.random() * 120)
               }))
-              .sort(() => Math.random() - 0.5) // Shuffle
-              .slice(0, 20); // Limit to 20 for performance
+              .sort(() => Math.random() - 0.5); // Shuffle
             setFortune500Companies(f500WithLogos);
           }
         } catch (err) {
