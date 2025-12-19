@@ -294,7 +294,8 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
    */
   async checkProfileViewAccess() {
     try {
-      const result = await api.apiCall('/users/profile-views/access-status');
+      // Use unified access API
+      const result = await api.apiCall('/access/status?type=profile_views');
       return result;
     } catch (error) {
       console.error('? Check profile view access failed:', error);

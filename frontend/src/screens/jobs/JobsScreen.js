@@ -288,7 +288,8 @@ export default function JobsScreen({ navigation, route }) {
 
   const checkAIAccessStatus = useCallback(async () => {
     try {
-      const result = await refopenAPI.apiCall('/jobs/ai-access-status');
+      // Use unified access API
+      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs');
       if (result?.success) {
         setHasActiveAIAccess(!!result.data?.hasActiveAccess);
       } else {
@@ -325,7 +326,8 @@ export default function JobsScreen({ navigation, route }) {
     }
 
     try {
-      const accessStatus = await refopenAPI.apiCall('/jobs/ai-access-status');
+      // Use unified access API
+      const accessStatus = await refopenAPI.apiCall('/access/status?type=ai_jobs');
       if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
         navigation.navigate('AIRecommendedJobs');
         return;

@@ -426,36 +426,3 @@ export const getAIJobFilters = withAuth(async (req: HttpRequest, context: Invoca
     }
 }, ['read:jobs']);
 
-/**
- * Check if user has active AI access (paid within 24 hours)
- * GET /jobs/ai-access-status
- * Returns whether user needs to pay or has active access
- */
-export const checkAIAccessStatus = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    try {
-        const hasAccess = await AIJobRecommendationService.hasActiveAIAccess(user.userId);
-        
-        return {
-            status: 200,
-            jsonBody: successResponse({
-                hasActiveAccess: hasAccess,
-                requiresPayment: !hasAccess,
-                cost: hasAccess ? 0 : 100,
-                message: hasAccess 
-                    ? 'You have active AI access (valid for 24 hours)' 
-                    : 'Payment required for AI recommendations'
-            }, 'AI access status retrieved successfully')
-        };
-    } catch (error: any) {
-        console.error('Error in checkAIAccessStatus:', error);
-        
-        return {
-            status: 500,
-            jsonBody: {
-                success: false,
-                error: 'Failed to check AI access status',
-                message: error?.message || 'Internal server error'
-            }
-        };
-    }
-}, ['read:jobs']);

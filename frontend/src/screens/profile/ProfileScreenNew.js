@@ -125,6 +125,10 @@ export default function ProfileScreen({ navigation, route }) {
     preferredJobTypes: '',
     preferredCompanySize: '',
     skills: { primary: [], secondary: [] },
+    // Privacy Settings
+    allowRecruitersToContact: true,
+    hideCurrentCompany: false,
+    hideSalaryDetails: false,
   });
 
   // Handle scroll animation
@@ -215,6 +219,10 @@ export default function ProfileScreen({ navigation, route }) {
               primary: data.PrimarySkills ? data.PrimarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
               secondary: data.SecondarySkills ? data.SecondarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
             },
+            // Privacy Settings
+            allowRecruitersToContact: data.AllowRecruitersToContact !== false,
+            hideCurrentCompany: data.HideCurrentCompany === true,
+            hideSalaryDetails: data.HideSalaryDetails === true,
           }));
         }
       }
@@ -401,6 +409,10 @@ export default function ProfileScreen({ navigation, route }) {
         preferredJobTypes: jobSeekerProfile.preferredJobTypes,
         preferredLocations: jobSeekerProfile.preferredLocations,
         preferredCompanySize: jobSeekerProfile.preferredCompanySize,
+        // Privacy Settings
+        allowRecruitersToContact: jobSeekerProfile.allowRecruitersToContact,
+        hideCurrentCompany: jobSeekerProfile.hideCurrentCompany,
+        hideSalaryDetails: jobSeekerProfile.hideSalaryDetails,
       });
       if (response.success) {
         Alert.alert('Success', 'Preferences updated successfully');
@@ -917,6 +929,59 @@ export default function ProfileScreen({ navigation, route }) {
               style={[styles.toggle, profile.profileVisibility === 'Public' && styles.toggleActive]}
             >
               <Text style={styles.toggleText}>{profile.profileVisibility || 'Public'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.sectionHeader}>Privacy Settings</Text>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
+              <Text style={styles.toggleLabel}>Allow Recruiters to Contact</Text>
+            </View>
+            <TouchableOpacity 
+              disabled={!editingModal}
+              onPress={() => editingModal && setJobSeekerProfile(prev => ({ 
+                ...prev, 
+                allowRecruitersToContact: !prev.allowRecruitersToContact 
+              }))}
+              style={[styles.toggle, jobSeekerProfile.allowRecruitersToContact && styles.toggleActive]}
+            >
+              <Text style={styles.toggleText}>{jobSeekerProfile.allowRecruitersToContact ? 'ON' : 'OFF'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="business-outline" size={20} color={colors.text} />
+              <Text style={styles.toggleLabel}>Hide Current Company</Text>
+            </View>
+            <TouchableOpacity 
+              disabled={!editingModal}
+              onPress={() => editingModal && setJobSeekerProfile(prev => ({ 
+                ...prev, 
+                hideCurrentCompany: !prev.hideCurrentCompany 
+              }))}
+              style={[styles.toggle, jobSeekerProfile.hideCurrentCompany && styles.toggleActive]}
+            >
+              <Text style={styles.toggleText}>{jobSeekerProfile.hideCurrentCompany ? 'ON' : 'OFF'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="cash-outline" size={20} color={colors.text} />
+              <Text style={styles.toggleLabel}>Hide Salary Details</Text>
+            </View>
+            <TouchableOpacity 
+              disabled={!editingModal}
+              onPress={() => editingModal && setJobSeekerProfile(prev => ({ 
+                ...prev, 
+                hideSalaryDetails: !prev.hideSalaryDetails 
+              }))}
+              style={[styles.toggle, jobSeekerProfile.hideSalaryDetails && styles.toggleActive]}
+            >
+              <Text style={styles.toggleText}>{jobSeekerProfile.hideSalaryDetails ? 'ON' : 'OFF'}</Text>
             </TouchableOpacity>
           </View>
 

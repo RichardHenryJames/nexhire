@@ -10,70 +10,65 @@ import {
   Linking,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
-import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 export default function ViewProfileScreen() {
-const navigation = useNavigation();
-const route = useRoute();
-const { user } = useAuth();
-const { colors } = useTheme();
-const styles = useMemo(() => createStyles(colors), [colors]);
-  
-const { userId, userName: initialUserName, userProfilePic: initialProfilePic } = route.params;
-  
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
+  const { userId, userName: initialUserName, userProfilePic: initialProfilePic } = route.params;
+
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [error, setError] = useState(null);
-  const [showMenuPopup, setShowMenuPopup] = useState(false); // Instagram-style popup
-  const [showBlockConfirm, setShowBlockConfirm] = useState(false); // Block confirmation modal
-  const [blockAction, setBlockAction] = useState(null); // 'block' or 'unblock'
+  const [showMenuPopup, setShowMenuPopup] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [blockAction, setBlockAction] = useState(null);
 
-  // Load public profile
   useEffect(() => {
- loadProfile();
+    loadProfile();
     checkIfBlocked();
-    // Profile view is recorded automatically in the backend when getPublicProfile is called
   }, [userId]);
 
   const loadProfile = async () => {
     try {
       setLoading(true);
-    setError(null); // Reset error
+      setError(null);
       const result = await messagingApi.getPublicProfile(userId);
-  
+
       if (result.success) {
-    setProfile(result.data);
- } else {
-        // ?? Set specific error type
+        setProfile(result.data);
+      } else {
         if (result.error?.includes('private')) {
-     setError('private');
+          setError('private');
         } else if (result.error?.includes('not found')) {
-     setError('not_found');
+          setError('not_found');
         } else {
- setError('general');
+          setError('general');
         }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      
-      // ?? Parse error message
       const errorMsg = error.message || error.toString();
- if (errorMsg.includes('private') || errorMsg.includes('403')) {
+      if (errorMsg.includes('private') || errorMsg.includes('403')) {
         setError('private');
       } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
- setError('not_found');
+        setError('not_found');
       } else {
-      setError('general');
-   }
+        setError('general');
+      }
     } finally {
       setLoading(false);
     }
@@ -81,38 +76,45 @@ const { userId, userName: initialUserName, userProfilePic: initialProfilePic } =
 
   const checkIfBlocked = async () => {
     try {
-  const result = await messagingApi.checkIfBlocked(userId);
+      const result = await messagingApi.checkIfBlocked(userId);
       if (result.success) {
         setIsBlocked(result.data.isBlocked || false);
       }
     } catch (error) {
- console.error('Error checking block status:', error);
+      console.error('Error checking block status:', error);
     }
   };
 
   const handleSendMessage = async () => {
- if (isBlocked) {
+    // Check if user allows recruiter contact (only relevant for employer viewing job seeker)
+    if (profile?.AllowRecruitersToContact === false && user?.UserType === 'Employer') {
+      Alert.alert(
+        'Contact Restricted',
+        'This user has chosen not to receive messages from recruiters.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (isBlocked) {
       Alert.alert('Cannot Message', 'You have blocked this user');
       return;
     }
 
     try {
       setSendingMessage(true);
-      
- // Create or get existing conversation
       const result = await messagingApi.createConversation(userId);
-      
+
       if (result.success) {
-        // Navigate to chat screen
         navigation.navigate('Chat', {
-        conversationId: result.data.ConversationID,
+          conversationId: result.data.ConversationID,
           otherUserName: profile.UserName || initialUserName,
-        otherUserId: userId,
-        otherUserProfilePic: profile.ProfilePictureURL,
+          otherUserId: userId,
+          otherUserProfilePic: profile.ProfilePictureURL,
         });
       }
     } catch (error) {
-  console.error('Error creating conversation:', error);
+      console.error('Error creating conversation:', error);
       Alert.alert('Error', 'Failed to start conversation');
     } finally {
       setSendingMessage(false);
@@ -148,368 +150,455 @@ const { userId, userName: initialUserName, userProfilePic: initialProfilePic } =
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    return parts.map(p => p[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // Loading state
   if (loading) {
-    // Show header and basic profile info immediately while loading details
     return (
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerMenuButton}>
-            <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
-          </TouchableOpacity>
+          <View style={styles.headerButton} />
         </View>
 
-        <ScrollView style={styles.scrollView}>
-          {/* Show basic profile header immediately with available data */}
-          <UserProfileHeader
-            user={{
-              UserID: userId,
-              FirstName: initialUserName?.split(' ')[0] || '',
-              LastName: initialUserName?.split(' ').slice(1).join(' ') || '',
-              ProfilePictureURL: initialProfilePic || null,
-            }}
-            profile={{
-              firstName: initialUserName?.split(' ')[0] || '',
-              lastName: initialUserName?.split(' ').slice(1).join(' ') || '',
-              profilePictureURL: initialProfilePic || null,
-            }}
-            jobSeekerProfile={{}}
-            userType="JobSeeker"
-            onProfileUpdate={null}
-            showStats={false}
-            showProgress={false}
-          />
-
-          {/* Loading indicator for the rest of the profile */}
-          <View style={styles.loadingDetailsContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingDetailsText}>Loading profile details...</Text>
-          </View>
-        </ScrollView>
+        <View style={styles.loadingContainer}>
+          <View style={styles.skeletonAvatar} />
+          <View style={styles.skeletonName} />
+          <View style={styles.skeletonHeadline} />
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
       </View>
     );
   }
 
-  // ?? NEW: Beautiful error screens
+  // Private profile error
   if (error === 'private') {
- return (
-      <View style={styles.container}>
-   <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
-    <Ionicons name="arrow-back" size={24} color={colors.white} />
-  </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-   <View style={styles.headerMenuButton} />
-      </View>
-      
-   <View style={styles.errorContainer}>
-     <View style={styles.errorIconContainer}>
-       <Ionicons name="lock-closed" size={80} color={colors.primary} />
-   </View>
-   <Text style={styles.errorTitle}>This Profile is Private</Text>
-  <Text style={styles.errorMessage}>
-    This user has set their profile to private. Only connections can view their full profile.
-        </Text>
-        
-     <View style={styles.errorActions}>
-     <TouchableOpacity 
-       style={styles.primaryButton}
-       onPress={() => navigation.goBack()}
-    >
-            <Ionicons name="arrow-back" size={20} color={colors.white} />
-      <Text style={styles.primaryButtonText}>Go Back</Text>
-     </TouchableOpacity>
-   </View>
-   
-        <View style={styles.privacyTip}>
-   <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
- <Text style={styles.privacyTipText}>
-       Tip: You can still send them a message if you know their name.
-          </Text>
-   </View>
-      </View>
-    </View>
-    );
-  }
-
-  if (error === 'not_found') {
- return (
+    return (
       <View style={styles.container}>
         <View style={styles.header}>
-   <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
-   <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
-   <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerMenuButton} />
-   </View>
-      
-   <View style={styles.errorContainer}>
-   <View style={styles.errorIconContainer}>
-     <Ionicons name="person-outline" size={80} color={colors.gray400} />
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={styles.headerButton} />
         </View>
-   <Text style={styles.errorTitle}>Profile Not Found</Text>
-        <Text style={styles.errorMessage}>
-    This user profile doesn't exist or has been deactivated.
-        </Text>
-        
-   <View style={styles.errorActions}>
-        <TouchableOpacity 
-    style={styles.primaryButton}
-   onPress={() => navigation.goBack()}
-     >
-     <Ionicons name="arrow-back" size={20} color={colors.white} />
-   <Text style={styles.primaryButtonText}>Go Back</Text>
+
+        <View style={styles.errorContainer}>
+          <View style={[styles.errorIconWrapper, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="lock-closed" size={64} color={colors.primary} />
+          </View>
+          <Text style={styles.errorTitle}>Private Profile</Text>
+          <Text style={styles.errorMessage}>
+            This user has set their profile to private. Only connections can view their details.
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
+            <Text style={styles.primaryBtnText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
     );
   }
 
+  // Not found error
+  if (error === 'not_found') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={styles.headerButton} />
+        </View>
+
+        <View style={styles.errorContainer}>
+          <View style={[styles.errorIconWrapper, { backgroundColor: colors.gray200 }]}>
+            <Ionicons name="person-outline" size={64} color={colors.gray500} />
+          </View>
+          <Text style={styles.errorTitle}>Profile Not Found</Text>
+          <Text style={styles.errorMessage}>
+            This user doesn't exist or has deactivated their account.
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
+            <Text style={styles.primaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // General error
   if (error === 'general') {
     return (
-   <View style={styles.container}>
-   <View style={styles.header}>
-  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
-    </TouchableOpacity>
-     <Text style={styles.headerTitle}>Profile</Text>
-     <View style={styles.headerMenuButton} />
-</View>
-   
-   <View style={styles.errorContainer}>
-        <View style={styles.errorIconContainer}>
-   <Ionicons name="alert-circle-outline" size={80} color={colors.error} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={styles.headerButton} />
         </View>
-   <Text style={styles.errorTitle}>Something Went Wrong</Text>
-   <Text style={styles.errorMessage}>
-   We couldn't load this profile. Please check your connection and try again.
- </Text>
-        
-        <View style={styles.errorActions}>
-       <TouchableOpacity 
-style={styles.primaryButton}
- onPress={loadProfile}
-   >
-   <Ionicons name="refresh" size={20} color={colors.white} />
-       <Text style={styles.primaryButtonText}>Try Again</Text>
-   </TouchableOpacity>
-        
-       <TouchableOpacity 
-    style={styles.secondaryButton}
-     onPress={() => navigation.goBack()}
-     >
-        <Text style={styles.secondaryButtonText}>Go Back</Text>
-   </TouchableOpacity>
- </View>
- </View>
-    </View>
+
+        <View style={styles.errorContainer}>
+          <View style={[styles.errorIconWrapper, { backgroundColor: colors.error + '15' }]}>
+            <Ionicons name="alert-circle" size={64} color={colors.error} />
+          </View>
+          <Text style={styles.errorTitle}>Something Went Wrong</Text>
+          <Text style={styles.errorMessage}>
+            We couldn't load this profile. Please check your connection and try again.
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={loadProfile}>
+            <Ionicons name="refresh" size={20} color={colors.white} />
+            <Text style={styles.primaryBtnText}>Try Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.secondaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
   if (!profile) {
     return (
-      <View style={styles.errorContainer}>
-   <Ionicons name="alert-circle-outline" size={64} color={colors.gray300} />
-    <Text style={styles.errorText}>Profile not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-   <Text style={styles.backButtonText}>Go Back</Text>
-    </TouchableOpacity>
-   </View>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={styles.headerButton} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>No Profile Data</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.primaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
+
+  // Check if messaging is allowed
+  const canMessage = profile.AllowRecruitersToContact !== false || user?.UserType !== 'Employer';
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerMenuButton}>
+        <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerButton}>
           <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {/* Profile Header Component (NO EDIT, NO STATS, NO PROGRESS) */}
-        <UserProfileHeader
-          user={{
-            UserID: userId,
-            FirstName: profile.UserName?.split(' ')[0] || '',
-            LastName: profile.UserName?.split(' ').slice(1).join(' ') || '',
-            ProfilePictureURL: profile.ProfilePictureURL,
-          }}
-          profile={{
-            firstName: profile.UserName?.split(' ')[0] || '',
-            lastName: profile.UserName?.split(' ').slice(1).join(' ') || '',
-            profilePictureURL: profile.ProfilePictureURL,
-          }}
-          jobSeekerProfile={{
-            headline: profile.Headline,
-            currentJobTitle: profile.CurrentJobTitle,
-            currentCompany: profile.CurrentCompanyName || profile.CurrentCompany,
-            currentLocation: profile.CurrentLocation,
-            yearsOfExperience: profile.YearsOfExperience,
-            highestEducation: profile.HighestEducation,
-            fieldOfStudy: profile.FieldOfStudy,
-            institution: profile.Institution,
-            primarySkills: profile.PrimarySkills,
-            isOpenToWork: profile.IsOpenToWork,
-            openToRefer: profile.OpenToRefer || false,
-          }}
-          userType="JobSeeker"
-          onProfileUpdate={null} // Read-only - no updates allowed
-          showStats={false} // Hide stats column for privacy
-          showProgress={false} // Hide circular progress ring - not relevant for viewing others
-        />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          {/* Avatar */}
+          {profile.ProfilePictureURL ? (
+            <Image source={{ uri: profile.ProfilePictureURL }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarText}>{getInitials(profile.UserName)}</Text>
+            </View>
+          )}
 
-   {/* About Section */}
-      {profile.Summary && (
-      <View style={styles.section}>
-   <Text style={styles.sectionTitle}>About</Text>
-    <Text style={styles.sectionText}>{profile.Summary}</Text>
-      </View>
+          {/* Name */}
+          <Text style={styles.userName}>{profile.UserName || 'Unknown User'}</Text>
+
+          {/* Headline */}
+          {profile.Headline && (
+            <Text style={styles.headline}>{profile.Headline}</Text>
+          )}
+
+          {/* Current Position - Only show if not hidden */}
+          {profile.CurrentJobTitle && (
+            <View style={styles.positionRow}>
+              <Ionicons name="briefcase-outline" size={16} color={colors.gray500} />
+              <Text style={styles.positionText}>
+                {profile.CurrentJobTitle}
+                {profile.CurrentCompanyName && ` at ${profile.CurrentCompanyName}`}
+              </Text>
+            </View>
+          )}
+
+          {/* Location */}
+          {profile.CurrentLocation && (
+            <View style={styles.positionRow}>
+              <Ionicons name="location-outline" size={16} color={colors.gray500} />
+              <Text style={styles.positionText}>{profile.CurrentLocation}</Text>
+            </View>
+          )}
+
+          {/* Status Badges */}
+          <View style={styles.badgeRow}>
+            {profile.IsOpenToWork && (
+              <View style={[styles.badge, styles.openToWorkBadge]}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={[styles.badgeText, { color: colors.success }]}>Open to Work</Text>
+              </View>
+            )}
+            {profile.OpenToRefer && (
+              <View style={[styles.badge, styles.openToReferBadge]}>
+                <Ionicons name="people" size={14} color={colors.info || colors.primary} />
+                <Text style={[styles.badgeText, { color: colors.info || colors.primary }]}>Open to Refer</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Message Button */}
+          <TouchableOpacity
+            style={[
+              styles.messageBtn,
+              (!canMessage || isBlocked) && styles.messageBtnDisabled
+            ]}
+            onPress={handleSendMessage}
+            disabled={sendingMessage || !canMessage || isBlocked}
+          >
+            {sendingMessage ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <>
+                <Ionicons
+                  name={!canMessage ? "close-circle" : "chatbubble-ellipses"}
+                  size={20}
+                  color={colors.white}
+                />
+                <Text style={styles.messageBtnText}>
+                  {!canMessage ? 'Not Available' : isBlocked ? 'Blocked' : 'Send Message'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Contact Restriction Notice */}
+          {!canMessage && (
+            <View style={styles.restrictionNotice}>
+              <Ionicons name="information-circle" size={16} color={colors.warning} />
+              <Text style={styles.restrictionText}>
+                This user has disabled recruiter messages
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* About Section */}
+        {profile.Summary && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>About</Text>
+            </View>
+            <Text style={styles.sectionContent}>{profile.Summary}</Text>
+          </View>
         )}
 
         {/* Experience Section */}
- {profile.YearsOfExperience > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-              <Ionicons name="briefcase" size={20} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Experience</Text>
-       </View>
-          <Text style={styles.sectionText}>
-      {profile.YearsOfExperience} {profile.YearsOfExperience === 1 ? 'year' : 'years'} of experience
-            </Text>
-  {profile.CurrentJobTitle && (
-              <View style={styles.experienceItem}>
-      <Text style={styles.experienceTitle}>{profile.CurrentJobTitle}</Text>
- {(profile.CurrentCompanyName || profile.CurrentCompany) && (profile.CurrentCompanyName || profile.CurrentCompany) !== 'Private' && (
-    <Text style={styles.experienceCompany}>{profile.CurrentCompanyName || profile.CurrentCompany}</Text>
-  )}
+        {profile.YearsOfExperience > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="briefcase-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Experience</Text>
+            </View>
+            <View style={styles.experienceInfo}>
+              <View style={styles.experienceBadge}>
+                <Text style={styles.experienceYears}>{profile.YearsOfExperience}</Text>
+                <Text style={styles.experienceLabel}>
+                  {profile.YearsOfExperience === 1 ? 'Year' : 'Years'}
+                </Text>
+              </View>
+              {profile.CurrentJobTitle && (
+                <View style={styles.currentRole}>
+                  <Text style={styles.currentRoleTitle}>{profile.CurrentJobTitle}</Text>
+                  {profile.CurrentCompanyName && (
+                    <Text style={styles.currentRoleCompany}>{profile.CurrentCompanyName}</Text>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
-            )}
-      </View>
-      )}
+        )}
 
-     {/* Education Section */}
-   {profile.HighestEducation && (
-  <View style={styles.section}>
-       <View style={styles.sectionHeader}>
-     <Ionicons name="school" size={20} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Education</Text>
-    </View>
- <Text style={styles.sectionText}>{profile.HighestEducation}</Text>
-      {profile.FieldOfStudy && (
-     <Text style={styles.sectionSubtext}>{profile.FieldOfStudy}</Text>
-            )}
-            {profile.Institution && (
-          <Text style={styles.sectionSubtext}>{profile.Institution}</Text>
-            )}
-      </View>
+        {/* Education Section */}
+        {profile.HighestEducation && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="school-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Education</Text>
+            </View>
+            <View style={styles.educationCard}>
+              <View style={styles.educationIcon}>
+                <Ionicons name="ribbon-outline" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.educationDetails}>
+                <Text style={styles.educationDegree}>{profile.HighestEducation}</Text>
+                {profile.FieldOfStudy && (
+                  <Text style={styles.educationField}>{profile.FieldOfStudy}</Text>
+                )}
+                {profile.Institution && (
+                  <Text style={styles.educationInstitution}>{profile.Institution}</Text>
+                )}
+              </View>
+            </View>
+          </View>
         )}
 
         {/* Skills Section */}
         {profile.PrimarySkills && (
           <View style={styles.section}>
- <View style={styles.sectionHeader}>
-      <Ionicons name="code-slash" size={20} color={colors.primary} />
-       <Text style={styles.sectionTitle}>Skills</Text>
-   </View>
-            <View style={styles.skillsContainer}>
-           {profile.PrimarySkills.split(',').map((skill, index) => (
-         <View key={index} style={styles.skillBadge}>
-         <Text style={styles.skillText}>{skill.trim()}</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="code-slash-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Skills</Text>
             </View>
-  ))}
-   </View>
-      </View>
+            <View style={styles.skillsGrid}>
+              {profile.PrimarySkills.split(',').map((skill, index) => (
+                <View key={index} style={styles.skillChip}>
+                  <Text style={styles.skillChipText}>{skill.trim()}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
         )}
 
         {/* Links Section */}
-        {(profile.LinkedInProfile || profile.GithubProfile) && (
+        {(profile.LinkedInProfile || profile.GithubProfile || profile.PortfolioURL) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="link" size={20} color={colors.primary} />
+              <Ionicons name="link-outline" size={22} color={colors.primary} />
               <Text style={styles.sectionTitle}>Links</Text>
             </View>
-            {profile.LinkedInProfile && (
-              <TouchableOpacity
-                style={styles.linkItem}
-                onPress={() => openLink(profile.LinkedInProfile)}
-              >
-                <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
-                <Text style={styles.linkText}>LinkedIn Profile</Text>
-                <Ionicons name="open-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
-            )}
-            {profile.GithubProfile && (
-              <TouchableOpacity
-                style={styles.linkItem}
-                onPress={() => openLink(profile.GithubProfile)}
-              >
-                <Ionicons name="logo-github" size={24} color="#333" />
-                <Text style={styles.linkText}>GitHub Profile</Text>
-                <Ionicons name="open-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
-            )}
+            <View style={styles.linksContainer}>
+              {profile.LinkedInProfile && (
+                <TouchableOpacity
+                  style={styles.linkCard}
+                  onPress={() => openLink(profile.LinkedInProfile)}
+                >
+                  <View style={[styles.linkIconWrapper, { backgroundColor: '#0077B5' + '15' }]}>
+                    <Ionicons name="logo-linkedin" size={22} color="#0077B5" />
+                  </View>
+                  <View style={styles.linkContent}>
+                    <Text style={styles.linkTitle}>LinkedIn</Text>
+                    <Text style={styles.linkSubtitle}>View profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+              {profile.GithubProfile && (
+                <TouchableOpacity
+                  style={styles.linkCard}
+                  onPress={() => openLink(profile.GithubProfile)}
+                >
+                  <View style={[styles.linkIconWrapper, { backgroundColor: colors.text + '10' }]}>
+                    <Ionicons name="logo-github" size={22} color={colors.text} />
+                  </View>
+                  <View style={styles.linkContent}>
+                    <Text style={styles.linkTitle}>GitHub</Text>
+                    <Text style={styles.linkSubtitle}>View repositories</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+              {profile.PortfolioURL && (
+                <TouchableOpacity
+                  style={styles.linkCard}
+                  onPress={() => openLink(profile.PortfolioURL)}
+                >
+                  <View style={[styles.linkIconWrapper, { backgroundColor: colors.primary + '15' }]}>
+                    <Ionicons name="globe-outline" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.linkContent}>
+                    <Text style={styles.linkTitle}>Portfolio</Text>
+                    <Text style={styles.linkSubtitle}>View website</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
+
+        {/* Privacy Notice */}
+        <View style={styles.privacyNotice}>
+          <Ionicons name="shield-checkmark-outline" size={16} color={colors.gray500} />
+          <Text style={styles.privacyNoticeText}>
+            Some information may be hidden based on user privacy settings
+          </Text>
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Instagram-Style Menu Popup */}
+      {/* Menu Popup */}
       <Modal
         visible={showMenuPopup}
         transparent={true}
+        animationType="fade"
         onRequestClose={() => setShowMenuPopup(false)}
       >
-        <Pressable 
-          style={styles.menuOverlay}
-          onPress={() => setShowMenuPopup(false)}
-        >
+        <Pressable style={styles.menuOverlay} onPress={() => setShowMenuPopup(false)}>
           <Pressable style={styles.menuPopup} onPress={(e) => e.stopPropagation()}>
-            {/* Block Option */}
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={handleBlockUser}
-            >
-              <Text style={[styles.menuOptionText, styles.menuOptionDanger]}>
-                {isBlocked ? 'Unblock' : 'Block'}
+            <View style={styles.menuHandle} />
+
+            <TouchableOpacity style={styles.menuOption} onPress={handleBlockUser}>
+              <Ionicons
+                name={isBlocked ? "checkmark-circle-outline" : "ban-outline"}
+                size={22}
+                color={isBlocked ? colors.success : colors.error}
+              />
+              <Text style={[styles.menuOptionText, { color: isBlocked ? colors.success : colors.error }]}>
+                {isBlocked ? 'Unblock User' : 'Block User'}
               </Text>
             </TouchableOpacity>
 
-            {/* Send Message Option */}
+            {canMessage && !isBlocked && (
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => {
+                  setShowMenuPopup(false);
+                  handleSendMessage();
+                }}
+              >
+                <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
+                <Text style={styles.menuOptionText}>Send Message</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={styles.menuOption}
               onPress={() => {
                 setShowMenuPopup(false);
-                handleSendMessage();
+                Alert.alert('Reported', 'Thank you for reporting. We will review this profile.');
               }}
-              disabled={isBlocked}
             >
-              <Text style={[styles.menuOptionText, isBlocked && styles.menuOptionDisabled]}>
-                Send message
-              </Text>
+              <Ionicons name="flag-outline" size={22} color={colors.warning} />
+              <Text style={[styles.menuOptionText, { color: colors.warning }]}>Report Profile</Text>
             </TouchableOpacity>
 
-            {/* Cancel Option */}
             <TouchableOpacity
               style={[styles.menuOption, styles.menuOptionCancel]}
               onPress={() => setShowMenuPopup(false)}
             >
-              <Text style={styles.menuOptionTextBold}>Cancel</Text>
+              <Text style={styles.menuCancelText}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* Block/Unblock Confirmation Modal */}
+      {/* Block Confirmation Modal */}
       <ConfirmationModal
         visible={showBlockConfirm}
         title={blockAction === 'unblock' ? 'Unblock User' : 'Block User'}
@@ -529,161 +618,213 @@ style={styles.primaryButton}
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, isDark) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
   },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: colors.primary,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+    flex: 1,
+    textAlign: 'center',
+  },
+
+  // Loading
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    paddingTop: 60,
+    backgroundColor: colors.surface || colors.white,
   },
-  loadingDetailsContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
+  skeletonAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.gray200,
+    marginBottom: 16,
+  },
+  skeletonName: {
+    width: 150,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: colors.gray200,
+    marginBottom: 8,
+  },
+  skeletonHeadline: {
+    width: 200,
+    height: 16,
+    borderRadius: 4,
+    backgroundColor: colors.gray200,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.gray500,
     marginTop: 12,
   },
-  loadingDetailsText: {
-    fontSize: 16,
-    color: colors.gray600,
-    marginTop: 16,
-  },
+
+  // Error
   errorContainer: {
     flex: 1,
- justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
-    paddingHorizontal: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: colors.surface || colors.white,
   },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
+  errorIconWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 24,
   },
   errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.gray600,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     marginBottom: 32,
   },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
+  primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
     borderRadius: 12,
-  shadowColor: colors.primary,
+    gap: 8,
+    minWidth: 160,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  primaryButtonText: {
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.white,
+  },
+  secondaryBtn: {
+    marginTop: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+  },
+  secondaryBtnText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  privacyTip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
   },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
+
+  // Scroll
   scrollView: {
     flex: 1,
   },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
+
+  // Profile Card
+  profileCard: {
+    backgroundColor: colors.surface || colors.white,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || colors.gray200,
   },
-  messageButton: {
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 16,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  avatarText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  headline: {
+    fontSize: 15,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  positionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  positionText: {
+    fontSize: 14,
+    color: colors.gray600,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  openToWorkBadge: {
+    backgroundColor: colors.success + '15',
+  },
+  openToReferBadge: {
+    backgroundColor: (colors.info || colors.primary) + '15',
+  },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  messageBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -691,1819 +832,246 @@ borderLeftWidth: 4,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
+    minWidth: 200,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
-  messageButtonDisabled: {
+  messageBtnDisabled: {
     backgroundColor: colors.gray400,
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
+  messageBtnText: {
+    fontSize: 16,
     fontWeight: '600',
-    marginLeft: 6,
+    color: colors.white,
   },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  restrictionNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 12,
+    gap: 6,
+    backgroundColor: colors.warning + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  restrictionText: {
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: '500',
+  },
+
+  // Sections
+  section: {
+    backgroundColor: colors.surface || colors.white,
+    marginTop: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 10,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
+    color: colors.text,
   },
-  sectionText: {
+  sectionContent: {
     fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
-  },
-  experienceCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  linkText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
-  },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-  lineHeight: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: colors.white,
-  },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
+    color: colors.gray700 || colors.text,
     lineHeight: 24,
-    marginBottom: 32,
   },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
+
+  // Experience
+  experienceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 16,
   },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  privacyTip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  experienceBadge: {
+    backgroundColor: colors.primary + '15',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
     borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  messageButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    minWidth: 70,
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  experienceYears: {
+    fontSize: 28,
     fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
+    color: colors.primary,
   },
-  sectionText: {
-    fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
-  },
-  experienceCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 14,
+  experienceLabel: {
+    fontSize: 12,
     color: colors.primary,
     fontWeight: '500',
   },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  linkText: {
+  currentRole: {
     flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
   },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-  lineHeight: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: colors.white,
-  },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
+  currentRoleTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
   },
-  privacyTip: {
+  currentRoleCompany: {
+    fontSize: 14,
+    color: colors.gray600,
+  },
+
+  // Education
+  educationCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    gap: 14,
   },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
-  },
-  messageButton: {
-    flexDirection: 'row',
+  educationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  messageButtonDisabled: {
-    backgroundColor: colors.gray400,
+  educationDetails: {
+    flex: 1,
   },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
-  },
-  sectionText: {
-    fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
+  educationDegree: {
     fontSize: 16,
     fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: 2,
   },
-  experienceCompany: {
+  educationField: {
     fontSize: 14,
     color: colors.gray600,
+    marginBottom: 2,
   },
-  skillsContainer: {
+  educationInstitution: {
+    fontSize: 13,
+    color: colors.gray500,
+  },
+
+  // Skills
+  skillsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
+    gap: 8,
   },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
+  skillChip: {
+    backgroundColor: colors.primary + '12',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
   },
-  skillText: {
+  skillChipText: {
     fontSize: 14,
     color: colors.primary,
     fontWeight: '500',
   },
-  linkItem: {
+
+  // Links
+  linksContainer: {
+    gap: 12,
+  },
+  linkCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    padding: 14,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    gap: 14,
   },
-  linkText: {
+  linkIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkContent: {
     flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
   },
+  linkTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  linkSubtitle: {
+    fontSize: 13,
+    color: colors.gray500,
+    marginTop: 2,
+  },
+
+  // Privacy Notice
   privacyNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 8,
   },
-  privacyText: {
-    flex: 1,
+  privacyNoticeText: {
     fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-  lineHeight: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: colors.white,
-  },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  privacyTip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
-  scrollView: {
+    color: colors.gray500,
     flex: 1,
   },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  messageButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
-  },
-  sectionText: {
-    fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
-  },
-  experienceCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  linkText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
-  },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-  lineHeight: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: colors.white,
-  },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  privacyTip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  messageButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
-  },
-  sectionText: {
-    fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
-  },
-  experienceCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  linkText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
-  },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-  lineHeight: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: colors.white,
-  },
-  errorIconContainer: {
-    width: 140,
- height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.gray100,
- justifyContent: 'center',
- alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorTitle: {
-  fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  errorActions: {
-    width: '100%',
- gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    alignItems: 'center',
- justifyContent: 'center',
-    backgroundColor: colors.gray100,
-paddingHorizontal: 32,
-    paddingVertical: 16,
-  borderRadius: 12,
-  },
-  secondaryButtonText: {
-    color: colors.gray700,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  privacyTip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
-borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  privacyTipText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray700,
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray600,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primary,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerMenuButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  messageButtonContainer: {
-    paddingHorizontal: 20,
-  paddingVertical: 16,
-    backgroundColor: colors.white,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  messageButtonDisabled: {
-    backgroundColor: colors.gray400,
-  },
-  messageButtonText: {
-    color: colors.white,
-  fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  section: {
-  backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
- marginBottom: 16,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-  borderRadius: 60,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImageText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
- fontWeight: 'bold',
-    color: colors.gray900,
-    marginBottom: 8,
-  },
-  headline: {
- fontSize: 16,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-},
-  jobInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  jobText: {
-    fontSize: 14,
-    color: colors.gray600,
- marginLeft: 6,
-  },
-  openToWorkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  borderRadius: 16,
-    marginBottom: 20,
-  },
-  openToWorkText: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  section: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  color: colors.gray900,
-    marginLeft: 8,
-  },
-  sectionText: {
-    fontSize: 15,
-    color: colors.gray700,
-    lineHeight: 22,
-  },
-  sectionSubtext: {
-    fontSize: 14,
-  color: colors.gray600,
-    marginTop: 4,
-  },
-  experienceItem: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-  },
-  experienceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  color: colors.gray900,
-    marginBottom: 4,
-  },
-  experienceCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  skillBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-  marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  linkText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.gray900,
-    marginLeft: 12,
-  },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    padding: 16,
-    marginTop: 12,
-    marginHorizontal: 12,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.gray600,
-    marginLeft: 8,
-    lineHeight: 16,
-  },
-  // Instagram-Style Menu Popup Styles
+
+  // Menu Popup
   menuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
-    alignItems: 'center',
   },
   menuPopup: {
-    width: '100%',
-    maxWidth: 500,
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: colors.surface || colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 34,
+    paddingTop: 8,
+  },
+  menuHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.gray300,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   menuOption: {
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200 || '#E5E7EB',
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  menuOptionCancel: {
-    borderBottomWidth: 0,
-    marginTop: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 14,
   },
   menuOptionText: {
     fontSize: 16,
-    color: colors.text || '#000000',
-    fontWeight: '400',
+    color: colors.text,
+    fontWeight: '500',
   },
-  menuOptionTextBold: {
+  menuOptionCancel: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border || colors.gray200,
+    justifyContent: 'center',
+  },
+  menuCancelText: {
     fontSize: 16,
-    color: colors.text || '#000000',
     fontWeight: '600',
-  },
-  menuOptionDanger: {
-    color: colors.danger || '#FF3B30',
-    fontWeight: '600',
-  },
-  menuOptionDisabled: {
-    color: colors.gray400 || '#9CA3AF',
+    color: colors.gray600,
+    textAlign: 'center',
   },
 });

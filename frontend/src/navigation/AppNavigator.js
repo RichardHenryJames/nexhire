@@ -156,6 +156,9 @@ const linking = {
           Wallet: "wallet",
           WalletTransactions: "wallet/transactions",
           WalletRecharge: "wallet/recharge",
+          
+          // Profile Views screen
+          ProfileViews: "ProfileViews",
         },
       },
     },

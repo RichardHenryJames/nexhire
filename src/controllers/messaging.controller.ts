@@ -384,33 +384,6 @@ export const getMyProfileViews = withAuth(async (req: HttpRequest, context: Invo
   }
 });
 
-// Check if user has active profile view access
-export const checkProfileViewAccess = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-  try {
-    const { PricingService } = await import('../services/pricing.service');
-    const hasAccess = await MessagingService.hasActiveProfileViewAccess(user.userId);
-    const cost = await PricingService.getProfileViewCost();
-    const durationHours = await PricingService.getProfileViewAccessDurationHours();
-    const durationDays = Math.floor(durationHours / 24);
-
-    return {
-      status: 200,
-      jsonBody: successResponse({
-        hasActiveAccess: hasAccess,
-        requiresPayment: !hasAccess,
-        cost: cost,
-        durationDays: durationDays,
-        message: hasAccess
-          ? `You have active profile view access (valid for ${durationDays} days)`
-          : `Payment required to see who viewed your profile`
-      }, 'Profile view access status retrieved successfully')
-    };
-  } catch (error) {
-    console.error('Error in checkProfileViewAccess:', error);
-    return { status: 500, jsonBody: { success: false, error: 'Failed to check profile view access' } };
-  }
-});
-
 // Purchase profile view access
 export const purchaseProfileViewAccess = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
   try {
@@ -504,6 +477,9 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         CurrentCompanyName: profile.HideCurrentCompany ? null : profile.CurrentCompanyName,
         CurrentJobTitle: profile.HideCurrentCompany ? null : profile.CurrentJobTitle,
         salaryBreakdown: profile.HideSalaryDetails ? null : profile.salaryBreakdown,
+
+        // Privacy preferences for frontend to respect
+        AllowRecruitersToContact: profile.AllowRecruitersToContact !== false,
 
         // Always hide wallet/referral info
         ReferralPoints: undefined,

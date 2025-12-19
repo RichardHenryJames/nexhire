@@ -34,7 +34,6 @@ import {
   getCurrencies,
   getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
   getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
-  checkAIAccessStatus, // NEW: Check if user has active 24hr AI access
 } from "./src/controllers/job.controller";
 import {
   applyForJob,
@@ -139,7 +138,6 @@ import {
   getBlockedUsers,
   recordProfileView,
   getMyProfileViews,
-  checkProfileViewAccess,
   purchaseProfileViewAccess,
   getPublicProfile,
   searchUsers, // ?? User search
@@ -150,6 +148,9 @@ import "./src/controllers/signalr.controller";
 
 // Import pricing controller
 import { getPricing } from "./src/controllers/pricing.controller";
+
+// Import unified access controller
+import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import profile services
 import {
@@ -541,14 +542,6 @@ app.http("ai-job-filters", {
   authLevel: "anonymous",
   route: "jobs/ai-filters",
   handler: getAIJobFilters,
-});
-
-// NEW: Check AI access status (24hr validity)
-app.http("ai-access-status", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "jobs/ai-access-status",
-  handler: checkAIAccessStatus,
 });
 
 // ========================================================================
@@ -1220,6 +1213,17 @@ app.http("pricing-get", {
 });
 
 // ========================================================================
+// UNIFIED ACCESS STATUS ENDPOINT
+// ========================================================================
+
+app.http("access-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "access/status",
+  handler: withErrorHandling(checkAccessStatus),
+});
+
+// ========================================================================
 // STORAGE ENDPOINTS - File uploads (import now at top)
 // ========================================================================
 
@@ -1355,14 +1359,6 @@ app.http("messaging-my-profile-views", {
   authLevel: "anonymous",
   route: "users/profile-views",
   handler: withErrorHandling(getMyProfileViews),
-});
-
-// Check profile view access status
-app.http("messaging-check-profile-view-access", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "users/profile-views/access-status",
-  handler: withErrorHandling(checkProfileViewAccess),
 });
 
 // Purchase profile view access

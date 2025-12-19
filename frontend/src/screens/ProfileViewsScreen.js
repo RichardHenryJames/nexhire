@@ -445,7 +445,25 @@ export default function ProfileViewsScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            // Smart back navigation - check if we have navigation history
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            
+            // If we have more than 1 route in the stack, go back normally
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              // Hard refresh scenario - navigate to Home
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Home'
+                }
+              });
+            }
+          }}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
