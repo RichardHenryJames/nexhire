@@ -617,11 +617,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
                   
                   <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.industry && item.industry !== 'Other' && (
-                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
-                        {item.industry}
-                      </Text>
-                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>

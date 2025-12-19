@@ -192,7 +192,11 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleRegisterNavigation = () => {
-    navigation.navigate('Register');
+    // Navigate to multi-step registration flow instead of single form
+    navigation.navigate('UserTypeSelection', {
+      fromGoogleAuth: false,
+      googleUser: null
+    });
   };
 
   const isSubmitDisabled = formLoading || loading || !email || !password;

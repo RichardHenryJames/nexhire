@@ -803,6 +803,15 @@ const [showResumeModal, setShowResumeModal] = useState(false);
                     </View>
                   </TouchableOpacity>
                 ))}
+                
+                {/* Option to upload a new resume */}
+                <TouchableOpacity
+                  style={styles.uploadNewResumeButton}
+                  onPress={() => setShowResumeModal(true)}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                  <Text style={styles.uploadNewResumeText}>Upload New Resume</Text>
+                </TouchableOpacity>
               </View>
             )}
             
@@ -1314,6 +1323,20 @@ const createStyles = (colors) => StyleSheet.create({
   },
   uploadResumeText: {
     color: colors.white,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+  },
+  uploadNewResumeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  uploadNewResumeText: {
+    color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
