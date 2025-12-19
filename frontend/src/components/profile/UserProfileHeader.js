@@ -799,15 +799,9 @@ const createStyles = (colors) => StyleSheet.create({
   // Main Header Card
   headerCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: 12,
   },
 
   // Main Content Layout

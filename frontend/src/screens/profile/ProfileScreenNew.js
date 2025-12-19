@@ -58,6 +58,7 @@ export default function ProfileScreen({ navigation, route }) {
   const openedFromHome = route?.params?.openedFromHome === true;
   
   const [loading, setLoading] = useState(false);
+  const [loadingSections, setLoadingSections] = useState(true); // Loading state for work exp, education sections
   const [refreshing, setRefreshing] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'personal', 'professional', 'workexp', 'salary', 'education', 'preferences', 'skills'
   const [editingModal, setEditingModal] = useState(false); // Track if modal is in edit mode
@@ -169,6 +170,7 @@ export default function ProfileScreen({ navigation, route }) {
   const loadExtendedProfile = async () => {
     try {
       setLoading(true);
+      setLoadingSections(true);
       
       // Use the same API as old ProfileScreen - getApplicantProfile includes salary and resumes
       const response = userType === 'JobSeeker' 
@@ -233,6 +235,7 @@ export default function ProfileScreen({ navigation, route }) {
       console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
+      setLoadingSections(false);
     }
   };
 
@@ -1209,7 +1212,8 @@ export default function ProfileScreen({ navigation, route }) {
     <View style={styles.container}>
       {/* Sticky Header with Wallet */}
       <View style={styles.stickyHeader}>
-        {showHeaderProfilePic && (
+        {/* Animated Profile Pic - Absolutely positioned overlay (only when from tab) */}
+        {!openedFromHome && showHeaderProfilePic && (
           <Animated.View style={[styles.headerProfilePic, { opacity: headerProfileOpacity, transform: [{ scale: headerProfileScale }] }]}>
             <TouchableOpacity onPress={scrollToTop} activeOpacity={0.8}>
               {profile.profilePictureURL ? (
@@ -1225,18 +1229,38 @@ export default function ProfileScreen({ navigation, route }) {
           </Animated.View>
         )}
 
-        <View style={styles.headerSpacer} />
+        {/* Left side spacer or Settings icon (when from home) */}
+        {openedFromHome ? (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
+
         <Text style={styles.title}>Profile</Text>
+
+        {/* Right side: Close button (when from home) OR Settings icon (when from tab) */}
         {openedFromHome ? (
           <TouchableOpacity
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
             activeOpacity={0.7}
-            style={styles.headerCloseButton}
+            style={styles.headerIconButton}
           >
             <Ionicons name="close" size={24} color={colors.text || '#000'} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -1325,8 +1349,30 @@ export default function ProfileScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Loading Skeleton for Sections */}
+        {loadingSections && userType === 'JobSeeker' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.skeletonIcon, { backgroundColor: colors.gray200 }]} />
+              <View style={[styles.skeletonText, { width: 150, backgroundColor: colors.gray200 }]} />
+            </View>
+            <View style={styles.workExperienceList}>
+              {[1, 2].map((_, index) => (
+                <View key={index} style={styles.workExpCard}>
+                  <View style={[styles.workExpIcon, { backgroundColor: colors.gray200 }]} />
+                  <View style={styles.workExpDetails}>
+                    <View style={[styles.skeletonText, { width: '70%', marginBottom: 8, backgroundColor: colors.gray200 }]} />
+                    <View style={[styles.skeletonText, { width: '50%', marginBottom: 6, backgroundColor: colors.gray200 }]} />
+                    <View style={[styles.skeletonText, { width: '40%', backgroundColor: colors.gray200 }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* About Section */}
-        {jobSeekerProfile.summary && (
+        {!loadingSections && jobSeekerProfile.summary && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
@@ -1340,7 +1386,7 @@ export default function ProfileScreen({ navigation, route }) {
         )}
 
         {/* Work Experience Section - View Mode */}
-        {jobSeekerProfile.workExperiences && jobSeekerProfile.workExperiences.length > 0 && (
+        {!loadingSections && jobSeekerProfile.workExperiences && jobSeekerProfile.workExperiences.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Ionicons name="briefcase-outline" size={22} color={colors.primary} />
@@ -1396,7 +1442,7 @@ export default function ProfileScreen({ navigation, route }) {
         )}
 
         {/* Education Section - View Mode */}
-        {jobSeekerProfile.highestEducation && (
+        {!loadingSections && jobSeekerProfile.highestEducation && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Ionicons name="school-outline" size={22} color={colors.primary} />
@@ -1423,7 +1469,7 @@ export default function ProfileScreen({ navigation, route }) {
         )}
 
         {/* Skills Section - View Mode */}
-        {(jobSeekerProfile.skills.primary?.length > 0 || jobSeekerProfile.skills.secondary?.length > 0) && (
+        {!loadingSections && (jobSeekerProfile.skills.primary?.length > 0 || jobSeekerProfile.skills.secondary?.length > 0) && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Ionicons name="code-slash-outline" size={22} color={colors.primary} />
@@ -1441,24 +1487,6 @@ export default function ProfileScreen({ navigation, route }) {
             </View>
           </View>
         )}
-
-        {/* Settings Button */}
-        <TouchableOpacity 
-          style={styles.settingsButton} 
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.settingsButtonContent}>
-            <View style={styles.settingsButtonIcon}>
-              <Ionicons name="settings-outline" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.settingsButtonText}>
-              <Text style={styles.settingsButtonTitle}>Settings</Text>
-              <Text style={styles.settingsButtonSubtitle}>Account, preferences, privacy & more</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray400 || '#C7C7CC'} />
-        </TouchableOpacity>
 
         {/* Compliance Footer */}
         <ComplianceFooter navigation={navigation} />
@@ -1672,6 +1700,12 @@ const createStyles = (colors) => StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerCloseButton: {
     width: 40,
     height: 40,
@@ -1701,13 +1735,16 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
   section: {
-    marginTop: 24,
+    backgroundColor: colors.surface || colors.white,
+    marginTop: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 10,
   },
   sectionIndicator: {
     width: 4,
@@ -1719,7 +1756,8 @@ const createStyles = (colors) => StyleSheet.create({
   sectionHeading: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
+    flex: 1,
   },
   sectionCard: {
     flexDirection: 'row',
@@ -2050,9 +2088,11 @@ const createStyles = (colors) => StyleSheet.create({
   // Action Buttons (Wallet & Invite)
   actionButtonsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     gap: 12,
+    backgroundColor: colors.surface,
+    marginTop: 12,
   },
   actionButtonHalf: {
     flex: 1,
@@ -2071,14 +2111,10 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
-    padding: 10,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: colors.gray100 || colors.background || '#F5F5F7',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
   actionButton: {
     flexDirection: 'row',
@@ -2350,9 +2386,8 @@ const createStyles = (colors) => StyleSheet.create({
   // About Section
   aboutText: {
     fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary || '#666',
-    paddingHorizontal: 16,
+    color: colors.gray700 || colors.text,
+    lineHeight: 24,
   },
   editIconButton: {
     marginLeft: 'auto',
@@ -2360,28 +2395,22 @@ const createStyles = (colors) => StyleSheet.create({
   },
   // Work Experience View Mode
   workExperienceList: {
-    paddingHorizontal: 16,
+    gap: 12,
   },
   workExpCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surface || '#FFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200 || colors.border,
   },
   workExpIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
   },
   workExpDetails: {
     flex: 1,
@@ -2389,19 +2418,19 @@ const createStyles = (colors) => StyleSheet.create({
   workExpHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 2,
   },
   workExpTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text || '#1C1C1E',
     flex: 1,
   },
   workExpCompany: {
     fontSize: 14,
-    color: colors.textSecondary || '#666',
-    marginBottom: 6,
+    color: colors.gray600 || colors.textSecondary || '#666',
+    marginBottom: 4,
   },
   workExpMeta: {
     flexDirection: 'row',
@@ -2420,9 +2449,8 @@ const createStyles = (colors) => StyleSheet.create({
   currentBadge: {
     backgroundColor: colors.success + '20' || '#E8F5E9',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    marginLeft: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   currentBadgeText: {
     fontSize: 10,
@@ -2433,15 +2461,8 @@ const createStyles = (colors) => StyleSheet.create({
   // Education View Mode
   educationCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surface || '#FFF',
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    alignItems: 'flex-start',
+    gap: 14,
   },
   educationIcon: {
     width: 44,
@@ -2450,7 +2471,6 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   educationDetails: {
     flex: 1,
@@ -2459,11 +2479,11 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text || '#1C1C1E',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   educationField: {
     fontSize: 14,
-    color: colors.textSecondary || '#666',
+    color: colors.gray600 || colors.textSecondary || '#666',
     marginBottom: 2,
   },
   educationInstitution: {
@@ -2475,18 +2495,17 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingHorizontal: 16,
   },
   skillChip: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: colors.primary + '12',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.primary + '30',
   },
   skillChipText: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary,
     fontWeight: '500',
   },
@@ -2495,18 +2514,10 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface || '#FFF',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: 12,
   },
   settingsButtonContent: {
     flexDirection: 'row',
@@ -2534,5 +2545,15 @@ const createStyles = (colors) => StyleSheet.create({
   settingsButtonSubtitle: {
     fontSize: 13,
     color: colors.textSecondary || '#8E8E93',
+  },
+  // Skeleton loader styles
+  skeletonIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+  },
+  skeletonText: {
+    height: 14,
+    borderRadius: 4,
   },
 });
