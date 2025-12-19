@@ -192,10 +192,15 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleRegisterNavigation = () => {
-    // Navigate to multi-step registration flow instead of single form
-    navigation.navigate('UserTypeSelection', {
-      fromGoogleAuth: false,
-      googleUser: null
+    // For email/password sign up start the Job Seeker registration flow
+    // directly at the experience type selection screen (skip user type)
+    navigation.navigate('JobSeekerFlow', {
+      screen: 'ExperienceTypeSelection',
+      params: {
+        userType: 'JobSeeker',
+        fromGoogleAuth: false,
+        googleUser: null,
+      },
     });
   };
 
