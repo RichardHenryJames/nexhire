@@ -139,6 +139,8 @@ import {
   getBlockedUsers,
   recordProfileView,
   getMyProfileViews,
+  checkProfileViewAccess,
+  purchaseProfileViewAccess,
   getPublicProfile,
   searchUsers, // ?? User search
 } from "./src/controllers/messaging.controller";
@@ -1353,6 +1355,22 @@ app.http("messaging-my-profile-views", {
   authLevel: "anonymous",
   route: "users/profile-views",
   handler: withErrorHandling(getMyProfileViews),
+});
+
+// Check profile view access status
+app.http("messaging-check-profile-view-access", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "users/profile-views/access-status",
+  handler: withErrorHandling(checkProfileViewAccess),
+});
+
+// Purchase profile view access
+app.http("messaging-purchase-profile-view-access", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "users/profile-views/purchase",
+  handler: withErrorHandling(purchaseProfileViewAccess),
 });
 
 app.http("messaging-get-public-profile", {

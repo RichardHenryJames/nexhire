@@ -30,7 +30,10 @@ async function getPricing(request: HttpRequest, context: InvocationContext): Pro
           referralRequestCost: settings.REFERRAL_REQUEST_COST,
           jobPublishCost: settings.JOB_PUBLISH_COST,
           welcomeBonus: settings.WELCOME_BONUS,
-          referralSignupBonus: settings.REFERRAL_SIGNUP_BONUS
+          referralSignupBonus: settings.REFERRAL_SIGNUP_BONUS,
+          profileViewCost: settings.PROFILE_VIEW_COST,
+          profileViewAccessDurationHours: settings.PROFILE_VIEW_ACCESS_DURATION_HOURS,
+          profileViewAccessDurationDays: Math.floor(settings.PROFILE_VIEW_ACCESS_DURATION_HOURS / 24)
         }
       })
     };

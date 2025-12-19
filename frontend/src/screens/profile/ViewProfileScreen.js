@@ -41,8 +41,7 @@ const { userId, userName: initialUserName, userProfilePic: initialProfilePic } =
   useEffect(() => {
  loadProfile();
     checkIfBlocked();
-    // Record profile view
-    messagingApi.recordProfileView(userId).catch(console.error);
+    // Profile view is recorded automatically in the backend when getPublicProfile is called
   }, [userId]);
 
   const loadProfile = async () => {

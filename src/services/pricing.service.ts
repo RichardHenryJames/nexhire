@@ -14,6 +14,8 @@ const DEFAULT_PRICING = {
   JOB_PUBLISH_COST: 50,
   WELCOME_BONUS: 100,
   REFERRAL_SIGNUP_BONUS: 50,
+  PROFILE_VIEW_COST: 29,
+  PROFILE_VIEW_ACCESS_DURATION_HOURS: 168, // 7 days
 };
 
 // Cache for pricing settings (refresh every 5 minutes)
@@ -95,6 +97,20 @@ export class PricingService {
    */
   static async getJobPublishCost(): Promise<number> {
     return this.getSetting('JOB_PUBLISH_COST');
+  }
+
+  /**
+   * Get profile view cost
+   */
+  static async getProfileViewCost(): Promise<number> {
+    return this.getSetting('PROFILE_VIEW_COST');
+  }
+
+  /**
+   * Get profile view access duration in hours
+   */
+  static async getProfileViewAccessDurationHours(): Promise<number> {
+    return this.getSetting('PROFILE_VIEW_ACCESS_DURATION_HOURS');
   }
 
   /**

@@ -290,6 +290,34 @@ const result = await api.apiCall(`/conversations/${conversationId}/messages?${pa
   }
 
   /**
+   * Check if user has active profile view access
+   */
+  async checkProfileViewAccess() {
+    try {
+      const result = await api.apiCall('/users/profile-views/access-status');
+      return result;
+    } catch (error) {
+      console.error('? Check profile view access failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Purchase profile view access
+   */
+  async purchaseProfileViewAccess() {
+    try {
+      const result = await api.apiCall('/users/profile-views/purchase', {
+        method: 'POST',
+      });
+      return result;
+    } catch (error) {
+      console.error('? Purchase profile view access failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get public profile of another user
    */
   async getPublicProfile(userId) {

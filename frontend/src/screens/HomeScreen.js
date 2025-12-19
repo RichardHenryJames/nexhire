@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,13 @@ import {
   Image,
   TextInput,
   FlatList,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
+import messagingApi from '../services/messagingApi';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -41,6 +43,18 @@ const [loadingStats, setLoadingStats] = useState(true);
 const [loadingJobs, setLoadingJobs] = useState(true);
 const [loadingF500Jobs, setLoadingF500Jobs] = useState(true);
 const [loadingApplications, setLoadingApplications] = useState(true);
+
+// 🎯 NEW: Fortune 500 companies for Get Referrals card
+const [fortune500Companies, setFortune500Companies] = useState([]);
+const [f500LogoScrollRef] = useState(useRef(null));
+const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
+const scrollIntervalRef = useRef(null);
+
+// 🎯 NEW: Profile views count
+const [profileViewsCount, setProfileViewsCount] = useState(0);
+
+// 🎯 NEW: Referrer requests (referrals that came to me)
+const [myReferrerRequests, setMyReferrerRequests] = useState([]);
   
 const [dashboardData, setDashboardData] = useState({
   // Enhanced stats from backend
@@ -174,9 +188,81 @@ const [dashboardData, setDashboardData] = useState({
         .finally(() => setLoadingApplications(false));
     }
 
+    // 🎯 NEW: Fetch Fortune 500 companies for Get Referrals card (job seekers only)
+    let f500CompaniesPromise = Promise.resolve();
+    if (isJobSeeker) {
+      f500CompaniesPromise = (async () => {
+        try {
+          const result = await refopenAPI.getOrganizations('', 100);
+          if (result.success && result.data) {
+            // Filter only Fortune 500 companies with logos
+            const f500WithLogos = result.data
+              .filter(org => org.isFortune500 && org.logoURL)
+              .map(org => ({
+                ...org,
+                // Generate random referrer count (0-99, or 99+)
+                referrerCount: Math.floor(Math.random() * 120)
+              }))
+              .sort(() => Math.random() - 0.5) // Shuffle
+              .slice(0, 20); // Limit to 20 for performance
+            setFortune500Companies(f500WithLogos);
+          }
+        } catch (err) {
+          console.warn('Fortune 500 companies fetch failed:', err);
+        }
+      })();
+    }
+
+    // 🎯 NEW: Fetch profile views count (job seekers only)
+    let profileViewsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      profileViewsPromise = (async () => {
+        try {
+          const result = await messagingApi.getMyProfileViews(1, 1);
+          if (result.success) {
+            // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
+            const count = result.meta?.total || result.total || result.data?.length || 0;
+            setProfileViewsCount(count);
+          }
+        } catch (err) {
+          console.warn('Profile views fetch failed:', err);
+          setProfileViewsCount(0);
+        }
+      })();
+    }
+
+    // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
+    let referrerRequestsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      referrerRequestsPromise = (async () => {
+        try {
+          const result = await refopenAPI.getMyReferrerRequests(1, 10);
+          if (result.success && result.data) {
+            // Data comes as { requests: [...], total, page, pageSize, totalPages }
+            const requests = result.data.requests || result.data || [];
+            // Only show pending/claimed requests
+            const activeRequests = Array.isArray(requests) 
+              ? requests.filter(r => r.StatusID === 1 || r.StatusID === 2 || r.Status === 'Pending' || r.Status === 'Claimed')
+              : [];
+            setMyReferrerRequests(activeRequests);
+          }
+        } catch (err) {
+          console.warn('Referrer requests fetch failed:', err);
+        }
+      })();
+    }
+
     // We don't await here to allow UI to update progressively
     // But we catch any unhandled promise rejections just in case
-    Promise.all([statsPromise, jobsPromise, f500JobsPromise, applicationsPromise]).catch(err => {
+    Promise.all([
+      statsPromise, 
+      jobsPromise, 
+      f500JobsPromise, 
+      applicationsPromise,
+      f500CompaniesPromise,
+      profileViewsPromise,
+      referrerRequestsPromise
+    ]).catch(err => {
       console.error('Error in dashboard data fetch:', err);
     });
 
@@ -200,6 +286,41 @@ const [dashboardData, setDashboardData] = useState({
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
+
+  // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
+  useEffect(() => {
+    if (fortune500Companies.length > 3 && isJobSeeker) {
+      // Clear any existing interval
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+      
+      const logoItemWidth = 70; // 56px logo + 14px margin
+      const maxScroll = (fortune500Companies.length - 3) * logoItemWidth;
+      
+      scrollIntervalRef.current = setInterval(() => {
+        setF500ScrollPosition(prev => {
+          const next = prev + logoItemWidth;
+          if (next >= maxScroll) {
+            return 0; // Reset to start
+          }
+          return next;
+        });
+      }, 2000); // Scroll every 2 seconds
+      
+      return () => {
+        if (scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+        }
+      };
+    }
+  }, [fortune500Companies.length, isJobSeeker]);
+
+  // Helper function to format referrer count
+  const formatReferrerCount = (count) => {
+    if (count > 99) return '99+';
+    return count.toString();
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -574,11 +695,11 @@ const [dashboardData, setDashboardData] = useState({
             </>
           ) : (
             <>
-              {/* Get Referrals Card - Premium Design */}
+              {/* 🎯 Get Referrals Card - Premium Design with F500 Logo Scroll */}
               <TouchableOpacity 
                 style={styles.premiumActionCard}
                 onPress={() => navigation.navigate('AskReferral')}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
               >
                 <View style={styles.premiumCardGradient}>
                   <View style={styles.premiumCardHeader}>
@@ -591,47 +712,117 @@ const [dashboardData, setDashboardData] = useState({
                   <Text style={styles.premiumActionDescription}>
                     Request referrals for job opportunities
                   </Text>
+                  
+                  {/* 🎯 Fortune 500 Company Logos with Referrer Counts */}
+                  {fortune500Companies.length > 0 && (
+                    <View style={styles.f500LogoContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentOffset={{ x: f500ScrollPosition, y: 0 }}
+                        scrollEnabled={true}
+                        style={styles.f500LogoScroll}
+                      >
+                        {fortune500Companies.map((company, index) => (
+                          <TouchableOpacity
+                            key={company.id || index}
+                            style={styles.f500LogoItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              navigation.navigate('AskReferral', { 
+                                preSelectedOrganization: {
+                                  id: company.id,
+                                  name: company.name,
+                                  logoURL: company.logoURL
+                                }
+                              });
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.f500LogoBadge}>
+                              <Text style={styles.f500BadgeText}>
+                                {formatReferrerCount(company.referrerCount)}
+                              </Text>
+                            </View>
+                            <Image 
+                              source={{ uri: company.logoURL }} 
+                              style={styles.f500Logo}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
 
-              {/* Complete Profile Card - With Circular Progress */}
+              {/* 🎯 My Referrals Card - Only show if user has incoming referral requests */}
+              {myReferrerRequests.length > 0 && (
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Referrals', { tab: 'referrer' })}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                    <Ionicons name="gift" size={24} color={colors.success} />
+                    <View style={styles.quickActionBadge}>
+                      <Text style={styles.quickActionBadgeText}>{myReferrerRequests.length}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>My Referrals</Text>
+                    <Text style={styles.quickActionDescription}>Help others get their dream job</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {/* 🎯 Profile Views Card */}
               <TouchableOpacity 
-                style={styles.profileActionCard}
+                style={styles.quickActionCard}
+                onPress={() => navigation.navigate('ProfileViews')}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                  <Ionicons name="eye" size={24} color={colors.info} />
+                  <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
+                    <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
+                  </View>
+                </View>
+                <View style={styles.quickActionContent}>
+                  <Text style={styles.quickActionTitle}>Profile Views</Text>
+                  <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+              </TouchableOpacity>
+
+              {/* 🎯 Complete Profile Card - Compact Style */}
+              <TouchableOpacity 
+                style={styles.quickActionCard}
                 onPress={() => navigation.navigate('Profile')}
                 activeOpacity={0.8}
               >
-                <View style={styles.profileCardContent}>
-                  <View style={styles.profileCardLeft}>
-                    <View style={styles.profileCardHeader}>
-                      <View style={[styles.profileIcon, { 
-                        backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
-                      }]}>
-                        <Ionicons 
-                          name="person" 
-                          size={28} 
-                          color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
-                        />
-                      </View>
-                    </View>
-                    <Text style={styles.profileActionTitle}>Complete Profile</Text>
-                    <Text style={styles.profileActionDescription}>
-                      Improve your profile to stand out
-                    </Text>
-                  </View>
-                  
-                  {/* Circular Progress Indicator */}
-                  <View style={styles.profileCardRight}>
-                    <View style={styles.circularProgress}>
-                      <Text style={[
-                        styles.progressPercentage,
-                        { color: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
-                      ]}>
-                        {stats.profileCompleteness || 0}%
-                      </Text>
-                      <Text style={styles.progressLabel}>Complete</Text>
-                    </View>
+                <View style={[styles.quickActionIcon, { 
+                  backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                }]}>
+                  <Ionicons 
+                    name="person" 
+                    size={24} 
+                    color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                  />
+                  <View style={[
+                    styles.quickActionBadge, 
+                    { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                  ]}>
+                    <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
                   </View>
                 </View>
+                <View style={styles.quickActionContent}>
+                  <Text style={styles.quickActionTitle}>Complete Profile</Text>
+                  <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
               </TouchableOpacity>
             </>
           )}
@@ -1106,6 +1297,105 @@ headerCompact: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     lineHeight: 20,
+  },
+  // 🎯 Fortune 500 Logo Scroll Styles
+  f500LogoContainer: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  f500LogoScroll: {
+    flexDirection: 'row',
+  },
+  f500LogoItem: {
+    alignItems: 'center',
+    marginRight: 14,
+    position: 'relative',
+  },
+  f500Logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  f500LogoBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    zIndex: 1,
+  },
+  f500BadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+  },
+  // 🎯 Quick Action Card (Compact Style like employer cards)
+  quickActionCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    position: 'relative',
+  },
+  quickActionBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 24,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  quickActionBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+  },
+  quickActionContent: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  quickActionDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
   },
   // Profile Completion Card
   profileActionCard: {

@@ -14,7 +14,10 @@ const DEFAULT_PRICING = {
   referralRequestCost: 39,
   jobPublishCost: 50,
   welcomeBonus: 100,
-  referralSignupBonus: 50
+  referralSignupBonus: 50,
+  profileViewCost: 29,
+  profileViewAccessDurationHours: 168,
+  profileViewAccessDurationDays: 7
 };
 
 const PricingContext = createContext({

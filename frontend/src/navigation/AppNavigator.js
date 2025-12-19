@@ -49,6 +49,8 @@ import ConversationsScreen from "../screens/messaging/ConversationsScreen";
 import ChatScreen from "../screens/messaging/ChatScreen";
 // ?? NEW: Profile viewing screen
 import ViewProfileScreen from "../screens/profile/ViewProfileScreen";
+// ?? NEW: Profile Views screen (who viewed my profile)
+import ProfileViewsScreen from "../screens/ProfileViewsScreen";
 // ?? NEW: Wallet screens
 import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
@@ -536,6 +538,14 @@ function MainStack() {
       <Stack.Screen
         name="ViewProfile"
         component={ViewProfileScreen}
+        options={{
+          headerShown: false, // Custom header in component
+        }}
+      />
+      {/* ?? NEW: Profile Views - Who viewed my profile */}
+      <Stack.Screen
+        name="ProfileViews"
+        component={ProfileViewsScreen}
         options={{
           headerShown: false, // Custom header in component
         }}
