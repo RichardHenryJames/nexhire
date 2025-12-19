@@ -107,13 +107,14 @@ export class ApplicantService {
                 (profile as any).TotalExperienceMonths = profile.TotalExperienceMonths ?? totalMonths;
                 if (experiences.recordset && experiences.recordset.length > 0) {
                     const latest = experiences.recordset[0];
-                    (profile as any).CurrentJobTitle = latest.JobTitle;
+                    (profile as any).CurrentJobTitle = latest.JobTitle || profile.CurrentJobTitle;
                     (profile as any).CurrentOrganizationID = latest.OrganizationID;
                     if (latest.OrganizationID) {
                         const org = await dbService.executeQuery('SELECT Name FROM Organizations WHERE OrganizationID = @param0', [latest.OrganizationID]);
-                        (profile as any).CurrentCompanyName = org.recordset && org.recordset[0] ? org.recordset[0].Name : null;
+                        (profile as any).CurrentCompanyName = org.recordset && org.recordset[0] ? org.recordset[0].Name : (latest.CompanyName || profile.CurrentCompanyName);
                     } else {
-                        (profile as any).CurrentCompanyName = null;
+                        // Fallback to CompanyName from WorkExperiences or Applicants table
+                        (profile as any).CurrentCompanyName = latest.CompanyName || profile.CurrentCompanyName || null;
                     }
                 }
             } catch (e) {
@@ -173,6 +174,36 @@ export class ApplicantService {
                 console.warn('Could not load resumes:', error);
                 profile.resumes = [];
                 profile.primaryResumeURL = null;
+            }
+
+            // Get all work experiences for this applicant
+            try {
+                const workExpQuery = `
+                    SELECT 
+                        we.WorkExperienceID,
+                        we.CompanyName,
+                        we.JobTitle,
+                        we.Department,
+                        we.EmploymentType,
+                        we.StartDate,
+                        we.EndDate,
+                        we.IsCurrent,
+                        we.Location,
+                        we.Country,
+                        we.Description,
+                        we.Skills,
+                        o.Name as OrganizationName,
+                        o.LogoURL as OrganizationLogo
+                    FROM WorkExperiences we
+                    LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
+                    WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
+                    ORDER BY we.IsCurrent DESC, we.EndDate DESC, we.StartDate DESC
+                `;
+                const workExpResult = await dbService.executeQuery(workExpQuery, [profile.ApplicantID]);
+                profile.workExperiences = workExpResult.recordset || [];
+            } catch (error) {
+                console.warn('Could not load work experiences:', error);
+                profile.workExperiences = [];
             }
             
             return profile;

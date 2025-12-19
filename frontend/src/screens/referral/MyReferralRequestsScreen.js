@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -24,6 +24,7 @@ import { showToast } from '../../components/Toast';
 export default function MyReferralRequestsScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,41 @@ export default function MyReferralRequestsScreen() {
   const [viewingProof, setViewingProof] = useState(null);
 
   const [cancelTarget, setCancelTarget] = useState(null);
+
+  // ✅ Set header style for dark mode support
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: {
+        backgroundColor: colors.surface,
+      },
+      headerTintColor: colors.text,
+      headerTitleStyle: {
+        color: colors.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            const navState = navigation.getState?.();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: { screen: 'Profile' },
+              });
+            }
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   useFocusEffect(
     useCallback(() => {

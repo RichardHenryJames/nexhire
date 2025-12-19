@@ -92,8 +92,16 @@ export default function ApplicationsScreen({ navigation }) {
   }, [pagination.total, isEmployer, navigation]);
 
   // ✅ Smart back navigation (hard-refresh safe) - mirror JobDetailsScreen
+  // Also set header style for dark mode support
   useEffect(() => {
     navigation.setOptions({
+      headerStyle: {
+        backgroundColor: colors.surface,
+      },
+      headerTintColor: colors.text,
+      headerTitleStyle: {
+        color: colors.text,
+      },
       headerLeft: () => (
         <TouchableOpacity
           style={styles.headerButton}
@@ -117,7 +125,7 @@ export default function ApplicationsScreen({ navigation }) {
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors]);
 
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {

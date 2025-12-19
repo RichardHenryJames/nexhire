@@ -39,6 +39,7 @@ import AIRecommendedJobsScreen from "../screens/jobs/AIRecommendedJobsScreen"; /
 import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
 import ProfileScreen from "../screens/profile/ProfileScreenNew";
+import SettingsScreen from "../screens/profile/SettingsScreen";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
 import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
@@ -148,6 +149,7 @@ const linking = {
           ReferralPlans: "plans",
           Payment: "payment",
           MyReferralRequests: "referrals/my-requests",
+          Settings: "settings",
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
@@ -448,6 +450,13 @@ function MainStack() {
           headerShown: true,
           title: "Saved Jobs",
           headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
         }}
       />
       <Stack.Screen
@@ -457,6 +466,13 @@ function MainStack() {
           headerShown: true,
           title: "My Applications",
           headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
         }}
       />
       <Stack.Screen
@@ -466,6 +482,13 @@ function MainStack() {
           headerShown: true,
           title: "My Requests",
           headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => {
@@ -541,6 +564,14 @@ function MainStack() {
       <Stack.Screen
         name="ViewProfile"
         component={ViewProfileScreen}
+        options={{
+          headerShown: false, // Custom header in component
+        }}
+      />
+      {/* Settings Screen */}
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
         options={{
           headerShown: false, // Custom header in component
         }}

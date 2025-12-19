@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
+import UserProfileHeader from '../../components/profile/UserProfileHeader';
 
 export default function ViewProfileScreen() {
   const navigation = useNavigation();
@@ -148,12 +149,6 @@ export default function ViewProfileScreen() {
         Alert.alert('Error', 'Failed to open link');
       });
     }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return '?';
-    const parts = name.split(' ');
-    return parts.map(p => p[0]).join('').toUpperCase().slice(0, 2);
   };
 
   // Loading state
@@ -306,60 +301,40 @@ export default function ViewProfileScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          {/* Avatar */}
-          {profile.ProfilePictureURL ? (
-            <Image source={{ uri: profile.ProfilePictureURL }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>{getInitials(profile.UserName)}</Text>
-            </View>
-          )}
+        {/* Compact Profile Header - Same as ProfileScreenNew */}
+        <UserProfileHeader
+          user={{
+            UserID: userId,
+            FirstName: profile.UserName?.split(' ')[0] || '',
+            LastName: profile.UserName?.split(' ').slice(1).join(' ') || '',
+            ProfilePictureURL: profile.ProfilePictureURL,
+          }}
+          profile={{
+            firstName: profile.UserName?.split(' ')[0] || '',
+            lastName: profile.UserName?.split(' ').slice(1).join(' ') || '',
+            profilePictureURL: profile.ProfilePictureURL,
+          }}
+          jobSeekerProfile={{
+            headline: profile.Headline,
+            currentJobTitle: profile.CurrentJobTitle,
+            currentCompany: profile.CurrentCompanyName,
+            currentLocation: profile.CurrentLocation,
+            yearsOfExperience: profile.YearsOfExperience,
+            highestEducation: profile.HighestEducation,
+            fieldOfStudy: profile.FieldOfStudy,
+            institution: profile.Institution,
+            primarySkills: profile.PrimarySkills,
+            isOpenToWork: profile.IsOpenToWork,
+            openToRefer: profile.OpenToRefer,
+          }}
+          userType="JobSeeker"
+          onProfileUpdate={null}
+          showStats={false}
+          showProgress={false}
+        />
 
-          {/* Name */}
-          <Text style={styles.userName}>{profile.UserName || 'Unknown User'}</Text>
-
-          {/* Headline */}
-          {profile.Headline && (
-            <Text style={styles.headline}>{profile.Headline}</Text>
-          )}
-
-          {/* Current Position - Only show if not hidden */}
-          {profile.CurrentJobTitle && (
-            <View style={styles.positionRow}>
-              <Ionicons name="briefcase-outline" size={16} color={colors.gray500} />
-              <Text style={styles.positionText}>
-                {profile.CurrentJobTitle}
-                {profile.CurrentCompanyName && ` at ${profile.CurrentCompanyName}`}
-              </Text>
-            </View>
-          )}
-
-          {/* Location */}
-          {profile.CurrentLocation && (
-            <View style={styles.positionRow}>
-              <Ionicons name="location-outline" size={16} color={colors.gray500} />
-              <Text style={styles.positionText}>{profile.CurrentLocation}</Text>
-            </View>
-          )}
-
-          {/* Status Badges */}
-          <View style={styles.badgeRow}>
-            {profile.IsOpenToWork && (
-              <View style={[styles.badge, styles.openToWorkBadge]}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>Open to Work</Text>
-              </View>
-            )}
-            {profile.OpenToRefer && (
-              <View style={[styles.badge, styles.openToReferBadge]}>
-                <Ionicons name="people" size={14} color={colors.info || colors.primary} />
-                <Text style={[styles.badgeText, { color: colors.info || colors.primary }]}>Open to Refer</Text>
-              </View>
-            )}
-          </View>
-
+        {/* Action Buttons Row */}
+        <View style={styles.actionRow}>
           {/* Message Button */}
           <TouchableOpacity
             style={[
@@ -375,11 +350,11 @@ export default function ViewProfileScreen() {
               <>
                 <Ionicons
                   name={!canMessage ? "close-circle" : "chatbubble-ellipses"}
-                  size={20}
+                  size={18}
                   color={colors.white}
                 />
                 <Text style={styles.messageBtnText}>
-                  {!canMessage ? 'Not Available' : isBlocked ? 'Blocked' : 'Send Message'}
+                  {!canMessage ? 'Not Available' : isBlocked ? 'Blocked' : 'Message'}
                 </Text>
               </>
             )}
@@ -388,9 +363,9 @@ export default function ViewProfileScreen() {
           {/* Contact Restriction Notice */}
           {!canMessage && (
             <View style={styles.restrictionNotice}>
-              <Ionicons name="information-circle" size={16} color={colors.warning} />
+              <Ionicons name="information-circle" size={14} color={colors.warning} />
               <Text style={styles.restrictionText}>
-                This user has disabled recruiter messages
+                Recruiter messages disabled
               </Text>
             </View>
           )}
@@ -407,28 +382,55 @@ export default function ViewProfileScreen() {
           </View>
         )}
 
-        {/* Experience Section */}
-        {profile.YearsOfExperience > 0 && (
+        {/* Work Experience Section */}
+        {profile.workExperiences && profile.workExperiences.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="briefcase-outline" size={22} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Experience</Text>
+              <Text style={styles.sectionTitle}>Work Experience</Text>
             </View>
-            <View style={styles.experienceInfo}>
-              <View style={styles.experienceBadge}>
-                <Text style={styles.experienceYears}>{profile.YearsOfExperience}</Text>
-                <Text style={styles.experienceLabel}>
-                  {profile.YearsOfExperience === 1 ? 'Year' : 'Years'}
-                </Text>
-              </View>
-              {profile.CurrentJobTitle && (
-                <View style={styles.currentRole}>
-                  <Text style={styles.currentRoleTitle}>{profile.CurrentJobTitle}</Text>
-                  {profile.CurrentCompanyName && (
-                    <Text style={styles.currentRoleCompany}>{profile.CurrentCompanyName}</Text>
-                  )}
+            <View style={styles.workExperienceList}>
+              {profile.workExperiences.map((exp, index) => (
+                <View key={exp.WorkExperienceID || index} style={styles.workExpCard}>
+                  <View style={styles.workExpIcon}>
+                    {exp.OrganizationLogo ? (
+                      <Image 
+                        source={{ uri: exp.OrganizationLogo }} 
+                        style={{ width: 36, height: 36, borderRadius: 6 }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Ionicons name="business" size={20} color={colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.workExpDetails}>
+                    <View style={styles.workExpHeader}>
+                      <Text style={styles.workExpTitle}>{exp.JobTitle}</Text>
+                      {exp.IsCurrent && (
+                        <View style={styles.currentBadge}>
+                          <Text style={styles.currentBadgeText}>Current</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.workExpCompany}>{exp.CompanyName}</Text>
+                    <View style={styles.workExpMeta}>
+                      {exp.Location && (
+                        <View style={styles.workExpMetaItem}>
+                          <Ionicons name="location-outline" size={12} color={colors.gray500} />
+                          <Text style={styles.workExpMetaText}>{exp.Location}</Text>
+                        </View>
+                      )}
+                      <View style={styles.workExpMetaItem}>
+                        <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
+                        <Text style={styles.workExpMetaText}>
+                          {new Date(exp.StartDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - 
+                          {exp.IsCurrent ? 'Present' : new Date(exp.EndDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-              )}
+              ))}
             </View>
           </View>
         )}
@@ -465,11 +467,28 @@ export default function ViewProfileScreen() {
               <Text style={styles.sectionTitle}>Skills</Text>
             </View>
             <View style={styles.skillsGrid}>
-              {profile.PrimarySkills.split(',').map((skill, index) => (
-                <View key={index} style={styles.skillChip}>
-                  <Text style={styles.skillChipText}>{skill.trim()}</Text>
-                </View>
-              ))}
+              {(() => {
+                let skills = [];
+                try {
+                  // Try parsing as JSON array first
+                  if (typeof profile.PrimarySkills === 'string') {
+                    if (profile.PrimarySkills.startsWith('[')) {
+                      skills = JSON.parse(profile.PrimarySkills);
+                    } else {
+                      skills = profile.PrimarySkills.split(',').map(s => s.trim());
+                    }
+                  } else if (Array.isArray(profile.PrimarySkills)) {
+                    skills = profile.PrimarySkills;
+                  }
+                } catch (e) {
+                  skills = profile.PrimarySkills.split(',').map(s => s.trim());
+                }
+                return skills.map((skill, index) => (
+                  <View key={index} style={styles.skillChip}>
+                    <Text style={styles.skillChipText}>{skill}</Text>
+                  </View>
+                ));
+              })()}
             </View>
           </View>
         )}
@@ -555,7 +574,7 @@ export default function ViewProfileScreen() {
 
             <TouchableOpacity style={styles.menuOption} onPress={handleBlockUser}>
               <Ionicons
-                name={isBlocked ? "checkmark-circle-outline" : "ban-outline"}
+                name={isBlocked ? "checkmark-circle-outline" : "close-circle-outline"}
                 size={22}
                 color={isBlocked ? colors.success : colors.error}
               />
@@ -747,99 +766,33 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     flex: 1,
   },
 
-  // Profile Card
-  profileCard: {
-    backgroundColor: colors.surface || colors.white,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+  // Action Row (below UserProfileHeader)
+  actionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.surface || colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border || colors.gray200,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 16,
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  headline: {
-    fontSize: 15,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 16,
-  },
-  positionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
-  },
-  positionText: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-  badgeRow: {
-    flexDirection: 'row',
+    gap: 12,
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: 16,
-    gap: 8,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  openToWorkBadge: {
-    backgroundColor: colors.success + '15',
-  },
-  openToReferBadge: {
-    backgroundColor: (colors.info || colors.primary) + '15',
-  },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   messageBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 20,
-    gap: 8,
-    minWidth: 200,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   messageBtnDisabled: {
     backgroundColor: colors.gray400,
@@ -847,22 +800,21 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     elevation: 0,
   },
   messageBtnText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.white,
   },
   restrictionNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    gap: 6,
+    gap: 4,
     backgroundColor: colors.warning + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   restrictionText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.warning,
     fontWeight: '500',
   },
@@ -927,6 +879,72 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   currentRoleCompany: {
     fontSize: 14,
     color: colors.gray600,
+  },
+
+  // Work Experience
+  workExperienceList: {
+    gap: 12,
+  },
+  workExpCard: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200 || colors.border,
+  },
+  workExpIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workExpDetails: {
+    flex: 1,
+  },
+  workExpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  workExpTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+  },
+  currentBadge: {
+    backgroundColor: colors.success + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.success,
+    textTransform: 'uppercase',
+  },
+  workExpCompany: {
+    fontSize: 14,
+    color: colors.gray600,
+    marginBottom: 4,
+  },
+  workExpMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  workExpMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  workExpMetaText: {
+    fontSize: 12,
+    color: colors.gray500,
   },
 
   // Education

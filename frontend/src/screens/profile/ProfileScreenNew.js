@@ -108,6 +108,7 @@ export default function ProfileScreen({ navigation, route }) {
     linkedInProfile: '',
     githubProfile: '',
     resumes: [],
+    workExperiences: [],
     additionalDocuments: '',
     highestEducation: '',
     fieldOfStudy: '',
@@ -192,6 +193,7 @@ export default function ProfileScreen({ navigation, route }) {
         if (userType === 'JobSeeker') {
           const salaryData = data.salaryBreakdown || { current: [], expected: [] };
           const resumeData = data.resumes || [];
+          const workExpData = data.workExperiences || [];
           
           setJobSeekerProfile(prev => ({
             ...prev,
@@ -215,6 +217,7 @@ export default function ProfileScreen({ navigation, route }) {
             preferredCompanySize: data.PreferredCompanySize || data.preferredCompanySize || prev.preferredCompanySize,
             salaryBreakdown: salaryData,
             resumes: resumeData,
+            workExperiences: workExpData,
             skills: {
               primary: data.PrimarySkills ? data.PrimarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
               secondary: data.SecondarySkills ? data.SecondarySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -1322,102 +1325,139 @@ export default function ProfileScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Account Details Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionIndicator} />
-            <Text style={styles.sectionHeading}>Account Details</Text>
-          </View>
-
-          {renderSectionCard(
-            'Personal Details',
-            'person-outline',
-            () => setActiveModal('personal'),
-            `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Add personal details'
-          )}
-
-          {renderSectionCard(
-            'Professional Details',
-            'briefcase-outline',
-            () => setActiveModal('professional'),
-            jobSeekerProfile.currentJobTitle || 'Add your work experience'
-          )}
-
-          {renderSectionCard(
-            'Education Details',
-            'school-outline',
-            () => setActiveModal('education'),
-            jobSeekerProfile.highestEducation || 'Add your education'
-          )}
-        </View>
-
-        {/* My Activity Section: applications, saved jobs, referrals */}
-        {userType === 'JobSeeker' && (
+        {/* About Section */}
+        {jobSeekerProfile.summary && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionIndicator} />
-              <Text style={styles.sectionHeading}>My Activity</Text>
+              <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>About</Text>
+              <TouchableOpacity onPress={() => setActiveModal('professional')} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
             </View>
-
-            {renderSectionCard(
-              'My Applications',
-              'clipboard-outline',
-              () => navigation.navigate('Applications'),
-              'Track jobs you have applied to'
-            )}
-
-            {renderSectionCard(
-              'Saved Jobs',
-              'bookmark-outline',
-              () => navigation.navigate('SavedJobs'),
-              'View and manage saved jobs'
-            )}
-
-            {renderSectionCard(
-              'Referral Requests',
-              'people-circle-outline',
-              () => navigation.navigate('MyReferralRequests'),
-              'See referrals you have asked for'
-            )}
+            <Text style={styles.aboutText}>{jobSeekerProfile.summary}</Text>
           </View>
         )}
 
-        {/* Preferences Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionIndicator} />
-            <Text style={styles.sectionHeading}>Preferences</Text>
+        {/* Work Experience Section - View Mode */}
+        {jobSeekerProfile.workExperiences && jobSeekerProfile.workExperiences.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="briefcase-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Work Experience</Text>
+              <TouchableOpacity onPress={() => setActiveModal('workexp')} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.workExperienceList}>
+              {jobSeekerProfile.workExperiences.map((exp, index) => (
+                <View key={exp.WorkExperienceID || index} style={styles.workExpCard}>
+                  <View style={styles.workExpIcon}>
+                    {exp.OrganizationLogo ? (
+                      <Image 
+                        source={{ uri: exp.OrganizationLogo }} 
+                        style={{ width: 36, height: 36, borderRadius: 6 }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Ionicons name="business" size={20} color={colors.primary} />
+                    )}
+                  </View>
+                  <View style={styles.workExpDetails}>
+                    <View style={styles.workExpHeader}>
+                      <Text style={styles.workExpTitle}>{exp.JobTitle}</Text>
+                      {exp.IsCurrent && (
+                        <View style={styles.currentBadge}>
+                          <Text style={styles.currentBadgeText}>Current</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
+                    <View style={styles.workExpMeta}>
+                      {exp.Location && (
+                        <View style={styles.workExpMetaItem}>
+                          <Ionicons name="location-outline" size={12} color={colors.gray500} />
+                          <Text style={styles.workExpMetaText}>{exp.Location}</Text>
+                        </View>
+                      )}
+                      <View style={styles.workExpMetaItem}>
+                        <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
+                        <Text style={styles.workExpMetaText}>
+                          {exp.StartDate ? new Date(exp.StartDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - 
+                          {exp.IsCurrent ? 'Present' : (exp.EndDate ? new Date(exp.EndDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
+        )}
 
-          {renderToggleCard(
-            'Dark Mode',
-            'moon-outline',
-            isDark,
-            toggleTheme,
-            'Use a darker theme across the app'
-          )}
+        {/* Education Section - View Mode */}
+        {jobSeekerProfile.highestEducation && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="school-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Education</Text>
+              <TouchableOpacity onPress={() => setActiveModal('education')} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.educationCard}>
+              <View style={styles.educationIcon}>
+                <Ionicons name="ribbon-outline" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.educationDetails}>
+                <Text style={styles.educationDegree}>{jobSeekerProfile.highestEducation}</Text>
+                {jobSeekerProfile.fieldOfStudy && (
+                  <Text style={styles.educationField}>{jobSeekerProfile.fieldOfStudy}</Text>
+                )}
+                {jobSeekerProfile.institution && (
+                  <Text style={styles.educationInstitution}>{jobSeekerProfile.institution}</Text>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
 
-          {renderSectionCard(
-            'Job Preferences',
-            'settings-outline',
-            () => setActiveModal('preferences'),
-            'Manage your job search preferences'
-          )}
+        {/* Skills Section - View Mode */}
+        {(jobSeekerProfile.skills.primary?.length > 0 || jobSeekerProfile.skills.secondary?.length > 0) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="code-slash-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Skills</Text>
+              <TouchableOpacity onPress={() => setShowSkillsModal(true)} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.skillsContainer}>
+              {[...(jobSeekerProfile.skills.primary || []), ...(jobSeekerProfile.skills.secondary || [])].map((skill, index) => (
+                <View key={index} style={styles.skillChip}>
+                  <Text style={styles.skillChipText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
-          {renderSectionCard(
-            'Resume Preferences',
-            'document-text-outline',
-            () => setActiveModal('resumes'),
-            jobSeekerProfile.resumes?.length > 0 
-              ? `${jobSeekerProfile.resumes.length} resume(s) uploaded` 
-              : 'Upload and manage your resumes'
-          )}
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
-          <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
-          <Text style={styles.logoutText}>Logout</Text>
+        {/* Settings Button */}
+        <TouchableOpacity 
+          style={styles.settingsButton} 
+          onPress={() => navigation.navigate('Settings')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsButtonContent}>
+            <View style={styles.settingsButtonIcon}>
+              <Ionicons name="settings-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.settingsButtonText}>
+              <Text style={styles.settingsButtonTitle}>Settings</Text>
+              <Text style={styles.settingsButtonSubtitle}>Account, preferences, privacy & more</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.gray400 || '#C7C7CC'} />
         </TouchableOpacity>
 
         {/* Compliance Footer */}
@@ -1564,27 +1604,6 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
             </View>
           </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Logout Confirmation Modal */}
-      <Modal visible={showLogoutModal} transparent onRequestClose={() => setShowLogoutModal(false)}>
-        <View style={styles.logoutModalOverlay}>
-          <View style={styles.logoutModalContent}>
-            <View style={styles.logoutModalIconContainer}>
-              <Ionicons name="log-out-outline" size={40} color={colors.danger} />
-            </View>
-            <Text style={styles.logoutModalTitle}>Logout</Text>
-            <Text style={styles.logoutModalMessage}>Are you sure you want to logout?</Text>
-            <View style={styles.logoutModalButtons}>
-              <TouchableOpacity style={styles.logoutModalCancelButton} onPress={() => setShowLogoutModal(false)}>
-                <Text style={styles.logoutModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutModalConfirmButton} onPress={() => { setShowLogoutModal(false); logout(); }}>
-                <Text style={styles.logoutModalConfirmText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </Modal>
 
@@ -2327,5 +2346,193 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary,
+  },
+  // About Section
+  aboutText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textSecondary || '#666',
+    paddingHorizontal: 16,
+  },
+  editIconButton: {
+    marginLeft: 'auto',
+    padding: 4,
+  },
+  // Work Experience View Mode
+  workExperienceList: {
+    paddingHorizontal: 16,
+  },
+  workExpCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface || '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  workExpIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  workExpDetails: {
+    flex: 1,
+  },
+  workExpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  workExpTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text || '#1C1C1E',
+    flex: 1,
+  },
+  workExpCompany: {
+    fontSize: 14,
+    color: colors.textSecondary || '#666',
+    marginBottom: 6,
+  },
+  workExpMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  workExpMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  workExpMetaText: {
+    fontSize: 12,
+    color: colors.gray500 || '#999',
+  },
+  currentBadge: {
+    backgroundColor: colors.success + '20' || '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.success || '#34C759',
+    textTransform: 'uppercase',
+  },
+  // Education View Mode
+  educationCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface || '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  educationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  educationDetails: {
+    flex: 1,
+  },
+  educationDegree: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text || '#1C1C1E',
+    marginBottom: 4,
+  },
+  educationField: {
+    fontSize: 14,
+    color: colors.textSecondary || '#666',
+    marginBottom: 2,
+  },
+  educationInstitution: {
+    fontSize: 13,
+    color: colors.gray500 || '#999',
+  },
+  // Skills View Mode
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  skillChip: {
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  skillChipText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  // Settings Button
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface || '#FFF',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  settingsButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingsButtonIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingsButtonText: {
+    flex: 1,
+  },
+  settingsButtonTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text || '#1C1C1E',
+    marginBottom: 2,
+  },
+  settingsButtonSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary || '#8E8E93',
   },
 });
