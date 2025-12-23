@@ -17,7 +17,6 @@ import RegisterScreen from "../screens/auth/RegisterScreen";
 import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
 import WorkExperienceScreen from "../screens/auth/registration/jobseeker/WorkExperienceScreen";
 import EducationDetailsScreen from "../screens/auth/registration/jobseeker/EducationDetailsScreen";
-import JobPreferencesScreen from "../screens/auth/registration/jobseeker/JobPreferencesScreen";
 import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/PersonalDetailsScreen";
 
 // Employer Registration Flow
@@ -104,7 +103,6 @@ const linking = {
               ExperienceTypeSelection: "experience",
               WorkExperienceScreen: "work",
               EducationDetailsScreen: "education",
-              JobPreferencesScreen: "preferences",
               PersonalDetails: "details",
             },
           },
@@ -186,10 +184,6 @@ function JobSeekerFlow() {
       <Stack.Screen
         name="EducationDetailsScreen"
         component={EducationDetailsScreen}
-      />
-      <Stack.Screen
-        name="JobPreferencesScreen"
-        component={JobPreferencesScreen}
       />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
     </Stack.Navigator>
@@ -758,7 +752,7 @@ export default function AppNavigator() {
         name="AboutUs"
         component={AboutUsScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: "About Us",
           headerBackTitleVisible: false,
         }}

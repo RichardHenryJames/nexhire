@@ -380,11 +380,13 @@ export default function EducationDetailsScreen({ navigation, route }) {
     };
 
     
-    navigation.navigate('JobPreferencesScreen', { 
+    navigation.navigate('PersonalDetailsScreenDirect', { 
       userType, 
       experienceType,
       workExperienceData,
-      educationData: finalFormData
+      educationData: finalFormData,
+      fromGoogleAuth: route?.params?.fromGoogleAuth,
+      googleUser: route?.params?.googleUser,
     });
   };
 

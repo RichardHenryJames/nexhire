@@ -22,6 +22,7 @@ import {
   Linking,
   Easing,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -320,6 +321,55 @@ const BigNumber = ({ number, label, color }) => (
 // ============================================
 export default function AboutScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef(null);
+  const navigation = useNavigation();
+
+  // Scroll to top on mount/refresh - run immediately on web
+  useEffect(() => {
+    // Immediate scroll for web
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+    
+    // Delayed scroll to ensure ScrollView is mounted
+    const timer = setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+      }
+      // Double-check web scroll
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Scroll to top whenever the screen comes into focus (handles navigation without remount)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
+
+      if (scrollViewRef.current) {
+        // Use small timeout to ensure ScrollView is ready
+        setTimeout(() => {
+          try {
+            scrollViewRef.current.scrollTo({ y: 0, animated: false });
+          } catch (e) {
+            // ignore
+          }
+        }, 20);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
@@ -336,6 +386,11 @@ export default function AboutScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bgPrimary }}>
+      {/* Dark gradient overlay */}
+      <LinearGradient
+        colors={[COLORS.bgPrimary, COLORS.bgSecondary, COLORS.bgPrimary]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
       {/* Sticky Header */}
       <Animated.View
         style={{
@@ -366,6 +421,7 @@ export default function AboutScreen() {
       </Animated.View>
 
       <Animated.ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
@@ -414,7 +470,6 @@ export default function AboutScreen() {
               >
                 Get Referred to{'\n'}
                 <Text style={{ color: COLORS.primary }}>Any Company</Text>{'\n'}
-                <Text style={{ fontSize: isLargeScreen ? 48 : isMediumScreen ? 36 : 28, color: COLORS.textSecondary }}>Instantly</Text>
               </Text>
 
               <Text
@@ -968,36 +1023,6 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
                 The Smarter Way to Get Referred & Hire
               </Text>
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
-                {['Terms', 'Privacy', 'Contact', 'FAQ', 'Blog'].map((link) => (
-                  <TouchableOpacity key={link} onPress={openRefOpen} style={{ marginHorizontal: 16, marginVertical: 8 }}>
-                    <Text style={{ fontSize: 14, color: COLORS.textSecondary }}>{link}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={{ flexDirection: 'row', marginBottom: 24 }}>
-                {['logo-linkedin', 'logo-twitter', 'logo-instagram'].map((icon) => (
-                  <TouchableOpacity
-                    key={icon}
-                    onPress={openRefOpen}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      backgroundColor: COLORS.bgCard,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginHorizontal: 6,
-                      borderWidth: 1,
-                      borderColor: COLORS.border,
-                    }}
-                  >
-                    <Ionicons name={icon} size={20} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
                 © 2024 RefOpen. All rights reserved.

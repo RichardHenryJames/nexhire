@@ -12,6 +12,7 @@ import {
   Image,
   Animated,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -402,7 +403,16 @@ export default function LoginScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           )}
-            </View>
+
+          {/* About Link */}
+          <TouchableOpacity 
+            style={screenStyles.aboutLink}
+            onPress={() => navigation.navigate('AboutUs')}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+            <Text style={screenStyles.aboutLinkText}>About RefOpen</Text>
+          </TouchableOpacity>
+        </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -657,5 +667,18 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
   devButtonText: {
     ...themeStyles.caption,
     color: colors.white,
+  },
+  aboutLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  aboutLinkText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
 });

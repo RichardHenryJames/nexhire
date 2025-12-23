@@ -15,6 +15,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import refopenAPI from '../../../../services/api';
@@ -30,7 +31,7 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
@@ -224,6 +225,10 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <LinearGradient
+        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.background, colors.surface, colors.background]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -232,13 +237,16 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
                 <Ionicons name="arrow-back" size={24} color={colors.primary} />
               </TouchableOpacity>
               
-              <TouchableOpacity
-                style={styles.headerSwitchButton}
-                onPress={handleSwitchToJobSeeker}
-              >
-                <Text style={styles.headerSwitchButtonText}>I'm looking for jobs</Text>
-                <Ionicons name="search-outline" size={18} color={colors.primary} />
-              </TouchableOpacity>
+              {/* Skip pill button - appears when selection made */}
+              {selectedType && (
+                <TouchableOpacity
+                  style={styles.skipPillButton}
+                  onPress={handleContinue}
+                >
+                  <Text style={styles.skipPillButtonText}>Skip</Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
 
             <Text style={styles.title}>What type of organization are you with?</Text>
@@ -285,6 +293,15 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               size={20}
               color={(!selectedType || (selectedType === 'company' && !selectedCompany)) ? colors.gray400 : colors.white}
             />
+          </TouchableOpacity>
+
+          {/* Switch to job seeker flow - at bottom */}
+          <TouchableOpacity
+            style={styles.switchFlowButton}
+            onPress={handleSwitchToJobSeeker}
+          >
+            <Ionicons name="search-outline" size={18} color={colors.primary} />
+            <Text style={styles.switchFlowButtonText}>I'm looking for jobs</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -385,7 +402,7 @@ const createStyles = (colors) => StyleSheet.create({
   scrollContainer: { flex: 1 },
   content: { padding: 20, paddingTop: 20 },
   header: { marginBottom: 32 },
-  backButton: { alignSelf: 'flex-start', padding: 8, marginBottom: 16 },
+  backButton: { padding: 8 },
   title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginBottom: 8 },
   subtitle: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 22 },
   cardsContainer: { gap: 16, marginBottom: 32 },
@@ -407,21 +424,18 @@ const createStyles = (colors) => StyleSheet.create({
   continueButtonText: { color: colors.white, fontSize: typography.sizes.md, fontWeight: typography.weights.bold },
   continueButtonTextDisabled: { color: colors.gray400 },
   switchFlowButton: {
-    marginTop: 12,
-    alignSelf: 'center',
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
   },
   switchFlowButtonText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.md,
     color: colors.primary,
     fontWeight: typography.weights.bold,
   },
@@ -431,19 +445,19 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  headerSwitchButton: {
+  skipPillButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
+    gap: 4,
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '10',
+    borderRadius: 16,
+    backgroundColor: colors.primary + '15',
   },
-  headerSwitchButtonText: {
+  skipPillButtonText: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    fontWeight: typography.weights.bold,
+    fontWeight: typography.weights.medium,
   },
   modalContainer: { flex: 1, backgroundColor: colors.background },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border },

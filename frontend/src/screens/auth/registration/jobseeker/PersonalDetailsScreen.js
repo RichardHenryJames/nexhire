@@ -14,6 +14,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
@@ -32,7 +33,7 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function PersonalDetailsScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
@@ -616,6 +617,12 @@ styles.selectionButton,
   );
 
   return (
+    <LinearGradient
+      colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.background, colors.surface, colors.background]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -627,7 +634,7 @@ styles.selectionButton,
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             
             {/* Show Google user info if applicable */}
@@ -753,7 +760,7 @@ styles.selectionButton,
             userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
-                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Ionicons name="information-circle" size={16} color={colors.info} />
                   <Text style={styles.companyFieldsNoticeText}>
                     Please provide your role details at {formData.currentCompany}
                   </Text>
@@ -1036,6 +1043,7 @@ styles.selectionButton,
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -1112,13 +1120,14 @@ styles.selectionButton,
         </View>
       </Modal>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollContainer: {
     flex: 1,
@@ -1128,12 +1137,14 @@ const createStyles = (colors) => StyleSheet.create({
     paddingTop: 20,
   },
   header: {
-    marginBottom: 24, // CHANGED: Reduced from 32 to 24
+    marginBottom: 24,
   },
   backButton: {
     alignSelf: 'flex-start',
     padding: 8,
     marginBottom: 16,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
   },
   // 🔧 Google user info styles
   googleUserInfo: {
@@ -1141,7 +1152,7 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     padding: 20,
-    backgroundColor: colors.success + '10',
+    backgroundColor: colors.success + '15',
     borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.success,
@@ -1192,19 +1203,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.gray600,
     marginBottom: 24,
   },
   form: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 16,
-    padding: 20, // CHANGED: Reduced from 24 to 20
-    paddingTop: 24, // CHANGED: Reduced from 32 to 24
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 0,
+    paddingTop: 0,
   },
   row: {
     flexDirection: 'row',
@@ -1242,7 +1248,7 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
   },
   inputPrefilled: {
-    backgroundColor: colors.success + '08', // Very light green background
+    backgroundColor: colors.success + '08',
     borderColor: colors.success,
     borderWidth: 1.5,
   },
@@ -1477,9 +1483,9 @@ const createStyles = (colors) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -1500,11 +1506,11 @@ const createStyles = (colors) => StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -1512,7 +1518,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.gray500,
     fontStyle: 'italic',
   },
 });
