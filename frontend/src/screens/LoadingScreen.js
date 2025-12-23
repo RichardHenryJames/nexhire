@@ -312,8 +312,8 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 220,
-    height: 80,
+    width: 528,
+    height: 176,
     tintColor: colors.white,
   },
   tagline: {

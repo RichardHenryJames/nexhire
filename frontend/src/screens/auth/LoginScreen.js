@@ -504,8 +504,8 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
     marginBottom: spacing.xl,
   },
   logoImage: {
-    width: 190,
-    height: 66,
+    width: 480,
+    height: 160,
     marginBottom: spacing.md,
     tintColor: colors.white,
   },

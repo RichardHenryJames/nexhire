@@ -335,14 +335,8 @@ export default function AboutScreen() {
     
     // Delayed scroll to ensure ScrollView is mounted
     const timer = setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 0, animated: false });
-      }
-      // Double-check web scroll
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.scrollTo(0, 0);
-      }
-    }, 50);
+      scrollToTop(false);
+    }, 120);
     
     return () => clearTimeout(timer);
   }, []);
@@ -356,20 +350,41 @@ export default function AboutScreen() {
         document.body.scrollTop = 0;
       }
 
-      if (scrollViewRef.current) {
-        // Use small timeout to ensure ScrollView is ready
-        setTimeout(() => {
-          try {
-            scrollViewRef.current.scrollTo({ y: 0, animated: false });
-          } catch (e) {
-            // ignore
-          }
-        }, 20);
-      }
+      // Ensure multiple attempts to reset scroll (fixes timing/platform issues)
+      const doEnsure = () => {
+        scrollToTop(false);
+        setTimeout(() => scrollToTop(false), 20);
+        setTimeout(() => scrollToTop(false), 80);
+        requestAnimationFrame(() => scrollToTop(false));
+      };
+
+      doEnsure();
     });
 
     return unsubscribe;
   }, [navigation]);
+
+  const scrollToTop = (animated = false) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      } catch (e) {}
+    }
+
+    if (scrollViewRef.current) {
+      try {
+        scrollViewRef.current.scrollTo({ y: 0, animated });
+      } catch (e) {
+        // ignore
+      }
+      // ensure after layout
+      requestAnimationFrame(() => {
+        try { scrollViewRef.current && scrollViewRef.current.scrollTo({ y: 0, animated }); } catch (e) {}
+      });
+    }
+  };
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
@@ -423,8 +438,14 @@ export default function AboutScreen() {
       <Animated.ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
+        contentOffset={{ x: 0, y: 0 }}
+        keyboardDismissMode="on-drag"
+        onLayout={() => {
+          scrollToTop(false);
+        }}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
+        onContentSizeChange={() => scrollToTop(false)}
       >
         {/* ============================================ */}
         {/* HERO SECTION */}
@@ -1018,7 +1039,7 @@ export default function AboutScreen() {
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
               <TouchableOpacity onPress={openRefOpen} style={{ marginBottom: 16 }}>
-                <Image source={RefOpenLogo} style={{ width: 180, height: 48 }} resizeMode="contain" />
+                <Image source={RefOpenLogo} style={{ width: 480, height: 160 }} resizeMode="contain" />
               </TouchableOpacity>
               <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
                 The Smarter Way to Get Referred & Hire
