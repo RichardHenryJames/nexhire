@@ -63,7 +63,7 @@ import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
 import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
 import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
 import ContactUsScreen from "../screens/legal/ContactUsScreen";
-import AboutUsScreen from "../screens/legal/AboutUsScreen";
+import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
 
