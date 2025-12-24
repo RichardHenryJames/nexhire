@@ -406,6 +406,31 @@ export default function AboutScreen() {
         colors={[COLORS.bgPrimary, COLORS.bgSecondary, COLORS.bgPrimary]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      
+      {/* Fixed Home Button - Top Right */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Main')}
+        style={{
+          position: 'fixed',
+          top: Platform.OS === 'ios' ? 50 : 20,
+          right: 20,
+          zIndex: 200,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: COLORS.primary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        <Ionicons name="home" size={22} color="#fff" />
+      </TouchableOpacity>
+
       {/* Sticky Header */}
       <Animated.View
         style={{
@@ -1039,7 +1064,7 @@ export default function AboutScreen() {
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
               <TouchableOpacity onPress={openRefOpen} style={{ marginBottom: 16 }}>
-                <Image source={RefOpenLogo} style={{ width: 480, height: 160 }} resizeMode="contain" />
+                <Image source={RefOpenLogo} style={{ width: 240, height: 68 }} resizeMode="contain" />
               </TouchableOpacity>
               <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
                 The Smarter Way to Get Referred & Hire
