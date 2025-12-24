@@ -19,6 +19,8 @@ import refopenAPI from '../../services/api';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import ResumeSection from '../../components/profile/ResumeSection';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
+import DatePicker from '../../components/DatePicker';
+import { showToast } from '../../components/Toast';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -62,6 +64,23 @@ export default function SettingsScreen({ navigation }) {
     gender: user?.Gender || '',
     profilePictureURL: user?.ProfilePictureURL || '',
   });
+
+  // Sync profile state when user data loads or changes
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        userID: user.UserID || '',
+        firstName: user.FirstName || '',
+        lastName: user.LastName || '',
+        email: user.Email || '',
+        phone: user.Phone || '',
+        userType: user.UserType || '',
+        dateOfBirth: user.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : '',
+        gender: user.Gender || '',
+        profilePictureURL: user.ProfilePictureURL || '',
+      });
+    }
+  }, [user]);
 
   // Job seeker profile state
   const [jobSeekerProfile, setJobSeekerProfile] = useState({
@@ -118,16 +137,20 @@ export default function SettingsScreen({ navigation }) {
       if (response.success && response.data) {
         const data = response.data;
         
+        // For JobSeeker, applicant profile doesn't have user fields (Gender, Phone, DOB)
+        // So preserve them from the user object
         setProfile({
           userID: data.UserID || user?.UserID || '',
-          firstName: data.FirstName || '',
-          lastName: data.LastName || '',
-          email: data.Email || '',
-          phone: data.Phone || '',
-          userType: data.UserType || '',
-          dateOfBirth: data.DateOfBirth ? new Date(data.DateOfBirth).toISOString().split('T')[0] : '',
-          gender: data.Gender || '',
-          profilePictureURL: data.ProfilePictureURL || '',
+          firstName: data.FirstName || user?.FirstName || '',
+          lastName: data.LastName || user?.LastName || '',
+          email: data.Email || user?.Email || '',
+          phone: data.Phone || user?.Phone || '',
+          userType: data.UserType || user?.UserType || '',
+          dateOfBirth: data.DateOfBirth 
+            ? new Date(data.DateOfBirth).toISOString().split('T')[0] 
+            : (user?.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : ''),
+          gender: data.Gender || user?.Gender || '',
+          profilePictureURL: data.ProfilePictureURL || user?.ProfilePictureURL || '',
         });
 
         if (userType === 'JobSeeker') {
@@ -216,18 +239,37 @@ export default function SettingsScreen({ navigation }) {
 
   // Save functions
   const savePersonalDetails = async () => {
+    setLoading(true);
     try {
-      await updateProfileSmart({
-        FirstName: profile.firstName,
-        LastName: profile.lastName,
-        Phone: profile.phone,
-        DateOfBirth: profile.dateOfBirth || null,
-        Gender: profile.gender || null,
+      console.log('Saving personal details:', {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        dateOfBirth: profile.dateOfBirth || null,
+        gender: profile.gender || null,
       });
-      Alert.alert('Success', 'Personal details updated');
-      setActiveModal(null);
+      
+      const result = await updateProfileSmart({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        dateOfBirth: profile.dateOfBirth || null,
+        gender: profile.gender || null,
+      });
+      
+      console.log('Save result:', result);
+      
+      if (result?.success) {
+        showToast('Personal details updated', 'success');
+        setActiveModal(null);
+      } else {
+        showToast(result?.error || 'Failed to update personal details', 'error');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update personal details');
+      console.error('Save error:', error);
+      showToast(error.message || 'Failed to update personal details', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -242,10 +284,10 @@ export default function SettingsScreen({ navigation }) {
         isOpenToWork: jobSeekerProfile.isOpenToWork,
         openToRefer: jobSeekerProfile.openToRefer,
       });
-      Alert.alert('Success', 'Professional details updated');
+      showToast('Professional details updated', 'success');
       setActiveModal(null);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update professional details');
+      showToast('Failed to update professional details', 'error');
     }
   };
 
@@ -257,10 +299,10 @@ export default function SettingsScreen({ navigation }) {
         Institution: jobSeekerProfile.institution,
         GraduationYear: jobSeekerProfile.graduationYear,
       });
-      Alert.alert('Success', 'Education updated successfully');
+      showToast('Education updated successfully', 'success');
       setActiveModal(null);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update education');
+      showToast('Failed to update education', 'error');
     }
   };
 
@@ -279,10 +321,10 @@ export default function SettingsScreen({ navigation }) {
         hideCurrentCompany: jobSeekerProfile.hideCurrentCompany,
         hideSalaryDetails: jobSeekerProfile.hideSalaryDetails,
       });
-      Alert.alert('Success', 'Preferences updated successfully');
+      showToast('Preferences updated successfully', 'success');
       setActiveModal(null);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update preferences');
+      showToast('Failed to update preferences', 'error');
     }
   };
 
@@ -291,7 +333,7 @@ export default function SettingsScreen({ navigation }) {
     try {
       await logout();
     } catch (error) {
-      Alert.alert('Error', 'Failed to logout');
+      showToast('Failed to logout', 'error');
     }
   };
 
@@ -342,8 +384,16 @@ export default function SettingsScreen({ navigation }) {
             <Ionicons name="close" size={28} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Personal Details</Text>
-          <TouchableOpacity onPress={savePersonalDetails} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
+          <TouchableOpacity 
+            onPress={savePersonalDetails} 
+            style={[styles.saveButton, loading && { opacity: 0.5 }]}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -395,12 +445,11 @@ export default function SettingsScreen({ navigation }) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Date of Birth</Text>
-            <TextInput
-              style={styles.textInput}
+            <DatePicker
               value={profile.dateOfBirth}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, dateOfBirth: text }))}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.gray400}
+              onChange={(date) => setProfile(prev => ({ ...prev, dateOfBirth: date }))}
+              placeholder="Select date of birth"
+              colors={colors}
             />
           </View>
 

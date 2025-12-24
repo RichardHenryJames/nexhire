@@ -43,7 +43,14 @@ function ThemedAppRoot() {
         <PricingProvider>
           <AuthProvider>
             <JobProvider>
-              <NavigationContainer ref={navigationRef} linking={linking}>
+              <NavigationContainer
+                ref={navigationRef}
+                linking={linking}
+                documentTitle={{
+                  formatter: (options, route) =>
+                    options?.title ?? route?.name ?? 'RefOpen',
+                }}
+              >
                 <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
                 <AppNavigator />
                 {/* Global toast overlay */}

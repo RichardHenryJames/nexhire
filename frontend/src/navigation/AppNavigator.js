@@ -549,6 +549,7 @@ function MainStack() {
         name="Settings"
         component={SettingsScreen}
         options={{
+          title: 'Settings',
           headerShown: false, // Custom header in component
         }}
       />
