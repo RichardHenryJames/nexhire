@@ -18,6 +18,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import ResumeSection from '../../components/profile/ResumeSection';
+import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -233,16 +234,13 @@ export default function SettingsScreen({ navigation }) {
   const saveProfessionalDetails = async () => {
     try {
       await updateProfileSmart({
-        Headline: jobSeekerProfile.headline,
-        Summary: jobSeekerProfile.summary,
-        CurrentJobTitle: jobSeekerProfile.currentJobTitle,
-        CurrentCompanyName: jobSeekerProfile.currentCompanyName,
-        CurrentLocation: jobSeekerProfile.currentLocation,
-        LinkedInProfile: jobSeekerProfile.linkedInProfile,
-        GithubProfile: jobSeekerProfile.githubProfile,
-        PortfolioURL: jobSeekerProfile.portfolioURL,
-        IsOpenToWork: jobSeekerProfile.isOpenToWork,
-        OpenToRefer: jobSeekerProfile.openToRefer,
+        headline: jobSeekerProfile.headline,
+        summary: jobSeekerProfile.summary,
+        currentLocation: jobSeekerProfile.currentLocation,
+        linkedInProfile: jobSeekerProfile.linkedInProfile,
+        githubProfile: jobSeekerProfile.githubProfile,
+        isOpenToWork: jobSeekerProfile.isOpenToWork,
+        openToRefer: jobSeekerProfile.openToRefer,
       });
       Alert.alert('Success', 'Professional details updated');
       setActiveModal(null);
@@ -468,26 +466,12 @@ export default function SettingsScreen({ navigation }) {
             />
           </View>
 
+          {/* Work Experience Section */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Current Job Title</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.currentJobTitle}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, currentJobTitle: text }))}
-              placeholder="E.g., Software Engineer"
-              placeholderTextColor={colors.gray400}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Current Company</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.currentCompanyName}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, currentCompanyName: text }))}
-              placeholder="E.g., Google"
-              placeholderTextColor={colors.gray400}
-            />
+            <View style={styles.workExpHeader}>
+              <Text style={styles.inputLabel}>Work Experience</Text>
+            </View>
+            <WorkExperienceSection editing={true} showHeader={false} />
           </View>
 
           <View style={styles.inputGroup}>
@@ -1190,6 +1174,12 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '500',
     color: colors.text,
     marginBottom: 8,
+  },
+  workExpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   textInput: {
     backgroundColor: colors.surface,

@@ -585,84 +585,76 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             </View>
             {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
 
-            {/* Company picker with inline manual entry */}
-            <View style={{ position: 'relative', zIndex: 1 }}>
-              <Text style={styles.label}>Company</Text>
-              <TouchableOpacity
-                style={styles.orgPicker}
-                onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}
+            {/* Company picker - shows dropdown on focus, filter as you type */}
+            <Text style={styles.label}>Company</Text>
+            <View style={{ position: 'relative', zIndex: 999 }}>
+              <TouchableOpacity 
+                style={styles.input}
+                onPress={() => setShowOrgPicker(true)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.orgPickerText}>
-                  {form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}
-                </Text>
-                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray600} />
+                <TextInput
+                  style={styles.companyInput}
+                  value={orgQuery || form.companyName}
+                  onChangeText={(t) => { 
+                    setOrgQuery(t);
+                    setForm({ ...form, companyName: t, organizationId: null }); 
+                  }}
+                  onFocus={() => {
+                    if (form.companyName) {
+                      setOrgQuery('');
+                    }
+                    setShowOrgPicker(true);
+                  }}
+                  placeholder="e.g., Google, Microsoft"
+                  placeholderTextColor={colors.gray400}
+                  autoCapitalize="words"
+                />
+                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray500} />
               </TouchableOpacity>
-            </View>
-
-            {showOrgPicker ? (
-              <View style={styles.orgPickerModal}>
-                <View style={styles.orgSearchRow}>
-                  <Ionicons name="search" size={16} color={colors.gray600} />
-                  <TextInput
-                    style={styles.orgSearchInput}
-                    value={orgQuery}
-                    onChangeText={setOrgQuery}
-                    placeholder={manualOrgMode ? 'Enter company name' : 'Search organizations...'}
-                    placeholderTextColor={colors.gray400}
-                    autoCapitalize="words"
-                  />
-                  {manualOrgMode ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        const name = (orgQuery || '').trim();
-                        if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
-                        setForm((prev) => ({ ...prev, organizationId: null, companyName: name }));
-                        setShowOrgPicker(false);
-                      }}
-                    >
-                      <Ionicons name="checkmark" size={18} color={colors.primary} />
-                    </TouchableOpacity>
-                  ) : (
-                    orgLoading ? (
+              {showOrgPicker && (
+                <View style={styles.jobTitleDropdown}>
+                  {orgLoading ? (
+                    <View style={styles.dropdownLoading}>
                       <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
-                        <Ionicons name="refresh" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    )
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {orgResults.slice(0, 15).map((org) => (
+                        <TouchableOpacity
+                          key={org.id}
+                          style={styles.orgDropdownItem}
+                          onPress={() => {
+                            setForm({ ...form, organizationId: org.id, companyName: org.name });
+                            setOrgQuery('');
+                            setShowOrgPicker(false);
+                          }}
+                        >
+                          {org.logoURL ? (
+                            <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
+                          ) : (
+                            <View style={styles.orgLogoPlaceholderSmall}>
+                              <Ionicons name="business" size={14} color={colors.gray400} />
+                            </View>
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.dropdownItemText}>{org.name}</Text>
+                            {org.industry && org.industry !== 'Other' && (
+                              <Text style={styles.orgMetaSmall}>{org.industry}</Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                      {orgResults.length === 0 && orgQuery.length > 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
+                        </View>
+                      )}
+                    </ScrollView>
                   )}
                 </View>
-
-                <TouchableOpacity style={styles.manualToggleRow} onPress={() => setManualOrgMode(v => !v)}>
-                  <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
-                  <Text style={styles.manualEntryText}> My company is not listed</Text>
-                </TouchableOpacity>
-
-                {!manualOrgMode && (
-                  <FlatList
-                    data={orgResults}
-                    keyExtractor={(o) => String(o.id)}
-                    style={styles.orgList}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
-                        {item.logoURL ? (
-                          <Image source={{ uri: item.logoURL }} style={styles.orgLogo} />
-                        ) : (
-                          <View style={styles.orgLogoPlaceholder}>
-                            <Ionicons name="business" size={16} color={colors.gray400} />
-                          </View>
-                        )}
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.orgName}>{item.name}</Text>
-                          {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
-                        </View>
-                      </TouchableOpacity>
-                    )}
-                  />
-                )}
-              </View>
-            ) : null}
+              )}
+            </View>
 
             {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
@@ -1023,7 +1015,8 @@ const createStyles = (colors) => StyleSheet.create({
   formContainer: { padding: 20, paddingBottom: 40 },
   formScroll: { flex: 1 },
   label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12 },
+  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12, flexDirection: 'row', alignItems: 'center', outlineStyle: 'none' },
+  companyInput: { flex: 1, fontSize: typography.sizes?.md || 16, color: colors.text, padding: 0, outlineStyle: 'none' },
   inputDisabled: { opacity: 0.6 },
   // ? ADDED STYLES FOR SMART VALIDATION
   errorInput: { 
@@ -1165,5 +1158,32 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted || '#999',
     fontStyle: 'italic',
+  },
+  orgDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#f0f0f0',
+    backgroundColor: colors.surface || '#fff',
+    gap: 10,
+  },
+  orgLogoSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
+  orgLogoPlaceholderSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.gray200 || '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  orgMetaSmall: {
+    fontSize: 12,
+    color: colors.gray500 || '#6B7280',
+    marginTop: 2,
   },
 });

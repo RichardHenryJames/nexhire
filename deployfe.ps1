@@ -150,6 +150,53 @@ if (Test-Path "staticwebapp.config.json") {
     Write-Host "Warning: staticwebapp.config.json not found in frontend/. SPA deep links may 404." -ForegroundColor Yellow
 }
 
+# Copy public folder assets (favicon, etc.) to web-build - but NOT index.html
+if (Test-Path "public") {
+    Get-ChildItem "public" -Exclude "index.html" | ForEach-Object {
+        Copy-Item $_.FullName "web-build/" -Force -Recurse
+    }
+    Write-Host "Public folder assets (excluding index.html) copied to web-build/" -ForegroundColor Green
+}
+
+# Update the Expo-generated index.html with SEO meta tags
+$indexPath = "web-build/index.html"
+if (Test-Path $indexPath) {
+    $indexContent = Get-Content $indexPath -Raw
+    
+    # Replace the title
+    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Your Next Career Opportunity Awaits</title>'
+    
+    # Add SEO meta tags after <meta charset>
+    $seoTags = @"
+    <meta name="description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals. Find your next career opportunity today." />
+    <meta name="keywords" content="jobs, careers, referrals, job search, employment, hiring, professional network" />
+    <meta name="author" content="RefOpen" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://refopen.com/" />
+    <meta property="og:title" content="RefOpen - Your Next Career Opportunity Awaits" />
+    <meta property="og:description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals." />
+    <meta property="og:image" content="https://refopen.com/favicon.png" />
+    <meta property="og:site_name" content="RefOpen" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="RefOpen - Your Next Career Opportunity Awaits" />
+    <meta property="twitter:description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals." />
+    <meta property="twitter:image" content="https://refopen.com/favicon.png" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="theme-color" content="#0F172A" />
+    <link rel="canonical" href="https://refopen.com/" />
+"@
+    
+    # Only add SEO tags if not already present
+    if ($indexContent -notmatch 'og:title') {
+        $indexContent = $indexContent -replace '(<meta charset="utf-8"\s*/?>)', "`$1`n$seoTags"
+    }
+    
+    Set-Content $indexPath $indexContent -NoNewline
+    Write-Host "SEO meta tags added to index.html" -ForegroundColor Green
+}
+
 $buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host "Build completed successfully" -ForegroundColor Green
 Write-Host "   Build size: $([math]::Round($buildSize, 2)) MB" -ForegroundColor Gray
