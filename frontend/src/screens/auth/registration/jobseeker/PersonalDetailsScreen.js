@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -33,7 +34,7 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function PersonalDetailsScreen({ navigation, route }) {
-  const { colors, isDark } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
@@ -47,7 +48,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     jobPreferences = null, 
     fromGoogleAuth = false, 
     skipEmailPassword = false,
-    skippedSteps = false, // 🔧 NEW: Check if user skipped from UserTypeSelection
+    skippedSteps = false, // Check if user skipped steps
   } = routeParams;
 
   // 🔧 Check if this is a Google user
@@ -618,7 +619,7 @@ styles.selectionButton,
 
   return (
     <LinearGradient
-      colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.background, colors.surface, colors.background]}
+      colors={['#0F172A', '#1E293B', '#0F172A']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
@@ -742,6 +743,7 @@ styles.selectionButton,
               placeholder="Select your date of birth"
               maximumDate={new Date()} // Can't be born in the future
               error={errors.dateOfBirth}
+              colors={colors}
             />
             
             {renderInput('location', 'Current Location', false, 'default')}
@@ -850,6 +852,7 @@ styles.selectionButton,
                     maximumDate={new Date()} // Can't start in the future
                     required={true}
                     error={errors.startDate}
+                    colors={colors}
                   />
                 </View>
               </>

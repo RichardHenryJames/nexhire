@@ -14,12 +14,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
 
 export default function EmployerAccountScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { 
     employerType = 'startup', 
@@ -434,6 +435,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
             maximumDate={new Date()}
             noMargin={true}
             buttonStyle={{ padding: 12 }} // ✅ Match input padding to make same height
+            colors={colors}
           />
         </View>
 

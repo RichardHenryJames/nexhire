@@ -44,8 +44,10 @@ export default function DatePicker({
   placeholderIconColor,
   pickerTextColor,
   containerStyle,
+  colors: colorsProp, // Allow passing custom colors to override theme
 }) {
-  const { colors } = useTheme();
+  const { colors: themeColors } = useTheme();
+  const colors = colorsProp || themeColors; // Use custom colors if provided
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [show, setShow] = useState(false);
   const webInputRef = useRef(null);

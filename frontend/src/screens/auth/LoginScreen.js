@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { spacing, typography, borderRadius, styles as themeStyles } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
+import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
 
 const { width, height } = Dimensions.get('window');
@@ -85,7 +86,7 @@ export default function LoginScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
-  const { colors, isDark } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles), [colors]);
 
   // FIXED: Clear error state when screen mounts or comes into focus
@@ -210,7 +211,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={screenStyles.mainContainer}>
       <LinearGradient
-        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.primaryLight, colors.primary, colors.primaryLight]}
+        colors={['#0F172A', '#1E293B', '#0F172A']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         pointerEvents="none"
@@ -423,6 +424,7 @@ export default function LoginScreen({ navigation }) {
 const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
   mainContainer: {
     flex: 1,
+    backgroundColor: '#0F172A', // Dark fallback for web
   },
   webBackground: {
     position: 'fixed',

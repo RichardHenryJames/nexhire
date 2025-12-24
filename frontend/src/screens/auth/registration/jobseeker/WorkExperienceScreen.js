@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -39,7 +40,7 @@ const EXPERIENCE_LEVELS = [
 ];
 
 export default function WorkExperienceScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   // Load job types and workplace types from database
   const [jobTypes, setJobTypes] = useState([]);
@@ -506,6 +507,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
               placeholder="Select start date"
               required
               maximumDate={new Date()} // Can't start in the future
+              colors={colors}
             />
             
             {/* FIXED: Only show End Date field when on "Previously Worked" tab */}
@@ -518,6 +520,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 required
                 minimumDate={formData.startDate ? new Date(formData.startDate) : undefined} // End date must be after start date
                 maximumDate={new Date()} // Can't end in the future
+                colors={colors}
               />
             )}
 

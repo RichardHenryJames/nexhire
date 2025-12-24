@@ -9,9 +9,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
-import UserTypeSelectionScreen from "../screens/auth/registration/UserTypeSelectionScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
-import RegisterScreen from "../screens/auth/RegisterScreen";
 
 // Job Seeker Registration Flow
 import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
@@ -89,8 +87,6 @@ const linking = {
         path: "auth",
         screens: {
           Login: "login",
-          Register: "register",
-          UserTypeSelection: "register/select-type",
 
           // Direct skip screens for web navigation
           PersonalDetailsScreenDirect: "register/complete-profile",
@@ -239,20 +235,6 @@ function AuthStack() {
       initialRouteName={getInitialRoute()}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen
-        name="UserTypeSelection"
-        component={UserTypeSelectionScreen}
-        // Pass Google user data automatically when coming from Google auth
-        initialParams={
-          hasPendingGoogleAuth
-            ? {
-                googleUser: pendingGoogleAuth?.user,
-                fromGoogleAuth: true,
-              }
-            : undefined
-        }
-      />
       <Stack.Screen
         name="JobSeekerFlow"
         component={JobSeekerFlow}

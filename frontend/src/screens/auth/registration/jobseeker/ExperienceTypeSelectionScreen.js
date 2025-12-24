@@ -15,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
-  const { colors, isDark } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedType, setSelectedType] = useState(null);
   const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
@@ -99,7 +100,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
+  // Handle Skip to final screen
   const handleSkipToFinal = () => {
     if (!selectedType) {
       Alert.alert('Selection Required', 'Please select your experience level first');
@@ -107,7 +108,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
 
     
-    // Navigate directly to PersonalDetailsScreenDirect (same route used in UserTypeSelectionScreen)
+    // Navigate directly to PersonalDetailsScreenDirect
     navigation.navigate('PersonalDetailsScreenDirect', {
       userType,
       experienceType: selectedType,
@@ -150,9 +151,9 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Dark gradient background */}
+      {/* Dark gradient background - Always dark */}
       <LinearGradient
-        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.background, colors.surface, colors.background]}
+        colors={['#0F172A', '#1E293B', '#0F172A']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}

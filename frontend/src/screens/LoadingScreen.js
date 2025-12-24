@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { typography } from '../styles/theme';
-import { useTheme } from '../contexts/ThemeContext';
+import { authDarkColors } from '../styles/authDarkColors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -129,7 +129,7 @@ export default function LoadingScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  const { colors, isDark } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
@@ -207,9 +207,9 @@ export default function LoadingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Modern Gradient Background - Purple/Indigo to match brand */}
+      {/* Modern Gradient Background - Always dark for auth screens */}
       <LinearGradient
-        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.primaryLight, colors.primary, colors.primaryLight]}
+        colors={['#0F172A', '#1E293B', '#0F172A']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
@@ -294,6 +294,7 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
+    backgroundColor: '#0F172A', // Dark fallback for web
   },
   gradientBackground: {
     position: 'absolute',

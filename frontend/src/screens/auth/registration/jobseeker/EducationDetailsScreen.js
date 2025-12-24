@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import refopenAPI from '../../../../services/api';
 
 // Add debounce hook for smooth search
@@ -41,7 +42,7 @@ const useDebounce = (value, delay) => {
 //  - FieldOfStudy (Category = degreeKey)
 
 export default function EducationDetailsScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [formData, setFormData] = useState({
     college: null,

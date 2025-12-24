@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import refopenAPI from '../../../../services/api';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
@@ -31,7 +32,7 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
-  const { colors, isDark } = useTheme();
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
@@ -226,7 +227,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <LinearGradient
-        colors={isDark ? [colors.background, colors.surface, colors.background] : [colors.background, colors.surface, colors.background]}
+        colors={['#0F172A', '#1E293B', '#0F172A']}
         style={StyleSheet.absoluteFill}
       />
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
