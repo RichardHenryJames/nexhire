@@ -736,7 +736,7 @@ export default function AppNavigator() {
         component={AboutUsScreen}
         options={{
           headerShown: false,
-          title: "About Us",
+          title: "About RefOpen - Job Referral Platform",
           headerBackTitleVisible: false,
         }}
       />

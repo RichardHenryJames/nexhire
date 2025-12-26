@@ -467,7 +467,7 @@ export class ReferralService {
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
-                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.OrganizationID, rr.JobURL,
                     -- For INTERNAL referrals (JobID not null)
@@ -485,7 +485,9 @@ export class ReferralService {
                     u.Email as ApplicantEmail,
                     u.UserID as ApplicantUserID,
                     u.ProfilePictureURL as ApplicantProfilePictureURL,
-                    ar.ResumeLabel,
+                    rr.ResumeID as ResumeID,
+                    ar.ResumeLabel as ResumeLabel,
+                    ar.ResumeURL as ResumeURL,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription

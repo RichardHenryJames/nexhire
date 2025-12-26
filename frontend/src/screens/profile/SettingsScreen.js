@@ -1142,7 +1142,7 @@ const createStyles = (colors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: colors.primaryLight || `${colors.primary}15`,
+    backgroundColor: `${colors.primary}20`,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

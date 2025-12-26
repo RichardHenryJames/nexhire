@@ -9,7 +9,8 @@
       "/manifest.json",
       "/robots.txt",
       "/*.js",
-      "/*.css"
+      "/*.css",
+      "/google*.html"
     ]
   },
   "globalHeaders": {
@@ -18,11 +19,6 @@
     "expires": "0"
   },
   "routes": [
-    {
-      "route": "/favicon.ico",
-      "redirect": "/favicon.svg",
-      "statusCode": 302
-    },
     {
       "route": "/index.html",
       "headers": {

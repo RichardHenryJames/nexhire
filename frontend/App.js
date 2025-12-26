@@ -47,8 +47,12 @@ function ThemedAppRoot() {
                 ref={navigationRef}
                 linking={linking}
                 documentTitle={{
-                  formatter: (options, route) =>
-                    options?.title ?? route?.name ?? 'RefOpen',
+                  formatter: (options, route) => {
+                    const title = options?.title ?? route?.name;
+                    if (!title || title === 'RefOpen') return 'RefOpen - Job Referral Platform';
+                    if (title.includes('RefOpen')) return title;
+                    return `${title} | RefOpen`;
+                  },
                 }}
               >
                 <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />

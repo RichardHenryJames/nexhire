@@ -164,28 +164,62 @@ if (Test-Path $indexPath) {
     $indexContent = Get-Content $indexPath -Raw
     
     # Replace the title
-    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Your Next Career Opportunity Awaits</title>'
+    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Job Referral Platform | Find Jobs Through Trusted Referrals</title>'
     
     # Add SEO meta tags after <meta charset>
     $seoTags = @"
-    <meta name="description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals. Find your next career opportunity today." />
-    <meta name="keywords" content="jobs, careers, referrals, job search, employment, hiring, professional network" />
+    <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
+    <meta name="description" content="RefOpen is India's leading job referral platform. Get referred to top companies by employees, discover job opportunities, and accelerate your career with trusted referrals." />
+    <meta name="keywords" content="job referrals, employee referrals, job search, career opportunities, hiring, professional network, job portal, referral jobs India, get referred" />
     <meta name="author" content="RefOpen" />
     <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://refopen.com/" />
-    <meta property="og:title" content="RefOpen - Your Next Career Opportunity Awaits" />
-    <meta property="og:description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals." />
-    <meta property="og:image" content="https://refopen.com/favicon.png" />
+    <meta property="og:title" content="RefOpen - Job Referral Platform | Find Jobs Through Trusted Referrals" />
+    <meta property="og:description" content="RefOpen is India's leading job referral platform. Get referred to top companies by employees and accelerate your career." />
+    <meta property="og:image" content="https://refopen.com/refopen-logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="RefOpen" />
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="RefOpen - Your Next Career Opportunity Awaits" />
-    <meta property="twitter:description" content="RefOpen is a professional job referral platform connecting job seekers with opportunities through trusted referrals." />
-    <meta property="twitter:image" content="https://refopen.com/favicon.png" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
-    <meta name="theme-color" content="#0F172A" />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RefOpen - Job Referral Platform" />
+    <meta name="twitter:description" content="Get referred to top companies by employees. Find jobs through trusted referrals." />
+    <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/refopen-logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/refopen-logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/refopen-logo.png" />
+    <meta name="theme-color" content="#6366F1" />
     <link rel="canonical" href="https://refopen.com/" />
+    <meta name="application-name" content="RefOpen" />
+    <meta name="apple-mobile-web-app-title" content="RefOpen" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "RefOpen",
+      "url": "https://refopen.com",
+      "logo": "https://refopen.com/refopen-logo.png",
+      "sameAs": [],
+      "description": "India's leading job referral platform. Get referred to top companies by employees."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "RefOpen",
+      "url": "https://refopen.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://refopen.com/jobs?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
 "@
     
     # Only add SEO tags if not already present

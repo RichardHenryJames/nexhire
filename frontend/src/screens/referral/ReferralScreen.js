@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -58,8 +60,18 @@ export default function ReferralScreen({ navigation }) {
   const loadRequestsToMe = async () => {
     try {
       const result = await refopenAPI.getAvailableReferralRequests(1, 50);
+      console.log('=== REFERRAL REQUESTS TO ME ===');
+      console.log('Full result:', JSON.stringify(result, null, 2));
       if (result.success) {
-        setRequestsToMe(result.data?.requests || []);
+        const requests = result.data?.requests || [];
+        console.log('Requests count:', requests.length);
+        if (requests.length > 0) {
+          console.log('First request keys:', Object.keys(requests[0]));
+          console.log('First request ResumeURL:', requests[0].ResumeURL);
+          console.log('First request ResumeLabel:', requests[0].ResumeLabel);
+          console.log('First request ResumeID:', requests[0].ResumeID);
+        }
+        setRequestsToMe(requests);
       }
     } catch (error) {
       console.error('Error loading requests to me:', error);
@@ -249,7 +261,7 @@ export default function ReferralScreen({ navigation }) {
               )}
               {isInternalJob && (
                 <View style={styles.internalBadge}>
-                  <Ionicons name="arrow-forward-circle-outline" size={10} color="#3B82F6" />
+                  <Ionicons name="checkmark-circle-outline" size={10} color="#10B981" />
                   <Text style={styles.internalBadgeText}>Internal</Text>
                 </View>
               )}
@@ -269,19 +281,7 @@ export default function ReferralScreen({ navigation }) {
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.requesterRow}
-              activeOpacity={applicantUserId ? 0.7 : 1}
-              disabled={!applicantUserId}
-              onPress={() =>
-                applicantUserId
-                  ? navigation.navigate('ViewProfile', {
-                      userId: applicantUserId,
-                      userName: applicantName,
-                    })
-                  : undefined
-              }
-            >
+            <View style={styles.requesterRow}>
               <Text style={styles.requesterPrefix}>Requested by</Text>
               {applicantPhotoUrl ? (
                 <Image
@@ -294,13 +294,49 @@ export default function ReferralScreen({ navigation }) {
                   <Ionicons name="person" size={14} color={colors.gray500} />
                 </View>
               )}
-              <Text
-                style={styles.requesterName}
-                numberOfLines={1}
+              <TouchableOpacity
+                activeOpacity={applicantUserId ? 0.7 : 1}
+                disabled={!applicantUserId}
+                onPress={() =>
+                  applicantUserId
+                    ? navigation.navigate('ViewProfile', {
+                        userId: applicantUserId,
+                        userName: applicantName,
+                      })
+                    : undefined
+                }
               >
-                {applicantName}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={styles.requesterName}
+                  numberOfLines={1}
+                >
+                  {applicantName}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Inline View Resume Button */}
+              <TouchableOpacity
+                style={[styles.viewResumeBtn, { backgroundColor: colors.primary + '15' }]}
+                onPress={() => {
+                  const resumeUrl = request.ResumeURL;
+                  console.log('Resume clicked, ResumeURL:', resumeUrl, 'ResumeID:', request.ResumeID);
+                  if (resumeUrl) {
+                    if (Platform.OS === 'web') {
+                      window.open(resumeUrl, '_blank');
+                    } else {
+                      Linking.openURL(resumeUrl).catch(() => {
+                        Alert.alert('Error', 'Could not open resume');
+                      });
+                    }
+                  } else {
+                    showToast('Resume not available', 'error');
+                  }
+                }}
+              >
+                <Ionicons name="document-text-outline" size={12} color={colors.primary} />
+                <Text style={[styles.viewResumeBtnText, { color: colors.primary }]}>Resume</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.timestampRow}>
               <Ionicons name="time-outline" size={14} color={colors.gray500} />
@@ -594,6 +630,19 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
+  viewResumeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  viewResumeBtnText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    marginLeft: 3,
+  },
   seekerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -874,7 +923,7 @@ const createStyles = (colors) => StyleSheet.create({
   internalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#10B98120',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -882,7 +931,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   internalBadgeText: {
     fontSize: typography.sizes.xxs,
-    color: colors.primary,
+    color: '#10B981',
     fontWeight: typography.weights.semibold,
     letterSpacing: 0.3,
   },
