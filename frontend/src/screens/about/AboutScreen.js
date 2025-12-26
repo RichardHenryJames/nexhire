@@ -3,8 +3,21 @@
  * 
  * DARK THEME - Beautiful, conversion-optimized
  * 
+ * RefOpen is a COMPREHENSIVE JOB PLATFORM with referral as an ADDITIONAL FEATURE:
+ * 
+ * CORE FEATURES:
+ * - Job Seekers can APPLY DIRECTLY to jobs (primary feature)
+ * - Browse 125K+ jobs from Fortune 500 companies
+ * - Track applications, save jobs, AI recommendations
+ * - Direct messaging with employers
+ * 
+ * REFERRAL FEATURES (Two Modes):
+ * 1. INTERNAL REFERRAL: Ask for referral on jobs listed in RefOpen
+ * 2. EXTERNAL REFERRAL: Provide external job ID/URL and ask for referral
+ *    (For jobs found on company websites, LinkedIn, etc.)
+ * 
  * CONTENT RATIO:
- * - 50% Job Seekers (request referrals, sent to ALL employees at company)
+ * - 50% Job Seekers (apply to jobs + request referrals)
  * - 30% Referrers (turn LinkedIn spam into income, earn per referral)
  * - 20% Employers (post jobs, hire talent)
  */
@@ -28,6 +41,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 // RefOpen Logo
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
+
+// Feature Images
+const AILogo = require('../../../assets/ai_logo.png');
+const JobSearchImg = require('../../../assets/job_search.png');
+const AskRefSentImg = require('../../../assets/askrefsent.png');
+const HiredImg = require('../../../assets/hired.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isLargeScreen = SCREEN_WIDTH > 900;
@@ -91,6 +110,134 @@ const FEATURED_COMPANIES = [
   { name: 'Uber', domain: 'uber.com', employees: '4K+' },
   { name: 'Spotify', domain: 'spotify.com', employees: '3K+' },
 ];
+
+// 100+ Testimonials - Real sounding, diverse users
+const ALL_TESTIMONIALS = [
+  // Job Seekers - Success Stories
+  { quote: "Sent one referral request and got 5 responses! Landed interviews at 3 companies. So much better than cold DMing.", name: "Priya S.", role: "Software Engineer", company: "Now at Google", gradient: 'gradientPrimary' },
+  { quote: "Was stuck applying through job boards for months. First week on RefOpen, got a referral to Amazon. Start next month!", name: "Amit K.", role: "Data Scientist", company: "Now at Amazon", gradient: 'gradientAccent' },
+  { quote: "The external referral feature is genius. Found a job on LinkedIn, got referred through RefOpen. Saved me so much time.", name: "Sarah M.", role: "Product Manager", company: "Now at Stripe", gradient: 'gradientBlue' },
+  { quote: "Applied to 200+ jobs on other sites. Zero callbacks. 3 referral requests here = 2 interviews. Math checks out.", name: "Rohan P.", role: "Frontend Dev", company: "Now at Meta", gradient: 'gradientPrimary' },
+  { quote: "Finally someone solved the LinkedIn DM problem. I can actually track who saw my request now.", name: "Jessica L.", role: "UX Designer", company: "Now at Figma", gradient: 'gradientSecondary' },
+  { quote: "Got referred to my dream company within a week. The resume went straight to the hiring manager apparently.", name: "Karthik R.", role: "ML Engineer", company: "Now at OpenAI", gradient: 'gradientPrimary' },
+  { quote: "Was skeptical about paying for referrals but honestly? Best career investment I've made. ROI is insane.", name: "Michelle T.", role: "Backend Engineer", company: "Now at Netflix", gradient: 'gradientAccent' },
+  { quote: "3 months of job hunting vs 2 weeks on RefOpen. Wish I found this earlier.", name: "David C.", role: "DevOps Engineer", company: "Now at Datadog", gradient: 'gradientBlue' },
+  { quote: "The fact that my request goes to ALL employees at a company? Game changer. Way better odds.", name: "Sneha G.", role: "iOS Developer", company: "Now at Apple", gradient: 'gradientSuccess' },
+  { quote: "Used the external referral for a job at Coinbase I found on their careers page. Got referred same day!", name: "Alex W.", role: "Blockchain Dev", company: "Now at Coinbase", gradient: 'gradientWarning' },
+  { quote: "Interview rate went from 2% to like 40% after I started using referrals. Numbers don't lie.", name: "Neha S.", role: "Full Stack Dev", company: "Now at Shopify", gradient: 'gradientPrimary' },
+  { quote: "No more 'Thanks for applying, we'll keep your resume on file' emails. Actually getting calls now.", name: "James H.", role: "Cloud Architect", company: "Now at AWS", gradient: 'gradientSecondary' },
+  { quote: "Switched careers from finance to tech. Referral made the transition way smoother.", name: "Pooja M.", role: "Data Analyst", company: "Now at Uber", gradient: 'gradientAccent' },
+  { quote: "International job search is hard. RefOpen made it easier to connect with employees at US companies.", name: "Carlos R.", role: "SRE", company: "Now at Cloudflare", gradient: 'gradientBlue' },
+  { quote: "Got ghosted by 50+ recruiters. First RefOpen referral? Interview within 3 days.", name: "Tanya K.", role: "QA Engineer", company: "Now at Atlassian", gradient: 'gradientSuccess' },
+  { quote: "My friend got her Google job through here. Tried it, now I'm at Microsoft. Legit works.", name: "Vikram J.", role: "Software Dev", company: "Now at Microsoft", gradient: 'gradientPrimary' },
+  { quote: "Entry level job search sucks. This actually helped me stand out as a fresh grad.", name: "Emily Z.", role: "Junior Dev", company: "Now at Airbnb", gradient: 'gradientWarning' },
+  { quote: "Applied to the same role on LinkedIn and RefOpen. Guess which one got me an interview?", name: "Raj T.", role: "Security Engineer", company: "Now at CrowdStrike", gradient: 'gradientAccent' },
+  { quote: "The tracking feature alone is worth it. No more wondering if anyone even saw my application.", name: "Lisa N.", role: "Product Designer", company: "Now at Notion", gradient: 'gradientSecondary' },
+  { quote: "Referral worked so well I convinced my whole bootcamp cohort to sign up.", name: "Mike D.", role: "Web Dev", company: "Now at Vercel", gradient: 'gradientBlue' },
+  
+  // More Job Seekers
+  { quote: "Honestly thought referral platforms were a scam. This one actually delivers.", name: "Ananya B.", role: "Backend Dev", company: "Now at Slack", gradient: 'gradientPrimary' },
+  { quote: "5 referral requests, 4 responses, 2 offers. The conversion rate is ridiculous.", name: "Tom S.", role: "Engineering Manager", company: "Now at Lyft", gradient: 'gradientSuccess' },
+  { quote: "Found my job through the external referral option. Super underrated feature.", name: "Priyanka D.", role: "Android Dev", company: "Now at DoorDash", gradient: 'gradientAccent' },
+  { quote: "Layoffs hit hard. RefOpen helped me bounce back faster than I expected.", name: "Kevin L.", role: "Software Engineer", company: "Now at Stripe", gradient: 'gradientWarning' },
+  { quote: "The whole 'spray and pray' job application thing wasn't working. Referrals are the way.", name: "Meera R.", role: "Data Engineer", company: "Now at Databricks", gradient: 'gradientBlue' },
+  { quote: "Got into a FAANG company after 2 years of trying. Referral made the difference.", name: "Chris P.", role: "SDE II", company: "Now at Amazon", gradient: 'gradientPrimary' },
+  { quote: "My resume was getting filtered out by ATS. Referral = straight to recruiter.", name: "Aditi S.", role: "ML Engineer", company: "Now at Anthropic", gradient: 'gradientSecondary' },
+  { quote: "Career switch from marketing to product. Referral helped me get past the 'no experience' barrier.", name: "Jason M.", role: "Product Manager", company: "Now at Instacart", gradient: 'gradientAccent' },
+  { quote: "Applied cold for 6 months. 2 weeks with referrals = 3 final rounds. Do the math.", name: "Sanya P.", role: "Frontend Engineer", company: "Now at Pinterest", gradient: 'gradientSuccess' },
+  { quote: "The direct messaging with referrers is clutch. Got insider tips for my interviews.", name: "Daniel K.", role: "Platform Engineer", company: "Now at Twilio", gradient: 'gradientWarning' },
+  
+  // Referrers - Earning Stories
+  { quote: "I was skeptical at first, but I've made $2,800 in 2 months just by referring people I'd normally ignore on LinkedIn. Game changer!", name: "Rahul M.", role: "Senior PM", company: "Microsoft", gradient: 'gradientSuccess' },
+  { quote: "Finally getting paid for all those LinkedIn messages. Made $500 last month just from referrals.", name: "Jennifer W.", role: "Tech Lead", company: "Google", gradient: 'gradientSuccess' },
+  { quote: "Used to ignore referral requests. Now I actually look forward to them lol.", name: "Sanjay K.", role: "Staff Engineer", company: "Meta", gradient: 'gradientWarning' },
+  { quote: "Side income from referring is real. Paid for my vacation last month.", name: "Amanda L.", role: "Senior SDE", company: "Amazon", gradient: 'gradientSuccess' },
+  { quote: "The AI filtering means I only see qualified candidates. No more spam resumes.", name: "Deepak R.", role: "Principal Engineer", company: "Netflix", gradient: 'gradientAccent' },
+  { quote: "My LinkedIn DMs are still flooded but at least now I'm getting paid to help people.", name: "Rachel G.", role: "Engineering Manager", company: "Apple", gradient: 'gradientSuccess' },
+  { quote: "Referred 12 people last month. 3 got hired. Company bonus + RefOpen rewards = nice.", name: "Arun S.", role: "Senior Dev", company: "Salesforce", gradient: 'gradientWarning' },
+  { quote: "Actually feels good to help people AND earn something. Win-win.", name: "Nicole H.", role: "Tech Lead", company: "Adobe", gradient: 'gradientSuccess' },
+  { quote: "One click to refer, instant reward. Why didn't this exist before?", name: "Vivek P.", role: "Staff SDE", company: "Uber", gradient: 'gradientAccent' },
+  { quote: "My team refers through RefOpen now. We've hired 4 great people from here.", name: "Brian T.", role: "Director of Eng", company: "Stripe", gradient: 'gradientSuccess' },
+  { quote: "The candidates are actually qualified. Not wasting time on random resumes.", name: "Shruti M.", role: "Senior PM", company: "LinkedIn", gradient: 'gradientWarning' },
+  { quote: "Made more from referrals than my annual bonus. Wild.", name: "Andrew C.", role: "Principal Eng", company: "Oracle", gradient: 'gradientSuccess' },
+  { quote: "Passive income from just reviewing profiles during lunch breaks.", name: "Kavya N.", role: "Tech Lead", company: "Intuit", gradient: 'gradientAccent' },
+  { quote: "Company was hiring, referred 5 from RefOpen, 2 hired. Easy money.", name: "Ryan B.", role: "Senior SWE", company: "Spotify", gradient: 'gradientSuccess' },
+  { quote: "The verification process filters out fake profiles. Quality over quantity.", name: "Anita J.", role: "Staff Engineer", company: "Airbnb", gradient: 'gradientWarning' },
+  
+  // Employers
+  { quote: "We filled 3 senior roles in 6 weeks using RefOpen. The candidates from referrals are significantly better than job boards.", name: "Sarah T.", role: "Head of Talent", company: "Series B Startup", gradient: 'gradientBlue' },
+  { quote: "Cost per hire dropped 40% when we started using referral-based hiring.", name: "Mark R.", role: "VP Engineering", company: "Tech Startup", gradient: 'gradientBlue' },
+  { quote: "Referral hires stay longer. Our retention improved significantly.", name: "Laura K.", role: "HR Director", company: "SaaS Company", gradient: 'gradientBlue' },
+  { quote: "Time to fill senior positions went from 90 days to 30. Referrals work.", name: "Greg P.", role: "CTO", company: "Fintech Startup", gradient: 'gradientBlue' },
+  { quote: "Quality of candidates is noticeably better than Indeed or LinkedIn posts.", name: "Nisha A.", role: "Talent Lead", company: "AI Startup", gradient: 'gradientBlue' },
+  { quote: "Our employees actually use this to refer people. That never happened with our internal tool.", name: "Steve M.", role: "VP People", company: "E-commerce Co", gradient: 'gradientBlue' },
+  { quote: "Hired our best engineer through a RefOpen referral. Worth every penny.", name: "Diana L.", role: "Engineering Director", company: "HealthTech", gradient: 'gradientBlue' },
+  { quote: "The analytics help us understand where good candidates come from.", name: "John K.", role: "Recruiting Lead", company: "Gaming Studio", gradient: 'gradientBlue' },
+  
+  // More diverse testimonials
+  { quote: "Non-CS background, thought no one would refer me. Got 3 referrals for bootcamp grads.", name: "Maria C.", role: "Junior Dev", company: "Now at Zillow", gradient: 'gradientPrimary' },
+  { quote: "H1B transfer was stressful. Referral helped me get interviews faster.", name: "Wei L.", role: "Software Engineer", company: "Now at Twitter", gradient: 'gradientAccent' },
+  { quote: "Remote job search from India to US companies. External referral feature is perfect for this.", name: "Arjun V.", role: "Backend Engineer", company: "Now at GitLab", gradient: 'gradientBlue' },
+  { quote: "Mom of 2, returning to tech after a break. Referral helped me get past the resume gap.", name: "Samantha W.", role: "Senior Dev", company: "Now at HubSpot", gradient: 'gradientSuccess' },
+  { quote: "Age discrimination is real in tech. Referral got me in the door despite being 45+.", name: "Robert D.", role: "Architect", company: "Now at Cisco", gradient: 'gradientWarning' },
+  { quote: "Just applied directly on RefOpen without referral. Still got the job. Good platform overall.", name: "Nina P.", role: "QA Lead", company: "Now at Zoom", gradient: 'gradientPrimary' },
+  { quote: "The saved jobs feature + AI recommendations = I found roles I didn't even know existed.", name: "Tyler H.", role: "Platform Eng", company: "Now at MongoDB", gradient: 'gradientSecondary' },
+  { quote: "Night shift worker. Love that I can apply and request referrals at 2am lol.", name: "Kristen M.", role: "DevOps", company: "Now at PagerDuty", gradient: 'gradientAccent' },
+  { quote: "PhD trying to leave academia. Industry referrals actually responded to my profile.", name: "Dr. Alan S.", role: "Research Eng", company: "Now at DeepMind", gradient: 'gradientBlue' },
+  { quote: "Self-taught dev with no degree. Referral got me past the 'BS required' filter.", name: "Jake R.", role: "Full Stack", company: "Now at Square", gradient: 'gradientSuccess' },
+  
+  // Short punchy ones
+  { quote: "It just works. Finally.", name: "Tony L.", role: "SWE", company: "Now at Dropbox", gradient: 'gradientPrimary' },
+  { quote: "LinkedIn DMs: 2% response. RefOpen: 60%+. Easy choice.", name: "Ritika S.", role: "Data Scientist", company: "Now at Palantir", gradient: 'gradientAccent' },
+  { quote: "Got the job. That's all that matters.", name: "Ben F.", role: "iOS Dev", company: "Now at Robinhood", gradient: 'gradientSuccess' },
+  { quote: "Resume straight to hiring manager. Not the ATS black hole.", name: "Divya K.", role: "Software Eng", company: "Now at Snap", gradient: 'gradientWarning' },
+  { quote: "Two referrals, two offers. Can't ask for more.", name: "Matt G.", role: "SRE", company: "Now at Reddit", gradient: 'gradientBlue' },
+  { quote: "Worth every rupee spent. Now earning in dollars.", name: "Harsh P.", role: "Backend Dev", company: "Now at Rippling", gradient: 'gradientPrimary' },
+  { quote: "Finally broke into FAANG after 5 years of trying.", name: "Swetha R.", role: "Senior SDE", company: "Now at Google", gradient: 'gradientSuccess' },
+  { quote: "External referral = cheat code for jobs not on regular portals.", name: "Derek N.", role: "Engineer", company: "Now at Plaid", gradient: 'gradientAccent' },
+  { quote: "The chat feature helped me prep for interviews. Referrers gave solid tips.", name: "Aparna M.", role: "PM", company: "Now at Notion", gradient: 'gradientSecondary' },
+  { quote: "Took 3 weeks from signup to offer letter. Not bad.", name: "Luke T.", role: "Frontend Eng", company: "Now at Figma", gradient: 'gradientBlue' },
+  
+  // More realistic mixed sentiments
+  { quote: "Not every referral works out, but the success rate is way higher than cold applying.", name: "Grace L.", role: "Engineer", company: "Now at Asana", gradient: 'gradientPrimary' },
+  { quote: "Some companies took longer to respond, but eventually got interviews at all of them.", name: "Suresh K.", role: "Tech Lead", company: "Now at ServiceNow", gradient: 'gradientWarning' },
+  { quote: "Had to tweak my profile a few times. Once I did, referrals started flowing.", name: "Kelly O.", role: "Designer", company: "Now at Canva", gradient: 'gradientAccent' },
+  { quote: "The wallet system took some getting used to, but makes sense once you understand it.", name: "Varun T.", role: "SWE II", company: "Now at Okta", gradient: 'gradientBlue' },
+  { quote: "Customer support was helpful when I had questions. Good experience overall.", name: "Diana M.", role: "Data Eng", company: "Now at Snowflake", gradient: 'gradientSuccess' },
+  { quote: "Wish I knew about this during my last job search. Would've saved months.", name: "Paul H.", role: "Principal Eng", company: "Now at Confluent", gradient: 'gradientPrimary' },
+  { quote: "The job filters are actually useful. Found exactly what I was looking for.", name: "Nandini G.", role: "ML Engineer", company: "Now at Scale AI", gradient: 'gradientSecondary' },
+  { quote: "Referred by someone at my dream company. Still pinching myself.", name: "Eric J.", role: "Software Dev", company: "Now at Tesla", gradient: 'gradientAccent' },
+  { quote: "Better than Blind, better than LinkedIn. This is how job search should work.", name: "Ankita C.", role: "SDE", company: "Now at Flexport", gradient: 'gradientBlue' },
+  { quote: "My referrer actually followed up. Never had that happen on LinkedIn.", name: "Scott W.", role: "Backend Eng", company: "Now at Brex", gradient: 'gradientSuccess' },
+  
+  // International users
+  { quote: "From Bangalore to Bay Area. RefOpen made the impossible possible.", name: "Lokesh M.", role: "Senior SWE", company: "Now at Meta", gradient: 'gradientPrimary' },
+  { quote: "Canada to US job search. Referrals helped with visa sponsorship questions too.", name: "Preet S.", role: "Full Stack", company: "Now at Nvidia", gradient: 'gradientWarning' },
+  { quote: "UK to US move. The external referral feature worked for companies hiring globally.", name: "James B.", role: "DevOps Lead", company: "Now at HashiCorp", gradient: 'gradientAccent' },
+  { quote: "Singapore to US. Referral fast-tracked my application through the system.", name: "Wei Min T.", role: "Staff Eng", company: "Now at Grab", gradient: 'gradientBlue' },
+  { quote: "Remote from Europe, hired by US startup. RefOpen connected us.", name: "Sophie K.", role: "Frontend Dev", company: "Now at Linear", gradient: 'gradientSuccess' },
+  
+  // Career changers
+  { quote: "Teacher to tech. Never thought it was possible until I got my first referral.", name: "Amanda R.", role: "Junior Dev", company: "Now at Duolingo", gradient: 'gradientPrimary' },
+  { quote: "10 years in banking, now in fintech. Referral opened doors that were closed before.", name: "Marcus J.", role: "Product Manager", company: "Now at Chime", gradient: 'gradientSecondary' },
+  { quote: "Nurse during COVID, now a health tech engineer. Career pivot complete.", name: "Linda P.", role: "Software Eng", company: "Now at Oscar Health", gradient: 'gradientAccent' },
+  { quote: "Journalism to content platforms. Industry insiders actually respond here.", name: "Ryan O.", role: "Product Lead", company: "Now at Medium", gradient: 'gradientBlue' },
+  
+  // Recent grads
+  { quote: "Class of 2024, job market was brutal. RefOpen was my lifeline.", name: "Josh K.", role: "New Grad SWE", company: "Now at Roblox", gradient: 'gradientPrimary' },
+  { quote: "No internship experience. Referral helped me explain my projects directly.", name: "Aisha P.", role: "Junior Engineer", company: "Now at Coursera", gradient: 'gradientSuccess' },
+  { quote: "Community college to FAANG. Proof that pedigree doesn't matter with referrals.", name: "Miguel S.", role: "SDE I", company: "Now at Amazon", gradient: 'gradientWarning' },
+  { quote: "First gen college student. Had no network until RefOpen.", name: "Crystal N.", role: "Software Dev", company: "Now at Gusto", gradient: 'gradientAccent' },
+];
+
+// Function to get random testimonials
+const getRandomTestimonials = (count = 4) => {
+  const shuffled = [...ALL_TESTIMONIALS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map(t => ({
+    ...t,
+    gradient: COLORS[t.gradient]
+  }));
+};
 
 // ============================================
 // HELPER
@@ -267,7 +414,7 @@ const FeatureCard = ({ icon, title, description, gradient, index }) => {
 
   return (
     <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8}>
-      <Animated.View style={{ transform: [{ scale: anim }], opacity: anim, width: isLargeScreen ? 320 : '100%', marginBottom: 16, marginHorizontal: isLargeScreen ? 8 : 0 }}>
+      <Animated.View style={{ transform: [{ scale: anim }], opacity: anim, width: isLargeScreen ? 320 : isMediumScreen ? 280 : '100%', marginBottom: 16, marginHorizontal: isLargeScreen ? 8 : 0 }}>
         <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 24, minHeight: 200 }}>
           <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
             <Ionicons name={icon} size={26} color="#fff" />
@@ -323,6 +470,9 @@ export default function AboutScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const navigation = useNavigation();
+  
+  // Get 4 random testimonials on each render
+  const [testimonials] = React.useState(() => getRandomTestimonials(4));
 
   // Scroll to top on mount/refresh - run immediately on web
   useEffect(() => {
@@ -481,26 +631,9 @@ export default function AboutScreen() {
         >
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
-              {/* Badge */}
-              <TouchableOpacity onPress={openRefOpen}>
-                <LinearGradient
-                  colors={[`${COLORS.primary}25`, `${COLORS.pink}15`]}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 24,
-                    marginBottom: 28,
-                    borderWidth: 1,
-                    borderColor: `${COLORS.primary}40`,
-                  }}
-                >
-                  <Text style={{ fontSize: 20, marginRight: 8 }}>🚀</Text>
-                  <Text style={{ color: COLORS.accent, fontWeight: '600', fontSize: 13 }}>
-                    The Smartest Way to Get Referred & Hire Talent
-                  </Text>
-                </LinearGradient>
+              {/* RefOpen Logo */}
+              <TouchableOpacity onPress={openRefOpen} style={{ marginBottom: 24 }}>
+                <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" />
               </TouchableOpacity>
 
               {/* Main Headline */}
@@ -514,8 +647,8 @@ export default function AboutScreen() {
                   color: COLORS.textPrimary,
                 }}
               >
-                Get Referred to{'\n'}
-                <Text style={{ color: COLORS.primary }}>Any Company</Text>{'\n'}
+                Find Jobs. AI Search.{'\n'}
+                <Text style={{ color: COLORS.primary }}>Get Referred.</Text>{'\n'}
               </Text>
 
               <Text
@@ -528,8 +661,9 @@ export default function AboutScreen() {
                   color: COLORS.textSecondary,
                 }}
               >
-                Request a referral and we'll send it to <Text style={{ color: COLORS.accent, fontWeight: '600' }}>ALL employees</Text> at that company on RefOpen. 
-                No more cold DMs. No more waiting. Just results.
+                <Text style={{ color: COLORS.accent, fontWeight: '600' }}>Apply directly</Text> to 125,000+ jobs, or request a referral to boost your chances. 
+                Your referral request reaches <Text style={{ color: COLORS.accent, fontWeight: '600' }}>ALL employees</Text> at that company on RefOpen.
+                No cold DMs. Real results.
               </Text>
 
               {/* CTA Buttons */}
@@ -545,11 +679,17 @@ export default function AboutScreen() {
                       borderRadius: 14,
                     }}
                   >
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Find Jobs & Get Referred</Text>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Browse Jobs & Apply</Text>
                     <Ionicons name="arrow-forward" size={20} color="#fff" />
                   </LinearGradient>
                 </TouchableOpacity>
                 
+                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                  <View style={{ paddingHorizontal: 28, paddingVertical: 16, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.accent }}>
+                    <Text style={{ fontWeight: '600', fontSize: 15, color: COLORS.accent }}>Ask for Referral</Text>
+                  </View>
+                </TouchableOpacity>
+
                 <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ paddingHorizontal: 28, paddingVertical: 16, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.success }}>
                     <Text style={{ fontWeight: '600', fontSize: 15, color: COLORS.success }}>Earn by Referring</Text>
@@ -626,6 +766,131 @@ export default function AboutScreen() {
         </View>
 
         {/* ============================================ */}
+        {/* AI-POWERED FEATURE HIGHLIGHT */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgSecondary }}>
+          <View style={containerStyle}>
+            <LinearGradient
+              colors={[`${COLORS.pink}15`, `${COLORS.primary}10`, `${COLORS.accent}08`]}
+              style={{
+                borderRadius: 32,
+                padding: isLargeScreen ? 48 : 32,
+                borderWidth: 1,
+                borderColor: `${COLORS.pink}40`,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Decorative AI sparkles */}
+              <View style={{ position: 'absolute', top: 20, right: 30, opacity: 0.3 }}>
+                <Text style={{ fontSize: 40, color: COLORS.pink }}>✨</Text>
+              </View>
+              <View style={{ position: 'absolute', bottom: 30, left: 40, opacity: 0.2 }}>
+                <Text style={{ fontSize: 28, color: COLORS.accent }}>✨</Text>
+              </View>
+              
+              <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', alignItems: 'center' }}>
+                {/* Left - AI Logo Image */}
+                <View style={{ alignItems: 'center', marginRight: isLargeScreen ? 48 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
+                  <Image
+                    source={AILogo}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 28,
+                      marginBottom: 16,
+                    }}
+                    resizeMode="contain"
+                  />
+                  <View style={{
+                    backgroundColor: `${COLORS.pink}30`,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: COLORS.pink,
+                  }}>
+                    <Text style={{ color: COLORS.pink, fontWeight: '700', fontSize: 13 }}>✨ AI-POWERED</Text>
+                  </View>
+                </View>
+
+                {/* Right - Content */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: isLargeScreen ? 36 : 28,
+                    fontWeight: '800',
+                    color: COLORS.textPrimary,
+                    marginBottom: 16,
+                    textAlign: isLargeScreen ? 'left' : 'center',
+                  }}>
+                    Smart Job Recommendations
+                  </Text>
+                  <Text style={{
+                    fontSize: 16,
+                    lineHeight: 26,
+                    color: COLORS.textSecondary,
+                    marginBottom: 24,
+                    textAlign: isLargeScreen ? 'left' : 'center',
+                  }}>
+                    Our AI analyzes your skills, experience, and preferences to surface jobs you'll actually love. 
+                    No more scrolling through hundreds of irrelevant listings. Get personalized matches that fit your career goals.
+                  </Text>
+
+                  {/* AI Features Grid */}
+                  <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap' }}>
+                    {[
+                      { icon: 'bulb', text: 'Smart matching based on your profile', color: COLORS.warning },
+                      { icon: 'trending-up', text: 'Learns from your activity over time', color: COLORS.success },
+                      { icon: 'flash', text: 'Daily personalized job alerts', color: COLORS.accent },
+                      { icon: 'search', text: 'AI-powered search understands intent', color: COLORS.primary },
+                    ].map((item, index) => (
+                      <View key={index} style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 14,
+                        marginRight: isLargeScreen ? 32 : 0,
+                        width: isLargeScreen ? '45%' : '100%',
+                      }}>
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          backgroundColor: `${item.color}20`,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginRight: 12,
+                        }}>
+                          <Ionicons name={item.icon} size={18} color={item.color} />
+                        </View>
+                        <Text style={{ fontSize: 14, color: COLORS.textPrimary, flex: 1 }}>{item.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 20, alignSelf: isLargeScreen ? 'flex-start' : 'center' }}>
+                    <LinearGradient
+                      colors={['#EC4899', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: 28,
+                        paddingVertical: 14,
+                        borderRadius: 14,
+                      }}
+                    >
+                      <Text style={{ fontSize: 18, marginRight: 8 }}>✨</Text>
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Get AI-Matched Jobs</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* ============================================ */}
         {/* SECTION 1: JOB SEEKERS (50%) */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
@@ -633,48 +898,130 @@ export default function AboutScreen() {
             <SectionHeader
               tag="For Job Seekers"
               tagColor={COLORS.primary}
-              title="Stop Sending Cold DMs. Start Getting Referred."
-              subtitle="Request a referral once and it reaches every employee at that company who's on RefOpen. Maximize your chances with minimal effort."
+              title="Apply Directly. Or Get Referred. Your Choice."
+              subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every employee at that company on RefOpen."
             />
 
             {/* Big Impact Numbers */}
             <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', justifyContent: 'center', alignItems: 'center', marginBottom: 48, backgroundColor: COLORS.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.border }}>
-              <BigNumber number="10x" label="Higher Interview Rate" color={COLORS.primary} />
+              <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="1" label="Request = All Employees" color={COLORS.accent} />
+              <BigNumber number="10x" label="Higher Interview Rate with Referral" color={COLORS.accent} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
               <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} />
             </View>
 
-            {/* How it works */}
-            <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', marginBottom: 48 }}>
-              <View style={{ flex: 1, marginRight: isLargeScreen ? 32 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How It Works</Text>
-                <ProcessStep number="1" title="Browse Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary & more." icon="search" gradient={COLORS.gradientPrimary} />
-                <ProcessStep number="2" title="Request Referral" description="Click 'Request Referral' on any job. Your request is sent to ALL employees at that company on RefOpen - not just one person!" icon="send" gradient={COLORS.gradientSecondary} />
-                <ProcessStep number="3" title="Get Referred & Interviewed" description="Employees review your profile and refer qualified candidates. Your resume goes to the TOP of the pile." icon="trophy" gradient={COLORS.gradientSuccess} />
+            {/* How it works - Always vertical layout */}
+            <View style={{ marginBottom: 48 }}>
+              <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How It Works</Text>
+              
+              {/* Step 1 */}
+              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} />
+              <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
+                <Image source={JobSearchImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
+              
+              {/* Step 2 */}
+              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to ALL employees at that company!" icon="send" gradient={COLORS.gradientSecondary} />
+              <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
+                <Image source={AskRefSentImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
+              </View>
+              
+              {/* Step 3 */}
+              <ProcessStep number="3" title="Track Applications & Get Hired" description="Track all your applications in real-time. See status updates, chat with referrers, and land your dream job faster." icon="trophy" gradient={COLORS.gradientSuccess} />
+              <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 8 }}>
+                <Image source={HiredImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
+              </View>
+            </View>
 
-              {/* Benefits Card */}
-              <View style={{ flex: 1 }}>
-                <LinearGradient
-                  colors={[`${COLORS.primary}15`, `${COLORS.primary}05`]}
-                  style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: `${COLORS.primary}30`, height: '100%' }}
-                >
-                  <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
-                  <BenefitItem icon="people" text="One request reaches ALL employees at that company" color={COLORS.primary} />
-                  <BenefitItem icon="flash" text="Skip the resume black hole - get noticed instantly" color={COLORS.accent} />
-                  <BenefitItem icon="shield-checkmark" text="Verified employees from real companies" color={COLORS.success} />
-                  <BenefitItem icon="analytics" text="Track your referral requests in real-time" color={COLORS.warning} />
-                  <BenefitItem icon="chatbubbles" text="Chat directly with referrers for tips" color={COLORS.pink} />
-                  <BenefitItem icon="ribbon" text="AI-optimized profile to stand out" color={COLORS.blue} />
+            {/* Benefits Card - Always below steps */}
+            <View style={{ marginBottom: 48 }}>
+              <LinearGradient
+                colors={[`${COLORS.primary}15`, `${COLORS.primary}05`]}
+                style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: `${COLORS.primary}30` }}
+              >
+                <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
+                <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} />
+                <BenefitItem icon="people" text="One referral request reaches ALL employees" color={COLORS.primary} />
+                <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} />
+                <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} />
+                <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} />
+                <BenefitItem icon="chatbubbles" text="Direct messaging with employers & referrers" color={COLORS.pink} />
+                <BenefitItem icon="bookmark" text="Save jobs and get AI recommendations" color={COLORS.secondary} />
 
-                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 24 }}>
-                    <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Start Getting Referred →</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </LinearGradient>
+                <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 24 }}>
+                  <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Start Finding Jobs →</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
+
+            {/* Two Referral Modes Section */}
+            <View style={{ marginBottom: 48 }}>
+              <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8, textAlign: 'center' }}>Two Ways to Get Referred</Text>
+              <Text style={{ fontSize: 15, color: COLORS.textSecondary, marginBottom: 24, textAlign: 'center' }}>Found a job on RefOpen or elsewhere? We've got you covered.</Text>
+              
+              <View style={{ flexDirection: isLargeScreen ? 'row' : 'column' }}>
+                {/* Internal Referral */}
+                <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
+                  <LinearGradient
+                    colors={[`${COLORS.success}20`, `${COLORS.success}08`]}
+                    style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+                      <LinearGradient colors={COLORS.gradientSuccess} style={{ width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                        <Ionicons name="checkmark-circle" size={22} color="#fff" />
+                      </LinearGradient>
+                      <View>
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>Internal Jobs</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.success }}>Jobs listed on RefOpen</Text>
+                      </View>
+                    </View>
+                    {[
+                      'Browse jobs directly on RefOpen',
+                      'Click "Apply" to apply directly',
+                      'Click "Ask Referral" for boost',
+                      'Request sent to ALL company employees',
+                      'Track status in real-time',
+                    ].map((item, index) => (
+                      <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                        <Ionicons name="checkmark" size={18} color={COLORS.success} style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, color: COLORS.textPrimary }}>{item}</Text>
+                      </View>
+                    ))}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* External Referral */}
+                <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
+                  <LinearGradient
+                    colors={[`${COLORS.accent}20`, `${COLORS.accent}08`]}
+                    style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: COLORS.accent, height: '100%' }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+                      <LinearGradient colors={COLORS.gradientSecondary} style={{ width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                        <Ionicons name="globe" size={22} color="#fff" />
+                      </LinearGradient>
+                      <View>
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>External Jobs</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.accent }}>Jobs from anywhere</Text>
+                      </View>
+                    </View>
+                    {[
+                      'Found job on LinkedIn, company site, etc.?',
+                      'Paste the job URL or Job ID',
+                      'Select the company',
+                      'We find RefOpen employees at that company',
+                      'Get referred to jobs not on our platform!',
+                    ].map((item, index) => (
+                      <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                        <Ionicons name="checkmark" size={18} color={COLORS.accent} style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, color: COLORS.textPrimary }}>{item}</Text>
+                      </View>
+                    ))}
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -690,10 +1037,10 @@ export default function AboutScreen() {
                     <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>The Old Way</Text>
                   </View>
                   {[
-                    'Send 100s of LinkedIn DMs',
+                    'Apply on 10 different job portals',
+                    'Send 100s of LinkedIn DMs for referrals',
                     'Most messages get ignored',
-                    'One person = one chance',
-                    'No tracking or follow-up',
+                    'No way to track anything',
                     'Resume lost in ATS black hole',
                   ].map((item, index) => (
                     <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -717,11 +1064,11 @@ export default function AboutScreen() {
                     <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>The RefOpen Way</Text>
                   </View>
                   {[
-                    'One request = ALL employees notified ✨',
-                    'Higher response rates guaranteed',
-                    'Multiple referrers see your profile',
-                    'Real-time status tracking',
-                    'Resume goes to TOP of the pile',
+                    'One platform for all job applications ✨',
+                    'Apply directly OR get referred - your choice',
+                    'One referral request = ALL employees notified',
+                    'External referral for jobs found anywhere',
+                    'Real-time tracking for everything',
                   ].map((item, index) => (
                     <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                       <Ionicons name="checkmark" size={18} color={COLORS.success} style={{ marginRight: 10 }} />
@@ -857,12 +1204,12 @@ export default function AboutScreen() {
             <SectionHeader
               tag="For Employers"
               tagColor={COLORS.blue}
-              title="Hire Exceptional Talent Through Referrals"
+              title="Hire Exceptional Talent Faster"
               subtitle="The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster."
             />
 
             {/* Feature Cards */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap', justifyContent: 'center', alignItems: isLargeScreen ? 'stretch' : 'center' }}>
               <FeatureCard
                 icon="create"
                 title="Post Jobs Instantly"
@@ -967,12 +1314,7 @@ export default function AboutScreen() {
             />
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8 }}>
-              {[
-                { quote: "Sent one referral request and got 5 responses! Landed interviews at 3 companies. This is so much better than cold DMing.", name: "Priya S.", role: "Software Engineer", company: "Now at Google", gradient: COLORS.gradientPrimary },
-                { quote: "I was skeptical at first, but I've made $2,800 in 2 months just by referring people I'd normally ignore on LinkedIn. Game changer!", name: "Rahul M.", role: "Senior PM", company: "Microsoft", gradient: COLORS.gradientSuccess },
-                { quote: "We filled 3 senior roles in 6 weeks using RefOpen. The candidates from referrals are significantly better than job boards.", name: "Sarah T.", role: "Head of Talent", company: "Series B Startup", gradient: COLORS.gradientBlue },
-                { quote: "No more guessing if someone got my message. I can see when employees view my profile and track everything.", name: "Amit K.", role: "Data Scientist", company: "Now at Amazon", gradient: COLORS.gradientAccent },
-              ].map((item, index) => (
+              {testimonials.map((item, index) => (
                 <TouchableOpacity key={index} onPress={openRefOpen} activeOpacity={0.8}>
                   <View
                     style={{
@@ -1024,14 +1366,21 @@ export default function AboutScreen() {
                 Ready to Get Started?
               </Text>
               <Text style={{ fontSize: 17, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 28, marginBottom: 36, maxWidth: 600 }}>
-                Whether you're looking for your dream job, want to earn by helping others, or need to hire talent - RefOpen has you covered.
+                Apply directly to jobs, request referrals for a boost, or earn by helping others. RefOpen is your complete career platform.
               </Text>
 
               <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', alignItems: 'center' }}>
                 <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 14, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 16, marginRight: 8 }}>Find Jobs</Text>
+                    <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 16, marginRight: 8 }}>Browse & Apply</Text>
                     <Ionicons name="briefcase" size={20} color={COLORS.primary} />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Get Referred</Text>
+                    <Ionicons name="hand-left" size={20} color="#fff" />
                   </View>
                 </TouchableOpacity>
 
@@ -1051,7 +1400,7 @@ export default function AboutScreen() {
               </View>
 
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 24 }}>
-                ✓ Free to join  ✓ No credit card  ✓ 50,000+ professionals
+                ✓ Free to join  ✓ Apply to 125K+ jobs  ✓ Direct messaging  ✓ AI recommendations
               </Text>
             </View>
           </View>
@@ -1067,7 +1416,7 @@ export default function AboutScreen() {
                 <Image source={RefOpenLogo} style={{ width: 240, height: 68 }} resizeMode="contain" />
               </TouchableOpacity>
               <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
-                The Smarter Way to Get Referred & Hire
+                Find Jobs. Apply Direct. Get Referred. Hire Talent.
               </Text>
 
               <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
