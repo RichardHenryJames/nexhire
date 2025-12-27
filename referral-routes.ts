@@ -17,7 +17,9 @@ import {
     getReferrerStats,
     getCurrentSubscription,
     getMyReferrerRequests,
-    verifyReferralCompletion
+    verifyReferralCompletion,
+    logReferralStatus,
+    getReferralStatusHistory
 } from './src/controllers/referral.controller';
 
 // ===== REFERRAL PLANS =====
@@ -156,6 +158,30 @@ app.http('referral-stats', {
     authLevel: 'anonymous',
     route: 'referral/stats',
     handler: withErrorHandling(getReferrerStats)
+});
+
+// ===== STATUS TRACKING =====
+
+/**
+ * Log status change for tracking (Viewed, Claimed)
+ * POST /api/referral/requests/{requestId}/status
+ */
+app.http('referral-log-status', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/status',
+    handler: withErrorHandling(logReferralStatus)
+});
+
+/**
+ * Get status history for tracking screen
+ * GET /api/referral/requests/{requestId}/history
+ */
+app.http('referral-status-history', {
+    methods: ['GET', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'referral/requests/{requestId}/history',
+    handler: withErrorHandling(getReferralStatusHistory)
 });
 
 console.log('Referral System API endpoints registered:');

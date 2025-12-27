@@ -124,6 +124,14 @@ export default function MyReferralRequestsScreen() {
     switch (status) {
       case 'Pending':
         return colors.gray500;
+      case 'NotifiedToReferrers':
+        return '#3B82F6'; // Blue - notified
+      case 'Viewed':
+        return '#3B82F6'; // Blue - someone viewed it
+      case 'Claimed':
+        return '#F59E0B'; // Amber - being worked on
+      case 'ProofUploaded':
+        return '#8B5CF6'; // Purple - proof submitted
       case 'Completed':
         return colors.success;
       case 'Verified':
@@ -139,6 +147,14 @@ export default function MyReferralRequestsScreen() {
     switch (status) {
       case 'Pending':
         return 'time-outline';
+      case 'NotifiedToReferrers':
+        return 'notifications-outline';
+      case 'Viewed':
+        return 'eye-outline';
+      case 'Claimed':
+        return 'hand-left-outline';
+      case 'ProofUploaded':
+        return 'document-attach-outline';
       case 'Completed':
         return 'checkmark-circle';
       case 'Verified':
@@ -147,6 +163,29 @@ export default function MyReferralRequestsScreen() {
         return 'close-circle';
       default:
         return 'help-outline';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'Waiting for referrer';
+      case 'NotifiedToReferrers':
+        return 'Notified to Referrers';
+      case 'Viewed':
+        return 'Viewed by referrer';
+      case 'Claimed':
+        return 'Being referred';
+      case 'ProofUploaded':
+        return 'Proof submitted';
+      case 'Completed':
+        return 'Completed';
+      case 'Verified':
+        return 'Verified';
+      case 'Cancelled':
+        return 'Cancelled';
+      default:
+        return status;
     }
   };
 
@@ -224,12 +263,24 @@ export default function MyReferralRequestsScreen() {
     }
   };
 
+  const handleViewTracking = (request) => {
+    navigation.navigate('ReferralTracking', { 
+      requestId: request.RequestID,
+      request: request
+    });
+  };
+
   const renderMyRequestCard = (request) => {
     const isExternalJob = !!request.ExtJobID;
     const isInternalJob = !!request.JobID && !request.ExtJobID;
 
     return (
-      <View key={request.RequestID} style={styles.requestCard}>
+      <TouchableOpacity 
+        key={request.RequestID} 
+        style={styles.requestCard}
+        onPress={() => handleViewTracking(request)}
+        activeOpacity={0.7}
+      >
         <View style={styles.requestHeader}>
           <View style={styles.logoContainer}>
             {request.OrganizationLogo ? (
@@ -326,14 +377,20 @@ export default function MyReferralRequestsScreen() {
             <>
               <TouchableOpacity
                 style={styles.viewProofBtn}
-                onPress={() => handleViewProof(request)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleViewProof(request);
+                }}
               >
                 <Ionicons name="eye-outline" size={16} color={colors.primary} />
                 <Text style={styles.viewProofText}>View Proof</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.verifyBtn}
-                onPress={() => handleVerifyReferral(request.RequestID)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleVerifyReferral(request.RequestID);
+                }}
               >
                 <Ionicons name="checkmark-done" size={16} color={colors.white} />
                 <Text style={styles.verifyText}>Verify</Text>
@@ -344,7 +401,10 @@ export default function MyReferralRequestsScreen() {
           {request.Status === 'Verified' && request.ProofFileURL && (
             <TouchableOpacity
               style={styles.viewProofBtn}
-              onPress={() => handleViewProof(request)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleViewProof(request);
+              }}
             >
               <Ionicons name="eye-outline" size={16} color={colors.primary} />
               <Text style={styles.viewProofText}>View Proof</Text>
@@ -354,7 +414,10 @@ export default function MyReferralRequestsScreen() {
           {request.Status === 'Pending' && (
             <TouchableOpacity
               style={styles.cancelBtn}
-              onPress={() => handleCancelRequest(request.RequestID)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleCancelRequest(request.RequestID);
+              }}
             >
               <Ionicons
                 name="close-circle-outline"
@@ -365,7 +428,13 @@ export default function MyReferralRequestsScreen() {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+        
+        {/* Tap to view tracking hint */}
+        <View style={styles.trackingHint}>
+          <Ionicons name="chevron-forward" size={16} color={colors.gray500} />
+          <Text style={styles.trackingHintText}>Tap to view tracking</Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -592,7 +661,9 @@ const createStyles = (colors) => StyleSheet.create({
   internalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight || '#E0F2FE',
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -601,7 +672,7 @@ const createStyles = (colors) => StyleSheet.create({
   internalBadgeText: {
     fontSize: 11,
     fontWeight: typography.weights.bold,
-    color: colors.primary,
+    color: '#3B82F6',
   },
   companyName: {
     marginTop: 4,
@@ -783,5 +854,19 @@ const createStyles = (colors) => StyleSheet.create({
   cancelReqBtnText: {
     color: colors.danger,
     fontWeight: typography.weights.semibold,
+  },
+  trackingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 4,
+  },
+  trackingHintText: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
   },
 });

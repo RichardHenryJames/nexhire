@@ -122,18 +122,19 @@ export class ApplicantService {
             }
 
             // ?? GET REFERRAL STATS FOR PROFILE HEADER
+            // Note: AssignedReferrerID stores UserID, ApplicantID is for seeker
             try {
                 const referralStatsQuery = `
                     SELECT 
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
-                        COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param0 THEN rr.RequestID END) as ReferralRequestsMade,
-                        ISNULL(SUM(CASE WHEN rw.ReferrerID = @param0 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
+                        COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param1 THEN rr.RequestID END) as ReferralRequestsMade,
+                        ISNULL(SUM(CASE WHEN rw.ReferrerID = @param1 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
                     FROM ReferralRequests rr
                     LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
-                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param0)
+                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)
                 `;
-                const statsResult = await dbService.executeQuery(referralStatsQuery, [profile.ApplicantID]);
+                const statsResult = await dbService.executeQuery(referralStatsQuery, [userId, profile.ApplicantID]);  // userId for AssignedReferrerID, ApplicantID for seeker
                 
                 if (statsResult.recordset && statsResult.recordset.length > 0) {
                     const stats = statsResult.recordset[0];

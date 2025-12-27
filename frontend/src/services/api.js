@@ -1898,7 +1898,8 @@ if (!resumeId) {
   }
 
   // Get available referral requests (as potential referrer)
-  async getAvailableReferralRequests(page = 1, pageSize = 20) {
+  // Returns ALL requests for the referrer's organization (frontend filters by status)
+  async getAvailableReferralRequests(page = 1, pageSize = 100) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -1919,7 +1920,7 @@ if (!resumeId) {
   }
 
   // NEW: Claim a referral request with proof upload (enhanced flow)
-  async claimReferralRequestWithProof(requestId, proofData) {
+  async submitReferralWithProof(requestId, proofData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     if (!proofData.proofFileURL || !proofData.proofFileType) {
@@ -1933,12 +1934,16 @@ if (!resumeId) {
   }
 
   // Submit proof of referral
-  async submitReferralProof(requestId, fileURL, fileType) {
+  async submitReferralProof(requestId, proofData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     return this.apiCall(`/referral/requests/${requestId}/proof`, {
       method: 'POST',
-      body: JSON.stringify({ fileURL, fileType }),
+      body: JSON.stringify({
+        fileURL: proofData.proofFileURL,
+        fileType: proofData.proofFileType,
+        description: proofData.proofDescription
+      }),
     });
   }
 
@@ -2108,6 +2113,50 @@ if (!resumeId) {
         success: false, 
         error: error.message || 'Failed to convert points to wallet'
       };
+    }
+  }
+
+  // ===== REFERRAL STATUS TRACKING =====
+
+  // ✅ NEW: Log referral status change (Viewed, Claimed)
+  async logReferralStatus(requestId, status, message = null) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    if (!requestId) {
+      return { success: false, error: 'Request ID is required' };
+    }
+
+    const validStatuses = ['Viewed', 'Claimed'];
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` };
+    }
+
+    try {
+      const result = await this.apiCall(`/referral/requests/${requestId}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status, message }),
+      });
+      return result;
+    } catch (error) {
+      console.error('❌ Log referral status failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ✅ NEW: Get referral status history for tracking screen
+  async getReferralStatusHistory(requestId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    if (!requestId) {
+      return { success: false, error: 'Request ID is required' };
+    }
+
+    try {
+      const result = await this.apiCall(`/referral/requests/${requestId}/history`);
+      return result;
+    } catch (error) {
+      console.error('❌ Get status history failed:', error.message);
+      return { success: false, error: error.message };
     }
   }
 

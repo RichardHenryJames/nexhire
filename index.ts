@@ -95,6 +95,8 @@ import {
   getReferrerStats,
   getReferralPointsHistory, // NEW: Add points history import
   convertPointsToWallet, // NEW: Convert points to wallet
+  logReferralStatus, // NEW: Log referral status changes
+  getReferralStatusHistory, // NEW: Get referral status history
 } from "./src/controllers/referral.controller";
 
 // NEW: Payment controllers - Razorpay Integration
@@ -1080,6 +1082,22 @@ app.http("referral-points-convert", {
   authLevel: "anonymous",
   route: "referral/points/convert-to-wallet",
   handler: withErrorHandling(convertPointsToWallet),
+});
+
+// NEW: Log referral request status change
+app.http("referral-status-log", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/requests/{id}/status",
+  handler: withErrorHandling(logReferralStatus),
+});
+
+// NEW: Get referral request status history
+app.http("referral-status-history", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/requests/{id}/history",
+  handler: withErrorHandling(getReferralStatusHistory),
 });
 
 // ========================================================================

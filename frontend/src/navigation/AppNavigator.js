@@ -40,6 +40,7 @@ import SettingsScreen from "../screens/profile/SettingsScreen";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
 import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
+import ReferralTrackingScreen from "../screens/referral/ReferralTrackingScreen";
 import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 // ?? NEW: Messaging screens
@@ -143,6 +144,7 @@ const linking = {
           ReferralPlans: "plans",
           Payment: "payment",
           MyReferralRequests: "referrals/my-requests",
+          ReferralTracking: "referrals/tracking/:requestId",
           Settings: "settings",
           
           // Organization screen with organizationId parameter
@@ -491,6 +493,23 @@ function MainStack() {
             </TouchableOpacity>
           ),
         })}
+      />
+      {/* ?? NEW: Referral Tracking screen */}
+      <Stack.Screen
+        name="ReferralTracking"
+        component={ReferralTrackingScreen}
+        options={{
+          headerShown: true,
+          title: "Referral Tracking",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+        }}
       />
       {/* ?? NEW: Chat screen for messaging */}
       <Stack.Screen

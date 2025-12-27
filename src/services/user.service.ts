@@ -672,8 +672,8 @@ export class UserService {
             const result = await dbService.executeQuery(statsQuery, [userId]);
             const baseStats = result.recordset[0] || {};
 
-            // Get referral statistics
-            const referralStats = await this.getReferralStats(applicantId);
+            // Get referral statistics (userId for AssignedReferrerID, applicantId for ApplicantID)
+            const referralStats = await this.getReferralStats(applicantId, userId);
             console.log(`Referral stats for applicant ${applicantId}:`, referralStats);
             
             // Get resume statistics
@@ -894,23 +894,23 @@ export class UserService {
 
     // Helper methods for enhanced analytics
 
-    private static async getReferralStats(applicantId: string): Promise<any> {
+    private static async getReferralStats(applicantId: string, userId: string): Promise<any> {
         try {
-            console.log(`Getting referral stats for applicant: ${applicantId}`);
+            console.log(`Getting referral stats for applicant: ${applicantId}, userId: ${userId}`);
             
-            // Use the EXACT same query structure as the working profile service
+            // AssignedReferrerID stores UserID, ApplicantID is for seeker
             const query = `
                 SELECT 
                     COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
                     COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
-                    COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param0 THEN rr.RequestID END) as ReferralRequestsMade,
-                    ISNULL(SUM(CASE WHEN rw.ReferrerID = @param0 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
+                    COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param1 THEN rr.RequestID END) as ReferralRequestsMade,
+                    ISNULL(SUM(CASE WHEN rw.ReferrerID = @param1 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
                 FROM ReferralRequests rr
                 LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
-                WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param0)
+                WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)
             `;
             
-            const result = await dbService.executeQuery(query, [applicantId]);
+            const result = await dbService.executeQuery(query, [userId, applicantId]);  // userId for AssignedReferrerID
             const stats = result.recordset[0] || {};
             
             console.log(`Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));

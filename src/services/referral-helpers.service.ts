@@ -165,7 +165,8 @@ export class ReferralAnalyticsService {
                     SUM(ISNULL(a.ReferralPoints, 0)) as TotalPointsDistributed
                     
                 FROM ReferralRequests rr
-                LEFT JOIN Applicants a ON rr.AssignedReferrerID = a.ApplicantID
+                LEFT JOIN Users u ON rr.AssignedReferrerID = u.UserID
+                LEFT JOIN Applicants a ON u.UserID = a.UserID
                 LEFT JOIN ApplicantReferralSubscriptions ars ON a.ApplicantID = ars.ApplicantID AND ars.IsActive = 1
                 LEFT JOIN ReferralPlans rp ON ars.PlanID = rp.PlanID
                 WHERE rr.RequestedAt >= DATEADD(day, -30, GETUTCDATE()) -- Last 30 days
@@ -243,9 +244,9 @@ export class ReferralAnalyticsService {
                     SUM(ISNULL(rewards.PointsEarned, 0)) as TotalPointsEarned,
                     AVG(CASE WHEN rr.ReferredAt IS NOT NULL 
                         THEN DATEDIFF(hour, rr.RequestedAt, rr.ReferredAt) END) as AvgResponseTimeHours
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                INNER JOIN ReferralRequests rr ON a.ApplicantID = rr.AssignedReferrerID
+                FROM Users u
+                INNER JOIN ReferralRequests rr ON u.UserID = rr.AssignedReferrerID
+                INNER JOIN Applicants a ON u.UserID = a.UserID
                 LEFT JOIN ReferralRewards rewards ON a.ApplicantID = rewards.ReferrerID
                 WHERE rr.RequestedAt >= DATEADD(day, -30, GETUTCDATE())
                 GROUP BY a.ApplicantID, u.FirstName, u.LastName, u.Email

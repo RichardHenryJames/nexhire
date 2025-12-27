@@ -28,7 +28,7 @@ import {
     ReferralRequestsFilter,
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
-    ClaimReferralRequestWithProofDto,
+    SubmitReferralWithProofDto,
     VerifyReferralDto
 } from '../types/referral.types';
 
@@ -273,11 +273,12 @@ export const getAvailableRequests = withErrorHandling(async (req: HttpRequest, c
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
         
-        const filters: ReferralRequestsFilter = {
+        const filters: ReferralRequestsFilter & { tab?: string } = {
             jobTitle: params.jobTitle as string,
             companyName: params.companyName as string,
             dateFrom: params.dateFrom ? new Date(params.dateFrom as string) : undefined,
-            dateTo: params.dateTo ? new Date(params.dateTo as string) : undefined
+            dateTo: params.dateTo ? new Date(params.dateTo as string) : undefined,
+            tab: (params.tab as string) || 'open' // 'open' or 'closed'
         };
 
         // Get applicant ID
@@ -315,7 +316,7 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
     try {
         const user = authenticate(req);
         const requestId = (req as any).params?.requestId;
-        const claimData = await extractRequestBody(req) as ClaimReferralRequestWithProofDto;
+        const claimData = await extractRequestBody(req) as SubmitReferralWithProofDto;
         
         if (!requestId || !isValidGuid(requestId)) {
             throw new ValidationError('Valid Request ID is required');
@@ -336,7 +337,7 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
         }
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
-        const request = await ReferralService.claimReferralRequestWithProof(applicantId, {
+        const request = await ReferralService.submitReferralWithProof(applicantId, user.userId, {
             requestID: requestId,
             proofFileURL: claimData.proofFileURL,
             proofFileType: claimData.proofFileType,
@@ -421,17 +422,8 @@ export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, 
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
-        const result = await ReferralService.getMyReferrerRequests(applicantId, page, pageSize);
+        // AssignedReferrerID now stores UserID, so pass userId directly
+        const result = await ReferralService.getMyReferrerRequests(user.userId, page, pageSize);
         
         return {
             status: 200,
@@ -466,7 +458,7 @@ export const getReferralAnalytics = withErrorHandling(async (req: HttpRequest, c
         }
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
-        const analytics = await ReferralService.getReferralAnalytics(applicantId);
+        const analytics = await ReferralService.getReferralAnalytics(applicantId, user.userId);
         
         return {
             status: 200,
@@ -664,6 +656,98 @@ export const convertPointsToWallet = withErrorHandling(async (req: HttpRequest, 
             jsonBody: { 
                 success: false, 
                 error: error?.message || 'Failed to convert points to wallet'
+            }
+        };
+    }
+});
+
+// ===== REFERRAL STATUS TRACKING =====
+
+/**
+ * Log a status change for tracking (Viewed, Claimed states)
+ * POST /referral/requests/{requestId}/status
+ */
+export const logReferralStatus = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const requestId = req.params.id;
+        
+        if (!requestId || !isValidGuid(requestId)) {
+            throw new ValidationError('Valid Request ID is required');
+        }
+
+        const body = await extractRequestBody(req) as { status: string; message?: string };
+        
+        if (!body.status) {
+            throw new ValidationError('Status is required');
+        }
+
+        // Allowed intermediate statuses that can be logged
+        const allowedStatuses = ['Viewed', 'Claimed'];
+        if (!allowedStatuses.includes(body.status)) {
+            throw new ValidationError(`Status must be one of: ${allowedStatuses.join(', ')}`);
+        }
+
+        // Get user name from database
+        const { dbService } = await import('../services/database.service');
+        const nameQuery = 'SELECT FirstName, LastName FROM Users WHERE UserID = @param0';
+        const nameResult = await dbService.executeQuery(nameQuery, [user.userId]);
+        const actorName = nameResult.recordset?.[0] 
+            ? `${nameResult.recordset[0].FirstName || ''} ${nameResult.recordset[0].LastName || ''}`.trim() 
+            : 'Unknown';
+
+        // Log the status change with userId
+        const result = await ReferralService.logStatusChange(
+            requestId,
+            body.status,
+            user.userId,  // Pass userId directly
+            'referrer',
+            actorName,
+            body.message
+        );
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, `Status '${body.status}' logged successfully`)
+        };
+    } catch (error: any) {
+        console.error('Error logging referral status:', error);
+        return {
+            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to log referral status'
+            }
+        };
+    }
+});
+
+/**
+ * Get status history for a referral request (for tracking screen)
+ * GET /referral/requests/{requestId}/history
+ */
+export const getReferralStatusHistory = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const requestId = req.params.id;
+        
+        if (!requestId || !isValidGuid(requestId)) {
+            throw new ValidationError('Valid Request ID is required');
+        }
+
+        const history = await ReferralService.getStatusHistory(requestId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(history, 'Status history retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Error getting referral status history:', error);
+        return {
+            status: error instanceof NotFoundError ? 404 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get status history'
             }
         };
     }

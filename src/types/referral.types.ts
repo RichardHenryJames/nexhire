@@ -101,7 +101,7 @@ export interface ClaimReferralRequestDto {
     requestID: string;
 }
 
-export interface ClaimReferralRequestWithProofDto {
+export interface SubmitReferralWithProofDto {
     requestID: string;
     proofFileURL: string;
     proofFileType: string;

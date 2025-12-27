@@ -18,16 +18,20 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
-import ReferralProofModal from '../../components/ReferralProofModal';
+import ViewReferralRequestModal from '../../components/ViewReferralRequestModal';
 import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, userId } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [requestsToMe, setRequestsToMe] = useState([]);
+  
+  // Two tabs: 'open' and 'closed'
+  const [activeTab, setActiveTab] = useState('open');
+  const [openRequests, setOpenRequests] = useState([]);
+  const [closedRequests, setClosedRequests] = useState([]);
   const [stats, setStats] = useState({ pendingCount: 0 });
 
   // Proof upload modal state
@@ -41,13 +45,17 @@ export default function ReferralScreen({ navigation }) {
     }, [])
   );
 
+  // Define which statuses belong to which tab
+  const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
+  const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified'];
+
   const loadData = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
       await Promise.all([
-        loadRequestsToMe(),
+        loadAllRequests(),
         loadStats()
       ]);
     } catch (error) {
@@ -57,25 +65,39 @@ export default function ReferralScreen({ navigation }) {
     }
   };
 
-  const loadRequestsToMe = async () => {
+  // Load ALL requests and filter on frontend
+  const loadAllRequests = async () => {
     try {
-      const result = await refopenAPI.getAvailableReferralRequests(1, 50);
-      console.log('=== REFERRAL REQUESTS TO ME ===');
-      console.log('Full result:', JSON.stringify(result, null, 2));
+      const result = await refopenAPI.getAvailableReferralRequests(1, 100); // Get all, no tab filter
+      console.log('=== ALL REFERRAL REQUESTS ===');
       if (result.success) {
-        const requests = result.data?.requests || [];
-        console.log('Requests count:', requests.length);
-        if (requests.length > 0) {
-          console.log('First request keys:', Object.keys(requests[0]));
-          console.log('First request ResumeURL:', requests[0].ResumeURL);
-          console.log('First request ResumeLabel:', requests[0].ResumeLabel);
-          console.log('First request ResumeID:', requests[0].ResumeID);
-        }
-        setRequestsToMe(requests);
+        const allRequests = result.data?.requests || [];
+        console.log('Total requests count:', allRequests.length);
+        console.log('Current user ID:', userId);
+        console.log('All requests with status and AssignedReferrerUserID:', 
+          allRequests.map(r => ({ status: r.Status, assignedTo: r.AssignedReferrerUserID || r.AssignedReferrerID }))
+        );
+        
+        // Filter into Open and Closed based on status
+        const open = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
+        
+        // Closed tab: Only show requests that THIS USER completed (AssignedReferrerUserID matches current user)
+        // Note: Compare case-insensitively as DB might return uppercase GUIDs
+        const closed = allRequests.filter(r => 
+          CLOSED_STATUSES.includes(r.Status) && 
+          ((r.AssignedReferrerUserID || r.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase())
+        );
+        
+        console.log('Open requests:', open.length, open.map(r => r.Status));
+        console.log('Closed requests:', closed.length, closed.map(r => r.Status));
+        
+        setOpenRequests(open);
+        setClosedRequests(closed);
       }
     } catch (error) {
-      console.error('Error loading requests to me:', error);
-      setRequestsToMe([]);
+      console.error('Error loading requests:', error);
+      setOpenRequests([]);
+      setClosedRequests([]);
     }
   };
 
@@ -96,58 +118,42 @@ export default function ReferralScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  // NEW: Enhanced claim request with immediate proof upload
-  const handleClaimRequest = async (request) => {
-    try {
-      
-      // Open proof modal instead of immediate claim
-      setSelectedRequest(request);
-      setShowProofModal(true);
-      
-    } catch (error) {
-      console.error('Error initiating claim:', error);
-      Alert.alert('Error', error.message || 'Failed to initiate claim');
-    }
+  // Get current list based on active tab
+  const requestsToMe = activeTab === 'open' ? openRequests : closedRequests;
+
+  // NEW: Open View Request modal (logs Viewed status inside modal)
+  const handleViewRequest = (request) => {
+    setSelectedRequest(request);
+    setShowProofModal(true);
   };
 
-  // NEW: Handle proof submission with claim
+  // NEW: Handle proof submission with claim (called from ViewReferralRequestModal)
   const handleProofSubmission = async (proofData) => {
     if (!selectedRequest) return;
 
     try {
-      
       // Use the new enhanced API that combines claim + proof
-      const result = await refopenAPI.claimReferralRequestWithProof(
+      const result = await refopenAPI.submitReferralWithProof(
         selectedRequest.RequestID,
         proofData
       );
       
       if (result.success) {
-        
-        // Update UI: move request from "Requests To Me" to "My Referrer Requests"
-        setRequestsToMe(prev => prev.filter(r => r.RequestID !== selectedRequest.RequestID));
-        
         // Close modal
         setShowProofModal(false);
         setSelectedRequest(null);
         
-        // Refresh data
+        // Refresh both lists (open and closed)
         await loadData();
         
-        showToast('Referral claimed and proof submitted successfully!', 'success');
+        showToast('Referral submitted successfully! 🎉', 'success');
       } else {
-        throw new Error(result.error || 'Failed to claim request');
+        throw new Error(result.error || 'Failed to submit referral');
       }
     } catch (error) {
-      console.error('? Proof submission failed:', error);
-      Alert.alert('Error', error.message || 'Failed to submit proof');
+      console.error('❌ Proof submission failed:', error);
+      Alert.alert('Error', error.message || 'Failed to submit referral');
     }
-  };
-
-  // OLD: Simple proof submission for already claimed requests
-  const handleSubmitProof = (request) => {
-    setSelectedRequest(request);
-    setShowProofModal(true);
   };
 
 
@@ -174,6 +180,14 @@ export default function ReferralScreen({ navigation }) {
     switch (status) {
       case 'Pending':
         return colors.gray600;
+      case 'NotifiedToReferrers':
+        return '#10B981'; // Green - notified
+      case 'Viewed':
+        return '#3B82F6'; // Blue
+      case 'Claimed':
+        return '#F59E0B'; // Amber
+      case 'ProofUploaded':
+        return '#8B5CF6'; // Purple
       case 'Completed':
         return colors.success;
       case 'Verified':
@@ -189,6 +203,14 @@ export default function ReferralScreen({ navigation }) {
     switch (status) {
       case 'Pending':
         return 'time-outline';
+      case 'NotifiedToReferrers':
+        return 'notifications-outline';
+      case 'Viewed':
+        return 'eye-outline';
+      case 'Claimed':
+        return 'hand-left-outline';
+      case 'ProofUploaded':
+        return 'document-attach-outline';
       case 'Completed':
         return 'checkmark-circle';
       case 'Verified':
@@ -359,20 +381,53 @@ export default function ReferralScreen({ navigation }) {
         </View>
         
         <View style={styles.requestActions}>
-          {request.Status === 'Pending' && (
+          {/* Show different buttons based on who claimed the request */}
+          {activeTab === 'open' && (
             <>
-              <TouchableOpacity 
-                style={styles.referBtn}
-                onPress={() => handleClaimRequest(request)}
-              >
-                <Ionicons name="people" size={16} color="#fff" />
-                <Text style={styles.referText}>Refer Now</Text>
-              </TouchableOpacity>
+              {/* Check if current user claimed this request - API returns AssignedReferrerUserID */}
+              {(request.AssignedReferrerUserID || request.AssignedReferrerID) && 
+               ((request.AssignedReferrerUserID || '').toLowerCase() === (userId || '').toLowerCase() || 
+                (request.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase()) ? (
+                // Current user claimed - show Continue button
+                <TouchableOpacity 
+                  style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+                  onPress={() => handleViewRequest(request)}
+                >
+                  <Ionicons name="arrow-forward" size={16} color="#fff" />
+                  <Text style={styles.viewRequestText}>Continue</Text>
+                </TouchableOpacity>
+              ) : (
+                // Not claimed by current user - show View Request button
+                <TouchableOpacity 
+                  style={styles.viewRequestBtn}
+                  onPress={() => handleViewRequest(request)}
+                >
+                  <Ionicons name="eye" size={16} color="#fff" />
+                  <Text style={styles.viewRequestText}>View Request</Text>
+                </TouchableOpacity>
+              )}
               
               <TouchableOpacity style={styles.dismissBtn}>
                 <Text style={styles.dismissText}>Dismiss</Text>
               </TouchableOpacity>
             </>
+          )}
+          
+          {/* Show View Proof for closed statuses */}
+          {activeTab === 'closed' && request.ProofFileURL && (
+            <TouchableOpacity 
+              style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  window.open(request.ProofFileURL, '_blank');
+                } else {
+                  Linking.openURL(request.ProofFileURL);
+                }
+              }}
+            >
+              <Ionicons name="eye" size={16} color="#fff" />
+              <Text style={styles.viewRequestText}>View Proof</Text>
+            </TouchableOpacity>
           )}
         </View>
       </CardWrapper>
@@ -389,6 +444,14 @@ export default function ReferralScreen({ navigation }) {
       );
     }
 
+    const emptyMessage = activeTab === 'open' 
+      ? 'No open referral requests are available for your current companies.'
+      : 'No completed referrals yet.';
+    
+    const emptyTitle = activeTab === 'open' 
+      ? 'No Open Requests'
+      : 'No Completed Referrals';
+
     return (
       <ScrollView 
         style={styles.tabContent}
@@ -396,17 +459,16 @@ export default function ReferralScreen({ navigation }) {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <Text style={styles.tabDescription}>
-          Referral requests where you can help others and earn rewards
+          {activeTab === 'open' 
+            ? 'Help others get referred and earn rewards'
+            : 'Referrals you have completed'}
         </Text>
         
         {requestsToMe.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color={colors.gray400} />
-            <Text style={styles.emptyTitle}>No Referral Opportunities</Text>
-            <Text style={styles.emptyText}>
-              No referral requests are available for your current companies. 
-              Make sure your work experience is up to date.
-            </Text>
+            <Ionicons name={activeTab === 'open' ? "people-outline" : "checkmark-done-outline"} size={64} color={colors.gray400} />
+            <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+            <Text style={styles.emptyText}>{emptyMessage}</Text>
           </View>
         ) : (
           requestsToMe.map(renderRequestToMeCard)
@@ -419,19 +481,50 @@ export default function ReferralScreen({ navigation }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-    <View style={styles.headerLeft}>
- <Text style={styles.headerTitle}>Referral requests to me</Text>
-   <Text style={styles.headerSubtitle}>
-      Incoming referral requests
-   </Text>
- </View>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Referral Requests</Text>
+          <Text style={styles.headerSubtitle}>
+            Help others get referred
+          </Text>
+        </View>
+      </View>
+
+      {/* Open/Closed Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'open' && styles.activeTab]}
+          onPress={() => setActiveTab('open')}
+        >
+          <Ionicons 
+            name="folder-open-outline" 
+            size={18} 
+            color={activeTab === 'open' ? colors.primary : colors.gray500} 
+          />
+          <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
+            Open ({openRequests.length})
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
+          onPress={() => setActiveTab('closed')}
+        >
+          <Ionicons 
+            name="checkmark-done-outline" 
+            size={18} 
+            color={activeTab === 'closed' ? colors.primary : colors.gray500} 
+          />
+          <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
+            Closed ({closedRequests.length})
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab Content */}
       {renderTabContent()}
 
-      {/* NEW: Proof Upload Modal */}
-      <ReferralProofModal
+      {/* View Referral Request Modal with enhanced flow */}
+      <ViewReferralRequestModal
         visible={showProofModal}
         onClose={() => {
           setShowProofModal(false);
@@ -440,6 +533,7 @@ export default function ReferralScreen({ navigation }) {
         onSubmit={handleProofSubmission}
         referralRequest={selectedRequest}
         jobTitle={selectedRequest?.JobTitle}
+        currentUserId={userId}  // Pass current user's UserID to check if they claimed
       />
 
     </View>
@@ -456,7 +550,7 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-  backgroundColor: colors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -472,6 +566,36 @@ const createStyles = (colors) => StyleSheet.create({
   headerSubtitle: {
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
+  },
+  // Open/Closed Tabs
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 8,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    color: colors.gray500,
+  },
+  activeTabText: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
   tabNavigation: {
     flexDirection: 'row',
@@ -732,6 +856,20 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.error,
     marginLeft: 4,
     fontWeight: typography.weights.medium,
+  },
+  viewRequestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+  },
+  viewRequestText: {
+    fontSize: typography.sizes.xs,
+    color: colors.white,
+    marginLeft: 4,
+    fontWeight: typography.weights.bold,
   },
   referBtn: {
     flexDirection: 'row',
