@@ -24,6 +24,7 @@ import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker } = useAuth();
@@ -74,6 +75,9 @@ const [showWalletModal, setShowWalletModal] = useState(false);
   
 // ✅ NEW: Resume Upload Modal state
 const [showResumeModal, setShowResumeModal] = useState(false);
+
+// 🎉 NEW: Referral success overlay state
+const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
 
   // ✅ FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
@@ -441,6 +445,9 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
       if (result?.success) {
         
+        // 🎉 Show fullscreen success overlay for 1 second
+        setShowReferralSuccessOverlay(true);
+        
         // ✅ NEW: Show wallet deduction info
         const amountDeducted = result.data?.amountDeducted || 39;
         const balanceAfter = result.data?.walletBalanceAfter;
@@ -462,8 +469,10 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         // Reset form
         resetForm();
         
-        // Navigate back or to success screen
-        navigation.goBack();
+        // Navigate back after overlay completes (2 second delay)
+        setTimeout(() => {
+          navigation.goBack();
+        }, 2000);
       } else {
         // ✅ NEW: Handle insufficient balance error
         if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -999,6 +1008,13 @@ const [showResumeModal, setShowResumeModal] = useState(false);
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowWalletModal(false)}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => setShowReferralSuccessOverlay(false)}
+        duration={2000}
       />
 
       {/* Floating Referral Requests Button */}

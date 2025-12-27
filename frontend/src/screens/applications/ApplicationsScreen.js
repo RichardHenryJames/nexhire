@@ -21,6 +21,7 @@ import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 
@@ -69,6 +70,9 @@ export default function ApplicationsScreen({ navigation }) {
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -430,6 +434,9 @@ export default function ApplicationsScreen({ navigation }) {
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           
+          // 🎉 Show fullscreen success overlay for 1 second
+          setShowReferralSuccessOverlay(true);
+          
           const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
@@ -479,6 +486,9 @@ export default function ApplicationsScreen({ navigation }) {
           dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
           isEligible: prev.dailyQuotaRemaining > 1
         }));
+        
+        // 🎉 Show fullscreen success overlay for 1 second
+        setShowReferralSuccessOverlay(true);
         
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
@@ -967,6 +977,13 @@ export default function ApplicationsScreen({ navigation }) {
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => setShowReferralSuccessOverlay(false)}
+        duration={2000}
       />
 
       {/* Custom Withdraw Confirmation (web only) */}

@@ -23,6 +23,7 @@ import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
 
 export default function JobDetailsScreen({ route, navigation }) {
@@ -55,6 +56,9 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
 
   // 💎 NEW: Publish confirmation modal state
   const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
@@ -358,6 +362,9 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (res.success) {
           setHasReferred(true);
           
+          // 🎉 Show fullscreen success overlay for 1 second
+          setShowReferralSuccessOverlay(true);
+          
           const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
@@ -505,6 +512,9 @@ const { jobId, fromReferralRequest } = route.params || {};
       });
       if (res?.success) {
         setHasReferred(true);
+        
+        // 🎉 Show fullscreen success overlay for 1 second
+        setShowReferralSuccessOverlay(true);
         
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
@@ -1309,6 +1319,13 @@ Highlight your relevant experience, skills, and why you're excited about this sp
           });
           setShowWalletModal(true);
         }}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => setShowReferralSuccessOverlay(false)}
+        duration={2000}
       />
     </ScrollView>
   );

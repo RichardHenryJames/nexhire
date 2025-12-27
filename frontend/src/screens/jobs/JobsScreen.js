@@ -10,6 +10,7 @@ import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
@@ -268,6 +269,9 @@ export default function JobsScreen({ navigation, route }) {
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '' });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
 
   // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
   const [walletBalance, setWalletBalance] = useState(0);
@@ -1336,6 +1340,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
+          
+          // 🎉 Show fullscreen success overlay for 1 second
+          setShowReferralSuccessOverlay(true);
+          
           showToast('Referral request sent successfully', 'success');
 
           // 🔧 FIXED: Reload primary resume after successful referral
@@ -1414,6 +1422,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id]));
+
+        // 🎉 Show fullscreen success overlay for 1 second
+        setShowReferralSuccessOverlay(true);
 
         // ✅ Show wallet deduction info
         const amountDeducted = res.data?.amountDeducted || 39;
@@ -1821,6 +1832,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           navigation.navigate('WalletRecharge');
         }}
         onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => setShowReferralSuccessOverlay(false)}
+        duration={2000}
       />
 
       {/* Floating Action Buttons */}
