@@ -18,11 +18,10 @@ function ThemedAppRoot() {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
-    // Match the auth/loading background so any uncovered area
-    // doesn't show as a different color on web.
-    const fallbackGradient = isDark
-      ? `linear-gradient(135deg, ${colors.background}, ${colors.surface}, ${colors.background})`
-      : `linear-gradient(135deg, ${colors.primaryLight}, ${colors.primary}, ${colors.primaryLight})`;
+    // Always use dark background for web to match auth screens
+    // Auth screens always use dark mode, so we use dark colors for consistency
+    const darkBackground = '#0F172A'; // Same as auth screen gradient start
+    const fallbackGradient = `linear-gradient(135deg, ${darkBackground}, #1E293B, ${darkBackground})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;

@@ -1910,6 +1910,18 @@ if (!resumeId) {
     return this.apiCall(`/referral/available?${params}`);
   }
 
+  // Get completed referrals by current user (for closed tab - all past completed referrals regardless of company)
+  async getCompletedReferrals(page = 1, pageSize = 100) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/referral/completed?${params}`);
+  }
+
   // Claim a referral request (as referrer)
   async claimReferralRequest(requestId) {
     if (!this.token) return { success: false, error: 'Authentication required' };

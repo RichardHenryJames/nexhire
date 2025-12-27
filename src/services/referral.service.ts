@@ -499,6 +499,7 @@ export class ReferralService {
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription,
+                    rr.ReferralMessage as ReferralMessage,
                     -- ✅ AssignedReferrerID now stores UserID directly
                     rr.AssignedReferrerID as AssignedReferrerUserID
                 FROM ReferralRequests rr
@@ -644,6 +645,88 @@ export class ReferralService {
             };
         } catch (error) {
             console.error('Error getting my referrer requests:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get completed referrals by UserID (for closed tab - shows ALL completed referrals regardless of company)
+     * AssignedReferrerID stores UserID, so we match directly against that
+     */
+    static async getCompletedReferralsByUser(userId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
+        try {
+            const safePageNumber = Math.max(1, Math.floor(page) || 1);
+            const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
+
+            // Filter by completed statuses AND this user as the assigned referrer
+            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified')";
+            const whereClause = `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;
+            const queryParams = [userId];
+
+            // Count total
+            const countQuery = `
+                SELECT COUNT(*) as Total
+                FROM ReferralRequests rr
+                ${whereClause}
+            `;
+            
+            const countResult = await dbService.executeQuery(countQuery, queryParams);
+            const total = countResult.recordset[0]?.Total || 0;
+            const totalPages = Math.ceil(total / safePageSize);
+
+            // Get paginated data - support both internal and external referrals
+            const offset = (safePageNumber - 1) * safePageSize;
+            const dataQuery = `
+                SELECT 
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
+                    rr.OrganizationID, rr.JobURL,
+                    -- For INTERNAL referrals (JobID not null)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    jo.LogoURL as InternalLogoURL,
+                    -- For EXTERNAL referrals (ExtJobID not null)
+                    eo.Name as ExternalCompanyName,
+                    eo.LogoURL as ExternalLogoURL,
+                    -- Use stored JobTitle column with proper COALESCE
+                    COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    u.FirstName + ' ' + u.LastName as ApplicantName,
+                    u.Email as ApplicantEmail,
+                    u.UserID as ApplicantUserID,
+                    u.ProfilePictureURL as ApplicantProfilePictureURL,
+                    ar.ResumeLabel as ResumeLabel,
+                    ar.ResumeURL as ResumeURL,
+                    rp.FileURL as ProofFileURL,
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription,
+                    rr.AssignedReferrerID as AssignedReferrerUserID
+                FROM ReferralRequests rr
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
+                INNER JOIN Users u ON a.UserID = u.UserID
+                INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
+                LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
+                ${whereClause}
+                ORDER BY rr.ReferredAt DESC
+                OFFSET ${offset} ROWS
+                FETCH NEXT ${safePageSize} ROWS ONLY
+            `;
+            
+            const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
+            
+            return {
+                requests: dataResult.recordset || [],
+                total,
+                page: safePageNumber,
+                pageSize: safePageSize,
+                totalPages
+            };
+        } catch (error) {
+            console.error('Error getting completed referrals by user:', error);
             throw error;
         }
     }

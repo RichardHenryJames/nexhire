@@ -157,7 +157,7 @@ export default function ViewProfileScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerButton} />
@@ -180,7 +180,7 @@ export default function ViewProfileScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerButton} />
@@ -209,7 +209,7 @@ export default function ViewProfileScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerButton} />
@@ -238,7 +238,7 @@ export default function ViewProfileScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerButton} />
@@ -269,7 +269,7 @@ export default function ViewProfileScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={styles.headerButton} />
@@ -292,11 +292,11 @@ export default function ViewProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={colors.white} />
+          <Ionicons name="ellipsis-vertical" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -345,13 +345,13 @@ export default function ViewProfileScreen() {
             disabled={sendingMessage || !canMessage || isBlocked}
           >
             {sendingMessage ? (
-              <ActivityIndicator size="small" color={colors.white} />
+              <ActivityIndicator size="small" color={colors.text} />
             ) : (
               <>
                 <Ionicons
                   name={!canMessage ? "close-circle" : "chatbubble-ellipses"}
                   size={18}
-                  color={colors.white}
+                  color={colors.text}
                 />
                 <Text style={styles.messageBtnText}>
                   {!canMessage ? 'Not Available' : isBlocked ? 'Blocked' : 'Message'}
@@ -650,7 +650,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   headerButton: {
     width: 40,
@@ -661,7 +661,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.white,
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
   },

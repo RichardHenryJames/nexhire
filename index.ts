@@ -89,6 +89,7 @@ import {
   claimReferralRequest,
   verifyReferralCompletion,
   getMyReferrerRequests,
+  getCompletedReferrals, // NEW: Get completed referrals for closed tab
   getReferralAnalytics,
   claimReferralRequest as claimReferralRequestWithProof, // FIXED: Use alias for now
   cancelReferralRequest,
@@ -1038,6 +1039,13 @@ app.http("referral-my-referrer-requests", {
   authLevel: "anonymous",
   route: "referral/my-referrer-requests",
   handler: withErrorHandling(getMyReferrerRequests), // Same pattern as work experience
+});
+
+app.http("referral-completed", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/completed",
+  handler: withErrorHandling(getCompletedReferrals), // Get all completed referrals by user (for closed tab)
 });
 
 app.http("referral-analytics", {

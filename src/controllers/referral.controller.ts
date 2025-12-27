@@ -441,6 +441,36 @@ export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, 
 });
 
 /**
+ * Get completed referrals by current user (for closed tab - all completed referrals regardless of company)
+ * GET /referral/completed
+ */
+export const getCompletedReferrals = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const params = extractQueryParams(req);
+        
+        const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
+        const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
+
+        // Pass userId directly - AssignedReferrerID stores UserID
+        const result = await ReferralService.getCompletedReferralsByUser(user.userId, page, pageSize);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, 'Completed referrals retrieved successfully')
+        };
+    } catch (error: any) {
+        return {
+            status: error instanceof NotFoundError ? 404 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get completed referrals'
+            }
+        };
+    }
+});
+
+/**
  * Get referral analytics/dashboard
  * GET /referral/analytics
  */

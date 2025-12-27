@@ -481,7 +481,7 @@ export default function ChatScreen() {
    display: "flex",
           flexDirection: "column",
           height: "100vh",
-       backgroundColor: colors.gray50,
+       backgroundColor: colors.background,
         }}
       >
         <div
@@ -489,7 +489,7 @@ export default function ChatScreen() {
   display: "flex",
          alignItems: "center",
   padding: "12px 16px",
-          backgroundColor: colors.primary,
+          backgroundColor: colors.surface,
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
      zIndex: 10,
          position: "sticky",
@@ -500,7 +500,7 @@ export default function ChatScreen() {
           onPress={handleBackPress}
             style={{ padding: 4, marginRight: 12 }}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
 
           {/* Clickable Profile Section */}
@@ -547,7 +547,7 @@ export default function ChatScreen() {
             {/* Name Only */}
             <div style={{ flex: 1 }}>
               <div
-                style={{ fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+                style={{ fontSize: 16, fontWeight: "600", color: colors.text, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
               >
                 {otherUserName}
               </div>
@@ -559,7 +559,7 @@ export default function ChatScreen() {
             onPress={() => window.alert("Feature Coming Soon\nCall feature is under development")}
             style={{ padding: 4, marginRight: 12 }}
           >
-            <Ionicons name="call" size={24} color={colors.white} />
+            <Ionicons name="call" size={24} color={colors.text} />
           </TouchableOpacity>
 
           {/* Video Call Button */}
@@ -567,7 +567,7 @@ export default function ChatScreen() {
             onPress={() => window.alert("Feature Coming Soon\nVideo call feature is under development")}
             style={{ padding: 4 }}
           >
-            <Ionicons name="videocam" size={24} color={colors.white} />
+            <Ionicons name="videocam" size={24} color={colors.text} />
           </TouchableOpacity>
         </div>
 
@@ -578,7 +578,7 @@ export default function ChatScreen() {
             display: "flex",
             flexDirection: "column-reverse",
             padding: "8px",
-            backgroundColor: colors.gray50,
+            backgroundColor: colors.background,
           }}
         >
           {loading ? (
@@ -673,7 +673,7 @@ export default function ChatScreen() {
                           );
                       }}
                       style={{
-                        backgroundColor: isMine ? colors.primary : colors.white,
+                        backgroundColor: isMine ? colors.primary : colors.surface,
                         borderRadius: "12px",
                         padding: "8px 12px",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
@@ -689,7 +689,7 @@ export default function ChatScreen() {
                         style={{
                           fontSize: 14,
                           lineHeight: "20px",
-                          color: isMine ? colors.white : colors.gray900,
+                          color: isMine ? colors.white : colors.text,
                           wordWrap: "break-word",
                           whiteSpace: "pre-wrap",
                           marginBottom: "4px",
@@ -776,7 +776,7 @@ export default function ChatScreen() {
             display: "flex",
             alignItems: "center",
             padding: "8px 12px",
-            backgroundColor: colors.white,
+            backgroundColor: colors.surface,
             borderTop: `1px solid ${colors.border}`,
             position: "sticky",
             bottom: 0,
@@ -785,7 +785,7 @@ export default function ChatScreen() {
           <TextInput
             style={{
               flex: 1,
-              backgroundColor: colors.gray100,
+              backgroundColor: colors.background,
               borderRadius: 24,
               paddingHorizontal: 16,
               paddingVertical: 10,
@@ -794,6 +794,7 @@ export default function ChatScreen() {
               marginRight: 8,
               outline: "none",
               border: "none",
+              color: colors.text,
             }}
             placeholder="Type a message"
             placeholderTextColor={colors.gray400}
@@ -837,7 +838,7 @@ export default function ChatScreen() {
           onPress={handleBackPress}
           style={styles.backButton}
         >
-       <Ionicons name="arrow-back" size={24} color={colors.white} />
+       <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
         {/* Clickable Profile Section */}
@@ -874,7 +875,7 @@ export default function ChatScreen() {
           onPress={() => Alert.alert("Feature Coming Soon", "Call feature is under development")}
           style={[styles.menuButton, { marginRight: 12 }]}
         >
-          <Ionicons name="call" size={24} color={colors.white} />
+          <Ionicons name="call" size={24} color={colors.text} />
         </TouchableOpacity>
 
         {/* Video Call Button */}
@@ -882,7 +883,7 @@ export default function ChatScreen() {
           onPress={() => Alert.alert("Feature Coming Soon", "Video call feature is under development")}
           style={styles.menuButton}
         >
-          <Ionicons name="videocam" size={24} color={colors.white} />
+          <Ionicons name="videocam" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -966,7 +967,7 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface,
     elevation: 4,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
@@ -987,7 +988,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
   headerInfo: { flex: 1 },
-  headerName: { fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "System" },
+  headerName: { fontSize: 16, fontWeight: "600", color: colors.text, fontFamily: "System" },
   menuButton: { padding: 4 },
   messagesList: {
     paddingHorizontal: 8,

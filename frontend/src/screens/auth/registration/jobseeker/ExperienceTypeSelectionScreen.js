@@ -10,7 +10,6 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
@@ -151,14 +150,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Dark gradient background - Always dark */}
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#0F172A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      
       {/* Decorative circles */}
       <View style={styles.decorationCircle1} />
       <View style={styles.decorationCircle2} />

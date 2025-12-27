@@ -15,7 +15,6 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
@@ -226,10 +225,6 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#0F172A']}
-        style={StyleSheet.absoluteFill}
-      />
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>

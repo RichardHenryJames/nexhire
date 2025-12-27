@@ -54,10 +54,11 @@ export default function ReferralScreen({ navigation }) {
     
     setLoading(true);
     try {
-      await Promise.all([
-        loadAllRequests(),
-        loadStats()
-      ]);
+      // Load stats first (quick) - show UI faster
+      await loadStats();
+      
+      // Then lazy load the requests (heavier calls)
+      loadAllRequests(); // Don't await - let it load in background
     } catch (error) {
       console.error('Error loading referral data:', error);
     } finally {
@@ -65,34 +66,36 @@ export default function ReferralScreen({ navigation }) {
     }
   };
 
-  // Load ALL requests and filter on frontend
+  // Load open requests (from available API - filtered by current company)
+  // and closed requests (from completed API - all completed referrals regardless of company)
   const loadAllRequests = async () => {
     try {
-      const result = await refopenAPI.getAvailableReferralRequests(1, 100); // Get all, no tab filter
-      console.log('=== ALL REFERRAL REQUESTS ===');
-      if (result.success) {
-        const allRequests = result.data?.requests || [];
-        console.log('Total requests count:', allRequests.length);
-        console.log('Current user ID:', userId);
-        console.log('All requests with status and AssignedReferrerUserID:', 
-          allRequests.map(r => ({ status: r.Status, assignedTo: r.AssignedReferrerUserID || r.AssignedReferrerID }))
-        );
-        
-        // Filter into Open and Closed based on status
+      // Fetch open and closed from separate APIs
+      const [openResult, closedResult] = await Promise.all([
+        refopenAPI.getAvailableReferralRequests(1, 100),
+        refopenAPI.getCompletedReferrals(1, 100)
+      ]);
+      
+      console.log('=== REFERRAL REQUESTS ===');
+      
+      // Open tab: Filter from available requests (current company only)
+      if (openResult.success) {
+        const allRequests = openResult.data?.requests || [];
+        // Filter to only show open statuses
         const open = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
-        
-        // Closed tab: Only show requests that THIS USER completed (AssignedReferrerUserID matches current user)
-        // Note: Compare case-insensitively as DB might return uppercase GUIDs
-        const closed = allRequests.filter(r => 
-          CLOSED_STATUSES.includes(r.Status) && 
-          ((r.AssignedReferrerUserID || r.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase())
-        );
-        
-        console.log('Open requests:', open.length, open.map(r => r.Status));
-        console.log('Closed requests:', closed.length, closed.map(r => r.Status));
-        
+        console.log('Open requests:', open.length);
         setOpenRequests(open);
-        setClosedRequests(closed);
+      } else {
+        setOpenRequests([]);
+      }
+      
+      // Closed tab: Use dedicated completed API (all completed referrals regardless of company)
+      if (closedResult.success) {
+        const closedData = closedResult.data?.requests || [];
+        console.log('Closed requests from completed API:', closedData.length);
+        setClosedRequests(closedData);
+      } else {
+        setClosedRequests([]);
       }
     } catch (error) {
       console.error('Error loading requests:', error);
@@ -114,7 +117,9 @@ export default function ReferralScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    // On refresh, load stats first then requests
+    await loadStats();
+    await loadAllRequests();
     setRefreshing(false);
   };
 
