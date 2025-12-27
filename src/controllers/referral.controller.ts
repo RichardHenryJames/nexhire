@@ -29,7 +29,6 @@ import {
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
     ClaimReferralRequestWithProofDto,
-    SubmitReferralProofDto,
     VerifyReferralDto
 } from '../types/referral.types';
 
@@ -360,55 +359,6 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
 });
 
 /**
- * Submit proof of referral
- * POST /referral/requests/{requestId}/proof
- */
-export const submitReferralProof = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    try {
-        const user = authenticate(req);
-        const requestId = (req as any).params?.requestId;
-        const proofData = await extractRequestBody(req) as SubmitReferralProofDto;
-
-        if (!requestId || !isValidGuid(requestId)) {
-            throw new ValidationError('Valid Request ID is required');
-        }
-
-        if (!proofData.fileURL || !proofData.fileType) {
-            throw new ValidationError('File URL and file type are required');
-        }
-
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
-        const proof = await ReferralService.submitReferralProof(applicantId, {
-            requestID: requestId,
-            fileURL: proofData.fileURL,
-            fileType: proofData.fileType
-        });
-
-        return {
-            status: 201,
-            jsonBody: successResponse(proof, 'Referral proof submitted successfully')
-        };
-    } catch (error: any) {
-        return {
-            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
-            jsonBody: { 
-                success: false, 
-                error: error?.message || 'Failed to submit referral proof'
-            }
-        };
-    }
-});
-
-/**
  * Verify referral completion
  * POST /referral/requests/{requestId}/verify
  */
@@ -459,7 +409,7 @@ export const verifyReferralCompletion = withErrorHandling(async (req: HttpReques
 });
 
 /**
- * Get my requests as referrer (claimed/completed requests)
+ * Get my requests as referrer (completed requests)
  * GET /referral/my-referrer-requests
  */
 export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {

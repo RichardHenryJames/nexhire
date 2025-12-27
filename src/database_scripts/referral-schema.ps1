@@ -53,7 +53,7 @@ BEGIN
         JobID UNIQUEIDENTIFIER NULL,
         ApplicantID UNIQUEIDENTIFIER NOT NULL, -- seeker
         ResumeID UNIQUEIDENTIFIER NOT NULL,
-        Status NVARCHAR(50) DEFAULT 'Pending', -- Pending, Claimed, Completed, Verified
+        Status NVARCHAR(50) DEFAULT 'Pending', -- Pending, Completed, Verified
         RequestedAt DATETIME2 DEFAULT GETUTCDATE(),
         AssignedReferrerID UNIQUEIDENTIFIER NULL, -- initially null until someone claims
         ReferredAt DATETIME2 NULL,

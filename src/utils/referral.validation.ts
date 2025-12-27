@@ -67,7 +67,7 @@ export const purchaseReferralPlanSchema = Joi.object({
 // ===== FILTER SCHEMAS =====
 
 export const referralRequestsFilterSchema = Joi.object({
-    status: Joi.string().valid('Pending', 'Claimed', 'Completed', 'Verified').optional(),
+    status: Joi.string().valid('Pending', 'Completed', 'Verified').optional(),
     jobTitle: Joi.string().max(200).optional(),
     companyName: Joi.string().max(200).optional(),
     dateFrom: Joi.date().optional(),
@@ -90,7 +90,6 @@ export const updateReferralPreferencesSchema = Joi.object({
         'boolean.base': 'Open to refer must be true or false'
     }),
     emailOnNewRequests: Joi.boolean().optional(),
-    emailOnClaimed: Joi.boolean().optional(),
     emailOnCompleted: Joi.boolean().optional(),
     pushNotifications: Joi.boolean().optional()
 });
@@ -122,7 +121,6 @@ export const searchReferralRequestsSchema = Joi.object({
 
 export const referralNotificationSettingsSchema = Joi.object({
     emailOnNewRequests: Joi.boolean().default(true),
-    emailOnClaimed: Joi.boolean().default(true),
     emailOnCompleted: Joi.boolean().default(true),
     pushNotifications: Joi.boolean().default(true),
     dailyDigest: Joi.boolean().default(false),
@@ -195,7 +193,7 @@ export function validateReferralPagination(data: any) {
  * Check if status is valid referral status
  */
 export function isValidReferralStatus(status: string): boolean {
-    return ['Pending', 'Claimed', 'Completed', 'Verified'].includes(status);
+    return ['Pending', 'Completed', 'Verified'].includes(status);
 }
 
 /**

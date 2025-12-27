@@ -174,8 +174,6 @@ export default function ReferralScreen({ navigation }) {
     switch (status) {
       case 'Pending':
         return colors.gray600;
-      case 'Claimed':
-        return colors.primary;
       case 'Completed':
         return colors.success;
       case 'Verified':
@@ -191,8 +189,6 @@ export default function ReferralScreen({ navigation }) {
     switch (status) {
       case 'Pending':
         return 'time-outline';
-      case 'Claimed':
-        return 'checkmark-circle-outline';
       case 'Completed':
         return 'checkmark-circle';
       case 'Verified':
@@ -377,16 +373,6 @@ export default function ReferralScreen({ navigation }) {
                 <Text style={styles.dismissText}>Dismiss</Text>
               </TouchableOpacity>
             </>
-          )}
-          
-          {request.Status === 'Claimed' && (
-            <TouchableOpacity 
-              style={styles.proofBtn}
-              onPress={() => handleSubmitProof(request)}
-            >
-              <Ionicons name="camera" size={16} color="#fff" />
-              <Text style={styles.proofText}>Submit Proof</Text>
-            </TouchableOpacity>
           )}
         </View>
       </CardWrapper>

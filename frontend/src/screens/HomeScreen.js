@@ -240,9 +240,9 @@ const [dashboardData, setDashboardData] = useState({
           if (result.success && result.data) {
             // Data comes as { requests: [...], total, page, pageSize, totalPages }
             const requests = result.data.requests || result.data || [];
-            // Only show pending/claimed requests
+            // Only show pending requests (Claimed status removed)
             const activeRequests = Array.isArray(requests) 
-              ? requests.filter(r => r.StatusID === 1 || r.StatusID === 2 || r.Status === 'Pending' || r.Status === 'Claimed')
+              ? requests.filter(r => r.StatusID === 1 || r.Status === 'Pending')
               : [];
             setMyReferrerRequests(activeRequests);
           }

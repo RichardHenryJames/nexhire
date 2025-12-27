@@ -30,21 +30,6 @@ export class ReferralNotificationService {
     }
 
     /**
-     * Send notification when referral request is claimed
-     */
-    static async notifyReferralClaimed(requestId: string, referrerId: string, seekerId: string): Promise<void> {
-        try {
-            console.log(`Referral request ${requestId} claimed by ${referrerId} for seeker ${seekerId}`);
-            
-            // Notify the seeker that their request was claimed
-            // TODO: Send email/push notification to seeker
-            
-        } catch (error) {
-            console.error('Error sending referral claimed notification:', error);
-        }
-    }
-
-    /**
      * Send notification when referral is completed
      */
     static async notifyReferralCompleted(requestId: string, referrerId: string, seekerId: string): Promise<void> {
@@ -160,7 +145,6 @@ export class ReferralAnalyticsService {
                     -- Request Metrics
                     COUNT(DISTINCT rr.RequestID) as TotalRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Pending' THEN rr.RequestID END) as PendingRequests,
-                    COUNT(DISTINCT CASE WHEN rr.Status = 'Claimed' THEN rr.RequestID END) as ClaimedRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Completed' THEN rr.RequestID END) as CompletedRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedRequests,
                     
@@ -208,18 +192,6 @@ export class ReferralAnalyticsService {
                     100.0 as Percentage
                 FROM ReferralRequests
                 WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())
-                
-                UNION ALL
-                
-                SELECT 
-                    'Requests Claimed' as Stage,
-                    COUNT(*) as Count,
-                    CASE WHEN (SELECT COUNT(*) FROM ReferralRequests WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())) > 0
-                        THEN (COUNT(*) * 100.0) / (SELECT COUNT(*) FROM ReferralRequests WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE()))
-                        ELSE 0 END as Percentage
-                FROM ReferralRequests
-                WHERE Status IN ('Claimed', 'Completed', 'Verified')
-                AND RequestedAt >= DATEADD(day, -30, GETUTCDATE())
                 
                 UNION ALL
                 

@@ -187,9 +187,12 @@ if (Test-Path $indexPath) {
     <meta name="twitter:title" content="RefOpen - Job Referral Platform" />
     <meta name="twitter:description" content="Get referred to top companies by employees. Find jobs through trusted referrals." />
     <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/refopen-logo.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/refopen-logo.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/refopen-logo.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     <meta name="theme-color" content="#6366F1" />
     <link rel="canonical" href="https://refopen.com/" />
     <meta name="application-name" content="RefOpen" />

@@ -29,7 +29,7 @@ export interface ReferralRequest {
     JobID: string; // Required - can be internal GUID or external job identifier
     ApplicantID: string;
     ResumeID: string;
-    Status: 'Pending' | 'Claimed' | 'Completed' | 'Verified';
+    Status: 'Pending' | 'Completed' | 'Verified';
     RequestedAt: Date;
     AssignedReferrerID?: string;
     ReferredAt?: Date;
@@ -171,7 +171,6 @@ export interface PaginatedReferralRequests {
 // Notification preferences
 export interface ReferralNotificationSettings {
     emailOnNewRequests: boolean;
-    emailOnClaimed: boolean;
     emailOnCompleted: boolean;
     pushNotifications: boolean;
 }

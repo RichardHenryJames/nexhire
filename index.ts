@@ -87,7 +87,6 @@ import {
   getMyReferralRequests,
   getAvailableRequests, // FIXED: Correct import name
   claimReferralRequest,
-  submitReferralProof,
   verifyReferralCompletion,
   getMyReferrerRequests,
   getReferralAnalytics,
@@ -1015,14 +1014,6 @@ app.http("referral-claim", {
   authLevel: "anonymous",
   route: "referral/requests/{requestId}/claim",
   handler: withErrorHandling(claimReferralRequest), // Same pattern as work experience
-});
-
-// NEW: Proof Submission & Verification
-app.http("referral-proof-submit", {
-  methods: ["POST", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "referral/requests/{requestId}/proof",
-  handler: withErrorHandling(submitReferralProof), // Same pattern as work experience
 });
 
 app.http("referral-verify", {

@@ -124,8 +124,6 @@ export default function MyReferralRequestsScreen() {
     switch (status) {
       case 'Pending':
         return colors.gray500;
-      case 'Claimed':
-        return colors.primary;
       case 'Completed':
         return colors.success;
       case 'Verified':
@@ -141,8 +139,6 @@ export default function MyReferralRequestsScreen() {
     switch (status) {
       case 'Pending':
         return 'time-outline';
-      case 'Claimed':
-        return 'checkmark-circle-outline';
       case 'Completed':
         return 'checkmark-circle';
       case 'Verified':

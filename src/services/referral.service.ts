@@ -18,7 +18,6 @@ import {
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
     ClaimReferralRequestWithProofDto,
-    SubmitReferralProofDto,
     VerifyReferralDto,
     PurchaseReferralPlanDto,
     ReferralAnalytics,
@@ -523,147 +522,7 @@ export class ReferralService {
         }
     }
 
-    /**
-     * Claim a referral request
-     */
-    static async claimReferralRequest(referrerId: string, dto: ClaimReferralRequestDto): Promise<ReferralRequest> {
-        try {
-            // Check if request is still available
-            const requestQuery = `
-                SELECT RequestID, Status, JobID
-                FROM ReferralRequests
-                WHERE RequestID = @param0 AND Status = 'Pending'
-            `;
-            const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID]);
-            
-            if (!requestResult.recordset || requestResult.recordset.length === 0) {
-                throw new ValidationError('Request not available for claiming');
-            }
-            
-            const jobId = requestResult.recordset[0].JobID;
-            
-            // Verify referrer is eligible (same organization)
-            const eligibilityQuery = `
-                SELECT we.OrganizationID
-                FROM WorkExperiences we
-                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND j.JobID = @param1
-            `;
-            const eligibilityResult = await dbService.executeQuery(eligibilityQuery, [referrerId, jobId]);
-            
-            if (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0) {
-                throw new ValidationError('You are not eligible to refer for this job');
-            }
-            
-            // Claim the request
-            const updateQuery = `
-                UPDATE ReferralRequests
-                SET Status = 'Claimed', AssignedReferrerID = @param1, ReferredAt = GETUTCDATE()
-                WHERE RequestID = @param0
-            `;
-            
-            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId]);
-            
-            // Update referrer stats
-            await this.updateReferrerStats(referrerId);
-            
-            return await this.getReferralRequestById(dto.requestID);
-        } catch (error) {
-            console.error('Error claiming referral request:', error);
-            throw error;
-        }
-    }
-
-    // ===== NEW: PROOF SUBMISSION & VERIFICATION =====
-
-    /**
-     * Submit proof of referral (screenshot, URL, etc.)
-     */
-    static async submitReferralProof(referrerId: string, dto: SubmitReferralProofDto): Promise<ReferralProof> {
-        try {
-            // Verify request exists and is claimed by this referrer
-            const requestQuery = `
-                SELECT RequestID, Status, AssignedReferrerID, RequestedAt, ReferredAt
-                FROM ReferralRequests
-                WHERE RequestID = @param0 AND AssignedReferrerID = @param1 AND Status = 'Claimed'
-            `;
-            const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID, referrerId]);
-            
-            if (!requestResult.recordset || requestResult.recordset.length === 0) {
-                throw new ValidationError('Request not found or not claimed by you');
-            }
-
-            // Check if proof already exists
-            const existingProofQuery = `
-                SELECT ProofID FROM ReferralProofs 
-                WHERE RequestID = @param0 AND ReferrerID = @param1
-            `;
-            const existingProofResult = await dbService.executeQuery(existingProofQuery, [dto.requestID, referrerId]);
-            
-            if (existingProofResult.recordset && existingProofResult.recordset.length > 0) {
-                throw new ConflictError('Proof already submitted for this request');
-            }
-
-            // Create proof record
-            const proofId = AuthService.generateUniqueId();
-            const insertQuery = `
-                INSERT INTO ReferralProofs (
-                    ProofID, RequestID, ReferrerID, FileURL, FileType, SubmittedAt
-                ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, GETUTCDATE()
-                )
-            `;
-            
-            await dbService.executeQuery(insertQuery, [
-                proofId, dto.requestID, referrerId, dto.fileURL, dto.fileType
-            ]);
-
-            // Update request status to 'Completed'
-            await dbService.executeQuery(
-                'UPDATE ReferralRequests SET Status = \'Completed\' WHERE RequestID = @param0',
-                [dto.requestID]
-            );
-
-            // ?? FIX: Award points for proof submission with separate quick response bonus tracking
-            const request = requestResult.recordset[0];
-            let baseProofPoints = 15; // Base points for submitting proof
-            
-            // Award base proof submission points first
-            console.log(`Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
-            await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
-            
-            // Calculate and award quick response bonus separately for better tracking  
-            const requestedAt = new Date(request.RequestedAt);
-            const referredAt = new Date(request.ReferredAt);
-            const now = new Date();
-            const hoursFromClaim = (now.getTime() - referredAt.getTime()) / (1000 * 60 * 60);
-            
-            if (hoursFromClaim <= 24) {
-                const quickBonusPoints = 10; // Quick response bonus
-                console.log(`Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
-                await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
-            }
-
-            // Get the created proof
-            const proofQuery = `
-                SELECT ProofID, RequestID, ReferrerID, FileURL, FileType, SubmittedAt
-                FROM ReferralProofs
-                WHERE ProofID = @param0
-            `;
-            const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
-            
-            console.log(`Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
-            
-            // TODO: Notify seeker that proof was submitted
-            // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
-
-            return proofResult.recordset[0];
-        } catch (error) {
-            console.error('Error submitting referral proof:', error);
-            throw error;
-        }
-    }
+    // ===== VERIFICATION =====
 
     /**
      * Verify referral completion by seeker
@@ -713,7 +572,7 @@ export class ReferralService {
     }
 
     /**
-     * Get my requests as referrer (claimed/completed requests)
+     * Get my requests as referrer (completed requests)
      */
     static async getMyReferrerRequests(referrerId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
         try {

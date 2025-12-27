@@ -102,7 +102,7 @@ app.http('referral-claim', {
 });
 
 /**
- * Get my requests as referrer (claimed/completed requests)
+ * Get my requests as referrer (completed requests)
  * GET /api/referral/my-referrer-requests
  */
 app.http('referral-my-referrer-requests', {
