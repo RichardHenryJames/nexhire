@@ -38,6 +38,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 
 // RefOpen Logo
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
@@ -750,6 +751,20 @@ export default function AboutScreen() {
             </ScrollView>
           </View>
         </LinearGradient>
+
+        {/* ============================================ */}
+        {/* GOOGLE ADSENSE - TOP BANNER */}
+        {/* ============================================ */}
+        <View style={{ backgroundColor: COLORS.bgPrimary, paddingTop: 16 }}>
+          <AdCard 
+            variant="about" 
+            style={{ 
+              marginHorizontal: isLargeScreen ? 40 : 16,
+              backgroundColor: COLORS.bgSecondary,
+              borderColor: COLORS.border,
+            }} 
+          />
+        </View>
 
         {/* ============================================ */}
         {/* STATS SECTION */}

@@ -22,6 +22,7 @@ import refopenAPI from '../services/api';
 import messagingApi from '../services/messagingApi';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 
 const { width } = Dimensions.get('window');
 
@@ -692,6 +693,9 @@ const [dashboardData, setDashboardData] = useState({
                 badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
                 onPress={() => navigation.navigate('Referrals')}
               />
+              
+              {/* Google AdSense Ad - Employer Home */}
+              <AdCard variant="home" />
             </>
           ) : (
             <>
@@ -824,6 +828,9 @@ const [dashboardData, setDashboardData] = useState({
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
               </TouchableOpacity>
+
+              {/* Google AdSense Ad - Job Seeker Home */}
+              <AdCard variant="home" />
             </>
           )}
         </View>

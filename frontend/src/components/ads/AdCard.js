@@ -1,127 +1,261 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
+import React, { useMemo, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 
+// Generate unique ID for each ad instance
+let adInstanceCounter = 0;
+
+// Ad slot IDs for each page (created in Google AdSense dashboard)
+const AD_SLOTS = {
+  home: '7282446761',      // Homepage ad slot
+  jobs: '1062213844',      // RefOpen Job Feeds ad slot
+  about: '2030120088',     // About screen ad slot
+  referral: '7090875076',  // Ask Referral ad slot
+};
+
 /**
  * AdCard Component - Displays Google AdSense ads
  * 
- * Props:
- * - variant: 'jobs' (default) | 'referral' - Different styles for different pages
+ * Each variant uses EXACT CSS matching its parent page:
+ * - home: Matches quickActionCard style from HomeScreen
+ * - jobs: Matches JobCard style from JobCard component
+ * - referral: Thin strip at top of AskReferralScreen
+ * - about: Matches AboutScreen card style
  */
 const AdCard = ({ 
-  adSlot = '1062213844',
   adClient = 'ca-pub-7167287641762329',
-  adFormat = 'auto',
-  variant = 'jobs', // 'jobs' | 'referral'
+  variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home'
+  style = {},
 }) => {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors, variant), [colors, variant]);
-  const adInitialized = useRef(false);
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [adId] = useState(() => `ad-${variant}-${++adInstanceCounter}`);
+  const [adLoaded, setAdLoaded] = useState(false);
+  
+  // Get the correct ad slot for this variant
+  const adSlot = AD_SLOTS[variant] || AD_SLOTS.jobs;
 
   useEffect(() => {
-    // Only run on web platform
-    if (Platform.OS === 'web' && !adInitialized.current) {
-      try {
-        const timer = setTimeout(() => {
-          if (window.adsbygoogle) {
+    if (Platform.OS === 'web' && !adLoaded) {
+      const timer = setTimeout(() => {
+        try {
+          const adElement = document.getElementById(adId);
+          if (adElement && !adElement.dataset.adsbygoogleStatus && window.adsbygoogle) {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
-            adInitialized.current = true;
+            setAdLoaded(true);
           }
-        }, 100);
-        return () => clearTimeout(timer);
-      } catch (error) {
-        console.log('AdSense error:', error);
-      }
+        } catch (error) {
+          console.log('AdSense initialization error:', error);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [adId, adLoaded]);
 
-  // Referral page variant - Minimal inline style
-  if (variant === 'referral') {
+  // ========================================
+  // HOME VARIANT - Matches quickActionCard from HomeScreen exactly
+  // ========================================
+  if (variant === 'home') {
     return (
-      <View style={styles.minimalAd}>
-        <View style={styles.minimalBadge}>
-          <Text style={styles.minimalBadgeText}>AD</Text>
+      <View style={[styles.homeCard, style]}>
+        <View style={[styles.homeIcon, { backgroundColor: colors.primary + '20' }]}>
+          <Ionicons name="megaphone" size={24} color={colors.primary} />
+          <View style={[styles.homeBadge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.homeBadgeText}>AD</Text>
+          </View>
         </View>
-        <Text style={styles.minimalText}>Sponsored</Text>
+        <View style={styles.homeContent}>
+          <Text style={styles.homeTitle}>Sponsored</Text>
+          {Platform.OS === 'web' ? (
+            <ins
+              id={adId}
+              className="adsbygoogle"
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '20px',
+              }}
+              data-ad-client={adClient}
+              data-ad-slot={adSlot}
+              data-ad-format="fluid"
+              data-ad-layout-key="-fb+5w+4e-db+86"
+            />
+          ) : (
+            <Text style={styles.homeDescription}>Promoted content</Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
       </View>
     );
   }
 
-  // Jobs page variant - Card style (default)
-  return (
-    <TouchableOpacity activeOpacity={0.8} style={styles.card}>
-      {/* Header - Same as JobCard */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          {/* Logo Container - Same as JobCard */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="megaphone" size={20} color={colors.primary} />
+  // ========================================
+  // JOBS VARIANT - Matches JobCard style exactly
+  // ========================================
+  if (variant === 'jobs') {
+    return (
+      <View style={[styles.jobCard, style]}>
+        {/* Header Row - Same as JobCard */}
+        <View style={styles.jobHeader}>
+          <View style={styles.jobTitleRow}>
+            <View style={styles.jobLogoContainer}>
+              <View style={styles.jobLogoPlaceholder}>
+                <Ionicons name="megaphone" size={20} color={colors.primary} />
+              </View>
+            </View>
+            <View style={styles.jobTitleContent}>
+              <Text style={styles.jobTitle} numberOfLines={1}>Sponsored</Text>
+              <Text style={styles.jobCompany} numberOfLines={1}>Advertisement</Text>
             </View>
           </View>
-          
-          {/* Title and Company - Same structure as JobCard */}
-          <View style={styles.titleContent}>
-            <Text style={styles.title} numberOfLines={1}>Sponsored Content</Text>
-            <Text style={styles.company} numberOfLines={1}>Advertisement</Text>
-          </View>
-        </View>
-      </View>
-      
-      {/* Meta Row - Same as JobCard */}
-      <View style={styles.metaRow}>
-        <Text style={styles.meta}>Promoted</Text>
-        <Text style={styles.dot}> • </Text>
-        <Text style={styles.meta}>Relevant to your search</Text>
-      </View>
-
-      {/* Badge Row - Similar to JobCard job type badges */}
-      <View style={styles.metaRowAlt}>
-        <Text style={styles.metaBadge}>AD</Text>
-        <Text style={styles.metaBadge}>Sponsored</Text>
-      </View>
-
-      {/* Google AdSense - inline ad (only on web) */}
-      {Platform.OS === 'web' && (
-        <ins
-          className="adsbygoogle"
-          style={{
-            display: 'block',
-            width: '100%',
-            height: 'auto',
-            minHeight: '50px',
-            maxHeight: '100px',
-            marginTop: '8px',
-          }}
-          data-ad-client={adClient}
-          data-ad-slot={adSlot}
-          data-ad-format="fluid"
-          data-ad-layout-key="-fb+5w+4e-db+86"
-        />
-      )}
-
-      {/* Actions Row - Same structure as JobCard */}
-      <View style={styles.actionsRow}>
-        <View style={styles.adBadgePill}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.gray500} />
-          <Text style={styles.adBadgeText}>Sponsored</Text>
         </View>
         
-        <TouchableOpacity style={styles.learnMoreBtn} activeOpacity={0.7}>
-          <Ionicons name="open-outline" size={18} color="#fff" />
-          <Text style={styles.learnMoreText}>Learn More</Text>
-        </TouchableOpacity>
+        {/* Ad Content */}
+        {Platform.OS === 'web' && (
+          <ins
+            id={adId}
+            className="adsbygoogle"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '60px',
+              marginTop: '8px',
+            }}
+            data-ad-client={adClient}
+            data-ad-slot={adSlot}
+            data-ad-format="fluid"
+            data-ad-layout-key="-fb+5w+4e-db+86"
+          />
+        )}
+        
+        {/* Footer - Similar to JobCard */}
+        <View style={styles.jobFooter}>
+          <View style={styles.jobBadge}>
+            <Text style={styles.jobBadgeText}>AD</Text>
+          </View>
+          <Text style={styles.jobMeta}>Sponsored</Text>
+        </View>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  }
+
+  // ========================================
+  // REFERRAL VARIANT - Thin strip at top
+  // ========================================
+  if (variant === 'referral') {
+    return (
+      <View style={[styles.referralStrip, style]}>
+        {Platform.OS === 'web' && (
+          <ins
+            id={adId}
+            className="adsbygoogle"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '50px',
+            }}
+            data-ad-client={adClient}
+            data-ad-slot={adSlot}
+            data-ad-format="fluid"
+            data-ad-layout-key="-fb+5w+4e-db+86"
+          />
+        )}
+      </View>
+    );
+  }
+
+  // ========================================
+  // ABOUT VARIANT - Matches AboutScreen card style
+  // ========================================
+  if (variant === 'about') {
+    return (
+      <View style={[styles.aboutCard, style]}>
+        {Platform.OS === 'web' && (
+          <ins
+            id={adId}
+            className="adsbygoogle"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '90px',
+            }}
+            data-ad-client={adClient}
+            data-ad-slot={adSlot}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        )}
+      </View>
+    );
+  }
+
+  // Default fallback
+  return null;
 };
 
-// Styles for both variants
-const createStyles = (colors, variant) => StyleSheet.create({
-  // ============ JOBS VARIANT (JobCard style) ============
-  card: {
+// ========================================
+// STYLES - Exact CSS from each page
+// ========================================
+const createStyles = (colors) => StyleSheet.create({
+  // ============ HOME VARIANT - quickActionCard style from HomeScreen ============
+  homeCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  homeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    position: 'relative',
+  },
+  homeBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    borderRadius: 10,
+    minWidth: 24,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  homeBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+  },
+  homeContent: {
+    flex: 1,
+  },
+  homeTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  homeDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+  },
+
+  // ============ JOBS VARIANT - JobCard style ============
+  jobCard: {
     backgroundColor: colors.surface,
     padding: 14,
     marginHorizontal: 16,
@@ -133,19 +267,19 @@ const createStyles = (colors, variant) => StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  header: {
+  jobHeader: {
     marginBottom: 6,
   },
-  titleRow: {
+  jobTitleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 4,
   },
-  logoContainer: {
+  jobLogoContainer: {
     marginRight: 12,
     marginTop: 2,
   },
-  logoPlaceholder: {
+  jobLogoPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 8,
@@ -155,114 +289,61 @@ const createStyles = (colors, variant) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  titleContent: {
+  jobTitleContent: {
     flex: 1,
   },
-  title: {
+  jobTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 2,
   },
-  company: {
+  jobCompany: {
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
   },
-  metaRow: {
+  jobFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 8,
   },
-  metaRowAlt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-  },
-  meta: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  metaBadge: {
-    fontSize: 12,
-    color: colors.primary,
-    backgroundColor: colors.primaryLight + '30',
-    borderRadius: 10,
+  jobBadge: {
+    backgroundColor: colors.primary + '20',
     paddingHorizontal: 8,
     paddingVertical: 3,
+    borderRadius: 6,
     marginRight: 8,
   },
-  dot: { 
-    color: colors.gray300 
-  },
-  actionsRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  adBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
-    marginRight: 'auto',
-  },
-  adBadgeText: {
-    fontSize: 12,
-    color: colors.gray500,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  learnMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-  },
-  learnMoreText: { 
-    color: '#fff', 
-    marginLeft: 6, 
-    fontWeight: '700', 
-    fontSize: 13 
-  },
-  
-  // ============ REFERRAL VARIANT (Minimal style) ============
-  minimalAd: {
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 0,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  minimalContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  minimalBadge: {
-    backgroundColor: colors.gray500,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-    marginRight: 8,
-  },
-  minimalBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  minimalText: {
+  jobBadgeText: {
     fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  jobMeta: {
+    fontSize: 12,
     color: colors.textSecondary,
+  },
+
+  // ============ REFERRAL VARIANT - Thin strip ============
+  referralStrip: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    height: 50,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+
+  // ============ ABOUT VARIANT - AboutScreen card style ============
+  aboutCard: {
+    marginHorizontal: 24,
+    marginVertical: 16,
+    backgroundColor: '#18181B', // COLORS.bgCard from AboutScreen
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#27272A', // COLORS.border from AboutScreen
+    overflow: 'hidden',
   },
 });
 

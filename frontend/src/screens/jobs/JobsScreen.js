@@ -1225,11 +1225,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < data.length - 1) {
         elements.push(
           <View key={`ad-${index}`} style={{ marginBottom: 12 }}>
-            <AdCard
-              adClient={AD_CONFIG.adClient}
-              adSlot={AD_CONFIG.adSlot}
-              adFormat="auto"
-            />
+            <AdCard variant="jobs" />
           </View>
         );
       }
