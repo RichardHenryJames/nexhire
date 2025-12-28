@@ -369,20 +369,23 @@ export default function ReferralScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={[styles.statusBadge, { backgroundColor: colors.gray100 }]}
-          >
-            <Ionicons
-              name={getStatusIcon(request.Status)}
-              size={14}
-              color={getStatusColor(request.Status)}
-            />
-            <Text
-              style={[styles.statusText, { color: getStatusColor(request.Status) }]}
-              numberOfLines={1}
+          {/* Only show status badge when Verified */}
+          {request.Status === 'Verified' && (
+            <View style={[styles.statusBadge, { backgroundColor: colors.gray100 }]}
             >
-              {request.Status || 'Pending'}
-            </Text>
-          </View>
+              <Ionicons
+                name={getStatusIcon(request.Status)}
+                size={14}
+                color={getStatusColor(request.Status)}
+              />
+              <Text
+                style={[styles.statusText, { color: getStatusColor(request.Status) }]}
+                numberOfLines={1}
+              >
+                {request.Status}
+              </Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.requestActions}>
@@ -411,10 +414,6 @@ export default function ReferralScreen({ navigation }) {
                   <Text style={styles.viewRequestText}>View Request</Text>
                 </TouchableOpacity>
               )}
-              
-              <TouchableOpacity style={styles.dismissBtn}>
-                <Text style={styles.dismissText}>Dismiss</Text>
-              </TouchableOpacity>
             </>
           )}
           

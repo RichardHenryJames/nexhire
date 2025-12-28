@@ -1488,6 +1488,61 @@ export default function ProfileScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* My Activity Section */}
+        {userType === 'JobSeeker' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="pulse-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>My Activity</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.activityCard}
+              onPress={() => navigation.navigate('Applications')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons name="clipboard-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>My Applications</Text>
+                <Text style={styles.activitySummary}>Track jobs you have applied to</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.activityCard}
+              onPress={() => navigation.navigate('SavedJobs')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons name="bookmark-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>Saved Jobs</Text>
+                <Text style={styles.activitySummary}>View and manage saved jobs</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.activityCard}
+              onPress={() => navigation.navigate('MyReferralRequests')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>Referral Requests</Text>
+                <Text style={styles.activitySummary}>See referrals you have asked for</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Compliance Footer */}
         <ComplianceFooter navigation={navigation} />
       </Animated.ScrollView>
@@ -2508,6 +2563,34 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     fontWeight: '500',
+  },
+  // Activity Card Styles
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 14,
+  },
+  activityIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  activitySummary: {
+    fontSize: 13,
+    color: colors.gray500 || colors.textSecondary,
   },
   // Settings Button
   settingsButton: {
