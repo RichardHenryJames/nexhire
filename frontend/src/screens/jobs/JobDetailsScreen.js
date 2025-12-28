@@ -59,6 +59,7 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
 
   // 💎 NEW: Publish confirmation modal state
   const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
@@ -363,6 +364,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           setHasReferred(true);
           
           // 🎉 Show fullscreen success overlay for 1 second
+          setReferralCompanyName(job?.OrganizationName || '');
           setShowReferralSuccessOverlay(true);
           
           const amountDeducted = res.data?.amountDeducted || 39;
@@ -514,6 +516,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         setHasReferred(true);
         
         // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(job?.OrganizationName || '');
         setShowReferralSuccessOverlay(true);
         
         const amountDeducted = res.data?.amountDeducted || 39;
@@ -1325,7 +1328,8 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
         onComplete={() => setShowReferralSuccessOverlay(false)}
-        duration={2000}
+        duration={3500}
+        companyName={referralCompanyName}
       />
     </ScrollView>
   );

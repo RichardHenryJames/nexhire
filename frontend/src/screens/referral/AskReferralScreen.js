@@ -80,6 +80,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
 // 🎉 NEW: Referral success overlay state
 const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+const [referralCompanyName, setReferralCompanyName] = useState('');
 
 // 🆕 NEW: Referral confirm modal state (like JobsScreen)
 const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
@@ -449,6 +450,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
       if (result?.success) {
         
         // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(selectedCompany?.name || '');
         setShowReferralSuccessOverlay(true);
         
         // ✅ NEW: Show wallet deduction info
@@ -967,11 +969,12 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
         onCancel={() => setShowReferralConfirmModal(false)}
       />
 
-      {/* �🎉 Referral Success Overlay */}
+      {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
         onComplete={() => setShowReferralSuccessOverlay(false)}
-        duration={2000}
+        duration={3500}
+        companyName={referralCompanyName}
       />
 
       {/* Floating Referral Requests Button */}

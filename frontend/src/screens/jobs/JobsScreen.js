@@ -277,10 +277,11 @@ export default function JobsScreen({ navigation, route }) {
 
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '' });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '', companyName: '' });
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
 
   // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
   const [walletBalance, setWalletBalance] = useState(0);
@@ -1324,7 +1325,8 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         setReferralConfirmData({
           currentBalance: balance,
           requiredAmount: pricing.referralRequestCost,
-          jobTitle: job.Title || 'this job'
+          jobTitle: job.Title || 'this job',
+          companyName: job.OrganizationName || ''
         });
         setShowReferralConfirmModal(true);
         console.log('✅ Modal should be visible now');
@@ -1447,6 +1449,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         setReferredJobIds(prev => new Set([...prev, id]));
 
         // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(referralConfirmData.companyName);
         setShowReferralSuccessOverlay(true);
 
         // ✅ Show wallet deduction info
@@ -1893,7 +1896,8 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
         onComplete={() => setShowReferralSuccessOverlay(false)}
-        duration={2000}
+        duration={3500}
+        companyName={referralCompanyName}
       />
     </View>
   );

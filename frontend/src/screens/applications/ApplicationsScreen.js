@@ -80,6 +80,7 @@ export default function ApplicationsScreen({ navigation }) {
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -350,6 +351,7 @@ export default function ApplicationsScreen({ navigation }) {
           currentBalance: balance,
           requiredAmount: pricing.referralRequestCost,
           jobTitle: job.JobTitle || job.Title || 'this job',
+          companyName: job.OrganizationName || job.CompanyName || '',
           job,
         });
         setShowReferralConfirmModal(true);
@@ -442,6 +444,7 @@ export default function ApplicationsScreen({ navigation }) {
           }));
           
           // 🎉 Show fullscreen success overlay for 1 second
+          setReferralCompanyName(referralConfirmData.companyName || '');
           setShowReferralSuccessOverlay(true);
           
           const amountDeducted = res.data?.amountDeducted || 39;
@@ -495,6 +498,7 @@ export default function ApplicationsScreen({ navigation }) {
         }));
         
         // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(job.OrganizationName || job.CompanyName || '');
         setShowReferralSuccessOverlay(true);
         
         const amountDeducted = res.data?.amountDeducted || 39;
@@ -1000,7 +1004,8 @@ export default function ApplicationsScreen({ navigation }) {
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
         onComplete={() => setShowReferralSuccessOverlay(false)}
-        duration={2000}
+        duration={3500}
+        companyName={referralCompanyName}
       />
 
       {/* Custom Withdraw Confirmation (web only) */}
