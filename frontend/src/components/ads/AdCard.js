@@ -9,10 +9,11 @@ let adInstanceCounter = 0;
 
 // Ad slot IDs for each page (created in Google AdSense dashboard)
 const AD_SLOTS = {
-  home: '7282446761',      // Homepage ad slot
-  jobs: '1062213844',      // RefOpen Job Feeds ad slot
-  about: '2030120088',     // About screen ad slot
-  referral: '7090875076',  // Ask Referral ad slot
+  home: '7282446761',         // Homepage ad slot
+  jobs: '1062213844',         // RefOpen Job Feeds ad slot
+  about: '2030120088',        // About screen ad slot
+  referral: '7090875076',     // Ask Referral ad slot
+  applications: '8368297727', // Applications screen ad slot
 };
 
 /**
@@ -26,7 +27,7 @@ const AD_SLOTS = {
  */
 const AdCard = ({ 
   adClient = 'ca-pub-7167287641762329',
-  variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home'
+  variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home' | 'applications'
   style = {},
 }) => {
   const { colors } = useTheme();
@@ -75,7 +76,7 @@ const AdCard = ({
               style={{
                 display: 'block',
                 width: '100%',
-                height: '20px',
+                minHeight: '50px',
               }}
               data-ad-client={adClient}
               data-ad-slot={adSlot}
@@ -187,6 +188,47 @@ const AdCard = ({
             data-full-width-responsive="true"
           />
         )}
+      </View>
+    );
+  }
+
+  // ========================================
+  // APPLICATIONS VARIANT - Matches ApplicationCard style
+  // ========================================
+  if (variant === 'applications') {
+    return (
+      <View style={[styles.applicationCard, style]}>
+        {/* Compact header with ad */}
+        <View style={styles.appTitleRow}>
+          <View style={styles.appLogoContainer}>
+            <View style={styles.appLogoPlaceholder}>
+              <Ionicons name="megaphone" size={20} color={colors.primary} />
+            </View>
+          </View>
+          <View style={styles.appTitleContent}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Text style={styles.appTitle} numberOfLines={1}>Sponsored</Text>
+              <View style={[styles.appBadge, { marginLeft: 8 }]}>
+                <Text style={styles.appBadgeText}>AD</Text>
+              </View>
+            </View>
+            {Platform.OS === 'web' && (
+              <ins
+                id={adId}
+                className="adsbygoogle"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  minHeight: '50px',
+                }}
+                data-ad-client={adClient}
+                data-ad-slot={adSlot}
+                data-ad-format="fluid"
+                data-ad-layout-key="-fb+5w+4e-db+86"
+              />
+            )}
+          </View>
+        </View>
       </View>
     );
   }
@@ -344,6 +386,79 @@ const createStyles = (colors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#27272A', // COLORS.border from AboutScreen
     overflow: 'hidden',
+  },
+
+  // ============ APPLICATIONS VARIANT - ApplicationCard style ============
+  applicationCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  appHeader: {
+    marginBottom: 6,
+  },
+  appTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  appLogoContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  appLogoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  appTitleContent: {
+    flex: 1,
+  },
+  appTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 4,
+    lineHeight: 22,
+  },
+  appCompany: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  appFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  appBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  appBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  appMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });
 

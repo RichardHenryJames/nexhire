@@ -22,8 +22,15 @@ import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
+
+// Ad configuration - Google AdSense
+const AD_CONFIG = {
+  enabled: true,                              // Toggle ads on/off
+  frequency: 5,                               // Show ad after every N application cards
+};
 
 export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
@@ -874,7 +881,17 @@ export default function ApplicationsScreen({ navigation }) {
       {/* Applications List */}
       <FlatList
         data={applications}
-        renderItem={({ item }) => <ApplicationCard application={item} />}
+        renderItem={({ item, index }) => (
+          <>
+            <ApplicationCard application={item} />
+            {/* Insert ad after every N applications */}
+            {AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < applications.length - 1 && (
+              <View style={{ marginBottom: 12 }}>
+                <AdCard variant="applications" />
+              </View>
+            )}
+          </>
+        )}
         keyExtractor={(item) => item.ApplicationID}
         contentContainerStyle={applications.length === 0 ? styles.emptyContainer : styles.listContainer}
         refreshControl={
