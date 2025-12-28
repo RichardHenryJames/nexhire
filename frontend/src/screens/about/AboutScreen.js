@@ -647,8 +647,8 @@ export default function AboutScreen() {
                   color: COLORS.textPrimary,
                 }}
               >
-                Find Jobs. AI Search.{'\n'}
-                <Text style={{ color: COLORS.primary }}>Get Referred.</Text>{'\n'}
+                Find Jobs. Get Referred.{'\n'}
+                <Text style={{ color: COLORS.primary }}>Get Hired.</Text>{'\n'}
               </Text>
 
               <Text
@@ -661,9 +661,9 @@ export default function AboutScreen() {
                   color: COLORS.textSecondary,
                 }}
               >
-                <Text style={{ color: COLORS.accent, fontWeight: '600' }}>Apply directly</Text> to 125,000+ jobs, or request a referral to boost your chances. 
-                Your referral request reaches <Text style={{ color: COLORS.accent, fontWeight: '600' }}>ALL employees</Text> at that company on RefOpen.
-                No cold DMs. Real results.
+                RefOpen is an <Text style={{ color: COLORS.accent, fontWeight: '600' }}>AI-powered hiring and referral platform</Text> connecting job seekers, referrers, and employers. 
+                Referred candidates are up to <Text style={{ color: COLORS.accent, fontWeight: '600' }}>15x more likely</Text> to get hired — yet most don't have connections inside top companies. 
+                We bridge that gap.
               </Text>
 
               {/* CTA Buttons */}
