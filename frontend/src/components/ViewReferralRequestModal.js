@@ -46,6 +46,10 @@ export default function ViewReferralRequestModal({
   const [uploading, setUploading] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [description, setDescription] = useState('');
+  
+  // Validation error states
+  const [proofError, setProofError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
 
   // Determine initial step based on current status AND who claimed it
   const getInitialStep = (status, assignedReferrerUserID) => {
@@ -68,6 +72,8 @@ export default function ViewReferralRequestModal({
       setStep(initialStep);
       setProofImage(null);
       setDescription('');
+      setProofError(false);
+      setDescriptionError(false);
       
       // Only log "Viewed" status if not already claimed by current user
       if (initialStep === 'viewing') {
@@ -140,6 +146,7 @@ export default function ViewReferralRequestModal({
 
       if (!result.canceled && result.assets?.[0]) {
         setProofImage(result.assets[0]);
+        setProofError(false); // Clear error when image selected
       }
     } catch (error) {
       console.error('Image picker error:', error);
@@ -148,13 +155,24 @@ export default function ViewReferralRequestModal({
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    // Reset errors
+    setProofError(false);
+    setDescriptionError(false);
+    
+    let hasErrors = false;
+    
     if (!proofImage) {
-      Alert.alert('Proof Required', 'Please upload a screenshot showing your referral');
-      return;
+      setProofError(true);
+      hasErrors = true;
     }
 
     if (description.trim().length < 10) {
-      Alert.alert('Description Required', 'Please provide a brief description of your referral (at least 10 characters)');
+      setDescriptionError(true);
+      hasErrors = true;
+    }
+    
+    if (hasErrors) {
+      showToast('Please fill all required fields', 'error');
       return;
     }
 
@@ -343,25 +361,33 @@ export default function ViewReferralRequestModal({
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity 
-                    style={styles.uploadButton}
-                    onPress={handleImagePicker}
-                    disabled={uploading}
-                  >
-                    <Ionicons name="cloud-upload-outline" size={32} color={colors.gray600} />
-                    <Text style={styles.uploadButtonText}>Upload Screenshot</Text>
-                    <Text style={styles.uploadButtonSubtext}>Tap to select from gallery</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.uploadButton, proofError && styles.uploadButtonError]}
+                      onPress={handleImagePicker}
+                      disabled={uploading}
+                    >
+                      <Ionicons name="cloud-upload-outline" size={32} color={proofError ? colors.error : colors.gray600} />
+                      <Text style={[styles.uploadButtonText, proofError && { color: colors.error }]}>Upload Screenshot</Text>
+                      <Text style={styles.uploadButtonSubtext}>Tap to select from gallery</Text>
+                    </TouchableOpacity>
+                    {proofError && (
+                      <Text style={styles.errorText}>* Proof screenshot is required</Text>
+                    )}
+                  </>
                 )}
               </View>
 
               {/* Description Section */}
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>Description *</Text>
+                <Text style={[styles.inputLabel, descriptionError && { color: colors.error }]}>Description *</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, descriptionError && styles.textInputError]}
                   value={description}
-                  onChangeText={setDescription}
+                  onChangeText={(text) => {
+                    setDescription(text);
+                    if (text.trim().length >= 10) setDescriptionError(false);
+                  }}
                   placeholder="E.g., Sent candidate's profile via company email to hiring manager..."
                   placeholderTextColor={colors.gray500}
                   multiline
@@ -369,7 +395,14 @@ export default function ViewReferralRequestModal({
                   maxLength={500}
                   editable={!uploading}
                 />
-                <Text style={styles.characterCount}>{description.length}/500</Text>
+                <View style={styles.inputFooter}>
+                  {descriptionError ? (
+                    <Text style={styles.errorText}>* Minimum 10 characters required</Text>
+                  ) : (
+                    <View />
+                  )}
+                  <Text style={[styles.characterCount, descriptionError && { color: colors.error }]}>{description.length}/500</Text>
+                </View>
               </View>
 
               {/* Requirements */}
@@ -407,14 +440,14 @@ export default function ViewReferralRequestModal({
               )}
             </TouchableOpacity>
           ) : (
-            // Step 2: "Submit Referral" button
+            // Step 2: "Submit Referral" button - Always clickable, shows errors if fields missing
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (!proofImage || description.trim().length < 10 || uploading) && styles.submitButtonDisabled
+                uploading && styles.submitButtonDisabled
               ]}
               onPress={handleSubmit}
-              disabled={!proofImage || description.trim().length < 10 || uploading}
+              disabled={uploading}
             >
               {uploading ? (
                 <ActivityIndicator size="small" color={colors.white} style={{ marginRight: 8 }} />
@@ -610,6 +643,10 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background,
   },
+  uploadButtonError: {
+    borderColor: colors.error,
+    backgroundColor: colors.error + '08',
+  },
   uploadButtonText: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.medium,
@@ -664,11 +701,27 @@ const createStyles = (colors) => StyleSheet.create({
     textAlignVertical: 'top',
     minHeight: 100,
   },
+  textInputError: {
+    borderColor: colors.error,
+    borderWidth: 2,
+    backgroundColor: colors.error + '08',
+  },
+  inputFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: typography.sizes.xs,
+    color: colors.error,
+    fontWeight: typography.weights.medium,
+    marginTop: 6,
+  },
   characterCount: {
     fontSize: typography.sizes.xs,
     color: colors.textSecondary,
     textAlign: 'right',
-    marginTop: 8,
   },
   
   // Requirements
