@@ -25,6 +25,7 @@ import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker } = useAuth();
@@ -554,50 +555,8 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* ✅ Wallet Balance Banner - Shows immediately with loading state */}
-        {loadingWallet ? (
-          <View style={styles.quotaBanner}>
-            <View style={styles.quotaBannerContent}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.quotaBannerText}>Loading wallet balance...</Text>
-            </View>
-          </View>
-        ) : (
-          <View style={[
-            styles.quotaBanner,
-            hasSufficientBalance ? styles.quotaBannerSuccess : styles.quotaBannerWarning
-          ]}>
-            <View style={styles.quotaBannerContent}>
-              <Ionicons 
-                name={hasSufficientBalance ? "wallet" : "warning"} 
-                size={20} 
-                color={hasSufficientBalance ? colors.success : colors.warning} 
-                style={styles.quotaBannerIcon}
-              />
-              <Text style={[
-                styles.quotaBannerText, 
-                hasSufficientBalance ? styles.quotaBannerSuccessText : styles.quotaBannerWarningText
-              ]}>
-                {hasSufficientBalance 
-                  ? `Wallet Balance: ₹${walletBalance.toFixed(2)}`
-                  : `Insufficient balance: ₹${walletBalance.toFixed(2)}`
-                }
-              </Text>
-              {!hasSufficientBalance && (
-                <TouchableOpacity
-                  style={styles.addMoneyChip}
-                  onPress={() => {
-                    setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
-                    setShowWalletModal(true);
-                  }}
-                >
-                  <Ionicons name="add-circle" size={16} color={colors.warning} />
-                  <Text style={styles.addMoneyText}>Add</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
+        {/* Google AdSense Ad at top - Referral page style */}
+        <AdCard variant="referral" />
 
         {/* ✅ NEW: Dynamic Fortune 500 Company Showcase */}
         <View style={styles.introSection}>
@@ -868,27 +827,34 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!isFormReady || submitting || !hasSufficientBalance) && styles.submitButtonDisabled
+            submitting && styles.submitButtonDisabled,
+            (isFormReady && !loadingWallet && !hasSufficientBalance) && styles.addMoneyButton
           ]}
           onPress={() => {
-            handleSubmit();
+            if (!hasSufficientBalance) {
+              // Open wallet modal to add money
+              setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
+              setShowWalletModal(true);
+            } else {
+              handleSubmit();
+            }
           }}
-          disabled={!isFormReady || submitting || !hasSufficientBalance}
+          disabled={!isFormReady || submitting || loadingWallet}
         >
-          {!isFormReady ? (
+          {(!isFormReady || loadingWallet) ? (
             <>
               <ActivityIndicator size="small" color={colors.white} />
               <Text style={styles.submitButtonText}>Loading...</Text>
             </>
           ) : (
-            <Text style={[
-              styles.submitButtonText,
-              (submitting || !hasSufficientBalance) && styles.submitButtonTextDisabled
-            ]}>
-              {submitting ? 'Submitting...' : 
-               !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
-               `Ask Referral (₹${pricing.referralRequestCost})`}
-            </Text>
+            <>
+              {!hasSufficientBalance && <Ionicons name="wallet" size={20} color="#fff" style={{ marginRight: 8 }} />}
+              <Text style={styles.submitButtonText}>
+                {submitting ? 'Submitting...' : 
+                 !hasSufficientBalance ? 'Add Money to Wallet' :
+                 `Ask Referral (₹${pricing.referralRequestCost})`}
+              </Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -1473,6 +1439,9 @@ const createStyles = (colors) => StyleSheet.create({
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray300,
+  },
+  addMoneyButton: {
+    backgroundColor: colors.warning,
   },
   submitButtonText: {
     color: colors.white,

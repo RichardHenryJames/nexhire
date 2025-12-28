@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
+import AdCard from '../../components/ads/AdCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -14,6 +15,14 @@ import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
+
+// Ad configuration - Google AdSense
+const AD_CONFIG = {
+  enabled: true,                              // Toggle ads on/off
+  adClient: 'ca-pub-7167287641762329',        // Your AdSense Publisher ID
+  adSlot: '1062213844',                       // RefOpen Job Feeds ad slot
+  frequency: 5,                               // Show ad after every N job cards
+};
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -1182,15 +1191,18 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       );
     }
 
-    // Simple job cards without animations
-    return data.map((job, index) => {
+    // Simple job cards without animations - with Ad integration
+    const elements = [];
+    
+    data.forEach((job, index) => {
       const id = job.JobID || index;
       const jobKey = job.JobID || job.id;
       const isReferred = referredJobIds.has(jobKey);
       const isSaved = savedIds.has(jobKey);
       const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
 
-      return (
+      // Add job card
+      elements.push(
         <View key={id} style={{ marginBottom: 12 }}>
           <JobCard
             job={job}
@@ -1208,7 +1220,22 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           />
         </View>
       );
+      
+      // Insert ad card after every N jobs (based on AD_CONFIG.frequency)
+      if (AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < data.length - 1) {
+        elements.push(
+          <View key={`ad-${index}`} style={{ marginBottom: 12 }}>
+            <AdCard
+              adClient={AD_CONFIG.adClient}
+              adSlot={AD_CONFIG.adSlot}
+              adFormat="auto"
+            />
+          </View>
+        );
+      }
     });
+    
+    return elements;
   };
 
   const openingsCount = jobs.length;
