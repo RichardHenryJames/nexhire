@@ -642,7 +642,7 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
           
           {/* Value Proposition - Short & Impactful */}
           <Text style={styles.valueText}>
-            Get referrals from employees working at your dream company who are ready to refer candidates. <Text style={styles.valueHighlight}>Increase your chances by 5x.</Text>
+            Get referrals from employees working at your dream company who are ready to refer candidates. <Text style={styles.valueHighlight}>Increase your chances by 15x.</Text>
           </Text>
         </View>
 

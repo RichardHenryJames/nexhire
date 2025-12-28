@@ -462,12 +462,6 @@ export default function ReferralScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        <Text style={styles.tabDescription}>
-          {activeTab === 'open' 
-            ? 'Help others get referred and earn rewards'
-            : 'Referrals you have completed'}
-        </Text>
-        
         {requestsToMe.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name={activeTab === 'open' ? "people-outline" : "checkmark-done-outline"} size={64} color={colors.gray400} />
@@ -488,7 +482,7 @@ export default function ReferralScreen({ navigation }) {
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Referral Requests</Text>
           <Text style={styles.headerSubtitle}>
-            Help others get referred
+            Help others get referred and earn rewards
           </Text>
         </View>
       </View>

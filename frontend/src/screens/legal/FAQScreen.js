@@ -75,7 +75,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How is Refopen different from other job portals?',
-          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, ALL employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 4x more likely to get hired.'
+          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, ALL employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 15x more likely to get hired.'
         },
         {
           question: 'Is Refopen available as a mobile app?',
@@ -117,7 +117,7 @@ export default function FAQScreen() {
         },
         {
           question: 'Does getting a referral guarantee me a job?',
-          answer: 'No, a referral does not guarantee a job offer. However, it significantly improves your chances:\n• Referred candidates are 4x more likely to be hired\n• Your resume gets priority review by recruiters\n• You skip the initial screening in many companies\n• You have an internal advocate for your application\n\nThe final hiring decision always rests with the employer based on your qualifications and interview performance.'
+          answer: 'No, a referral does not guarantee a job offer. However, it significantly improves your chances:\n• Referred candidates are 15x more likely to be hired\n• Your resume gets priority review by recruiters\n• You skip the initial screening in many companies\n• You have an internal advocate for your application\n\nThe final hiring decision always rests with the employer based on your qualifications and interview performance.'
         },
         {
           question: 'What happens if no one accepts my referral request?',
@@ -221,7 +221,7 @@ export default function FAQScreen() {
         },
         {
           question: 'What makes referred candidates better?',
-          answer: 'Referred candidates are pre-vetted:\n• Recommended by your own employees\n• 4x more likely to be hired\n• Better cultural fit\n• Faster time-to-hire\n• Higher retention rates\n• Reduced hiring costs'
+          answer: 'Referred candidates are pre-vetted:\n• Recommended by your own employees\n• 15x more likely to be hired\n• Better cultural fit\n• Faster time-to-hire\n• Higher retention rates\n• Reduced hiring costs'
         }
       ]
     },

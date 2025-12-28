@@ -906,7 +906,7 @@ export default function AboutScreen() {
             <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', justifyContent: 'center', alignItems: 'center', marginBottom: 48, backgroundColor: COLORS.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.border }}>
               <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="10x" label="Higher Interview Rate with Referral" color={COLORS.accent} />
+              <BigNumber number="15x" label="Higher Hiring Rate with Referral" color={COLORS.accent} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
               <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} />
             </View>

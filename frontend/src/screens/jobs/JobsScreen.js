@@ -1657,16 +1657,47 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         </>
       )}
 
-      {/* Job List */}
-      <ScrollView
-        style={styles.jobList}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onScroll={onScrollNearEnd}
-        scrollEventThrottle={16}
-      >
-        {renderList()}
+      {/* Job List Container with FAB */}
+      <View style={{ flex: 1 }}>
+        {/* Floating Action Buttons - Top Right of Job List */}
+        <View style={styles.fabContainerTop}>
+          <TouchableOpacity
+            style={[styles.fab, styles.fabSaved]}
+            onPress={() => navigation.navigate('SavedJobs')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="bookmark" size={20} color="#FFFFFF" />
+            {savedIds.length > 0 && (
+              <View style={styles.fabBadge}>
+                <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.fab, styles.fabApplications]}
+            onPress={() => navigation.navigate('Applications')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="briefcase" size={20} color="#FFFFFF" />
+            {appliedCount > 0 && (
+              <View style={styles.fabBadge}>
+                <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Job List */}
+        <ScrollView
+          style={styles.jobList}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          onScroll={onScrollNearEnd}
+          scrollEventThrottle={16}
+        >
+          {renderList()}
         
         {/* Loading More Indicator */}
         {loadingMore && (
@@ -1675,7 +1706,8 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Filter Modal */}
       <FilterModal
@@ -1840,37 +1872,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         onComplete={() => setShowReferralSuccessOverlay(false)}
         duration={2000}
       />
-
-      {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
-        {/* Saved Jobs Button */}
-     <TouchableOpacity
-     style={[styles.fab, styles.fabSaved]}
-    onPress={() => navigation.navigate('SavedJobs')}
-       activeOpacity={0.8}
- >
-          <Ionicons name="bookmark" size={20} color="#FFFFFF" />
-      {savedIds.length > 0 && (
-            <View style={styles.fabBadge}>
-              <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
-            </View>
-        )}
-     </TouchableOpacity>
-
-        {/* Applications Button */}
-        <TouchableOpacity
-  style={[styles.fab, styles.fabApplications]}
-          onPress={() => navigation.navigate('Applications')}
-    activeOpacity={0.8}
-   >
-          <Ionicons name="briefcase" size={20} color="#FFFFFF" />
-          {appliedCount > 0 && (
-            <View style={styles.fabBadge}>
-         <Text style={styles.fabBadgeText}>{appliedCount}</Text>
-          </View>
-   )}
-        </TouchableOpacity>
-  </View>
     </View>
   );
 }
