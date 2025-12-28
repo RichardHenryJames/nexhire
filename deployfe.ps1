@@ -191,10 +191,11 @@ if (Test-Path $indexPath) {
     <meta name="twitter:description" content="Find jobs, apply & get referrals from employees at top companies. Referred candidates are 15x more likely to get hired." />
     <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/refopen-logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/refopen-small-logo.jpg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <meta name="theme-color" content="#6366F1" />
     <link rel="canonical" href="https://refopen.com/" />

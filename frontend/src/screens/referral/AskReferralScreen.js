@@ -25,6 +25,7 @@ import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 
 export default function AskReferralScreen({ navigation, route }) {
@@ -79,6 +80,9 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
 // 🎉 NEW: Referral success overlay state
 const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+
+// 🆕 NEW: Referral confirm modal state (like JobsScreen)
+const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 
   // ✅ FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
@@ -410,24 +414,22 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
     return errorCount === 0;
   };
 
+  // 🆕 NEW: Handler when user clicks "Ask Referral" button - shows confirmation modal
+  const handleAskReferralClick = () => {
+    // Validate form FIRST
+    if (!validateForm()) {
+      return;
+    }
+    
+    // Show confirmation modal (handles both sufficient and insufficient balance)
+    setShowReferralConfirmModal(true);
+  };
+
+  // 🆕 UPDATED: Called when user clicks "Proceed" in confirm modal
   const handleSubmit = async () => {
     
     try {
       setSubmitting(true);
-      
-      // ✅ NEW: Check wallet balance FIRST (before validation)
-      if (walletBalance < pricing.referralRequestCost) {
-        
-        // Show beautiful wallet modal instead of ugly alert
-        setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
-        setShowWalletModal(true);
-        return;
-      }
-      
-      // Validate form
-      if (!validateForm()) {
-        return;
-      }
 
       // ✅ NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
@@ -806,39 +808,16 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
             </>
           )}
         </View>
-
-        {/* Enhanced Info Card */}
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={20} color={colors.primary} />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>How our referral system works:</Text>
-            <Text style={styles.infoText}>
-              1. Submit your referral request{'\n'}
-              2. Employees at that company get notified instantly{'\n'}
-              3. Increase your chances with employees ready to refer{'\n'}
-              4. Get fast-tracked in the hiring process through internal referrals
-            </Text>
-          </View>
-        </View>
       </ScrollView>
 
-      {/* Submit Button - Only enabled when everything is loaded */}
+      {/* Submit Button - Opens confirmation modal */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={[
             styles.submitButton,
-            submitting && styles.submitButtonDisabled,
-            (isFormReady && !loadingWallet && !hasSufficientBalance) && styles.addMoneyButton
+            submitting && styles.submitButtonDisabled
           ]}
-          onPress={() => {
-            if (!hasSufficientBalance) {
-              // Open wallet modal to add money
-              setWalletModalData({ currentBalance: walletBalance, requiredAmount: pricing.referralRequestCost });
-              setShowWalletModal(true);
-            } else {
-              handleSubmit();
-            }
-          }}
+          onPress={handleAskReferralClick}
           disabled={!isFormReady || submitting || loadingWallet}
         >
           {(!isFormReady || loadingWallet) ? (
@@ -847,14 +826,9 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
               <Text style={styles.submitButtonText}>Loading...</Text>
             </>
           ) : (
-            <>
-              {!hasSufficientBalance && <Ionicons name="wallet" size={20} color="#fff" style={{ marginRight: 8 }} />}
-              <Text style={styles.submitButtonText}>
-                {submitting ? 'Submitting...' : 
-                 !hasSufficientBalance ? 'Add Money to Wallet' :
-                 `Ask Referral (₹${pricing.referralRequestCost})`}
-              </Text>
-            </>
+            <Text style={styles.submitButtonText}>
+              {submitting ? 'Submitting...' : 'Ask Referral'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -976,7 +950,24 @@ const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(fal
         onCancel={() => setShowWalletModal(false)}
       />
 
-      {/* 🎉 Referral Success Overlay */}
+      {/* � Referral Confirm Modal - like JobsScreen */}
+      <ReferralConfirmModal
+        visible={showReferralConfirmModal}
+        currentBalance={walletBalance}
+        requiredAmount={pricing.referralRequestCost}
+        jobTitle={formData.jobTitle || 'this job'}
+        onProceed={async () => {
+          setShowReferralConfirmModal(false);
+          await handleSubmit();
+        }}
+        onAddMoney={() => {
+          setShowReferralConfirmModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* �🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
         onComplete={() => setShowReferralSuccessOverlay(false)}
