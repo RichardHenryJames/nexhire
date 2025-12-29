@@ -282,6 +282,7 @@ export default function JobsScreen({ navigation, route }) {
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralJobId, setPendingReferralJobId] = useState(null);
 
   // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
   const [walletBalance, setWalletBalance] = useState(0);
@@ -1359,19 +1360,23 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
-          setReferredJobIds(prev => new Set([...prev, id]));
+          // 🎉 Store pending job ID - will mark as referred when overlay closes
+          setPendingReferralJobId(id);
           setReferralEligibility(prev => ({
             ...prev,
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
             isEligible: prev.dailyQuotaRemaining > 1
           }));
           
-          // 🎉 Show fullscreen success overlay for 1 second
+          // 🎉 Show fullscreen success overlay
+          setReferralCompanyName(job.OrganizationName || '');
           setShowReferralSuccessOverlay(true);
           
           showToast('Referral request sent successfully', 'success');
 
-          // 🔧 FIXED: Reload primary resume after successful referral
+          // 🔧 FIXED: Set the resume directly and reload
+          setPrimaryResume(resumeData);
+          primaryResumeLoadedRef.current = false;
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -1446,10 +1451,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         resumeID: resumeId
       });
       if (res?.success) {
-        setReferredJobIds(prev => new Set([...prev, id]));
+        // 🎉 Store pending job ID - will mark as referred when overlay closes
+        setPendingReferralJobId(id);
 
-        // 🎉 Show fullscreen success overlay for 1 second
-        setReferralCompanyName(referralConfirmData.companyName);
+        // 🎉 Show fullscreen success overlay
+        setReferralCompanyName(job.OrganizationName || referralConfirmData.companyName || '');
         setShowReferralSuccessOverlay(true);
 
         // ✅ Show wallet deduction info
@@ -1895,7 +1901,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
-        onComplete={() => setShowReferralSuccessOverlay(false)}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark the job as referred after overlay closes
+          if (pendingReferralJobId) {
+            setReferredJobIds(prev => new Set([...prev, pendingReferralJobId]));
+            setPendingReferralJobId(null);
+          }
+        }}
         duration={3500}
         companyName={referralCompanyName}
       />

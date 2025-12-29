@@ -60,6 +60,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralSuccess, setPendingReferralSuccess] = useState(false);
 
   // 💎 NEW: Publish confirmation modal state
   const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
@@ -361,7 +362,8 @@ const { jobId, fromReferralRequest } = route.params || {};
           referralMessage: referralMessage.trim() || undefined
         });
         if (res.success) {
-          setHasReferred(true);
+          // 🎉 Store pending - will mark as referred when overlay closes
+          setPendingReferralSuccess(true);
           
           // 🎉 Show fullscreen success overlay for 1 second
           setReferralCompanyName(job?.OrganizationName || '');
@@ -378,6 +380,9 @@ const { jobId, fromReferralRequest } = route.params || {};
           showToast(message, 'success');
           setReferralMessage('');
           setShowReferralMessageInput(false);
+          
+          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
+          setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
           // Handle insufficient balance error
@@ -513,7 +518,8 @@ const { jobId, fromReferralRequest } = route.params || {};
         referralMessage: referralMessage.trim() || undefined
       });
       if (res?.success) {
-        setHasReferred(true);
+        // 🎉 Store pending - will mark as referred when overlay closes
+        setPendingReferralSuccess(true);
         
         // 🎉 Show fullscreen success overlay for 1 second
         setReferralCompanyName(job?.OrganizationName || '');
@@ -1327,7 +1333,14 @@ Highlight your relevant experience, skills, and why you're excited about this sp
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
-        onComplete={() => setShowReferralSuccessOverlay(false)}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark as referred after overlay closes
+          if (pendingReferralSuccess) {
+            setHasReferred(true);
+            setPendingReferralSuccess(false);
+          }
+        }}
         duration={3500}
         companyName={referralCompanyName}
       />

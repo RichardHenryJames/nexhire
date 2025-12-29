@@ -81,6 +81,7 @@ export default function ApplicationsScreen({ navigation }) {
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralJobId, setPendingReferralJobId] = useState(null);
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -436,7 +437,8 @@ export default function ApplicationsScreen({ navigation }) {
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
-          setReferredJobIds(prev => new Set([...prev, id]));
+          // 🎉 Store pending - will mark as referred when overlay closes
+          setPendingReferralJobId(id);
           setReferralEligibility(prev => ({
             ...prev,
             dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
@@ -456,6 +458,9 @@ export default function ApplicationsScreen({ navigation }) {
           }
           
           showToast(message, 'success');
+          
+          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
+          setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
           // Handle insufficient balance error
@@ -490,7 +495,8 @@ export default function ApplicationsScreen({ navigation }) {
         resumeID: resumeId
       });
       if (res?.success) {
-        setReferredJobIds(prev => new Set([...prev, id]));
+        // 🎉 Store pending - will mark as referred when overlay closes
+        setPendingReferralJobId(id);
         setReferralEligibility(prev => ({ 
           ...prev, 
           dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
@@ -1003,7 +1009,14 @@ export default function ApplicationsScreen({ navigation }) {
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
-        onComplete={() => setShowReferralSuccessOverlay(false)}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark as referred after overlay closes
+          if (pendingReferralJobId) {
+            setReferredJobIds(prev => new Set([...prev, pendingReferralJobId]));
+            setPendingReferralJobId(null);
+          }
+        }}
         duration={3500}
         companyName={referralCompanyName}
       />
