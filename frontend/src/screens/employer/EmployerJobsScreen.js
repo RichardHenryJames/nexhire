@@ -10,6 +10,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
 import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
+import useResponsive from '../../hooks/useResponsive';
 
 /*
 EmployerJobsScreen
@@ -23,9 +24,10 @@ const TABS = [ 'draft', 'published' ];
 export default function EmployerJobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
+  const responsive = useResponsive();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
-  const jobStyles = useMemo(() => createJobStyles(colors), [colors]);
-  const localStyles = useMemo(() => createLocalStyles(colors), [colors]);
+  const jobStyles = useMemo(() => createJobStyles(colors, responsive), [colors, responsive]);
+  const localStyles = useMemo(() => createLocalStyles(colors, responsive), [colors, responsive]);
   
   const [activeTab, setActiveTab] = useState('draft');
   const [jobs, setJobs] = useState([]);
@@ -199,7 +201,8 @@ export default function EmployerJobsScreen({ navigation, route }) {
   };
 
   return (
-    <View style={jobStyles.container}>
+    <View style={localStyles.container}>
+      <View style={localStyles.innerContainer}>
       {/* Search + Filter Bar */}
       <View style={jobStyles.searchHeader}>
         <View style={jobStyles.searchContainer}>
@@ -288,6 +291,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
           jobs.map(renderJob).filter(Boolean)
         )}
       </ScrollView>
+      </View>
 
       <WalletRechargeModal
         visible={showWalletModal}
@@ -320,7 +324,21 @@ export default function EmployerJobsScreen({ navigation, route }) {
   );
 }
 
-const createLocalStyles = (colors) => ({
+const createLocalStyles = (colors, responsive = {}) => {
+  const { isDesktop = false } = responsive;
+  const MAX_CONTENT_WIDTH = 1200;
+  
+  return {
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  innerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: isDesktop ? MAX_CONTENT_WIDTH : '100%',
+  },
   toggleScope:{
     marginLeft:8,
     backgroundColor:colors.surface,
@@ -383,4 +401,5 @@ const createLocalStyles = (colors) => ({
     fontWeight: '600',
     marginLeft: 8,
   }
-});
+};
+};

@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
@@ -10,7 +11,8 @@ import { typography } from '../../styles/theme';
 
 export default function CreateJobScreen({ navigation }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [loading, setLoading] = useState(false);
   const [jobTypes, setJobTypes] = useState([]);
@@ -339,6 +341,7 @@ export default function CreateJobScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={styles.title}>Post a New Job</Text>
@@ -473,6 +476,7 @@ export default function CreateJobScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+      </View>
       {datePickerVisible && (
         <DatePicker
           mode={datePickerMode}
@@ -601,8 +605,19 @@ export default function CreateJobScreen({ navigation }) {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  container:{flex:1,backgroundColor:colors.background},
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
+  },
   scrollContainer:{flex:1},
   scrollContent:{paddingBottom:100},
   content:{padding:20},

@@ -34,6 +34,23 @@ function ThemedAppRoot() {
       root.style.minHeight = '100vh';
       root.style.background = fallbackGradient;
     }
+
+    // Hide scrollbars globally but allow scrolling
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+      }
+      *::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
   }, [colors, isDark]);
 
   return (

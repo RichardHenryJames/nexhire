@@ -15,6 +15,8 @@ import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -223,7 +225,9 @@ export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet, gridColumns, contentWidth } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
@@ -1203,9 +1207,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       const isSaved = savedIds.has(jobKey);
       const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
 
-      // Add job card
+      // Add job card - responsive width for grid layout
       elements.push(
-        <View key={id} style={{ marginBottom: 12 }}>
+        <View key={id} style={styles.jobCardWrapper}>
           <JobCard
             job={job}
             jobTypes={jobTypes}
@@ -1223,15 +1227,30 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         </View>
       );
       
-      // Insert ad card after every N jobs (based on AD_CONFIG.frequency)
-      if (AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < data.length - 1) {
+      // Insert ad card after every N jobs (based on AD_CONFIG.frequency) - only on mobile
+      if (AD_CONFIG.enabled && isMobile && (index + 1) % AD_CONFIG.frequency === 0 && index < data.length - 1) {
         elements.push(
-          <View key={`ad-${index}`} style={{ marginBottom: 12 }}>
+          <View key={`ad-${index}`} style={styles.jobCardWrapper}>
             <AdCard variant="jobs" />
           </View>
         );
       }
     });
+    
+    // On desktop/tablet, wrap in a grid container
+    if (!isMobile) {
+      return (
+        <View style={styles.jobsGrid}>
+          {elements}
+          {/* Show ad at the end on desktop */}
+          {AD_CONFIG.enabled && data.length > 0 && (
+            <View style={styles.jobCardWrapper}>
+              <AdCard variant="jobs" />
+            </View>
+          )}
+        </View>
+      );
+    }
     
     return elements;
   };
@@ -1724,20 +1743,22 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         <ScrollView
           style={styles.jobList}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={styles.jobListContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onScroll={onScrollNearEnd}
           scrollEventThrottle={16}
         >
-          {renderList()}
-        
-        {/* Loading More Indicator */}
-        {loadingMore && (
-          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
-          </View>
-        )}
+          <ResponsiveContainer style={styles.jobListResponsive}>
+            {renderList()}
+          
+          {/* Loading More Indicator */}
+          {loadingMore && (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
+            </View>
+          )}
+          </ResponsiveContainer>
         </ScrollView>
       </View>
 

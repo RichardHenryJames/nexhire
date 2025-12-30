@@ -23,13 +23,17 @@ import messagingApi from '../services/messagingApi';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
+import useResponsive from '../hooks/useResponsive';
+import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker } = useAuth();
 const { colors } = useTheme();
-const styles = React.useMemo(() => createStyles(colors), [colors]);
+const responsive = useResponsive();
+const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
+const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
@@ -649,12 +653,13 @@ const [dashboardData, setDashboardData] = useState({
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer style={styles.responsiveContent}>
 
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
@@ -761,76 +766,79 @@ const [dashboardData, setDashboardData] = useState({
                 </View>
               </TouchableOpacity>
 
-              {/* 🎯 My Referrals Card - Only show if user has incoming referral requests */}
-              {myReferrerRequests.length > 0 && (
+              {/* Secondary Cards Container - 3 column grid on desktop */}
+              <View style={styles.secondaryCardsContainer}>
+                {/* 🎯 My Referrals Card - Only show if user has incoming referral requests */}
+                {myReferrerRequests.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.quickActionCard}
+                    onPress={() => navigation.navigate('Referrals', { tab: 'referrer' })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                      <Ionicons name="gift" size={24} color={colors.success} />
+                      <View style={styles.quickActionBadge}>
+                        <Text style={styles.quickActionBadgeText}>{myReferrerRequests.length}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.quickActionContent}>
+                      <Text style={styles.quickActionTitle}>My Referrals</Text>
+                      <Text style={styles.quickActionDescription}>Help others get their dream job</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+
+                {/* 🎯 Profile Views Card */}
                 <TouchableOpacity 
                   style={styles.quickActionCard}
-                  onPress={() => navigation.navigate('Referrals', { tab: 'referrer' })}
+                  onPress={() => navigation.navigate('ProfileViews')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
-                    <Ionicons name="gift" size={24} color={colors.success} />
-                    <View style={styles.quickActionBadge}>
-                      <Text style={styles.quickActionBadgeText}>{myReferrerRequests.length}</Text>
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="eye" size={24} color={colors.info} />
+                    <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
+                      <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
                     </View>
                   </View>
                   <View style={styles.quickActionContent}>
-                    <Text style={styles.quickActionTitle}>My Referrals</Text>
-                    <Text style={styles.quickActionDescription}>Help others get their dream job</Text>
+                    <Text style={styles.quickActionTitle}>Profile Views</Text>
+                    <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
-              )}
 
-              {/* 🎯 Profile Views Card */}
-              <TouchableOpacity 
-                style={styles.quickActionCard}
-                onPress={() => navigation.navigate('ProfileViews')}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
-                  <Ionicons name="eye" size={24} color={colors.info} />
-                  <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
-                    <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
+                {/* 🎯 Complete Profile Card - Compact Style */}
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Profile')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { 
+                    backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                  }]}>
+                    <Ionicons 
+                      name="person" 
+                      size={24} 
+                      color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                    />
+                    <View style={[
+                      styles.quickActionBadge, 
+                      { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                    ]}>
+                      <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.quickActionContent}>
-                  <Text style={styles.quickActionTitle}>Profile Views</Text>
-                  <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-              </TouchableOpacity>
-
-              {/* 🎯 Complete Profile Card - Compact Style */}
-              <TouchableOpacity 
-                style={styles.quickActionCard}
-                onPress={() => navigation.navigate('Profile')}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.quickActionIcon, { 
-                  backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
-                }]}>
-                  <Ionicons 
-                    name="person" 
-                    size={24} 
-                    color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
-                  />
-                  <View style={[
-                    styles.quickActionBadge, 
-                    { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
-                  ]}>
-                    <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Complete Profile</Text>
+                    <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
                   </View>
-                </View>
-                <View style={styles.quickActionContent}>
-                  <Text style={styles.quickActionTitle}>Complete Profile</Text>
-                  <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-              </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
 
-              {/* Google AdSense Ad - Job Seeker Home */}
-              <AdCard variant="home" />
+                {/* Google AdSense Ad - Job Seeker Home */}
+                <AdCard variant="home" />
+              </View>
             </>
           )}
         </View>
@@ -938,15 +946,29 @@ const [dashboardData, setDashboardData] = useState({
             </TouchableOpacity>
           </View>
         )}
+        </ResponsiveContainer>
       </ScrollView>
     </>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false, contentWidth = width, statColumns = 2 } = responsive;
+  
+  return StyleSheet.create({
 container: {
   flex: 1,
   backgroundColor: colors.background,
+},
+scrollContent: {
+  flexGrow: 1,
+  paddingBottom: 100,
+  alignItems: isDesktop ? 'center' : 'stretch',
+},
+responsiveContent: {
+  width: '100%',
+  maxWidth: isDesktop ? 1200 : '100%',
+  paddingHorizontal: isMobile ? 0 : 24,
 },
 loadingContainer: {
   flex: 1,
@@ -1166,12 +1188,12 @@ headerCompact: {
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
+    gap: isMobile ? 12 : 16,
+    justifyContent: 'flex-start',
   },
   statCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     borderLeftWidth: 4,
     shadowColor: colors.black,
@@ -1182,13 +1204,15 @@ headerCompact: {
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    width: '48%', // Makes it 2x2 grid with gap
-    minHeight: 120,
+    // Responsive width: 2 cols on mobile, 4 cols on tablet/desktop
+    width: isMobile ? '48%' : isTablet ? '23%' : '23%',
+    minWidth: isMobile ? 150 : 200,
+    minHeight: isMobile ? 120 : 140,
   },
   statCardLarge: {
-    padding: 20,
+    padding: isMobile ? 20 : 24,
     borderLeftWidth: 6,
-    width: '48%', // Keep consistent with regular cards
+    width: isMobile ? '48%' : '23%',
   },
   statContent: {
     flex: 1,
@@ -1257,10 +1281,19 @@ headerCompact: {
     flex: 1,
   },
   actionsContainer: {
-    padding: 20,
+    padding: isMobile ? 16 : 24,
     paddingTop: 0,
   },
-  // Premium Get Referrals Card
+  // Secondary cards container - 3 column grid on desktop
+  secondaryCardsContainer: {
+    ...(isDesktop && {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      marginTop: 8,
+    }),
+  },
+  // Premium Get Referrals Card - Full width on desktop
   premiumActionCard: {
     marginBottom: 16,
     borderRadius: 16,
@@ -1273,6 +1306,10 @@ headerCompact: {
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    // Full width on desktop (takes entire first row)
+    ...(isDesktop && {
+      width: '100%',
+    }),
   },
   premiumCardGradient: {
     backgroundColor: colors.surface,
@@ -1364,6 +1401,12 @@ headerCompact: {
     elevation: 5,
     borderWidth: 1,
     borderColor: colors.border,
+    // On desktop, make cards equal width in 3-column grid
+    ...(isDesktop && {
+      width: 'calc(33.333% - 11px)',
+      marginBottom: 0,
+      minWidth: 280,
+    }),
   },
   quickActionIcon: {
     width: 48,
@@ -1489,7 +1532,7 @@ headerCompact: {
   },
   actionCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1502,6 +1545,11 @@ headerCompact: {
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    // On desktop, action cards go in a 2-column grid
+    ...(isDesktop && {
+      width: '48%',
+      minWidth: 350,
+    }),
   },
   actionCardUrgent: {
     borderLeftWidth: 4,
@@ -1554,18 +1602,18 @@ headerCompact: {
     color: colors.gray600,
   },
   recentContainer: {
-    padding: 20,
+    padding: isMobile ? 16 : 24,
     paddingTop: 0,
   },
   horizontalScroll: {
-    paddingRight: 20,
+    paddingRight: isMobile ? 16 : 24,
   },
   jobCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     marginRight: 12,
-    width: 280,
+    width: isMobile ? 280 : 320,
     shadowColor: colors.black,
     shadowOffset: {
       width: 0,
@@ -1734,3 +1782,4 @@ headerCompact: {
     height: 100,
   },
 });
+};

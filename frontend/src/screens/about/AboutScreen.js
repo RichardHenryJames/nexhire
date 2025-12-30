@@ -34,8 +34,10 @@ import {
   Platform,
   Linking,
   Easing,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import useResponsive from '../../hooks/useResponsive';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
@@ -467,10 +469,28 @@ const BigNumber = ({ number, label, color }) => (
 // ============================================
 // MAIN COMPONENT
 // ============================================
+// Create responsive styles
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
+  },
+});
+
 export default function AboutScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const navigation = useNavigation();
+  const responsive = useResponsive();
+  const styles = createStyles(COLORS, responsive);
   
   // Get 4 random testimonials on each render
   const [testimonials] = React.useState(() => getRandomTestimonials(4));
@@ -551,7 +571,8 @@ export default function AboutScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bgPrimary }}>
+    <View style={styles.container}>
+      <View style={styles.innerContainer}>
       {/* Dark gradient overlay */}
       <LinearGradient
         colors={[COLORS.bgPrimary, COLORS.bgSecondary, COLORS.bgPrimary]}
@@ -1441,6 +1462,7 @@ export default function AboutScreen() {
           </View>
         </View>
       </Animated.ScrollView>
+      </View>
     </View>
   );
 }

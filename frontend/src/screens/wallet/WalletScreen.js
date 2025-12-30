@@ -8,15 +8,18 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
 
 export default function WalletScreen({ navigation, route }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -164,6 +167,7 @@ export default function WalletScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       {/* Wallet Balance Card */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Wallet Balance</Text>
@@ -241,14 +245,23 @@ export default function WalletScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
       </View>
+      </View>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -263,7 +276,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   balanceCard: {
     backgroundColor: '#007AFF',
-    padding: 24,
+    padding: responsive.isDesktop ? 32 : 24,
     margin: 16,
     borderRadius: 16,
     elevation: 4,

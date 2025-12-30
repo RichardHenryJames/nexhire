@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
 
 // Generate unique ID for each ad instance
 let adInstanceCounter = 0;
@@ -31,7 +32,8 @@ const AdCard = ({
   style = {},
 }) => {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [adId] = useState(() => `ad-${variant}-${++adInstanceCounter}`);
   const [adLoaded, setAdLoaded] = useState(false);
   
@@ -240,7 +242,10 @@ const AdCard = ({
 // ========================================
 // STYLES - Exact CSS from each page
 // ========================================
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isDesktop } = responsive;
+  
+  return StyleSheet.create({
   // ============ HOME VARIANT - quickActionCard style from HomeScreen ============
   homeCard: {
     backgroundColor: colors.surface,
@@ -256,6 +261,13 @@ const createStyles = (colors) => StyleSheet.create({
     elevation: 5,
     borderWidth: 1,
     borderColor: colors.border,
+    // On desktop, make cards equal width in 3-column grid (matching quickActionCard)
+    ...(Platform.OS === 'web' && isDesktop ? {
+      width: 'calc(33.333% - 11px)',
+      marginBottom: 0,
+      minWidth: 280,
+      minHeight: 80,
+    } : {}),
   },
   homeIcon: {
     width: 48,
@@ -461,5 +473,6 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+};
 
 export default AdCard;

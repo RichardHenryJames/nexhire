@@ -11,9 +11,11 @@ import {
   Alert,
   Switch,
   Image,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import ComplianceFooter from '../../components/ComplianceFooter';
@@ -46,7 +48,8 @@ const EDUCATION_LEVELS = [
 export default function SettingsScreen({ navigation }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [loading, setLoading] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
@@ -929,37 +932,38 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => {
-            // ✅ Smart back navigation - check if we have meaningful navigation history
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            
-            // If we have more than 1 route in the stack, go back normally
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              // Hard refresh scenario - navigate to Profile tab
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: {
-                  screen: 'Profile'
-                }
-              });
-            }
-          }} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <View style={styles.innerContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => {
+              // ✅ Smart back navigation - check if we have meaningful navigation history
+              const navState = navigation.getState();
+              const routes = navState?.routes || [];
+              const currentIndex = navState?.index || 0;
+              
+              // If we have more than 1 route in the stack, go back normally
+              if (routes.length > 1 && currentIndex > 0) {
+                navigation.goBack();
+              } else {
+                // Hard refresh scenario - navigate to Profile tab
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'Profile'
+                  }
+                });
+              }
+            }} 
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Account Details Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
@@ -1027,9 +1031,10 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
-        {/* Compliance Footer */}
-        <ComplianceFooter navigation={navigation} />
-      </ScrollView>
+          {/* Compliance Footer */}
+          <ComplianceFooter navigation={navigation} />
+        </ScrollView>
+      </View>
 
       {/* Modals */}
       {renderPersonalModal()}
@@ -1042,10 +1047,18 @@ export default function SettingsScreen({ navigation }) {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

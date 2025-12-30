@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 
 // Add debounce hook for smooth search
@@ -43,7 +44,8 @@ const useDebounce = (value, delay) => {
 
 export default function EducationDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [formData, setFormData] = useState({
     college: null,
     customCollege: '',
@@ -589,6 +591,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -836,14 +839,23 @@ export default function EducationDetailsScreen({ navigation, route }) {
           )}
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,

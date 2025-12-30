@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
@@ -32,7 +33,8 @@ const useDebounce = (value, delay = 300) => {
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
   // Employer type selection
@@ -225,6 +227,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -389,12 +392,24 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
           )}
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
+  },
   scrollContainer: { flex: 1 },
   content: { padding: 20, paddingTop: 20 },
   header: { marginBottom: 32 },

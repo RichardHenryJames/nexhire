@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
+import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
 
 const AuthContext = createContext();
 
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingRedirect, setPendingRedirect] = useState(null);
   
   // IMPROVED: Initialize from sessionStorage on mount
   const [pendingGoogleAuth, setPendingGoogleAuthState] = useState(() => {
@@ -60,6 +62,17 @@ export const AuthProvider = ({ children }) => {
     setPendingGoogleAuthState(data);
     savePendingGoogleAuthToStorage(data);
   };
+
+  // Check for pending redirect on mount
+  useEffect(() => {
+    const checkPendingRedirect = async () => {
+      const savedRoute = await getAndClearRedirectRoute();
+      if (savedRoute) {
+        setPendingRedirect(savedRoute);
+      }
+    };
+    checkPendingRedirect();
+  }, []);
 
   // Initialize smart auth methods
   const smartMethods = createSmartAuthMethods(refopenAPI, setUser, setError);
@@ -158,7 +171,11 @@ export const AuthProvider = ({ children }) => {
         if (loginResult.success) {
           
           setUser(loginResult.data.user);
-          return { success: true, user: loginResult.data.user };
+          
+          // Check for pending redirect after successful Google login
+          handlePostLoginRedirect();
+          
+          return { success: true, user: loginResult.data.user, hasPendingRedirect: !!pendingRedirect };
         }
         
         // Check if it's a user not found error
@@ -214,7 +231,22 @@ export const AuthProvider = ({ children }) => {
     setPendingGoogleAuth(null);
   };
 
-  // Existing login method (unchanged)
+  // Handle redirect after successful login
+  const handlePostLoginRedirect = () => {
+    if (pendingRedirect) {
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        const navigated = navigateToRoute(pendingRedirect);
+        if (navigated) {
+          setPendingRedirect(null);
+        }
+      }, 100);
+      return true;
+    }
+    return false;
+  };
+
+  // Existing login method - now with redirect support
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -226,7 +258,11 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         
         setUser(result.data.user);
-        return { success: true, user: result.data.user };
+        
+        // Check for pending redirect after successful login
+        handlePostLoginRedirect();
+        
+        return { success: true, user: result.data.user, hasPendingRedirect: !!pendingRedirect };
       } else {
         const errorMessage = result.message || 'Login failed';
         console.error('Login failed:', errorMessage);
@@ -516,6 +552,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     pendingGoogleAuth, // NEW: Expose pending Google auth data
+    pendingRedirect, // Expose pending redirect route (for session expiry redirect back)
     
     // Authentication methods
     login,
@@ -523,6 +560,7 @@ export const AuthProvider = ({ children }) => {
     clearPendingGoogleAuth, // NEW: Clear pending Google auth
     register,
     logout,
+    handlePostLoginRedirect, // Handle redirect after login
     
     // Profile methods
     updateProfile,           
@@ -549,6 +587,7 @@ export const AuthProvider = ({ children }) => {
     isGoogleUser: user?.LoginMethod === 'Google',
     hasPendingGoogleAuth: !!pendingGoogleAuth,
     googleAuthAvailable: googleAuth.isConfigured(),
+    hasPendingRedirect: !!pendingRedirect,
   };
 
   return (

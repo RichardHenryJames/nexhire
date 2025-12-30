@@ -22,6 +22,7 @@ import { spacing, typography, borderRadius, styles as themeStyles } from '../../
 import { useTheme } from '../../contexts/ThemeContext';
 import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
+import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,9 +86,32 @@ export default function LoginScreen({ navigation }) {
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet } = responsive;
   const colors = authDarkColors; // Always use dark colors for auth screens
-  const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles), [colors]);
+  const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles, responsive), [colors, responsive]);
+
+  // Check auth state when screen mounts or comes into focus
+  useEffect(() => {
+    // Re-check auth state when screen mounts (handles case where logged in on another tab)
+    checkAuthState();
+  }, []);
+
+  // Redirect to home if already authenticated (after loading completes)
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      // Check if there's a pending redirect first
+      const hasRedirect = handlePostLoginRedirect();
+      if (!hasRedirect) {
+        // No pending redirect, go to main screen
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+      }
+    }
+  }, [loading, isAuthenticated, navigation, handlePostLoginRedirect]);
 
   // FIXED: Clear error state when screen mounts or comes into focus
   useEffect(() => {
@@ -96,12 +120,14 @@ export default function LoginScreen({ navigation }) {
     // Also clear when screen comes into focus
     const unsubscribeFocus = navigation.addListener('focus', () => {
       clearError();
+      // Re-check auth state when screen comes into focus
+      checkAuthState();
     });
     
     return () => {
       unsubscribeFocus();
     };
-  }, [navigation, clearError]);
+  }, [navigation, clearError, checkAuthState]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -421,7 +447,10 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
+const createScreenStyles = (colors, themeStyles, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false } = responsive;
+  
+  return StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#0F172A', // Dark fallback for web
@@ -440,9 +469,12 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
   card: {
     backgroundColor: 'transparent',
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginHorizontal: spacing.md,
+    padding: isMobile ? spacing.lg : spacing.xl,
+    marginHorizontal: isMobile ? spacing.md : 'auto',
     marginVertical: spacing.xl,
+    maxWidth: isDesktop ? 480 : '100%',
+    width: isDesktop ? 480 : '100%',
+    alignSelf: 'center',
   },
   keyboardContainer: {
     flex: 1,
@@ -451,6 +483,7 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: spacing.xl,
+    alignItems: isDesktop ? 'center' : 'stretch',
   },
   floatingParticle: {
     position: 'absolute',
@@ -684,3 +717,4 @@ const createScreenStyles = (colors, themeStyles) => StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
 });
+};

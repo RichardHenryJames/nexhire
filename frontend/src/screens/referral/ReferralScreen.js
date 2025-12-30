@@ -18,13 +18,15 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
 import ViewReferralRequestModal from '../../components/ViewReferralRequestModal';
 import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
   const { user, userId } = useAuth();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -461,6 +463,8 @@ export default function ReferralScreen({ navigation }) {
         style={styles.tabContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
       >
         {requestsToMe.length === 0 ? (
           <View style={styles.emptyState}>
@@ -477,71 +481,80 @@ export default function ReferralScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Referral Requests</Text>
-          <Text style={styles.headerSubtitle}>
-            Help others get referred and earn rewards
-          </Text>
+      <View style={styles.innerContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Referral Requests</Text>
+            <Text style={styles.headerSubtitle}>
+              Help others get referred and earn rewards
+            </Text>
+          </View>
         </View>
+
+        {/* Open/Closed Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'open' && styles.activeTab]}
+            onPress={() => setActiveTab('open')}
+          >
+            <Ionicons 
+              name="folder-open-outline" 
+              size={18} 
+              color={activeTab === 'open' ? colors.primary : colors.gray500} 
+            />
+            <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
+              Open ({openRequests.length})
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
+            onPress={() => setActiveTab('closed')}
+          >
+            <Ionicons 
+              name="checkmark-done-outline" 
+              size={18} 
+              color={activeTab === 'closed' ? colors.primary : colors.gray500} 
+            />
+            <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
+              Closed ({closedRequests.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab Content */}
+        {renderTabContent()}
+
+        {/* View Referral Request Modal with enhanced flow */}
+        <ViewReferralRequestModal
+          visible={showProofModal}
+          onClose={() => {
+            setShowProofModal(false);
+            setSelectedRequest(null);
+          }}
+          onSubmit={handleProofSubmission}
+          referralRequest={selectedRequest}
+          jobTitle={selectedRequest?.JobTitle}
+          currentUserId={userId}  // Pass current user's UserID to check if they claimed
+        />
       </View>
-
-      {/* Open/Closed Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'open' && styles.activeTab]}
-          onPress={() => setActiveTab('open')}
-        >
-          <Ionicons 
-            name="folder-open-outline" 
-            size={18} 
-            color={activeTab === 'open' ? colors.primary : colors.gray500} 
-          />
-          <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
-            Open ({openRequests.length})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
-          onPress={() => setActiveTab('closed')}
-        >
-          <Ionicons 
-            name="checkmark-done-outline" 
-            size={18} 
-            color={activeTab === 'closed' ? colors.primary : colors.gray500} 
-          />
-          <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
-            Closed ({closedRequests.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      {renderTabContent()}
-
-      {/* View Referral Request Modal with enhanced flow */}
-      <ViewReferralRequestModal
-        visible={showProofModal}
-        onClose={() => {
-          setShowProofModal(false);
-          setSelectedRequest(null);
-        }}
-        onSubmit={handleProofSubmission}
-        referralRequest={selectedRequest}
-        jobTitle={selectedRequest?.JobTitle}
-        currentUserId={userId}  // Pass current user's UserID to check if they claimed
-      />
-
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

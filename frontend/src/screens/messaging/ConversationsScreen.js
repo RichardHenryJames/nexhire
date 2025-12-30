@@ -11,18 +11,35 @@ import {
   Image,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
+import MessagingLayoutDesktop from './MessagingLayoutDesktop';
 
+// Wrapper component to handle desktop vs mobile layout
 export default function ConversationsScreen() {
+  const responsive = useResponsive();
+
+  // On desktop web, use WhatsApp-style split view layout
+  if (Platform.OS === 'web' && responsive.isDesktop) {
+    return <MessagingLayoutDesktop />;
+  }
+
+  // On mobile/tablet, use the standard single-screen layout
+  return <ConversationsScreenMobile />;
+}
+
+function ConversationsScreenMobile() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,13 +51,22 @@ export default function ConversationsScreen() {
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
-  // ✅ Set dark theme header
+  // ✅ Set dark theme header with + button for new chat
   useEffect(() => {
     navigation.setOptions({
       title: 'Messages',
       headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
       headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerTintColor: colors.text,
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => setShowNewMessageModal(true)}
+          style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="add" size={28} color={colors.text} />
+        </TouchableOpacity>
+      ),
     });
   }, [navigation, colors]);
 
@@ -237,6 +263,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
@@ -268,6 +295,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
      </View>
         }
       />
+      </View>
       
  {/* ?? NEW: New Message Modal */}
       <Modal
@@ -289,7 +317,10 @@ onRequestClose={() => {
       }}>
     <Ionicons name="close" size={24} color={colors.text} />
    </TouchableOpacity>
- <Text style={styles.modalTitle}>New Message</Text>
+ <View style={styles.modalTitleContainer}>
+              <Ionicons name="add-circle" size={24} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.modalTitle}>New Message</Text>
+            </View>
         <View style={{ width: 24 }} />
           </View>
           
@@ -359,22 +390,22 @@ onRequestClose={() => {
       </View>
    </Modal>
       
-      {/* Floating New Message Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowNewMessageModal(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -528,6 +559,10 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   modalSearchContainer: {
     flexDirection: 'row',

@@ -1,15 +1,17 @@
 import React, { useMemo, useEffect } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function DisclaimerScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   // ✅ Navigation header with smart back button (hard-refresh safe)
   useEffect(() => {
@@ -38,7 +40,9 @@ export default function DisclaimerScreen() {
   }, [navigation, colors]);
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+    <ScrollView style={styles.scrollView}>
+    <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Disclaimer</Text>
     <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
@@ -249,14 +253,28 @@ export default function DisclaimerScreen() {
 
         <ComplianceFooter currentPage="disclaimer" />
    </View>
+    </View>
     </ScrollView>
+    </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   content: {
     padding: 20,

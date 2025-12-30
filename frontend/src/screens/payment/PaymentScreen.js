@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -34,9 +36,10 @@ export default function PaymentScreen({ route, navigation }) {
   const { plan, returnScreen = 'ReferralPlans' } = route.params || {};
   const { user } = useAuth();
   const { colors } = useTheme();
+  const responsive = useResponsive();
   const [loading, setLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   useEffect(() => {
     if (!plan) {
@@ -181,6 +184,7 @@ export default function PaymentScreen({ route, navigation }) {
   // Payment initiation screen
   return (
     <ScrollView style={styles.container}>
+      <View style={styles.innerContainer}>
       <View style={styles.content}>
         <View style={styles.planSummary}>
           <Text style={styles.planName}>{plan?.Name}</Text>
@@ -228,14 +232,23 @@ export default function PaymentScreen({ route, navigation }) {
           Your subscription will be activated immediately upon successful payment.
         </Text>
       </View>
+      </View>
     </ScrollView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

@@ -1,6 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 
-export const createStyles = (colors) => StyleSheet.create({
+export const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false, gridColumns = 1 } = responsive;
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -11,7 +14,7 @@ export const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: isMobile ? 16 : 24,
     paddingVertical: 16,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
@@ -182,7 +185,35 @@ export const createStyles = (colors) => StyleSheet.create({
   jobList: {
     flex: 1,
     paddingTop: 8,
+  },
+  jobListContent: {
     paddingBottom: 100,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  jobListResponsive: {
+    width: '100%',
+    maxWidth: isDesktop ? 1200 : '100%',
+    paddingHorizontal: isMobile ? 16 : 24,
+  },
+  // Grid layout for desktop
+  jobsGrid: {
+    ...(Platform.OS === 'web' && !isMobile ? {
+      display: 'grid',
+      gridTemplateColumns: isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gap: 16,
+    } : {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginHorizontal: -8,
+    }),
+  },
+  jobCardWrapper: {
+    marginBottom: isMobile ? 12 : 0,
+    ...(Platform.OS !== 'web' && !isMobile ? {
+      width: isTablet ? '50%' : '33.33%',
+      paddingHorizontal: 8,
+      marginBottom: 16,
+    } : {}),
   },
   loadingContainer: {
     minHeight: 200,
@@ -333,6 +364,7 @@ export const createStyles = (colors) => StyleSheet.create({
     fontWeight: '700',
   },
 });
+};
 
 // For backward compatibility
 export const styles = createStyles({

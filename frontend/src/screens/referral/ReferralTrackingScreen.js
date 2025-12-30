@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 
@@ -27,7 +28,8 @@ export default function ReferralTrackingScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const { requestId, request: initialRequest } = route.params || {};
 
@@ -278,7 +280,7 @@ export default function ReferralTrackingScreen() {
                   <View style={styles.actorRow}>
                     <Ionicons name="person-outline" size={14} color={colors.gray500} />
                     <Text style={styles.actorText}>
-                      by {item.actorName}
+                      by {request?.CompanyName || 'Company'} Employee
                     </Text>
                   </View>
                 )}
@@ -307,35 +309,45 @@ export default function ReferralTrackingScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        {renderHeader()}
-        {renderTimeline()}
-        
-        {/* Help Section */}
-        <View style={styles.helpSection}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.gray500} />
-          <Text style={styles.helpText}>
-            Pull down to refresh and see the latest updates on your referral request.
-          </Text>
-        </View>
-      </ScrollView>
+      <View style={styles.innerContainer}>
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          {renderHeader()}
+          {renderTimeline()}
+          
+          {/* Help Section */}
+          <View style={styles.helpSection}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.gray500} />
+            <Text style={styles.helpText}>
+              Pull down to refresh and see the latest updates on your referral request.
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

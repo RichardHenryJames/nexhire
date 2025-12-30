@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, Alert, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, Alert, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import JobCard from '../../components/jobs/JobCard';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 
 const SavedJobsScreen = ({ navigation }) => {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [savedJobs, setSavedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,30 +185,40 @@ const SavedJobsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Job list */}
-      <FlatList
-        data={savedJobs}
-        renderItem={renderJobCard}
-        keyExtractor={(item) => `saved-${item.JobID}`}
-        contentContainerStyle={savedJobs.length === 0 ? { flex: 1 } : { paddingBottom: 16 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-      />
+      <View style={styles.innerContainer}>
+        {/* Job list */}
+        <FlatList
+          data={savedJobs}
+          renderItem={renderJobCard}
+          keyExtractor={(item) => `saved-${item.JobID}`}
+          contentContainerStyle={savedJobs.length === 0 ? { flex: 1 } : { paddingBottom: 16 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+        />
+      </View>
     </View>
   );
 };
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

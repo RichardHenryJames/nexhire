@@ -12,6 +12,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import useResponsive from '../hooks/useResponsive';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePricing } from '../contexts/PricingContext';
@@ -142,7 +143,8 @@ const createConfirmModalStyles = (colors) => StyleSheet.create({
 export default function ProfileViewsScreen({ navigation }) {
   const { colors } = useTheme();
   const { pricing } = usePricing();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const confirmModalStyles = useMemo(() => createConfirmModalStyles(colors), [colors]);
   
   const [profileViews, setProfileViews] = useState([]);
@@ -442,6 +444,7 @@ export default function ProfileViewsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -575,14 +578,23 @@ export default function ProfileViewsScreen({ navigation }) {
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
       />
+      </View>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

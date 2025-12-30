@@ -18,6 +18,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
@@ -25,7 +26,8 @@ export default function MyReferralRequestsScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -428,12 +430,6 @@ export default function MyReferralRequestsScreen() {
             </TouchableOpacity>
           )}
         </View>
-        
-        {/* Tap to view tracking hint */}
-        <View style={styles.trackingHint}>
-          <Ionicons name="chevron-forward" size={16} color={colors.gray500} />
-          <Text style={styles.trackingHintText}>Tap to view tracking</Text>
-        </View>
       </TouchableOpacity>
     );
   };
@@ -449,13 +445,14 @@ export default function MyReferralRequestsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <Text style={styles.description}>Referral requests you have asked for</Text>
+      <View style={styles.innerContainer}>
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <Text style={styles.description}>Referral requests you have asked for</Text>
 
         {myRequests.length === 0 ? (
           <View style={styles.emptyState}>
@@ -470,6 +467,7 @@ export default function MyReferralRequestsScreen() {
           myRequests.map(renderMyRequestCard)
         )}
       </ScrollView>
+      </View>
 
       {showProofViewer && viewingProof && (
         <Modal
@@ -556,10 +554,18 @@ export default function MyReferralRequestsScreen() {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

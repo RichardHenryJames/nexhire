@@ -17,17 +17,33 @@ import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import useResponsive from '../../hooks/useResponsive';
 
-export default function ChatScreen() {
+export default function ChatScreen({ 
+  // Props for embedded mode (desktop WhatsApp-style layout)
+  embedded = false,
+  embeddedConversationId,
+  embeddedOtherUserName,
+  embeddedOtherUserId,
+  embeddedOtherUserProfilePic,
+  onConversationUpdate,
+  hideHeader = false,
+}) {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  const { conversationId, otherUserName, otherUserId, otherUserProfilePic } = route.params;
+  // Use props if embedded, otherwise use route.params
+  const routeParams = route?.params || {};
+  const conversationId = embedded ? embeddedConversationId : routeParams.conversationId;
+  const otherUserName = embedded ? embeddedOtherUserName : routeParams.otherUserName;
+  const otherUserId = embedded ? embeddedOtherUserId : routeParams.otherUserId;
+  const otherUserProfilePic = embedded ? embeddedOtherUserProfilePic : routeParams.otherUserProfilePic;
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,15 +69,6 @@ export default function ChatScreen() {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
   };
-
-  if (!user || !currentUserId) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.emptyText}>Loading user data...</Text>
-      </View>
-    );
-  }
 
   const loadMessages = useCallback(
     async (pageNum = 1, append = false) => {
@@ -283,6 +290,8 @@ export default function ChatScreen() {
               : msg
           )
         );
+        // Notify parent to refresh conversation list (for embedded mode)
+        onConversationUpdate?.();
       }
     } catch (error) {
       console.error("? Error sending message:", error);
@@ -473,17 +482,50 @@ export default function ChatScreen() {
     }
   };
 
+  // Early returns for loading/no conversation states - placed AFTER all hooks
+  if (!user || !currentUserId) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.emptyText}>Loading user data...</Text>
+      </View>
+    );
+  }
+
+  // For embedded mode - show placeholder when no conversation selected
+  if (embedded && !conversationId) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="chatbubbles-outline" size={80} color={colors.gray400} />
+        <Text style={[styles.emptyTitle, { color: colors.text, marginTop: 16 }]}>Select a conversation</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          Choose from your existing conversations or start a new one
+        </Text>
+      </View>
+    );
+  }
+
   // WEB LAYOUT
   if (Platform.OS === "web") {
     return (
       <div
         style={{
-   display: "flex",
+          display: "flex",
           flexDirection: "column",
           height: "100vh",
-       backgroundColor: colors.background,
+          backgroundColor: colors.background,
+          alignItems: responsive.isDesktop ? "center" : "stretch",
         }}
       >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            maxWidth: responsive.isDesktop ? 900 : "100%",
+            height: "100%",
+          }}
+        >
         <div
         style={{
   display: "flex",
@@ -496,12 +538,15 @@ export default function ChatScreen() {
             top: 0,
           }}
         >
+          {/* Only show back button if not embedded (desktop split view) */}
+          {!embedded && (
           <TouchableOpacity
           onPress={handleBackPress}
             style={{ padding: 4, marginRight: 12 }}
           >
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
+          )}
 
           {/* Clickable Profile Section */}
           <div
@@ -553,22 +598,6 @@ export default function ChatScreen() {
               </div>
             </div>
           </div>
-
-          {/* Call Button */}
-          <TouchableOpacity
-            onPress={() => window.alert("Feature Coming Soon\nCall feature is under development")}
-            style={{ padding: 4, marginRight: 12 }}
-          >
-            <Ionicons name="call" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          {/* Video Call Button */}
-          <TouchableOpacity
-            onPress={() => window.alert("Feature Coming Soon\nVideo call feature is under development")}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="videocam" size={24} color={colors.text} />
-          </TouchableOpacity>
         </div>
 
         <div
@@ -826,6 +855,7 @@ export default function ChatScreen() {
             )}
           </TouchableOpacity>
         </div>
+        </div>
       </div>
     );
   }
@@ -833,6 +863,8 @@ export default function ChatScreen() {
   // MOBILE LAYOUT
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
+      {!hideHeader && (
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBackPress}
@@ -869,23 +901,8 @@ export default function ChatScreen() {
             <Text style={styles.headerName}>{otherUserName}</Text>
           </View>
         </TouchableOpacity>
-
-        {/* Call Button */}
-        <TouchableOpacity
-          onPress={() => Alert.alert("Feature Coming Soon", "Call feature is under development")}
-          style={[styles.menuButton, { marginRight: 12 }]}
-        >
-          <Ionicons name="call" size={24} color={colors.text} />
-        </TouchableOpacity>
-
-        {/* Video Call Button */}
-        <TouchableOpacity
-          onPress={() => Alert.alert("Feature Coming Soon", "Video call feature is under development")}
-          style={styles.menuButton}
-        >
-          <Ionicons name="videocam" size={24} color={colors.text} />
-        </TouchableOpacity>
       </View>
+      )}
 
       <FlatList
         ref={flatListRef}
@@ -950,12 +967,24 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+      </View>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

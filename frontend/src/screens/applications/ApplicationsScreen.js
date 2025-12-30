@@ -24,6 +24,7 @@ import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 
 // Ad configuration - Google AdSense
@@ -36,7 +37,8 @@ export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -888,34 +890,36 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Applications List */}
-      <FlatList
-        data={applications}
-        renderItem={({ item, index }) => (
-          <>
-            <ApplicationCard application={item} />
-            {/* Insert ad after every N applications */}
-            {AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < applications.length - 1 && (
-              <View style={{ marginBottom: 12 }}>
-                <AdCard variant="applications" />
-              </View>
-            )}
-          </>
-        )}
-        keyExtractor={(item) => item.ApplicationID}
-        contentContainerStyle={applications.length === 0 ? styles.emptyContainer : styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        onEndReached={loadMoreApplications}
-        onEndReachedThreshold={0.2}
-        ListEmptyComponent={<EmptyState />}
-        ListFooterComponent={<LoadingFooter />}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-      />
+      <View style={styles.innerContainer}>
+        {/* Applications List */}
+        <FlatList
+          data={applications}
+          renderItem={({ item, index }) => (
+            <>
+              <ApplicationCard application={item} />
+              {/* Insert ad after every N applications */}
+              {AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < applications.length - 1 && (
+                <View style={{ marginBottom: 12 }}>
+                  <AdCard variant="applications" />
+                </View>
+              )}
+            </>
+          )}
+          keyExtractor={(item) => item.ApplicationID}
+          contentContainerStyle={applications.length === 0 ? styles.emptyContainer : styles.listContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          onEndReached={loadMoreApplications}
+          onEndReachedThreshold={0.2}
+          ListEmptyComponent={<EmptyState />}
+          ListFooterComponent={<LoadingFooter />}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+        />
+      </View>
 
       {/* NEW: Resume Upload Modal */}
       <ResumeUploadModal
@@ -1067,10 +1071,18 @@ export default function ApplicationsScreen({ navigation }) {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   headerButton: {
     paddingHorizontal: 12,

@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
@@ -35,7 +36,8 @@ const FAQItem = ({ question, answer, colors, styles }) => {
 export default function FAQScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // ✅ Navigation header with smart back button (hard-refresh safe)
@@ -290,7 +292,9 @@ export default function FAQScreen() {
   }, [searchQuery, faqData]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <View style={styles.container}>
+    <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+    <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Frequently Asked Questions</Text>
         <Text style={styles.subtitle}>Everything you need to know about Refopen</Text>
@@ -361,14 +365,28 @@ export default function FAQScreen() {
 
         <ComplianceFooter currentPage="faq" />
       </View>
+    </View>
     </ScrollView>
+    </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   content: {
     padding: 20,

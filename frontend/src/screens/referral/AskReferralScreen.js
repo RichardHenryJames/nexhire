@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -29,10 +30,27 @@ import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 
 export default function AskReferralScreen({ navigation, route }) {
-const { user, isJobSeeker } = useAuth();
+const { user, isJobSeeker, isAuthenticated } = useAuth();
 const { colors } = useTheme();
 const { pricing } = usePricing(); // 💰 DB-driven pricing
-const styles = useMemo(() => createStyles(colors), [colors]);
+const responsive = useResponsive();
+const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+
+// 🔐 Helper to check auth and redirect to login if needed
+const requireAuth = (action) => {
+  if (!isAuthenticated || !user) {
+    // Save the current route to return after login
+    navigation.navigate('Auth', {
+      screen: 'Login',
+      params: {
+        returnTo: 'AskReferral',
+        returnParams: route?.params,
+      }
+    });
+    return false;
+  }
+  return true;
+};
   
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingWallet, setLoadingWallet] = useState(true);
@@ -128,8 +146,17 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 
   // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
-    loadWalletBalance(); // Load immediately for banner
-    loadResumesLazily(); // Load resumes after a delay
+    // Only load wallet and resumes if authenticated
+    if (isAuthenticated && user) {
+      loadWalletBalance(); // Load immediately for banner
+      loadResumesLazily(); // Load resumes after a delay
+    } else {
+      // For unauthenticated users, set loading states to false
+      setLoadingWallet(false);
+      setLoadingResumes(false);
+    }
+    
+    // Always load companies (public data)
     loadCompaniesInBackground(); // Load companies in background (includes Fortune 500)
     
     // ✅ NEW: Auto-select organization if passed from route params
@@ -417,6 +444,11 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 
   // 🆕 NEW: Handler when user clicks "Ask Referral" button - shows confirmation modal
   const handleAskReferralClick = () => {
+    // 🔐 Check authentication first
+    if (!requireAuth('ask referral')) {
+      return;
+    }
+    
     // Validate form FIRST
     if (!validateForm()) {
       return;
@@ -538,8 +570,8 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   };
 
   // ⚡ Remove the global loading screen - show form immediately
-  // Only check if user is job seeker
-  if (!isJobSeeker) {
+  // Only check if user is job seeker (allow unauthenticated users to see the form)
+  if (isAuthenticated && !isJobSeeker) {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="lock-closed" size={64} color={colors.gray400} />
@@ -558,9 +590,10 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Google AdSense Ad at top - Referral page style */}
-        <AdCard variant="referral" />
+      <View style={styles.innerContainer}>
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 80 : 120 }}>
+          {/* Google AdSense Ad at top - Referral page style */}
+          <AdCard variant="referral" />
 
         {/* ✅ NEW: Dynamic Fortune 500 Company Showcase */}
         <View style={styles.introSection}>
@@ -649,9 +682,6 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
             )}
           </View>
 
-          {/* Show rest of form only after company is selected */}
-          {selectedCompany && (
-            <>
               {/* Job ID */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
@@ -747,7 +777,11 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                 <Text style={styles.noResumeText}>No resumes found</Text>
                 <TouchableOpacity
                   style={styles.uploadResumeButton}
-                  onPress={() => setShowResumeModal(true)} // ✅ CHANGED: Open modal instead of navigate
+                  onPress={() => {
+                    if (requireAuth('upload resume')) {
+                      setShowResumeModal(true);
+                    }
+                  }}
                 >
                   <Text style={styles.uploadResumeText}>Upload Resume</Text>
                 </TouchableOpacity>
@@ -795,7 +829,11 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                 {/* Option to upload a new resume */}
                 <TouchableOpacity
                   style={styles.uploadNewResumeButton}
-                  onPress={() => setShowResumeModal(true)}
+                  onPress={() => {
+                    if (requireAuth('upload resume')) {
+                      setShowResumeModal(true);
+                    }
+                  }}
                 >
                   <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                   <Text style={styles.uploadNewResumeText}>Upload New Resume</Text>
@@ -807,32 +845,31 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
               <Text style={styles.errorText}>{errors.resume}</Text>
             )}
           </View>
-            </>
-          )}
+
+          {/* Submit Button - Inside form */}
+          <View style={styles.submitButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                submitting && styles.submitButtonDisabled
+              ]}
+              onPress={handleAskReferralClick}
+              disabled={!isFormReady || submitting || loadingWallet}
+            >
+              {(!isFormReady || loadingWallet) ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.white} />
+                  <Text style={styles.submitButtonText}>Loading...</Text>
+                </>
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {submitting ? 'Submitting...' : 'Ask Referral'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
-
-      {/* Submit Button - Opens confirmation modal */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            submitting && styles.submitButtonDisabled
-          ]}
-          onPress={handleAskReferralClick}
-          disabled={!isFormReady || submitting || loadingWallet}
-        >
-          {(!isFormReady || loadingWallet) ? (
-            <>
-              <ActivityIndicator size="small" color={colors.white} />
-              <Text style={styles.submitButtonText}>Loading...</Text>
-            </>
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {submitting ? 'Submitting...' : 'Ask Referral'}
-            </Text>
-          )}
-        </TouchableOpacity>
       </View>
 
       {/* NEW: Company Selection Modal */}
@@ -976,30 +1013,22 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
         duration={3500}
         companyName={referralCompanyName}
       />
-
-      {/* Floating Referral Requests Button */}
-      <View style={styles.fabContainer} pointerEvents="box-none">
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate('MyReferralRequests')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.fabIconWrap}>
-            <Ionicons name="people" size={18} color={colors.primary} />
-          </View>
-          <Text style={styles.fabLabel} numberOfLines={1}>
-            Referral Requests
-          </Text>
-        </TouchableOpacity>
-      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -1033,47 +1062,6 @@ const createStyles = (colors) => StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-  },
-
-  // Floating Action Button (My Requests)
-  fabContainer: {
-    position: 'absolute',
-    right: 16,
-    // Sit above the bottom submit bar so it never overlaps
-    bottom: 170,
-    alignItems: 'center',
-    zIndex: 20,
-  },
-  fab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    paddingLeft: 10,
-    paddingRight: 16,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-
-  fabIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-
-  fabLabel: {
-    color: colors.white,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.2,
   },
   
   // ✅ ADDED: Header button style for navigation
@@ -1415,12 +1403,9 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  bottomContainer: {
-    padding: 16,
-    paddingBottom: 90,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  submitButtonContainer: {
+    marginTop: 24,
+    marginBottom: 16,
   },
   submitButton: {
     flexDirection: 'row',
@@ -1430,6 +1415,12 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     gap: 8,
+    // On desktop, limit button width
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      maxWidth: 400,
+      alignSelf: 'center',
+      width: '100%',
+    } : {}),
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray300,

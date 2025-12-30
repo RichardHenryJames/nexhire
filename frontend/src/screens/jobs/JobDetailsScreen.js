@@ -25,13 +25,17 @@ import ReferralConfirmModal from '../../components/ReferralConfirmModal';
 import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
+import useResponsive from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
 export default function JobDetailsScreen({ route, navigation }) {
 const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -865,7 +869,8 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ResponsiveContainer style={styles.contentWrapper}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.companyHeader}>
@@ -1387,14 +1392,27 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         duration={3500}
         companyName={referralCompanyName}
       />
+      </ResponsiveContainer>
     </ScrollView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false, contentWidth = 400 } = responsive;
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  contentWrapper: {
+    width: '100%',
+    maxWidth: isDesktop ? 900 : '100%',
+    paddingHorizontal: isMobile ? 0 : 24,
   },
   loadingContainer: {
     flex: 1,
@@ -1439,10 +1457,16 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   header: {
-    padding: 20,
+    padding: isMobile ? 20 : 32,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    ...(isDesktop && {
+      borderRadius: 12,
+      marginTop: 16,
+      marginHorizontal: 0,
+      borderWidth: 1,
+    }),
   },
   companyHeader: {
     marginBottom: 16,
@@ -1453,15 +1477,15 @@ const createStyles = (colors) => StyleSheet.create({
     marginBottom: 12,
   },
   companyLogo: {
-    width: 60,
-    height: 60,
+    width: isMobile ? 60 : 80,
+    height: isMobile ? 60 : 80,
     borderRadius: 12,
     backgroundColor: colors.gray100,
     marginRight: 16,
   },
   logoPlaceholder: {
-    width: 60,
-    height: 60,
+    width: isMobile ? 60 : 80,
+    height: isMobile ? 60 : 80,
     borderRadius: 12,
     backgroundColor: colors.gray100,
     justifyContent: 'center',
@@ -1575,12 +1599,18 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
   },
   section: {
-    padding: 20,
+    padding: isMobile ? 20 : 32,
     backgroundColor: colors.surface,
     marginTop: 8,
+    ...(isDesktop && {
+      borderRadius: 12,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    }),
   },
   sectionTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: isDesktop ? typography.sizes.xl : typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 16,
@@ -1849,3 +1879,4 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
 });
+};

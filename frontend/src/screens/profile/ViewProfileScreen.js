@@ -11,7 +11,9 @@ import {
   Modal,
   Pressable,
   Image,
+  Platform,
 } from 'react-native';
+import useResponsive from '../../hooks/useResponsive';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,7 +27,8 @@ export default function ViewProfileScreen() {
   const route = useRoute();
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, isDark, responsive), [colors, isDark, responsive]);
 
   const { userId, userName: initialUserName, userProfilePic: initialProfilePic } = route.params;
 
@@ -289,6 +292,7 @@ export default function ViewProfileScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
@@ -616,6 +620,7 @@ export default function ViewProfileScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+      </View>
 
       {/* Block Confirmation Modal */}
       <ConfirmationModal
@@ -637,10 +642,18 @@ export default function ViewProfileScreen() {
   );
 }
 
-const createStyles = (colors, isDark) => StyleSheet.create({
+const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
 
   // Header

@@ -19,11 +19,13 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { pendingGoogleAuth } = useAuth();
   const { employerType = 'startup', selectedCompany, fromGoogleAuth, skipEmailPassword } = route.params || {};
 
@@ -139,6 +141,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20 }}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 8 }}>
           <Ionicons name="arrow-back" size={22} color={colors.primary} />
@@ -370,14 +373,23 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           />
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scroll: { 
     flex: 1 

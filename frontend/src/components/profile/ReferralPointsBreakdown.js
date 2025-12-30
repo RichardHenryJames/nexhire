@@ -5,6 +5,7 @@ import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
+import useResponsive from '../../hooks/useResponsive';
 
 const ReferralPointsBreakdown = ({ 
   totalPoints = 0, 
@@ -16,7 +17,8 @@ const ReferralPointsBreakdown = ({
   onConversionSuccess // NEW: Callback to refresh data after conversion
 }) => {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation();
   const [showConversionModal, setShowConversionModal] = useState(false);
@@ -253,16 +255,17 @@ const ReferralPointsBreakdown = ({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Referral Points Breakdown</Text>
-          <View style={styles.placeholder} />
-        </View>
+        <View style={styles.innerContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Referral Points Breakdown</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Total Points Card */}
           <View style={styles.totalPointsCard}>
             <View style={styles.pointsIcon}>
@@ -414,6 +417,7 @@ const ReferralPointsBreakdown = ({
             </TouchableOpacity>
           </View>
         </ScrollView>
+        </View>
       </Animated.View>
 
       {/* Conversion Confirmation Modal */}
@@ -476,10 +480,16 @@ const ReferralPointsBreakdown = ({
   );
 };
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    alignItems: responsive.isDesktop ? 'center' : 'stretch',
+  },
+  innerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: responsive.isDesktop ? 600 : '100%',
   },
   header: {
     flexDirection: 'row',

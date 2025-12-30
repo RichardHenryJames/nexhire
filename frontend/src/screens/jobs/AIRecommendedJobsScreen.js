@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
@@ -23,8 +24,9 @@ import { typography } from '../../styles/theme';
 export default function AIRecommendedJobsScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
+  const responsive = useResponsive();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [loading, setLoading] = useState(true);
   const [aiJobs, setAiJobs] = useState([]);
@@ -358,6 +360,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       />
 
       <View style={styles.container}>
+        <View style={styles.innerContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -440,15 +443,24 @@ export default function AIRecommendedJobsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
+        </View>
       </View>
     </>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
 container: {
   flex: 1,
   backgroundColor: colors.background,
+  ...(Platform.OS === 'web' && responsive.isDesktop ? {
+    alignItems: 'center',
+  } : {}),
+},
+innerContainer: {
+  width: '100%',
+  maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+  flex: 1,
 },
 headerFixed: {
   paddingTop: Platform.OS === 'ios' ? 44 : 16,

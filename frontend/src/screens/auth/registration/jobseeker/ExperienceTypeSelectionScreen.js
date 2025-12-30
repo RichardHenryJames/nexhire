@@ -15,10 +15,12 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [selectedType, setSelectedType] = useState(null);
   const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
   
@@ -158,6 +160,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <View style={styles.innerContainer}>
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -265,12 +268,13 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
        
           </View>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -300,6 +304,14 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scrollView: {
     flex: 1,

@@ -7,17 +7,20 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 
 export default function ReferralPlansScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -182,8 +185,9 @@ export default function ReferralPlansScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Upgrade Your Referral Power</Text>
+      <View style={styles.innerContainer}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Upgrade Your Referral Power</Text>
         <Text style={styles.subtitle}>
           Choose a plan that fits your job search needs and boost your chances of getting referred!
         </Text>
@@ -255,15 +259,24 @@ export default function ReferralPlansScreen({ navigation }) {
             All plans include secure payments through Razorpay and can be canceled anytime.
           </Text>
         </View>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

@@ -35,7 +35,7 @@ import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
 import AIRecommendedJobsScreen from "../screens/jobs/AIRecommendedJobsScreen"; // NEW: AI Recommended Jobs screen
 import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
-import ProfileScreen from "../screens/profile/ProfileScreenNew";
+import ProfileScreen from "../screens/profile/ProfileScreen";
 import SettingsScreen from "../screens/profile/SettingsScreen";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
@@ -82,6 +82,9 @@ const linking = {
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
+      
+      // Public Ask Referral screen - accessible without auth but actions require login
+      AskReferralPublic: "ask-referral",
 
       // Auth Stack
       Auth: {
@@ -127,7 +130,7 @@ const linking = {
               Home: "",
               Jobs: "jobs",
               CreateJob: "create-job",
-              AskReferral: "ask-referral",
+              AskReferral: "ask-for-referral",
               Referrals: "referrals",
               Profile: "profile",
             },
@@ -458,7 +461,7 @@ function MainStack() {
         component={MyReferralRequestsScreen}
         options={({ navigation }) => ({
           headerShown: true,
-          title: "My Requests",
+          title: "My Referral Requests",
           headerBackTitleVisible: false,
           headerStyle: {
             backgroundColor: colors.surface,
@@ -774,6 +777,17 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "FAQ",
+          headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Public Ask Referral Screen - accessible without auth but actions require login */}
+      <Stack.Screen
+        name="AskReferralPublic"
+        component={AskReferralScreen}
+        options={{
+          headerShown: true,
+          title: "Ask for Referral",
           headerBackTitleVisible: false,
         }}
       />

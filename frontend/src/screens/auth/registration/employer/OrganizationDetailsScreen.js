@@ -3,10 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import useResponsive from '../../../../hooks/useResponsive';
 
 export default function OrganizationDetailsScreen({ navigation, route }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { employerType = 'startup', selectedCompany = null } = route.params || {};
 
   const [organizationName, setOrganizationName] = useState(selectedCompany?.name || '');
@@ -33,6 +35,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20 }}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 8 }}>
           <Ionicons name="arrow-back" size={22} color={colors.primary} />
@@ -87,12 +90,24 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
           <Ionicons name="arrow-forward" size={18} color={colors.white} />
         </TouchableOpacity>
       </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
+  },
   scroll: { flex: 1 },
   title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginTop: 8 },
   subtitle: { color: colors.gray600, marginTop: 6, marginBottom: 16 },

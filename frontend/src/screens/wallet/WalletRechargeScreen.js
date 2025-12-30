@@ -13,11 +13,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 
 export default function WalletRechargeScreen({ navigation }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -228,9 +230,11 @@ export default function WalletRechargeScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={styles.innerContainer}>
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+          {/* Header */}
+          <View style={styles.header}>
         <Ionicons name="wallet" size={48} color="#007AFF" />
         <Text style={styles.headerTitle}>Recharge Wallet</Text>
         <Text style={styles.headerSubtitle}>Add money to your wallet</Text>
@@ -320,32 +324,45 @@ export default function WalletRechargeScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
-      {/* Payment Methods */}
-      <View style={styles.paymentMethods}>
-        <Text style={styles.paymentMethodsTitle}>Accepted Payment Methods</Text>
-        <View style={styles.paymentMethodsIcons}>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="card" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>Cards</Text>
+          {/* Payment Methods */}
+          <View style={styles.paymentMethods}>
+            <Text style={styles.paymentMethodsTitle}>Accepted Payment Methods</Text>
+            <View style={styles.paymentMethodsIcons}>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="card" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>Cards</Text>
+              </View>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="phone-portrait" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>UPI</Text>
+              </View>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="business" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>Netbanking</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="phone-portrait" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>UPI</Text>
-          </View>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="business" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>Netbanking</Text>
-          </View>
-        </View>
+        </ScrollView>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   contentContainer: {
     padding: 16,

@@ -13,6 +13,7 @@ import {
   Animated,
   Image,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,6 +29,8 @@ import EducationSection from '../../components/profile/EducationSection';
 import ResumeSection from '../../components/profile/ResumeSection';
 import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBreakdown';
 import SkillsSelectionModal from '../../components/profile/SkillsSelectionModal';
+import useResponsive from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -53,7 +56,9 @@ const EDUCATION_LEVELS = [
 export default function ProfileScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet } = responsive;
+  const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const openedFromHome = route?.params?.openedFromHome === true;
   
@@ -1267,11 +1272,12 @@ export default function ProfileScreen({ navigation, route }) {
       <Animated.ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <ResponsiveContainer style={styles.profileContent}>
         {/* User Profile Header */}
         <UserProfileHeader
           user={user}
@@ -1535,7 +1541,7 @@ export default function ProfileScreen({ navigation, route }) {
                 <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
               </View>
               <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Referral Requests</Text>
+                <Text style={styles.activityTitle}>My Referral Requests</Text>
                 <Text style={styles.activitySummary}>See referrals you have asked for</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
@@ -1545,6 +1551,7 @@ export default function ProfileScreen({ navigation, route }) {
 
         {/* Compliance Footer */}
         <ComplianceFooter navigation={navigation} />
+        </ResponsiveContainer>
       </Animated.ScrollView>
 
       {/* Modals */}
@@ -1579,19 +1586,20 @@ export default function ProfileScreen({ navigation, route }) {
         onRequestClose={() => setActiveModal(null)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Invite & Earn</Text>
-            <View style={{ width: 28 }} />
-          </View>
+          <View style={styles.modalInnerContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Invite & Earn</Text>
+              <View style={{ width: 28 }} />
+            </View>
 
-          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+            <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
             {/* Gift Icon */}
             <View style={styles.inviteIconContainer}>
               <View style={styles.inviteIconCircle}>
-                <Ionicons name="gift" size={60} color="#FF9500" />
+                <Ionicons name="gift" size={40} color="#FF9500" />
               </View>
             </View>
 
@@ -1609,12 +1617,16 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
               <TouchableOpacity 
                 style={styles.copyCodeButton}
-                onPress={() => {
-                  // TODO: Add Clipboard API
-                  Alert.alert('Copied!', `Code ${referralCode} copied to clipboard`);
+                onPress={async () => {
+                  try {
+                    await navigator.clipboard.writeText(referralCode);
+                    Alert.alert('Copied!', `Code ${referralCode} copied to clipboard`);
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to copy code');
+                  }
                 }}
               >
-                <Ionicons name="copy-outline" size={20} color="#FFF" />
+                <Ionicons name="copy-outline" size={18} color="#FFF" />
                 <Text style={styles.copyCodeButtonText}>Copy Code</Text>
               </TouchableOpacity>
             </View>
@@ -1663,14 +1675,14 @@ export default function ProfileScreen({ navigation, route }) {
             {/* Benefits */}
             <View style={styles.benefitsSection}>
               <View style={styles.benefitCard}>
-                <Ionicons name="person-add" size={32} color={colors.primary} />
+                <Ionicons name="person-add" size={24} color={colors.primary} />
                 <Text style={styles.benefitTitle}>Your Friend</Text>
                 <Text style={styles.benefitAmount}>₹50</Text>
                 <Text style={styles.benefitDescription}>On successful signup</Text>
               </View>
 
               <View style={styles.benefitCard}>
-                <Ionicons name="wallet" size={32} color="#FF9500" />
+                <Ionicons name="wallet" size={24} color="#FF9500" />
                 <Text style={styles.benefitTitle}>You</Text>
                 <Text style={styles.benefitAmount}>₹50</Text>
                 <Text style={styles.benefitDescription}>When they join</Text>
@@ -1686,7 +1698,8 @@ export default function ProfileScreen({ navigation, route }) {
                 </Text>
               </View>
             </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
 
@@ -1703,7 +1716,10 @@ export default function ProfileScreen({ navigation, route }) {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false } = responsive;
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background || '#F5F5F7',
@@ -1713,6 +1729,16 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background || '#F5F5F7',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  profileContent: {
+    width: '100%',
+    maxWidth: isDesktop ? 900 : '100%',
+    paddingHorizontal: isMobile ? 0 : 24,
   },
   // Sticky Header
   stickyHeader: {
@@ -1874,6 +1900,12 @@ const createStyles = (colors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background || '#F5F5F7',
+    alignItems: responsive.isDesktop ? 'center' : 'stretch',
+  },
+  modalInnerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: responsive.isDesktop ? 600 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2214,42 +2246,42 @@ const createStyles = (colors) => StyleSheet.create({
   // Invite & Earn Modal Styles
   inviteIconContainer: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 12,
   },
   inviteIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#FFF4E6',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   inviteHeading: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.text || '#1C1C1E',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   inviteSubheading: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.gray600 || '#666',
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
-    paddingHorizontal: 20,
+    marginBottom: 16,
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
   referralCodeCard: {
     backgroundColor: colors.surface || '#FFF',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 32,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -2257,23 +2289,23 @@ const createStyles = (colors) => StyleSheet.create({
     elevation: 3,
   },
   referralCodeLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.gray600 || '#666',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
     fontWeight: '500',
   },
   referralCodeBox: {
     backgroundColor: colors.background || '#F5F5F7',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 2,
     borderColor: colors.primary + '30',
     borderStyle: 'dashed',
   },
   referralCodeText: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.primary,
     textAlign: 'center',
@@ -2281,115 +2313,115 @@ const createStyles = (colors) => StyleSheet.create({
   },
   copyCodeButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   copyCodeButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#FFF',
   },
   howItWorksSection: {
-    marginBottom: 32,
+    marginBottom: 20,
   },
   howItWorksTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
     color: colors.text || '#1C1C1E',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   howItWorksStep: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 12,
     alignItems: 'flex-start',
   },
   stepNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   stepNumberText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
     color: colors.primary,
   },
   stepContent: {
     flex: 1,
-    paddingTop: 4,
+    paddingTop: 2,
   },
   stepTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text || '#1C1C1E',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   stepDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.gray600 || '#666',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   benefitsSection: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 32,
+    gap: 10,
+    marginBottom: 20,
   },
   benefitCard: {
     flex: 1,
     backgroundColor: colors.surface || '#FFF',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 14,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     elevation: 2,
   },
   benefitTitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.gray600 || '#666',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 4,
     fontWeight: '500',
   },
   benefitAmount: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.success || '#34C759',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   benefitDescription: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.gray600 || '#666',
     textAlign: 'center',
   },
   shareLinkSection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   shareLinkTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text || '#1C1C1E',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   shareLinkBox: {
     backgroundColor: colors.background || '#F5F5F7',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.border || '#E5E5EA',
   },
   shareLinkText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primary,
     fontFamily: 'monospace',
   },
@@ -2640,3 +2672,4 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 4,
   },
 });
+};
