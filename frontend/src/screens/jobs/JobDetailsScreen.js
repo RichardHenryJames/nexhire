@@ -717,13 +717,56 @@ const { jobId, fromReferralRequest } = route.params || {};
   const parseJobTags = () => {
     if (!job.Tags) return [];
     
+    // Job source identifiers that should NOT be shown as skills
+    const sourcePatterns = [
+      /^Adzuna/i,           // Adzuna_IN, Adzuna_US, etc.
+      /^RemoteOK/i,         // RemoteOK
+      /^WeWorkRemotely/i,   // WeWorkRemotely
+      /^HackerNews/i,       // HackerNews
+      /^LinkedIn/i,         // LinkedIn
+      /^Indeed/i,           // Indeed
+      /^Glassdoor/i,        // Glassdoor
+    ];
+    
+    // Job types and workplace types to filter out
+    const nonSkillTags = ['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid', 'Internship', 'Freelance', 'Temporary'];
+    
     // Split by comma and clean up tags
     return job.Tags
       .split(',')
       .map(tag => tag.trim())
       .filter(tag => tag.length > 0)
-      .filter(tag => !['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid'].includes(tag))
+      .filter(tag => !nonSkillTags.includes(tag))
+      .filter(tag => !sourcePatterns.some(pattern => pattern.test(tag)))
       .slice(0, 10); // Limit to 10 tags
+  };
+
+  // Clean up truncated descriptions - if ends with "..." cut back to last full stop
+  const cleanDescription = (description) => {
+    if (!description) return '';
+    
+    let cleaned = description.trim();
+    
+    // Check if description ends with truncation indicators
+    if (cleaned.endsWith('...') || cleaned.endsWith('…') || cleaned.endsWith('a...') || cleaned.endsWith('a…')) {
+      // Remove the truncation marker
+      cleaned = cleaned.replace(/\.{3}$|…$/, '').trim();
+      
+      // Find the last full stop (sentence end)
+      const lastPeriod = cleaned.lastIndexOf('.');
+      const lastExclamation = cleaned.lastIndexOf('!');
+      const lastQuestion = cleaned.lastIndexOf('?');
+      
+      // Get the position of the last sentence-ending punctuation
+      const lastSentenceEnd = Math.max(lastPeriod, lastExclamation, lastQuestion);
+      
+      if (lastSentenceEnd > 0) {
+        // Cut at the last complete sentence
+        cleaned = cleaned.substring(0, lastSentenceEnd + 1);
+      }
+    }
+    
+    return cleaned;
   };
 
   const openExternalApplication = () => {
@@ -958,8 +1001,8 @@ const { jobId, fromReferralRequest } = route.params || {};
         ) : null}
       </View>
 
-      {/* ✅ NEW: Job Tags Section */}
-      {job.Tags && (
+      {/* ✅ NEW: Job Tags Section - Only show if there are valid skills after filtering */}
+      {job.Tags && parseJobTags().length > 0 && (
         <View style={styles.jobTagsSection}>
           <Text style={styles.jobTagsSectionTitle}>Skills & Technologies</Text>
           <View style={styles.jobTagsContainer}>
@@ -978,7 +1021,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           <Text style={styles.sectionTitle}>Job Description</Text>
           <RenderHtml
             contentWidth={width}
-            source={{ html: job.Description }}
+            source={{ html: cleanDescription(job.Description) }}
             renderers={customRenderers}
             tagsStyles={{
               body: {

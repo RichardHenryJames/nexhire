@@ -1399,7 +1399,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         'Published', this.calculateJobPriority(job, jobAge), 'Public',
         actualPostedDate, this.calculateExpiryDate(actualPostedDate, jobAge),
         actualPostedDate, now, job.externalJobId,
-        `${job.source}, ${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 100) : ''}`,
+        `${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 200) : ''}`,  // Note: Source NOT included in tags - only skills
         0, job.applicationUrl
       ];
       
