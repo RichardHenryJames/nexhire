@@ -21,6 +21,7 @@ import messagingApi from '../services/messagingApi';
 import ModalToast from './ModalToast';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 /**
  * ViewReferralRequestModal - Enhanced referral flow modal
@@ -41,7 +42,8 @@ export default function ViewReferralRequestModal({
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   // Ref for modal toast
   const toastRef = useRef(null);
@@ -293,12 +295,13 @@ export default function ViewReferralRequestModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={styles.container}>
-        {/* Modal Toast - shows inside modal */}
-        <ModalToast ref={toastRef} />
-        
-        {/* Header */}
-        <View style={styles.header}>
+      <View style={styles.modalOuterContainer}>
+        <View style={styles.container}>
+          {/* Modal Toast - shows inside modal */}
+          <ModalToast ref={toastRef} />
+          
+          {/* Header */}
+          <View style={styles.header}>
           <Text style={styles.title}>
             {step === 'viewing' ? 'Referral Request' : 'Submit Referral Proof'}
           </Text>
@@ -619,15 +622,23 @@ export default function ViewReferralRequestModal({
             </TouchableOpacity>
           )}
         </View>
+        </View>
       </View>
     </Modal>
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  modalOuterContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: responsive.isDesktop ? 'center' : 'stretch',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    width: '100%',
+    maxWidth: responsive.isDesktop ? 600 : '100%',
   },
   header: {
     flexDirection: 'row',
