@@ -1574,35 +1574,77 @@ export class ReferralService {
 
     /**
      * Get complete status history for a referral request
+     * Also returns full request details for the tracking screen
      */
     static async getStatusHistory(requestId: string): Promise<{
         requestId: string;
         currentStatus: string;
+        request: any;
         history: Array<{
             historyId: string;
             status: string;
             statusMessage?: string;
+            actorId?: string;
             actorName?: string;
             actorType?: string;
             createdAt: Date;
         }>;
+        referrerUserIds: string[];
     }> {
         try {
-            // Get current status from main table
-            const currentQuery = `
-                SELECT Status FROM ReferralRequests WHERE RequestID = @param0
+            // Get full request details
+            const requestQuery = `
+                SELECT 
+                    rr.RequestID,
+                    rr.ApplicantID,
+                    rr.Status,
+                    rr.RequestedAt,
+                    rr.AssignedReferrerID as AssignedReferrerUserID,
+                    rr.OrganizationID,
+                    rr.JobID,
+                    rr.ExtJobID,
+                    rr.JobTitle as StoredJobTitle,
+                    rr.JobURL as StoredJobURL,
+                    j.Title as InternalJobTitle,
+                    COALESCE(jo.Name, eo.Name) as CompanyName,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    u.FirstName + ' ' + u.LastName as AssignedReferrerName
+                FROM ReferralRequests rr
+                LEFT JOIN Jobs j ON j.JobID = rr.JobID
+                LEFT JOIN Organizations jo ON jo.OrganizationID = j.OrganizationID
+                LEFT JOIN Organizations eo ON eo.OrganizationID = rr.OrganizationID AND rr.ExtJobID IS NOT NULL
+                LEFT JOIN Users u ON u.UserID = rr.AssignedReferrerID
+                WHERE rr.RequestID = @param0
             `;
-            const currentResult = await dbService.executeQuery(currentQuery, [requestId]);
+            const requestResult = await dbService.executeQuery(requestQuery, [requestId]);
             
-            if (!currentResult.recordset || currentResult.recordset.length === 0) {
+            if (!requestResult.recordset || requestResult.recordset.length === 0) {
                 throw new NotFoundError('Referral request not found');
             }
 
-            const currentStatus = currentResult.recordset[0].Status;
+            const row = requestResult.recordset[0];
+            const currentStatus = row.Status;
+            
+            // Build request object with proper fallbacks for external jobs
+            const requestData = {
+                RequestID: row.RequestID,
+                ApplicantID: row.ApplicantID,
+                Status: row.Status,
+                RequestedAt: row.RequestedAt,
+                AssignedReferrerUserID: row.AssignedReferrerUserID,
+                AssignedReferrerName: row.AssignedReferrerName,
+                OrganizationID: row.OrganizationID,
+                JobID: row.JobID,
+                ExtJobID: row.ExtJobID,
+                JobTitle: row.InternalJobTitle || row.StoredJobTitle || 'Job Title',
+                JobURL: row.StoredJobURL, // JobURL is only in ReferralRequests table
+                CompanyName: row.CompanyName || 'Company',
+                OrganizationLogo: row.OrganizationLogo,
+            };
 
-            // Get history
+            // Get history with ActorID for referrers
             const historyQuery = `
-                SELECT HistoryID, Status, StatusMessage, ActorName, ActorType, CreatedAt
+                SELECT HistoryID, Status, StatusMessage, ActorID, ActorName, ActorType, CreatedAt
                 FROM ReferralRequestStatusHistory
                 WHERE RequestID = @param0
                 ORDER BY CreatedAt ASC
@@ -1614,15 +1656,25 @@ export class ReferralService {
                 historyId: row.HistoryID,
                 status: row.Status,
                 statusMessage: row.StatusMessage,
+                actorId: row.ActorID,
                 actorName: row.ActorName,
                 actorType: row.ActorType,
                 createdAt: row.CreatedAt
             }));
 
+            // Get unique referrer UserIDs from history (actors with type 'referrer')
+            const referrerUserIds = [...new Set(
+                history
+                    .filter((h: any) => h.actorType === 'referrer' && h.actorId)
+                    .map((h: any) => h.actorId)
+            )];
+
             return {
                 requestId,
                 currentStatus,
-                history
+                request: requestData,
+                history,
+                referrerUserIds // List of all referrers who interacted with this request
             };
         } catch (error) {
             console.error('Error getting status history:', error);

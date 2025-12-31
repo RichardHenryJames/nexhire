@@ -7,6 +7,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
+import { PricingService } from './pricing.service';
 import { ValidationError, NotFoundError, InsufficientBalanceError } from '../utils/validation';
 import { config } from '../config/appConfig';
 
@@ -681,12 +682,14 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give welcome bonus to new user (₹100)
+   * ? NEW: Give welcome bonus to new user
    * Called automatically during user registration
+   * Amount is fetched from PricingSettings table in database
    */
   static async giveWelcomeBonus(userId: string): Promise<{ success: boolean; amount: number }> {
     try {
-      const WELCOME_BONUS_AMOUNT = 100;
+      // Fetch welcome bonus amount from PricingSettings table
+      const WELCOME_BONUS_AMOUNT = await PricingService.getSetting('WELCOME_BONUS');
 
       // Check if bonus already given
       const checkQuery = `

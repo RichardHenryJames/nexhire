@@ -111,6 +111,24 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
   const [jobTitleSearch, setJobTitleSearch] = useState('');
 
+  // 🎁 NEW: Welcome bonus amount from pricing API
+  const [welcomeBonus, setWelcomeBonus] = useState(50); // Default fallback
+
+  // Fetch welcome bonus from pricing API
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const result = await refopenAPI.getPricing();
+        if (result.success && result.data?.welcomeBonus) {
+          setWelcomeBonus(result.data.welcomeBonus);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch pricing:', error);
+      }
+    };
+    fetchPricing();
+  }, []);
+
   // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
@@ -673,6 +691,22 @@ styles.selectionButton,
                 : 'Just a few more details and you\'re all set!'
               }
             </Text>
+          </View>
+
+          {/* 🎉 NEW: Welcome Bonus Banner */}
+          <View style={styles.welcomeBonusBanner}>
+            <View style={styles.welcomeBonusIconContainer}>
+              <Ionicons name="gift" size={28} color="#FFD700" />
+            </View>
+            <View style={styles.welcomeBonusContent}>
+              <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
+              <Text style={styles.welcomeBonusText}>
+                RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
+              </Text>
+              <Text style={styles.welcomeBonusSubtext}>
+                Use it to apply for jobs & get referrals
+              </Text>
+            </View>
           </View>
 
           <View style={styles.form}>
@@ -1305,6 +1339,50 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.success,
     marginLeft: 6,
     flex: 1,
+  },
+  // 🎉 Welcome Bonus Banner Styles
+  welcomeBonusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  welcomeBonusIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  welcomeBonusContent: {
+    flex: 1,
+  },
+  welcomeBonusTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#22C55E',
+    marginBottom: 4,
+  },
+  welcomeBonusText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  welcomeBonusAmount: {
+    fontWeight: typography.weights.bold,
+    color: '#FFD700',
+    fontSize: typography.sizes.md,
+  },
+  welcomeBonusSubtext: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray400,
+    marginTop: 2,
   },
   selectionButton: {
     backgroundColor: colors.surface,

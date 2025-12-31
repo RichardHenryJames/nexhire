@@ -31,6 +31,8 @@ import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBrea
 import SkillsSelectionModal from '../../components/profile/SkillsSelectionModal';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
+import { showToast } from '../../components/Toast';
+import ModalToast from '../../components/ModalToast';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -92,6 +94,9 @@ export default function ProfileScreen({ navigation, route }) {
   const [showHeaderProfilePic, setShowHeaderProfilePic] = useState(false);
   const headerProfileOpacity = useRef(new Animated.Value(0)).current;
   const headerProfileScale = useRef(new Animated.Value(0.8)).current;
+  
+  // Modal toast ref for Invite & Earn
+  const inviteToastRef = useRef(null);
   
   // Profile state matching old structure
   const [profile, setProfile] = useState({
@@ -1587,6 +1592,9 @@ export default function ProfileScreen({ navigation, route }) {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalInnerContainer}>
+            {/* Modal Toast - shows inside modal */}
+            <ModalToast ref={inviteToastRef} />
+            
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
                 <Ionicons name="close" size={28} color={colors.text} />
@@ -1620,9 +1628,9 @@ export default function ProfileScreen({ navigation, route }) {
                 onPress={async () => {
                   try {
                     await navigator.clipboard.writeText(referralCode);
-                    Alert.alert('Copied!', `Code ${referralCode} copied to clipboard`);
+                    inviteToastRef.current?.show('Copied!', 'success');
                   } catch (e) {
-                    Alert.alert('Error', 'Failed to copy code');
+                    inviteToastRef.current?.show('Failed to copy code', 'error');
                   }
                 }}
               >

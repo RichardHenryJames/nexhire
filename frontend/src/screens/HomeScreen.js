@@ -60,6 +60,9 @@ const [profileViewsCount, setProfileViewsCount] = useState(0);
 
 // 🎯 NEW: Referrer requests (referrals that came to me)
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
+
+// 🎯 NEW: Unread message count for messages icon badge
+const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   
 const [dashboardData, setDashboardData] = useState({
   // Enhanced stats from backend
@@ -236,6 +239,19 @@ const [dashboardData, setDashboardData] = useState({
       })();
     }
 
+    // 🎯 NEW: Fetch unread message count
+    const unreadCountPromise = (async () => {
+      try {
+        const result = await messagingApi.getUnreadCount();
+        if (result.success && result.data) {
+          setUnreadMessageCount(result.data.TotalUnread || 0);
+        }
+      } catch (err) {
+        console.warn('Unread count fetch failed:', err);
+        setUnreadMessageCount(0);
+      }
+    })();
+
     // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
     let referrerRequestsPromise = Promise.resolve();
     if (isJobSeeker) {
@@ -266,7 +282,8 @@ const [dashboardData, setDashboardData] = useState({
       applicationsPromise,
       f500CompaniesPromise,
       profileViewsPromise,
-      referrerRequestsPromise
+      referrerRequestsPromise,
+      unreadCountPromise
     ]).catch(err => {
       console.error('Error in dashboard data fetch:', err);
     });
@@ -639,13 +656,20 @@ const [dashboardData, setDashboardData] = useState({
           )}
         </View>
         
-        {/* Right: Messages button */}
+        {/* Right: Messages button with unread badge */}
         <TouchableOpacity 
           onPress={() => navigation.navigate('Messages')}
           activeOpacity={0.7}
           style={styles.messagesButton}
         >
           <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+          {unreadMessageCount > 0 && (
+            <View style={styles.messagesBadge}>
+              <Text style={styles.messagesBadgeText}>
+                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
       )}
@@ -1111,6 +1135,26 @@ headerCompact: {
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  messagesBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.danger || '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  messagesBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
   },
   headerLeft: {
     flex: 1,

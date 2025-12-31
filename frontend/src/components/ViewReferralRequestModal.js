@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,11 @@ import {
   Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import refopenAPI from '../services/api';
-import { showToast } from './Toast';
+import messagingApi from '../services/messagingApi';
+import ModalToast from './ModalToast';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -38,7 +40,16 @@ export default function ViewReferralRequestModal({
   currentUserId = null  // NEW: Pass current user's UserID to check if they claimed
 }) {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  
+  // Ref for modal toast
+  const toastRef = useRef(null);
+  
+  // Helper function to show toast inside modal
+  const showToast = (message, type = 'success') => {
+    toastRef.current?.show(message, type);
+  };
   
   // Step state: 'viewing' | 'claimed' (shows proof upload)
   const [step, setStep] = useState('viewing');
@@ -46,6 +57,7 @@ export default function ViewReferralRequestModal({
   const [uploading, setUploading] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [description, setDescription] = useState('');
+  const [startingChat, setStartingChat] = useState(false);
   
   // Validation error states
   const [proofError, setProofError] = useState(false);
@@ -131,6 +143,47 @@ export default function ViewReferralRequestModal({
       }
     } else {
       showToast('Resume not available', 'error');
+    }
+  };
+
+  // Handle messaging the applicant
+  const handleMessageApplicant = async () => {
+    const applicantUserId = referralRequest?.ApplicantUserID;
+    if (!applicantUserId) {
+      showToast('Cannot message this applicant', 'error');
+      return;
+    }
+
+    try {
+      setStartingChat(true);
+      const result = await messagingApi.createConversation(applicantUserId);
+
+      if (result.success) {
+        // Close modal first
+        onClose();
+        
+        // Navigate to chat with referral context
+        navigation.navigate('Chat', {
+          conversationId: result.data.ConversationID,
+          otherUserName: referralRequest?.ApplicantName || 'Applicant',
+          otherUserId: applicantUserId,
+          otherUserProfilePic: referralRequest?.ApplicantProfilePictureURL,
+          // Pass referral context for tagging
+          referralContext: {
+            requestId: referralRequest?.RequestID,
+            jobTitle: jobTitle,
+            companyName: referralRequest?.CompanyName,
+            isReferrer: true,
+          }
+        });
+      } else {
+        showToast('Failed to start conversation', 'error');
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      showToast('Failed to start conversation', 'error');
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -241,6 +294,9 @@ export default function ViewReferralRequestModal({
       onRequestClose={handleClose}
     >
       <View style={styles.container}>
+        {/* Modal Toast - shows inside modal */}
+        <ModalToast ref={toastRef} />
+        
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -272,6 +328,92 @@ export default function ViewReferralRequestModal({
             </View>
           </View>
 
+          {/* Job Details Section - Job ID & URL */}
+          {(referralRequest?.ExtJobID || referralRequest?.JobURL) && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="briefcase-outline" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Job Details</Text>
+              </View>
+              
+              <View style={styles.jobDetailsCard}>
+                {/* Job ID */}
+                {referralRequest?.ExtJobID && (
+                  <View style={styles.jobDetailRow}>
+                    <View style={styles.jobDetailLabelRow}>
+                      <Ionicons name="pricetag-outline" size={16} color={colors.gray500} />
+                      <Text style={styles.jobDetailLabel}>Job ID</Text>
+                    </View>
+                    <View style={styles.jobDetailValueRow}>
+                      <Text style={styles.jobDetailValue} numberOfLines={1}>
+                        {referralRequest.ExtJobID}
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.copyButton}
+                        onPress={async () => {
+                          try {
+                            if (Platform.OS === 'web') {
+                              await navigator.clipboard.writeText(referralRequest.ExtJobID);
+                            }
+                            showToast('Job ID copied!', 'success');
+                          } catch (e) {
+                            showToast('Failed to copy', 'error');
+                          }
+                        }}
+                      >
+                        <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Job URL */}
+                {referralRequest?.JobURL && (
+                  <View style={[styles.jobDetailRow, { marginTop: referralRequest?.ExtJobID ? 12 : 0 }]}>
+                    <View style={styles.jobDetailLabelRow}>
+                      <Ionicons name="link-outline" size={16} color={colors.gray500} />
+                      <Text style={styles.jobDetailLabel}>Job URL</Text>
+                    </View>
+                    <View style={styles.jobUrlRow}>
+                      <TouchableOpacity 
+                        style={styles.jobUrlLink}
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            window.open(referralRequest.JobURL, '_blank');
+                          } else {
+                            Linking.openURL(referralRequest.JobURL).catch(() => {
+                              showToast('Could not open URL', 'error');
+                            });
+                          }
+                        }}
+                      >
+                        <Text style={styles.jobUrlText} numberOfLines={2}>
+                          {referralRequest.JobURL}
+                        </Text>
+                        <Ionicons name="open-outline" size={16} color={colors.primary} style={{ marginLeft: 4 }} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.copyButton}
+                        onPress={async () => {
+                          try {
+                            if (Platform.OS === 'web') {
+                              await navigator.clipboard.writeText(referralRequest.JobURL);
+                            }
+                            showToast('URL copied!', 'success');
+                          } catch (e) {
+                            showToast('Failed to copy', 'error');
+                          }
+                        }}
+                      >
+                        <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Candidate Info Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -297,11 +439,28 @@ export default function ViewReferralRequestModal({
                 </View>
               </View>
               
-              {/* Resume Button - Inside modal */}
-              <TouchableOpacity style={styles.resumeButton} onPress={handleOpenResume}>
-                <Ionicons name="document-text" size={18} color={colors.white} />
-                <Text style={styles.resumeButtonText}>View Resume</Text>
-              </TouchableOpacity>
+              {/* Action Buttons - Resume and Message */}
+              <View style={styles.candidateActions}>
+                <TouchableOpacity style={styles.resumeButton} onPress={handleOpenResume}>
+                  <Ionicons name="document-text" size={18} color={colors.white} />
+                  <Text style={styles.resumeButtonText}>View Resume</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.messageButton} 
+                  onPress={handleMessageApplicant}
+                  disabled={startingChat}
+                >
+                  {startingChat ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble" size={18} color={colors.white} />
+                      <Text style={styles.messageButtonText}>Message</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -532,6 +691,69 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   
+  // Job Details Card (Job ID & URL)
+  jobDetailsCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  jobDetailRow: {
+    marginBottom: 0,
+  },
+  jobDetailLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  jobDetailLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginLeft: 6,
+    fontWeight: typography.weights.medium,
+  },
+  jobDetailValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.gray100,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  jobDetailValue: {
+    fontSize: typography.sizes.base,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+    flex: 1,
+  },
+  jobUrlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray100,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  jobUrlLink: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  jobUrlText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    flex: 1,
+    textDecorationLine: 'underline',
+  },
+  copyButton: {
+    padding: 6,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: colors.primary + '15',
+  },
+  
   // Section Styles
   section: {
     marginBottom: 20,
@@ -595,7 +817,13 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
   },
+  candidateActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
   resumeButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -605,6 +833,22 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
   },
   resumeButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.white,
+    marginLeft: 6,
+  },
+  messageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  messageButtonText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     color: colors.white,

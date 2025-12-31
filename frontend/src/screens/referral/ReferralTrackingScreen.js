@@ -14,10 +14,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
+import messagingApi from '../../services/messagingApi';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
+import { showToast } from '../../components/Toast';
 
 /**
  * ReferralTrackingScreen - Shows detailed tracking/history of a referral request
@@ -38,6 +40,51 @@ export default function ReferralTrackingScreen() {
   const [request, setRequest] = useState(initialRequest || null);
   const [history, setHistory] = useState([]);
   const [currentStatus, setCurrentStatus] = useState(initialRequest?.Status || 'Pending');
+  const [messagingReferrer, setMessagingReferrer] = useState(false);
+  const [referrerConversation, setReferrerConversation] = useState(null); // Conversation with referrer if exists
+  const [referrerUserIds, setReferrerUserIds] = useState([]); // All referrers who interacted with this request
+
+  // Handle messaging the referrer
+  // If there are unread messages, go to Chat screen directly
+  // If no unread messages, go to Conversations screen (list)
+  const handleMessageReferrer = async () => {
+    // Check if we have unread messages from referrer
+    const hasUnread = referrerConversation?.TotalUnreadFromReferrers > 0 || referrerConversation?.UnreadCount > 0;
+    
+    if (hasUnread && referrerConversation) {
+      // Go directly to chat with this referrer
+      navigation.navigate('Chat', {
+        conversationId: referrerConversation.ConversationID,
+        otherUserName: referrerConversation.OtherUserName || 'Referrer',
+        otherUserId: referrerConversation.OtherUserID,
+        referralContext: {
+          requestId: requestId,
+          jobTitle: request?.JobTitle,
+          companyName: request?.CompanyName,
+          isReferrer: false,
+        }
+      });
+    } else {
+      // No unread - go to messages/conversations list
+      navigation.navigate('Messages');
+    }
+  };
+
+  // Handle back navigation - go to MyReferralRequests if context lost
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Context lost (hard refresh), navigate to my requests
+      navigation.reset({
+        index: 0,
+        routes: [
+          { name: 'MainTabs' },
+          { name: 'MyReferralRequests' },
+        ],
+      });
+    }
+  };
 
   // Set header style
   useEffect(() => {
@@ -48,7 +95,7 @@ export default function ReferralTrackingScreen() {
       headerTitleStyle: { color: colors.text },
       headerLeft: () => (
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleGoBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={{ paddingHorizontal: 12, paddingVertical: 8 }}
         >
@@ -66,6 +113,78 @@ export default function ReferralTrackingScreen() {
     }, [requestId])
   );
 
+  // Check if there are conversations with any referrers who have unread messages
+  const checkReferrerConversations = async (referrerIds) => {
+    console.log('🔍 checkReferrerConversations - referrerIds:', referrerIds);
+    
+    if (!referrerIds || referrerIds.length === 0) {
+      console.log('❌ No referrer IDs found, not showing message button');
+      setReferrerConversation(null);
+      return;
+    }
+
+    try {
+      const result = await messagingApi.getMyConversations(1, 100);
+      console.log('📨 getMyConversations result:', result);
+      console.log('📨 result.data type:', typeof result.data, Array.isArray(result.data));
+      console.log('📨 result.data.conversations:', result.data?.conversations);
+      
+      // Handle both possible response structures
+      const conversations = result.data?.conversations || result.data || [];
+      console.log('📨 conversations array:', conversations);
+      
+      if (result.success && conversations.length > 0) {
+        // Log all conversation OtherUserIDs for debugging
+        console.log('📨 All conversations OtherUserIDs:', conversations.map(c => ({
+          OtherUserID: c.OtherUserID,
+          OtherUserName: c.OtherUserName,
+          UnreadCount: c.UnreadCount,
+          LastMessageAt: c.LastMessageAt
+        })));
+        console.log('🔍 Looking for referrerIds:', referrerIds);
+        
+        // Find conversations with any of the referrers (case-insensitive comparison)
+        const referrerConvs = conversations.filter(c => {
+          const match = referrerIds.some(rid => 
+            rid && c.OtherUserID && 
+            rid.toLowerCase() === c.OtherUserID.toLowerCase()
+          );
+          console.log(`Comparing ${c.OtherUserID} with referrerIds:`, match);
+          return match;
+        });
+        console.log('🎯 Found conversations with referrers:', referrerConvs);
+        
+        // Calculate total unread count from all referrer conversations
+        let totalUnread = 0;
+        let bestConv = null;
+        
+        for (const conv of referrerConvs) {
+          if (conv.LastMessageAt) {
+            totalUnread += conv.UnreadCount || 0;
+            // Use the conversation with most recent message or unread messages
+            if (!bestConv || conv.UnreadCount > 0 || conv.LastMessageAt > bestConv.LastMessageAt) {
+              bestConv = conv;
+            }
+          }
+        }
+        
+        if (bestConv) {
+          // Store the best conversation with total unread count
+          console.log('✅ Setting referrerConversation with totalUnread:', totalUnread);
+          setReferrerConversation({
+            ...bestConv,
+            TotalUnreadFromReferrers: totalUnread
+          });
+        } else {
+          console.log('❌ No conversations with messages found');
+          setReferrerConversation(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking referrer conversations:', error);
+    }
+  };
+
   const loadHistory = async () => {
     if (!requestId) return;
 
@@ -75,6 +194,33 @@ export default function ReferralTrackingScreen() {
       if (result.success && result.data) {
         setHistory(result.data.history || []);
         setCurrentStatus(result.data.currentStatus || request?.Status || 'Pending');
+        
+        // Update request data from API (fixes hard refresh issue)
+        if (result.data.request) {
+          setRequest(prev => ({
+            ...prev,
+            ...result.data.request,
+          }));
+        }
+        
+        // Get referrer IDs - use from history first, fallback to AssignedReferrerUserID
+        let referrerIds = result.data.referrerUserIds || [];
+        console.log('📋 Referrer UserIds from API:', referrerIds);
+        
+        // Fallback: if no referrerIds but we have AssignedReferrerUserID, use that
+        if (referrerIds.length === 0 && result.data.request?.AssignedReferrerUserID) {
+          referrerIds = [result.data.request.AssignedReferrerUserID];
+          console.log('📋 Using AssignedReferrerUserID as fallback:', referrerIds);
+        }
+        
+        setReferrerUserIds(referrerIds);
+        
+        // Check conversations with these referrers
+        if (referrerIds.length > 0) {
+          checkReferrerConversations(referrerIds);
+        } else {
+          console.log('❌ No referrer IDs available');
+        }
       }
     } catch (error) {
       console.error('Error loading referral history:', error);
@@ -162,6 +308,10 @@ export default function ReferralTrackingScreen() {
     if (!request) return null;
 
     const statusConfig = getStatusConfig(currentStatus);
+    
+    console.log('🖼️ renderHeader - referrerConversation:', referrerConversation);
+    console.log('🖼️ renderHeader - currentStatus:', currentStatus);
+    console.log('🖼️ renderHeader - AssignedReferrerUserID:', request?.AssignedReferrerUserID);
 
     return (
       <View style={styles.headerCard}>
@@ -218,6 +368,33 @@ export default function ReferralTrackingScreen() {
             Requested on {formatDate(request.RequestedAt)}
           </Text>
         </View>
+
+        {/* Message Referrer Button - Only show when referrer has messaged */}
+        {referrerConversation && currentStatus !== 'Completed' && currentStatus !== 'Rejected' && (
+          <TouchableOpacity
+            style={styles.messageReferrerBtnTop}
+            onPress={handleMessageReferrer}
+            disabled={messagingReferrer}
+          >
+            <View style={styles.messageBtnContent}>
+              <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+              <Text style={styles.messageReferrerTextTop}>
+                {(referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount) > 0 
+                  ? 'Message Referrer' 
+                  : 'View Conversations'}
+              </Text>
+            </View>
+            {(referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount) > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>
+                  {(referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount) > 99 
+                    ? '99+' 
+                    : (referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount)}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -526,12 +703,49 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   actorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
     gap: 6,
+    marginTop: 8,
   },
   actorText: {
     fontSize: typography.sizes.xs,
     color: colors.gray600,
+  },
+  // Message referrer button at top of card
+  messageReferrerBtnTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  messageBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  messageReferrerTextTop: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: '#fff',
+  },
+  unreadBadge: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  unreadBadgeText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+    color: '#fff',
   },
   timelineMessage: {
     fontSize: typography.sizes.sm,

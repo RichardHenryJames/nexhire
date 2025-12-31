@@ -1703,7 +1703,7 @@ if (!resumeId) {
           aiAccessDurationDays: 15,
           referralRequestCost: 39,
           jobPublishCost: 50,
-          welcomeBonus: 100,
+          welcomeBonus: 50,
           referralSignupBonus: 50
         }
       };
