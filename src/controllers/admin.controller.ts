@@ -1,5 +1,5 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { withAuth, corsHeaders } from '../middleware/index';
+import { withAuth } from '../middleware';
 import { successResponse } from '../utils/validation';
 
 /**
@@ -16,7 +16,6 @@ export const getAdminDashboard = withAuth(async (
     if (user.userType?.toLowerCase() !== 'admin') {
       return {
         status: 403,
-        headers: corsHeaders,
         jsonBody: { success: false, error: 'Access denied. Admin only.' }
       };
     }
@@ -45,7 +44,7 @@ export const getAdminDashboard = withAuth(async (
         SUM(CASE WHEN UserType = 'JobSeeker' THEN 1 ELSE 0 END) AS TotalJobSeekers,
         SUM(CASE WHEN UserType = 'Employer' THEN 1 ELSE 0 END) AS TotalEmployers,
         SUM(CASE WHEN IsActive = 1 THEN 1 ELSE 0 END) AS ActiveUsers,
-        SUM(CASE WHEN IsEmailVerified = 1 THEN 1 ELSE 0 END) AS VerifiedUsers
+        SUM(CASE WHEN EmailVerified = 1 THEN 1 ELSE 0 END) AS VerifiedUsers
       FROM Users
       WHERE UserType != 'Admin'
     `;
@@ -54,9 +53,9 @@ export const getAdminDashboard = withAuth(async (
     const referralStatsQuery = `
       SELECT 
         COUNT(*) AS TotalRequests,
-        SUM(CASE WHEN CAST(CreatedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS RequestsToday,
-        SUM(CASE WHEN CAST(CreatedAt AS DATE) >= @param1 THEN 1 ELSE 0 END) AS RequestsThisWeek,
-        SUM(CASE WHEN CAST(CreatedAt AS DATE) >= @param2 THEN 1 ELSE 0 END) AS RequestsThisMonth,
+        SUM(CASE WHEN CAST(RequestedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS RequestsToday,
+        SUM(CASE WHEN CAST(RequestedAt AS DATE) >= @param1 THEN 1 ELSE 0 END) AS RequestsThisWeek,
+        SUM(CASE WHEN CAST(RequestedAt AS DATE) >= @param2 THEN 1 ELSE 0 END) AS RequestsThisMonth,
         SUM(CASE WHEN Status = 'Pending' THEN 1 ELSE 0 END) AS PendingRequests,
         SUM(CASE WHEN Status = 'Claimed' THEN 1 ELSE 0 END) AS ClaimedRequests,
         SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) AS CompletedRequests,
@@ -81,13 +80,13 @@ export const getAdminDashboard = withAuth(async (
     // 4. Daily referral requests for last 30 days
     const dailyReferralsQuery = `
       SELECT 
-        CAST(CreatedAt AS DATE) AS Date,
+        CAST(RequestedAt AS DATE) AS Date,
         COUNT(*) AS Count,
         SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) AS Completed,
         SUM(CASE WHEN Status = 'Pending' THEN 1 ELSE 0 END) AS Pending
       FROM ReferralRequests
-      WHERE CreatedAt >= DATEADD(day, -30, GETDATE())
-      GROUP BY CAST(CreatedAt AS DATE)
+      WHERE RequestedAt >= DATEADD(day, -30, GETDATE())
+      GROUP BY CAST(RequestedAt AS DATE)
       ORDER BY Date DESC
     `;
 
@@ -99,7 +98,7 @@ export const getAdminDashboard = withAuth(async (
         SUM(CASE WHEN CAST(CreatedAt AS DATE) >= @param1 THEN 1 ELSE 0 END) AS JobsThisWeek,
         SUM(CASE WHEN CAST(CreatedAt AS DATE) >= @param2 THEN 1 ELSE 0 END) AS JobsThisMonth,
         SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) AS ActiveJobs,
-        SUM(CASE WHEN IsExternal = 1 THEN 1 ELSE 0 END) AS ExternalJobs
+        SUM(CASE WHEN ExternalJobID IS NOT NULL THEN 1 ELSE 0 END) AS ExternalJobs
       FROM Jobs
     `;
 
@@ -139,7 +138,7 @@ export const getAdminDashboard = withAuth(async (
         u.Email,
         u.UserType,
         u.IsActive,
-        u.IsEmailVerified,
+        u.EmailVerified,
         u.CreatedAt,
         u.LastLoginAt,
         u.ProfilePictureURL
@@ -151,47 +150,43 @@ export const getAdminDashboard = withAuth(async (
     // 9. Recent Referral Requests
     const recentReferralsQuery = `
       SELECT TOP 20
-        rr.ReferralRequestID,
+        rr.RequestID,
         rr.JobTitle,
-        rr.CompanyName,
+        o.Name AS CompanyName,
         rr.Status,
-        rr.ReferralType,
-        rr.CreatedAt,
-        rr.ClaimedAt,
-        rr.CompletedAt,
+        rr.RequestedAt,
+        rr.ReferredAt,
         u.FirstName + ' ' + u.LastName AS RequesterName,
         u.Email AS RequesterEmail,
         ref.FirstName + ' ' + ref.LastName AS ReferrerName
       FROM ReferralRequests rr
       JOIN Users u ON rr.ApplicantID = u.UserID
-      LEFT JOIN Users ref ON rr.ClaimedBy = ref.UserID
-      ORDER BY rr.CreatedAt DESC
+      LEFT JOIN Users ref ON rr.AssignedReferrerID = ref.UserID
+      LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
+      ORDER BY rr.RequestedAt DESC
     `;
 
-    // 10. Top Organizations by Jobs
+    // 10. Top Organizations by Jobs (optimized with subqueries)
     const topOrgsQuery = `
       SELECT TOP 10
         o.OrganizationID,
         o.Name AS OrganizationName,
         o.LogoURL,
-        COUNT(j.JobID) AS JobCount,
-        COUNT(DISTINCT rr.ReferralRequestID) AS ReferralCount
+        (SELECT COUNT(*) FROM Jobs j WHERE j.OrganizationID = o.OrganizationID) AS JobCount,
+        (SELECT COUNT(*) FROM ReferralRequests rr WHERE rr.OrganizationID = o.OrganizationID) AS ReferralCount
       FROM Organizations o
-      LEFT JOIN Jobs j ON o.OrganizationID = j.OrganizationID
-      LEFT JOIN ReferralRequests rr ON o.OrganizationID = rr.OrganizationID
-      GROUP BY o.OrganizationID, o.Name, o.LogoURL
-      ORDER BY JobCount DESC
+      ORDER BY (SELECT COUNT(*) FROM Jobs j WHERE j.OrganizationID = o.OrganizationID) DESC
     `;
 
     // 11. Application Statistics
     const appStatsQuery = `
       SELECT 
         COUNT(*) AS TotalApplications,
-        SUM(CASE WHEN CAST(AppliedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS ApplicationsToday,
-        SUM(CASE WHEN CAST(AppliedAt AS DATE) >= @param1 THEN 1 ELSE 0 END) AS ApplicationsThisWeek,
-        SUM(CASE WHEN Status = 'Submitted' THEN 1 ELSE 0 END) AS Submitted,
-        SUM(CASE WHEN Status = 'Shortlisted' THEN 1 ELSE 0 END) AS Shortlisted,
-        SUM(CASE WHEN Status = 'Offer Accepted' THEN 1 ELSE 0 END) AS OfferAccepted
+        SUM(CASE WHEN CAST(SubmittedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS ApplicationsToday,
+        SUM(CASE WHEN CAST(SubmittedAt AS DATE) >= @param1 THEN 1 ELSE 0 END) AS ApplicationsThisWeek,
+        SUM(CASE WHEN StatusID = 1 THEN 1 ELSE 0 END) AS Submitted,
+        SUM(CASE WHEN StatusID = 2 THEN 1 ELSE 0 END) AS Shortlisted,
+        SUM(CASE WHEN StatusID = 5 THEN 1 ELSE 0 END) AS OfferAccepted
       FROM JobApplications
     `;
 
@@ -236,7 +231,6 @@ export const getAdminDashboard = withAuth(async (
 
     return {
       status: 200,
-      headers: corsHeaders,
       jsonBody: successResponse({
         userStats: userStats.recordset[0] || {},
         referralStats: referralStats.recordset[0] || {},
@@ -256,7 +250,6 @@ export const getAdminDashboard = withAuth(async (
     console.error('Error in getAdminDashboard:', error);
     return {
       status: 500,
-      headers: corsHeaders,
       jsonBody: { success: false, error: 'Failed to get admin dashboard data' }
     };
   }

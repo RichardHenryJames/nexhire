@@ -296,7 +296,7 @@ function AuthStack() {
 
 // Main App Tab Navigator
 function MainTabNavigator() {
-  const { userType, isEmployer, isJobSeeker } = useAuth();
+  const { userType, isEmployer, isJobSeeker, isAdmin } = useAuth();
   const { colors } = useTheme();
 
   return (
@@ -317,6 +317,8 @@ function MainTabNavigator() {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
+          } else if (route.name === "Admin") {
+            iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -388,6 +390,14 @@ function MainTabNavigator() {
         component={ProfileScreen}
         options={{ title: "Profile" }}
       />
+
+      {isAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminDashboardScreen}
+          options={{ title: "Admin" }}
+        />
+      )}
     </Tab.Navigator>
   );
 }

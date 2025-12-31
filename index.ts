@@ -1245,12 +1245,13 @@ app.http("access-status", {
 
 // ========================================================================
 // ADMIN DASHBOARD ENDPOINT (Admin only)
+// NOTE: "admin" is a reserved prefix in Azure Functions, use "management" instead
 // ========================================================================
 
 app.http("admin-dashboard", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
-  route: "admin/dashboard",
+  route: "management/dashboard",
   handler: withErrorHandling(getAdminDashboard),
 });
 

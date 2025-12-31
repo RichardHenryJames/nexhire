@@ -49,7 +49,8 @@ export default function AdminDashboardScreen() {
   const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await refopenAPI.apiCall('/admin/dashboard');
+      // NOTE: Using "management/dashboard" because "admin" is reserved in Azure Functions
+      const response = await refopenAPI.apiCall('/management/dashboard');
       if (response.success) {
         setDashboardData(response.data);
       }
@@ -130,37 +131,38 @@ export default function AdminDashboardScreen() {
   );
 
   const renderTabs = () => (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false}
-      style={styles.tabsContainer}
-      contentContainerStyle={styles.tabsContent}
-    >
-      {[
-        { key: 'overview', label: 'Overview', icon: 'grid-outline' },
-        { key: 'users', label: 'Users', icon: 'people-outline' },
-        { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
-        { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
-      ].map((tab) => (
-        <TouchableOpacity
-          key={tab.key}
-          style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-          onPress={() => setActiveTab(tab.key)}
-        >
-          <Ionicons 
-            name={tab.icon} 
-            size={18} 
-            color={activeTab === tab.key ? colors.primary : colors.textSecondary} 
-          />
-          <Text style={[
-            styles.tabText, 
-            activeTab === tab.key && styles.tabTextActive
-          ]}>
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+    <View style={styles.tabsContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsContent}
+      >
+        {[
+          { key: 'overview', label: 'Overview', icon: 'grid-outline' },
+          { key: 'users', label: 'Users', icon: 'people-outline' },
+          { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
+          { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Ionicons 
+              name={tab.icon} 
+              size={16} 
+              color={activeTab === tab.key ? colors.primary : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabText, 
+              activeTab === tab.key && styles.tabTextActive
+            ]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 
   const renderOverviewTab = () => (
@@ -403,18 +405,20 @@ export default function AdminDashboardScreen() {
 
 const createStyles = (colors, responsive = {}) => {
   const { isMobile = true, isDesktop = false, isTablet = false } = responsive;
-  const cardWidth = isDesktop ? 200 : isTablet ? 180 : 150;
+  const cardWidth = isDesktop ? 220 : isTablet ? 180 : 150;
+  const gridColumns = isDesktop ? 4 : isTablet ? 3 : 2;
+  const contentPadding = isDesktop ? 24 : 16;
 
   return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      ...(isDesktop && { alignItems: 'center' }),
+      ...(Platform.OS === 'web' && isDesktop ? { alignItems: 'center' } : {}),
     },
     innerContainer: {
       flex: 1,
       width: '100%',
-      maxWidth: isDesktop ? 1200 : '100%',
+      maxWidth: Platform.OS === 'web' && isDesktop ? 1200 : '100%',
     },
     loadingContainer: {
       flex: 1,
@@ -460,28 +464,34 @@ const createStyles = (colors, responsive = {}) => {
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+      maxHeight: 56,
+      ...(isDesktop && { justifyContent: 'center' }),
     },
     tabsContent: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      gap: 8,
+      paddingHorizontal: contentPadding,
+      paddingVertical: 8,
+      gap: isDesktop ? 12 : 8,
       flexDirection: 'row',
+      alignItems: 'center',
+      ...(isDesktop && { justifyContent: 'center' }),
     },
     tab: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
+      justifyContent: 'center',
+      paddingHorizontal: isDesktop ? 20 : 14,
+      paddingVertical: isDesktop ? 10 : 8,
       borderRadius: 20,
       backgroundColor: colors.background,
-      marginRight: 8,
+      marginRight: isDesktop ? 12 : 8,
       gap: 6,
+      height: isDesktop ? 44 : 40,
     },
     tabActive: {
       backgroundColor: colors.primary + '15',
     },
     tabText: {
-      fontSize: 14,
+      fontSize: isDesktop ? 15 : 14,
       color: colors.textSecondary,
       fontWeight: '500',
     },
@@ -493,41 +503,45 @@ const createStyles = (colors, responsive = {}) => {
       flex: 1,
     },
     contentContainer: {
-      padding: 16,
+      padding: contentPadding,
       paddingBottom: 100,
     },
     sectionHeader: {
-      marginTop: 16,
-      marginBottom: 12,
+      marginTop: isDesktop ? 24 : 16,
+      marginBottom: isDesktop ? 16 : 12,
     },
     sectionTitle: {
-      fontSize: 18,
+      fontSize: isDesktop ? 20 : 18,
       fontWeight: 'bold',
       color: colors.text,
     },
     sectionSubtitle: {
-      fontSize: 13,
+      fontSize: isDesktop ? 14 : 13,
       color: colors.textSecondary,
       marginTop: 2,
     },
     statsScroll: {
-      marginHorizontal: -16,
+      marginHorizontal: -contentPadding,
     },
     statsRow: {
       flexDirection: 'row',
-      paddingHorizontal: 16,
-      gap: 12,
+      paddingHorizontal: contentPadding,
+      gap: isDesktop ? 16 : 12,
+      ...(isDesktop && { flexWrap: 'wrap' }),
     },
     gridRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 12,
+      gap: isDesktop ? 16 : 12,
     },
     statCard: {
       backgroundColor: colors.surface,
       borderRadius: 12,
-      padding: 16,
+      padding: isDesktop ? 20 : 16,
       width: cardWidth,
+      minWidth: isDesktop ? 200 : cardWidth,
+      flex: isDesktop ? 1 : 0,
+      maxWidth: isDesktop ? 280 : cardWidth,
       borderLeftWidth: 4,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
@@ -538,54 +552,54 @@ const createStyles = (colors, responsive = {}) => {
     statCardHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: isDesktop ? 12 : 8,
     },
     statIconBg: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: isDesktop ? 44 : 36,
+      height: isDesktop ? 44 : 36,
+      borderRadius: isDesktop ? 22 : 18,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: isDesktop ? 16 : 12,
     },
     statValue: {
-      fontSize: 24,
+      fontSize: isDesktop ? 28 : 24,
       fontWeight: 'bold',
       color: colors.text,
     },
     statTitle: {
-      fontSize: 13,
+      fontSize: isDesktop ? 14 : 13,
       color: colors.textSecondary,
       fontWeight: '500',
     },
     statSubtitle: {
-      fontSize: 11,
+      fontSize: isDesktop ? 12 : 11,
       color: colors.gray500,
       marginTop: 2,
     },
     walletCard: {
       backgroundColor: colors.surface,
       borderRadius: 16,
-      padding: 20,
+      padding: isDesktop ? 24 : 20,
       marginTop: 8,
     },
     walletRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 8,
+      paddingVertical: isDesktop ? 12 : 8,
     },
     walletLabel: {
-      fontSize: 14,
+      fontSize: isDesktop ? 16 : 14,
       color: colors.textSecondary,
     },
     walletAmount: {
-      fontSize: 24,
+      fontSize: isDesktop ? 28 : 24,
       fontWeight: 'bold',
       color: '#10B981',
     },
     walletCount: {
-      fontSize: 20,
+      fontSize: isDesktop ? 22 : 20,
       fontWeight: 'bold',
       color: colors.text,
     },
@@ -594,20 +608,20 @@ const createStyles = (colors, responsive = {}) => {
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: 12,
-      padding: 16,
+      padding: isDesktop ? 20 : 16,
       marginBottom: 12,
     },
     userAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: isDesktop ? 56 : 48,
+      height: isDesktop ? 56 : 48,
+      borderRadius: isDesktop ? 28 : 24,
       backgroundColor: colors.primary + '20',
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: isDesktop ? 16 : 12,
     },
     userAvatarText: {
-      fontSize: 18,
+      fontSize: isDesktop ? 20 : 18,
       fontWeight: 'bold',
       color: colors.primary,
     },
@@ -615,37 +629,37 @@ const createStyles = (colors, responsive = {}) => {
       flex: 1,
     },
     userName: {
-      fontSize: 16,
+      fontSize: isDesktop ? 17 : 16,
       fontWeight: '600',
       color: colors.text,
     },
     userEmail: {
-      fontSize: 13,
+      fontSize: isDesktop ? 14 : 13,
       color: colors.textSecondary,
       marginTop: 2,
     },
     userMeta: {
       flexDirection: 'row',
       marginTop: 6,
-      gap: 8,
+      gap: isDesktop ? 12 : 8,
     },
     badge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
+      paddingHorizontal: isDesktop ? 10 : 8,
+      paddingVertical: isDesktop ? 3 : 2,
       borderRadius: 10,
     },
     badgeText: {
-      fontSize: 11,
+      fontSize: isDesktop ? 12 : 11,
       fontWeight: '600',
     },
     userDate: {
-      fontSize: 12,
+      fontSize: isDesktop ? 13 : 12,
       color: colors.gray500,
     },
     referralCard: {
       backgroundColor: colors.surface,
       borderRadius: 12,
-      padding: 16,
+      padding: isDesktop ? 20 : 16,
       marginBottom: 12,
     },
     referralHeader: {
@@ -684,11 +698,11 @@ const createStyles = (colors, responsive = {}) => {
       color: colors.gray500,
     },
     referralClaimed: {
-      fontSize: 12,
+      fontSize: isDesktop ? 13 : 12,
       color: colors.primary,
     },
     referralDate: {
-      fontSize: 11,
+      fontSize: isDesktop ? 12 : 11,
       color: colors.gray400,
       marginTop: 8,
     },
@@ -697,37 +711,37 @@ const createStyles = (colors, responsive = {}) => {
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: 12,
-      padding: 16,
+      padding: isDesktop ? 20 : 16,
       marginBottom: 12,
     },
     txIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: isDesktop ? 52 : 44,
+      height: isDesktop ? 52 : 44,
+      borderRadius: isDesktop ? 26 : 22,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: isDesktop ? 16 : 12,
     },
     txInfo: {
       flex: 1,
     },
     txDescription: {
-      fontSize: 14,
+      fontSize: isDesktop ? 15 : 14,
       fontWeight: '600',
       color: colors.text,
     },
     txUser: {
-      fontSize: 12,
+      fontSize: isDesktop ? 13 : 12,
       color: colors.textSecondary,
       marginTop: 2,
     },
     txDate: {
-      fontSize: 11,
+      fontSize: isDesktop ? 12 : 11,
       color: colors.gray500,
       marginTop: 4,
     },
     txAmount: {
-      fontSize: 16,
+      fontSize: isDesktop ? 18 : 16,
       fontWeight: 'bold',
     },
   });
