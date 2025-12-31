@@ -147,7 +147,7 @@ export default function MessagingLayoutDesktop() {
       if (result.success) {
         setSelectedConversation({
           conversationId: result.data.ConversationID,
-          otherUserName: `${selectedUser.FirstName} ${selectedUser.LastName}`,
+          otherUserName: selectedUser.UserName || `${selectedUser.FirstName || ''} ${selectedUser.LastName || ''}`.trim(),
           otherUserId: selectedUser.UserID,
           otherUserProfilePic: selectedUser.ProfilePictureURL,
         });
