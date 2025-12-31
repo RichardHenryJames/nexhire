@@ -38,8 +38,15 @@ export default function ConversationsScreen() {
 function ConversationsScreenMobile() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { user, isAdmin, userType } = useAuth();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
+  // Debug: Log user and isAdmin from AuthContext
+  console.log('🔍 ConversationsScreen - user object:', user);
+  console.log('🔍 ConversationsScreen - user.UserType:', user?.UserType);
+  console.log('🔍 ConversationsScreen - userType from context:', userType);
+  console.log('🔍 ConversationsScreen - isAdmin from context:', isAdmin);
   
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +58,14 @@ function ConversationsScreenMobile() {
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
-  // ✅ Set dark theme header with + button for new chat
+  // ✅ Set dark theme header with + button for new chat (admin only)
   useEffect(() => {
     navigation.setOptions({
       title: 'Messages',
       headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
       headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
       headerTintColor: colors.text,
-      headerRight: () => (
+      headerRight: isAdmin ? () => (
         <TouchableOpacity
           onPress={() => setShowNewMessageModal(true)}
           style={{ paddingHorizontal: 16, paddingVertical: 8 }}
@@ -66,9 +73,9 @@ function ConversationsScreenMobile() {
         >
           <Ionicons name="add" size={28} color={colors.text} />
         </TouchableOpacity>
-      ),
+      ) : undefined,
     });
-  }, [navigation, colors]);
+  }, [navigation, colors, isAdmin]);
 
   // Load conversations
   const loadConversations = useCallback(async () => {

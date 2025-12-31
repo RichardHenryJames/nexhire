@@ -65,6 +65,9 @@ import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
 
+// Admin Screen
+import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -160,6 +163,9 @@ const linking = {
           
           // Profile Views screen
           ProfileViews: "ProfileViews",
+          
+          // Admin Dashboard (admin only)
+          AdminDashboard: "admin",
         },
       },
     },
@@ -591,6 +597,14 @@ function MainStack() {
           headerShown: true,
           title: "Company Details",
           headerBackTitleVisible: false,
+        }}
+      />
+      {/* Admin Dashboard - Admin only */}
+      <Stack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen

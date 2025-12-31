@@ -27,7 +27,13 @@ export default function MessagingLayoutDesktop() {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const responsive = useResponsive();
-  const { user } = useAuth();
+  const { user, isAdmin, userType } = useAuth();
+  
+  // Debug: Log user and isAdmin from AuthContext
+  console.log('🔍 MessagingLayoutDesktop - user object:', user);
+  console.log('🔍 MessagingLayoutDesktop - user.UserType:', user?.UserType);
+  console.log('🔍 MessagingLayoutDesktop - userType from context:', userType);
+  console.log('🔍 MessagingLayoutDesktop - isAdmin from context:', isAdmin);
 
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +149,7 @@ export default function MessagingLayoutDesktop() {
 
   const startNewConversation = async (selectedUser) => {
     try {
-      const result = await messagingApi.getOrCreateConversation(selectedUser.UserID);
+      const result = await messagingApi.createConversation(selectedUser.UserID);
       if (result.success) {
         setSelectedConversation({
           conversationId: result.data.ConversationID,
@@ -268,19 +274,21 @@ export default function MessagingLayoutDesktop() {
                 onChangeText={setSearchQuery}
               />
             </View>
-            <TouchableOpacity
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: colors.primary + '15',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              onPress={() => setShowNewMessageModal(true)}
-            >
-              <Ionicons name="add" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            {isAdmin && (
+              <TouchableOpacity
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: colors.primary + '15',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                onPress={() => setShowNewMessageModal(true)}
+              >
+                <Ionicons name="add" size={24} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Conversations List */}

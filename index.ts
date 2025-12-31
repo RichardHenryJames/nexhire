@@ -154,6 +154,9 @@ import { getPricing } from "./src/controllers/pricing.controller";
 // Import unified access controller
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
+// Import admin dashboard controller
+import { getAdminDashboard } from "./src/controllers/admin.controller";
+
 // Import profile services
 import {
   ApplicantService,
@@ -1238,6 +1241,17 @@ app.http("access-status", {
   authLevel: "anonymous",
   route: "access/status",
   handler: withErrorHandling(checkAccessStatus),
+});
+
+// ========================================================================
+// ADMIN DASHBOARD ENDPOINT (Admin only)
+// ========================================================================
+
+app.http("admin-dashboard", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "admin/dashboard",
+  handler: withErrorHandling(getAdminDashboard),
 });
 
 // ========================================================================

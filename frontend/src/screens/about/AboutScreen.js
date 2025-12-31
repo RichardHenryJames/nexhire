@@ -22,7 +22,7 @@
  * - 20% Employers (post jobs, hire talent)
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useResponsive from '../../hooks/useResponsive';
+import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
@@ -52,45 +53,43 @@ const AskRefSentImg = require('../../../assets/askrefsent.png');
 const HiredImg = require('../../../assets/hired.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const isLargeScreen = SCREEN_WIDTH > 900;
-const isMediumScreen = SCREEN_WIDTH > 600;
 
 // RefOpen website URL
 const REFOPEN_URL = 'https://www.refopen.com';
 
 // ============================================
-// DARK THEME COLORS
+// THEME-AWARE COLORS GENERATOR
 // ============================================
-const COLORS = {
-  bgPrimary: '#09090B',
-  bgSecondary: '#0F0F13',
-  bgCard: '#18181B',
-  bgCardHover: '#27272A',
+const getThemeColors = (colors, isDark) => ({
+  bgPrimary: isDark ? '#09090B' : colors.background,
+  bgSecondary: isDark ? '#0F0F13' : colors.gray50,
+  bgCard: isDark ? '#18181B' : colors.card,
+  bgCardHover: isDark ? '#27272A' : colors.gray100,
   
-  primary: '#8B5CF6',
-  primaryLight: '#A78BFA',
-  secondary: '#06B6D4',
-  accent: '#22D3EE',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
+  primary: colors.primary,
+  primaryLight: colors.primaryLight,
+  secondary: isDark ? '#06B6D4' : colors.info,
+  accent: isDark ? '#22D3EE' : '#0EA5E9',
+  success: colors.success,
+  warning: colors.warning,
+  error: colors.error,
   pink: '#EC4899',
   blue: '#3B82F6',
   
-  gradientPrimary: ['#8B5CF6', '#6366F1'],
-  gradientSecondary: ['#06B6D4', '#0891B2'],
+  gradientPrimary: isDark ? ['#8B5CF6', '#6366F1'] : [colors.primary, colors.primaryDark],
+  gradientSecondary: isDark ? ['#06B6D4', '#0891B2'] : ['#0EA5E9', '#0284C7'],
   gradientAccent: ['#EC4899', '#BE185D'],
-  gradientSuccess: ['#10B981', '#059669'],
-  gradientWarning: ['#F59E0B', '#D97706'],
+  gradientSuccess: [colors.success, isDark ? '#059669' : '#047857'],
+  gradientWarning: [colors.warning, isDark ? '#D97706' : '#B45309'],
   gradientBlue: ['#3B82F6', '#2563EB'],
   
-  textPrimary: '#FAFAFA',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A',
+  textPrimary: colors.textPrimary,
+  textSecondary: colors.textSecondary,
+  textMuted: colors.textMuted,
   
-  border: '#27272A',
-  borderLight: '#3F3F46',
-};
+  border: colors.border,
+  borderLight: isDark ? '#3F3F46' : colors.borderLight,
+});
 
 // ============================================
 // STATIC DATA
@@ -234,7 +233,7 @@ const ALL_TESTIMONIALS = [
 ];
 
 // Function to get random testimonials
-const getRandomTestimonials = (count = 4) => {
+const getRandomTestimonials = (count = 4, COLORS) => {
   const shuffled = [...ALL_TESTIMONIALS].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count).map(t => ({
     ...t,
@@ -254,7 +253,7 @@ const openRefOpen = () => {
 // ============================================
 
 // Smooth Floating Company Logo with Letter Fallback
-const FloatingLogo = ({ company, index }) => {
+const FloatingLogo = ({ company, index, COLORS }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
@@ -361,7 +360,7 @@ const FloatingLogo = ({ company, index }) => {
 };
 
 // Section Header
-const SectionHeader = ({ tag, tagColor, title, subtitle, align = 'center' }) => (
+const SectionHeader = ({ tag, tagColor, title, subtitle, align = 'center', COLORS, isLargeScreen, isMediumScreen }) => (
   <View style={{ marginBottom: 40, alignItems: align === 'center' ? 'center' : 'flex-start' }}>
     <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 2, color: tagColor, marginBottom: 12, textTransform: 'uppercase' }}>
       {tag}
@@ -385,7 +384,7 @@ const SectionHeader = ({ tag, tagColor, title, subtitle, align = 'center' }) => 
 );
 
 // Stat Card
-const StatCard = ({ icon, value, label, gradient }) => (
+const StatCard = ({ icon, value, label, gradient, COLORS, isLargeScreen, isMediumScreen }) => (
   <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8}>
     <LinearGradient
       colors={[`${gradient[0]}15`, `${gradient[1]}08`]}
@@ -409,7 +408,7 @@ const StatCard = ({ icon, value, label, gradient }) => (
 );
 
 // Feature Card
-const FeatureCard = ({ icon, title, description, gradient, index }) => {
+const FeatureCard = ({ icon, title, description, gradient, index, isLargeScreen, isMediumScreen }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(anim, { toValue: 1, tension: 50, friction: 8, delay: index * 80, useNativeDriver: true }).start();
@@ -431,7 +430,7 @@ const FeatureCard = ({ icon, title, description, gradient, index }) => {
 };
 
 // Process Step with big numbers
-const ProcessStep = ({ number, title, description, icon, gradient }) => (
+const ProcessStep = ({ number, title, description, icon, gradient, COLORS }) => (
   <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8} style={{ marginBottom: 32 }}>
     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
       <LinearGradient colors={gradient} style={{ width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
@@ -449,7 +448,7 @@ const ProcessStep = ({ number, title, description, icon, gradient }) => (
 );
 
 // Benefit Item
-const BenefitItem = ({ icon, text, color }) => (
+const BenefitItem = ({ icon, text, color, COLORS }) => (
   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
     <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${color}20`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
       <Ionicons name={icon} size={16} color={color} />
@@ -459,7 +458,7 @@ const BenefitItem = ({ icon, text, color }) => (
 );
 
 // Big Number Highlight
-const BigNumber = ({ number, label, color }) => (
+const BigNumber = ({ number, label, color, COLORS, isLargeScreen }) => (
   <View style={{ alignItems: 'center', paddingHorizontal: isLargeScreen ? 40 : 20, paddingVertical: 16 }}>
     <Text style={{ fontSize: isLargeScreen ? 64 : 48, fontWeight: '800', color }}>{number}</Text>
     <Text style={{ fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>{label}</Text>
@@ -470,17 +469,17 @@ const BigNumber = ({ number, label, color }) => (
 // MAIN COMPONENT
 // ============================================
 // Create responsive styles
-const createStyles = (colors, responsive = {}) => StyleSheet.create({
+const createStyles = (COLORS, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
+    backgroundColor: COLORS.bgPrimary,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       alignItems: 'center',
     } : {}),
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 1200 : '100%',
     flex: 1,
   },
 });
@@ -489,11 +488,20 @@ export default function AboutScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef(null);
   const navigation = useNavigation();
+  const { colors, isDark } = useTheme();
   const responsive = useResponsive();
-  const styles = createStyles(COLORS, responsive);
+  const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
+  
+  // Derive responsive breakpoints
+  const isLargeScreen = isDesktop;
+  const isMediumScreen = isTablet;
+  
+  // Get theme-aware colors
+  const COLORS = useMemo(() => getThemeColors(colors, isDark), [colors, isDark]);
+  const styles = useMemo(() => createStyles(COLORS, responsive), [COLORS, responsive]);
   
   // Get 4 random testimonials on each render
-  const [testimonials] = React.useState(() => getRandomTestimonials(4));
+  const [testimonials] = React.useState(() => getRandomTestimonials(4, COLORS));
 
   // Scroll to top on mount/refresh - run immediately on web
   useEffect(() => {
@@ -567,7 +575,7 @@ export default function AboutScreen() {
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: isLargeScreen ? 40 : 20,
+    paddingHorizontal: isLargeScreen ? 40 : isTablet ? 24 : 16,
   };
 
   return (
@@ -767,7 +775,7 @@ export default function AboutScreen() {
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
               {FEATURED_COMPANIES.map((company, index) => (
-                <FloatingLogo key={company.name} company={company} index={index} />
+                <FloatingLogo key={company.name} company={company} index={index} COLORS={COLORS} />
               ))}
             </ScrollView>
           </View>
@@ -793,10 +801,10 @@ export default function AboutScreen() {
         <View style={{ paddingVertical: 48, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} />
-              <StatCard icon="briefcase" value="125K+" label="Active Jobs" gradient={COLORS.gradientSecondary} />
-              <StatCard icon="business" value="2,500+" label="Companies" gradient={COLORS.gradientSuccess} />
-              <StatCard icon="gift" value="$2.5M+" label="Rewards Paid" gradient={COLORS.gradientWarning} />
+              <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <StatCard icon="briefcase" value="125K+" label="Active Jobs" gradient={COLORS.gradientSecondary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <StatCard icon="business" value="2,500+" label="Companies" gradient={COLORS.gradientSuccess} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <StatCard icon="gift" value="$2.5M+" label="Rewards Paid" gradient={COLORS.gradientWarning} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
             </View>
           </View>
         </View>
@@ -936,15 +944,18 @@ export default function AboutScreen() {
               tagColor={COLORS.primary}
               title="Apply Directly. Or Get Referred. Your Choice."
               subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every employee at that company on RefOpen."
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
             />
 
             {/* Big Impact Numbers */}
             <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', justifyContent: 'center', alignItems: 'center', marginBottom: 48, backgroundColor: COLORS.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.border }}>
-              <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} />
+              <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} COLORS={COLORS} isLargeScreen={isLargeScreen} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="15x" label="Higher Hiring Rate with Referral" color={COLORS.accent} />
+              <BigNumber number="15x" label="Higher Hiring Rate with Referral" color={COLORS.accent} COLORS={COLORS} isLargeScreen={isLargeScreen} />
               <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} />
+              <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} COLORS={COLORS} isLargeScreen={isLargeScreen} />
             </View>
 
             {/* How it works - Always vertical layout */}
@@ -952,19 +963,19 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How It Works</Text>
               
               {/* Step 1 */}
-              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} />
+              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={JobSearchImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
               
               {/* Step 2 */}
-              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to ALL employees at that company!" icon="send" gradient={COLORS.gradientSecondary} />
+              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to ALL employees at that company!" icon="send" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={AskRefSentImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
               
               {/* Step 3 */}
-              <ProcessStep number="3" title="Track Applications & Get Hired" description="Track all your applications in real-time. See status updates, chat with referrers, and land your dream job faster." icon="trophy" gradient={COLORS.gradientSuccess} />
+              <ProcessStep number="3" title="Track Applications & Get Hired" description="Track all your applications in real-time. See status updates, chat with referrers, and land your dream job faster." icon="trophy" gradient={COLORS.gradientSuccess} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 8 }}>
                 <Image source={HiredImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
@@ -977,13 +988,13 @@ export default function AboutScreen() {
                 style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: `${COLORS.primary}30` }}
               >
                 <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
-                <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} />
-                <BenefitItem icon="people" text="One referral request reaches ALL employees" color={COLORS.primary} />
-                <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} />
-                <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} />
-                <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} />
-                <BenefitItem icon="chatbubbles" text="Direct messaging with employers & referrers" color={COLORS.pink} />
-                <BenefitItem icon="bookmark" text="Save jobs and get AI recommendations" color={COLORS.secondary} />
+                <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
+                <BenefitItem icon="people" text="One referral request reaches ALL employees" color={COLORS.primary} COLORS={COLORS} />
+                <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
+                <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
+                <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
+                <BenefitItem icon="chatbubbles" text="Direct messaging with employers & referrers" color={COLORS.pink} COLORS={COLORS} />
+                <BenefitItem icon="bookmark" text="Save jobs and get AI recommendations" color={COLORS.secondary} COLORS={COLORS} />
 
                 <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 24 }}>
                   <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
@@ -1127,6 +1138,9 @@ export default function AboutScreen() {
               tagColor={COLORS.success}
               title="Turn LinkedIn DMs Into Real Income"
               subtitle="Tired of endless referral requests in your DMs? Now you can get paid for every single referral you make - not just when they get hired!"
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
             />
 
             {/* Pain Point Callout */}
@@ -1193,9 +1207,9 @@ export default function AboutScreen() {
             <View style={{ flexDirection: isLargeScreen ? 'row' : 'column' }}>
               <View style={{ flex: 1, marginRight: isLargeScreen ? 32 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How You Earn</Text>
-                <ProcessStep number="1" title="Get Verified" description="Connect your work email to verify your employment. Takes 2 minutes." icon="shield-checkmark" gradient={COLORS.gradientSuccess} />
-                <ProcessStep number="2" title="Review AI-Filtered Requests" description="Our AI scores candidates and filters spam. You only see quality profiles worth your time." icon="filter" gradient={COLORS.gradientSecondary} />
-                <ProcessStep number="3" title="Refer & Earn Instantly" description="Submit the referral to your company's system. Get RefOpen rewards right away - no waiting for hires!" icon="gift" gradient={COLORS.gradientWarning} />
+                <ProcessStep number="1" title="Get Verified" description="Connect your work email to verify your employment. Takes 2 minutes." icon="shield-checkmark" gradient={COLORS.gradientSuccess} COLORS={COLORS} />
+                <ProcessStep number="2" title="Review AI-Filtered Requests" description="Our AI scores candidates and filters spam. You only see quality profiles worth your time." icon="filter" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
+                <ProcessStep number="3" title="Refer & Earn Instantly" description="Submit the referral to your company's system. Get RefOpen rewards right away - no waiting for hires!" icon="gift" gradient={COLORS.gradientWarning} COLORS={COLORS} />
               </View>
 
               {/* Earning Card */}
@@ -1242,6 +1256,9 @@ export default function AboutScreen() {
               tagColor={COLORS.blue}
               title="Hire Exceptional Talent Faster"
               subtitle="The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster."
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
             />
 
             {/* Feature Cards */}
@@ -1252,6 +1269,8 @@ export default function AboutScreen() {
                 description="Create beautiful job listings in minutes. Reach 50,000+ qualified professionals actively seeking opportunities."
                 gradient={COLORS.gradientBlue}
                 index={0}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
               />
               <FeatureCard
                 icon="people"
@@ -1259,6 +1278,8 @@ export default function AboutScreen() {
                 description="Your employees are on RefOpen. When they refer, candidates are pre-vetted and more likely to be a cultural fit."
                 gradient={COLORS.gradientPrimary}
                 index={1}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
               />
               <FeatureCard
                 icon="analytics"
@@ -1266,6 +1287,8 @@ export default function AboutScreen() {
                 description="Full analytics on your hiring funnel. See which sources bring the best candidates and optimize your process."
                 gradient={COLORS.gradientSecondary}
                 index={2}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
               />
             </View>
 
@@ -1293,6 +1316,9 @@ export default function AboutScreen() {
               tag="Trusted by Employees At"
               tagColor={COLORS.accent}
               title="Top Companies Around the World"
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
             />
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1347,6 +1373,9 @@ export default function AboutScreen() {
               tag="Success Stories"
               tagColor={COLORS.warning}
               title="What Our Users Say"
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
             />
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8 }}>
@@ -1358,7 +1387,7 @@ export default function AboutScreen() {
                       borderRadius: 24,
                       padding: 24,
                       marginHorizontal: 8,
-                      width: isLargeScreen ? 360 : SCREEN_WIDTH - 64,
+                      width: isLargeScreen ? 360 : isMediumScreen ? 320 : contentWidth - 48,
                       borderWidth: 1,
                       borderColor: COLORS.border,
                     }}
