@@ -52,6 +52,20 @@ export default function DatePicker({
   const [show, setShow] = useState(false);
   const webInputRef = useRef(null);
   
+  // Detect if dark mode based on background color
+  const isDarkMode = (() => {
+    if (!colors.background) return false;
+    const bg = colors.background.toLowerCase();
+    // Check for common dark backgrounds
+    if (bg === '#0f0f23' || bg === '#1a1a2e' || bg === '#121212' || bg === '#111827') return true;
+    // Check if hex color is dark (first digit of RGB is 0-3)
+    if (bg.startsWith('#') && bg.length >= 4) {
+      const firstHex = bg.charAt(1);
+      return ['0', '1', '2', '3'].includes(firstHex);
+    }
+    return false;
+  })();
+  
   // Convert value to Date object
   const dateValue = value 
     ? (value instanceof Date ? value : new Date(value))
@@ -222,6 +236,7 @@ export default function DatePicker({
               height: '100%',
               opacity: 0,
               cursor: 'pointer',
+              colorScheme: isDarkMode ? 'dark' : 'light',
             }}
           />
         </div>

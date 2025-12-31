@@ -727,6 +727,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         onRequestClose={closeModal}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={closeModal}>
               <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -837,6 +838,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               })}
             />
           )}
+          </View>
         </View>
       </Modal>
       </View>
@@ -968,6 +970,31 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',

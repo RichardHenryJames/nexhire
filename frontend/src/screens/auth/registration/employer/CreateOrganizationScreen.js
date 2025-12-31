@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 
-export default function OrganizationDetailsScreen({ navigation, route }) {
-  const { colors } = useTheme();
+export default function CreateOrganizationScreen({ navigation, route }) {
+  const colors = authDarkColors; // Always use dark colors for auth screens
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { employerType = 'startup', selectedCompany = null } = route.params || {};
@@ -49,6 +49,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
           <TextInput
             style={styles.input}
             placeholder="e.g., Acme Innovations"
+            placeholderTextColor={colors.gray400}
             value={organizationName}
             onChangeText={setOrganizationName}
           />
@@ -59,6 +60,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
           <TextInput
             style={styles.input}
             placeholder="e.g., Technology"
+            placeholderTextColor={colors.gray400}
             value={industry}
             onChangeText={setIndustry}
           />
@@ -69,6 +71,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
           <TextInput
             style={styles.input}
             placeholder="e.g., 1-10"
+            placeholderTextColor={colors.gray400}
             value={size}
             onChangeText={setSize}
           />
@@ -79,6 +82,7 @@ export default function OrganizationDetailsScreen({ navigation, route }) {
           <TextInput
             style={styles.input}
             placeholder="https://example.com"
+            placeholderTextColor={colors.gray400}
             value={website}
             autoCapitalize="none"
             onChangeText={setWebsite}

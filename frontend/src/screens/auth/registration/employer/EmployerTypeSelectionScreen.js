@@ -144,7 +144,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       navigation.navigate('EmployerPersonalDetailsScreen', routeParams);
     } else if (selectedType === 'startup') {
       // Startup/new company always routes to organization details to allow extra info
-      navigation.navigate('OrganizationDetailsScreen', routeParams);
+      navigation.navigate('CreateOrganizationScreen', routeParams);
     } else if (selectedType === 'freelancer') {
       navigation.navigate('EmployerPersonalDetailsScreen', routeParams);
     }
@@ -313,6 +313,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
         onRequestClose={closeOrgModal}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={closeOrgModal}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -326,6 +327,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -390,6 +392,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               )}
             />
           )}
+          </View>
         </View>
       </Modal>
       </View>
@@ -470,7 +473,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.primary,
     fontWeight: typography.weights.medium,
   },
-  modalContainer: { flex: 1, backgroundColor: colors.background },
+  modalContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, zIndex: 9999 } : {}) },
+  modalInnerContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { flex: 'none', width: '100%', maxWidth: 600, height: '80vh', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' } : {}) },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
   textInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 16, fontSize: typography.sizes.md, color: colors.text },

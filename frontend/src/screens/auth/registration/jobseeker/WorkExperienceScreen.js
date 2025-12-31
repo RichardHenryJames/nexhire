@@ -554,6 +554,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         onRequestClose={() => setShowOrgModal(false)}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowOrgModal(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -632,6 +633,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
               windowSize={8}
             />
           )}
+          </View>
         </View>
       </Modal>
 
@@ -803,6 +805,31 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -887,9 +914,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -910,11 +937,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -922,7 +949,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.gray400,
     fontStyle: 'italic',
   },
 });

@@ -19,7 +19,7 @@ import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/Person
 
 // Employer Registration Flow
 import EmployerTypeSelectionScreen from "../screens/auth/registration/employer/EmployerTypeSelectionScreen";
-import EmployerOrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
+import CreateOrganizationScreen from "../screens/auth/registration/employer/CreateOrganizationScreen";
 import EmployerPersonalDetailsScreen from "../screens/auth/registration/employer/EmployerPersonalDetailsScreen";
 import EmployerAccountScreen from "../screens/auth/registration/employer/EmployerAccountScreen";
 
@@ -210,8 +210,8 @@ function EmployerFlow() {
         component={EmployerTypeSelectionScreen}
       />
       <Stack.Screen
-        name="OrganizationDetailsScreen"
-        component={EmployerOrganizationDetailsScreen}
+        name="CreateOrganizationScreen"
+        component={CreateOrganizationScreen}
       />
       <Stack.Screen
         name="EmployerPersonalDetailsScreen"

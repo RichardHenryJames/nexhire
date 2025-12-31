@@ -1070,6 +1070,7 @@ styles.selectionButton,
         onRequestClose={() => setShowOrgModal(false)}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowOrgModal(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -1157,6 +1158,7 @@ styles.selectionButton,
               windowSize={8}
             />
           )}
+          </View>
         </View>
       </Modal>
       </View>
@@ -1501,6 +1503,34 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 16,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      paddingTop: 0,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',
