@@ -1221,13 +1221,6 @@ export class ReferralService {
                 color: '#F59E0B', // Warning amber
                 category: 'bonus'
             },
-            conversion: {
-                icon: '\uD83D\uDCB8', // 💸 Money with wings emoji
-                title: 'Points Converted',
-                description: 'Points converted to wallet balance (1 point = ₹0.50)',
-                color: '#7EB900', // Green (negative/spent)
-                category: 'conversion'
-            },
             // 🚀 FUTURE: Any new point types can be added here without frontend changes
             monthly_bonus: {
                 icon: '\uD83C\uDF81', // 🎁 Gift emoji
