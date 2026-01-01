@@ -49,7 +49,7 @@ export default function ReferralScreen({ navigation }) {
 
   // Define which statuses belong to which tab
   const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
-  const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified'];
+  const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified', 'Unverified'];
 
   const loadData = async () => {
     if (!user) return;
@@ -199,6 +199,8 @@ export default function ReferralScreen({ navigation }) {
         return colors.success;
       case 'Verified':
         return '#ffd700';
+      case 'Unverified':
+        return '#ef4444'; // Red - not verified
       case 'Cancelled':
         return colors.danger;
       default:
@@ -222,6 +224,8 @@ export default function ReferralScreen({ navigation }) {
         return 'checkmark-circle';
       case 'Verified':
         return 'trophy-outline';
+      case 'Unverified':
+        return 'alert-circle-outline';
       case 'Cancelled':
         return 'close-circle-outline';
       default:

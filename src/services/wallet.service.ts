@@ -764,4 +764,116 @@ export class WalletService {
       throw error;
     }
   }
+
+  /**
+   * Get withdrawable balance (money earned from referral verification rewards)
+   * Only REFERRAL_BONUS transactions are withdrawable
+   */
+  static async getWithdrawableBalance(userId: string): Promise<{
+    withdrawableAmount: number;
+    totalEarned: number;
+    totalWithdrawn: number;
+    canWithdraw: boolean;
+    minimumWithdrawal: number;
+  }> {
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+      
+      // Get total earned from referral bonuses (verification rewards)
+      const earnedQuery = `
+        SELECT COALESCE(SUM(Amount), 0) as TotalEarned
+        FROM WalletTransactions
+        WHERE WalletID = @param0 
+          AND TransactionType = 'Credit'
+          AND Source = 'REFERRAL_BONUS'
+          AND Status = 'Completed'
+      `;
+      const earnedResult = await dbService.executeQuery(earnedQuery, [wallet.WalletID]);
+      const totalEarned = earnedResult.recordset?.[0]?.TotalEarned || 0;
+
+      // Get total already withdrawn
+      const withdrawnQuery = `
+        SELECT COALESCE(SUM(Amount), 0) as TotalWithdrawn
+        FROM WalletWithdrawals
+        WHERE UserID = @param0 
+          AND Status IN ('Completed', 'Pending', 'Processing')
+      `;
+      const withdrawnResult = await dbService.executeQuery(withdrawnQuery, [userId]);
+      const totalWithdrawn = withdrawnResult.recordset?.[0]?.TotalWithdrawn || 0;
+
+      const withdrawableAmount = Math.max(0, totalEarned - totalWithdrawn);
+      const minimumWithdrawal = 500; // Minimum ₹500 required to withdraw
+      const canWithdraw = withdrawableAmount >= minimumWithdrawal;
+
+      return {
+        withdrawableAmount,
+        totalEarned,
+        totalWithdrawn,
+        canWithdraw,
+        minimumWithdrawal
+      };
+    } catch (error) {
+      console.error('Error getting withdrawable balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Request withdrawal of referral earnings
+   */
+  static async requestWithdrawal(userId: string, amount: number, paymentDetails: {
+    upiId?: string;
+    bankAccount?: string;
+    ifscCode?: string;
+    accountHolderName?: string;
+  }): Promise<{ success: boolean; withdrawalId: string; message: string }> {
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+      const withdrawable = await this.getWithdrawableBalance(userId);
+      
+      if (amount > withdrawable.withdrawableAmount) {
+        throw new ValidationError(`Insufficient withdrawable balance. Available: ₹${withdrawable.withdrawableAmount}`);
+      }
+      
+      if (amount < withdrawable.minimumWithdrawal) {
+        throw new ValidationError(`Minimum withdrawal amount is ₹${withdrawable.minimumWithdrawal}`);
+      }
+
+      // Create withdrawal request
+      const withdrawalId = AuthService.generateUniqueId();
+      const insertQuery = `
+        INSERT INTO WalletWithdrawals (
+          WithdrawalID, WalletID, UserID, Amount, CurrencyID, 
+          UPI_ID, BankAccountNumber, BankIFSC, BankAccountName,
+          Status, RequestedAt
+        ) VALUES (
+          @param0, @param1, @param2, @param3, 4,
+          @param4, @param5, @param6, @param7,
+          'Pending', GETUTCDATE()
+        )
+      `;
+      
+      await dbService.executeQuery(insertQuery, [
+        withdrawalId,
+        wallet.WalletID,
+        userId,
+        amount,
+        paymentDetails.upiId || null,
+        paymentDetails.bankAccount || null,
+        paymentDetails.ifscCode || null,
+        paymentDetails.accountHolderName || null
+      ]);
+
+      console.log(`💸 Withdrawal request created: ₹${amount} for user ${userId}`);
+
+      return {
+        success: true,
+        withdrawalId,
+        message: `Withdrawal request for ₹${amount} has been submitted. It will be processed within 24-48 hours.`
+      };
+    } catch (error) {
+      console.error('Error requesting withdrawal:', error);
+      throw error;
+    }
+  }
 }

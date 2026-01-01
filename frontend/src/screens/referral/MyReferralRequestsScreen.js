@@ -37,6 +37,7 @@ export default function MyReferralRequestsScreen() {
   const [viewingProof, setViewingProof] = useState(null);
 
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [verifyTarget, setVerifyTarget] = useState(null);
 
   // ✅ Set header style for dark mode support
   useEffect(() => {
@@ -138,6 +139,8 @@ export default function MyReferralRequestsScreen() {
         return colors.success;
       case 'Verified':
         return '#ffd700';
+      case 'Unverified':
+        return '#ef4444'; // Red - not verified
       case 'Cancelled':
         return colors.danger;
       default:
@@ -161,6 +164,8 @@ export default function MyReferralRequestsScreen() {
         return 'checkmark-circle';
       case 'Verified':
         return 'trophy';
+      case 'Unverified':
+        return 'alert-circle';
       case 'Cancelled':
         return 'close-circle';
       default:
@@ -184,6 +189,8 @@ export default function MyReferralRequestsScreen() {
         return 'Completed';
       case 'Verified':
         return 'Verified';
+      case 'Unverified':
+        return 'Unverified';
       case 'Cancelled':
         return 'Cancelled';
       default:
@@ -201,14 +208,20 @@ export default function MyReferralRequestsScreen() {
   };
 
   const handleVerifyReferral = async (requestId) => {
+    const request = myRequests.find((r) => r.RequestID === requestId);
+    setVerifyTarget({ requestId, request });
+  };
+
+  const performVerifyReferral = async (requestId, verified) => {
     try {
-      const result = await refopenAPI.verifyReferralCompletion(requestId, true);
+      const result = await refopenAPI.verifyReferralCompletion(requestId, verified);
       if (result.success) {
-        showToast('Referral verified', 'success');
+        const newStatus = verified ? 'Verified' : 'Unverified';
+        showToast(`Referral ${verified ? 'verified' : 'marked as unverified'}`, 'success');
         setMyRequests((prev) =>
           prev.map((r) =>
             r.RequestID === requestId
-              ? { ...r, Status: 'Verified', VerifiedByApplicant: 1 }
+              ? { ...r, Status: newStatus, VerifiedByApplicant: verified ? 1 : 0 }
               : r
           )
         );
@@ -545,6 +558,88 @@ export default function MyReferralRequestsScreen() {
                   style={{ marginRight: 6 }}
                 />
                 <Text style={styles.cancelReqBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Verification Confirmation Modal */}
+      <Modal
+        visible={!!verifyTarget}
+        transparent
+        onRequestClose={() => setVerifyTarget(null)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setVerifyTarget(null)}>
+          <Pressable style={styles.confirmBox} onPress={() => {}}>
+            <View style={styles.confirmHeader}>
+              <View style={[styles.confirmIconContainer, styles.verifyIconContainer]}>
+                <Ionicons name="checkmark-done-circle" size={24} color={colors.primary} />
+              </View>
+              <Text style={styles.confirmTitle}>Verify Referral</Text>
+            </View>
+
+            <Text style={styles.confirmMessage}>
+              Has the referrer successfully referred you for{' '}
+              <Text style={styles.jobTitleInModal}>
+                {verifyTarget?.request?.JobTitle || 'this job'}
+              </Text>
+              ?{'\n\n'}Please confirm whether you received a legitimate referral from this person.
+            </Text>
+
+            {verifyTarget?.request?.ProofDescription && (
+              <View style={styles.referrerMessageBox}>
+                <View style={styles.referrerMessageHeader}>
+                  <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
+                  <Text style={styles.referrerMessageLabel}>Referrer's Message:</Text>
+                </View>
+                <Text style={styles.referrerMessageText}>
+                  "{verifyTarget.request.ProofDescription}"
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.verifyInfoBox}>
+              <Ionicons name="information-circle" size={18} color="#93c5fd" />
+              <Text style={styles.verifyInfoText}>
+                Your feedback helps us verify authentic referrers and improve the platform for everyone.
+              </Text>
+            </View>
+
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.noBtn]}
+                onPress={() => {
+                  const requestId = verifyTarget?.requestId;
+                  setVerifyTarget(null);
+                  if (requestId != null) performVerifyReferral(requestId, false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={16}
+                  color={colors.danger}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.noBtnText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.yesBtn]}
+                onPress={() => {
+                  const requestId = verifyTarget?.requestId;
+                  setVerifyTarget(null);
+                  if (requestId != null) performVerifyReferral(requestId, true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={colors.white}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.yesBtnText}>Yes</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -890,5 +985,68 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   trackingHintText: {
     fontSize: typography.sizes.xs,
     color: colors.gray500,
+  },
+
+  // Verification modal styles
+  verifyIconContainer: {
+    backgroundColor: colors.primaryDark || 'rgba(59, 130, 246, 0.2)',
+  },
+  verifyInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  verifyInfoText: {
+    flex: 1,
+    fontSize: typography.sizes.xs,
+    color: '#93c5fd',
+    lineHeight: 18,
+  },
+  referrerMessageBox: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  referrerMessageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  referrerMessageLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: '#6ee7b7',
+  },
+  referrerMessageText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary || '#a3e635',
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  noBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  noBtnText: {
+    color: '#f87171',
+    fontWeight: typography.weights.semibold,
+  },
+  yesBtn: {
+    backgroundColor: colors.primary,
+  },
+  yesBtnText: {
+    color: colors.white,
+    fontWeight: typography.weights.semibold,
   },
 });

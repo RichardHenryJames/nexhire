@@ -563,17 +563,74 @@ export class ReferralService {
                 WHERE RequestID = @param0
             `;
             
-            const newStatus = dto.verified ? 'Verified' : 'Completed';
+            const newStatus = dto.verified ? 'Verified' : 'Unverified';
             await dbService.executeQuery(updateQuery, [dto.requestID, newStatus, dto.verified ? 1 : 0]);
 
-            // If verified, award ADDITIONAL verification points to referrer
+            // Log status change to history table
+            const historyId = AuthService.generateUniqueId();
+            const statusMessage = dto.verified 
+                ? 'Referral verified by job seeker' 
+                : 'Referral marked as unverified by job seeker';
+            const historyQuery = `
+                INSERT INTO ReferralRequestStatusHistory (
+                    HistoryID, RequestID, Status, StatusMessage, ActorID, ActorType, ActorName, CreatedAt
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5, @param6, GETUTCDATE()
+                )
+            `;
+            
+            // Get applicant name for history
+            const applicantQuery = `SELECT FirstName, LastName FROM Users WHERE UserID = @param0`;
+            const applicantResult = await dbService.executeQuery(applicantQuery, [applicantId]);
+            const applicantName = applicantResult.recordset?.[0] 
+                ? `${applicantResult.recordset[0].FirstName} ${applicantResult.recordset[0].LastName}`
+                : 'Job Seeker';
+            
+            await dbService.executeQuery(historyQuery, [
+                historyId,
+                dto.requestID,
+                newStatus,
+                statusMessage,
+                applicantId,
+                'seeker',
+                applicantName
+            ]);
+
+            // If verified, award ADDITIONAL verification money to referrer's wallet
+            // Amount varies based on whether referrer got quick response bonus
             if (dto.verified && referrerId) {
-                const verificationPoints = 25; // Higher points for verified referrals
-                await this.awardReferralPoints(referrerId, dto.requestID, verificationPoints, 'verification');
-                console.log(`🔍 Referral verified! ${verificationPoints} additional points awarded to referrer ${referrerId}`);
+                // Check if referrer received quick response bonus for this request
+                const quickBonusCheckQuery = `
+                    SELECT COUNT(*) as HasQuickBonus 
+                    FROM ReferralRewards 
+                    WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointsType = 'quick_response_bonus'
+                `;
+                const quickBonusResult = await dbService.executeQuery(quickBonusCheckQuery, [referrerId, dto.requestID]);
+                const hasQuickBonus = quickBonusResult.recordset?.[0]?.HasQuickBonus > 0;
+
+                // Calculate verification reward amount (in rupees):
+                // - With quick bonus: random 25-35 rupees (rewarding fast referrers more)
+                // - Without quick bonus: random 5-24 rupees (still rewarding but less)
+                let verificationAmount: number;
+                if (hasQuickBonus) {
+                    verificationAmount = Math.floor(Math.random() * 11) + 25; // ₹25-35
+                    console.log(`🌟 Quick referrer verification! Awarding ₹${verificationAmount} (₹25-35 range)`);
+                } else {
+                    verificationAmount = Math.floor(Math.random() * 20) + 5; // ₹5-24
+                    console.log(`✅ Standard verification! Awarding ₹${verificationAmount} (₹5-24 range)`);
+                }
+
+                // Add money to referrer's wallet
+                await WalletService.creditBonus(
+                    referrerId,
+                    verificationAmount,
+                    'REFERRAL_BONUS',
+                    `Referral verification reward for request ${dto.requestID}`
+                );
+                console.log(`💰 Referral verified! ₹${verificationAmount} added to referrer ${referrerId}'s wallet`);
                 
-                // TODO: Notify referrer about points earned
-                // await ReferralNotificationService.notifyReferralVerified(dto.requestID, referrerId, verificationPoints);
+                // Also record in ReferralRewards for tracking
+                await this.awardReferralPoints(referrerId, dto.requestID, verificationAmount, 'verification');
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -659,7 +716,7 @@ export class ReferralService {
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
             // Filter by completed statuses AND this user as the assigned referrer
-            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified')";
+            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified', 'Unverified')";
             const whereClause = `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;
             const queryParams = [userId];
 

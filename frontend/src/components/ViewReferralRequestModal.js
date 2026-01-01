@@ -417,6 +417,21 @@ export default function ViewReferralRequestModal({
             </View>
           )}
 
+          {/* Reward Info Banner - Show only when viewing (before claiming) */}
+          {step === 'viewing' && (
+            <View style={styles.rewardBanner}>
+              <View style={styles.rewardIconContainer}>
+                <Ionicons name="gift" size={24} color="#ffd700" />
+              </View>
+              <View style={styles.rewardTextContainer}>
+                <Text style={styles.rewardTitle}>Earn Guaranteed Rewards!</Text>
+                <Text style={styles.rewardDescription}>
+                  Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> when the candidate verifies your referral.
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Candidate Info Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -1002,6 +1017,60 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
     marginLeft: 8,
+  },
+  
+  // Reward Banner Styles
+  rewardBanner: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  rewardIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  rewardTextContainer: {
+    flex: 1,
+  },
+  rewardTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+    color: '#fbbf24',
+    marginBottom: 4,
+  },
+  rewardDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  rewardHighlight: {
+    fontWeight: typography.weights.bold,
+    color: '#fbbf24',
+  },
+  rewardTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  rewardTipText: {
+    fontSize: typography.sizes.xs,
+    color: '#fbbf24',
+    flex: 1,
   },
   
   // Footer
