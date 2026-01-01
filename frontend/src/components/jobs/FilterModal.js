@@ -175,7 +175,11 @@ default:
                 </View>
               )}
             </View>
-            <ScrollView style={styles.optionsList}>
+            <ScrollView 
+              style={styles.optionsList} 
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
+            >
               {displayCompanies.map((org, index) => {
                   const active = (filters.organizationIds || []).includes(org.id);
                   return (
@@ -414,9 +418,13 @@ const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobType
 
           {/* Right Column - Filter Options */}
           <View style={styles.rightColumn}>
-     <ScrollView showsVerticalScrollIndicator={false}>
-       {renderRightContent()}
-            </ScrollView>
+     {selectedCategory === 'company' ? (
+       renderRightContent()
+     ) : (
+       <ScrollView showsVerticalScrollIndicator={false}>
+         {renderRightContent()}
+       </ScrollView>
+     )}
       </View>
         </View>
 
@@ -508,6 +516,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface
   },
   rightContent: {
+    flex: 1,
     padding: 20
   },
   rightTitle: {
@@ -517,7 +526,8 @@ const createStyles = (colors) => StyleSheet.create({
     marginBottom: 16
   },
   optionsList: {
-    maxHeight: 400,
+    flex: 1,
+    minHeight: 300,
   },
   optionItem: {
     flexDirection: 'row',

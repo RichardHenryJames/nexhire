@@ -28,6 +28,7 @@ export default function ReferralScreen({ navigation }) {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [loading, setLoading] = useState(true);
+  const [loadingRequests, setLoadingRequests] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
   // Two tabs: 'open' and 'closed'
@@ -55,16 +56,18 @@ export default function ReferralScreen({ navigation }) {
     if (!user) return;
     
     setLoading(true);
+    setLoadingRequests(true);
     try {
-      // Load stats first (quick) - show UI faster
-      await loadStats();
-      
-      // Then lazy load the requests (heavier calls)
-      loadAllRequests(); // Don't await - let it load in background
+      // Load stats and requests in parallel
+      await Promise.all([
+        loadStats(),
+        loadAllRequests()
+      ]);
     } catch (error) {
       console.error('Error loading referral data:', error);
     } finally {
       setLoading(false);
+      setLoadingRequests(false);
     }
   };
 
@@ -445,11 +448,11 @@ export default function ReferralScreen({ navigation }) {
   };
 
   const renderTabContent = () => {
-    if (loading) {
+    if (loading || loadingRequests) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading referral data...</Text>
+          <Text style={styles.loadingText}>Loading referral requests...</Text>
         </View>
       );
     }
