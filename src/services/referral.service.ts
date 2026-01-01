@@ -620,7 +620,7 @@ export class ReferralService {
                     console.log(`✅ Standard verification! Awarding ₹${verificationAmount} (₹5-24 range)`);
                 }
 
-                // Add money to referrer's wallet
+                // Add money to referrer's wallet (NO points recording - direct money only)
                 await WalletService.creditBonus(
                     referrerId,
                     verificationAmount,
@@ -628,9 +628,6 @@ export class ReferralService {
                     `Referral verification reward for request ${dto.requestID}`
                 );
                 console.log(`💰 Referral verified! ₹${verificationAmount} added to referrer ${referrerId}'s wallet`);
-                
-                // Also record in ReferralRewards for tracking
-                await this.awardReferralPoints(referrerId, dto.requestID, verificationAmount, 'verification');
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -1160,7 +1157,7 @@ export class ReferralService {
 
                 UNION ALL
 
-                -- Points converted to wallet
+                -- Points converted to wallet (only POINTS_CONVERSION, not REFERRAL_BONUS which is direct earnings)
                 SELECT 
                     wt.TransactionID as ID,
                     'converted' as TransactionType,
@@ -1177,7 +1174,7 @@ export class ReferralService {
                 INNER JOIN Wallets w ON wt.WalletID = w.WalletID
                 INNER JOIN Applicants a ON w.UserID = a.UserID
                 WHERE a.ApplicantID = @param0
-                AND wt.Source = 'REFERRAL_BONUS'
+                AND wt.Source = 'POINTS_CONVERSION'  -- Only actual point conversions, not direct referral earnings
                 AND wt.Amount > 0  -- Credits only (conversions)
 
                 ORDER BY TransactionDate DESC
