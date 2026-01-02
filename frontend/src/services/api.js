@@ -1796,6 +1796,18 @@ if (!resumeId) {
     });
   }
 
+  // 💰 NEW: Get withdrawal history
+  async getWithdrawalHistory(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/wallet/withdrawals?${params}`);
+  }
+
   // 💰 NEW: Create wallet recharge order
   async createWalletRechargeOrder(amount, currencyId = 4) {
     if (!this.token) return { success: false, error: 'Authentication required' };

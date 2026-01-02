@@ -345,3 +345,34 @@ export const requestWithdrawal = withErrorHandling(async (req: HttpRequest, cont
         };
     }
 });
+
+/**
+ * Get withdrawal history
+ * GET /wallet/withdrawals
+ */
+export const getWithdrawalHistory = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        
+        const url = new URL(req.url);
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+        const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize') || '20')));
+        
+        const history = await WalletService.getWithdrawalHistory(user.userId, page, pageSize);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(history, 'Withdrawal history retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Get withdrawal history error:', error);
+        return {
+            status: 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get withdrawal history',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});

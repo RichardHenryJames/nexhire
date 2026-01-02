@@ -54,6 +54,7 @@ import ProfileViewsScreen from "../screens/ProfileViewsScreen";
 import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
 import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
+import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
@@ -160,6 +161,7 @@ const linking = {
           Wallet: "wallet",
           WalletTransactions: "wallet/transactions",
           WalletRecharge: "wallet/recharge",
+          WithdrawalRequests: "wallet/withdrawals",
           
           // Profile Views screen
           ProfileViews: "ProfileViews",
@@ -678,6 +680,15 @@ function MainStack() {
         options={{
           headerShown: true,
           title: "Add Money to Wallet",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="WithdrawalRequests"
+        component={WithdrawalRequestsScreen}
+        options={{
+          headerShown: true,
+          title: "Withdrawal Requests",
           headerBackTitleVisible: false,
         }}
       />

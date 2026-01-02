@@ -417,8 +417,8 @@ export default function ViewReferralRequestModal({
             </View>
           )}
 
-          {/* Reward Info Banner - Show only when viewing (before claiming) */}
-          {step === 'viewing' && (
+          {/* Reward Info Banner - Show on viewing and claimed steps */}
+          {(step === 'viewing' || step === 'claimed') && (
             <View style={styles.rewardBanner}>
               <View style={styles.rewardIconContainer}>
                 <Ionicons name="gift" size={24} color="#ffd700" />
@@ -426,7 +426,7 @@ export default function ViewReferralRequestModal({
               <View style={styles.rewardTextContainer}>
                 <Text style={styles.rewardTitle}>Earn Guaranteed Rewards!</Text>
                 <Text style={styles.rewardDescription}>
-                  Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> when the candidate verifies your referral.
+                  Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> immediately when candidate verifies.
                 </Text>
               </View>
             </View>

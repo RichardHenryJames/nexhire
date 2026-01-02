@@ -876,4 +876,62 @@ export class WalletService {
       throw error;
     }
   }
+
+  /**
+   * Get user's withdrawal history
+   */
+  static async getWithdrawalHistory(userId: string, page: number = 1, pageSize: number = 20): Promise<{
+    withdrawals: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    try {
+      const safePage = Math.max(1, Math.floor(page) || 1);
+      const safePageSize = Math.min(50, Math.max(1, Math.floor(pageSize) || 20));
+      const offset = (safePage - 1) * safePageSize;
+
+      // Count total
+      const countQuery = `
+        SELECT COUNT(*) as Total
+        FROM WalletWithdrawals
+        WHERE UserID = @param0
+      `;
+      const countResult = await dbService.executeQuery(countQuery, [userId]);
+      const total = countResult.recordset?.[0]?.Total || 0;
+      const totalPages = Math.ceil(total / safePageSize);
+
+      // Get withdrawals
+      const dataQuery = `
+        SELECT 
+          WithdrawalID,
+          Amount,
+          UPI_ID as UpiId,
+          BankAccountNumber,
+          Status,
+          RequestedAt,
+          ProcessedAt,
+          PaymentReference,
+          RejectionReason
+        FROM WalletWithdrawals
+        WHERE UserID = @param0
+        ORDER BY RequestedAt DESC
+        OFFSET ${offset} ROWS
+        FETCH NEXT ${safePageSize} ROWS ONLY
+      `;
+      const dataResult = await dbService.executeQuery(dataQuery, [userId]);
+
+      return {
+        withdrawals: dataResult.recordset || [],
+        total,
+        page: safePage,
+        pageSize: safePageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error('Error getting withdrawal history:', error);
+      throw error;
+    }
+  }
 }

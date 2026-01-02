@@ -191,7 +191,15 @@ export default function WalletScreen({ navigation, route }) {
             onPress={() => navigation.navigate('WalletTransactions')}
           >
             <Ionicons name="receipt-outline" size={24} color="#007AFF" />
-            <Text style={styles.historyText}>All Transactions</Text>
+            <Text style={styles.historyText}>Transactions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.withdrawButton}
+            onPress={() => navigation.navigate('WithdrawalRequests')}
+          >
+            <Ionicons name="wallet-outline" size={24} color="#10B981" />
+            <Text style={styles.withdrawText}>Withdrawals</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -317,7 +325,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   addMoneyText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   historyButton: {
@@ -328,11 +336,28 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 8,
-    gap: 8,
+    gap: 6,
   },
   historyText: {
     color: colors.primary,
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  withdrawButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    padding: 12,
+    borderRadius: 8,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  withdrawText: {
+    color: '#10B981',
+    fontSize: 14,
     fontWeight: '600',
   },
   transactionsContainer: {

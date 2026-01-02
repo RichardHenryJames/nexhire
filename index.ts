@@ -119,6 +119,7 @@ import {
   debitWallet,
   getWithdrawableBalance,
   requestWithdrawal,
+  getWithdrawalHistory,
 } from "./src/controllers/wallet.controller";
 
 // Import storage controller - MOVED HERE to prevent execution issues
@@ -1235,6 +1236,13 @@ app.http("wallet-withdraw", {
   authLevel: "anonymous",
   route: "wallet/withdraw",
   handler: withErrorHandling(requestWithdrawal),
+});
+
+app.http("wallet-withdrawals", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "wallet/withdrawals",
+  handler: withErrorHandling(getWithdrawalHistory),
 });
 
 // ========================================================================
