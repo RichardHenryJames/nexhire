@@ -703,16 +703,18 @@ export default function ProfileScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal('professional')}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal('professional')}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Work Experience</Text>
-          <View style={{ width: 24 }} />
+        <View style={styles.modalInnerContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal('professional')}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Work Experience</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <WorkExperienceSection editing={true} showHeader={false} />
+          </ScrollView>
         </View>
-        <ScrollView style={styles.modalContent}>
-          <WorkExperienceSection editing={true} showHeader={false} />
-        </ScrollView>
       </View>
     </Modal>
   );
@@ -1913,7 +1915,7 @@ const createStyles = (colors, responsive = {}) => {
   modalInnerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 600 : '100%',
+    maxWidth: responsive.isDesktop ? 800 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',
