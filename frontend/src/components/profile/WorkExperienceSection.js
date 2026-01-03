@@ -953,12 +953,15 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
             {/* Company Email Verification Section - Only for current jobs */}
             {editingItem && form.companyName && form.isCurrent && (
               <View style={styles.verificationSection}>
-                {/* Check if database also has IsCurrent = true, otherwise user needs to save first */}
-                {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) ? (
+                {/* Check if database also has IsCurrent = true AND company hasn't changed, otherwise user needs to save first */}
+                {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) || 
+                 (form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()) ? (
                   <View style={styles.saveFirstContainer}>
                     <Ionicons name="information-circle" size={20} color={colors.warning} />
                     <Text style={[styles.verificationSubtitle, { color: colors.warning, marginLeft: 8 }]}>
-                      Please save your changes first before verifying your company email.
+                      {form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()
+                        ? 'You changed the company. Please save first before verifying your email.'
+                        : 'Please save your changes first before verifying your company email.'}
                     </Text>
                   </View>
                 ) : userLevelVerified ? (
