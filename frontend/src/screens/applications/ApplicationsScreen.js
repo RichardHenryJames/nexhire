@@ -585,15 +585,12 @@ export default function ApplicationsScreen({ navigation }) {
       const newApplications = [...prevApplications];
       newApplications.splice(idx, 1);
       
-      console.log('✅ Optimistic UI: Removed application', applicationId, 'from list. New count:', newApplications.length);
-      
       return newApplications;
     });
 
     // 🔥 OPTIMISTIC UI UPDATE: Decrement count immediately
     setPagination((prev) => {
       const newTotal = Math.max((prev.total || 0) - 1, 0);
-      console.log('✅ Optimistic UI: Updated count from', prev.total, 'to', newTotal);
       return {
         ...prev,
         total: newTotal,
@@ -608,7 +605,6 @@ export default function ApplicationsScreen({ navigation }) {
         // Success! Clear rollback data
         optimisticWithdrawRollbackRef.current.delete(applicationId);
         showToast('Application withdrawn successfully', 'success');
-        console.log('✅ API confirmed withdrawal:', applicationId);
       } else {
         console.error('❌ Withdraw API error:', res.error || res.message);
         throw new Error(res.error || res.message || 'Failed to withdraw application');
@@ -621,12 +617,9 @@ export default function ApplicationsScreen({ navigation }) {
       optimisticWithdrawRollbackRef.current.delete(applicationId);
       
       if (rollback?.application) {
-        console.log('🔄 Rolling back application:', applicationId);
-        
         setApplications((prev) => {
           // Double-check it's not already in the list
           if (prev.some((a) => a.ApplicationID === applicationId)) {
-            console.warn('Application already exists, skipping rollback');
             return prev;
           }
           
@@ -639,18 +632,15 @@ export default function ApplicationsScreen({ navigation }) {
               : next.length;
           next.splice(insertAt, 0, rollback.application);
           
-          console.log('🔄 Rollback: Restored application at index', insertAt);
           return next;
         });
         
         setPagination((prev) => {
           const newTotal = (prev.total || 0) + 1;
-          console.log('🔄 Rollback: Restored count to', newTotal);
           return { ...prev, total: newTotal };
         });
       } else if (wasRemoved) {
         // Fallback: if we removed but didn't capture rollback, refetch everything
-        console.log('🔄 Rollback failed, refetching all applications');
         fetchApplications(true);
       }
 

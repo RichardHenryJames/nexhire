@@ -23,6 +23,7 @@ import ResumeSection from '../../components/profile/ResumeSection';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
+import ModalToast from '../../components/ModalToast';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -45,7 +46,7 @@ const EDUCATION_LEVELS = [
   'Other'
 ];
 
-export default function SettingsScreen({ navigation }) {
+export default function SettingsScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const responsive = useResponsive();
@@ -53,7 +54,28 @@ export default function SettingsScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
+  
+  // Handle route params to auto-open modals
+  useEffect(() => {
+    if (route?.params?.openModal) {
+      setActiveModal(route.params.openModal);
+    }
+  }, [route?.params?.openModal]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Notification preferences state
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    EmailEnabled: false,
+    PushEnabled: false,
+    ReferralRequestEmail: false,
+    ReferralClaimedEmail: false,
+    ReferralVerifiedEmail: false,
+    MessageReceivedEmail: false,
+    WeeklyDigestEmail: false,
+  });
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [notificationSaveMessage, setNotificationSaveMessage] = useState(null); // { type: 'success' | 'error', text: string }
 
   // Profile state
   const [profile, setProfile] = useState({
@@ -240,18 +262,45 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
+  // Notification preferences functions
+  const loadNotificationPreferences = async () => {
+    setLoadingNotifications(true);
+    try {
+      const response = await refopenAPI.getNotificationPreferences();
+      if (response?.success && response?.preferences) {
+        setNotificationPrefs(response.preferences);
+      }
+    } catch (error) {
+      console.error('Error loading notification preferences:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const saveNotificationPreferences = async () => {
+    setSavingNotifications(true);
+    setNotificationSaveMessage(null);
+    try {
+      const response = await refopenAPI.updateNotificationPreferences(notificationPrefs);
+      if (response?.success) {
+        setNotificationSaveMessage({ type: 'success', text: 'Preferences saved!' });
+        // Auto-hide after 3 seconds
+        setTimeout(() => setNotificationSaveMessage(null), 3000);
+      } else {
+        setNotificationSaveMessage({ type: 'error', text: 'Failed to update preferences' });
+      }
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      setNotificationSaveMessage({ type: 'error', text: 'Failed to update preferences' });
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
   // Save functions
   const savePersonalDetails = async () => {
     setLoading(true);
     try {
-      console.log('Saving personal details:', {
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        phone: profile.phone,
-        dateOfBirth: profile.dateOfBirth || null,
-        gender: profile.gender || null,
-      });
-      
       const result = await updateProfileSmart({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -259,8 +308,6 @@ export default function SettingsScreen({ navigation }) {
         dateOfBirth: profile.dateOfBirth || null,
         gender: profile.gender || null,
       });
-      
-      console.log('Save result:', result);
       
       if (result?.success) {
         showToast('Personal details updated', 'success');
@@ -890,6 +937,169 @@ export default function SettingsScreen({ navigation }) {
     </Modal>
   );
 
+  // Notification Preferences Modal
+  const renderNotificationsModal = () => (
+    <Modal
+      visible={activeModal === 'notifications'}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setActiveModal(null)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+            <Ionicons name="close" size={28} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Notification Settings</Text>
+          <TouchableOpacity 
+            onPress={saveNotificationPreferences}
+            disabled={savingNotifications}
+            style={styles.saveButton}
+          >
+            {savingNotifications ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="checkmark" size={24} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Modal Toast for save feedback */}
+        <ModalToast
+          visible={!!notificationSaveMessage}
+          message={notificationSaveMessage?.text || ''}
+          type={notificationSaveMessage?.type || 'success'}
+          onHide={() => setNotificationSaveMessage(null)}
+        />
+
+        <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+          {loadingNotifications ? (
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 12, color: colors.textSecondary }}>Loading preferences...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Global Toggles */}
+              <Text style={styles.notifSectionHeader}>Global Settings</Text>
+              
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="mail-outline" size={20} color={colors.text} />
+                  <Text style={styles.notifToggleLabel}>Email Notifications</Text>
+                </View>
+                <Switch
+                  value={notificationPrefs.EmailEnabled}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, EmailEnabled: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.EmailEnabled ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="notifications-outline" size={20} color={colors.text} />
+                  <Text style={styles.notifToggleLabel}>Push Notifications</Text>
+                </View>
+                <Switch
+                  value={notificationPrefs.PushEnabled}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, PushEnabled: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.PushEnabled ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              {/* Referral Notifications */}
+              <Text style={styles.notifSectionHeader}>Referral Notifications</Text>
+              
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="hand-right-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>New Referral Requests</Text>
+                    <Text style={styles.notifToggleDesc}>When someone needs a referral at your company</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferralRequestEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralRequestEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferralRequestEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Referral Claimed</Text>
+                    <Text style={styles.notifToggleDesc}>When your referral request is claimed</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferralClaimedEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralClaimedEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferralClaimedEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="trophy-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Referral Verified</Text>
+                    <Text style={styles.notifToggleDesc}>When you earn rewards for a referral</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferralVerifiedEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralVerifiedEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferralVerifiedEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              {/* Other Notifications */}
+              <Text style={styles.notifSectionHeader}>Other Notifications</Text>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+                  <Text style={styles.notifToggleLabel}>Messages</Text>
+                </View>
+                <Switch
+                  value={notificationPrefs.MessageReceivedEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, MessageReceivedEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.MessageReceivedEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="calendar-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Weekly Digest</Text>
+                    <Text style={styles.notifToggleDesc}>Summary of activity and opportunities</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.WeeklyDigestEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, WeeklyDigestEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.WeeklyDigestEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={{ height: 40 }} />
+            </>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+
   // Logout Modal
   const renderLogoutModal = () => (
     <Modal
@@ -1023,6 +1233,16 @@ export default function SettingsScreen({ navigation }) {
               ? `${jobSeekerProfile.resumes.length} resume(s) uploaded` 
               : 'Upload and manage your resumes'
           )}
+
+          {renderSectionCard(
+            'Notification Settings',
+            'notifications-outline',
+            () => {
+              loadNotificationPreferences();
+              setActiveModal('notifications');
+            },
+            'Manage email & push notifications'
+          )}
         </View>
 
         {/* Logout Button */}
@@ -1042,6 +1262,7 @@ export default function SettingsScreen({ navigation }) {
       {renderEducationModal()}
       {renderPreferencesModal()}
       {renderResumesModal()}
+      {renderNotificationsModal()}
       {renderLogoutModal()}
     </View>
   );
@@ -1325,5 +1546,44 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Notification styles
+  notifSectionHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 20,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  notifToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  notifToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  notifToggleLabel: {
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  notifToggleDesc: {
+    fontSize: 12,
+    color: colors.gray500,
+    marginTop: 2,
+  },
+  saveButton: {
+    width: 60,
+    alignItems: 'flex-end',
+    paddingRight: 8,
   },
 });

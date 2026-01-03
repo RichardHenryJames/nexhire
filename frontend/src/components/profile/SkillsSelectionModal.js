@@ -60,8 +60,6 @@ export default function SkillsSelectionModal({
       setLoading(true);
       const response = await refopenAPI.getReferenceMetadata('Skill');
       
-      console.log('Skills API response:', response);
-      
       if (response.success && response.data) {
         // Ensure data is an array and filter out invalid entries
         const skillsArray = Array.isArray(response.data) ? response.data : [];
@@ -74,7 +72,6 @@ export default function SkillsSelectionModal({
           return aValue.localeCompare(bValue);
         });
         
-        console.log('Loaded skills count:', sortedSkills.length);
         setAllSkills(sortedSkills);
       } else {
         console.error('Invalid skills response:', response);

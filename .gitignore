@@ -37,6 +37,9 @@ Thumbs.db
 # Environment files
 .env
 *.pem
+local.settings.json
+env-config.prod.json
+frontend/env-config.prod.json
 
 # IDE specific
 *.sublime-workspace

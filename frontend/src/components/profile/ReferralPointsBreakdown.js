@@ -18,6 +18,7 @@ const ReferralPointsBreakdown = ({
 }) => {
   const { colors } = useTheme();
   const responsive = useResponsive();
+  const { isMobile, isDesktop } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation();
@@ -247,12 +248,8 @@ const ReferralPointsBreakdown = ({
     try {
       setConverting(true);
       
-      console.log(`Converting ${totalPoints} points to wallet...`);
-      
       // Call the real API endpoint
       const response = await refopenAPI.convertPointsToWallet();
-      
-      console.log('Conversion API response:', response);
       
       if (response.success) {
         const { pointsConverted, walletAmount, newWalletBalance } = response.data;
@@ -342,102 +339,105 @@ const ReferralPointsBreakdown = ({
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Referral Points Breakdown</Text>
+            <Text style={styles.headerTitle}>RefPoints Breakdown</Text>
             <View style={styles.placeholder} />
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Total Points Card */}
-          <View style={styles.totalPointsCard}>
-            <View style={styles.pointsIcon}>
-              <Text style={styles.pointsEmoji}>🏆</Text>
-            </View>
-            <Text style={styles.totalPointsNumber}>{totalPoints || 0}</Text>
-            <Text style={styles.totalPointsLabel}>Total Referral Points</Text>
-            
-            {/* Quick Stats Row */}
-            <View style={styles.quickStatsRow}>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referral Made</Text>
+          {/* Top Cards Row - Side by side on desktop, stacked on mobile */}
+          <View style={styles.topCardsRow}>
+            {/* Withdraw Earnings Section - MOVED FIRST */}
+            <View style={[styles.withdrawSection, !isMobile && styles.topCardHalf]}>
+              <View style={styles.withdrawHeader}>
+                <View style={styles.withdrawTitleRow}>
+                  <Ionicons name="wallet" size={20} color="#10b981" />
+                  <Text style={styles.withdrawTitle}>Referral Earnings</Text>
+                </View>
+                <Text style={styles.withdrawSubtitle}>
+                  Earn money when job seekers verify your referrals
+                </Text>
               </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referral Verified</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Withdraw Earnings Section */}
-          <View style={styles.withdrawSection}>
-            <View style={styles.withdrawHeader}>
-              <View style={styles.withdrawTitleRow}>
-                <Ionicons name="wallet" size={20} color="#10b981" />
-                <Text style={styles.withdrawTitle}>Referral Earnings</Text>
-              </View>
-              <Text style={styles.withdrawSubtitle}>
-                Earn money when job seekers verify your referrals
-              </Text>
-            </View>
-            
-            {/* Liquid Fill Withdraw Button */}
-            <TouchableOpacity 
-              style={styles.withdrawButtonContainer}
-              onPress={() => setShowWithdrawModal(true)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.withdrawButtonOuter}>
-                {/* Background liquid fill based on amount */}
-                <View 
-                  style={[
-                    styles.withdrawButtonFill,
-                    { 
-                      height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
-                      backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
-                    }
-                  ]} 
-                />
-                <View style={styles.withdrawButtonContent}>
-                  <Ionicons 
-                    name={withdrawableData.canWithdraw ? "cash" : "water"} 
-                    size={24} 
-                    color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+              
+              {/* Liquid Fill Withdraw Button */}
+              <TouchableOpacity 
+                style={styles.withdrawButtonContainer}
+                onPress={() => setShowWithdrawModal(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.withdrawButtonOuter}>
+                  {/* Background liquid fill based on amount */}
+                  <View 
+                    style={[
+                      styles.withdrawButtonFill,
+                      { 
+                        height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
+                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                      }
+                    ]} 
                   />
-                  <Text style={[
-                    styles.withdrawButtonAmount,
-                    { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
-                  ]}>
-                    ₹{withdrawableData.withdrawableAmount}
-                  </Text>
-                  <Text style={[
-                    styles.withdrawButtonLabel,
-                    { color: withdrawableData.withdrawableAmount > 0 ? 'rgba(255,255,255,0.8)' : '#9ca3af' }
-                  ]}>
-                    {withdrawableData.canWithdraw ? 'Withdraw Now' : `₹${withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to withdraw`}
-                  </Text>
+                  <View style={styles.withdrawButtonContent}>
+                    <Ionicons 
+                      name={withdrawableData.canWithdraw ? "cash" : "water"} 
+                      size={24} 
+                      color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+                    />
+                    <Text style={[
+                      styles.withdrawButtonAmount,
+                      { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
+                    ]}>
+                      ₹{withdrawableData.withdrawableAmount}
+                    </Text>
+                    <Text style={[
+                      styles.withdrawButtonLabel,
+                      { color: withdrawableData.withdrawableAmount > 0 ? 'rgba(255,255,255,0.8)' : '#9ca3af' }
+                    ]}>
+                      {withdrawableData.canWithdraw ? 'Withdraw Now' : `₹${withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to withdraw`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.withdrawProgressBar}>
+                  <View 
+                    style={[
+                      styles.withdrawProgressFill,
+                      { 
+                        width: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
+                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.withdrawProgressText}>
+                  {withdrawableData.withdrawableAmount} / {withdrawableData.minimumWithdrawal} required
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Total Points Card */}
+            <View style={[styles.totalPointsCard, !isMobile && styles.topCardHalf]}>
+              <View style={styles.pointsIcon}>
+                <Text style={styles.pointsEmoji}>🏆</Text>
+              </View>
+              <Text style={styles.totalPointsNumber}>{totalPoints || 0}</Text>
+              <Text style={styles.totalPointsLabel}>Total RefPoints</Text>
+              
+              {/* Quick Stats Row */}
+              <View style={styles.quickStatsRow}>
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Referral Made</Text>
+                </View>
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Referral Verified</Text>
                 </View>
               </View>
-              <View style={styles.withdrawProgressBar}>
-                <View 
-                  style={[
-                    styles.withdrawProgressFill,
-                    { 
-                      width: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
-                      backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
-                    }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.withdrawProgressText}>
-                {withdrawableData.withdrawableAmount} / {withdrawableData.minimumWithdrawal} required
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* Points Breakdown by Type */}
           {Object.keys(pointsBreakdown).length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📊 Points Breakdown by Type</Text>
+              <Text style={styles.sectionTitle}>📊 RefPoints Breakdown by Type</Text>
               
               {Object.values(pointsBreakdown).map((category) => {
                 const typeInfo = getPointTypeInfo(category.type);
@@ -647,18 +647,18 @@ const ReferralPointsBreakdown = ({
             <View style={styles.conversionModalHeader}>
               <Ionicons name="swap-horizontal" size={48} color={colors.primary} />
             </View>
-            <Text style={styles.conversionModalTitle}>Convert Points to Wallet</Text>
+            <Text style={styles.conversionModalTitle}>Convert RefPoints to Wallet</Text>
             <Text style={styles.conversionModalDescription}>
-              Convert your referral points to wallet balance
+              Convert your RefPoints to wallet balance
             </Text>
             
             <View style={styles.conversionRate}>
-              <Text style={styles.conversionRateText}>1 Point = ₹0.50</Text>
+              <Text style={styles.conversionRateText}>1 RefPoint = ₹0.50</Text>
             </View>
 
             <View style={styles.conversionDetails}>
               <View style={styles.conversionRow}>
-                <Text style={styles.conversionLabel}>Your Points:</Text>
+                <Text style={styles.conversionLabel}>Your RefPoints:</Text>
                 <Text style={styles.conversionValue}>{totalPoints}</Text>
               </View>
               <View style={styles.conversionRow}>
@@ -705,7 +705,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   innerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 600 : '100%',
+    maxWidth: responsive.isDesktop ? 800 : '100%',
   },
   header: {
     flexDirection: 'row',
@@ -731,12 +731,22 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  // Responsive top cards row
+  topCardsRow: {
+    flexDirection: responsive.isMobile ? 'column' : 'row',
+    gap: 16,
+    marginBottom: responsive.isMobile ? 0 : 24,
+  },
+  topCardHalf: {
+    flex: 1,
+    marginBottom: 0,
+  },
   totalPointsCard: {
     backgroundColor: colors.surface || colors.background,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: responsive.isMobile ? 24 : 0,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1106,7 +1116,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.surface || colors.background,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
+    marginBottom: responsive.isMobile ? 24 : 0,
     borderWidth: 1,
     borderColor: '#10b98133',
   },

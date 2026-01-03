@@ -55,6 +55,7 @@ import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
 import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
+import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
@@ -162,6 +163,7 @@ const linking = {
           WalletTransactions: "wallet/transactions",
           WalletRecharge: "wallet/recharge",
           WithdrawalRequests: "wallet/withdrawals",
+          PaymentSuccess: "wallet/payment-success",
           
           // Profile Views screen
           ProfileViews: "ProfileViews",
@@ -383,7 +385,7 @@ function MainTabNavigator() {
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
-          options={{ title: "Requests" }}
+          options={{ title: "Refer" }}
         />
       )}
 
@@ -690,6 +692,15 @@ function MainStack() {
           headerShown: true,
           title: "Withdrawal Requests",
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="PaymentSuccess"
+        component={PaymentSuccessScreen}
+        options={{
+          headerShown: false,
+          title: "Payment Successful",
+          gestureEnabled: false, // Prevent swipe back
         }}
       />
     </Stack.Navigator>

@@ -122,6 +122,13 @@ import {
   getWithdrawalHistory,
 } from "./src/controllers/wallet.controller";
 
+// NEW: Company Email Verification controller
+import {
+  sendCompanyEmailOTP,
+  verifyCompanyEmailOTP,
+  getVerificationStatus,
+} from "./src/controllers/companyEmailVerification.controller";
+
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from "./src/controllers/storage.controller";
 
@@ -262,6 +269,88 @@ app.http("users-referral-code", {
   authLevel: "anonymous",
   route: "users/referral-code",
   handler: withErrorHandling(getMyReferralCode),
+});
+
+// ========================================================================
+// NOTIFICATION PREFERENCES endpoints
+// ========================================================================
+app.http("notification-preferences", {
+  methods: ["GET", "PUT", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "notifications/preferences",
+  handler: withErrorHandling(async (req, context) => {
+    // Handle CORS
+    if (req.method === "OPTIONS") {
+      return { status: 204, headers: corsHeaders };
+    }
+
+    // Get user from auth token
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Unauthorized" })
+      };
+    }
+
+    const { AuthService } = await import("./src/services/auth.service");
+    const token = authHeader.replace("Bearer ", "");
+    const decoded = AuthService.verifyToken(token);
+    
+    if (!decoded?.userId) {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Invalid token" })
+      };
+    }
+
+    const { NotificationService } = await import("./src/services/notificationService");
+
+    // GET - Fetch preferences
+    if (req.method === "GET") {
+      const preferences = await NotificationService.getFullPreferences(decoded.userId);
+      return {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true, preferences })
+      };
+    }
+
+    // PUT - Update preferences
+    if (req.method === "PUT") {
+      const body = await req.json() as Partial<{
+        EmailEnabled?: boolean;
+        PushEnabled?: boolean;
+        InAppEnabled?: boolean;
+        ReferralRequestEmail?: boolean;
+        ReferralRequestPush?: boolean;
+        ReferralClaimedEmail?: boolean;
+        ReferralClaimedPush?: boolean;
+        ReferralVerifiedEmail?: boolean;
+        ReferralVerifiedPush?: boolean;
+        MessageReceivedEmail?: boolean;
+        MessageReceivedPush?: boolean;
+        WeeklyDigestEmail?: boolean;
+      }>;
+      const success = await NotificationService.updatePreferences(decoded.userId, body);
+      return {
+        status: success ? 200 : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          success, 
+          message: success ? "Preferences updated" : "Failed to update preferences" 
+        })
+      };
+    }
+
+    return {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ success: false, message: "Method not allowed" })
+    };
+  }),
 });
 
 // ========================================================================
@@ -1243,6 +1332,31 @@ app.http("wallet-withdrawals", {
   authLevel: "anonymous",
   route: "wallet/withdrawals",
   handler: withErrorHandling(getWithdrawalHistory),
+});
+
+// ========================================================================
+// COMPANY EMAIL VERIFICATION ENDPOINTS - Verified Referrer Feature
+// ========================================================================
+
+app.http("verification-send-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/company-email/send-otp",
+  handler: withErrorHandling(sendCompanyEmailOTP),
+});
+
+app.http("verification-verify-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/company-email/verify-otp",
+  handler: withErrorHandling(verifyCompanyEmailOTP),
+});
+
+app.http("verification-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/status",
+  handler: withErrorHandling(getVerificationStatus),
 });
 
 // ========================================================================
@@ -2687,7 +2801,48 @@ export {};
 * GET    /messages/profile-views - Get my profile views
 * GET    /messages/public-profile/{userId} - Get public profile details
 *
+* NOTIFICATION SYSTEM (1 Timer Trigger): Email/Push Notifications
+* TIMER  /notificationProcessorTimer - Process notification queue every 1 minute
+*
 * ========================================================================
-* TOTAL: 68 HTTP endpoints + 2 Timer Triggers = 70 functions
+* TOTAL: 68 HTTP endpoints + 3 Timer Triggers = 71 functions
 * ========================================================================
 */
+
+// ========================================================================
+// TIMER TRIGGER - NOTIFICATION QUEUE PROCESSOR (Every 1 minute)
+// ========================================================================
+
+app.timer("notificationProcessorTimer", {
+  schedule: "0 */1 * * * *", // Every 1 minute
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      // Import notification queue service
+      const { NotificationQueueService } = await import("./src/services/notificationQueueService");
+
+      // Process pending notifications
+      const result = await NotificationQueueService.processQueue(50);
+
+      const duration = Date.now() - startTime;
+
+      if (result.processed > 0) {
+        context.log(`📬 Notification Queue Processed [${executionId}]`);
+        context.log(`   Processed: ${result.processed}`);
+        context.log(`   Sent: ${result.sent}`);
+        context.log(`   Failed: ${result.failed}`);
+        context.log(`   Duration: ${duration}ms`);
+        
+        if (result.errors.length > 0) {
+          context.warn(`   Errors: ${result.errors.slice(0, 3).join('; ')}`);
+        }
+      }
+      // Don't log if nothing was processed (to reduce noise)
+
+    } catch (error: any) {
+      context.error(`❌ Notification queue error: ${error.message}`);
+    }
+  }
+});

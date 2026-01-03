@@ -32,18 +32,10 @@ export default function ProfileSection({
   const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
   const [userToggled, setUserToggled] = useState(false);
   
-  // ? DEBUG: Log when defaultCollapsed changes
-  useEffect(() => {
- console.log(`[${title}] defaultCollapsed prop changed to:`, defaultCollapsed);
-  }, [defaultCollapsed, title]);
-  
   // ? FIX: Update collapsed state when defaultCollapsed changes (data loads) ONLY if user hasn't manually toggled
   useEffect(() => {
     if (!userToggled) {
-    console.log(`[${title}] Auto-updating collapsed state to:`, !!defaultCollapsed);
       setCollapsed(!!defaultCollapsed);
-    } else {
-      console.log(`[${title}] User toggled - ignoring defaultCollapsed change`);
     }
   }, [defaultCollapsed, userToggled, title]);
   

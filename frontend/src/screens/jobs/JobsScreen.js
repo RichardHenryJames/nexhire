@@ -794,11 +794,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
  const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const responseTime = apiEndTime - apiStartTime;
 
-  try {
-    const backendMs = result?.meta?._performanceMs;
-    console.log(`⏱️ [JobsScreen] ${shouldUseSearch ? 'searchJobs' : 'getJobs'} page=1 size=${pagination.pageSize} clientMs=${Math.round(responseTime)} backendMs=${backendMs ?? 'n/a'}`);
-  } catch {}
-
       if (controller.signal.aborted) return;
 
         if (result.success) {
@@ -904,11 +899,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       // ⏱️ END: Calculate and log response time
       const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const responseTime = apiEndTime - apiStartTime;
-
-      try {
-        const backendMs = result?.meta?._performanceMs;
-        console.log(`⏱️ [JobsScreen] ${debouncedQuery.trim().length > 0 || hasBoosts ? 'searchJobs' : 'getJobs'} page=${nextPage} size=${pagination.pageSize} clientMs=${Math.round(responseTime)} backendMs=${backendMs ?? 'n/a'}`);
-      } catch {}
 
    if (controller.signal.aborted) return;
 
@@ -1280,14 +1270,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-    console.log('🔍 handleAskReferral called with job:', job?.JobID || job?.id, job?.Title);
-
     if (!job) {
-      console.log('❌ No job provided');
       return;
     }
     if (!user) {
-      console.log('❌ User not logged in');
       // Web-compatible alert
       if (Platform.OS === 'web') {
         if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
@@ -1302,19 +1288,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
     if (!isJobSeeker) {
-      console.log('❌ User is not a job seeker');
       Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
       return;
     }
 
     const jobId = job.JobID || job.id;
-    console.log('📋 JobID:', jobId);
-    console.log('📋 referredJobIds:', Array.from(referredJobIds));
-    console.log('📋 Has this job in referredJobIds?', referredJobIds.has(jobId));
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
-      console.log('⚠️ Already referred for this job');
       if (Platform.OS === 'web') {
         if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
           navigation.navigate('Referrals');
@@ -1328,20 +1309,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
 
-    console.log('✅ Proceeding to check wallet balance...');
-
     // ✅ NEW: Check wallet balance and show confirmation modal
     try {
-      console.log('📞 Calling getWalletBalance API...');
       const walletBalance = await refopenAPI.getWalletBalance();
-      console.log('💰 Wallet balance response:', walletBalance);
 
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
-        console.log('💵 Balance:', balance, 'Required:', pricing.referralRequestCost);
 
         // 💎 NEW: Show confirmation modal (whether sufficient balance or not)
-        console.log('🔓 Setting referral confirm data and showing modal...');
         setReferralConfirmData({
           currentBalance: balance,
           requiredAmount: pricing.referralRequestCost,
@@ -1349,7 +1324,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           companyName: job.OrganizationName || ''
         });
         setShowReferralConfirmModal(true);
-        console.log('✅ Modal should be visible now');
         return;
 
       } else {

@@ -50,7 +50,7 @@ const AdCard = ({
             setAdLoaded(true);
           }
         } catch (error) {
-          console.log('AdSense initialization error:', error);
+          // AdSense initialization error - silent fail
         }
       }, 300);
       return () => clearTimeout(timer);

@@ -581,6 +581,12 @@ export class UserService {
             
             const applicantId = applicantResult.recordset[0].ApplicantID;
 
+            // Fetch IsVerifiedReferrer from Users table
+            const userFlagsResult = await dbService.executeQuery(`
+                SELECT IsVerifiedReferrer FROM Users WHERE UserID = @param0
+            `, [userId]);
+            const isVerifiedReferrer = userFlagsResult.recordset?.[0]?.IsVerifiedReferrer || false;
+
             // FIRST: Recalculate profile completeness to ensure it's up to date
             let profileCompleteness = 0;
             try {
@@ -735,7 +741,10 @@ export class UserService {
                     isActiveJobSeeker: (baseStats.ApplicationsLast30Days || 0) > 0,
                     profileStrength: this.calculateProfileStrength(profileCompleteness, resumeStats.totalResumes || 0),
                     needsAttention: this.getJobSeekerAttentionItems(baseStats, referralStats, resumeStats)
-                }
+                },
+                
+                // Verified referrer status
+                isVerifiedReferrer: isVerifiedReferrer
             };
 
         } catch (error) {

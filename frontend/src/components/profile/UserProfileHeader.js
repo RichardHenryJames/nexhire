@@ -92,34 +92,6 @@ export default function UserProfileHeader({
     calculateProfileCompleteness();
   }, [profile, jobSeekerProfile, employerProfile, userType]);
 
-  // ? NEW: Force re-render when key profile fields change
-  useEffect(() => {
-    // Track when critical fields change for debugging
-    console.log('🔍 Profile Header Data Debug:', {
-      hasWorkExperience: !!(jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany),
-      currentJobTitle: jobSeekerProfile?.currentJobTitle,
-      currentCompany: jobSeekerProfile?.currentCompany,
-      hasEducation: !!(jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution),
-      highestEducation: jobSeekerProfile?.highestEducation,
-      fieldOfStudy: jobSeekerProfile?.fieldOfStudy,
-      institution: jobSeekerProfile?.institution,
-      headline: jobSeekerProfile?.headline,
-      summary: jobSeekerProfile?.summary
-    });
-  }, [
-    jobSeekerProfile?.currentJobTitle,
-    jobSeekerProfile?.currentCompany,
-    jobSeekerProfile?.highestEducation,
-    jobSeekerProfile?.fieldOfStudy,
-    jobSeekerProfile?.institution,
-    jobSeekerProfile?.headline,
-    jobSeekerProfile?.summary,
-    jobSeekerProfile?.minimumSalary,
-    jobSeekerProfile?.yearsOfExperience,
-    jobSeekerProfile?.primarySkills,
-    jobSeekerProfile?.preferredWorkTypes
-  ]);
-
   const calculateProfileCompleteness = () => {
     const requiredFields = userType === 'JobSeeker' ? [
       // Basic Info (Users table) - 30%
@@ -350,13 +322,6 @@ export default function UserProfileHeader({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0];
-        console.log('Selected image:', {
-          uri: selectedImage.uri,
-          type: selectedImage.type,
-          width: selectedImage.width,
-          height: selectedImage.height,
-          fileSize: selectedImage.fileSize
-        });
 
         await uploadImage(selectedImage);
       }
@@ -370,7 +335,6 @@ export default function UserProfileHeader({
   const uploadImage = async (imageAsset) => {
     try {
       setUploading(true);
-      console.log('Starting image upload...');
 
       // Validate image asset
       if (!imageAsset || !imageAsset.uri) {
@@ -415,18 +379,7 @@ export default function UserProfileHeader({
         mimeType = mimeType.split(';')[0].replace('data:', '');
       }
 
-      console.log('Upload details:', {
-        fileName,
-        mimeType,
-        fileExtension,
-        originalType: imageAsset.type,
-        imageWidth: imageAsset.width,
-        imageHeight: imageAsset.height,
-        uriType: imageAsset.uri.startsWith('data:') ? 'data URL' : 'file URL'
-      });
-
       // Convert to base64
-      console.log('Converting image to base64...');
       const base64 = await CrossPlatformFileHandler.readAsBase64(imageAsset.uri);
 
       if (!base64) {
@@ -441,17 +394,10 @@ export default function UserProfileHeader({
       // Check base64 size
       const base64Size = base64.length;
       const estimatedSizeKB = Math.round((base64Size * 3) / 4 / 1024);
-      
-      console.log('Base64 details:', {
-        length: base64Size,
-        estimatedSizeKB: estimatedSizeKB,
-        first50chars: base64.substring(0, 50),
-        last50chars: base64.substring(base64.length - 50)
-      });
 
       // If image is too large (>1MB base64), show warning
       if (base64Size > 1024 * 1024) {
-        console.warn('Large image detected, this might cause upload issues');
+        // Large image detected
       }
 
       // Final validation
@@ -461,7 +407,6 @@ export default function UserProfileHeader({
       }
 
       // Upload to Azure Storage
-      console.log('Uploading to Azure Storage...');
       const uploadResult = await refopenAPI.uploadProfileImage({
         fileName,
         fileData: base64,
@@ -470,8 +415,6 @@ export default function UserProfileHeader({
       });
 
       if (uploadResult && uploadResult.success) {
-        console.log('Upload successful:', uploadResult.data?.imageUrl);
-        
         // Update local profile state
         const updatedProfile = {
           ...profile,
@@ -483,9 +426,7 @@ export default function UserProfileHeader({
           await refopenAPI.updateProfile({
             profilePictureURL: uploadResult.data.imageUrl,
           });
-          console.log('Profile updated successfully');
         } catch (updateError) {
-          console.warn('Profile update warning:', updateError.message);
           // Continue anyway - image uploaded successfully
         }
 
@@ -603,7 +544,6 @@ export default function UserProfileHeader({
                     <Image 
                       source={{ uri: profile.profilePictureURL }} 
                       style={styles.profileImage}
-                      onError={() => console.log('Failed to load profile image')}
                     />
                   ) : (
                     <View style={styles.profileImagePlaceholder}>
@@ -638,7 +578,6 @@ export default function UserProfileHeader({
                 <Image 
                   source={{ uri: profile.profilePictureURL }} 
                   style={styles.profileImageStandaloneImg}
-                  onError={() => console.log('Failed to load profile image')}
                 />
               ) : (
                 <View style={styles.profileImagePlaceholderStandalone}>

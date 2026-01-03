@@ -209,9 +209,23 @@ if (Test-Path $indexPath) {
       "@type": "Organization",
       "name": "RefOpen",
       "url": "https://refopen.com",
-      "logo": "https://refopen.com/refopen-logo.png",
-      "sameAs": [],
-      "description": "The leading job referral platform connecting job seekers with employees at top companies. Get referred to your dream job."
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://refopen.com/refopen-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "image": "https://refopen.com/refopen-logo.png",
+      "sameAs": [
+        "https://www.linkedin.com/company/refopen"
+      ],
+      "description": "The leading job referral platform connecting job seekers with employees at top companies. Get referred to your dream job.",
+      "foundingDate": "2024",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "email": "support@refopen.com"
+      }
     }
     </script>
     <script type="application/ld+json">

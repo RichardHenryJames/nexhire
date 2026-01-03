@@ -81,14 +81,11 @@ export default function ReferralScreen({ navigation }) {
         refopenAPI.getCompletedReferrals(1, 100)
       ]);
       
-      console.log('=== REFERRAL REQUESTS ===');
-      
       // Open tab: Filter from available requests (current company only)
       if (openResult.success) {
         const allRequests = openResult.data?.requests || [];
         // Filter to only show open statuses
         const open = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
-        console.log('Open requests:', open.length);
         setOpenRequests(open);
       } else {
         setOpenRequests([]);
@@ -97,7 +94,6 @@ export default function ReferralScreen({ navigation }) {
       // Closed tab: Use dedicated completed API (all completed referrals regardless of company)
       if (closedResult.success) {
         const closedData = closedResult.data?.requests || [];
-        console.log('Closed requests from completed API:', closedData.length);
         setClosedRequests(closedData);
       } else {
         setClosedRequests([]);
@@ -351,7 +347,6 @@ export default function ReferralScreen({ navigation }) {
                 style={[styles.viewResumeBtn, { backgroundColor: colors.primary + '15' }]}
                 onPress={() => {
                   const resumeUrl = request.ResumeURL;
-                  console.log('Resume clicked, ResumeURL:', resumeUrl, 'ResumeID:', request.ResumeID);
                   if (resumeUrl) {
                     if (Platform.OS === 'web') {
                       window.open(resumeUrl, '_blank');

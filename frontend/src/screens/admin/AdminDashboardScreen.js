@@ -32,11 +32,6 @@ export default function AdminDashboardScreen() {
   const [dashboardData, setDashboardData] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions
 
-  // Debug: Log admin check
-  console.log('🔍 AdminDashboard - user:', user);
-  console.log('🔍 AdminDashboard - user.UserType:', user?.UserType);
-  console.log('🔍 AdminDashboard - isAdmin from context:', isAdmin);
-
   useEffect(() => {
     navigation.setOptions({
       title: 'Admin Dashboard',

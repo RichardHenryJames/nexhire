@@ -42,12 +42,6 @@ function ConversationsScreenMobile() {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
-  // Debug: Log user and isAdmin from AuthContext
-  console.log('🔍 ConversationsScreen - user object:', user);
-  console.log('🔍 ConversationsScreen - user.UserType:', user?.UserType);
-  console.log('🔍 ConversationsScreen - userType from context:', userType);
-  console.log('🔍 ConversationsScreen - isAdmin from context:', isAdmin);
-  
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

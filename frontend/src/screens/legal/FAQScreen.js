@@ -386,7 +386,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   innerContainer: {
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
-    flex: 1,
+    alignSelf: 'center',
   },
   content: {
     padding: 20,

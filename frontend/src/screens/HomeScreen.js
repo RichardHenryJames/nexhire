@@ -613,13 +613,6 @@ const [dashboardData, setDashboardData] = useState({
                     activeOpacity={0.7}
                     onPress={() => {
                       // ✅ Use onPress instead of onPressIn to allow scrolling
-                      console.log('🔍 [HomeScreen] Search result pressed:', {
-                        id: item.id,
-                        name: item.name,
-                        industry: item.industry
-                      });
-                      
-                      console.log('🔍 [HomeScreen] Navigating to OrganizationDetails with ID:', item.id);
                       
                       // Navigate
                       navigation.navigate('OrganizationDetails', { 
@@ -835,7 +828,7 @@ const [dashboardData, setDashboardData] = useState({
                 {/* 🎯 Complete Profile Card - Compact Style */}
                 <TouchableOpacity 
                   style={styles.quickActionCard}
-                  onPress={() => navigation.navigate('Profile')}
+                  onPress={() => navigation.navigate('Settings')}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.quickActionIcon, { 
@@ -859,6 +852,31 @@ const [dashboardData, setDashboardData] = useState({
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
+
+                {/* 🌟 Become Verified Referrer Card - Only show if not verified */}
+                {stats.isVerifiedReferrer === false && (
+                  <TouchableOpacity 
+                    style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
+                    onPress={() => navigation.navigate('Settings', { openModal: 'professional' })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
+                      <Ionicons 
+                        name="shield-checkmark" 
+                        size={24} 
+                        color={colors.primary} 
+                      />
+                    </View>
+                    <View style={styles.quickActionContent}>
+                      <Text style={styles.quickActionTitle}>Become a Verified Referrer</Text>
+                      <Text style={styles.quickActionDescription}>Verify your company email & earn rewards</Text>
+                    </View>
+                    <View style={[styles.quickActionRewardBadge, { backgroundColor: colors.success + '15' }]}>
+                      <Ionicons name="gift" size={14} color={colors.success} />
+                      <Text style={[styles.quickActionRewardText, { color: colors.success }]}>+50</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
 
                 {/* Google AdSense Ad - Job Seeker Home */}
                 <AdCard variant="home" />
@@ -1490,6 +1508,19 @@ headerCompact: {
   quickActionDescription: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
+  },
+  quickActionRewardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  quickActionRewardText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    marginLeft: 4,
   },
   // Profile Completion Card
   profileActionCard: {

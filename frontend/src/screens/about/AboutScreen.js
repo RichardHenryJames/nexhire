@@ -52,17 +52,70 @@ const JobSearchImg = require('../../../assets/job_search.png');
 const AskRefSentImg = require('../../../assets/askrefsent.png');
 const HiredImg = require('../../../assets/hired.png');
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Floating particle component for background effect (same as LoginScreen)
+function FloatingParticle({ delay, style }) {
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * SCREEN_WIDTH)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -100,
+          duration: 8000 + Math.random() * 4000,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0.6,
+            duration: 1000,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 1000,
+            delay: 6000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ translateY }, { translateX }],
+          opacity,
+        },
+      ]}
+    />
+  );
+}
 
 // RefOpen website URL
 const REFOPEN_URL = 'https://www.refopen.com';
+const ASK_REFERRAL_URL = 'https://www.refopen.com/ask-referral';
 
 // ============================================
 // THEME-AWARE COLORS GENERATOR
 // ============================================
 const getThemeColors = (colors, isDark) => ({
-  bgPrimary: isDark ? '#09090B' : colors.background,
-  bgSecondary: isDark ? '#0F0F13' : colors.gray50,
+  bgPrimary: isDark ? '#0F172A' : colors.background,  // Match LoginScreen gradient
+  bgSecondary: isDark ? '#1E293B' : colors.gray50,    // Match LoginScreen gradient
   bgCard: isDark ? '#18181B' : colors.card,
   bgCardHover: isDark ? '#27272A' : colors.gray100,
   
@@ -246,6 +299,10 @@ const getRandomTestimonials = (count = 4, COLORS) => {
 // ============================================
 const openRefOpen = () => {
   Linking.openURL(REFOPEN_URL);
+};
+
+const openAskReferral = () => {
+  Linking.openURL(ASK_REFERRAL_URL);
 };
 
 // ============================================
@@ -578,6 +635,16 @@ export default function AboutScreen() {
     paddingHorizontal: isLargeScreen ? 40 : isTablet ? 24 : 16,
   };
 
+  // Floating particle style
+  const floatingParticleStyle = {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ffffff',
+    zIndex: 1,
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
@@ -586,6 +653,20 @@ export default function AboutScreen() {
         colors={[COLORS.bgPrimary, COLORS.bgSecondary, COLORS.bgPrimary]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      
+      {/* Floating Particles - same as LoginScreen */}
+      <FloatingParticle delay={0} style={floatingParticleStyle} />
+      <FloatingParticle delay={1000} style={floatingParticleStyle} />
+      <FloatingParticle delay={2000} style={floatingParticleStyle} />
+      <FloatingParticle delay={3000} style={floatingParticleStyle} />
+      <FloatingParticle delay={4000} style={floatingParticleStyle} />
+      
+      {/* Bottom Decoration Circles */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 300, zIndex: 0 }}>
+        <View style={{ position: 'absolute', bottom: -80, right: -60, width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }} />
+        <View style={{ position: 'absolute', bottom: -120, left: -100, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' }} />
+        <View style={{ position: 'absolute', bottom: 50, right: 30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }} />
+      </View>
       
       {/* Fixed Home Button - Top Right */}
       <TouchableOpacity
@@ -714,13 +795,13 @@ export default function AboutScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
                 
-                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                <TouchableOpacity onPress={openAskReferral} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ paddingHorizontal: 28, paddingVertical: 16, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.accent }}>
                     <Text style={{ fontWeight: '600', fontSize: 15, color: COLORS.accent }}>Ask for Referral</Text>
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                <TouchableOpacity onPress={openAskReferral} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ paddingHorizontal: 28, paddingVertical: 16, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.success }}>
                     <Text style={{ fontWeight: '600', fontSize: 15, color: COLORS.success }}>Earn by Referring</Text>
                   </View>
@@ -1011,7 +1092,7 @@ export default function AboutScreen() {
               
               <View style={{ flexDirection: isLargeScreen ? 'row' : 'column' }}>
                 {/* Internal Referral */}
-                <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
+                <TouchableOpacity onPress={openAskReferral} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
                   <LinearGradient
                     colors={[`${COLORS.success}20`, `${COLORS.success}08`]}
                     style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}
@@ -1041,7 +1122,7 @@ export default function AboutScreen() {
                 </TouchableOpacity>
 
                 {/* External Referral */}
-                <TouchableOpacity onPress={openRefOpen} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
+                <TouchableOpacity onPress={openAskReferral} activeOpacity={0.8} style={{ flex: 1, margin: 8 }}>
                   <LinearGradient
                     colors={[`${COLORS.accent}20`, `${COLORS.accent}08`]}
                     style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: COLORS.accent, height: '100%' }}
@@ -1442,14 +1523,14 @@ export default function AboutScreen() {
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                <TouchableOpacity onPress={openAskReferral} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Get Referred</Text>
                     <Ionicons name="hand-left" size={20} color="#fff" />
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={openRefOpen} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
+                <TouchableOpacity onPress={openAskReferral} style={{ marginRight: isLargeScreen ? 16 : 0, marginBottom: isLargeScreen ? 0 : 12 }}>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 32, paddingVertical: 18, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Start Earning</Text>
                     <Ionicons name="cash" size={20} color="#fff" />

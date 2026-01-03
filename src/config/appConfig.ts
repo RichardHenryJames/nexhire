@@ -139,8 +139,8 @@ class ConfigService {
 
       auth: {
         jwtSecret: process.env.JWT_SECRET || 'your-super-secret-development-key',
-        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
-        refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d',
+        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d',
+        refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
         bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),
       },
 

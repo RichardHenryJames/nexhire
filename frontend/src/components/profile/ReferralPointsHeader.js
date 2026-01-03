@@ -17,18 +17,6 @@ const ReferralPointsHeader = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  console.log('ReferralPointsHeader rendered with:', {
-    referralPoints,
-    pointsHistoryLength: pointsHistory?.length || 0,
-    showBreakdown,
-    hasCustomOnPress: !!onPress
-  });
-
-  // Track modal state changes
-  React.useEffect(() => {
-    console.log('showBreakdown changed to:', showBreakdown);
-  }, [showBreakdown]);
-
   // Default stats structure
   const stats = {
     totalReferralsMade: 0,
@@ -39,15 +27,7 @@ const ReferralPointsHeader = ({
   };
 
   const handlePress = () => {
-    console.log('ReferralPointsHeader pressed with:', {
-      referralPoints,
-      pointsHistory: pointsHistory?.length || 0,
-      hasOnPress: !!onPress,
-      showBreakdown
-    });
-    
     // Always use the modal behavior for now
-    console.log('Setting showBreakdown to true');
     setShowBreakdown(true);
   };
 
@@ -90,7 +70,6 @@ const ReferralPointsHeader = ({
           pointsHistory={pointsHistory}
           pointTypeMetadata={pointTypeMetadata}
           onClose={() => {
-            console.log('Closing compact breakdown modal');
             setShowBreakdown(false);
           }}
         />
@@ -152,7 +131,6 @@ const ReferralPointsHeader = ({
         pointsHistory={pointsHistory}
         pointTypeMetadata={pointTypeMetadata} // Pass metadata
         onClose={() => {
-          console.log('Closing breakdown modal');
           setShowBreakdown(false);
         }}
       />

@@ -115,44 +115,26 @@ export default function ReferralTrackingScreen() {
 
   // Check if there are conversations with any referrers who have unread messages
   const checkReferrerConversations = async (referrerIds) => {
-    console.log('🔍 checkReferrerConversations - referrerIds:', referrerIds);
-    
     if (!referrerIds || referrerIds.length === 0) {
-      console.log('❌ No referrer IDs found, not showing message button');
       setReferrerConversation(null);
       return;
     }
 
     try {
       const result = await messagingApi.getMyConversations(1, 100);
-      console.log('📨 getMyConversations result:', result);
-      console.log('📨 result.data type:', typeof result.data, Array.isArray(result.data));
-      console.log('📨 result.data.conversations:', result.data?.conversations);
       
       // Handle both possible response structures
       const conversations = result.data?.conversations || result.data || [];
-      console.log('📨 conversations array:', conversations);
       
       if (result.success && conversations.length > 0) {
-        // Log all conversation OtherUserIDs for debugging
-        console.log('📨 All conversations OtherUserIDs:', conversations.map(c => ({
-          OtherUserID: c.OtherUserID,
-          OtherUserName: c.OtherUserName,
-          UnreadCount: c.UnreadCount,
-          LastMessageAt: c.LastMessageAt
-        })));
-        console.log('🔍 Looking for referrerIds:', referrerIds);
-        
         // Find conversations with any of the referrers (case-insensitive comparison)
         const referrerConvs = conversations.filter(c => {
           const match = referrerIds.some(rid => 
             rid && c.OtherUserID && 
             rid.toLowerCase() === c.OtherUserID.toLowerCase()
           );
-          console.log(`Comparing ${c.OtherUserID} with referrerIds:`, match);
           return match;
         });
-        console.log('🎯 Found conversations with referrers:', referrerConvs);
         
         // Calculate total unread count from all referrer conversations
         let totalUnread = 0;
@@ -170,13 +152,11 @@ export default function ReferralTrackingScreen() {
         
         if (bestConv) {
           // Store the best conversation with total unread count
-          console.log('✅ Setting referrerConversation with totalUnread:', totalUnread);
           setReferrerConversation({
             ...bestConv,
             TotalUnreadFromReferrers: totalUnread
           });
         } else {
-          console.log('❌ No conversations with messages found');
           setReferrerConversation(null);
         }
       }
@@ -205,12 +185,10 @@ export default function ReferralTrackingScreen() {
         
         // Get referrer IDs - use from history first, fallback to AssignedReferrerUserID
         let referrerIds = result.data.referrerUserIds || [];
-        console.log('📋 Referrer UserIds from API:', referrerIds);
         
         // Fallback: if no referrerIds but we have AssignedReferrerUserID, use that
         if (referrerIds.length === 0 && result.data.request?.AssignedReferrerUserID) {
           referrerIds = [result.data.request.AssignedReferrerUserID];
-          console.log('📋 Using AssignedReferrerUserID as fallback:', referrerIds);
         }
         
         setReferrerUserIds(referrerIds);
@@ -218,8 +196,6 @@ export default function ReferralTrackingScreen() {
         // Check conversations with these referrers
         if (referrerIds.length > 0) {
           checkReferrerConversations(referrerIds);
-        } else {
-          console.log('❌ No referrer IDs available');
         }
       }
     } catch (error) {
@@ -308,10 +284,6 @@ export default function ReferralTrackingScreen() {
     if (!request) return null;
 
     const statusConfig = getStatusConfig(currentStatus);
-    
-    console.log('🖼️ renderHeader - referrerConversation:', referrerConversation);
-    console.log('🖼️ renderHeader - currentStatus:', currentStatus);
-    console.log('🖼️ renderHeader - AssignedReferrerUserID:', request?.AssignedReferrerUserID);
 
     return (
       <View style={styles.headerCard}>

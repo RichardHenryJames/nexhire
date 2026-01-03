@@ -98,22 +98,9 @@ const ResumeUploadModal = ({
           }
           setUploading(true);
           try {
-            console.log('Starting upload process...');
-            
             // Use actual file name as the resume label
-            console.log('STEP 1: Using file name as resume label...');
             const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
             const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
-            console.log('STEP 2: Resume label set to:', resumeLabel);
-            
-            console.log('STEP 3: Calling uploadResume API...');
-            console.log('API call parameters:', {
-              fileName: file.name,
-              fileSize: file.size,
-              userObject: user,
-              userId: user.userId || user.UserID || user.id || user.sub,
-              resumeLabel: resumeLabel
-            });
             
             // ENSURE we have a valid user ID
             const actualUserId = user.userId || user.UserID || user.id || user.sub;
@@ -121,10 +108,7 @@ const ResumeUploadModal = ({
               throw new Error('User ID not found. Please log in again.');
             }
             
-            console.log('Using userId:', actualUserId);
-            
             const uploadResult = await refopenAPI.uploadResume(file, actualUserId, resumeLabel);
-            console.log('STEP 4: Upload result received:', uploadResult);
             
             if (uploadResult.success) {
               const resumeData = {
@@ -133,7 +117,6 @@ const ResumeUploadModal = ({
                 ResumeLabel: resumeLabel,
                 IsPrimary: existingResumes.length === 0
               };
-              console.log('STEP 5: Resume data prepared:', resumeData);
               onResumeSelected(resumeData);
               onClose();
             } else {
@@ -162,8 +145,6 @@ const ResumeUploadModal = ({
         copyToCacheDirectory: true,
         multiple: false
       });
-
-      console.log('Document picker result (native):', result);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploading(true);
@@ -194,8 +175,6 @@ const ResumeUploadModal = ({
         } else {
           Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
         }
-      } else {
-        console.log('Document picker canceled');
       }
     } catch (error) {
       console.error('Resume upload error:', error);
@@ -209,29 +188,21 @@ const ResumeUploadModal = ({
     return new Promise((resolve) => {
       const defaultLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
       
-      console.log('promptForResumeLabel called with jobTitle:', jobTitle);
-      console.log('Default label:', defaultLabel);
-      
       // WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
       Alert.alert(
         'Resume Label',
         `Give this resume a name. Default: "${defaultLabel}"`,
         [
           { text: 'Use Default', onPress: () => {
-            console.log('User selected default label:', defaultLabel);
             resolve(defaultLabel);
           }},
           { text: 'Custom Name', onPress: () => {
-            console.log('User wants custom name...');
             // For web, we'll use the default for now
             // In a full implementation, you'd use a custom modal
             try {
               const customName = prompt(`Enter resume name (or leave empty for default):`) || defaultLabel;
-              console.log('Custom name received:', customName);
               resolve(customName);
             } catch (error) {
-              console.error('Error with prompt:', error);
-              console.log('Falling back to default label');
               resolve(defaultLabel);
             }
           }}

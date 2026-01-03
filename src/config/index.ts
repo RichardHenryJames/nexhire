@@ -20,8 +20,8 @@ export const dbConfig = {
 // JWT Configuration
 export const jwtConfig = {
     secret: process.env.JWT_SECRET || 'refopen-super-secret-key-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
 };
 
 // Azure Blob Storage Configuration

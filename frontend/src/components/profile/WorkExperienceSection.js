@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
@@ -38,6 +38,44 @@ const normalizeString = (v) => {
   return typeof v === 'string' ? v.trim() : String(v);
 };
 
+// Helper functions for company email verification
+const extractDomainFromEmail = (email) => {
+  if (!email || !email.includes('@')) return null;
+  return email.split('@')[1]?.toLowerCase();
+};
+
+const normalizeCompanyName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') // Remove special chars
+    .replace(/\s+/g, ''); // Remove spaces
+};
+
+const isValidCompanyEmail = (email, companyName) => {
+  if (!email || !companyName) return false;
+  const domain = extractDomainFromEmail(email);
+  if (!domain) return false;
+  
+  // Extract company part from domain (before first dot)
+  const domainParts = domain.split('.');
+  const domainCompany = domainParts[0];
+  
+  // Normalize company name (remove spaces, special chars, common suffixes)
+  let normalizedCompany = normalizeCompanyName(companyName);
+  
+  // Remove common company suffixes
+  const suffixes = ['inc', 'llc', 'ltd', 'pvtltd', 'pvt', 'corp', 'corporation', 'limited', 'company', 'technologies', 'tech', 'software', 'solutions', 'services', 'group', 'india', 'global'];
+  suffixes.forEach(suffix => {
+    normalizedCompany = normalizedCompany.replace(new RegExp(suffix + '$', 'i'), '');
+  });
+  
+  // Check if domain contains company name or vice versa
+  return domainCompany.includes(normalizedCompany) || 
+         normalizedCompany.includes(domainCompany) ||
+         domain.includes(normalizedCompany);
+};
+
 // ? SMART WORK EXPERIENCE VALIDATION - Added validation functions
 const shouldHideCurrentToggle = (startDate, existingWorkExperiences, excludeWorkExperienceId = null) => {
   if (!startDate) return false;
@@ -69,6 +107,7 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast, colors, styl
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
   const isCurrent = item.IsCurrent || !end;
+  const isEmailVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
   
   const formatDate = (date) => {
     if (!date) return '';
@@ -108,7 +147,14 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast, colors, styl
           {/* Job info */}
           <View style={styles.timelineCardContent}>
             <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
-            <Text style={styles.itemCompany}>{companyName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.itemCompany}>{companyName}</Text>
+              {isEmailVerified && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                </View>
+              )}
+            </View>
             <View style={styles.dateRow}>
               <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
               <Text style={styles.itemDates}>{startStr} - {endStr}</Text>
@@ -186,6 +232,18 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Company Email Verification state
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [emailDomainValid, setEmailDomainValid] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [otpExpiryTime, setOtpExpiryTime] = useState(null);
+  const otpInputRefs = useRef([]);
+
   // Organization search state
   const [orgQuery, setOrgQuery] = useState('');
   const debouncedOrgQuery = useDebounce(orgQuery, 300);
@@ -209,6 +267,114 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       // Auto-uncheck "Currently Working" if it should be hidden
       isCurrent: shouldHideCurrentToggle(date, experiences, excludeId) ? false : prev.isCurrent
     }));
+  };
+
+  // Company Email Verification Handlers
+  const handleCompanyEmailChange = (email) => {
+    setCompanyEmail(email);
+    setVerificationError('');
+    // Validate domain against company name
+    const valid = isValidCompanyEmail(email, form.companyName);
+    setEmailDomainValid(valid);
+  };
+
+  const handleSendOtp = async () => {
+    if (!companyEmail || !emailDomainValid) {
+      setVerificationError('Please enter a valid company email');
+      return;
+    }
+    
+    const workExpId = editingItem ? getId(editingItem) : null;
+    if (!workExpId) {
+      setVerificationError('Please save the work experience first before verifying');
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+      setVerificationError('');
+      const response = await refopenAPI.sendCompanyEmailOTP(workExpId, companyEmail);
+      
+      if (response.success) {
+        setShowOtpInput(true);
+        setOtp(['', '', '', '']);
+        setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
+        Alert.alert('Success', `OTP sent to ${response.data?.email || companyEmail}`);
+      } else {
+        setVerificationError(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      setVerificationError(error.message || 'Failed to send OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleOtpChange = (value, index) => {
+    // Only allow numbers
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    const newOtp = [...otp];
+    newOtp[index] = numericValue.slice(-1); // Take only last character
+    setOtp(newOtp);
+    setVerificationError('');
+
+    // Auto-focus next input
+    if (numericValue && index < 3) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (e, index) => {
+    // Handle backspace - move to previous input
+    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length !== 4) {
+      setVerificationError('Please enter complete 4-digit OTP');
+      return;
+    }
+
+    const workExpId = editingItem ? getId(editingItem) : null;
+    if (!workExpId) {
+      setVerificationError('Invalid work experience');
+      return;
+    }
+
+    try {
+      setVerifyingOtp(true);
+      setVerificationError('');
+      const response = await refopenAPI.verifyCompanyEmailOTP(workExpId, otpCode);
+      
+      if (response.success) {
+        setEmailVerified(true);
+        setShowOtpInput(false);
+        Alert.alert('Verified!', 'Your company email has been verified. You are now a verified referrer!');
+      } else {
+        setVerificationError(response.message || 'Verification failed');
+        if (response.data?.remainingAttempts !== undefined) {
+          setVerificationError(`${response.message} (${response.data.remainingAttempts} attempts left)`);
+        }
+      }
+    } catch (error) {
+      setVerificationError(error.message || 'Verification failed');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const resetVerificationState = () => {
+    setCompanyEmail('');
+    setEmailDomainValid(false);
+    setShowOtpInput(false);
+    setOtp(['', '', '', '']);
+    setVerificationError('');
+    setEmailVerified(false);
+    setOtpExpiryTime(null);
   };
 
   const applyOrgFilter = (list, q) => {
@@ -341,6 +507,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setShowOrgPicker(false);
     setJobTitleSearch('');
     setShowJobTitleDropdown(false);
+    
+    // Reset and load verification state
+    resetVerificationState();
+    if (item.CompanyEmail) {
+      setCompanyEmail(item.CompanyEmail);
+      setEmailDomainValid(true);
+    }
+    if (item.CompanyEmailVerified) {
+      setEmailVerified(true);
+    }
+    
     setShowModal(true);
     loadJobRoles();
   };
@@ -380,8 +557,6 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   };
 
   const saveForm = async () => {
-    console.log('[WorkExp] Save pressed. Editing item:', editingItem && getId(editingItem));
-    console.log('[WorkExp] Current form:', JSON.stringify(form));
     const errors = {};
     if (!form.jobTitle || !normalizeString(form.jobTitle)) {
       errors.jobTitle = 'Job title is required';
@@ -430,16 +605,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
         managerContact: normalizeString(form.managerContact),
         canContact: !!form.canContact,
       };
-      console.log('[WorkExp] Payload:', payload);
       if (editingItem) {
         const id = getId(editingItem);
         if (!id) throw new Error('Invalid experience id');
         const res = await refopenAPI.updateWorkExperienceById(id, payload);
-        console.log('[WorkExp] Update response:', res);
         if (!res?.success) throw new Error(res?.error || 'Update failed');
       } else {
         const res = await refopenAPI.createWorkExperience(payload);
-        console.log('[WorkExp] Create response:', res);
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }
       await loadData();
@@ -655,6 +827,127 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
                 </View>
               )}
             </View>
+
+            {/* Company Email Verification Section - Only for current jobs when editing */}
+            {editingItem && form.isCurrent && (
+              <View style={styles.verificationSection}>
+                <View style={styles.verificationHeader}>
+                  <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+                  <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
+                </View>
+                <Text style={styles.verificationSubtitle}>
+                  Verify your company email to become a verified referrer and earn rewards.
+                </Text>
+
+                {emailVerified ? (
+                  <View style={styles.verifiedContainer}>
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                    <View style={styles.verifiedTextContainer}>
+                      <Text style={styles.verifiedText}>Email Verified</Text>
+                      <Text style={styles.verifiedEmail}>{companyEmail}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    {/* Email Input */}
+                    <View style={styles.emailInputRow}>
+                      <TextInput
+                        style={[
+                          styles.emailInput,
+                          emailDomainValid && styles.emailInputValid,
+                          companyEmail && !emailDomainValid && styles.emailInputInvalid
+                        ]}
+                        value={companyEmail}
+                        onChangeText={handleCompanyEmailChange}
+                        placeholder={`your.name@${normalizeCompanyName(form.companyName) || 'company'}.com`}
+                        placeholderTextColor={colors.gray400}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        editable={!showOtpInput}
+                      />
+                      {!showOtpInput && (
+                        <TouchableOpacity
+                          style={[
+                            styles.verifyButton,
+                            (!emailDomainValid || sendingOtp) && styles.verifyButtonDisabled
+                          ]}
+                          onPress={handleSendOtp}
+                          disabled={!emailDomainValid || sendingOtp}
+                        >
+                          {sendingOtp ? (
+                            <ActivityIndicator size="small" color={colors.white} />
+                          ) : (
+                            <Text style={styles.verifyButtonText}>Verify</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Domain validation hint */}
+                    {companyEmail && !emailDomainValid && (
+                      <Text style={styles.domainHint}>
+                        Email domain should match your company ({form.companyName || 'company'})
+                      </Text>
+                    )}
+
+                    {/* OTP Input Section */}
+                    {showOtpInput && (
+                      <View style={styles.otpSection}>
+                        <Text style={styles.otpLabel}>Enter 4-digit verification code</Text>
+                        <View style={styles.otpInputContainer}>
+                          {[0, 1, 2, 3].map((index) => (
+                            <TextInput
+                              key={index}
+                              ref={(ref) => otpInputRefs.current[index] = ref}
+                              style={styles.otpInput}
+                              value={otp[index]}
+                              onChangeText={(value) => handleOtpChange(value, index)}
+                              onKeyPress={(e) => handleOtpKeyPress(e, index)}
+                              keyboardType="number-pad"
+                              maxLength={1}
+                              selectTextOnFocus
+                            />
+                          ))}
+                        </View>
+                        
+                        <View style={styles.otpActions}>
+                          <TouchableOpacity
+                            style={styles.resendButton}
+                            onPress={handleSendOtp}
+                            disabled={sendingOtp}
+                          >
+                            <Text style={styles.resendButtonText}>
+                              {sendingOtp ? 'Sending...' : 'Resend Code'}
+                            </Text>
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            style={[
+                              styles.submitOtpButton,
+                              (otp.join('').length !== 4 || verifyingOtp) && styles.submitOtpButtonDisabled
+                            ]}
+                            onPress={handleVerifyOtp}
+                            disabled={otp.join('').length !== 4 || verifyingOtp}
+                          >
+                            {verifyingOtp ? (
+                              <ActivityIndicator size="small" color={colors.white} />
+                            ) : (
+                              <Text style={styles.submitOtpButtonText}>Submit</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Error message */}
+                    {verificationError ? (
+                      <Text style={styles.verificationError}>{verificationError}</Text>
+                    ) : null}
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
@@ -988,6 +1281,11 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: typography.weights?.semibold || '600',
     color: '#047857',
   },
+  verifiedBadge: {
+    backgroundColor: '#ECFDF5',
+    padding: 4,
+    borderRadius: 10,
+  },
   timelineCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1185,5 +1483,159 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     color: colors.gray500 || '#6B7280',
     marginTop: 2,
+  },
+  // Company Email Verification Styles
+  verificationSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: colors.gray50 || '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+  },
+  verificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  verificationTitle: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.text,
+  },
+  verificationSubtitle: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  emailInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailInput: {
+    flex: 1,
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text,
+  },
+  emailInputValid: {
+    borderColor: '#10B981',
+    borderWidth: 2,
+  },
+  emailInputInvalid: {
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+  },
+  verifyButton: {
+    backgroundColor: colors.primary || '#6366F1',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  verifyButtonDisabled: {
+    backgroundColor: colors.gray400 || '#9CA3AF',
+  },
+  verifyButtonText: {
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.semibold || '600',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  domainHint: {
+    fontSize: typography.sizes?.xs || 12,
+    color: '#F59E0B',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  otpSection: {
+    marginTop: 16,
+  },
+  otpLabel: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray700 || '#374151',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  otpInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  otpInput: {
+    width: 50,
+    height: 50,
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 2,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 10,
+    fontSize: 24,
+    fontWeight: typography.weights?.bold || 'bold',
+    textAlign: 'center',
+    color: colors.text,
+  },
+  otpActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  resendButton: {
+    padding: 8,
+  },
+  resendButtonText: {
+    color: colors.primary || '#6366F1',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  submitOtpButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  submitOtpButtonDisabled: {
+    backgroundColor: colors.gray400 || '#9CA3AF',
+  },
+  submitOtpButtonText: {
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.semibold || '600',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  verifiedTextContainer: {
+    flex: 1,
+  },
+  verifiedText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: '#065F46',
+  },
+  verifiedEmail: {
+    fontSize: typography.sizes?.sm || 14,
+    color: '#047857',
+    marginTop: 2,
+  },
+  verificationError: {
+    color: colors.danger || '#E53E3E',
+    fontSize: typography.sizes?.sm || 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

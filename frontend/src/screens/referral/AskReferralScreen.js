@@ -161,7 +161,6 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
     
     // ✅ NEW: Auto-select organization if passed from route params
     if (preSelectedOrganization) {
-      console.log('🔍 Pre-selected organization received:', preSelectedOrganization);
       setSelectedCompany(preSelectedOrganization);
       setFormData(prev => ({ ...prev, companyName: preSelectedOrganization.name }));
     }

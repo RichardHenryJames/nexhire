@@ -28,12 +28,6 @@ export default function MessagingLayoutDesktop() {
   const { colors } = useTheme();
   const responsive = useResponsive();
   const { user, isAdmin, userType } = useAuth();
-  
-  // Debug: Log user and isAdmin from AuthContext
-  console.log('🔍 MessagingLayoutDesktop - user object:', user);
-  console.log('🔍 MessagingLayoutDesktop - user.UserType:', user?.UserType);
-  console.log('🔍 MessagingLayoutDesktop - userType from context:', userType);
-  console.log('🔍 MessagingLayoutDesktop - isAdmin from context:', isAdmin);
 
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);

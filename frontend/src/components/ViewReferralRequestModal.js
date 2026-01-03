@@ -101,7 +101,6 @@ export default function ViewReferralRequestModal({
     
     try {
       await refopenAPI.logReferralStatus(referralRequest.RequestID, 'Viewed');
-      console.log('📊 Viewed status logged');
     } catch (error) {
       console.warn('Failed to log Viewed status:', error);
       // Non-critical, don't show error to user
@@ -119,7 +118,6 @@ export default function ViewReferralRequestModal({
         'Claimed',
         'Referrer started working on this request'
       );
-      console.log('📊 Claimed status logged');
       
       // Move to proof upload step
       setStep('claimed');

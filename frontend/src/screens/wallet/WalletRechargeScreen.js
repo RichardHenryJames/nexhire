@@ -201,23 +201,14 @@ export default function WalletRechargeScreen({ navigation }) {
       });
 
       if (verifyResult.success) {
-        Alert.alert(
-          '💰 Payment Successful',
-          `₹${rechargeAmount} added to your wallet!\n\nNew Balance: ₹${verifyResult.data.balanceAfter}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setAmount('');
-                // Navigate to wallet screen and force refresh
-                navigation.navigate('Wallet', { 
-                  refresh: true,
-                  timestamp: Date.now() // Force re-render
-                });
-              },
-            },
-          ]
-        );
+        setAmount('');
+        // Navigate to Payment Success screen for tracking and confirmation
+        navigation.navigate('PaymentSuccess', {
+          amount: rechargeAmount,
+          balanceAfter: verifyResult.data.balanceAfter,
+          transactionId: verifyResult.data.transactionId || '',
+          paymentId: response.razorpay_payment_id,
+        });
       } else {
         throw new Error(verifyResult.error || 'Payment verification failed');
       }

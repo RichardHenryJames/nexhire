@@ -42,7 +42,6 @@ export async function saveRedirectRoute() {
         fullState: state,
         timestamp: Date.now(),
       }));
-      console.log('📍 Saved redirect route:', currentRoute.name);
     }
   } catch (error) {
     console.error('Failed to save redirect route:', error);
@@ -62,7 +61,6 @@ export async function getAndClearRedirectRoute() {
       // Only use if saved within the last 30 minutes
       const thirtyMinutes = 30 * 60 * 1000;
       if (Date.now() - parsed.timestamp < thirtyMinutes) {
-        console.log('📍 Retrieved redirect route:', parsed.route?.name);
         return parsed;
       }
     }
@@ -100,7 +98,6 @@ export function navigateToRoute(routeData) {
           ],
         })
       );
-      console.log('📍 Navigated to saved route:', route.name);
       return true;
     }
   } catch (error) {

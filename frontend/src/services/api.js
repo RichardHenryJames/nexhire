@@ -13,12 +13,60 @@ class RefOpenAPI {
     this.refreshToken = null;
     this.onSessionExpired = null;
     this._handlingSessionExpired = false;
+    this._isRefreshing = false;
+    this._refreshSubscribers = [];
     this.baseURL = frontendConfig.api.baseUrl;
     this.timeout = frontendConfig.api.timeout;
     
     // Log configuration on initialization
     if (frontendConfig.shouldLog('debug')) {
       this.logConfigStatus();
+    }
+  }
+
+  // Subscribe to token refresh completion
+  _subscribeTokenRefresh(callback) {
+    this._refreshSubscribers.push(callback);
+  }
+
+  // Notify all subscribers when token is refreshed
+  _onTokenRefreshed(newToken) {
+    this._refreshSubscribers.forEach(callback => callback(newToken));
+    this._refreshSubscribers = [];
+  }
+
+  // Attempt to refresh the access token using refresh token
+  async _tryRefreshToken() {
+    const storedRefreshToken = await this.getToken('refopen_refresh_token');
+    
+    if (!storedRefreshToken) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.data?.accessToken) {
+        await this.setTokens(data.data.accessToken, data.data.refreshToken || storedRefreshToken);
+        return data.data.accessToken;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return null;
     }
   }
 
@@ -76,16 +124,6 @@ class RefOpenAPI {
         ...options,
       };
 
-      // Targeted debug logging for job creation (do not log tokens)
-      if (endpoint === '/jobs' && String(config.method).toUpperCase() === 'POST') {
-        try {
-          const body = options.body ? JSON.parse(options.body) : null;
-          console.log('➡️ [API] POST /jobs', body);
-        } catch {
-          console.log('➡️ [API] POST /jobs (non-JSON body)');
-        }
-      }
-
       // Log the API call
       this.logApiCall(config.method, endpoint, options.body ? JSON.parse(options.body) : null);
 
@@ -117,10 +155,6 @@ class RefOpenAPI {
         const error = new Error(data.message || data.error || `HTTP ${response.status}`);
         error.status = response.status;
         error.data = data;
-
-        if (endpoint === '/jobs' && String(config.method).toUpperCase() === 'POST') {
-          console.log('⬅️ [API] POST /jobs error', { status: response.status, data });
-        }
         throw error;
       }
 
@@ -141,17 +175,48 @@ class RefOpenAPI {
         });
       }
 
-      // Global session-expired handling: redirect to Login instead of leaving the app in a broken state
+      // Global session-expired handling: try to refresh token first
       try {
         const status = error?.status;
         const message = (error?.message || '').toString();
         const dataMessage = (error?.data?.message || error?.data?.error || '').toString();
         const isTokenExpired = /token\s*expired/i.test(message) || /token\s*expired/i.test(dataMessage);
-        const isAuthStatus = status === 401 || status === 403;
+        const isAuthStatus = status === 401;
 
-        if ((isAuthStatus || isTokenExpired) && !this._handlingSessionExpired) {
+        // Only try refresh for 401 errors, not 403 (forbidden)
+        if ((isAuthStatus || isTokenExpired) && !this._handlingSessionExpired && !options._isRetry) {
+          // If already refreshing, wait for it to complete
+          if (this._isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this._subscribeTokenRefresh(async (newToken) => {
+                if (newToken) {
+                  // Retry the original request with new token
+                  try {
+                    const result = await this.apiCall(endpoint, { ...options, _isRetry: true });
+                    resolve(result);
+                  } catch (retryError) {
+                    reject(retryError);
+                  }
+                } else {
+                  reject(error);
+                }
+              });
+            });
+          }
+
+          // Try to refresh the token
+          this._isRefreshing = true;
+          const newToken = await this._tryRefreshToken();
+          this._isRefreshing = false;
+          this._onTokenRefreshed(newToken);
+
+          if (newToken) {
+            // Retry the original request with new token
+            return await this.apiCall(endpoint, { ...options, _isRetry: true });
+          }
+
+          // Refresh failed, logout
           this._handlingSessionExpired = true;
-
           await this.clearTokens();
           if (typeof this.onSessionExpired === 'function') {
             await this.onSessionExpired({ status, message: dataMessage || message });
@@ -508,6 +573,68 @@ class RefOpenAPI {
     });
   }
 
+  // ==========================================
+  // COMPANY EMAIL VERIFICATION (Verified Referrer)
+  // ==========================================
+  
+  /**
+   * Send OTP to company email for verification
+   * @param {string} workExperienceId - The work experience ID to verify
+   * @param {string} companyEmail - The company email to send OTP to
+   */
+  async sendCompanyEmailOTP(workExperienceId, companyEmail) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/company-email/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ workExperienceId, companyEmail }),
+    });
+  }
+
+  /**
+   * Verify OTP sent to company email
+   * @param {string} workExperienceId - The work experience ID being verified
+   * @param {string} otp - The 4-digit OTP code
+   */
+  async verifyCompanyEmailOTP(workExperienceId, otp) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/company-email/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ workExperienceId, otp }),
+    });
+  }
+
+  /**
+   * Get user's verification status (isVerifiedReferrer, current work experience verification)
+   */
+  async getVerificationStatus() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/status');
+  }
+
   // NEW: Update job preferences data
   async updateJobPreferences(jobPreferencesData) {
     
@@ -629,18 +756,6 @@ class RefOpenAPI {
     }
 
     const params = new URLSearchParams(cleaned);
-    
-    // 🔍 DEBUG: Log full request details
-    console.log('🌐 [API] getJobs Request:');
-    console.log('   Base URL:', this.baseURL);
-    console.log('   Endpoint:', `/jobs?${params}`);
-    console.log('   Full URL:', `${this.baseURL}/jobs?${params}`);
-    console.log('   Filters before cleaning:', filters);
-    console.log('   Filters after cleaning:', cleaned);
-    if (filters.organizationIds) {
-      console.log('   ⚠️ Organization Filter:', filters.organizationIds);
-      console.log('   ⚠️ Organization IDs in URL:', cleaned.organizationIds);
-    }
     
     return this.apiCall(`/jobs?${params}`, fetchOptions);
   }
@@ -2514,6 +2629,50 @@ if (!resumeId) {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
     };
     return mimeToExt[mimeType] || 'jpg';
+  }
+
+  // ========================================
+  // NOTIFICATION PREFERENCES
+  // ========================================
+  
+  async getNotificationPreferences() {
+    try {
+      const result = await this.apiCall('/notifications/preferences');
+      return result;
+    } catch (error) {
+      console.error('Failed to get notification preferences:', error);
+      // Return defaults on error
+      return {
+        success: true,
+        preferences: {
+          EmailEnabled: true,
+          PushEnabled: true,
+          InAppEnabled: true,
+          ReferralRequestEmail: true,
+          ReferralRequestPush: true,
+          ReferralClaimedEmail: true,
+          ReferralClaimedPush: true,
+          ReferralVerifiedEmail: true,
+          ReferralVerifiedPush: true,
+          JobApplicationEmail: true,
+          MessageReceivedEmail: true,
+          MessageReceivedPush: true,
+          WeeklyDigestEmail: true
+        }
+      };
+    }
+  }
+
+  async updateNotificationPreferences(preferences) {
+    try {
+      return await this.apiCall('/notifications/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences),
+      });
+    } catch (error) {
+      console.error('Failed to update notification preferences:', error);
+      throw error;
+    }
   }
 }
 

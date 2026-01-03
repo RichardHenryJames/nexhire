@@ -1,6 +1,7 @@
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
+import { resetVerificationOnNewJob } from './companyEmailVerification.service';
 
 export interface WorkExperienceInput {
   jobTitle: string;
@@ -159,6 +160,23 @@ export class WorkExperienceService {
       await UserService.recomputeProfileCompletenessByApplicantId(applicantId);
     } catch (e) { console.warn('Completeness recalculation failed (create):', (e as any)?.message); }
 
+    // Reset verified referrer status if new current job is added (user must re-verify)
+    if (isNewCurrent) {
+      try {
+        // Get UserId from ApplicantID
+        const userResult = await dbService.executeQuery(
+          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
+          [applicantId]
+        );
+        if (userResult.recordset && userResult.recordset.length > 0) {
+          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+          console.log(`Reset verified referrer status for applicant ${applicantId} due to new current job`);
+        }
+      } catch (e) {
+        console.warn('Failed to reset verified referrer status:', (e as any)?.message);
+      }
+    }
+
     return await this.getWorkExperienceById(id);
   }
 
@@ -236,6 +254,27 @@ export class WorkExperienceService {
       const { UserService } = await import('./user.service');
       await UserService.recomputeProfileCompletenessByApplicantId(existing.ApplicantID);
     } catch (e) { console.warn('Completeness recalculation failed (update):', (e as any)?.message); }
+
+    // Reset verified referrer if setting to current OR if organization changed on current job
+    const wasCurrentBefore = existing.IsCurrent === 1 || existing.IsCurrent === true;
+    const organizationChanged = (data.organizationId !== undefined || data.companyName !== undefined) &&
+      ((data.organizationId !== existing.OrganizationID) || (data.companyName !== existing.CompanyName));
+    
+    if (isBeingSetToCurrent || (wasCurrentBefore && organizationChanged)) {
+      try {
+        const userResult = await dbService.executeQuery(
+          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
+          [existing.ApplicantID]
+        );
+        if (userResult.recordset && userResult.recordset.length > 0) {
+          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+          console.log(`Reset verified referrer status for applicant ${existing.ApplicantID} due to job update`);
+        }
+      } catch (e) {
+        console.warn('Failed to reset verified referrer status:', (e as any)?.message);
+      }
+    }
+
     return await this.getWorkExperienceById(workExperienceId);
   }
 

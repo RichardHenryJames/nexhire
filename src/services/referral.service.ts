@@ -7,6 +7,7 @@ import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import { WalletService } from './wallet.service'; // ✅ NEW: Import wallet service
 import { PricingService } from './pricing.service'; // ✅ NEW: DB-driven pricing
+import { NotificationService } from './notificationService'; // ✅ NEW: Notification service
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -287,6 +288,34 @@ export class ReferralService {
                 await this.logInitialStatus(requestId, createdRequest.ApplicantName || 'Job Seeker');
             } catch (err) {
                 console.warn('Non-critical: Failed to log initial status history:', err);
+            }
+            
+            // ✅ NEW: Send email notifications to eligible referrers
+            try {
+                // Cast to any to access query-derived fields not in the interface
+                const requestData = createdRequest as any;
+                const companyName = requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
+                const jobTitle = requestData.JobTitle || requestData.InternalJobTitle || dto.jobTitle || 'Unknown Position';
+                const organizationIdRaw = isExternal 
+                    ? (dto.organizationId ? parseInt(dto.organizationId, 10) : null)
+                    : (requestData.OrganizationID ? parseInt(requestData.OrganizationID, 10) : null);
+
+                if (organizationIdRaw) {
+                    const notifyResult = await NotificationService.notifyNewReferralRequest({
+                        requestId: requestId,
+                        organizationId: organizationIdRaw,
+                        jobId: dto.jobID || undefined,
+                        jobTitle: jobTitle,
+                        companyName: companyName,
+                        seekerName: createdRequest.ApplicantName || 'Job Seeker',
+                        seekerId: applicantId
+                    });
+                    console.log(`📧 Notification queued for ${notifyResult.notified} referrers at ${companyName}`);
+                } else {
+                    console.log(`⚠️ No organizationId available - skipping referrer notifications`);
+                }
+            } catch (notifyErr) {
+                console.warn('Non-critical: Failed to queue referrer notifications:', notifyErr);
             }
             
             // ✅ NEW: Add wallet balance info to response

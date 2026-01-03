@@ -67,7 +67,7 @@ export default function ProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [loadingSections, setLoadingSections] = useState(true); // Loading state for work exp, education sections
   const [refreshing, setRefreshing] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // 'personal', 'professional', 'workexp', 'salary', 'education', 'preferences', 'skills'
+  const [activeModal, setActiveModal] = useState(null); // 'personal', 'professional', 'workexp', 'salary', 'education', 'preferences', 'skills', 'notifications'
   const [editingModal, setEditingModal] = useState(false); // Track if modal is in edit mode
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
@@ -1330,7 +1330,7 @@ export default function ProfileScreen({ navigation, route }) {
                     <Ionicons name="star" size={20} color="#00A3EE" />
                   </View>
                   <View style={styles.actionButtonContent}>
-                    <Text style={styles.actionButtonLabel}>Points</Text>
+                    <Text style={styles.actionButtonLabel}>Rewards</Text>
                     {loadingReferralPoints ? (
                       <ActivityIndicator size="small" color="#00A3EE" />
                     ) : (

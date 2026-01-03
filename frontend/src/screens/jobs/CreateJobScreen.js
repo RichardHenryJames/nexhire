@@ -205,8 +205,6 @@ export default function CreateJobScreen({ navigation }) {
         internalNotes: jobData.internalNotes?.trim() || undefined
       };
 
-      // Debug: log payload (no tokens) to help identify validation mismatches
-      console.log('🧾 [CreateJob] payload', payload);
 
       const result = await refopenAPI.createJob(payload);
       if (result.success) {
