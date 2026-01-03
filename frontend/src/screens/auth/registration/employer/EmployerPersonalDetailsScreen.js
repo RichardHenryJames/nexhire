@@ -206,7 +206,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
               RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
             </Text>
             <Text style={styles.welcomeBonusSubtext}>
-              Use it to post jobs & hire talent
+              Use it to post jobs, AI candidate search and more
             </Text>
           </View>
         </View>

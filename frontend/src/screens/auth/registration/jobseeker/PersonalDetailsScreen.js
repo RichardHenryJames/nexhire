@@ -704,7 +704,7 @@ styles.selectionButton,
                 RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
               </Text>
               <Text style={styles.welcomeBonusSubtext}>
-                Use it to apply for jobs & get referrals
+                Use it to get referrals, AI job search and more
               </Text>
             </View>
           </View>
