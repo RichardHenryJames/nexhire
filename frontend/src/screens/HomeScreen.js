@@ -58,6 +58,9 @@ const scrollIntervalRef = useRef(null);
 // 🎯 NEW: Profile views count
 const [profileViewsCount, setProfileViewsCount] = useState(0);
 
+// 🎯 NEW: Loading state for navigating to verify referrer
+const [navigatingToVerify, setNavigatingToVerify] = useState(false);
+
 // 🎯 NEW: Referrer requests (referrals that came to me)
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
 
@@ -857,24 +860,35 @@ const [dashboardData, setDashboardData] = useState({
                 {!stats.isVerifiedReferrer && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
-                    onPress={() => navigation.navigate('Settings', { openModal: 'professional' })}
+                    onPress={() => {
+                      setNavigatingToVerify(true);
+                      navigation.navigate('Settings', { openModal: 'professional' });
+                      // Reset after navigation completes
+                      setTimeout(() => setNavigatingToVerify(false), 1000);
+                    }}
                     activeOpacity={0.8}
+                    disabled={navigatingToVerify}
                   >
                     <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
-                      <Ionicons 
-                        name="shield-checkmark" 
-                        size={24} 
-                        color={colors.primary} 
-                      />
+                      {navigatingToVerify ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <Ionicons 
+                          name="shield-checkmark" 
+                          size={24} 
+                          color={colors.primary} 
+                        />
+                      )}
                     </View>
                     <View style={styles.quickActionContent}>
                       <Text style={styles.quickActionTitle}>Become a Verified Referrer</Text>
                       <Text style={styles.quickActionDescription}>Verify your company email & earn rewards</Text>
                     </View>
-                    <View style={[styles.quickActionRewardBadge, { backgroundColor: colors.success + '15' }]}>
-                      <Ionicons name="gift" size={14} color={colors.success} />
-                      <Text style={[styles.quickActionRewardText, { color: colors.success }]}>+50</Text>
-                    </View>
+                    {navigatingToVerify ? (
+                      <ActivityIndicator size="small" color={colors.gray400} />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                    )}
                   </TouchableOpacity>
                 )}
 

@@ -54,6 +54,7 @@ export default function SettingsScreen({ navigation, route }) {
 
   const [loading, setLoading] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
+  const [workExpLoading, setWorkExpLoading] = useState(true); // Track work experience loading
   
   // Handle route params to auto-open modals
   useEffect(() => {
@@ -572,8 +573,15 @@ export default function SettingsScreen({ navigation, route }) {
           <View style={styles.inputGroup}>
             <View style={styles.workExpHeader}>
               <Text style={styles.inputLabel}>Work Experience</Text>
+              {workExpLoading && (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+              )}
             </View>
-            <WorkExperienceSection editing={true} showHeader={false} />
+            <WorkExperienceSection 
+              editing={true} 
+              showHeader={false} 
+              onLoadingChange={setWorkExpLoading}
+            />
           </View>
 
           <View style={styles.inputGroup}>

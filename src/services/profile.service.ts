@@ -193,6 +193,8 @@ export class ApplicantService {
                         we.Country,
                         we.Description,
                         we.Skills,
+                        we.CompanyEmail,
+                        we.CompanyEmailVerified,
                         o.Name as OrganizationName,
                         o.LogoURL as OrganizationLogo
                     FROM WorkExperiences we

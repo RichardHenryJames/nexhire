@@ -192,7 +192,7 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
   );
 };
 
-export default function WorkExperienceSection({ editing, showHeader = false }) {
+export default function WorkExperienceSection({ editing, showHeader = false, onLoadingChange }) {
   const ctxEditing = useEditing();
   const isEditing = typeof editing === 'boolean' ? editing : ctxEditing;
   const { colors } = useTheme();
@@ -200,7 +200,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [experiences, setExperiences] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -419,6 +419,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      if (onLoadingChange) onLoadingChange(true);
       const [expRes, curRes] = await Promise.all([
         refopenAPI.getMyWorkExperiences(),
         refopenAPI.getCurrencies().catch(() => ({ success: false }))
@@ -438,8 +439,9 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       setExperiences([]);
     } finally {
       setLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
     }
-  }, []);
+  }, [onLoadingChange]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -853,31 +855,28 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               )}
             </View>
 
-            {/* Company Email Verification Section - Show only when editing saved work experience */}
-            {/* For current job: show if user-level isVerifiedReferrer is false (even if work exp was verified before) */}
-            {/* For non-current jobs: show based on work exp level CompanyEmailVerified */}
-            {editingItem && form.companyName && (form.isCurrent ? !userLevelVerified : !emailVerified) && (
+            {/* Company Email Verification Section - Show for all saved work experiences */}
+            {editingItem && form.companyName && (
               <View style={styles.verificationSection}>
-                <View style={styles.verificationHeader}>
-                  <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-                  <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
-                </View>
-                <Text style={styles.verificationSubtitle}>
-                  {form.isCurrent 
-                    ? 'Verify your company email to become a verified referrer and earn rewards.'
-                    : 'Verify this past employment to show a verified badge.'}
-                </Text>
-
-                {emailVerified && !form.isCurrent ? (
+                {emailVerified ? (
                   <View style={styles.verifiedContainer}>
-                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                    <Ionicons name="shield-checkmark" size={22} color="#10B981" />
                     <View style={styles.verifiedTextContainer}>
-                      <Text style={styles.verifiedText}>Email Verified</Text>
-                      <Text style={styles.verifiedEmail}>{companyEmail}</Text>
+                      <Text style={styles.verifiedText}>Verified Employee</Text>
+                      <Text style={styles.verifiedEmail}>{companyEmail || editingItem?.CompanyEmail}</Text>
                     </View>
                   </View>
                 ) : (
                   <>
+                    <View style={styles.verificationHeader}>
+                      <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+                      <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
+                    </View>
+                    <Text style={styles.verificationSubtitle}>
+                      {form.isCurrent 
+                        ? 'Verify your company email to become a verified referrer and earn rewards.'
+                        : 'Verify this past employment to show a verified badge.'}
+                    </Text>
                     {/* Email Input */}
                     <View style={styles.emailInputRow}>
                       <TextInput

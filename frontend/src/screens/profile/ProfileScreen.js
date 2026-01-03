@@ -700,13 +700,13 @@ export default function ProfileScreen({ navigation, route }) {
       visible={activeModal === 'workexp'}
       animationType="slide"
       presentationStyle="fullScreen"
-      onRequestClose={() => setActiveModal('professional')}
+      onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setActiveModal('professional')}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <TouchableOpacity onPress={() => setActiveModal(null)}>
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Work Experience</Text>
             <View style={{ width: 24 }} />
@@ -728,12 +728,12 @@ export default function ProfileScreen({ navigation, route }) {
         visible={activeModal === 'salary'}
         animationType="slide"
         presentationStyle="fullScreen"
-        onRequestClose={() => setActiveModal('professional')}
+        onRequestClose={() => setActiveModal(null)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setActiveModal('professional')}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <TouchableOpacity onPress={() => setActiveModal(null)}>
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Salary Breakdown</Text>
             {!editingModal ? (
@@ -1431,7 +1431,19 @@ export default function ProfileScreen({ navigation, route }) {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
+                      {exp.CompanyEmailVerified ? (
+                        <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
+                          <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                        </View>
+                      ) : (
+                        <View style={{ backgroundColor: colors.gray100 || '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Ionicons name="shield-outline" size={10} color={colors.gray500 || '#6B7280'} />
+                          <Text style={{ fontSize: 10, color: colors.gray500 || '#6B7280' }}>Unverified</Text>
+                        </View>
+                      )}
+                    </View>
                     <View style={styles.workExpMeta}>
                       {exp.Location && (
                         <View style={styles.workExpMetaItem}>
