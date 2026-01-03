@@ -317,16 +317,25 @@ export const approveManualPayment = async (
       WHERE WalletID = @param0
     `, [walletId, sub.Amount]);
 
+    // Get current balance for transaction record
+    const balanceResult = await dbService.executeQuery(`
+      SELECT Balance FROM Wallets WHERE WalletID = @param0
+    `, [walletId]);
+    const balanceAfter = balanceResult.recordset[0]?.Balance || sub.Amount;
+    const balanceBefore = balanceAfter - sub.Amount;
+
     // Add transaction record
     await dbService.executeQuery(`
       INSERT INTO WalletTransactions (
-        TransactionID, WalletID, Type, Amount, 
-        Description, ReferenceType, ReferenceID, CreatedAt
+        TransactionID, WalletID, TransactionType, Amount, 
+        BalanceBefore, BalanceAfter, CurrencyID, Source,
+        PaymentReference, Description, Status, CreatedAt
       ) VALUES (
         @param0, @param1, 'Credit', @param2,
-        'Manual payment - Bank/UPI Transfer', 'ManualPayment', @param3, GETUTCDATE()
+        @param3, @param4, 4, 'Manual_Payment',
+        @param5, 'Manual payment - Bank/UPI Transfer', 'Completed', GETUTCDATE()
       )
-    `, [uuidv4(), walletId, sub.Amount, submissionId]);
+    `, [uuidv4(), walletId, sub.Amount, balanceBefore, balanceAfter, submissionId]);
 
     // Update submission status to Approved ONLY AFTER wallet is credited
     await dbService.executeQuery(`

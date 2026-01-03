@@ -70,6 +70,7 @@ import FAQScreen from "../screens/legal/FAQScreen";
 
 // Admin Screen
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminPaymentsScreen from "../screens/admin/AdminPaymentsScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -139,6 +140,8 @@ const linking = {
               AskReferral: "ask-for-referral",
               Referrals: "referrals",
               Profile: "profile",
+              Admin: "admin",
+              AdminPayments: "AdminPayments",
             },
           },
 
@@ -163,14 +166,12 @@ const linking = {
           Wallet: "wallet",
           WalletTransactions: "wallet/transactions",
           WalletRecharge: "wallet/recharge",
+          ManualRecharge: "wallet/manual-recharge",
           WithdrawalRequests: "wallet/withdrawals",
           PaymentSuccess: "wallet/payment-success",
           
           // Profile Views screen
           ProfileViews: "ProfileViews",
-          
-          // Admin Dashboard (admin only)
-          AdminDashboard: "admin",
         },
       },
     },
@@ -324,6 +325,8 @@ function MainTabNavigator() {
             iconName = focused ? "person" : "person-outline";
           } else if (route.name === "Admin") {
             iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
+          } else if (route.name === "AdminPayments") {
+            iconName = focused ? "cash" : "cash-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -408,6 +411,14 @@ function MainTabNavigator() {
           name="Admin"
           component={AdminDashboardScreen}
           options={{ title: "Admin" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminPayments"
+          component={AdminPaymentsScreen}
+          options={{ title: "Payments" }}
         />
       )}
     </Tab.Navigator>
@@ -627,6 +638,15 @@ function MainStack() {
         component={AdminDashboardScreen}
         options={{
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="AdminPayments"
+        component={AdminPaymentsScreen}
+        options={{
+          headerShown: true,
+          title: "Payment Approvals",
+          headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen

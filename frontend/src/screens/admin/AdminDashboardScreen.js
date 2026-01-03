@@ -30,10 +30,7 @@ export default function AdminDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions, payments
-  const [pendingPayments, setPendingPayments] = useState([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions
 
   useEffect(() => {
     navigation.setOptions({
@@ -60,84 +57,15 @@ export default function AdminDashboardScreen() {
     }
   }, []);
 
-  const loadPendingPayments = useCallback(async () => {
-    try {
-      setPaymentsLoading(true);
-      const response = await refopenAPI.apiCall('/manual-payment/admin/pending');
-      if (response.success) {
-        setPendingPayments(response.data || []);
-      }
-    } catch (error) {
-      console.error('Error loading pending payments:', error);
-    } finally {
-      setPaymentsLoading(false);
-    }
-  }, []);
-
-  const handleApprovePayment = async (submissionId) => {
-    try {
-      setProcessingPayment(submissionId);
-      const response = await refopenAPI.apiCall(`/manual-payment/admin/approve/${submissionId}`, {
-        method: 'POST',
-        body: JSON.stringify({ adminRemarks: 'Payment verified and approved' })
-      });
-      if (response.success) {
-        alert('Payment approved! Amount credited to user wallet.');
-        loadPendingPayments();
-      } else {
-        alert(response.message || 'Failed to approve payment');
-      }
-    } catch (error) {
-      console.error('Error approving payment:', error);
-      alert('Failed to approve payment');
-    } finally {
-      setProcessingPayment(null);
-    }
-  };
-
-  const handleRejectPayment = async (submissionId) => {
-    const reason = prompt('Enter reason for rejection:');
-    if (!reason) return;
-    
-    try {
-      setProcessingPayment(submissionId);
-      const response = await refopenAPI.apiCall(`/manual-payment/admin/reject/${submissionId}`, {
-        method: 'POST',
-        body: JSON.stringify({ adminRemarks: reason })
-      });
-      if (response.success) {
-        alert('Payment rejected.');
-        loadPendingPayments();
-      } else {
-        alert(response.message || 'Failed to reject payment');
-      }
-    } catch (error) {
-      console.error('Error rejecting payment:', error);
-      alert('Failed to reject payment');
-    } finally {
-      setProcessingPayment(null);
-    }
-  };
-
   useEffect(() => {
     if (isAdmin) {
       loadDashboard();
     }
   }, [isAdmin, loadDashboard]);
 
-  // Load pending payments when payments tab is selected
-  useEffect(() => {
-    if (isAdmin && activeTab === 'payments') {
-      loadPendingPayments();
-    }
-  }, [isAdmin, activeTab, loadPendingPayments]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadDashboard();
-    if (activeTab === 'payments') {
-      loadPendingPayments();
-    }
   }, [loadDashboard]);
 
   if (!isAdmin) {
@@ -209,7 +137,6 @@ export default function AdminDashboardScreen() {
           { key: 'users', label: 'Users', icon: 'people-outline' },
           { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
           { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
-          { key: 'payments', label: 'Payments', icon: 'cash-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -439,102 +366,6 @@ export default function AdminDashboardScreen() {
     </>
   );
 
-  const renderPaymentsTab = () => (
-    <>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Pending Manual Payments</Text>
-        <Text style={styles.sectionSubtitle}>Review and approve bank/UPI transfers</Text>
-      </View>
-      
-      {paymentsLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading payments...</Text>
-        </View>
-      ) : pendingPayments.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="checkmark-circle" size={48} color={colors.success} />
-          <Text style={styles.emptyText}>No pending payments to review</Text>
-        </View>
-      ) : (
-        pendingPayments.map((payment, index) => (
-          <View key={payment.submissionId || index} style={styles.paymentCard}>
-            <View style={styles.paymentHeader}>
-              <Text style={styles.paymentAmount}>₹{payment.amount}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#F59E0B20' }]}>
-                <Text style={[styles.statusText, { color: '#F59E0B' }]}>Pending</Text>
-              </View>
-            </View>
-            
-            <View style={styles.paymentDetails}>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>User:</Text>
-                <Text style={styles.paymentValue}>{payment.userName || 'N/A'}</Text>
-              </View>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Email:</Text>
-                <Text style={styles.paymentValue}>{payment.userEmail}</Text>
-              </View>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Method:</Text>
-                <Text style={styles.paymentValue}>{payment.paymentMethod}</Text>
-              </View>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Reference:</Text>
-                <Text style={[styles.paymentValue, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                  {payment.referenceNumber}
-                </Text>
-              </View>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Payment Date:</Text>
-                <Text style={styles.paymentValue}>
-                  {new Date(payment.paymentDate).toLocaleDateString()}
-                </Text>
-              </View>
-              {payment.userRemarks && (
-                <View style={styles.paymentRow}>
-                  <Text style={styles.paymentLabel}>Remarks:</Text>
-                  <Text style={styles.paymentValue}>{payment.userRemarks}</Text>
-                </View>
-              )}
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Submitted:</Text>
-                <Text style={styles.paymentValue}>
-                  {new Date(payment.createdAt).toLocaleString()}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.paymentActions}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.approveButton]}
-                onPress={() => handleApprovePayment(payment.submissionId)}
-                disabled={processingPayment === payment.submissionId}
-              >
-                {processingPayment === payment.submissionId ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark" size={16} color="#fff" />
-                    <Text style={styles.actionButtonText}>Approve</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.rejectButton]}
-                onPress={() => handleRejectPayment(payment.submissionId)}
-                disabled={processingPayment === payment.submissionId}
-              >
-                <Ionicons name="close" size={16} color="#fff" />
-                <Text style={styles.actionButtonText}>Reject</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </>
-  );
-
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending': return '#F59E0B';
@@ -561,7 +392,6 @@ export default function AdminDashboardScreen() {
           {activeTab === 'users' && renderUsersTab()}
           {activeTab === 'referrals' && renderReferralsTab()}
           {activeTab === 'transactions' && renderTransactionsTab()}
-          {activeTab === 'payments' && renderPaymentsTab()}
         </ScrollView>
       </View>
     </View>
@@ -682,6 +512,37 @@ const createStyles = (colors, responsive = {}) => {
     },
     sectionSubtitle: {
       fontSize: isDesktop ? 14 : 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    quickActionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    quickActionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    quickActionContent: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    quickActionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    quickActionSubtitle: {
+      fontSize: 13,
       color: colors.textSecondary,
       marginTop: 2,
     },
