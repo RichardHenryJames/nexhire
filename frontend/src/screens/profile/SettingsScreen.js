@@ -1551,11 +1551,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   logoutModalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
+    marginTop: 8,
   },
   logoutModalButton: {
     flex: 1,
     paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 10,
     alignItems: 'center',
   },

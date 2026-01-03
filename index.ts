@@ -167,6 +167,17 @@ import { checkAccessStatus } from "./src/controllers/access.controller";
 // Import admin dashboard controller
 import { getAdminDashboard } from "./src/controllers/admin.controller";
 
+// Import manual payment controller
+import {
+  getPaymentSettings as getManualPaymentSettings,
+  submitPaymentProof,
+  getMySubmissions as getMyManualPaymentSubmissions,
+  getAdminPendingPayments,
+  getAdminAllPayments,
+  approvePayment,
+  rejectPayment,
+} from "./src/controllers/manualPayment.controller";
+
 // Import profile services
 import {
   ApplicantService,
@@ -1332,6 +1343,60 @@ app.http("wallet-withdrawals", {
   authLevel: "anonymous",
   route: "wallet/withdrawals",
   handler: withErrorHandling(getWithdrawalHistory),
+});
+
+// ========================================================================
+// MANUAL PAYMENT ENDPOINTS - Bank Transfer/UPI while Razorpay is pending
+// ========================================================================
+
+app.http("manual-payment-settings", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/settings",
+  handler: withErrorHandling(getManualPaymentSettings),
+});
+
+app.http("manual-payment-submit", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/submit",
+  handler: withErrorHandling(submitPaymentProof),
+});
+
+app.http("manual-payment-my-submissions", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/my-submissions",
+  handler: withErrorHandling(getMyManualPaymentSubmissions),
+});
+
+// Admin endpoints for manual payments
+app.http("manual-payment-admin-pending", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/pending",
+  handler: withErrorHandling(getAdminPendingPayments),
+});
+
+app.http("manual-payment-admin-all", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/all",
+  handler: withErrorHandling(getAdminAllPayments),
+});
+
+app.http("manual-payment-admin-approve", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/approve/{submissionId}",
+  handler: withErrorHandling(approvePayment),
+});
+
+app.http("manual-payment-admin-reject", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/reject/{submissionId}",
+  handler: withErrorHandling(rejectPayment),
 });
 
 // ========================================================================

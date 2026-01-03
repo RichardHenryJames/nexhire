@@ -54,6 +54,7 @@ import ProfileViewsScreen from "../screens/ProfileViewsScreen";
 import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
 import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
+import ManualRechargeScreen from "../screens/wallet/ManualRechargeScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 
@@ -685,7 +686,7 @@ function MainStack() {
       />
       <Stack.Screen
         name="WalletRecharge"
-        component={WalletRechargeScreen}
+        component={ManualRechargeScreen}
         options={{
           headerShown: true,
           title: "Add Money to Wallet",

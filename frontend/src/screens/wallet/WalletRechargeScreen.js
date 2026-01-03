@@ -40,7 +40,7 @@ export default function WalletRechargeScreen({ navigation }) {
             if (routes.length > 1 && currentIndex > 0) {
               navigation.goBack();
             } else {
-              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+              navigation.navigate('Wallet');
             }
           }} 
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

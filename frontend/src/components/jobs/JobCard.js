@@ -122,17 +122,17 @@ const JobCard = ({
           {!hideSave && (
             savedContext ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color="#0d47a1" />
-                <Text style={styles.saveText}>Saved</Text>
+                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : isSaved ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color="#0d47a1" />
-                <Text style={styles.saveText}>Saved</Text>
+                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-                <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+                <Ionicons name="bookmark-outline" size={18} color={colors.primary} />
                 <Text style={styles.saveText}>Save</Text>
               </TouchableOpacity>
             )
@@ -284,19 +284,22 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: colors.primaryLight + '30',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
   savedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: colors.primaryLight + '30',
+    backgroundColor: colors.primary,
   },
   saveText: { color: colors.primary, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  savedText: { color: colors.white, marginLeft: 6, fontWeight: '600', fontSize: 13 },
   referralBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2668,6 +2668,72 @@ if (!resumeId) {
       throw error;
     }
   }
+
+  // ========================================
+  // MANUAL PAYMENT / WALLET RECHARGE
+  // ========================================
+
+  /**
+   * Get manual payment settings (bank/UPI details)
+   */
+  async getManualPaymentSettings() {
+    try {
+      return await this.apiCall('/manual-payment/settings');
+    } catch (error) {
+      console.error('Failed to get manual payment settings:', error);
+      // Return default settings if API fails
+      return {
+        success: true,
+        data: {
+          upiId: 'refopen@ybl',
+          upiName: 'RefOpen Technologies',
+          bankName: 'HDFC Bank',
+          bankAccountName: 'RefOpen Technologies Pvt Ltd',
+          bankAccountNumber: '50200012345678',
+          bankIfsc: 'HDFC0001234',
+          bankBranch: 'Mumbai Main Branch',
+          minAmount: 100,
+          maxAmount: 50000,
+          processingTime: '1 business day',
+          supportEmail: 'support@refopen.com',
+          supportPhone: '+91-9876543210'
+        }
+      };
+    }
+  }
+
+  /**
+   * Submit manual payment proof
+   */
+  async submitManualPayment(data) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/manual-payment/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get user's manual payment submissions
+   */
+  async getMyManualPaymentSubmissions() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required', data: [] };
+    }
+
+    return this.apiCall('/manual-payment/my-submissions');
+  }
 }
 
 export default new RefOpenAPI();

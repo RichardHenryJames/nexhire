@@ -1519,13 +1519,15 @@ const createStyles = (colors, responsive = {}) => {
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: 'transparent',
     borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
   websiteText: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    fontWeight: typography.weights.medium,
+    fontWeight: typography.weights.semibold,
     marginLeft: 6,
   },
   linkedinButton: {
