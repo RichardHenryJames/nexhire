@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useEditing } from './ProfileSection';
 import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
+import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
@@ -282,6 +283,10 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const [otpExpiryTime, setOtpExpiryTime] = useState(null);
   const otpInputRefs = useRef([]);
 
+  // ✅ Verified Referrer Overlay state
+  const [showVerifiedReferrerOverlay, setShowVerifiedReferrerOverlay] = useState(false);
+  const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
+
   // Organization search state
   const [orgQuery, setOrgQuery] = useState('');
   const debouncedOrgQuery = useDebounce(orgQuery, 300);
@@ -422,7 +427,11 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
         setEmailVerified(true);
         setUserLevelVerified(true); // Also update user-level status
         setShowOtpInput(false);
-        Alert.alert('Verified!', 'Your company email has been verified. You are now a verified referrer!');
+        
+        // ✅ Show the Verified Referrer Overlay instead of simple alert
+        const companyName = form.companyName || editingItem?.CompanyName || editingItem?.OrganizationName || 'your company';
+        setVerifiedCompanyName(companyName);
+        setShowVerifiedReferrerOverlay(true);
       } else {
         setVerificationError(response.message || 'Verification failed');
         if (response.data?.remainingAttempts !== undefined) {
@@ -1367,6 +1376,13 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
           </View>
         </View>
       </Modal>
+
+      {/* ✅ Verified Referrer Celebration Overlay */}
+      <VerifiedReferrerOverlay
+        visible={showVerifiedReferrerOverlay}
+        onClose={() => setShowVerifiedReferrerOverlay(false)}
+        companyName={verifiedCompanyName}
+      />
     </View>
   );
 }

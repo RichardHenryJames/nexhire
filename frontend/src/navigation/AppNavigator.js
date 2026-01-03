@@ -381,11 +381,18 @@ function MainTabNavigator() {
         />
       )}
 
-      {isJobSeeker && isVerifiedReferrer && (
+      {/* ✅ FIXED: Always render Referrals tab for job seekers to support deep linking */}
+      {/* Hide tab button for non-verified referrers, but screen is still accessible via deep link */}
+      {/* Access control is handled inside ReferralScreen based on isVerifiedReferrer */}
+      {isJobSeeker && (
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
-          options={{ title: "Refer" }}
+          options={{ 
+            title: "Refer",
+            // Hide tab from tab bar if not verified, but keep screen for deep linking
+            tabBarButton: isVerifiedReferrer ? undefined : () => null,
+          }}
         />
       )}
 

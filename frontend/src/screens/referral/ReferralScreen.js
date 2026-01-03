@@ -23,7 +23,7 @@ import ViewReferralRequestModal from '../../components/ViewReferralRequestModal'
 import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
-  const { user, userId } = useAuth();
+  const { user, userId, isVerifiedReferrer, loading: authLoading } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -41,11 +41,17 @@ export default function ReferralScreen({ navigation }) {
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
+  // ✅ Handle non-verified referrers - show message instead of redirecting
+  // This supports deep linking while still enforcing access control
+  const showNotVerifiedMessage = !authLoading && !isVerifiedReferrer;
+
   // Refresh data when screen is focused
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [])
+      if (!showNotVerifiedMessage) {
+        loadData();
+      }
+    }, [showNotVerifiedMessage])
   );
 
   // Define which statuses belong to which tab
@@ -480,6 +486,42 @@ export default function ReferralScreen({ navigation }) {
       </ScrollView>
     );
   };
+
+  // ✅ Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.emptyText, { marginTop: 16 }]}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // ✅ Show message for non-verified referrers (instead of redirecting)
+  if (showNotVerifiedMessage) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.innerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Become a Referrer</Text>
+          </View>
+          <View style={[styles.emptyContainer, { flex: 1, justifyContent: 'center' }]}>
+            <Ionicons name="shield-checkmark-outline" size={64} color={colors.gray400} />
+            <Text style={[styles.emptyTitle, { marginTop: 16 }]}>Verification Required</Text>
+            <Text style={[styles.emptyText, { textAlign: 'center', paddingHorizontal: 32 }]}>
+              To refer others, you need to add your current work experience and get verified.
+            </Text>
+            <TouchableOpacity 
+              style={[styles.claimButton, { marginTop: 24, paddingHorizontal: 32 }]}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Text style={styles.claimButtonText}>Go to Profile</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
