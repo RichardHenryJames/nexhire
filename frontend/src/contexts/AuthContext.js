@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingRedirect, setPendingRedirect] = useState(null);
+  const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false);
   
   // IMPROVED: Initialize from sessionStorage on mount
   const [pendingGoogleAuth, setPendingGoogleAuthState] = useState(() => {
@@ -110,6 +111,10 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
+          // Fetch verification status for job seekers
+          if (result.data?.UserType === 'JobSeeker') {
+            refreshVerificationStatus();
+          }
         } else {
           await refopenAPI.clearTokens();
           // FIXED: Don't set error for normal token expiration
@@ -128,6 +133,18 @@ export const AuthProvider = ({ children }) => {
       setError(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Refresh verification status
+  const refreshVerificationStatus = async () => {
+    try {
+      const response = await refopenAPI.getVerificationStatus();
+      if (response.success) {
+        setIsVerifiedReferrer(response.data?.isVerifiedReferrer || false);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch verification status:', error);
     }
   };
 
@@ -577,6 +594,8 @@ export const AuthProvider = ({ children }) => {
     isEmployer: user?.UserType === 'Employer',
     isJobSeeker: user?.UserType === 'JobSeeker',
     isAdmin: user?.UserType === 'Admin',
+    isVerifiedReferrer,
+    refreshVerificationStatus,
     userType: user?.UserType || null,
     userName: user ? `${user.FirstName} ${user.LastName}` : null,
     userEmail: user?.Email || null,

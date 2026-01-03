@@ -85,6 +85,9 @@ export default function ProfileScreen({ navigation, route }) {
   const [loadingReferralPoints, setLoadingReferralPoints] = useState(false);
   const [showReferralBreakdown, setShowReferralBreakdown] = useState(false);
   
+  // User-level verification status
+  const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false);
+  
   // Referral code (first part of UserID before dash)
   const referralCode = user?.UserID?.split('-')[0] || '';
   
@@ -239,6 +242,16 @@ export default function ProfileScreen({ navigation, route }) {
             hideCurrentCompany: data.HideCurrentCompany === true,
             hideSalaryDetails: data.HideSalaryDetails === true,
           }));
+          
+          // Fetch user-level verification status
+          try {
+            const verifyRes = await refopenAPI.getVerificationStatus();
+            if (verifyRes.success) {
+              setIsVerifiedReferrer(verifyRes.data?.isVerifiedReferrer || false);
+            }
+          } catch (verifyError) {
+            console.warn('Could not load verification status:', verifyError);
+          }
         }
       }
     } catch (error) {
@@ -1409,59 +1422,65 @@ export default function ProfileScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             <View style={styles.workExperienceList}>
-              {jobSeekerProfile.workExperiences.map((exp, index) => (
-                <View key={exp.WorkExperienceID || index} style={styles.workExpCard}>
-                  <View style={styles.workExpIcon}>
-                    {exp.OrganizationLogo ? (
-                      <Image 
-                        source={{ uri: exp.OrganizationLogo }} 
-                        style={{ width: 36, height: 36, borderRadius: 6 }}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <Ionicons name="business" size={20} color={colors.primary} />
-                    )}
-                  </View>
-                  <View style={styles.workExpDetails}>
-                    <View style={styles.workExpHeader}>
-                      <Text style={styles.workExpTitle}>{exp.JobTitle}</Text>
-                      {exp.IsCurrent && (
-                        <View style={styles.currentBadge}>
-                          <Text style={styles.currentBadgeText}>Current</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
-                      {exp.CompanyEmailVerified ? (
-                        <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
-                          <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                        </View>
+              {jobSeekerProfile.workExperiences.map((exp, index) => {
+                // For current job: use user-level IsVerifiedReferrer
+                // For historical jobs: use work experience level CompanyEmailVerified
+                const isExpVerified = exp.IsCurrent ? isVerifiedReferrer : exp.CompanyEmailVerified;
+                
+                return (
+                  <View key={exp.WorkExperienceID || index} style={styles.workExpCard}>
+                    <View style={styles.workExpIcon}>
+                      {exp.OrganizationLogo ? (
+                        <Image 
+                          source={{ uri: exp.OrganizationLogo }} 
+                          style={{ width: 36, height: 36, borderRadius: 6 }}
+                          resizeMode="contain"
+                        />
                       ) : (
-                        <View style={{ backgroundColor: colors.gray100 || '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                          <Ionicons name="shield-outline" size={10} color={colors.gray500 || '#6B7280'} />
-                          <Text style={{ fontSize: 10, color: colors.gray500 || '#6B7280' }}>Unverified</Text>
-                        </View>
+                        <Ionicons name="business" size={20} color={colors.primary} />
                       )}
                     </View>
-                    <View style={styles.workExpMeta}>
-                      {exp.Location && (
+                    <View style={styles.workExpDetails}>
+                      <View style={styles.workExpHeader}>
+                        <Text style={styles.workExpTitle}>{exp.JobTitle}</Text>
+                        {exp.IsCurrent && (
+                          <View style={styles.currentBadge}>
+                            <Text style={styles.currentBadgeText}>Current</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
+                        {isExpVerified ? (
+                          <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
+                            <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                          </View>
+                        ) : (
+                          <View style={{ backgroundColor: colors.gray100 || '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                            <Ionicons name="shield-outline" size={10} color={colors.gray500 || '#6B7280'} />
+                            <Text style={{ fontSize: 10, color: colors.gray500 || '#6B7280' }}>Unverified</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.workExpMeta}>
+                        {exp.Location && (
+                          <View style={styles.workExpMetaItem}>
+                            <Ionicons name="location-outline" size={12} color={colors.gray500} />
+                            <Text style={styles.workExpMetaText}>{exp.Location}</Text>
+                          </View>
+                        )}
                         <View style={styles.workExpMetaItem}>
-                          <Ionicons name="location-outline" size={12} color={colors.gray500} />
-                          <Text style={styles.workExpMetaText}>{exp.Location}</Text>
+                          <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
+                          <Text style={styles.workExpMetaText}>
+                            {exp.StartDate ? new Date(exp.StartDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - 
+                            {exp.IsCurrent ? 'Present' : (exp.EndDate ? new Date(exp.EndDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '')}
+                          </Text>
                         </View>
-                      )}
-                      <View style={styles.workExpMetaItem}>
-                        <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
-                        <Text style={styles.workExpMetaText}>
-                          {exp.StartDate ? new Date(exp.StartDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - 
-                          {exp.IsCurrent ? 'Present' : (exp.EndDate ? new Date(exp.EndDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '')}
-                        </Text>
                       </View>
                     </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         )}

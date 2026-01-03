@@ -104,11 +104,15 @@ const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperie
   return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
 };
 
-const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, colors, styles }) => {
+const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, colors, styles, userIsVerifiedReferrer }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
   const isCurrent = item.IsCurrent || !end;
-  const isEmailVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
+  const workExpVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
+  
+  // For current job: use user-level IsVerifiedReferrer
+  // For historical jobs: use work experience level CompanyEmailVerified
+  const isVerified = isCurrent ? userIsVerifiedReferrer : workExpVerified;
   
   const formatDate = (date) => {
     if (!date) return '';
@@ -150,7 +154,7 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
             <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.itemCompany}>{companyName}</Text>
-              {isEmailVerified ? (
+              {isVerified ? (
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="shield-checkmark" size={12} color="#10B981" />
                 </View>
@@ -420,14 +424,21 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     try {
       setLoading(true);
       if (onLoadingChange) onLoadingChange(true);
-      const [expRes, curRes] = await Promise.all([
+      const [expRes, curRes, verifyRes] = await Promise.all([
         refopenAPI.getMyWorkExperiences(),
-        refopenAPI.getCurrencies().catch(() => ({ success: false }))
+        refopenAPI.getCurrencies().catch(() => ({ success: false })),
+        refopenAPI.getVerificationStatus().catch(() => ({ success: false }))
       ]);
       if (expRes && expRes.success) {
         setExperiences(Array.isArray(expRes.data) ? expRes.data : []);
       } else {
         setExperiences([]);
+      }
+      // Set user-level verification status
+      if (verifyRes && verifyRes.success) {
+        setUserLevelVerified(verifyRes.data?.isVerifiedReferrer || false);
+      } else {
+        setUserLevelVerified(false);
       }
       if (curRes && curRes.success) {
         setCurrencies(curRes.data);
@@ -706,6 +717,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
             isLast={index === validExperiences.length - 1}
             colors={colors}
             styles={styles}
+            userIsVerifiedReferrer={userLevelVerified}
           />
         )}
         ListEmptyComponent={renderEmpty}
@@ -858,7 +870,9 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
             {/* Company Email Verification Section - Show for all saved work experiences */}
             {editingItem && form.companyName && (
               <View style={styles.verificationSection}>
-                {emailVerified ? (
+                {/* For current job: show verified only if user-level is verified */}
+                {/* For historical: show verified if work-exp level is verified */}
+                {(form.isCurrent ? userLevelVerified : emailVerified) ? (
                   <View style={styles.verifiedContainer}>
                     <Ionicons name="shield-checkmark" size={22} color="#10B981" />
                     <View style={styles.verifiedTextContainer}>

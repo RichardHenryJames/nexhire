@@ -300,7 +300,7 @@ function AuthStack() {
 
 // Main App Tab Navigator
 function MainTabNavigator() {
-  const { userType, isEmployer, isJobSeeker, isAdmin } = useAuth();
+  const { userType, isEmployer, isJobSeeker, isAdmin, isVerifiedReferrer } = useAuth();
   const { colors } = useTheme();
 
   return (
@@ -381,7 +381,7 @@ function MainTabNavigator() {
         />
       )}
 
-      {isJobSeeker && (
+      {isJobSeeker && isVerifiedReferrer && (
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
