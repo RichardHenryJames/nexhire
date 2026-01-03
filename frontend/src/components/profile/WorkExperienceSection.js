@@ -71,10 +71,12 @@ const isValidCompanyEmail = (email, companyName) => {
     normalizedCompany = normalizedCompany.replace(new RegExp(suffix + '$', 'i'), '');
   });
   
-  // Check if domain contains company name or vice versa
-  return domainCompany.includes(normalizedCompany) || 
-         normalizedCompany.includes(domainCompany) ||
-         domain.includes(normalizedCompany);
+  // Strict matching - the domain must EXACTLY contain or match the company name
+  // This prevents typos like "microsofty" passing for "microsoft"
+  // The company name must be a prefix of the domain, or exact match
+  return domainCompany === normalizedCompany || 
+         domainCompany.startsWith(normalizedCompany) ||
+         (normalizedCompany.length >= 3 && domain.split('.').some(part => part === normalizedCompany || part.startsWith(normalizedCompany)));
 };
 
 // ? SMART WORK EXPERIENCE VALIDATION - Added validation functions
