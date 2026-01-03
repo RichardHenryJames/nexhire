@@ -217,6 +217,12 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const [jobRoles, setJobRoles] = useState([]);
   const [loadingJobRoles, setLoadingJobRoles] = useState(false);
 
+  // Department dropdown
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  const [departmentSearch, setDepartmentSearch] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+
   // Extended form fields
   const [form, setForm] = useState({
     jobTitle: '',
@@ -403,20 +409,33 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     );
   };
 
-  const loadJobRoles = useCallback(async () => {
+  // Load both JobRole and Department in a single bulk API call
+  const loadReferenceData = useCallback(async () => {
     try {
       setLoadingJobRoles(true);
-      const response = await refopenAPI.getReferenceMetadata('JobRole');
-      if (response.success && Array.isArray(response.data)) {
-        const sorted = response.data.sort((a, b) => 
-          (a.Value || '').localeCompare(b.Value || '')
-        );
-        setJobRoles(sorted);
+      setLoadingDepartments(true);
+      const response = await refopenAPI.getBulkReferenceMetadata(['JobRole', 'Department']);
+      if (response.success && response.data) {
+        // JobRoles
+        if (Array.isArray(response.data.JobRole)) {
+          const sortedRoles = response.data.JobRole.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          );
+          setJobRoles(sortedRoles);
+        }
+        // Departments
+        if (Array.isArray(response.data.Department)) {
+          const sortedDepts = response.data.Department.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          );
+          setDepartments(sortedDepts);
+        }
       }
     } catch (error) {
-      console.error('Error loading job roles:', error);
+      console.error('Error loading reference data:', error);
     } finally {
       setLoadingJobRoles(false);
+      setLoadingDepartments(false);
     }
   }, []);
 
@@ -499,8 +518,10 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     setShowOrgPicker(false);
     setJobTitleSearch('');
     setShowJobTitleDropdown(false);
+    setDepartmentSearch('');
+    setShowDepartmentDropdown(false);
     setShowModal(true);
-    loadJobRoles();
+    loadReferenceData();
   };
 
   const openEdit = (item) => {
@@ -555,7 +576,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     }
     
     setShowModal(true);
-    loadJobRoles();
+    loadReferenceData();
   };
 
   const handleDeletePress = (item) => { setPendingDelete(item); setShowDeleteModal(true); };
@@ -867,12 +888,18 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
               )}
             </View>
 
-            {/* Company Email Verification Section - Show for all saved work experiences */}
-            {editingItem && form.companyName && (
+            {/* Company Email Verification Section - Only for current jobs */}
+            {editingItem && form.companyName && form.isCurrent && (
               <View style={styles.verificationSection}>
-                {/* For current job: show verified only if user-level is verified */}
-                {/* For historical: show verified if work-exp level is verified */}
-                {(form.isCurrent ? userLevelVerified : emailVerified) ? (
+                {/* Check if database also has IsCurrent = true, otherwise user needs to save first */}
+                {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) ? (
+                  <View style={styles.saveFirstContainer}>
+                    <Ionicons name="information-circle" size={20} color={colors.warning} />
+                    <Text style={[styles.verificationSubtitle, { color: colors.warning, marginLeft: 8 }]}>
+                      Please save your changes first before verifying your company email.
+                    </Text>
+                  </View>
+                ) : userLevelVerified ? (
                   <View style={styles.verifiedContainer}>
                     <Ionicons name="shield-checkmark" size={22} color="#10B981" />
                     <View style={styles.verifiedTextContainer}>
@@ -887,9 +914,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
                       <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
                     </View>
                     <Text style={styles.verificationSubtitle}>
-                      {form.isCurrent 
-                        ? 'Verify your company email to become a verified referrer and earn rewards.'
-                        : 'Verify this past employment to show a verified badge.'}
+                      Verify your company email to become a verified referrer and earn rewards.
                     </Text>
                     {/* Email Input */}
                     <View style={styles.emailInputRow}>
@@ -993,13 +1018,59 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
 
             {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.department} 
-              onChangeText={(t) => setForm({ ...form, department: t })} 
-              placeholder="e.g., Engineering" 
-              placeholderTextColor={colors.gray400}
-            />
+            <View style={{ position: 'relative', zIndex: 998 }}>
+              <TextInput
+                style={styles.input}
+                value={departmentSearch || form.department}
+                onChangeText={(t) => { 
+                  setDepartmentSearch(t);
+                  setShowDepartmentDropdown(t.length > 0);
+                  setForm({ ...form, department: t }); 
+                }}
+                onFocus={() => {
+                  if (form.department) {
+                    setDepartmentSearch('');
+                  }
+                  setShowDepartmentDropdown(true);
+                }}
+                placeholder="e.g., Engineering"
+                placeholderTextColor={colors.gray400}
+              />
+              {showDepartmentDropdown && (departmentSearch.length > 0 || departments.length > 0) && (
+                <View style={styles.jobTitleDropdown}>
+                  {loadingDepartments ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {departments
+                        .filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase()))
+                        .slice(0, 15)
+                        .map((dept) => (
+                          <TouchableOpacity
+                            key={dept.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setForm({ ...form, department: dept.Value });
+                              setDepartmentSearch('');
+                              setShowDepartmentDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{dept.Value}</Text>
+                          </TouchableOpacity>
+                        ))
+                      }
+                      {departments.filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+            </View>
 
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
@@ -1673,6 +1744,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.white || '#FFFFFF',
     fontWeight: typography.weights?.semibold || '600',
     fontSize: typography.sizes?.sm || 14,
+  },
+  saveFirstContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warning + '15',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.warning,
   },
   verifiedContainer: {
     flexDirection: 'row',
