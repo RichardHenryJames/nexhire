@@ -429,15 +429,16 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Personal Details</Text>
-          <TouchableOpacity 
-            onPress={savePersonalDetails} 
-            style={[styles.saveButton, loading && { opacity: 0.5 }]}
-            disabled={loading}
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Personal Details</Text>
+            <TouchableOpacity 
+              onPress={savePersonalDetails} 
+              style={[styles.saveButton, loading && { opacity: 0.5 }]}
+              disabled={loading}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -518,6 +519,7 @@ export default function SettingsScreen({ navigation, route }) {
             </View>
           </View>
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -531,18 +533,19 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Professional Details</Text>
-          <TouchableOpacity onPress={saveProfessionalDetails} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Professional Details</Text>
+            <TouchableOpacity onPress={saveProfessionalDetails} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
-          <View style={styles.inputGroup}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+            <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Headline</Text>
             <TextInput
               style={styles.textInput}
@@ -632,6 +635,7 @@ export default function SettingsScreen({ navigation, route }) {
             />
           </View>
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -645,17 +649,18 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Education</Text>
-          <TouchableOpacity onPress={saveEducation} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Education</Text>
+            <TouchableOpacity onPress={saveEducation} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Highest Education</Text>
             <View style={styles.chipContainer}>
@@ -707,6 +712,7 @@ export default function SettingsScreen({ navigation, route }) {
             />
           </View>
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -720,17 +726,18 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Preferences</Text>
-          <TouchableOpacity onPress={savePreferences} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Preferences</Text>
+            <TouchableOpacity onPress={savePreferences} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
           {/* Privacy Settings */}
           <Text style={styles.sectionHeader}>Privacy Settings</Text>
 
@@ -888,6 +895,7 @@ export default function SettingsScreen({ navigation, route }) {
             />
           </View>
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -901,15 +909,16 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Resumes & Documents</Text>
-          <View style={{ width: 60 }} />
-        </View>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Resumes & Documents</Text>
+            <View style={{ width: 60 }} />
+          </View>
 
-        <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
           <ResumeSection
             profile={{ 
               ...jobSeekerProfile, 
@@ -933,6 +942,7 @@ export default function SettingsScreen({ navigation, route }) {
             editing={true}
           />
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -946,20 +956,21 @@ export default function SettingsScreen({ navigation, route }) {
       onRequestClose={() => setActiveModal(null)}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Notification Settings</Text>
-          <TouchableOpacity 
-            onPress={saveNotificationPreferences}
-            disabled={savingNotifications}
-            style={styles.saveButton}
-          >
-            {savingNotifications ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Ionicons name="checkmark" size={24} color={colors.primary} />
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Notification Settings</Text>
+            <TouchableOpacity 
+              onPress={saveNotificationPreferences}
+              disabled={savingNotifications}
+              style={styles.saveButton}
+            >
+              {savingNotifications ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="checkmark" size={24} color={colors.primary} />
             )}
           </TouchableOpacity>
         </View>
@@ -1096,6 +1107,7 @@ export default function SettingsScreen({ navigation, route }) {
             </>
           )}
         </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -1385,6 +1397,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  modalInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',

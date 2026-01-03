@@ -854,7 +854,7 @@ const [dashboardData, setDashboardData] = useState({
                 </TouchableOpacity>
 
                 {/* 🌟 Become Verified Referrer Card - Only show if not verified */}
-                {stats.isVerifiedReferrer === false && (
+                {!stats.isVerifiedReferrer && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
                     onPress={() => navigation.navigate('Settings', { openModal: 'professional' })}

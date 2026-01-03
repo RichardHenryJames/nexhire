@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useEditing } from './ProfileSection';
+import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 
 const useDebounce = (value, delay = 300) => {
@@ -103,7 +104,7 @@ const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperie
   return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
 };
 
-const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast, colors, styles }) => {
+const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, colors, styles }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
   const isCurrent = item.IsCurrent || !end;
@@ -149,10 +150,18 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast, colors, styl
             <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.itemCompany}>{companyName}</Text>
-              {isEmailVerified && (
+              {isEmailVerified ? (
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="shield-checkmark" size={12} color="#10B981" />
                 </View>
+              ) : editable && (
+                <TouchableOpacity 
+                  style={styles.clickToVerifyBadge}
+                  onPress={() => onVerify(item)}
+                >
+                  <Ionicons name="shield-outline" size={10} color={colors.primary} />
+                  <Text style={[styles.clickToVerifyText, { color: colors.primary }]}>Click to Verify</Text>
+                </TouchableOpacity>
               )}
             </View>
             <View style={styles.dateRow}>
@@ -187,7 +196,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const ctxEditing = useEditing();
   const isEditing = typeof editing === 'boolean' ? editing : ctxEditing;
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -239,7 +249,8 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false); // Work exp level verification
+  const [userLevelVerified, setUserLevelVerified] = useState(false); // User level IsVerifiedReferrer
   const [verificationError, setVerificationError] = useState('');
   const [otpExpiryTime, setOtpExpiryTime] = useState(null);
   const otpInputRefs = useRef([]);
@@ -286,7 +297,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     
     const workExpId = editingItem ? getId(editingItem) : null;
     if (!workExpId) {
-      setVerificationError('Please save the work experience first before verifying');
+      setVerificationError('Please save the work experience first, then edit it to verify your email');
       return;
     }
 
@@ -352,6 +363,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       
       if (response.success) {
         setEmailVerified(true);
+        setUserLevelVerified(true); // Also update user-level status
         setShowOtpInput(false);
         Alert.alert('Verified!', 'Your company email has been verified. You are now a verified referrer!');
       } else {
@@ -374,6 +386,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setOtp(['', '', '', '']);
     setVerificationError('');
     setEmailVerified(false);
+    setUserLevelVerified(false);
     setOtpExpiryTime(null);
   };
 
@@ -516,6 +529,16 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     }
     if (item.CompanyEmailVerified) {
       setEmailVerified(true);
+    }
+    
+    // Fetch user-level verification status for current jobs
+    const isCurrent = item.IsCurrent === 1 || item.IsCurrent === true || (!item.EndDate);
+    if (isCurrent) {
+      refopenAPI.getVerificationStatus().then(res => {
+        if (res.success) {
+          setUserLevelVerified(res.data?.isVerifiedReferrer || false);
+        }
+      }).catch(() => setUserLevelVerified(false));
     }
     
     setShowModal(true);
@@ -676,6 +699,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             item={item}
             editable={isEditing}
             onEdit={openEdit}
+            onVerify={openEdit}
             onDelete={handleDeletePress}
             isLast={index === validExperiences.length - 1}
             colors={colors}
@@ -689,16 +713,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       {/* Add/Edit Modal */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
-            {/* Removed Save button from header */}
-            <View style={{ width: 24 }} />
-          </View>
+          <View style={styles.modalInner}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
+              {/* Removed Save button from header */}
+              <View style={{ width: 24 }} />
+            </View>
 
-          <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Job Title *</Text>
             <View style={{ position: 'relative', zIndex: 1000 }}>
               <TextInput
@@ -828,18 +853,22 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               )}
             </View>
 
-            {/* Company Email Verification Section - Only for current jobs when editing */}
-            {editingItem && form.isCurrent && (
+            {/* Company Email Verification Section - Show only when editing saved work experience */}
+            {/* For current job: show if user-level isVerifiedReferrer is false (even if work exp was verified before) */}
+            {/* For non-current jobs: show based on work exp level CompanyEmailVerified */}
+            {editingItem && form.companyName && (form.isCurrent ? !userLevelVerified : !emailVerified) && (
               <View style={styles.verificationSection}>
                 <View style={styles.verificationHeader}>
                   <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
                   <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
                 </View>
                 <Text style={styles.verificationSubtitle}>
-                  Verify your company email to become a verified referrer and earn rewards.
+                  {form.isCurrent 
+                    ? 'Verify your company email to become a verified referrer and earn rewards.'
+                    : 'Verify this past employment to show a verified badge.'}
                 </Text>
 
-                {emailVerified ? (
+                {emailVerified && !form.isCurrent ? (
                   <View style={styles.verifiedContainer}>
                     <Ionicons name="checkmark-circle" size={24} color="#10B981" />
                     <View style={styles.verifiedTextContainer}>
@@ -1141,6 +1170,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               </TouchableOpacity>
             </View>
           </ScrollView>
+          </View>
         </View>
       </Modal>
 
@@ -1166,7 +1196,7 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   sectionContainer: { marginHorizontal: 4 },
   inlineHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   inlineAddButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, backgroundColor: colors.background },
@@ -1286,6 +1316,19 @@ const createStyles = (colors) => StyleSheet.create({
     padding: 4,
     borderRadius: 10,
   },
+  clickToVerifyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 3,
+  },
+  clickToVerifyText: {
+    fontSize: 10,
+    fontWeight: typography.weights?.semibold || '600',
+  },
   timelineCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1306,7 +1349,16 @@ const createStyles = (colors) => StyleSheet.create({
   emptyText: { color: colors.gray600, marginBottom: 8 },
   addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   addButtonText: { color: colors.white, marginLeft: 6 },
-  modalContainer: { flex: 1, backgroundColor: colors.background },
+  modalContainer: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? { alignItems: 'center' } : {}),
+  },
+  modalInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+  },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   // Removed saveButton style as it's now in footer
