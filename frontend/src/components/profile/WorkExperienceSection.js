@@ -53,6 +53,18 @@ const normalizeCompanyName = (name) => {
     .replace(/\s+/g, ''); // Remove spaces
 };
 
+// Get suggested company email domain based on company name
+const getSuggestedDomain = (companyName) => {
+  if (!companyName) return 'company.com';
+  let normalized = normalizeCompanyName(companyName);
+  // Remove common suffixes for cleaner domain
+  const suffixes = ['inc', 'llc', 'ltd', 'pvtltd', 'pvt', 'corp', 'corporation', 'limited', 'company', 'technologies', 'tech', 'software', 'solutions', 'services', 'group', 'india', 'global'];
+  suffixes.forEach(suffix => {
+    normalized = normalized.replace(new RegExp(suffix + '$', 'i'), '');
+  });
+  return normalized ? `${normalized}.com` : 'company.com';
+};
+
 const isValidCompanyEmail = (email, companyName) => {
   if (!email || !companyName) return false;
   const domain = extractDomainFromEmail(email);
@@ -71,12 +83,13 @@ const isValidCompanyEmail = (email, companyName) => {
     normalizedCompany = normalizedCompany.replace(new RegExp(suffix + '$', 'i'), '');
   });
   
-  // Strict matching - the domain must EXACTLY contain or match the company name
+  // Strict matching - domain must exactly match or company name must start with the domain
   // This prevents typos like "microsofty" passing for "microsoft"
-  // The company name must be a prefix of the domain, or exact match
+  // e.g., "microsoft.com" is valid for "Microsoft" or "Microsoft Corporation"
+  // e.g., "ms.com" is valid for "MS" but "microsofty.com" is NOT valid for "Microsoft"
   return domainCompany === normalizedCompany || 
-         domainCompany.startsWith(normalizedCompany) ||
-         (normalizedCompany.length >= 3 && domain.split('.').some(part => part === normalizedCompany || part.startsWith(normalizedCompany)));
+         normalizedCompany.startsWith(domainCompany) ||
+         (normalizedCompany.length >= 3 && domain.split('.').some(part => part === normalizedCompany));
 };
 
 // ? SMART WORK EXPERIENCE VALIDATION - Added validation functions
@@ -256,6 +269,8 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
 
   // Company Email Verification state
   const [companyEmail, setCompanyEmail] = useState('');
+  const [emailPrefix, setEmailPrefix] = useState(''); // Just the prefix before @
+  const [useCustomDomain, setUseCustomDomain] = useState(false); // Toggle for full email input
   const [emailDomainValid, setEmailDomainValid] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -292,17 +307,46 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     }));
   };
 
+  // Get suggested domain for current company
+  const suggestedDomain = getSuggestedDomain(form.companyName);
+
   // Company Email Verification Handlers
+  const handleEmailPrefixChange = (prefix) => {
+    // Remove @ if user types it
+    const cleanPrefix = prefix.replace(/@.*$/, '');
+    setEmailPrefix(cleanPrefix);
+    
+    // Build full email with suggested domain
+    const fullEmail = cleanPrefix ? `${cleanPrefix}@${suggestedDomain}` : '';
+    setCompanyEmail(fullEmail);
+    setVerificationError('');
+    
+    // Auto-validate since we're using the correct domain
+    setEmailDomainValid(cleanPrefix.length > 0);
+  };
+
   const handleCompanyEmailChange = (email) => {
     setCompanyEmail(email);
     setVerificationError('');
+    
+    // Extract prefix if user pastes full email
+    if (email.includes('@')) {
+      const prefix = email.split('@')[0];
+      setEmailPrefix(prefix);
+    }
+    
     // Validate domain against company name
     const valid = isValidCompanyEmail(email, form.companyName);
     setEmailDomainValid(valid);
   };
 
   const handleSendOtp = async () => {
-    if (!companyEmail || !emailDomainValid) {
+    // Build the email to send - if in prefix mode, construct it; otherwise use companyEmail directly
+    const emailToSend = useCustomDomain 
+      ? companyEmail 
+      : (emailPrefix ? `${emailPrefix}@${suggestedDomain}` : companyEmail);
+    
+    if (!emailToSend || !emailDomainValid) {
       setVerificationError('Please enter a valid company email');
       return;
     }
@@ -316,13 +360,14 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     try {
       setSendingOtp(true);
       setVerificationError('');
-      const response = await refopenAPI.sendCompanyEmailOTP(workExpId, companyEmail);
+      console.log('Sending OTP to:', emailToSend); // Debug log
+      const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       
       if (response.success) {
         setShowOtpInput(true);
         setOtp(['', '', '', '']);
         setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
-        Alert.alert('Success', `OTP sent to ${response.data?.email || companyEmail}`);
+        Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
       }
@@ -393,6 +438,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
 
   const resetVerificationState = () => {
     setCompanyEmail('');
+    setEmailPrefix('');
     setEmailDomainValid(false);
     setShowOtpInput(false);
     setOtp(['', '', '', '']);
@@ -400,6 +446,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     setEmailVerified(false);
     setUserLevelVerified(false);
     setOtpExpiryTime(null);
+    setUseCustomDomain(false);
   };
 
   const applyOrgFilter = (list, q) => {
@@ -561,6 +608,10 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     resetVerificationState();
     if (item.CompanyEmail) {
       setCompanyEmail(item.CompanyEmail);
+      // Extract prefix for the prefix input
+      if (item.CompanyEmail.includes('@')) {
+        setEmailPrefix(item.CompanyEmail.split('@')[0]);
+      }
       setEmailDomainValid(true);
     }
     if (item.CompanyEmailVerified) {
@@ -918,23 +969,44 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
                     <Text style={styles.verificationSubtitle}>
                       Verify your company email to become a verified referrer and earn rewards.
                     </Text>
-                    {/* Email Input */}
+                    {/* Email Input - Either prefix with domain OR full email */}
                     <View style={styles.emailInputRow}>
-                      <TextInput
-                        style={[
-                          styles.emailInput,
+                      {useCustomDomain ? (
+                        <TextInput
+                          style={[
+                            styles.emailInput,
+                            emailDomainValid && styles.emailInputValid,
+                            companyEmail && !emailDomainValid && styles.emailInputInvalid
+                          ]}
+                          value={companyEmail}
+                          onChangeText={handleCompanyEmailChange}
+                          placeholder={`your.name@${suggestedDomain}`}
+                          placeholderTextColor={colors.gray400}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          editable={!showOtpInput}
+                        />
+                      ) : (
+                        <View style={[
+                          styles.emailInputContainer,
                           emailDomainValid && styles.emailInputValid,
-                          companyEmail && !emailDomainValid && styles.emailInputInvalid
-                        ]}
-                        value={companyEmail}
-                        onChangeText={handleCompanyEmailChange}
-                        placeholder={`your.name@${normalizeCompanyName(form.companyName) || 'company'}.com`}
-                        placeholderTextColor={colors.gray400}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        editable={!showOtpInput}
-                      />
+                          emailPrefix && !emailDomainValid && styles.emailInputInvalid
+                        ]}>
+                          <TextInput
+                            style={styles.emailPrefixInput}
+                            value={emailPrefix}
+                            onChangeText={handleEmailPrefixChange}
+                            placeholder="your.name"
+                            placeholderTextColor={colors.gray400}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            editable={!showOtpInput}
+                          />
+                          <Text style={styles.emailDomainSuffix}>@{suggestedDomain}</Text>
+                        </View>
+                      )}
                       {!showOtpInput && (
                         <TouchableOpacity
                           style={[
@@ -953,8 +1025,25 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
                       )}
                     </View>
 
-                    {/* Domain validation hint */}
-                    {companyEmail && !emailDomainValid && (
+                    {/* Option to use different domain / switch back */}
+                    {!showOtpInput && (
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setUseCustomDomain(!useCustomDomain);
+                          // Reset email state when switching
+                          setCompanyEmail('');
+                          setEmailPrefix('');
+                          setEmailDomainValid(false);
+                        }}
+                      >
+                        <Text style={styles.differentDomainLink}>
+                          {useCustomDomain ? `Use @${suggestedDomain}` : 'Use different email domain?'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Domain validation hint for custom domain */}
+                    {useCustomDomain && companyEmail && !emailDomainValid && (
                       <Text style={styles.domainHint}>
                         Email domain should match your company ({form.companyName || 'company'})
                       </Text>
@@ -1653,6 +1742,41 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'nowrap',
+  },
+  emailInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+    minWidth: 0, // Allow shrinking
+  },
+  emailPrefixInput: {
+    flex: 1,
+    minWidth: 80,
+    padding: 12,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text,
+  },
+  emailDomainSuffix: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray500 || '#6B7280',
+    backgroundColor: colors.gray100 || '#F3F4F6',
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border || '#E5E7EB',
+    flexShrink: 0, // Don't shrink the domain
+  },
+  differentDomainLink: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.primary || '#6366F1',
+    marginTop: 6,
+    textDecorationLine: 'underline',
   },
   emailInput: {
     flex: 1,

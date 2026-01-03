@@ -428,19 +428,20 @@ export class ReferralService {
 
     /**
      * Get available referral requests for a referrer (same organization)
+     * ✅ FIXED: Added IsActive = 1 to exclude soft-deleted work experiences
      */
     static async getAvailableRequests(referrerId: string, page: number = 1, pageSize: number = 20, filters?: ReferralRequestsFilter): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // ✅ FIX: Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
-            // Get referrer's current organization
+            // ✅ FIXED: Get referrer's current ACTIVE organization (IsActive = 1 excludes soft-deleted)
             const referrerOrgQuery = `
                 SELECT we.OrganizationID
                 FROM WorkExperiences we
                 INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1
+                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND we.IsActive = 1
             `;
             const referrerOrgResult = await dbService.executeQuery(referrerOrgQuery, [referrerId]);
             

@@ -185,7 +185,8 @@ export class WorkExperienceService {
     if (!existing) throw new NotFoundError('Work experience not found');
 
     // ? NEW: Handle current work experience logic for updates too
-    const isBeingSetToCurrent = data.isCurrent === true || data.isCurrent === 1;
+    const wasCurrentBefore = existing.IsCurrent === 1 || existing.IsCurrent === true;
+    const isBeingSetToCurrent = (data.isCurrent === true || data.isCurrent === 1) && !wasCurrentBefore;
     let newStartDate: Date | null = null;
 
     if (data.startDate !== undefined) {
@@ -256,11 +257,15 @@ export class WorkExperienceService {
     } catch (e) { console.warn('Completeness recalculation failed (update):', (e as any)?.message); }
 
     // Reset verified referrer if setting to current OR if organization changed on current job
-    const wasCurrentBefore = existing.IsCurrent === 1 || existing.IsCurrent === true;
-    const organizationChanged = (data.organizationId !== undefined || data.companyName !== undefined) &&
-      ((data.organizationId !== existing.OrganizationID) || (data.companyName !== existing.CompanyName));
+    // Check if organization actually changed (normalize for comparison)
+    const normalizeCompanyName = (name: string | string[] | null | undefined): string => 
+      (Array.isArray(name) ? name[0] : name || '').toLowerCase().trim();
     
-    if (isBeingSetToCurrent || (wasCurrentBefore && organizationChanged)) {
+    const orgActuallyChanged = 
+      (data.organizationId !== undefined && data.organizationId !== existing.OrganizationID) ||
+      (data.companyName !== undefined && normalizeCompanyName(data.companyName) !== normalizeCompanyName(existing.CompanyName));
+    
+    if (isBeingSetToCurrent || (wasCurrentBefore && orgActuallyChanged)) {
       try {
         const userResult = await dbService.executeQuery(
           'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
