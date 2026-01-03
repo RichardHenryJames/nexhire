@@ -118,7 +118,8 @@ const ResumeUploadModal = ({
                 IsPrimary: existingResumes.length === 0
               };
               onResumeSelected(resumeData);
-              onClose();
+              // ✅ FIX: Don't call onClose() here - let the parent handle closing
+              // onResumeSelected callback will close the modal and handle cleanup
             } else {
               console.error('Upload failed:', uploadResult);
               Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
@@ -171,7 +172,8 @@ const ResumeUploadModal = ({
             IsPrimary: existingResumes.length === 0
           };
           onResumeSelected(resumeData);
-          onClose();
+          // ✅ FIX: Don't call onClose() here - let the parent handle closing
+          // onResumeSelected callback will close the modal and handle cleanup
         } else {
           Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
         }
@@ -213,7 +215,8 @@ const ResumeUploadModal = ({
 
   const handleSelectExistingResume = (resume) => {
     onResumeSelected(resume);
-    onClose();
+    // ✅ FIX: Don't call onClose() here - let the parent handle closing
+    // onResumeSelected callback will close the modal and handle cleanup
   };
 
   const renderContent = () => {

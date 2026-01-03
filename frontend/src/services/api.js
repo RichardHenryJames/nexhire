@@ -1952,12 +1952,6 @@ if (!resumeId) {
     return this.apiCall('/referral/plans');
   }
 
-  // Check referral eligibility
-  async checkReferralEligibility() {
-    if (!this.token) return { success: false, error: 'Authentication required' };
-    return this.apiCall('/referral/eligibility');
-  }
-
   // Create referral request (supports both internal and external)
   async createReferralRequest(requestData) {
     try {

@@ -52,12 +52,6 @@ export default function ApplicationsScreen({ navigation }) {
 
   // NEW: Referral state management
   const [referredJobIds, setReferredJobIds] = useState(new Set());
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null
-  });
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [pendingJobForApplication, setPendingJobForApplication] = useState(null);
   const [referralMode, setReferralMode] = useState(false);
@@ -194,18 +188,11 @@ export default function ApplicationsScreen({ navigation }) {
   const loadReferralData = async () => {
     if (!user || !isJobSeeker) return;
     try {
-      const [referralRes, eligibilityRes] = await Promise.all([
-        refopenAPI.getMyReferralRequests(1, 500),
-        refopenAPI.checkReferralEligibility()
-      ]);
+      const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
       
       if (referralRes?.success && referralRes.data?.requests) {
         const ids = new Set(referralRes.data.requests.map(r => r.JobID));
         setReferredJobIds(ids);
-      }
-      
-      if (eligibilityRes?.success) {
-        setReferralEligibility(eligibilityRes.data);
       }
     } catch (e) {
       console.warn('Failed to load referral data:', e.message);
@@ -410,14 +397,6 @@ export default function ApplicationsScreen({ navigation }) {
         ]
       );
       
-      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
-      setTimeout(() => {
-        const state = navigation.getState?.();
-        const currentRoute = state?.routes?.[state.index]?.name;
-        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
-        }
-      }, 3000);
     } catch (error) {
       console.error('Error showing subscription modal:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
@@ -441,11 +420,6 @@ export default function ApplicationsScreen({ navigation }) {
         if (res?.success) {
           // 🎉 Store pending - will mark as referred when overlay closes
           setPendingReferralJobId(id);
-          setReferralEligibility(prev => ({
-            ...prev,
-            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-            isEligible: prev.dailyQuotaRemaining > 1
-          }));
           
           // 🎉 Show fullscreen success overlay for 1 second
           setReferralCompanyName(referralConfirmData.companyName || '');
@@ -499,11 +473,6 @@ export default function ApplicationsScreen({ navigation }) {
       if (res?.success) {
         // 🎉 Store pending - will mark as referred when overlay closes
         setPendingReferralJobId(id);
-        setReferralEligibility(prev => ({ 
-          ...prev, 
-          dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-          isEligible: prev.dailyQuotaRemaining > 1
-        }));
         
         // 🎉 Show fullscreen success overlay for 1 second
         setReferralCompanyName(job.OrganizationName || job.CompanyName || '');

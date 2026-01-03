@@ -25,7 +25,6 @@ export default function ReferralPlansScreen({ navigation }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState(null);
-  const [eligibility, setEligibility] = useState(null);
 
   // Add navigation check at component load
   useEffect(() => {
@@ -35,10 +34,9 @@ export default function ReferralPlansScreen({ navigation }) {
   const loadPlansAndSubscription = async () => {
     try {
       setLoading(true);
-      const [plansRes, subscriptionRes, eligibilityRes] = await Promise.all([
+      const [plansRes, subscriptionRes] = await Promise.all([
         refopenAPI.getReferralPlans(),
-        refopenAPI.getCurrentReferralSubscription(),
-        refopenAPI.checkReferralEligibility()
+        refopenAPI.getCurrentReferralSubscription()
       ]);
 
       if (plansRes.success) {
@@ -47,10 +45,6 @@ export default function ReferralPlansScreen({ navigation }) {
 
       if (subscriptionRes.success) {
         setCurrentSubscription(subscriptionRes.data);
-      }
-
-      if (eligibilityRes.success) {
-        setEligibility(eligibilityRes.data);
       }
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -193,20 +187,15 @@ export default function ReferralPlansScreen({ navigation }) {
         </Text>
 
         {/* Current Status */}
-        {eligibility && (
+        {currentSubscription && (
           <View style={styles.statusCard}>
             <View style={styles.statusHeader}>
               <Ionicons name="information-circle" size={20} color={colors.primary} />
               <Text style={styles.statusTitle}>Current Status</Text>
             </View>
             <Text style={styles.statusText}>
-              Daily quota: {eligibility.dailyQuotaRemaining} of {eligibility.hasActiveSubscription ? currentSubscription?.ReferralsPerDay || 0 : 5} remaining
+              Active plan: {currentSubscription.PlanName}
             </Text>
-            {currentSubscription && (
-              <Text style={styles.statusText}>
-                Active plan: {currentSubscription.PlanName}
-              </Text>
-            )}
           </View>
         )}
 

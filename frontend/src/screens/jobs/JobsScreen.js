@@ -1355,11 +1355,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         if (res?.success) {
           // 🎉 Store pending job ID - will mark as referred when overlay closes
           setPendingReferralJobId(id);
-          setReferralEligibility(prev => ({
-            ...prev,
-            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-            isEligible: prev.dailyQuotaRemaining > 1
-          }));
           
           // 🎉 Show fullscreen success overlay
           setReferralCompanyName(job.OrganizationName || '');
