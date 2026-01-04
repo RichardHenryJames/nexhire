@@ -1,13 +1,19 @@
 # RefOpen Referral Status History Schema Deployment Script
 
 param(
-    [string]$ConnectionString = $env:DB_CONNECTION_STRING
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING,
+    [string]$KeyVaultName = "refopen-keyvault-prod"
 )
 
+# Auto-load credentials from Key Vault if not provided
 if (-not $ConnectionString) {
-    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
-    Write-Host "Run: . .\scripts\Load-DbCredentials.ps1" -ForegroundColor Yellow
-    exit 1
+    Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+    $ConnectionString = az keyvault secret show --vault-name $KeyVaultName --name "DbConnectionString" --query "value" -o tsv 2>$null
+    if (-not $ConnectionString) {
+        Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+        exit 1
+    }
+    Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
 }
 
 Write-Host "📊 Setting up Referral Status History Schema..." -ForegroundColor Green

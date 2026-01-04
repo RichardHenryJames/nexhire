@@ -69,13 +69,19 @@ $EnvironmentUrls = @{
 # Get API base URL
 $BaseUrl = if ($ApiBaseUrl) { $ApiBaseUrl } else { $EnvironmentUrls[$Environment] }
 
-# Get connection string from environment (no hardcoded default)
+# Get connection string from environment or Key Vault
 $DefaultConnectionString = $env:DB_CONNECTION_STRING
+$KeyVaultName = "refopen-keyvault-prod"
 
 if (-not $ConnectionString -and ($Action -in @("setup", "logs"))) {
     if (-not $DefaultConnectionString) {
-        Write-Error "DB_CONNECTION_STRING environment variable is required for '$Action' action"
-        exit 1
+        Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+        $DefaultConnectionString = az keyvault secret show --vault-name $KeyVaultName --name "DbConnectionString" --query "value" -o tsv 2>$null
+        if (-not $DefaultConnectionString) {
+            Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+            exit 1
+        }
+        Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
     }
     $ConnectionString = $DefaultConnectionString
 }

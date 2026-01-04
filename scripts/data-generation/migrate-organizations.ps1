@@ -1,5 +1,5 @@
 # ================================================================
-# Data Migration Script: RefOpen ? RefOpen Organizations
+# Data Migration Script: RefOpen → RefOpen Organizations
 # ================================================================
 # Migrates organization data from RefOpen database to RefOpen database
 # ================================================================
@@ -7,20 +7,27 @@
 param(
     [string]$SourceConnectionString = $env:SOURCE_DB_CONNECTION_STRING,
     [string]$TargetConnectionString = $env:DB_CONNECTION_STRING,
+    [string]$KeyVaultName = "refopen-keyvault-prod",
     [switch]$DryRun,
     [switch]$SkipDuplicates
 )
 
+# Auto-load credentials from Key Vault if not provided
 if (-not $TargetConnectionString) {
-    Write-Error "DB_CONNECTION_STRING environment variable or -TargetConnectionString parameter is required"
-    exit 1
+    Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+    $TargetConnectionString = az keyvault secret show --vault-name $KeyVaultName --name "DbConnectionString" --query "value" -o tsv 2>$null
+    if (-not $TargetConnectionString) {
+        Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+        exit 1
+    }
+    Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
 }
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "??????????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  DATA MIGRATION: RefOpen ? RefOpen Organizations              ?" -ForegroundColor Cyan
-Write-Host "??????????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦" -ForegroundColor Cyan
+Write-Host "📦  DATA MIGRATION: RefOpen → RefOpen Organizations              📦" -ForegroundColor Cyan
+Write-Host "📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦📦" -ForegroundColor Cyan
 Write-Host ""
 
 if ($DryRun) {

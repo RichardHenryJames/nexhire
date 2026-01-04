@@ -1,6 +1,10 @@
 #!/usr/bin/env pwsh
 # Diagnose database performance issues
 
+param(
+    [string]$KeyVaultName = "refopen-keyvault-prod"
+)
+
 Write-Host "`n==== DATABASE PERFORMANCE DIAGNOSTICS ====`n" -ForegroundColor Cyan
 
 $server = $env:DB_SERVER ?? "refopen-sqlserver-ci.database.windows.net"
@@ -8,9 +12,15 @@ $database = $env:DB_NAME ?? "refopen-sql-db"
 $username = $env:DB_USER ?? "sqladmin"
 $password = $env:DB_PASSWORD
 
+# Auto-load password from Key Vault if not provided
 if (-not $password) {
-    Write-Error "DB_PASSWORD environment variable is required"
-    exit 1
+    Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+    $password = az keyvault secret show --vault-name $KeyVaultName --name "SqlPassword" --query "value" -o tsv 2>$null
+    if (-not $password) {
+        Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+        exit 1
+    }
+    Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
 }
 
 # Test 1: Check index fragmentation

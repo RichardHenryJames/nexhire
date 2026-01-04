@@ -37,6 +37,9 @@ param(
     [string]$ConnectionString = $env:DB_CONNECTION_STRING,
     
     [Parameter(Mandatory=$false)]
+    [string]$KeyVaultName = "refopen-keyvault-prod",
+    
+    [Parameter(Mandatory=$false)]
     [switch]$DryRun,
     
     [Parameter(Mandatory=$false)]
@@ -46,6 +49,17 @@ param(
     [Parameter(Mandatory=$false)]
     [switch]$DeleteDuplicates
 )
+
+# Auto-load credentials from Key Vault if not provided
+if (-not $ConnectionString) {
+    Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+    $ConnectionString = az keyvault secret show --vault-name $KeyVaultName --name "DbConnectionString" --query "value" -o tsv 2>$null
+    if (-not $ConnectionString) {
+        Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+        exit 1
+    }
+    Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
+}
 
 $ErrorActionPreference = "Continue"
 

@@ -9,15 +9,22 @@
 # ============================================================================
 
 param(
-    [switch]$Execute = $false
+    [switch]$Execute = $false,
+    [string]$KeyVaultName = "refopen-keyvault-prod"
 )
 
-# Connection string from environment
+# Connection string from environment or Key Vault
 $ConnectionString = $env:DB_CONNECTION_STRING
 
+# Auto-load credentials from Key Vault if not provided
 if (-not $ConnectionString) {
-    Write-Host "ERROR: DB_CONNECTION_STRING environment variable is required" -ForegroundColor Red
-    exit 1
+    Write-Host "🔐 Loading credentials from Azure Key Vault..." -ForegroundColor Cyan
+    $ConnectionString = az keyvault secret show --vault-name $KeyVaultName --name "DbConnectionString" --query "value" -o tsv 2>$null
+    if (-not $ConnectionString) {
+        Write-Error "Failed to load credentials. Ensure you're logged in: az login"
+        exit 1
+    }
+    Write-Host "✅ Credentials loaded from Key Vault" -ForegroundColor Green
 }
 
 # Colors for output
