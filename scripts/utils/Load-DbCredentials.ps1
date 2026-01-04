@@ -1,8 +1,8 @@
 # ================================================================
 # Load Database Credentials from Azure Key Vault
 # ================================================================
-# Usage: . .\scripts\Load-DbCredentials.ps1
-# Then run your script: .\setup-database.ps1
+# Usage: . .\scripts\utils\Load-DbCredentials.ps1
+# Then run your script: .\scripts\database\setup-database.ps1
 # ================================================================
 
 param(
