@@ -1,13 +1,12 @@
 /**
  * Referral Controllers - HTTP Request Handlers
  * RefOpen Referral System API Endpoints
- * ? ALL USING WORKING AUTHENTICATION PATTERN
  */
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { 
     withErrorHandling, 
-    authenticate  // ? Use authenticate like work experience controllers
+    authenticate
 } from '../middleware';
 import { 
     successResponse, 
@@ -146,7 +145,7 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
             throw new ValidationError('Resume ID is required');
         }
 
-        // ? NEW SCHEMA: Validate based on presence of jobID vs extJobID
+        // Validate based on presence of jobID vs extJobID
         const hasJobID = !!requestData.jobID;
         const hasExtJobID = !!requestData.extJobID;
         
@@ -194,7 +193,7 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
             jsonBody: successResponse(request, `Referral request created successfully. ₹${referralCost} deducted from wallet.`)
         };
     } catch (error: any) {
-        // ? NEW: Handle insufficient wallet balance error
+        // Handle insufficient wallet balance error
         if (error instanceof ValidationError && error.message === 'INSUFFICIENT_WALLET_BALANCE') {
             return {
                 status: 402, // Payment Required
@@ -227,7 +226,7 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
@@ -242,7 +241,7 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // ? FIX: Use the service method instead of direct SQL
+        // Use the service method
         const result = await ReferralService.getMyReferralRequests(applicantId, page, pageSize);
         
         return {
@@ -269,7 +268,7 @@ export const getAvailableRequests = withErrorHandling(async (req: HttpRequest, c
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
         
@@ -418,7 +417,7 @@ export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, 
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 

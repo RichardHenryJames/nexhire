@@ -306,7 +306,7 @@ export class MessagingService {
       CASE WHEN @User1ID = @param1 THEN @User2ID ELSE @User1ID END as ReceiverUserID
     `;
 
-    // ✅ OPTIMIZATION 2: Execute as single batch query
+    // Execute as single batch query for performance
     const result = await dbService.executeQuery(combinedQuery, [
       conversationId,
       senderUserId,
@@ -323,22 +323,10 @@ export class MessagingService {
     const newMessage = result.recordset[0];
     const receiverUserId = newMessage.ReceiverUserID;
 
-    console.log(
-      `📤 Attempting to emit message via SignalR to receiver: ${receiverUserId}`
-    );
-
-    // ✅ OPTIMIZATION 3: Fire SignalR async (don't await - let it run in background)
-    // This makes the API response instant
+    // Fire SignalR async (don't await - makes API response instant)
     SignalRService.emitNewMessage(conversationId, newMessage, receiverUserId)
-      .then(() => console.log(`✅ SignalR emission completed successfully`))
       .catch((err) => {
-        console.error("❌ SignalR emit error (non-critical):", err);
-        console.error("Error details:", {
-          message: err.message,
-          stack: err.stack,
-          conversationId,
-          receiverUserId,
-        });
+        console.error("SignalR emit error (non-critical):", err.message);
       });
 
     // Remove internal field from response

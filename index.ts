@@ -1,26 +1,26 @@
 import { app } from "@azure/functions";
 import type { InvocationContext, Timer } from "@azure/functions";
 
-// FIXED: Import CORS middleware
 import { withErrorHandling, corsHeaders } from "./src/middleware";
 
-// Import controllers
+// User controllers
 import {
   register,
   login,
-  logout, // FIXED: Add logout import
+  logout,
   getProfile,
   updateProfile,
-  updateEducation, // NEW: Add education update import
+  updateEducation,
   changePassword,
   verifyEmail,
   getDashboardStats,
   deactivateAccount,
   refreshToken,
-  googleLogin, // NEW: Google OAuth login
-  googleRegister, // NEW: Google OAuth registration
-  getMyReferralCode, // NEW: Get user's referral code and stats
+  googleLogin,
+  googleRegister,
+  getMyReferralCode,
 } from "./src/controllers/user.controller";
+// Job controllers
 import {
   createJob,
   getJobs,
@@ -32,8 +32,8 @@ import {
   searchJobs,
   getJobsByOrganization,
   getCurrencies,
-  getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
-  getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
+  getAIRecommendedJobs,
+  getAIJobFilters,
 } from "./src/controllers/job.controller";
 import {
   applyForJob,
@@ -44,17 +44,18 @@ import {
   getApplicationDetails,
   getApplicationStats,
 } from "./src/controllers/job-application.controller";
+// Reference controllers
 import {
   getOrganizations,
   getOrganizationById,
   getColleges,
   getUniversitiesByCountry,
   getIndustries,
-  getCountries, // NEW: Add countries import
+  getCountries,
 } from "./src/controllers/reference.controller";
 import { initializeEmployer } from "./src/controllers/employer.controller";
 
-// NEW: Reference Metadata controller
+// Reference metadata controllers
 import {
   getReferenceMetadata,
   getCategoriesByType,
@@ -62,7 +63,7 @@ import {
   getReferenceById,
 } from "./src/controllers/reference-metadata.controller";
 
-// NEW: Work experience controllers
+// Work experience controllers
 import {
   getMyWorkExperiences,
   getWorkExperiences,
@@ -77,7 +78,7 @@ import {
   getMySavedJobs as getMySavedJobsCtrl,
 } from "./src/controllers/saved-jobs.controller";
 
-// Import referral controllers
+// Referral controllers
 import {
   getReferralPlans,
   purchaseReferralPlan,
@@ -85,22 +86,22 @@ import {
   checkReferralEligibility,
   createReferralRequest,
   getMyReferralRequests,
-  getAvailableRequests, // FIXED: Correct import name
+  getAvailableRequests,
   claimReferralRequest,
   verifyReferralCompletion,
   getMyReferrerRequests,
-  getCompletedReferrals, // NEW: Get completed referrals for closed tab
+  getCompletedReferrals,
   getReferralAnalytics,
-  claimReferralRequest as claimReferralRequestWithProof, // FIXED: Use alias for now
+  claimReferralRequest as claimReferralRequestWithProof,
   cancelReferralRequest,
   getReferrerStats,
-  getReferralPointsHistory, // NEW: Add points history import
-  convertPointsToWallet, // NEW: Convert points to wallet
-  logReferralStatus, // NEW: Log referral status changes
-  getReferralStatusHistory, // NEW: Get referral status history
+  getReferralPointsHistory,
+  convertPointsToWallet,
+  logReferralStatus,
+  getReferralStatusHistory,
 } from "./src/controllers/referral.controller";
 
-// NEW: Payment controllers - Razorpay Integration
+// Payment controllers
 import {
   createRazorpayOrder,
   verifyPaymentAndActivateSubscription,

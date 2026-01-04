@@ -39,12 +39,14 @@ export interface ReferralRequest {
     ApplicantUserID?: string;
     ApplicantProfilePictureURL?: string;
     
-    // ?? NEW: Minimal external referral support
+    /** External referral support fields */
     ReferralType: 'internal' | 'external';
-    OrganizationID?: string; // ?? NEW: For external referrals, store matched organization ID
-    ReferralMessage?: string; // ?? NEW: Optional message from candidate to referrer
+    /** For external referrals, stores matched organization ID */
+    OrganizationID?: string;
+    /** Optional message from candidate to referrer */
+    ReferralMessage?: string;
     
-    // ?? NEW: Proof-related fields (fix TypeScript error)
+    /** Proof submission fields */
     ProofFileURL?: string;
     ProofFileType?: string;
     ProofDescription?: string;
@@ -84,11 +86,13 @@ export interface ReferrerStats {
 
 // Request/Response DTOs
 export interface CreateReferralRequestDto {
-    // ? NEW SCHEMA: Either jobID (internal UNIQUEIDENTIFIER) OR extJobID (external STRING)
-    jobID?: string; // Internal job UNIQUEIDENTIFIER - null for external referrals
-    extJobID?: string; // External job identifier STRING - null for internal referrals
+    /** Internal job UNIQUEIDENTIFIER - null for external referrals */
+    jobID?: string;
+    /** External job identifier STRING - null for internal referrals */
+    extJobID?: string;
     resumeID: string;
-    referralMessage?: string; // Optional message from candidate to referrer
+    /** Optional message from candidate to referrer */
+    referralMessage?: string;
     
     // External job details (for external referrals from AskReferral screen)
     jobTitle?: string; // Required for external referrals
@@ -136,7 +140,7 @@ export interface ReferralAnalytics {
     dailyQuotaUsed: number;
     dailyQuotaLimit: number;
     
-    // ?? NEW: Breakdown by referral type
+    /** Breakdown by referral type */
     internalRequests?: number;
     externalRequests?: number;
 }
@@ -157,7 +161,8 @@ export interface ReferralRequestsFilter {
     companyName?: string;
     dateFrom?: Date;
     dateTo?: Date;
-    referralType?: 'internal' | 'external'; // ?? NEW: Filter by type
+    /** Filter by referral type */
+    referralType?: 'internal' | 'external';
 }
 
 export interface PaginatedReferralRequests {
@@ -175,7 +180,7 @@ export interface ReferralNotificationSettings {
     pushNotifications: boolean;
 }
 
-// ?? NEW: External job matching interface
+/** External job matching interface for referrals to jobs not in system */
 export interface ExternalJobMatch {
     companyName: string;
     matchingReferrers: Array<{
@@ -185,7 +190,7 @@ export interface ExternalJobMatch {
         experienceYears: number;
     }>;
 
-    // ?? NEW: External job details
+    /** External job details */
     jobUrl?: string;
     jobDescription?: string;
     location?: string;

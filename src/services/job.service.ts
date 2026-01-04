@@ -293,18 +293,15 @@ export class JobService {
             paramIndex++;
         }
 
-        // Organization filter (multiple organizations support) - uses OrganizationID from Jobs table
+        // Organization filter (multiple organizations support)
         if (f.organizationIds) {
             const orgIdsStr = String(f.organizationIds).trim();
-            console.log('🔍 [BACKEND] Organization filter received:', { orgIdsStr });
             
             if (orgIdsStr) {
                 // Parse comma-separated organization IDs and convert to integers
                 const orgIds = orgIdsStr.split(',')
-                    .map(s => parseInt(s.trim(), 10))  // ✅ FIXED: Convert to integers
-                    .filter(n => !isNaN(n) && n > 0);   // ✅ FIXED: Filter out invalid numbers
-                
-                console.log('🔍 [BACKEND] Parsed organization IDs:', orgIds);
+                    .map(s => parseInt(s.trim(), 10))
+                    .filter(n => !isNaN(n) && n > 0);
                 
                 if (orgIds.length > 0) {
                     // Build IN clause with parameterized values
@@ -315,10 +312,7 @@ export class JobService {
                     }).join(',');
                     
                     whereClause += ` AND j.OrganizationID IN (${placeholders})`;
-                    queryParams.push(...orgIds);  // Now pushing integers instead of strings
-                    
-                    console.log('🔍 [BACKEND] WHERE clause addition:', `j.OrganizationID IN (${placeholders})`);
-                    console.log('🔍 [BACKEND] Query params added:', orgIds);
+                    queryParams.push(...orgIds);
                 }
             }
         }
@@ -622,18 +616,15 @@ export class JobService {
         const result = await dbService.executeQuery<Job>(query, [jobId]);
         
         if (result.recordset && result.recordset.length > 0) {
-            console.log(`[JobService] Job ${jobId} found in SQL database`);
             return result.recordset[0];
         }
 
         // If not found in SQL, search in archived jobs (blob storage)
         try {
-            console.log(`[JobService] Job ${jobId} not found in SQL, searching archives...`);
             const { JobArchiveService } = await import('./job-archive.service');
             const archivedJob = await JobArchiveService.getArchivedJob(jobId);
             
             if (archivedJob) {
-                console.log(`[JobService] Job ${jobId} found in archive`);
                 // Add flag that this is an archived job
                 // Frontend uses IsArchived flag to hide Apply/Refer buttons
                 return {
@@ -643,10 +634,9 @@ export class JobService {
                 } as Job;
             }
         } catch (archiveError: any) {
-            console.error(`[JobService] Error searching archives for job ${jobId}:`, archiveError.message);
+            console.error(`Error searching archives for job ${jobId}:`, archiveError.message);
         }
 
-        console.log(`[JobService] Job ${jobId} not found in SQL or archives`);
         return null;
     }
 
@@ -919,11 +909,11 @@ export class JobService {
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (page-based only) - OPTIMIZED for performance
+    /**
+     * Search jobs with advanced filters and pagination
+     * Supports personalization based on user preferences
+     */
     static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; hasMore: boolean; nextCursor: any | null }> {
-        const searchStartTime = Date.now();
-        console.log('🔍 searchJobs started:', { searchParams, timestamp: new Date().toISOString() });
-
         try {
             const { page = 1, pageSize = 20, excludeUserApplications, ...rest } = searchParams || {};
             const f = { ...rest } as any;
@@ -1001,29 +991,14 @@ export class JobService {
             dataParams.push(offset, pageSizeNum + 1);
             paramIndex += 2;
 
-            console.log('🔍 Executing data query');
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-            const dataTime = Date.now() - dataStartTime;
             const fetched = dataResult.recordset || [];
             const hasMore = fetched.length > pageSizeNum;
             const rows = hasMore ? fetched.slice(0, pageSizeNum) : fetched;
 
-            console.log('✅ Data query completed:', { rowCount: rows.length, hasMore, dataTime: `${dataTime}ms` });
-
-            const totalTime = Date.now() - searchStartTime;
-            console.log('✅ searchJobs completed:', {
-                totalTime: `${totalTime}ms`,
-                dataTime: `${dataTime}ms`,
-                returned: rows.length
-            });
-
             return { jobs: rows, hasMore, nextCursor: null };
         } catch (error) {
-            const totalTime = Date.now() - searchStartTime;
-            console.error('❌ Error in JobService.searchJobs:', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                totalTime: `${totalTime}ms`
-            });
+            console.error('Error in JobService.searchJobs:', error instanceof Error ? error.message : 'Unknown error');
             return { jobs: [], hasMore: false, nextCursor: null };
         }
     }

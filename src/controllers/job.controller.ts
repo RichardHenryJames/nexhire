@@ -61,7 +61,10 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['write:jobs']);
 
-// Get all jobs (paged, supports cursor) - FIXED: User-aware filtering
+/**
+ * Get all active jobs with pagination
+ * Excludes jobs the user has already applied to
+ */
 export const getJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const params = extractQueryParams(req);
@@ -180,90 +183,48 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['delete:jobs']);
 
-// Search jobs (paged, supports cursor) - FIXED: User-aware filtering
+/**
+ * Search jobs with filters and pagination
+ * Excludes jobs the user has already applied to or saved
+ */
 export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    // ?? START: Measure total API response time
-    const apiStartTime = Date.now();
-    console.log('?? /search/jobs API called:', {
-        userId: user.userId,
-        timestamp: new Date().toISOString()
-    });
-
- try {
+    try {
         const searchParams = extractQueryParams(req);
-        
-        console.log('?? Search params received:', {
-     search: searchParams.search,
- page: searchParams.page,
-    pageSize: searchParams.pageSize,
-     filters: Object.keys(searchParams).filter(k => !['search', 'page', 'pageSize'].includes(k)),
-       timestamp: new Date().toISOString()
-        });
 
         const safeParams = { 
-        ...searchParams, 
-       page: searchParams.page || 1, 
-pageSize: searchParams.pageSize || 20,
-       // Add user filtering for applied/saved exclusion
-     excludeUserApplications: user.userId
+            ...searchParams, 
+            page: searchParams.page || 1, 
+            pageSize: searchParams.pageSize || 20,
+            excludeUserApplications: user.userId
         } as any;
    
-        // ?? Measure service call
-const serviceStartTime = Date.now();
-  const result = await JobService.searchJobs(safeParams);
-        const serviceTime = Date.now() - serviceStartTime;
-   
-        console.log('? JobService.searchJobs completed:', {
-       serviceTime: `${serviceTime}ms`,
- jobsReturned: result.jobs.length,
-  timestamp: new Date().toISOString()
-        });
-     const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
-        
-        const totalTime = Date.now() - apiStartTime;
-        console.log('? /search/jobs API response ready:', {
-      totalApiTime: `${totalTime}ms`,
-            serviceTime: `${serviceTime}ms`,
-            overheadTime: `${totalTime - serviceTime}ms`,
-      timestamp: new Date().toISOString()
-    });
+        const result = await JobService.searchJobs(safeParams);
+        const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
 
         return {
             status: 200,
             jsonBody: successResponse(result.jobs, 'Jobs search completed', {
-    page: safeParams.page,
-    pageSize: safeParams.pageSize,
-     hasMore: result.hasMore,
+                page: safeParams.page,
+                pageSize: safeParams.pageSize,
+                hasMore: result.hasMore,
                 nextCursor: result.nextCursor,
-        searchQuery,
-_performanceMs: totalTime // Include in response for frontend monitoring
+                searchQuery
             })
         };
     } catch (error) {
-        const totalTime = Date.now() - apiStartTime;
-  console.error('? Error in searchJobs:', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-   totalTime: `${totalTime}ms`,
-      timestamp: new Date().toISOString()
-        });
+        console.error('Error in searchJobs:', error);
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to search jobs' } };
     }
 }, ['read:jobs']);
 
-// Get jobs by organization
+/**
+ * Get jobs for a specific organization
+ * Requires employer access to the organization
+ */
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
-    const postedByUserId = user.userId; // Always use the authenticated user's ID
-    
-    // ?? DEBUG: Log received params
-    console.log('?? Backend getJobsByOrganization params:', {
-        organizationId,
-        status: params.status,
-        page: params.page,
-        search: params.search,
-        postedByUserId // This will always be the authenticated user
-    });
+    const postedByUserId = user.userId;
     
     let validated: PaginationParams;
     try {
@@ -274,7 +235,6 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
 
     if (!organizationId) return { status: 400, jsonBody: { success: false, error: 'Organization ID is required' } };
     
-    // ? FIXED: Validate it's a valid integer, but keep as string for service method
     const orgIdNum = parseInt(organizationId);
     if (isNaN(orgIdNum) || orgIdNum <= 0) {
         return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID - must be a positive integer' } };
@@ -288,16 +248,13 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
 
-        // ?? CRITICAL FIX: Normalize and explicitly pass status
         const normalizedStatus = params.status ? String(params.status).trim() : undefined;
-        console.log('?? Normalized status:', normalizedStatus);
         
-        // ? SECURITY: Always filter by authenticated user's ID
         const extendedParams = {
             ...validated,
-            status: normalizedStatus, // ?? Explicitly pass normalized status
+            status: normalizedStatus,
             search: params.search,
-            postedByUserId // ? Always use authenticated user's ID
+            postedByUserId
         };
         
         // ?? DEBUG: Log params being sent to service

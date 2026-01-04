@@ -31,12 +31,6 @@ export class ProfileImageStorageService {
    */
   async uploadProfileImage(uploadData: ProfileImageUploadRequest): Promise<string> {
     try {
-      console.log('=== AZURE STORAGE UPLOAD DEBUG ===');
-      console.log('User ID:', uploadData.userId);
-      console.log('File name:', uploadData.fileName);
-      console.log('MIME type:', uploadData.mimeType);
-      console.log('File data length:', uploadData.fileData?.length || 0);
-
       // Create container client
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       
@@ -51,7 +45,6 @@ export class ProfileImageStorageService {
 
       // Convert base64 to buffer
       const buffer = Buffer.from(uploadData.fileData, 'base64');
-      console.log('Buffer size:', buffer.length);
 
       // Upload with proper content type
       const uploadResult = await blockBlobClient.upload(buffer, buffer.length, {
@@ -68,8 +61,6 @@ export class ProfileImageStorageService {
 
       // Get the public URL
       const imageUrl = blockBlobClient.url;
-      console.log('Image uploaded successfully:', imageUrl);
-      console.log('=== END AZURE STORAGE UPLOAD DEBUG ===');
 
       return imageUrl;
 
@@ -105,13 +96,11 @@ export class ProfileImageStorageService {
       }
 
       const blobName = urlParts.slice(containerIndex + 1).join('/');
-      console.log('??? Deleting old profile image:', blobName);
 
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       
       await blockBlobClient.deleteIfExists();
-      console.log('Old profile image deleted successfully');
 
     } catch (error: unknown) {
       console.error('Error deleting old profile image:', error);
@@ -192,10 +181,6 @@ function validateImageUpload(data: any): ProfileImageUploadRequest {
  */
 export async function uploadProfileImage(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    console.log('=== PROFILE IMAGE UPLOAD HANDLER ===');
-    console.log('Method:', req.method);
-    console.log('Headers:', Object.keys(req.headers));
-
     // Handle OPTIONS for CORS
     if (req.method === 'OPTIONS') {
       return {
@@ -221,15 +206,7 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
 
     // Parse and validate request body
     const requestBody = await req.json() as any;
-    console.log('Request body keys:', requestBody ? Object.keys(requestBody) : []);
-    
     const uploadData = validateImageUpload(requestBody);
-    console.log('Validated upload data:', {
-      fileName: uploadData.fileName,
-      userId: uploadData.userId,
-      mimeType: uploadData.mimeType,
-      fileDataLength: uploadData.fileData.length
-    });
 
     // Initialize storage service
     const storageService = new ProfileImageStorageService();
@@ -253,7 +230,6 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
       await UserService.updateProfile(uploadData.userId, {
         profilePictureURL: imageUrl
       });
-      console.log('User profile updated with new image URL');
     } catch (error: unknown) {
       console.error('Failed to update user profile with new image URL:', error);
       // Continue anyway - image is uploaded successfully
@@ -264,9 +240,6 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
       storageService.deleteOldProfileImage(uploadData.userId, oldImageUrl)
         .catch(error => console.warn('Failed to delete old profile image:', error));
     }
-
-    console.log('Profile image upload completed successfully');
-    console.log('=== END PROFILE IMAGE UPLOAD HANDLER ===');
 
     return {
       status: 200,

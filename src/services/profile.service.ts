@@ -19,7 +19,7 @@ interface ProfileData {
     [key: string]: any;
 }
 
-// ? NEW: Salary-related interfaces for the enhanced schema
+/** Salary component structure for detailed compensation breakdown */
 interface SalaryComponent {
     ComponentID: number;
     ComponentName: string;
@@ -66,7 +66,6 @@ export class ApplicantService {
             
             // If no applicant profile exists, create one
             if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-                console.log('Creating applicant profile for user:', userId);
                 await this.createApplicantProfile(userId);
                 
                 // Retry query after creation
@@ -79,7 +78,7 @@ export class ApplicantService {
 
             const profile = applicantResult.recordset[0];
 
-            // NEW: Compute derived current job fields and total experience from WorkExperiences
+            // Compute derived current job fields and total experience from WorkExperiences
             try {
                 const experiences = await dbService.executeQuery(
                     `SELECT TOP 1 * FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)
@@ -121,8 +120,7 @@ export class ApplicantService {
                 console.warn('Could not compute derived work experience fields:', e);
             }
 
-            // ?? GET REFERRAL STATS FOR PROFILE HEADER
-            // Note: AssignedReferrerID stores UserID, ApplicantID is for seeker
+            // Get referral stats for profile header (AssignedReferrerID = UserID)
             try {
                 const referralStatsQuery = `
                     SELECT 
@@ -155,7 +153,7 @@ export class ApplicantService {
                 };
             }
 
-            // ? NEW: Get salary breakdown for this applicant
+            // Get salary breakdown for this applicant
             try {
                 const salaryData = await this.getApplicantSalaryBreakdown(profile.ApplicantID);
                 profile.salaryBreakdown = salaryData;
@@ -164,7 +162,7 @@ export class ApplicantService {
                 profile.salaryBreakdown = { current: [], expected: [] };
             }
 
-            // ? NEW: Get resumes for this applicant
+            // Get resumes for this applicant
             try {
                 const resumes = await this.getApplicantResumes(profile.ApplicantID);
                 profile.resumes = resumes;
@@ -216,7 +214,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Get salary breakdown for an applicant
+    /** Get salary breakdown (current and expected) for an applicant */
     static async getApplicantSalaryBreakdown(applicantId: string): Promise<SalaryBreakdown> {
         try {
             const query = `
@@ -265,7 +263,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Update salary breakdown for an applicant
+    /** Update salary breakdown for an applicant */
     static async updateApplicantSalaryBreakdown(applicantId: string, salaryData: SalaryBreakdown): Promise<void> {
         try {
             // Delete existing salary records for this applicant
@@ -305,8 +303,6 @@ export class ApplicantService {
                 `, [salaryId, applicantId, component.ComponentID, component.Amount, 
                     component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
             }
-            
-            console.log(`Updated salary breakdown for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error updating salary breakdown:', error);
             throw error;
@@ -324,7 +320,7 @@ export class ApplicantService {
                 throw new Error('Could not determine applicant ID');
             }
 
-            // ? UPDATED: mapping does not include removed columns like CurrentCompany, CurrentJobTitle, YearsOfExperience, WorkExperience
+            // Field mapping (excludes removed columns: CurrentCompany, CurrentJobTitle, YearsOfExperience, WorkExperience)
             const fieldMapping: ApplicantFieldMapping = {
                 // Personal Information
                 'nationality': 'Nationality',
@@ -355,7 +351,6 @@ export class ApplicantService {
                 'preferredWorkTypes': 'PreferredWorkTypes',
                 'preferredRoles': 'PreferredRoles',
                 'preferredIndustries': 'PreferredIndustries',
-                // ? NEW: Keep MinimumSalary as a simple field for quick filtering
                 'minimumSalary': 'MinimumSalary',
                 'preferredCompanySize': 'PreferredCompanySize',
                 
@@ -374,7 +369,7 @@ export class ApplicantService {
                 'allowRecruitersToContact': 'AllowRecruitersToContact',
                 'hideCurrentCompany': 'HideCurrentCompany',
                 'hideSalaryDetails': 'HideSalaryDetails',
-                'openToRefer': 'OpenToRefer', // ? NEW: Enable referral functionality
+                'openToRefer': 'OpenToRefer',
 
                 // Status Fields
                 'isOpenToWork': 'IsOpenToWork',
@@ -385,7 +380,7 @@ export class ApplicantService {
                 'tags': 'Tags'
             };
 
-            // ? NEW: Handle salary breakdown separately if provided
+            // Handle salary breakdown separately if provided
             let salaryUpdated = false;
             if (profileData.salaryBreakdown) {
                 await this.updateApplicantSalaryBreakdown(applicantId, profileData.salaryBreakdown);
@@ -430,7 +425,7 @@ export class ApplicantService {
                 }
             });
 
-            // ? FIXED: Allow salary-only updates
+            // Allow salary-only updates (no profile field changes)
             if (updateFields.length === 0 && !salaryUpdated) {
                 throw new ValidationError('No valid fields provided for update');
             }
@@ -459,13 +454,6 @@ export class ApplicantService {
 
                 await dbService.executeQuery(updateQuery, parameters);
             }
-
-            console.log(`Updated applicant profile for user ${userId}:`, {
-                fieldsUpdated: Object.keys(profileData).filter(key => key in fieldMapping),
-                applicantId: applicantId,
-                profileFieldsCount: updateFields.length > 0 ? updateFields.length - 2 : 0, // Exclude ProfileCompleteness and UpdatedAt
-                salaryUpdated: salaryUpdated
-            });
 
             // Return updated profile with salary breakdown
             return await this.getApplicantProfile(userId);
@@ -501,12 +489,10 @@ export class ApplicantService {
         `;
         
         await dbService.executeQuery(query, [applicantId, userId]);
-        console.log(`Created applicant profile ${applicantId} for user ${userId}`);
-        
         return applicantId;
     }
 
-    // ? NEW: Get available salary components for frontend
+    /** Get available salary components for frontend dropdown */
     static async getSalaryComponents(): Promise<any[]> {
         try {
             const query = 'SELECT * FROM SalaryComponents WHERE IsActive = 1 ORDER BY ComponentID';
@@ -518,7 +504,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Get all resumes for an applicant (exclude soft-deleted)
+    /** Get all resumes for an applicant (excludes soft-deleted) */
     static async getApplicantResumes(applicantId: string): Promise<any[]> {
         try {
             const query = `
@@ -543,7 +529,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Get resume for historical viewing (include soft-deleted)
+    /** Get resume for historical viewing (includes soft-deleted for application history) */
     static async getResumeForViewing(resumeId: string): Promise<any | null> {
         try {
             const query = `
@@ -567,7 +553,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Get primary resume for an applicant
+    /** Get primary resume for an applicant */
     static async getPrimaryResume(applicantId: string): Promise<any | null> {
         try {
             const query = `
@@ -590,7 +576,7 @@ export class ApplicantService {
         }
     }
 
-    // ? NEW: Save a new resume for an applicant
+    /** Save a new resume for an applicant (max 3 resumes) */
     static async saveApplicantResume(applicantId: string, resumeData: any): Promise<string> {
         try {
             const resumeId = AuthService.generateUniqueId();
@@ -609,7 +595,7 @@ export class ApplicantService {
             const currentCount = countResult.recordset[0]?.ResumeCount || 0;
 
             if (currentCount >= 3) {
-                // ? FIXED: Get the oldest non-primary resume details BEFORE deleting
+                // Get the oldest non-primary resume details before deleting
                 const oldestResumeQuery = `
                     SELECT TOP 1 ResumeID, ResumeURL FROM ApplicantResumes 
                     WHERE ApplicantID = @param0 AND IsPrimary = 0
@@ -626,7 +612,7 @@ export class ApplicantService {
                         [oldestResume.ResumeID]
                     );
                     
-                    // ? FIXED: Delete file from storage too
+                    // Delete file from storage too
                     try {
                         const { ResumeStorageService } = await import('../services/resume-upload.service');
                         const storageService = new ResumeStorageService();
@@ -638,14 +624,11 @@ export class ApplicantService {
                         
                         if (userId && oldestResume.ResumeURL) {
                             await storageService.deleteOldResume(userId, oldestResume.ResumeURL);
-                            console.log(`??? Deleted old resume file from storage: ${oldestResume.ResumeURL}`);
                         }
                     } catch (storageError) {
                         console.warn('Failed to delete old resume from storage:', storageError);
                         // Continue - database cleanup succeeded
                     }
-                    
-                    console.log(`??? Removed oldest resume ${oldestResume.ResumeID} to make room for new resume`);
                 }
             }
 
@@ -668,7 +651,6 @@ export class ApplicantService {
                 resumeData.isPrimary ? 1 : 0
             ]);
 
-            console.log(`Saved resume ${resumeId} for applicant ${applicantId}`);
             return resumeId;
         } catch (error) {
             console.error('Error saving applicant resume:', error);
@@ -676,7 +658,7 @@ export class ApplicantService {
         }
     }
 
-    // ? UPDATED: Delete a resume (soft delete if referenced, hard delete otherwise)
+    /** Delete a resume (soft delete if referenced by applications/referrals, hard delete otherwise) */
     static async deleteApplicantResume(applicantId: string, resumeId: string): Promise<{ success: boolean; softDelete: boolean; message: string; applicationCount?: number; referralCount?: number; }> {
         try {
             // Verify resume exists
@@ -717,7 +699,6 @@ export class ApplicantService {
                     `UPDATE ApplicantResumes SET IsDeleted =1, DeletedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0 AND ApplicantID = @param1`,
                     [resumeId, applicantId]
                 );
-                console.log(`Soft deleted resume ${resumeId} (used in ${ApplicationCount} applications, ${ReferralCount} referrals)`);
                 return {
                     success: true,
                     softDelete: true,
@@ -733,7 +714,6 @@ export class ApplicantService {
                 [resumeId, applicantId]
             );
 
-            console.log(`Hard deleted resume ${resumeId}`);
             return { success: true, softDelete: false, message: 'Resume permanently deleted.' };
         } catch (error) {
             console.error('Error deleting applicant resume:', error);
@@ -741,7 +721,7 @@ export class ApplicantService {
         }
     }
 
-    // ? UPDATED: Set a resume as primary (cannot set deleted)
+    /** Set a resume as primary (cannot set deleted resume as primary) */
     static async setPrimaryResume(applicantId: string, resumeId: string): Promise<void> {
         try {
             const resumeQuery = 'SELECT ResumeID, IsDeleted FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1';
@@ -754,7 +734,6 @@ export class ApplicantService {
             }
             await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =0 WHERE ApplicantID = @param0', [applicantId]);
             await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =1, UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0', [resumeId]);
-            console.log(`Set resume ${resumeId} as primary for applicant ${applicantId}`);
         } catch (error) {
             console.error('Error setting primary resume:', error);
             throw error;
@@ -776,7 +755,6 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId]);
-            console.log(`Updated LastJobAppliedAt for user ${userId}`);
         } catch (error) {
             console.error('Error updating LastJobAppliedAt:', error);
             // Don't throw - this is non-critical
@@ -825,7 +803,6 @@ export class ApplicantService {
             `;
             
             await dbService.executeQuery(query, [userId, searchScore]);
-            console.log(`Updated SearchScore for user ${userId}: ${searchScore.toFixed(1)}`);
         } catch (error) {
             console.error('Error calculating search score:', error);
             // Don't throw - this is non-critical
@@ -957,8 +934,6 @@ export class EmployerService {
                 `;
                 await dbService.executeQuery(orgUpdateQuery, orgParams);
             }
-
-            console.log(`Updated employer profile for user ${userId}`);
 
             // Return updated profile
             return await this.getEmployerProfile(userId);

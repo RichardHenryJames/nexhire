@@ -58,18 +58,13 @@ export class NotificationService {
         seekerName: string;
         seekerId: string;
     }): Promise<{ notified: number; errors: string[] }> {
-        console.log(`📧 Notifying referrers for new referral request at ${data.companyName}`);
-
         try {
             // 1. Find all eligible referrers at this organization
             const referrers = await this.getEligibleReferrers(data.organizationId, data.seekerId);
             
             if (referrers.length === 0) {
-                console.log(`⚠️ No eligible referrers found for organization ${data.organizationId}`);
                 return { notified: 0, errors: ['No eligible referrers found'] };
             }
-
-            console.log(`📋 Found ${referrers.length} eligible referrers`);
 
             // 2. Queue notification for each referrer
             let notified = 0;
@@ -81,8 +76,7 @@ export class NotificationService {
                     const prefs = await this.getUserPreferences(referrer.userId);
                     
                     if (!prefs.EmailEnabled || !prefs.ReferralRequestEmail) {
-                        console.log(`⏭️ Skipping ${referrer.email} - notifications disabled`);
-                        continue;
+                        continue; // Skip - notifications disabled
                     }
 
                     // Queue the notification
@@ -104,7 +98,6 @@ export class NotificationService {
                 }
             }
 
-            console.log(`✅ Queued notifications for ${notified} referrers`);
             return { notified, errors };
 
         } catch (error: any) {
@@ -433,7 +426,6 @@ export class NotificationService {
                 ]);
             }
 
-            console.log(`✅ Updated notification preferences for user ${userId}`);
             return true;
         } catch (error: any) {
             console.error('❌ Failed to update notification preferences:', error);

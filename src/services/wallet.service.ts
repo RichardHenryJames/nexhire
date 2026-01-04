@@ -192,8 +192,6 @@ export class WalletService {
         expiresAt
       ]);
 
-      console.log(`Wallet recharge order created: ${order.id} for user ${userId}`);
-
       return {
         orderId: order.id,
         amount: order.amount,
@@ -306,8 +304,6 @@ export class WalletService {
          WHERE OrderID = @param0`,
         [order.OrderID, verificationData.razorpayPaymentId, verificationData.razorpaySignature]
       );
-
-      console.log(`Wallet credited: ?${order.Amount} for user ${userId}. New balance: ?${balanceAfter}`);
 
       return {
         success: true,
@@ -625,8 +621,6 @@ export class WalletService {
     description: string
   ): Promise<{ success: boolean; transactionId: string; newBalance: number }> {
     try {
-      console.log(`?? Crediting ${source} of ?${amount} to user ${userId}`);
-
       if (amount <= 0) {
         throw new ValidationError('Bonus amount must be greater than 0');
       }
@@ -668,8 +662,6 @@ export class WalletService {
         ]
       );
 
-      console.log(`? Bonus credited: ?${amount} to user ${userId}. New balance: ?${balanceAfter}`);
-
       return {
         success: true,
         transactionId,
@@ -682,13 +674,12 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give welcome bonus to new user
+   * Give welcome bonus to new user
    * Called automatically during user registration
    * Amount is fetched from PricingSettings table in database
    */
   static async giveWelcomeBonus(userId: string): Promise<{ success: boolean; amount: number }> {
     try {
-      // Fetch welcome bonus amount from PricingSettings table
       const WELCOME_BONUS_AMOUNT = await PricingService.getSetting('WELCOME_BONUS');
 
       // Check if bonus already given
@@ -700,7 +691,6 @@ export class WalletService {
       const checkResult = await dbService.executeQuery(checkQuery, [userId]);
 
       if (checkResult.recordset[0]?.WalletBonusGiven) {
-        console.log(`?? Welcome bonus already given to user ${userId}`);
         return { success: false, amount: 0 };
       }
 
@@ -720,8 +710,6 @@ export class WalletService {
         [userId]
       );
 
-      console.log(`?? Welcome bonus of ?${WELCOME_BONUS_AMOUNT} credited to user ${userId}`);
-
       return { success: true, amount: WELCOME_BONUS_AMOUNT };
     } catch (error) {
       console.error('Error giving welcome bonus:', error);
@@ -730,7 +718,7 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give referral bonuses (₹50 to both referrer and referee)
+   * Give referral bonuses to both referrer and referee
    * Called when a new user registers with a referral code
    */
   static async giveReferralBonuses(
@@ -755,8 +743,6 @@ export class WalletService {
         'REFERRAL_BONUS',
         `Referral bonus for referring a new user`
       );
-
-      console.log(`?? Referral bonuses credited: ?${REFERRAL_BONUS_AMOUNT} each to ${newUserId} and ${referrerId}`);
 
       return { success: true, amount: REFERRAL_BONUS_AMOUNT };
     } catch (error) {
@@ -863,8 +849,6 @@ export class WalletService {
         paymentDetails.ifscCode || null,
         paymentDetails.accountHolderName || null
       ]);
-
-      console.log(`💸 Withdrawal request created: ₹${amount} for user ${userId}`);
 
       return {
         success: true,

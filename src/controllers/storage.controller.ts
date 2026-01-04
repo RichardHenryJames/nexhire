@@ -34,14 +34,6 @@ export const uploadFile = withErrorHandling(async (req: HttpRequest, context: In
         const user = authenticate(req);
         const uploadData = await extractRequestBody(req);
 
-        console.log('=== STORAGE UPLOAD START ===');
-        console.log('User ID:', user.userId);
-        console.log('Upload data keys:', Object.keys(uploadData));
-        console.log('Container name:', uploadData.containerName);
-        console.log('File name:', uploadData.fileName);
-        console.log('MIME type:', uploadData.mimeType);
-        console.log('File data length:', uploadData.fileData?.length);
-
         // Validate required fields
         if (!uploadData.fileName || typeof uploadData.fileName !== 'string') {
             throw new ValidationError('File name is required');
@@ -76,12 +68,9 @@ export const uploadFile = withErrorHandling(async (req: HttpRequest, context: In
         // Generate unique filename
         const fileExtension = getFileExtension(uploadData.fileName);
         const uniqueFileName = `${user.userId}_${Date.now()}_${uuidv4()}${fileExtension}`;
-        
-        console.log('Generated unique filename:', uniqueFileName);
 
         // Convert base64 to buffer
         const fileBuffer = Buffer.from(uploadData.fileData, 'base64');
-        console.log('File buffer size:', fileBuffer.length);
 
         // Upload to Azure Storage
         const blobServiceClient = getStorageClient();
@@ -94,7 +83,6 @@ export const uploadFile = withErrorHandling(async (req: HttpRequest, context: In
 
         const blockBlobClient = containerClient.getBlockBlobClient(uniqueFileName);
         
-        console.log('Uploading to Azure Storage...');
         await blockBlobClient.uploadData(fileBuffer, {
             blobHTTPHeaders: {
                 blobContentType: uploadData.mimeType
@@ -108,7 +96,6 @@ export const uploadFile = withErrorHandling(async (req: HttpRequest, context: In
 
         // Get the file URL
         const fileUrl = blockBlobClient.url;
-        console.log('File uploaded successfully:', fileUrl);
 
         const result = {
             fileUrl,
@@ -120,18 +107,13 @@ export const uploadFile = withErrorHandling(async (req: HttpRequest, context: In
             uploadedAt: new Date().toISOString()
         };
 
-        console.log('=== STORAGE UPLOAD END ===');
-
         return {
             status: 200,
             jsonBody: successResponse(result, 'File uploaded successfully')
         };
 
     } catch (error: any) {
-        console.error('=== STORAGE UPLOAD ERROR ===');
-        console.error('Error:', error.message);
-        console.error('Stack:', error.stack);
-        console.error('=== END ERROR ===');
+        console.error('Storage upload error:', error.message);
 
         const status = error instanceof ValidationError ? 400 : 500;
         return {

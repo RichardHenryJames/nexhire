@@ -406,17 +406,11 @@ function MainTabNavigator() {
         />
       )}
 
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: "Profile" }}
-      />
-
       {isAdmin && (
         <Tab.Screen
           name="Admin"
           component={AdminDashboardScreen}
-          options={{ title: "Admin" }}
+          options={{ title: "Admin Dashboard" }}
         />
       )}
 
@@ -427,6 +421,12 @@ function MainTabNavigator() {
           options={{ title: "Payments" }}
         />
       )}
+
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: "Profile" }}
+      />
     </Tab.Navigator>
   );
 }

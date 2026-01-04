@@ -5,9 +5,9 @@
 
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
-import { WalletService } from './wallet.service'; // ✅ NEW: Import wallet service
-import { PricingService } from './pricing.service'; // ✅ NEW: DB-driven pricing
-import { NotificationService } from './notificationService'; // ✅ NEW: Notification service
+import { WalletService } from './wallet.service';
+import { PricingService } from './pricing.service';
+import { NotificationService } from './notificationService';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -146,14 +146,14 @@ export class ReferralService {
     
     /**
      * Create a new referral request (supports both internal and external)
-     * ✅ NEW: Requires ₹50 wallet balance - deducted before creating request
+     * Requires wallet balance - deducted before creating request
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
-            // ✅ DB-DRIVEN: Get referral cost from database
+            // Get referral cost from database
             const REFERRAL_REQUEST_COST = await PricingService.getReferralCost();
             
-            // ✅ NEW: Get user ID for wallet operations
+            // Get user ID for wallet operations
             const userQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
             const userResult = await dbService.executeQuery(userQuery, [applicantId]);
             
@@ -163,7 +163,7 @@ export class ReferralService {
             
             const userId = userResult.recordset[0].UserID;
 
-            // ✅ NEW: Check wallet balance FIRST (before any other validation)
+            // Check wallet balance first
             const walletBalance = await WalletService.getBalance(userId);
             
             if (walletBalance.balance < REFERRAL_REQUEST_COST) {
@@ -175,9 +175,7 @@ export class ReferralService {
                 });
             }
 
-            // ✅ REMOVED: No longer checking eligibility (daily quota) - wallet-based model only
-
-            // ✅ NEW SCHEMA: Determine referral type from presence of ExtJobID vs JobID
+            // Determine referral type from presence of ExtJobID vs JobID
             const isExternal = !!dto.extJobID && !dto.jobID; // External if ExtJobID provided and JobID is null
             const isInternal = !!dto.jobID && !dto.extJobID; // Internal if JobID provided and ExtJobID is null
             
@@ -186,8 +184,7 @@ export class ReferralService {
             }
 
             if (isExternal) {
-                // EXTERNAL REFERRAL VALIDATION
-                // ✅ FIXED: Only require jobTitle (companyName derived from organizationId)
+                // External referral validation - only require jobTitle
                 if (!dto.jobTitle) {
                     throw new ValidationError('Job title is required for external referrals');
                 }
@@ -227,7 +224,7 @@ export class ReferralService {
                 throw new ValidationError('Invalid resume selection');
             }
 
-            // ✅ NEW: Debit ₹50 from wallet BEFORE creating the request
+            // Debit from wallet before creating the request
             const debitResult = await WalletService.debitWallet(
                 userId,
                 REFERRAL_REQUEST_COST,
@@ -235,12 +232,10 @@ export class ReferralService {
                 `Referral request for ${dto.jobTitle || 'job'} at ${dto.companyName || 'company'}`
             );
 
-            console.log(`💰 Wallet debited: ₹${REFERRAL_REQUEST_COST} for referral request. New balance: ₹${debitResult.BalanceAfter}`);
-
             const requestId = AuthService.generateUniqueId();
 
             if (isExternal) {
-                // ✅ CREATE EXTERNAL REFERRAL REQUEST with JobTitle and JobURL
+                // Create external referral request with JobTitle and JobURL
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
                         RequestID, ExtJobID, ApplicantID, ResumeID, Status, RequestedAt,
@@ -310,15 +305,12 @@ export class ReferralService {
                         seekerName: createdRequest.ApplicantName || 'Job Seeker',
                         seekerId: applicantId
                     });
-                    console.log(`📧 Notification queued for ${notifyResult.notified} referrers at ${companyName}`);
-                } else {
-                    console.log(`⚠️ No organizationId available - skipping referrer notifications`);
                 }
             } catch (notifyErr) {
-                console.warn('Non-critical: Failed to queue referrer notifications:', notifyErr);
+                // Non-critical: notification failure shouldn't block referral creation
             }
             
-            // ✅ NEW: Add wallet balance info to response
+            // Add wallet balance info to response
             return {
                 ...createdRequest,
                 walletBalanceBefore: debitResult.BalanceBefore,
@@ -548,7 +540,6 @@ export class ReferralService {
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -644,10 +635,8 @@ export class ReferralService {
                 let verificationAmount: number;
                 if (hasQuickBonus) {
                     verificationAmount = Math.floor(Math.random() * 11) + 25; // ₹25-35
-                    console.log(`🌟 Quick referrer verification! Awarding ₹${verificationAmount} (₹25-35 range)`);
                 } else {
                     verificationAmount = Math.floor(Math.random() * 20) + 5; // ₹5-24
-                    console.log(`✅ Standard verification! Awarding ₹${verificationAmount} (₹5-24 range)`);
                 }
 
                 // Add money to referrer's wallet (NO points recording - direct money only)
@@ -657,7 +646,6 @@ export class ReferralService {
                     'REFERRAL_BONUS',
                     `Referral verification reward for request ${dto.requestID}`
                 );
-                console.log(`💰 Referral verified! ₹${verificationAmount} added to referrer ${referrerId}'s wallet`);
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -672,7 +660,7 @@ export class ReferralService {
      */
     static async getMyReferrerRequests(referrerId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
@@ -717,7 +705,6 @@ export class ReferralService {
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -820,7 +807,7 @@ export class ReferralService {
      */
     static async getMyReferralRequests(applicantId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
@@ -877,7 +864,7 @@ export class ReferralService {
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Pass integers as strings for SQL Server
+            // Pass integers as strings for SQL Server
             queryParams.push(offset.toString(), safePageSize.toString());
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
@@ -910,7 +897,7 @@ export class ReferralService {
             const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId, pointType]);
             
             if (existingRewardResult.recordset && existingRewardResult.recordset.length > 0) {
-                console.log(`Points already awarded for request ${requestId} (${pointType})`);
+                // Points already awarded for this type
                 return;
             }
 
@@ -934,8 +921,6 @@ export class ReferralService {
             `;
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
-            
-            console.log(`Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
             // Don't rethrow - we don't want to break the main referral flow if points can't be awarded
@@ -1402,11 +1387,10 @@ export class ReferralService {
                 console.warn('Non-critical: Failed to log Completed status:', err);
             }
             
-            // ?? FIX: Award points for proof submission with quick response bonus
+            // Award points for proof submission with quick response bonus
             let baseProofPoints = 15; // Base points for submitting proof
             
             // Award base proof submission points first
-            console.log(`🎯 Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
 
             // Calculate and award quick response bonus separately for better tracking
@@ -1416,22 +1400,11 @@ export class ReferralService {
             
             if (hoursFromRequest <= 24) {
                 const quickBonusPoints = 10; // Quick response bonus
-                console.log(`⚡ Quick response bonus awarded! Completed in ${hoursFromRequest.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
             
             // Update referrer stats
             await this.updateReferrerStats(referrerId);
-            
-            let totalPointsAwarded = baseProofPoints;
-            if (hoursFromRequest <= 24) {
-                totalPointsAwarded += 10; // Add quick bonus to display total
-            }
-            
-            console.log(`🎯 Referral request ${dto.requestID} claimed with proof by ${referrerId} - ${totalPointsAwarded} total points awarded`);
-            
-            // TODO: Notify seeker that referral was completed
-            // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
             
             return await this.getReferralRequestById(dto.requestID);
         } catch (error) {
@@ -1505,8 +1478,6 @@ export class ReferralService {
         transactionId: string;
     }> {
         try {
-            console.log(`💱 Converting points to wallet for applicant ${applicantId}, user ${userId}`);
-
             // Get current referral points
             const pointsQuery = `
                 SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
@@ -1529,8 +1500,6 @@ export class ReferralService {
             const CONVERSION_RATE = 0.5;
             const walletAmount = currentPoints * CONVERSION_RATE;
 
-            console.log(`💰 Converting ${currentPoints} points to ₹${walletAmount.toFixed(2)}`);
-
             // Credit wallet using existing WalletService.creditBonus method
             const creditResult = await WalletService.creditBonus(
                 userId,
@@ -1550,8 +1519,6 @@ export class ReferralService {
                 WHERE ApplicantID = @param0
             `;
             await dbService.executeQuery(resetQuery, [applicantId]);
-
-            console.log(`✅ Successfully converted ${currentPoints} points to ₹${walletAmount.toFixed(2)} for user ${userId}`);
 
             return {
                 success: true,
@@ -1617,8 +1584,6 @@ export class ReferralService {
                     updateParams = [status, requestId];
                 }
                 await dbService.executeQuery(updateMainQuery, updateParams);
-            } else {
-                console.log(`⚠️ Skipping status update: ${currentStatus} → ${status} (protected)`);
             }
             
             // Always insert into history table (logs the view even if status not updated)
@@ -1639,8 +1604,6 @@ export class ReferralService {
                 actorType || 'system',
                 actorName || null
             ]);
-
-            console.log(`📊 Status '${status}' logged for request ${requestId} (updated: ${shouldUpdateStatus})`);
             
             return { success: true, historyId };
         } catch (error) {

@@ -14,10 +14,6 @@ export class ReferralNotificationService {
     static async notifyNewReferralRequest(requestId: string, organizationId: number): Promise<void> {
         try {
             // This would integrate with your notification system
-            // For now, we'll just log and potentially send emails
-            
-            console.log(`New referral request ${requestId} for organization ${organizationId}`);
-            
             // TODO: Integrate with email service or push notification service
             // Example:
             // await this.sendEmailToEligibleReferrers(requestId, organizationId);
@@ -34,8 +30,6 @@ export class ReferralNotificationService {
      */
     static async notifyReferralCompleted(requestId: string, referrerId: string, seekerId: string): Promise<void> {
         try {
-            console.log(`Referral request ${requestId} completed by ${referrerId} for seeker ${seekerId}`);
-            
             // Notify the seeker that their referral was submitted
             // TODO: Send email/push notification to seeker
             
@@ -49,8 +43,6 @@ export class ReferralNotificationService {
      */
     static async notifyReferralVerified(requestId: string, referrerId: string, pointsEarned: number): Promise<void> {
         try {
-            console.log(`Referral request ${requestId} verified, ${pointsEarned} points awarded to ${referrerId}`);
-            
             // Notify the referrer about points earned
             // TODO: Send email/push notification to referrer
             
@@ -64,8 +56,6 @@ export class ReferralNotificationService {
      */
     static async sendDailyReferralDigest(): Promise<void> {
         try {
-            console.log('Sending daily referral digest...');
-            
             // Get all referrers who opted in for daily digest
             const query = `
                 SELECT DISTINCT a.ApplicantID, u.Email, u.FirstName
@@ -81,7 +71,6 @@ export class ReferralNotificationService {
             
             for (const referrer of result.recordset || []) {
                 // TODO: Send personalized daily digest email
-                console.log(`Would send daily digest to ${referrer.Email} (${referrer.PendingCount} pending)`);
             }
             
         } catch (error) {
@@ -94,8 +83,6 @@ export class ReferralNotificationService {
      */
     static async updateReferrerBadgeCounts(): Promise<void> {
         try {
-            console.log('Updating referrer badge counts...');
-            
             // This is typically run as a background job every few minutes
             const updateQuery = `
                 MERGE ReferrerStats rs
@@ -121,7 +108,6 @@ export class ReferralNotificationService {
             `;
             
             await dbService.executeQuery(updateQuery, []);
-            console.log('Referrer badge counts updated');
             
         } catch (error) {
             console.error('Error updating referrer badge counts:', error);

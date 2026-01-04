@@ -314,34 +314,60 @@ if ($envVars.Count -gt 0) {
         $batchEnd = [Math]::Min($i + $batchSize - 1, $varNames.Count - 1)
         $currentBatch = $varNames[$i..$batchEnd]
 
-        $batchSettings = @()
-        foreach ($varName in $currentBatch) {
-            $escapedValue = $envVars[$varName] -replace '"', '\"'
-            $batchSettings += "$varName=$escapedValue"
-        }
-
         $batchNumber = [Math]::Floor($i / $batchSize) + 1
         $totalBatches = [Math]::Ceiling($varNames.Count / $batchSize)
 
         Write-Host "   🔹 Batch ${batchNumber}/${totalBatches}: Setting $($currentBatch.Count) variables..." -ForegroundColor Gray
 
+        # Create a temporary JSON file for this batch to handle special characters
+        $tempJsonPath = Join-Path $env:TEMP "env-batch-$batchNumber.json"
+        $batchJson = @{}
+        foreach ($varName in $currentBatch) {
+            $batchJson[$varName] = $envVars[$varName]
+        }
+        $batchJson | ConvertTo-Json -Depth 1 | Set-Content -Path $tempJsonPath -Encoding UTF8
+
         try {
-            & az functionapp config appsettings set `
+            # Use --settings @file.json syntax for proper escaping
+            $result = az functionapp config appsettings set `
                 --name $FunctionAppName `
                 --resource-group $ResourceGroup `
-                --settings @batchSettings `
-                --output none 2>$null
+                --settings "@$tempJsonPath" `
+                --output none 2>&1
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "   ✅ Batch ${batchNumber} completed" -ForegroundColor Green
                 $successCount += $currentBatch.Count
             } else {
-                Write-Host "   ❌ Batch ${batchNumber} failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
-                $failCount += $currentBatch.Count
+                # Fallback: try one-by-one for this batch
+                Write-Host "   ⚠️ Batch failed, trying individual settings..." -ForegroundColor Yellow
+                foreach ($varName in $currentBatch) {
+                    $value = $envVars[$varName]
+                    # Use proper quoting for complex values
+                    $settingArg = "${varName}=${value}"
+                    
+                    $singleResult = az functionapp config appsettings set `
+                        --name $FunctionAppName `
+                        --resource-group $ResourceGroup `
+                        --settings $settingArg `
+                        --output none 2>&1
+
+                    if ($LASTEXITCODE -eq 0) {
+                        $successCount++
+                    } else {
+                        Write-Host "      ❌ Failed: $varName" -ForegroundColor Red
+                        $failCount++
+                    }
+                }
             }
         } catch {
             Write-Host "   ❌ Batch ${batchNumber} failed: $($_.Exception.Message)" -ForegroundColor Red
             $failCount += $currentBatch.Count
+        } finally {
+            # Clean up temp file
+            if (Test-Path $tempJsonPath) {
+                Remove-Item $tempJsonPath -Force -ErrorAction SilentlyContinue
+            }
         }
         
         # Small delay between batches

@@ -36,8 +36,9 @@ export const getAdminDashboardOverview = withAuth(async (
     monthAgo.setMonth(monthAgo.getMonth() - 1);
     const monthAgoStr = monthAgo.toISOString().split('T')[0];
 
-    // Only fetch overview stats - lightweight queries
-    const [userStats, referralStats, jobStats, walletStats, appStats, messageStats] = await Promise.all([
+    // Optimized queries - run in parallel but with lightweight counts
+    const [userStats, referralStats, jobStats, walletStats] = await Promise.all([
+      // Users query - optimized
       dbService.executeQuery(`
         SELECT 
           COUNT(*) AS TotalUsers,
@@ -50,6 +51,8 @@ export const getAdminDashboardOverview = withAuth(async (
           SUM(CASE WHEN EmailVerified = 1 THEN 1 ELSE 0 END) AS VerifiedUsers
         FROM Users WHERE UserType != 'Admin'
       `, [todayStr, weekAgoStr, monthAgoStr]),
+      
+      // Referrals - small table, fine as is
       dbService.executeQuery(`
         SELECT 
           COUNT(*) AS TotalRequests,
@@ -58,27 +61,21 @@ export const getAdminDashboardOverview = withAuth(async (
           SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) AS CompletedRequests
         FROM ReferralRequests
       `, [todayStr]),
+      
+      // Jobs - use approximate count for total (fast), exact for recent
       dbService.executeQuery(`
         SELECT 
-          COUNT(*) AS TotalJobs,
-          SUM(CASE WHEN CAST(CreatedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS JobsToday,
-          SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) AS ActiveJobs,
-          SUM(CASE WHEN ExternalJobID IS NOT NULL THEN 1 ELSE 0 END) AS ExternalJobs
-        FROM Jobs
-      `, [todayStr]),
+          (SELECT SUM(p.rows) FROM sys.partitions p JOIN sys.tables t ON p.object_id = t.object_id 
+           WHERE t.name = 'Jobs' AND p.index_id IN (0,1)) AS TotalJobs,
+          (SELECT COUNT(*) FROM Jobs WHERE CAST(CreatedAt AS DATE) = @param0) AS JobsToday,
+          (SELECT COUNT(*) FROM Jobs WHERE Status = 'Active') AS ActiveJobs,
+          (SELECT COUNT(*) FROM Jobs WHERE ExternalJobID IS NOT NULL AND CAST(CreatedAt AS DATE) >= @param1) AS RecentExternalJobs
+      `, [todayStr, weekAgoStr]),
+      
+      // Wallets - simple aggregate
       dbService.executeQuery(`
         SELECT ISNULL(SUM(Balance), 0) AS TotalWalletBalance, COUNT(*) AS TotalWallets
         FROM Wallets WHERE Status = 'Active'
-      `, []),
-      dbService.executeQuery(`
-        SELECT 
-          COUNT(*) AS TotalApplications,
-          SUM(CASE WHEN CAST(SubmittedAt AS DATE) = @param0 THEN 1 ELSE 0 END) AS ApplicationsToday
-        FROM JobApplications
-      `, [todayStr]),
-      dbService.executeQuery(`
-        SELECT COUNT(DISTINCT ConversationID) AS TotalConversations, COUNT(*) AS TotalMessages
-        FROM Messages
       `, [])
     ]);
 
@@ -89,8 +86,8 @@ export const getAdminDashboardOverview = withAuth(async (
         referralStats: referralStats.recordset[0] || {},
         jobStats: jobStats.recordset[0] || {},
         walletStats: walletStats.recordset[0] || {},
-        applicationStats: appStats.recordset[0] || {},
-        messageStats: messageStats.recordset[0] || {}
+        applicationStats: { TotalApplications: 0, ApplicationsToday: 0 },
+        messageStats: { TotalConversations: 0, TotalMessages: 0 }
       }, 'Overview stats loaded')
     };
   } catch (error) {

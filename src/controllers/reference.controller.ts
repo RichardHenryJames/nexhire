@@ -259,8 +259,6 @@ export const getColleges = async (req: any): Promise<any> => {
     const searchName = url.searchParams.get('name') || '';
     
     try {
-        console.log(`Fetching universities for country: ${country}, search: ${searchName}`);
-        
         let apiUrl = `http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`;
         if (searchName) {
             apiUrl += `&name=${encodeURIComponent(searchName)}`;
@@ -321,8 +319,6 @@ export const getColleges = async (req: any): Promise<any> => {
             logoURL: null,
             alpha_two_code: null
         });
-
-        console.log(`Successfully fetched ${transformedColleges.length - 1} universities for ${country} + Other option`);
 
         return {
             status: 200,
@@ -399,8 +395,6 @@ export const getUniversitiesByCountry = async (req: any): Promise<any> => {
         const url = new URL(req.url);
         const country = url.searchParams.get('country') || 'India';
         
-        console.log(`Fetching universities specifically for country: ${country}`);
-        
         const apiUrl = `http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`;
         
         const response = await fetch(apiUrl, {
@@ -461,8 +455,6 @@ export const getUniversitiesByCountry = async (req: any): Promise<any> => {
 // NEW: Get all countries for education country selection
 export const getCountries = async (req: any): Promise<any> => {
     try {
-        console.log('Fetching countries from REST Countries API...');
-        
         // Fetch countries from REST Countries API
         const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flag,cca2,cca3,region,subregion', {
             method: 'GET',
@@ -520,8 +512,6 @@ export const getCountries = async (req: any): Promise<any> => {
         });
 
         const finalCountries = [...prioritized, ...others];
-
-        console.log(`Successfully fetched ${finalCountries.length} countries`);
 
         return {
             status: 200,

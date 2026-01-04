@@ -12,7 +12,9 @@ import {
 import { appConstants } from '../config';
 
 export class UserService {
-    // FIXED: Register new user with organization creation for employers (now fully transactional)
+    /**
+     * Register new user with organization creation for employers (transactional)
+     */
     static async register(userData: any): Promise<User> {
         const validatedData = validateRequest<UserRegistrationRequest>(userRegistrationSchema, userData);
         
@@ -28,11 +30,9 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
-        // ? NEW: Validate and lookup referral code if provided
+        // Validate and lookup referral code if provided
         let referrerId: string | null = null;
         if (userData.referralCode && userData.referralCode.trim().length > 0) {
-            console.log(`?? Looking up referral code: ${userData.referralCode}`);
-            
             // Find user by referral code (UserID prefix)
             const referrerQuery = `
                 SELECT UserID, Email, FirstName, LastName 
@@ -45,10 +45,6 @@ export class UserService {
             
             if (referrerResult.recordset && referrerResult.recordset.length > 0) {
                 referrerId = referrerResult.recordset[0].UserID;
-                console.log(`? Valid referral code! Referrer: ${referrerResult.recordset[0].Email}`);
-            } else {
-                console.log(`?? Invalid referral code: ${userData.referralCode}`);
-                // Don't throw error, just log - invalid codes are silently ignored
             }
         }
         
@@ -103,27 +99,25 @@ export class UserService {
             }
             // Handle Admin user registration (no additional profile needed)
             else if (validatedData.userType === 'Admin') {
-                console.log(`Admin user created: ${userId} (${validatedData.email})`);
+                // Admin user created
             }
 
             await tx.commit();
             
-            // ? NEW: Give welcome bonus and referral bonuses AFTER transaction commit
+            // Give welcome bonus and referral bonuses after transaction commit
             try {
                 const { WalletService } = await import('./wallet.service');
                 
-                // Give ₹100 welcome bonus to new user
-                console.log(`?? Giving welcome bonus to new user ${userId}`);
+                // Give welcome bonus to new user
                 await WalletService.giveWelcomeBonus(userId);
                 
-                // If referred, give ₹50 to both new user and referrer
+                // If referred, give bonus to both new user and referrer
                 if (referrerId) {
-                    console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
                     await WalletService.giveReferralBonuses(userId, referrerId);
                 }
             } catch (bonusError) {
                 // Log but don't fail registration if bonus fails
-                console.error('?? Error giving bonuses (registration still successful):', bonusError);
+                console.error('Error giving bonuses (registration still successful):', bonusError);
             }
             
             return user;
@@ -135,14 +129,14 @@ export class UserService {
         }
     }
 
-    // FIXED: Create employer profile with organization during registration (transactional)
+    /** Create employer profile with organization during registration (transactional) */
     private static async createEmployerProfileWithOrganizationTx(tx: any, userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
         // Generate only EmployerID (OrganizationID is auto-increment in database)
         const employerId = AuthService.generateUniqueId();
         
         const organizationName = userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`;
         
-        // FIXED: Check if organization already exists
+        // Check if organization already exists
         const existingOrgQuery = `
             SELECT OrganizationID 
             FROM Organizations 
@@ -156,7 +150,6 @@ export class UserService {
         if (existingOrgResult.recordset && existingOrgResult.recordset.length > 0) {
             // Organization exists, use existing OrganizationID
             organizationId = existingOrgResult.recordset[0].OrganizationID;
-            console.log(`Using existing organization: ${organizationName} (ID: ${organizationId})`);
         } else {
             // Organization doesn't exist, create new one
             const orgQuery = `
@@ -189,11 +182,10 @@ export class UserService {
                 throw new Error('Failed to create organization - no ID returned');
             }
             organizationId = orgResult.recordset[0].OrganizationID;
-            console.log(`Created new organization: ${organizationName} (ID: ${organizationId})`);
         }
         
         // Employer profile creation with the OrganizationID (existing or new)
-        // FIXED: Use only columns that exist in the database schema
+        // Use only columns that exist in the database schema
         const employerQuery = `
             INSERT INTO Employers (
                 EmployerID, UserID, OrganizationID, Role, IsVerified, JoinedAt
@@ -204,7 +196,6 @@ export class UserService {
 
         await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
         
-        console.log(`Created employer profile ${employerId} for user ${userId} with organization ${organizationId}`);
         return { organizationId: organizationId.toString(), employerId };
     }
 
@@ -250,7 +241,7 @@ export class UserService {
         }
     }
 
-    // NEW: Initialize employer profile for an existing authenticated user (transactional)
+    /** Initialize employer profile for an existing authenticated user (transactional) */
     static async initializeEmployerProfile(userId: string, data: any): Promise<{ organizationId: string; employerId: string }> {
         const user = await this.findById(userId);
         if (!user) {
@@ -591,7 +582,6 @@ export class UserService {
             let profileCompleteness = 0;
             try {
                 profileCompleteness = await this.recalculateApplicantProfileCompleteness(applicantId);
-                console.log(`Profile completeness recalculated for ${applicantId}: ${profileCompleteness}%`);
             } catch (error) {
                 console.error('Failed to recalculate profile completeness:', error);
             }
@@ -678,13 +668,11 @@ export class UserService {
             const result = await dbService.executeQuery(statsQuery, [userId]);
             const baseStats = result.recordset[0] || {};
 
-            // Get referral statistics (userId for AssignedReferrerID, applicantId for ApplicantID)
+            // Get referral statistics
             const referralStats = await this.getReferralStats(applicantId, userId);
-            console.log(`Referral stats for applicant ${applicantId}:`, referralStats);
             
             // Get resume statistics
             const resumeStats = await this.getResumeStats(applicantId);
-            console.log(`Resume stats for applicant ${applicantId}:`, resumeStats);
 
             // Get recent applications breakdown
             const recentActivityStats = await this.getRecentActivityStats(userId);
@@ -905,8 +893,6 @@ export class UserService {
 
     private static async getReferralStats(applicantId: string, userId: string): Promise<any> {
         try {
-            console.log(`Getting referral stats for applicant: ${applicantId}, userId: ${userId}`);
-            
             // AssignedReferrerID stores UserID, ApplicantID is for seeker
             const query = `
                 SELECT 
@@ -919,12 +905,10 @@ export class UserService {
                 WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)
             `;
             
-            const result = await dbService.executeQuery(query, [userId, applicantId]);  // userId for AssignedReferrerID
+            const result = await dbService.executeQuery(query, [userId, applicantId]);
             const stats = result.recordset[0] || {};
             
-            console.log(`Referral stats raw result for ${applicantId}:`, JSON.stringify(stats));
-            
-            // Map the results exactly as the profile service does
+            // Map the results
             const mappedStats = {
                 referralRequestsMade: stats.ReferralRequestsMade || 0,
                 referralRequestsReceived: stats.TotalReferralsMade || 0,
@@ -932,8 +916,6 @@ export class UserService {
                 totalReferralPoints: stats.TotalPointsFromRewards || 0,
                 referralSuccessRate: stats.TotalReferralsMade > 0 ? Math.round((stats.VerifiedReferrals / stats.TotalReferralsMade) * 100) : 0
             };
-            
-            console.log(`Mapped referral stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
@@ -950,8 +932,6 @@ export class UserService {
 
     private static async getResumeStats(applicantId: string): Promise<any> {
         try {
-            console.log(`Getting resume stats for applicant: ${applicantId}`);
-            
             const query = `
                 SELECT 
                     COUNT(*) as TotalResumes,
@@ -964,14 +944,10 @@ export class UserService {
             const result = await dbService.executeQuery(query, [applicantId]);
             const resumeData = result.recordset[0] || { TotalResumes: 0, PrimaryResumeSet: 0 };
             
-            console.log(`Resume stats raw result for ${applicantId}:`, JSON.stringify(resumeData));
-            
             const mappedStats = { 
                 totalResumes: resumeData.TotalResumes || 0, 
                 primaryResumeSet: resumeData.PrimaryResumeSet === 1 || resumeData.PrimaryResumeSet === true
             };
-            
-            console.log(`Mapped resume stats for ${applicantId}:`, JSON.stringify(mappedStats));
             
             return mappedStats;
         } catch (error) {
@@ -1339,23 +1315,6 @@ export class UserService {
             const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
-            console.log(`Profile data for ${applicantId}:`, {
-                Institution: row.Institution,
-                HighestEducation: row.HighestEducation,
-                FieldOfStudy: row.FieldOfStudy,
-                PrimarySkills: row.PrimarySkills,
-                SecondarySkills: row.SecondarySkills,
-                Summary: row.Summary,
-                PreferredJobTypes: row.PreferredJobTypes,
-                PreferredWorkTypes: row.PreferredWorkTypes,
-                PreferredLocations: row.PreferredLocations,
-                CurrentJobTitle: row.CurrentJobTitle,
-                LinkedInProfile: row.LinkedInProfile,
-                ResumeCount: row.ResumeCount,
-                WorkExpCount: row.WorkExpCount,
-                ProfilePictureURL: row.ProfilePictureURL ? 'Yes' : 'No'
-            });
-
             // Components (10)
             const educationComplete = hasValue(row.Institution) && hasValue(row.HighestEducation) && hasValue(row.FieldOfStudy) ? 1 : 0; // 1
             const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0; //2
@@ -1370,21 +1329,6 @@ export class UserService {
 
             const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
             const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
-
-            console.log(`Profile completeness calculation for ${applicantId}:`, {
-                educationComplete,
-                primarySkills,
-                secondarySkills,
-                summaryPresent,
-                jobPrefsPresent,
-                resumePresent,
-                workExpPresent,
-                profilePicPresent,
-                linkedInPresent,
-                currentJobTitlePresent,
-                total: achieved,
-                percentage: completeness
-            });
 
             await dbService.executeQuery(
                 `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
@@ -1448,11 +1392,11 @@ export class UserService {
         );
     }
 
-    // ?? NEW: Google OAuth Login
+    /**
+     * Google OAuth Login
+     */
     static async loginWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
         const { googleUser } = googleData;
-        
-        console.log('UserService: Google login attempt for:', googleUser?.email);
         
         if (!googleUser?.email) {
             throw new ValidationError('Google user email is required');
@@ -1462,11 +1406,8 @@ export class UserService {
         const existingUser = await this.findByEmail(googleUser.email);
         
         if (!existingUser) {
-            console.log('Google login: User not found for email:', googleUser.email);
             throw new NotFoundError('User not found with email: ' + googleUser.email);
         }
-
-        console.log('Google login: Found existing user:', existingUser.Email, 'Type:', existingUser.UserType);
 
         // Check if account is active
         if (!existingUser.IsActive) {
@@ -1491,8 +1432,6 @@ export class UserService {
 
         // Apply updates if any
         if (Object.keys(updateData).length > 0) {
-            console.log('Updating user with Google data:', Object.keys(updateData));
-            
             const updateFields = Object.keys(updateData)
                 .map((key, index) => `${key} = @param${index + 1}`)
                 .join(', ');
@@ -1522,19 +1461,17 @@ export class UserService {
         // Remove password from response
         const { Password, ...userWithoutPassword } = existingUser;
 
-        console.log('Google login successful for:', userWithoutPassword.Email);
-
         return {
             user: userWithoutPassword,
             tokens
         };
     }
 
-    // ?? NEW: Google OAuth Registration
+    /**
+     * Google OAuth Registration
+     */
     static async registerWithGoogle(googleData: any): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
         const { googleUser, userType, ...additionalData } = googleData;
-        
-        console.log('UserService: Google registration attempt for:', googleUser?.email, 'as', userType);
         
         if (!googleUser?.email) {
             throw new ValidationError('Google user email is required');
@@ -1547,7 +1484,6 @@ export class UserService {
         // Check if user already exists
         const existingUser = await this.findByEmail(googleUser.email);
         if (existingUser) {
-            console.log('Google registration: User already exists:', googleUser.email);
             throw new ConflictError('User with this email already exists. Please sign in instead.');
         }
 
@@ -1558,11 +1494,9 @@ export class UserService {
         // Generate user ID
         const userId = AuthService.generateUniqueId();
         
-        // ? NEW: Validate and lookup referral code if provided
+        // Validate and lookup referral code if provided
         let referrerId: string | null = null;
         if (additionalData.referralCode && additionalData.referralCode.trim().length > 0) {
-            console.log(`?? Looking up referral code: ${additionalData.referralCode}`);
-            
             const referrerQuery = `
                 SELECT UserID, Email, FirstName, LastName 
                 FROM Users 
@@ -1574,14 +1508,9 @@ export class UserService {
             
             if (referrerResult.recordset && referrerResult.recordset.length > 0) {
                 referrerId = referrerResult.recordset[0].UserID;
-                console.log(`? Valid referral code! Referrer: ${referrerResult.recordset[0].Email}`);
-            } else {
-                console.log(`?? Invalid referral code: ${additionalData.referralCode}`);
             }
         }
         
-        console.log('Creating new user with Google data...');
-
         // Start transaction for user and profile creation
         const tx = await dbService.beginTransaction();
         try {
@@ -1626,11 +1555,9 @@ export class UserService {
             }
 
             const user = userResult.recordset[0];
-            console.log('User created successfully:', user.Email);
             
             // Create organization and employer profile if user is an employer
             if (userType === appConstants.userTypes.EMPLOYER) {
-                console.log('Creating employer profile...');
                 await this.createEmployerProfileWithOrganizationTx(tx, userId, {
                     organizationName: additionalData.organizationName || `${firstName} ${lastName}'s Company`,
                     organizationIndustry: additionalData.organizationIndustry || 'Technology',
@@ -1640,29 +1567,25 @@ export class UserService {
             }
             // Create applicant profile if user is a job seeker
             else if (userType === appConstants.userTypes.JOB_SEEKER) {
-                console.log('Creating applicant profile...');
                 await this.createApplicantProfileTx(tx, userId);
             }
 
             await tx.commit();
-            console.log('Transaction committed successfully');
 
-            // ? NEW: Give welcome bonus and referral bonuses AFTER transaction commit
+            // Give welcome bonus and referral bonuses AFTER transaction commit
             try {
                 const { WalletService } = await import('./wallet.service');
                 
                 // Give ₹100 welcome bonus to new user
-                console.log(`?? Giving welcome bonus to new Google user ${userId}`);
                 await WalletService.giveWelcomeBonus(userId);
                 
                 // If referred, give ₹50 to both new user and referrer
                 if (referrerId) {
-                    console.log(`?? Giving referral bonuses to ${userId} and ${referrerId}`);
                     await WalletService.giveReferralBonuses(userId, referrerId);
                 }
             } catch (bonusError) {
                 // Log but don't fail registration if bonus fails
-                console.error('?? Error giving bonuses (registration still successful):', bonusError);
+                console.error('Error giving bonuses (registration still successful):', bonusError);
             }
 
             // Generate tokens
@@ -1670,8 +1593,6 @@ export class UserService {
 
             // Remove password from response
             const { Password, ...userWithoutPassword } = user;
-
-            console.log('Google registration successful for:', userWithoutPassword.Email);
 
             return {
                 user: userWithoutPassword,
@@ -1689,15 +1610,15 @@ export class UserService {
         }
     }
 
-    // ?? NEW: Helper method to verify Google token (optional - for extra security)
+    /**
+     * Helper method to verify Google token (optional - for extra security)
+     */
     private static async verifyGoogleToken(idToken: string): Promise<any> {
         try {
             // In production, you would verify the Google ID token here
-            // For now, we'll trust the frontend verification
-            console.log('Google token verification skipped (trusting frontend)');
+            // For now, we trust the frontend verification
             return { verified: true };
         } catch (error) {
-            console.error('Google token verification failed:', error);
             throw new ValidationError('Invalid Google token');
         }
     }
