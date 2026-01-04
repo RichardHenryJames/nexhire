@@ -237,19 +237,16 @@ export class JobScraperService {
   // Load Adzuna API keys with fallback to your provided keys
   private static loadAdzunaApiKeys(): { appId: string; appKey: string } | null {
     try {
-      // Try environment variables first
-      let appId = process.env.ADZUNA_APP_ID;
-      let appKey = process.env.ADZUNA_APP_KEY;
+      // Get API keys from environment variables only - no hardcoded fallbacks
+      const appId = process.env.ADZUNA_APP_ID;
+      const appKey = process.env.ADZUNA_APP_KEY;
       
-      // 🔑 FALLBACK: Use your provided keys if env vars not available
       if (!appId || !appKey) {
-        appId = 'f88adc65';
-        appKey = 'f10e165aae13d06f9c74709a38ed4e53';
-        console.log('🔑 Using provided Adzuna API keys');
-      } else {
-        console.log('🔑 Using environment Adzuna API keys');
+        console.error('❌ Adzuna API keys not configured. Set ADZUNA_APP_ID and ADZUNA_APP_KEY environment variables.');
+        return null;
       }
       
+      console.log('🔑 Using environment Adzuna API keys');
       return { appId, appKey };
       
     } catch (error: any) {

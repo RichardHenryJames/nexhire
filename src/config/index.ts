@@ -3,7 +3,7 @@ export const dbConfig = {
     server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
     database: process.env.DB_NAME || 'refopen-sql-db',
     user: process.env.DB_USER || 'sqladmin',
-    password: process.env.DB_PASSWORD || 'RefOpen@2024!Secure',
+    password: process.env.DB_PASSWORD || '',  // REQUIRED: Set via environment variable
     options: {
         encrypt: true,
         trustServerCertificate: false,
