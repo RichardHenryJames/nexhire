@@ -333,7 +333,7 @@ export const approveManualPayment = async (
       ) VALUES (
         @param0, @param1, 'Credit', @param2,
         @param3, @param4, 4, 'Manual_Payment',
-        @param5, 'Manual payment - Bank/UPI Transfer', 'Completed', GETUTCDATE()
+        @param5, 'Bank/UPI Transfer', 'Completed', GETUTCDATE()
       )
     `, [uuidv4(), walletId, sub.Amount, balanceBefore, balanceAfter, submissionId]);
 
