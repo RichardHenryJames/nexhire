@@ -13,9 +13,16 @@ try {
 
 # Step 2: Admin Login
 Write-Host "`n2️⃣ Logging in as admin..." -ForegroundColor Yellow
+
+# Get admin password from Key Vault
+$AdminPassword = az keyvault secret show --vault-name "refopen-keyvault-prod" --name "AdminPassword" --query "value" -o tsv 2>$null
+if (-not $AdminPassword) {
+    $AdminPassword = Read-Host "Enter admin password" -AsSecureString | ConvertFrom-SecureString -AsPlainText
+}
+
 $loginBody = @{
     email = "admin@refopen.com"
-    password = "12345678"
+    password = $AdminPassword
 } | ConvertTo-Json
 
 try {

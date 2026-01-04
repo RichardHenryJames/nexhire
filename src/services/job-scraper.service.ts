@@ -258,17 +258,15 @@ export class JobScraperService {
   // Load Clearbit API key (optional - for enhanced enrichment)
   private static loadClearbitApiKey(): string | null {
     try {
-      // Try environment variable first
-      let apiKey = process.env.CLEARBIT_API_KEY;
+      // Get API key from environment variable only - NO HARDCODED KEYS
+      const apiKey = process.env.CLEARBIT_API_KEY;
       
-      // 🔑 FALLBACK: Use hardcoded key if env var not available (same as PowerShell script)
       if (!apiKey) {
-        apiKey = 'sk_2c8c9b5e8f5a4c5d9b3a7f1e2d4c6b8a'; // Clearbit API key
-        console.log('🔑 Using hardcoded Clearbit API key for enrichment');
-      } else {
-        console.log('🔑 Using environment Clearbit API key for enhanced enrichment');
+        console.log('⚠️ CLEARBIT_API_KEY not configured - enrichment disabled');
+        return null;
       }
       
+      console.log('🔑 Using environment Clearbit API key for enhanced enrichment');
       return apiKey;
     } catch (error: any) {
       return null;

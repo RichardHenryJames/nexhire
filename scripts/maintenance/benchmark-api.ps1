@@ -1,7 +1,7 @@
 param(
   [string]$BaseUrl = "https://refopen-api-func.azurewebsites.net/api",
   [string]$Email = "admin@refopen.com",
-  [string]$Password = "12345678",
+  [string]$Password,  # Will be fetched from Key Vault if not provided
   [int]$Iterations = 15,
   [int]$PageSize = 20,
   [string]$SearchText = "software",
@@ -9,6 +9,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Fetch password from Key Vault if not provided
+if (-not $Password) {
+    Write-Host "🔐 Fetching admin password from Key Vault..." -ForegroundColor Cyan
+    $Password = az keyvault secret show --vault-name "refopen-keyvault-prod" --name "AdminPassword" --query "value" -o tsv 2>$null
+    if (-not $Password) {
+        Write-Error "❌ Password not provided and failed to fetch from Key Vault. Run: az login"
+        exit 1
+    }
+}
 
 try {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

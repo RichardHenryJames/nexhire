@@ -37,7 +37,7 @@ param(
     [string]$AdminEmail = "admin@refopen.com",
 
     [Parameter(Mandatory = $false)]
-    [string]$AdminPassword = "12345678",
+    [string]$AdminPassword,  # Will be fetched from Key Vault if not provided
 
     [Parameter(Mandatory = $false)]
     [string]$ApiBaseUrl,
@@ -164,7 +164,18 @@ function Get-AdminToken {
     if ($AdminToken) { $script:Token = $AdminToken; return $AdminToken }
 
     Write-Info "Logging in as admin..."
-    $loginBody = @{ email = $AdminEmail; password = $AdminPassword }
+    
+    # Fetch password from Key Vault if not provided
+    $pwd = $AdminPassword
+    if (-not $pwd) {
+        $pwd = az keyvault secret show --vault-name "refopen-keyvault-prod" --name "AdminPassword" --query "value" -o tsv 2>$null
+        if (-not $pwd) {
+            Write-ErrorMsg "AdminPassword not provided and failed to fetch from Key Vault"
+            return $null
+        }
+    }
+    
+    $loginBody = @{ email = $AdminEmail; password = $pwd }
 
     try {
         $response = Invoke-ApiCall -Endpoint "auth/login" -Method "POST" -Body $loginBody -TimeoutSec 30
