@@ -2,9 +2,14 @@
 # Creates ApplicantProfileViews table, supporting indexes, and aggregation view (no cached column on Applicants)
 
 param(
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING,
     [int]$RetentionDays = 365 # Set 0 to skip retention purge
 )
+
+if (-not $ConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
+    exit 1
+}
 
 Write-Host "Setting up Applicant Profile Views tracking..." -ForegroundColor Green
 

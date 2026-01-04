@@ -3,10 +3,15 @@
 
 Write-Host "`n==== DATABASE PERFORMANCE DIAGNOSTICS ====`n" -ForegroundColor Cyan
 
-$server = "refopen-sqlserver-ci.database.windows.net"
-$database = "refopen-sql-db"
-$username = "sqladmin"
-$password = "RefOpen@2024!Secure"
+$server = $env:DB_SERVER ?? "refopen-sqlserver-ci.database.windows.net"
+$database = $env:DB_NAME ?? "refopen-sql-db"
+$username = $env:DB_USER ?? "sqladmin"
+$password = $env:DB_PASSWORD
+
+if (-not $password) {
+    Write-Error "DB_PASSWORD environment variable is required"
+    exit 1
+}
 
 # Test 1: Check index fragmentation
 Write-Host "1. Checking index fragmentation on Jobs table..." -ForegroundColor Yellow

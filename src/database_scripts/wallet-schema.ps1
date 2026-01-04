@@ -2,8 +2,13 @@
 # Wallet feature for adding money using Razorpay
 
 param(
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING
 )
+
+if (-not $ConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
+    exit 1
+}
 
 Write-Host "?? Setting up RefOpen Wallet Schema..." -ForegroundColor Green
 

@@ -2,8 +2,13 @@
 # This script adds chat/messaging functionality to the existing database
 
 param(
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING
 )
+
+if (-not $ConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
+    exit 1
+}
 
 Write-Host "?? Adding Messaging System to RefOpen Database..." -ForegroundColor Green
 

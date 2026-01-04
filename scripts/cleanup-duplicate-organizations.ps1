@@ -34,7 +34,7 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=300;",
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING,
     
     [Parameter(Mandatory=$false)]
     [switch]$DryRun,
@@ -276,7 +276,7 @@ ORDER BY Name
         
         # Display all duplicates
         foreach ($dup in $duplicates) {
-            Write-Host "  • ID: $($dup.OrganizationID) | Name: '$($dup.Name)' | Jobs: $($dup.JobCount) | Score: $(Get-OrganizationScore $dup)" -ForegroundColor Gray
+            Write-Host "  ï¿½ ID: $($dup.OrganizationID) | Name: '$($dup.Name)' | Jobs: $($dup.JobCount) | Score: $(Get-OrganizationScore $dup)" -ForegroundColor Gray
         }
         
         # Choose canonical organization based on strategy

@@ -7,10 +7,15 @@
 # ================================================================
 
 param(
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING,
     [int]$UserCount = 1000,
     [switch]$DryRun
 )
+
+if (-not $ConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
+    exit 1
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -489,9 +494,9 @@ $verificationQueries = @{
 foreach ($key in $verificationQueries.Keys) {
     try {
         $result = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $verificationQueries[$key] -QueryTimeout 30
-        Write-Host "   • $key`: $($result.Count)" -ForegroundColor White
+        Write-Host "   ï¿½ $key`: $($result.Count)" -ForegroundColor White
     } catch {
-        Write-Host "   • $key`: Unable to verify" -ForegroundColor Yellow
+        Write-Host "   ï¿½ $key`: Unable to verify" -ForegroundColor Yellow
     }
 }
 

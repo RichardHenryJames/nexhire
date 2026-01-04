@@ -69,10 +69,14 @@ $EnvironmentUrls = @{
 # Get API base URL
 $BaseUrl = if ($ApiBaseUrl) { $ApiBaseUrl } else { $EnvironmentUrls[$Environment] }
 
-# Default connection string for production
-$DefaultConnectionString = "Server=tcp:refopen-sqlserver-ci.database.windows.net,1433;Initial Catalog=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+# Get connection string from environment (no hardcoded default)
+$DefaultConnectionString = $env:DB_CONNECTION_STRING
 
 if (-not $ConnectionString -and ($Action -in @("setup", "logs"))) {
+    if (-not $DefaultConnectionString) {
+        Write-Error "DB_CONNECTION_STRING environment variable is required for '$Action' action"
+        exit 1
+    }
     $ConnectionString = $DefaultConnectionString
 }
 

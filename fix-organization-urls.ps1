@@ -3,8 +3,13 @@
 # ================================================================
 
 param(
-    [string]$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;"
+    [string]$ConnectionString = $env:DB_CONNECTION_STRING
 )
+
+if (-not $ConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -ConnectionString parameter is required"
+    exit 1
+}
 
 Write-Host "==================================================================" -ForegroundColor Cyan
 Write-Host " FIXING INCORRECT ORGANIZATION DATA" -ForegroundColor Cyan

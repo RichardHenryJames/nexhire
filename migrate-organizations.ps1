@@ -5,11 +5,16 @@
 # ================================================================
 
 param(
-    [string]$SourceConnectionString = "Server=refopen-sql-srv.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=P@ssw0rd1234!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
-    [string]$TargetConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    [string]$SourceConnectionString = $env:SOURCE_DB_CONNECTION_STRING,
+    [string]$TargetConnectionString = $env:DB_CONNECTION_STRING,
     [switch]$DryRun,
     [switch]$SkipDuplicates
 )
+
+if (-not $TargetConnectionString) {
+    Write-Error "DB_CONNECTION_STRING environment variable or -TargetConnectionString parameter is required"
+    exit 1
+}
 
 $ErrorActionPreference = "Stop"
 

@@ -12,8 +12,13 @@ param(
     [switch]$Execute = $false
 )
 
-# Connection string
-$ConnectionString = "Server=refopen-sqlserver-ci.database.windows.net;Database=refopen-sql-db;User ID=sqladmin;Password=RefOpen@2024!Secure;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+# Connection string from environment
+$ConnectionString = $env:DB_CONNECTION_STRING
+
+if (-not $ConnectionString) {
+    Write-Host "ERROR: DB_CONNECTION_STRING environment variable is required" -ForegroundColor Red
+    exit 1
+}
 
 # Colors for output
 function Write-ColorOutput {
