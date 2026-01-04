@@ -7,9 +7,10 @@ obj/
 TestResults/
 *.csproj.user
 packages/
-.env*
+.env
+.env.local
+.env.development
 backups/*
-frontend/.env*
 
 # Node.js related files
 node_modules/
@@ -34,8 +35,7 @@ out/
 .DS_Store
 Thumbs.db
 
-# Environment files
-.env
+# Environment files (local only - .env.prod is safe with Key Vault refs)
 *.pem
 local.settings.json
 env-config.prod.json
