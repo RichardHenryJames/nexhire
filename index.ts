@@ -165,7 +165,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboard } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1447,15 +1447,37 @@ app.http("access-status", {
 });
 
 // ========================================================================
-// ADMIN DASHBOARD ENDPOINT (Admin only)
+// ADMIN DASHBOARD ENDPOINTS (Admin only)
 // NOTE: "admin" is a reserved prefix in Azure Functions, use "management" instead
+// Split into 4 fast endpoints for lazy loading per tab
 // ========================================================================
 
-app.http("admin-dashboard", {
+app.http("admin-dashboard-overview", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
-  route: "management/dashboard",
-  handler: withErrorHandling(getAdminDashboard),
+  route: "management/dashboard/overview",
+  handler: withErrorHandling(getAdminDashboardOverview),
+});
+
+app.http("admin-dashboard-users", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/users",
+  handler: withErrorHandling(getAdminDashboardUsers),
+});
+
+app.http("admin-dashboard-referrals", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/referrals",
+  handler: withErrorHandling(getAdminDashboardReferrals),
+});
+
+app.http("admin-dashboard-transactions", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/transactions",
+  handler: withErrorHandling(getAdminDashboardTransactions),
 });
 
 // ========================================================================

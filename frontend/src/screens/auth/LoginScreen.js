@@ -85,6 +85,7 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [loginError, setLoginError] = useState(''); // State for login error message
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
   const responsive = useResponsive();
@@ -115,10 +116,12 @@ export default function LoginScreen({ navigation }) {
 
   // FIXED: Clear error state when screen mounts or comes into focus
   useEffect(() => {
+    setLoginError(''); // Clear local login error on mount
     clearError();
     
     // Also clear when screen comes into focus
     const unsubscribeFocus = navigation.addListener('focus', () => {
+      setLoginError(''); // Clear local login error on focus
       clearError();
       // Re-check auth state when screen comes into focus
       checkAuthState();
@@ -151,16 +154,19 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     if (!validateForm()) return;
 
+    setLoginError(''); // Clear previous error
     setFormLoading(true);
     const result = await login(email, password);
     setFormLoading(false);
     
     if (!result.success) {
-      Alert.alert(
-        'Login Failed', 
-        result.error || 'Please check your credentials and try again.',
-        [{ text: 'OK' }]
-      );
+      const errorMessage = result.error || 'Please check your credentials and try again.';
+      setLoginError(errorMessage); // Set error to display on UI
+      
+      // Also show alert for mobile
+      if (Platform.OS !== 'web') {
+        Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
+      }
     }
     // If successful, navigation will happen automatically via auth context
   };
@@ -318,7 +324,7 @@ export default function LoginScreen({ navigation }) {
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
-                    clearError(); // FIXED: Clear error when user starts typing
+                    if (errors.email) setErrors(prev => ({ ...prev, email: null }));
                   }}
                   placeholder="Enter your email"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
@@ -351,7 +357,7 @@ export default function LoginScreen({ navigation }) {
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
-                    clearError(); // FIXED: Clear error when user starts typing
+                    if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
@@ -396,11 +402,11 @@ export default function LoginScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            {/* Error Message - FIXED: Only show if error exists */}
-            {error && (
+            {/* Error Message - FIXED: Show loginError or context error */}
+            {(loginError || error) && (
               <View style={screenStyles.globalErrorContainer}>
                 <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
-                <Text style={screenStyles.globalError}>{error}</Text>
+                <Text style={screenStyles.globalError}>{loginError || error}</Text>
               </View>
             )}
           </View>

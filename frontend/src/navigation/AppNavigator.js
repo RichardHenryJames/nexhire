@@ -356,18 +356,24 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ title: "Home" }}
-      />
+      {/* Hide Home and Jobs tabs for Admin users */}
+      {!isAdmin && (
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{ title: "Home" }}
+        />
+      )}
 
       {/* FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
-      <Tab.Screen
-        name="Jobs"
-        component={isEmployer ? EmployerJobsScreen : JobsScreen}
-        options={{ title: "Jobs" }}
-      />
+      {/* Hide Jobs tab for Admin users */}
+      {!isAdmin && (
+        <Tab.Screen
+          name="Jobs"
+          component={isEmployer ? EmployerJobsScreen : JobsScreen}
+          options={{ title: "Jobs" }}
+        />
+      )}
 
       {isEmployer && (
         <Tab.Screen

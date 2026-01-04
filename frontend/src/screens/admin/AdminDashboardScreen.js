@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,8 +29,24 @@ export default function AdminDashboardScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dashboardData, setDashboardData] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions
+  
+  // Separate state for each tab's data
+  const [overviewData, setOverviewData] = useState(null);
+  const [usersData, setUsersData] = useState(null);
+  const [referralsData, setReferralsData] = useState(null);
+  const [transactionsData, setTransactionsData] = useState(null);
+  
+  // Track which tabs have been loaded
+  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false });
+  
+  // Tab-specific loading states
+  const [tabLoading, setTabLoading] = useState({
+    overview: false,
+    users: false,
+    referrals: false,
+    transactions: false
+  });
 
   useEffect(() => {
     navigation.setOptions({
@@ -41,32 +57,124 @@ export default function AdminDashboardScreen() {
     });
   }, [navigation, colors]);
 
-  const loadDashboard = useCallback(async () => {
+  // Load overview data on initial mount (fast, lightweight)
+  const loadOverview = useCallback(async (force = false) => {
+    if (loadedTabs.current.overview && !force) return;
     try {
-      setLoading(true);
-      // NOTE: Using "management/dashboard" because "admin" is reserved in Azure Functions
-      const response = await refopenAPI.apiCall('/management/dashboard');
+      setTabLoading(prev => ({ ...prev, overview: true }));
+      const response = await refopenAPI.apiCall('/management/dashboard/overview');
       if (response.success) {
-        setDashboardData(response.data);
+        setOverviewData(response.data);
+        loadedTabs.current.overview = true;
       }
     } catch (error) {
-      console.error('Error loading admin dashboard:', error);
+      console.error('Error loading overview:', error);
     } finally {
+      setTabLoading(prev => ({ ...prev, overview: false }));
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  // Load users data on demand
+  const loadUsers = useCallback(async (force = false) => {
+    if (loadedTabs.current.users && !force) return;
+    try {
+      setTabLoading(prev => ({ ...prev, users: true }));
+      const response = await refopenAPI.apiCall('/management/dashboard/users');
+      if (response.success) {
+        setUsersData(response.data);
+        loadedTabs.current.users = true;
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, users: false }));
+    }
+  }, []);
+
+  // Load referrals data on demand
+  const loadReferrals = useCallback(async (force = false) => {
+    if (loadedTabs.current.referrals && !force) return;
+    try {
+      setTabLoading(prev => ({ ...prev, referrals: true }));
+      const response = await refopenAPI.apiCall('/management/dashboard/referrals');
+      if (response.success) {
+        setReferralsData(response.data);
+        loadedTabs.current.referrals = true;
+      }
+    } catch (error) {
+      console.error('Error loading referrals:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, referrals: false }));
+    }
+  }, []);
+
+  // Load transactions data on demand
+  const loadTransactions = useCallback(async (force = false) => {
+    if (loadedTabs.current.transactions && !force) return;
+    try {
+      setTabLoading(prev => ({ ...prev, transactions: true }));
+      const response = await refopenAPI.apiCall('/management/dashboard/transactions');
+      if (response.success) {
+        setTransactionsData(response.data);
+        loadedTabs.current.transactions = true;
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, transactions: false }));
+    }
+  }, []);
+
+  // Load data when tab changes
+  useEffect(() => {
+    if (!isAdmin) return;
+    
+    switch (activeTab) {
+      case 'overview':
+        loadOverview();
+        break;
+      case 'users':
+        loadUsers();
+        break;
+      case 'referrals':
+        loadReferrals();
+        break;
+      case 'transactions':
+        loadTransactions();
+        break;
+    }
+  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions]);
+
+  // Initial load - just overview
   useEffect(() => {
     if (isAdmin) {
-      loadDashboard();
+      loadOverview();
     }
-  }, [isAdmin, loadDashboard]);
+  }, [isAdmin, loadOverview]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadDashboard();
-  }, [loadDashboard]);
+    // Reset loaded tabs to force reload
+    loadedTabs.current = { overview: false, users: false, referrals: false, transactions: false };
+    
+    // Reload current tab
+    switch (activeTab) {
+      case 'overview':
+        loadOverview(true);
+        break;
+      case 'users':
+        loadUsers(true);
+        break;
+      case 'referrals':
+        loadReferrals(true);
+        break;
+      case 'transactions':
+        loadTransactions(true);
+        break;
+    }
+  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions]);
 
   if (!isAdmin) {
     return (
@@ -88,7 +196,7 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  if (loading && !dashboardData) {
+  if (loading && !overviewData) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -96,6 +204,14 @@ export default function AdminDashboardScreen() {
       </View>
     );
   }
+
+  // Combine data from different tabs for rendering
+  const dashboardData = {
+    ...overviewData,
+    ...usersData,
+    ...referralsData,
+    ...transactionsData
+  };
 
   const { 
     userStats = {}, 
@@ -154,13 +270,28 @@ export default function AdminDashboardScreen() {
             ]}>
               {tab.label}
             </Text>
+            {tabLoading[tab.key] && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
+            )}
           </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
   );
 
-  const renderOverviewTab = () => (
+  // Tab loading spinner component
+  const TabLoadingSpinner = () => (
+    <View style={styles.tabLoadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.tabLoadingText}>Loading...</Text>
+    </View>
+  );
+
+  const renderOverviewTab = () => {
+    if (tabLoading.overview && !overviewData) {
+      return <TabLoadingSpinner />;
+    }
+    return (
     <>
       {/* Quick Stats Row */}
       <View style={styles.sectionHeader}>
@@ -243,8 +374,13 @@ export default function AdminDashboardScreen() {
       </View>
     </>
   );
+  };
 
-  const renderUsersTab = () => (
+  const renderUsersTab = () => {
+    if (tabLoading.users && !usersData) {
+      return <TabLoadingSpinner />;
+    }
+    return (
     <>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Users</Text>
@@ -284,8 +420,13 @@ export default function AdminDashboardScreen() {
       ))}
     </>
   );
+  };
 
-  const renderReferralsTab = () => (
+  const renderReferralsTab = () => {
+    if (tabLoading.referrals && !referralsData) {
+      return <TabLoadingSpinner />;
+    }
+    return (
     <>
       {/* Referral Status Breakdown */}
       <View style={styles.sectionHeader}>
@@ -329,8 +470,13 @@ export default function AdminDashboardScreen() {
       ))}
     </>
   );
+  };
 
-  const renderTransactionsTab = () => (
+  const renderTransactionsTab = () => {
+    if (tabLoading.transactions && !transactionsData) {
+      return <TabLoadingSpinner />;
+    }
+    return (
     <>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -365,6 +511,7 @@ export default function AdminDashboardScreen() {
       ))}
     </>
   );
+  };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -425,6 +572,17 @@ const createStyles = (colors, responsive = {}) => {
       marginTop: 12,
       color: colors.textSecondary,
       fontSize: 16,
+    },
+    tabLoadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
+    tabLoadingText: {
+      marginTop: 12,
+      color: colors.textSecondary,
+      fontSize: 14,
     },
     accessDenied: {
       flex: 1,
