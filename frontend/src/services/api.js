@@ -2834,7 +2834,7 @@ if (!resumeId) {
       return { success: false, error: 'Authentication required' };
     }
 
-    return this.apiCall(`/support/tickets/${ticketId}`, {
+    return this.apiCall(`/support/tickets/${ticketId}/update`, {
       method: 'PATCH',
       body: JSON.stringify(updateData),
     });

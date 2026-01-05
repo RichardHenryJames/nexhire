@@ -1443,7 +1443,7 @@ app.http("support-get-ticket-by-id", {
 app.http("support-update-ticket", {
   methods: ["PATCH", "OPTIONS"],
   authLevel: "anonymous",
-  route: "support/tickets/{ticketId}",
+  route: "support/tickets/{ticketId}/update",
   handler: withErrorHandling(updateTicket),
 });
 
