@@ -111,6 +111,8 @@ export default function WithdrawalRequestsScreen({ navigation }) {
   // Render withdrawal item
   const renderWithdrawal = ({ item }) => {
     const statusInfo = getStatusInfo(item.Status);
+    const netAmount = item.NetAmount ?? item.Amount; // Use NetAmount if available, else show Amount
+    const fee = item.ProcessingFee ?? 0;
     
     return (
       <View style={styles.withdrawalItem}>
@@ -119,7 +121,14 @@ export default function WithdrawalRequestsScreen({ navigation }) {
             <Ionicons name={statusInfo.icon} size={16} color={statusInfo.color} />
             <Text style={[styles.statusText, { color: statusInfo.color }]}>{item.Status}</Text>
           </View>
-          <Text style={styles.amount}>₹{item.Amount.toFixed(2)}</Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.amount}>₹{netAmount.toFixed(2)}</Text>
+            {fee > 0 && (
+              <Text style={styles.amountBreakdown}>
+                (₹{item.Amount.toFixed(0)} - ₹{fee} fee)
+              </Text>
+            )}
+          </View>
         </View>
         
         <View style={styles.withdrawalDetails}>
@@ -158,8 +167,8 @@ export default function WithdrawalRequestsScreen({ navigation }) {
           
           {item.PaymentReference && (
             <View style={styles.detailRow}>
-              <Ionicons name="receipt-outline" size={16} color="#10B981" />
-              <Text style={[styles.detailText, { color: '#10B981' }]}>
+              <Ionicons name="receipt-outline" size={16} color={colors.success} />
+              <Text style={[styles.detailText, { color: colors.success }]}>
                 Ref: {item.PaymentReference}
               </Text>
             </View>
@@ -167,8 +176,8 @@ export default function WithdrawalRequestsScreen({ navigation }) {
           
           {item.RejectionReason && (
             <View style={[styles.detailRow, styles.rejectionRow]}>
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
-              <Text style={[styles.detailText, { color: '#EF4444' }]}>
+              <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+              <Text style={[styles.detailText, { color: colors.error }]}>
                 {item.RejectionReason}
               </Text>
             </View>
@@ -266,10 +275,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  amountContainer: {
+    alignItems: 'flex-end',
+  },
   amount: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.text,
+  },
+  amountBreakdown: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   withdrawalDetails: {
     gap: 8,

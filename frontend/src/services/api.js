@@ -1902,12 +1902,12 @@ if (!resumeId) {
   }
 
   // 💰 NEW: Request withdrawal of referral earnings
-  async requestWithdrawal(amount, upiId) {
+  async requestWithdrawal(amount, paymentDetails) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     return this.apiCall('/wallet/withdraw', {
       method: 'POST',
-      body: JSON.stringify({ amount, upiId }),
+      body: JSON.stringify({ amount, ...paymentDetails }),
     });
   }
 
