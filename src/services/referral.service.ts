@@ -296,7 +296,8 @@ export class ReferralService {
             try {
                 // Cast to any to access query-derived fields not in the interface
                 const requestData = createdRequest as any;
-                const companyName = requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
+                // Use CompanyName (processed field) or fallback to raw fields
+                const companyName = requestData.CompanyName || requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
                 const jobTitle = requestData.JobTitle || requestData.InternalJobTitle || dto.jobTitle || 'Unknown Position';
                 const organizationIdRaw = isExternal 
                     ? (dto.organizationId ? parseInt(dto.organizationId, 10) : null)

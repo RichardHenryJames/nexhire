@@ -30,7 +30,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     // ========================================
 
     'new_referral_request': {
-        subject: '🎯 New referral request at {{companyName}} - Help {{seekerName}} get hired!',
+        subject: '🎯 New referral request at {{companyName}} - Help {{seekerName}} get referred & earn rewards!',
         html: `
 <!DOCTYPE html>
 <html>
