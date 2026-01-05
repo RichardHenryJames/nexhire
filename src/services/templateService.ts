@@ -493,6 +493,179 @@ const templates: Record<string, { subject: string; html: string }> = {
 </body>
 </html>
         `
+    },
+
+    // ========================================
+    // USER REGISTRATION
+    // ========================================
+
+    'welcome_new_user': {
+        subject: '🎉 Welcome {{firstName}} to RefOpen - Find Jobs, Get Referred, Hire Talent, Earn Rewards!',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">Welcome to RefOpen! 🚀</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 16px;">Find Jobs. Get Referred. Hire Talent. Earn Rewards.</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                Welcome aboard! You've just joined <strong>125,000+</strong> job seekers who are landing jobs 
+                                at top companies using RefOpen.
+                            </p>
+                            
+                            <!-- Stats Banner -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; margin: 0 0 30px 0;">
+                                <tr>
+                                    <td style="padding: 25px; text-align: center;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">
+                                                    <p style="margin: 0; color: white; font-size: 28px; font-weight: 700;">125K+</p>
+                                                    <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px;">Active Jobs</p>
+                                                </td>
+                                                <td width="33%" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">
+                                                    <p style="margin: 0; color: white; font-size: 28px; font-weight: 700;">500+</p>
+                                                    <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px;">Top Companies</p>
+                                                </td>
+                                                <td width="33%" style="text-align: center;">
+                                                    <p style="margin: 0; color: white; font-size: 28px; font-weight: 700;">48hrs</p>
+                                                    <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px;">Avg Response</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- How It Works Section -->
+                            <h3 style="color: #333; margin: 0 0 20px 0; font-size: 18px;">🎯 How RefOpen Works</h3>
+                            
+                            <!-- Step 1 -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                                <tr>
+                                    <td width="50" valign="top">
+                                        <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 36px; color: white; font-weight: 700;">1</div>
+                                    </td>
+                                    <td style="padding-left: 10px;">
+                                        <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Browse & Search Jobs</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Explore 125K+ jobs from Fortune 500 companies. AI-powered recommendations find perfect matches.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Step 2 -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                                <tr>
+                                    <td width="50" valign="top">
+                                        <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); border-radius: 50%; text-align: center; line-height: 36px; color: white; font-weight: 700;">2</div>
+                                    </td>
+                                    <td style="padding-left: 10px;">
+                                        <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Apply Directly or Ask Referral</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request goes to ALL employees at that company!</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Step 3 -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                                <tr>
+                                    <td width="50" valign="top">
+                                        <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; text-align: center; line-height: 36px; color: white; font-weight: 700;">3</div>
+                                    </td>
+                                    <td style="padding-left: 10px;">
+                                        <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Get Referred & Land Your Job</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Track applications in real-time, chat with referrers, and land your dream job faster!</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Why RefOpen Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 12px; margin: 0 0 25px 0;">
+                                <tr>
+                                    <td style="padding: 25px;">
+                                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">✨ Why Job Seekers Love RefOpen</h3>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request reaches ALL employees at a company</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Skip the resume black hole - get noticed by real people</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ External referrals: Found a job elsewhere? We'll find referrers!</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Track applications & referrals in real-time</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Direct messaging with employers & referrers</td></tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 10px 0 30px 0;">
+                                        <a href="{{appUrl}}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 50px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);">
+                                            Start Exploring Jobs →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Referrer CTA -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin: 0 0 20px 0;">
+                                <tr>
+                                    <td style="padding: 20px; text-align: center;">
+                                        <p style="margin: 0 0 10px 0; color: #92400e; font-size: 15px; font-weight: 600;">
+                                            💰 Already employed? Earn up to ₹100 per referral!
+                                        </p>
+                                        <p style="margin: 0; color: #a16207; font-size: 13px;">
+                                            Verify your work email and turn LinkedIn spam into rewards.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #888; font-size: 14px; line-height: 1.6; text-align: center;">
+                                Questions? Reply to this email or reach us at support@refopen.com
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
+                                You're receiving this because you signed up for RefOpen.
+                            </p>
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage preferences</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
     }
 };
 

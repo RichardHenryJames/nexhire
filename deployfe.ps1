@@ -164,30 +164,30 @@ if (Test-Path $indexPath) {
     $indexContent = Get-Content $indexPath -Raw
     
     # Replace the title
-    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Job Referrals | Find Jobs & Apply | Get Referred to Top Companies</title>'
+    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - India''s Leading Job & Referral Platform | Find Jobs, Get Referred, Hire Talent, Earn Rewards</title>'
     
     # Add SEO meta tags after <meta charset>
     # NOTE: Google AdSense script is loaded dynamically by AdCard component
     # to avoid "ads on screens without publisher content" violation
     $seoTags = @"
     <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
-    <meta name="description" content="RefOpen - The leading job referral platform. Ask for referrals from employees at Google, Amazon, Microsoft & 500+ top companies. Find jobs, apply & get referred faster. Referred candidates are 15x more likely to get hired." />
-    <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement" />
+    <meta name="description" content="RefOpen - India's leading job & referral platform. Find jobs, get referred to Google, Amazon, Microsoft & 500+ top companies. Hire talent & earn rewards. Apply, Hire, Refer & Earn!" />
+    <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement, hire talent, earn rewards, referral bonus" />
     <meta name="author" content="RefOpen" />
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://refopen.com/" />
-    <meta property="og:title" content="RefOpen - Job Referrals | Find Jobs & Apply | Get Referred Fast" />
-    <meta property="og:description" content="Find jobs, apply & get referrals from employees at top companies. Search jobs & get referred to Google, Amazon, Microsoft. Referred candidates are 15x more likely to be hired." />
+    <meta property="og:title" content="RefOpen - India's Leading Job & Referral Platform | Apply, Hire, Refer, Earn" />
+    <meta property="og:description" content="Find jobs, get referred to top companies. Hire talent & earn rewards. India's #1 job & referral platform with 125K+ jobs." />
     <meta property="og:image" content="https://refopen.com/refopen-logo.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="RefOpen" />
     <meta property="og:locale" content="en_IN" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="RefOpen - Job Referrals | Find Jobs & Apply" />
-    <meta name="twitter:description" content="Find jobs, apply & get referrals from employees at top companies. Referred candidates are 15x more likely to get hired." />
+    <meta name="twitter:title" content="RefOpen - India's Leading Job & Referral Platform" />
+    <meta name="twitter:description" content="Find jobs, get referred, hire talent & earn rewards. Apply, Hire, Refer & Earn at India's #1 job referral platform." />
     <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />

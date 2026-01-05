@@ -281,7 +281,8 @@ export default function LoginScreen({ navigation }) {
               resizeMode="contain"
             />
 
-            <Text style={screenStyles.title}>Your next career opportunity awaits</Text>
+            <Text style={screenStyles.title}>India's Leading Job & Referral Platform</Text>
+            <Text style={screenStyles.subtitle}>Apply • Hire • Refer • Earn Rewards</Text>
           </View>
 
 
@@ -555,11 +556,19 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     color: colors.white + 'E6',
     textAlign: 'center',
     lineHeight: 26,
-    fontWeight: typography.weights.medium,
+    fontWeight: typography.weights.bold,
     maxWidth: 320,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  subtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.white + 'B3',
+    textAlign: 'center',
+    marginTop: 6,
+    fontWeight: typography.weights.regular,
+    letterSpacing: 1,
   },
   // NEW: Google Sign-In styles
   googleSection: {

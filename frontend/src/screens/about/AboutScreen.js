@@ -760,7 +760,7 @@ export default function AboutScreen() {
                 }}
               >
                 Find Jobs. Get Referred.{'\n'}
-                <Text style={{ color: COLORS.primary }}>Get Hired.</Text>{'\n'}
+                Hire Talent. <Text style={{ color: COLORS.primary }}>Earn Rewards.</Text>{'\n'}
               </Text>
 
               <Text

@@ -238,6 +238,29 @@ export class EmailService {
     }
 
     /**
+     * Send welcome email to new users
+     */
+    static async sendWelcomeEmail(email: string, firstName: string): Promise<EmailResult> {
+        try {
+            const { TemplateService } = await import('./templateService');
+            const template = TemplateService.render('welcome_new_user', {
+                firstName: firstName || 'there'
+            });
+
+            return await this.send({
+                to: email,
+                subject: template.subject,
+                html: template.html,
+                text: template.text,
+                emailType: 'welcome'
+            });
+        } catch (error: any) {
+            console.error('❌ Error sending welcome email:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Get email configuration for external use
      */
     static getConfig() {

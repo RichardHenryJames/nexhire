@@ -120,6 +120,15 @@ export class UserService {
                 console.error('Error giving bonuses (registration still successful):', bonusError);
             }
             
+            // Send welcome email to new user
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendWelcomeEmail(user.Email, user.FirstName || 'there');
+            } catch (emailError) {
+                // Log but don't fail registration if email fails
+                console.error('Error sending welcome email (registration still successful):', emailError);
+            }
+            
             return user;
         } catch (error) {
             try { await tx.rollback(); } catch {}
