@@ -49,9 +49,12 @@ scripts/
 ### `/deployment` - Deployment Scripts
 | Script | Description |
 |--------|-------------|
+| `deploy-infrastructure.ps1` | **Create full Azure infrastructure** (supports all environments) |
 | `deploy-backend.ps1` | Deploy Azure Function App |
 | `deployfe.ps1` | Deploy frontend to Static Web App |
-| `sync-env-variables.ps1` | Sync .env.prod to Azure |
+| `sync-env-variables.ps1` | Sync .env to Azure Function App |
+| `deploy-email-service.ps1` | Deploy email service configuration |
+| `deploy-env-from-json.ps1` | Deploy environment from JSON config |
 
 ### `/job-scraping` - Job Scraper Scripts
 | Script | Description |
@@ -76,16 +79,57 @@ scripts/
 ## 💡 Common Commands
 
 ```powershell
+# ==============================
+# INFRASTRUCTURE DEPLOYMENT
+# ==============================
+
+# Create NEW environment infrastructure (dev, staging, prod, etc.)
+.\scripts\deployment\deploy-infrastructure.ps1 -Environment dev
+.\scripts\deployment\deploy-infrastructure.ps1 -Environment prod
+.\scripts\deployment\deploy-infrastructure.ps1 -Environment staging
+
+# Dry run (see what will be created without creating)
+.\scripts\deployment\deploy-infrastructure.ps1 -Environment dev -DryRun
+
+# Skip confirmation prompt
+.\scripts\deployment\deploy-infrastructure.ps1 -Environment dev -SkipConfirmation
+
+# ==============================
+# DATABASE SETUP
+# ==============================
+
 # Setup database from scratch
 . .\scripts\utils\Load-DbCredentials.ps1
 .\scripts\database\setup-database.ps1
 
+# ==============================
+# TEST DATA
+# ==============================
+
 # Generate test users
 .\scripts\data-generation\generate-indian-users.ps1 -UserCount 100 -DryRun
 
-# Deploy backend
-.\scripts\deployment\deploy-backend.ps1
+# ==============================
+# CODE DEPLOYMENT
+# ==============================
 
-# Sync environment variables
-.\scripts\deployment\sync-env-variables.ps1 -EnvFile .env.prod
+# Deploy backend (dev)
+.\deploy-backend.ps1 -Environment dev
+
+# Deploy backend (prod)
+.\deploy-backend.ps1 -Environment prod
+
+# Deploy frontend (dev)
+.\deployfe.ps1 -Environment dev
+
+# Deploy frontend (prod)
+.\deployfe.ps1 -Environment prod
+
+# ==============================
+# ENVIRONMENT SYNC
+# ==============================
+
+# Sync environment variables to Azure
+.\scripts\deployment\sync-env-variables.ps1 -Environment dev
+.\scripts\deployment\sync-env-variables.ps1 -Environment prod
 ```
