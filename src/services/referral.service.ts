@@ -360,8 +360,8 @@ export class ReferralService {
                 -- ✅ LEFT JOIN for internal jobs (only when JobID is not null)
                 LEFT JOIN Jobs j ON rr.JobID = j.JobID AND rr.JobID IS NOT NULL
                 LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
-                -- ✅ LEFT JOIN for external organizations (only when ExtJobID is not null)
-                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                -- ✅ LEFT JOIN for organization directly from ReferralRequests.OrganizationID
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID
                 -- Applicant data (always present)
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
@@ -390,9 +390,9 @@ export class ReferralService {
                 jobTitle = rawData.JobTitle || 'External Job'; // ✅ Use stored JobTitle column
                 actualJobId = rawData.ExtJobID; // Use ExtJobID for external
             } else {
-                // For internal referrals, use job data
-                jobTitle = rawData.InternalJobTitle || 'Internal Job';
-                companyName = rawData.InternalCompanyName || 'Company';
+                // For internal referrals, use job data - prefer direct org lookup via rr.OrganizationID
+                jobTitle = rawData.InternalJobTitle || rawData.JobTitle || 'Internal Job';
+                companyName = rawData.ExternalCompanyName || rawData.InternalCompanyName || 'Company';
                 actualJobId = rawData.JobID; // Use JobID for internal
             }
             

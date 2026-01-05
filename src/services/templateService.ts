@@ -76,11 +76,11 @@ const templates: Record<string, { subject: string; html: string }> = {
                             <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; margin: 25px 0;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0; color: #166534; font-size: 14px;">
-                                            💰 <strong>Earn ₹25-35</strong> when you refer and the seeker verifies!
+                                        <p style="margin: 0; color: #166534; font-size: 16px; font-weight: 600;">
+                                            💰 Earn up to <strong>₹100</strong> per referral!
                                         </p>
-                                        <p style="margin: 8px 0 0 0; color: #166534; font-size: 13px;">
-                                            ⚡ Quick response bonus: Extra ₹10 if you refer within 24 hours!
+                                        <p style="margin: 10px 0 0 0; color: #166534; font-size: 14px;">
+                                            ⚡ Quick response bonus if you refer within 24 hours!
                                         </p>
                                     </td>
                                 </tr>
