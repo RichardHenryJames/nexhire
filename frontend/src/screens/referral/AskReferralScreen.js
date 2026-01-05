@@ -169,8 +169,9 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   // 🎯 NEW: Filter and rotate Fortune 500 company logos with random timing
   useEffect(() => {
     // Filter Fortune 500 companies with logos from already loaded companies
+    // Note: isFortune500 can be 1, true, "1", or "true" from backend
     const f500WithLogos = companies
-      .filter(org => org.isFortune500 && org.logoURL);
+      .filter(org => (org.isFortune500 === 1 || org.isFortune500 === true || org.isFortune500 === '1' || org.isFortune500 === 'true') && org.logoURL);
     
     if (f500WithLogos.length === 0) return;
     
