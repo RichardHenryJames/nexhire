@@ -42,6 +42,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
+import ComplianceFooter from '../../components/ComplianceFooter';
 
 // RefOpen Logo
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
@@ -1571,6 +1572,9 @@ export default function AboutScreen() {
             </View>
           </View>
         </View>
+
+        {/* Compliance Footer */}
+        <ComplianceFooter currentPage="about" />
       </Animated.ScrollView>
       </View>
     </View>

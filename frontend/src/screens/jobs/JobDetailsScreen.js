@@ -1174,9 +1174,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               </View>
               <TextInput
                 style={styles.referralMessageInput}
-                placeholder="Tell them why you're interested in this role and your background...
-
-Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns perfectly with my career goals. I'd be grateful for any referral help!'"
+                placeholder="Tell referrer what makes you the ideal fit..."
                 value={referralMessage}
                 onChangeText={setReferralMessage}
                 multiline
@@ -1186,7 +1184,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
               />
               <View style={styles.messageFooter}>
                 <Text style={styles.referralMessageHint}>
-                  Help referrers understand your interest and background
+                  (max 1000 characters)
                 </Text>
                 <Text style={styles.characterCount}>
                   {referralMessage.length}/1000
@@ -1653,7 +1651,7 @@ const createStyles = (colors, responsive = {}) => {
     gap: 12,
   },
   applyButton: {
-    flex: 2,
+    flex: 1,
     flexDirection: 'row',
     backgroundColor: colors.primary,
     padding: 16,

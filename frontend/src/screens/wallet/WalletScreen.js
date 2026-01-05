@@ -325,7 +325,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   addMoneyText: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   historyButton: {
@@ -340,7 +340,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   historyText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   withdrawButton: {
@@ -357,7 +357,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   withdrawText: {
     color: '#10B981',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   transactionsContainer: {

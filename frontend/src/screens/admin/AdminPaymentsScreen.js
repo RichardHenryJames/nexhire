@@ -334,7 +334,9 @@ export default function AdminPaymentsScreen() {
                 <Text style={styles.emptyText}>No pending payment approvals.</Text>
               </View>
             ) : (
-              pendingPayments.map(payment => renderPaymentCard(payment, true))
+              <View style={styles.cardsGrid}>
+                {pendingPayments.map(payment => renderPaymentCard(payment, true))}
+              </View>
             )}
           </>
         )}
@@ -348,7 +350,9 @@ export default function AdminPaymentsScreen() {
                 <Text style={styles.emptyText}>No manual payment submissions found.</Text>
               </View>
             ) : (
-              allPayments.map(payment => renderPaymentCard(payment, false))
+              <View style={styles.cardsGrid}>
+                {allPayments.map(payment => renderPaymentCard(payment, false))}
+              </View>
             )}
           </>
         )}
@@ -485,6 +489,20 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 100,
+    ...(responsive.isDesktop && {
+      maxWidth: 1200,
+      alignSelf: 'center',
+      width: '100%',
+    }),
+  },
+  cardsGrid: {
+    ...(responsive.isDesktop && {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      justifyContent: 'flex-start',
+    }),
   },
   emptyContainer: {
     alignItems: 'center',
@@ -509,6 +527,11 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    ...(responsive.isDesktop && {
+      width: 'calc(50% - 8px)',
+      minWidth: 400,
+      maxWidth: 580,
+    }),
   },
   paymentHeader: {
     flexDirection: 'row',

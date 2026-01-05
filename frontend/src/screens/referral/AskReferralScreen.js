@@ -742,7 +742,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                 <Text style={styles.label}>Referral Message</Text>
                 <TextInput
                   style={[styles.textArea, errors.referralMessage && styles.inputError]}
-                  placeholder="Tell the referrer about yourself and why you're interested in this role..."
+                  placeholder="Tell referrer what makes you the ideal fit..."
                   placeholderTextColor={colors.gray500}
                   value={formData.referralMessage}
                   onChangeText={(value) => updateFormData('referralMessage', value)}
@@ -755,7 +755,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                   <Text style={styles.errorText}>{errors.referralMessage}</Text>
                 )}
                 <Text style={styles.helperText}>
-                  Help referrers understand your background and interest in the role (max 1000 characters)
+                  (max 1000 characters)
                 </Text>
               </View>
 
