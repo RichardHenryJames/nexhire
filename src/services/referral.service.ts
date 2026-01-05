@@ -179,6 +179,10 @@ export class ReferralService {
             const isExternal = !!dto.extJobID && !dto.jobID; // External if ExtJobID provided and JobID is null
             const isInternal = !!dto.jobID && !dto.extJobID; // Internal if JobID provided and ExtJobID is null
             
+            // Variables to store job details for internal referrals
+            let jobOrganizationId: number | null = null;
+            let internalJobTitle: string | null = null;
+            
             if (!isExternal && !isInternal) {
                 throw new ValidationError('Either jobID (internal) or extJobID (external) must be provided, but not both');
             }
@@ -202,8 +206,8 @@ export class ReferralService {
                 if (existingResult.recordset?.length) {
                     throw new ConflictError('You have already requested a referral for this job');
                 }
-                // Verify job exists first (any status)
-                const jobExistsQuery = `SELECT JobID, Status FROM Jobs WHERE JobID = @param0`;
+                // Verify job exists first (any status) and get OrganizationID
+                const jobExistsQuery = `SELECT JobID, Status, OrganizationID, Title FROM Jobs WHERE JobID = @param0`;
                 const jobExistsResult = await dbService.executeQuery(jobExistsQuery, [dto.jobID]);
                 if (!jobExistsResult.recordset?.length) {
                     throw new NotFoundError('Job not found');
@@ -212,6 +216,9 @@ export class ReferralService {
                 if (jobExistsResult.recordset[0].Status !== 'Published') {
                     throw new ValidationError('Job not open for referrals');
                 }
+                // Store job details for internal referral
+                jobOrganizationId = jobExistsResult.recordset[0].OrganizationID;
+                internalJobTitle = jobExistsResult.recordset[0].Title;
             }
 
             // Verify resume ownership
@@ -260,16 +267,16 @@ export class ReferralService {
                     await this.updateReferrerStatsForExternalRequest(dto.companyName);
                 }
             } else {
-                // ✅ CREATE INTERNAL REFERRAL REQUEST
+                // ✅ CREATE INTERNAL REFERRAL REQUEST (includes OrganizationID and JobTitle from Job)
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
-                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralMessage
+                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralMessage, OrganizationID, JobTitle
                     ) VALUES (
-                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), @param4
+                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), @param4, @param5, @param6
                     )`;
                 
                 await dbService.executeQuery(insertQuery, [
-                    requestId, dto.jobID, applicantId, dto.resumeID, dto.referralMessage || null
+                    requestId, dto.jobID, applicantId, dto.resumeID, dto.referralMessage || null, jobOrganizationId, internalJobTitle
                 ]);
                 
                 // Update referrer stats for internal referrals

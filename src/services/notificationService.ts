@@ -225,10 +225,11 @@ export class NotificationService {
                 u.FirstName as firstName,
                 u.LastName as lastName
             FROM WorkExperiences we
-            INNER JOIN Users u ON we.UserID = u.UserID
-            LEFT JOIN Applicants a ON u.UserID = a.UserID
+            INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+            INNER JOIN Users u ON a.UserID = u.UserID
             WHERE we.OrganizationID = @param0
             AND we.IsCurrent = 1
+            AND we.CompanyEmailVerified = 1
             AND u.IsVerifiedReferrer = 1
             AND (a.OpenToRefer = 1 OR a.OpenToRefer IS NULL)
             AND u.Email IS NOT NULL
