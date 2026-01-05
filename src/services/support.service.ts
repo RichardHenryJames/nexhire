@@ -5,6 +5,11 @@
 
 import { dbService } from './database.service';
 import { ValidationError, NotFoundError, AuthorizationError } from '../utils/validation';
+import { EmailService } from './emailService';
+import { TemplateService } from './templateService';
+
+// Admin notification email for new tickets
+const ADMIN_NOTIFICATION_EMAIL = 'parimalkumar261@gmail.com';
 
 export interface SupportTicket {
     TicketID: string;
@@ -83,7 +88,61 @@ export class SupportService {
             contactEmail || null
         ]);
         
-        return result.recordset[0];
+        const ticket = result.recordset[0];
+        
+        // Send email notification to admin
+        this.sendNewTicketNotification(ticket, contactEmail).catch(err => {
+            console.error('Failed to send new ticket notification email:', err);
+        });
+        
+        return ticket;
+    }
+    
+    /**
+     * Send email notification for new support ticket
+     */
+    private static async sendNewTicketNotification(ticket: SupportTicket, contactEmail?: string): Promise<void> {
+        try {
+            // Get user details
+            const userQuery = `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`;
+            const userResult = await dbService.executeQuery(userQuery, [ticket.UserID]);
+            const user = userResult.recordset[0];
+            
+            const userName = user ? `${user.FirstName} ${user.LastName}` : 'Unknown User';
+            const userEmail = contactEmail || user?.Email || 'Not provided';
+            
+            // Use the template service for consistent email styling
+            const { subject, html, text } = TemplateService.render('new_support_ticket', {
+                ticketId: ticket.TicketID,
+                subject: ticket.Subject,
+                category: ticket.Category,
+                priority: ticket.Priority,
+                status: ticket.Status,
+                userName: userName,
+                userEmail: userEmail,
+                userId: ticket.UserID,
+                message: ticket.Message,
+                createdAt: new Date(ticket.CreatedAt).toLocaleString('en-IN', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                    timeZone: 'Asia/Kolkata'
+                })
+            });
+            
+            await EmailService.send({
+                to: ADMIN_NOTIFICATION_EMAIL,
+                subject: subject,
+                html: html,
+                text: text,
+                emailType: 'support_ticket_notification',
+                referenceType: 'SupportTicket',
+                referenceId: ticket.TicketID
+            });
+            
+            console.log(`✅ New ticket notification sent to ${ADMIN_NOTIFICATION_EMAIL} for ticket ${ticket.TicketID}`);
+        } catch (error) {
+            console.error('Error sending new ticket notification:', error);
+        }
     }
     
     /**

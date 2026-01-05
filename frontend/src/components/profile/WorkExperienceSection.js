@@ -362,22 +362,26 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       return;
     }
 
+    // Show OTP input immediately for better UX
+    setShowOtpInput(true);
+    setOtp(['', '', '', '']);
+    setSendingOtp(true);
+    setVerificationError('');
+    
     try {
-      setSendingOtp(true);
-      setVerificationError('');
       console.log('Sending OTP to:', emailToSend); // Debug log
       const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       
       if (response.success) {
-        setShowOtpInput(true);
-        setOtp(['', '', '', '']);
         setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
         Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
+        setShowOtpInput(false); // Hide boxes on failure
       }
     } catch (error) {
       setVerificationError(error.message || 'Failed to send OTP');
+      setShowOtpInput(false); // Hide boxes on failure
     } finally {
       setSendingOtp(false);
     }
@@ -1087,9 +1091,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
                             onPress={handleSendOtp}
                             disabled={sendingOtp}
                           >
-                            <Text style={styles.resendButtonText}>
-                              {sendingOtp ? 'Sending...' : 'Resend Code'}
-                            </Text>
+                            <Text style={styles.resendButtonText}>Resend Code</Text>
                           </TouchableOpacity>
                           
                           <TouchableOpacity
