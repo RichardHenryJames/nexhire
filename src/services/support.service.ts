@@ -129,7 +129,7 @@ export class SupportService {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                     timeZone: 'Asia/Kolkata'
-                });
+                })
             });
             
             const adminEmails = getAdminEmails();
