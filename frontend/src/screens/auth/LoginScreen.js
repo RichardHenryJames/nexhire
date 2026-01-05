@@ -546,9 +546,9 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     marginBottom: spacing.xl,
   },
   logoImage: {
-    width: 240,
-    height: 68,
-    marginBottom: 8,
+    width: 280,
+    height: 80,
+    marginBottom: 12,
     tintColor: colors.white,
   },
   title: {
@@ -557,7 +557,6 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: typography.weights.bold,
-    maxWidth: 320,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
