@@ -401,4 +401,153 @@ export class SupportService {
             categoryBreakdown: categoryResult.recordset
         };
     }
+
+    /**
+     * Add a message to a ticket conversation
+     */
+    static async addMessage(ticketId: string, senderId: string, senderType: 'User' | 'Admin', message: string): Promise<any> {
+        // Verify ticket exists and user has access
+        const ticketQuery = `SELECT TicketID, UserID, Status FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
+        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        
+        if (ticketResult.recordset.length === 0) {
+            throw new NotFoundError('Ticket not found');
+        }
+        
+        const ticket = ticketResult.recordset[0];
+        
+        // Users can only message their own tickets
+        if (senderType === 'User' && ticket.UserID !== senderId) {
+            throw new AuthorizationError('You do not have permission to message this ticket');
+        }
+        
+        // Can't message closed tickets
+        if (ticket.Status === 'Closed') {
+            throw new ValidationError('Cannot add messages to closed tickets');
+        }
+        
+        // Insert the message
+        const insertQuery = `
+            INSERT INTO SupportMessages (TicketID, SenderID, SenderType, Message)
+            OUTPUT 
+                INSERTED.MessageID,
+                INSERTED.TicketID,
+                INSERTED.SenderID,
+                INSERTED.SenderType,
+                INSERTED.Message,
+                INSERTED.CreatedAt
+            VALUES (@param0, @param1, @param2, @param3)
+        `;
+        
+        const result = await dbService.executeQuery(insertQuery, [ticketId, senderId, senderType, message]);
+        
+        // Update ticket status and timestamps
+        let updateQuery = `UPDATE SupportTickets SET UpdatedAt = GETUTCDATE()`;
+        const updateParams: any[] = [];
+        let paramIndex = 0;
+        
+        if (senderType === 'Admin') {
+            // Admin replied - set to InProgress if Open, update AdminResponse for legacy
+            updateQuery += `, AdminResponse = @param${paramIndex}, AdminUserID = @param${paramIndex + 1}`;
+            updateParams.push(message, senderId);
+            paramIndex += 2;
+            
+            updateQuery += `, Status = CASE WHEN Status = 'Open' THEN 'InProgress' ELSE Status END`;
+        } else {
+            // User replied - reopen if resolved (so admin sees it needs attention)
+            updateQuery += `, Status = CASE WHEN Status = 'Resolved' THEN 'Open' ELSE Status END`;
+        }
+        
+        updateQuery += ` WHERE TicketID = @param${paramIndex}`;
+        updateParams.push(ticketId);
+        
+        await dbService.executeQuery(updateQuery, updateParams);
+        
+        return result.recordset[0];
+    }
+
+    /**
+     * Get messages for a ticket
+     */
+    static async getMessages(ticketId: string, userId: string, isAdmin: boolean): Promise<any[]> {
+        // Verify access
+        const ticketQuery = `SELECT TicketID, UserID FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
+        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        
+        if (ticketResult.recordset.length === 0) {
+            throw new NotFoundError('Ticket not found');
+        }
+        
+        const ticket = ticketResult.recordset[0];
+        
+        // Users can only view their own ticket messages
+        if (!isAdmin && ticket.UserID !== userId) {
+            throw new AuthorizationError('You do not have permission to view this ticket');
+        }
+        
+        const messagesQuery = `
+            SELECT 
+                sm.MessageID,
+                sm.TicketID,
+                sm.SenderID,
+                sm.SenderType,
+                sm.Message,
+                sm.CreatedAt,
+                u.FirstName + ' ' + u.LastName AS SenderName
+            FROM SupportMessages sm
+            JOIN Users u ON sm.SenderID = u.UserID
+            WHERE sm.TicketID = @param0 AND sm.IsDeleted = 0
+            ORDER BY sm.CreatedAt ASC
+        `;
+        
+        const result = await dbService.executeQuery(messagesQuery, [ticketId]);
+        return result.recordset;
+    }
+
+    /**
+     * Close a ticket (User can close their own, Admin can close any)
+     */
+    static async closeTicket(ticketId: string, userId: string, isAdmin: boolean): Promise<SupportTicket> {
+        // Verify ticket exists
+        const ticketQuery = `SELECT TicketID, UserID, Status FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
+        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        
+        if (ticketResult.recordset.length === 0) {
+            throw new NotFoundError('Ticket not found');
+        }
+        
+        const ticket = ticketResult.recordset[0];
+        
+        // Users can only close their own tickets
+        if (!isAdmin && ticket.UserID !== userId) {
+            throw new AuthorizationError('You do not have permission to close this ticket');
+        }
+        
+        if (ticket.Status === 'Closed') {
+            throw new ValidationError('Ticket is already closed');
+        }
+        
+        const updateQuery = `
+            UPDATE SupportTickets
+            SET Status = 'Closed', UpdatedAt = GETUTCDATE(), ResolvedAt = GETUTCDATE()
+            OUTPUT 
+                INSERTED.TicketID,
+                INSERTED.UserID,
+                INSERTED.Category,
+                INSERTED.Subject,
+                INSERTED.Message,
+                INSERTED.Status,
+                INSERTED.Priority,
+                INSERTED.AdminResponse,
+                INSERTED.AdminUserID,
+                INSERTED.ContactEmail,
+                INSERTED.CreatedAt,
+                INSERTED.UpdatedAt,
+                INSERTED.ResolvedAt
+            WHERE TicketID = @param0
+        `;
+        
+        const result = await dbService.executeQuery(updateQuery, [ticketId]);
+        return result.recordset[0];
+    }
 }

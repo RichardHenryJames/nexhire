@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
   RefreshControl,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 
 // Support categories
 const CATEGORIES = [
@@ -49,6 +49,11 @@ export default function SupportScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [closingTicket, setClosingTicket] = useState(false);
 
   // Form state
   const [category, setCategory] = useState('');
@@ -113,6 +118,84 @@ export default function SupportScreen() {
     setRefreshing(false);
   }, []);
 
+  // Load messages when a ticket is selected
+  const loadMessages = async (ticketId) => {
+    try {
+      setLoadingMessages(true);
+      const result = await refopenAPI.getSupportTicketMessages(ticketId);
+      if (result.success) {
+        setMessages(result.data || []);
+      } else {
+        console.error('Failed to load messages:', result.error);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  // Handle selecting a ticket
+  const handleSelectTicket = async (ticket) => {
+    setSelectedTicket(ticket);
+    setReplyMessage('');
+    await loadMessages(ticket.TicketID);
+  };
+
+  // Send reply message
+  const handleSendReply = async () => {
+    if (!replyMessage.trim()) {
+      showToast('Please enter a message', 'error');
+      return;
+    }
+
+    try {
+      setSendingReply(true);
+      const result = await refopenAPI.sendSupportTicketMessage(selectedTicket.TicketID, replyMessage.trim());
+      
+      if (result.success) {
+        showToast('Message sent successfully', 'success');
+        setReplyMessage('');
+        await loadMessages(selectedTicket.TicketID);
+        // Refresh ticket status
+        const updatedTicket = await refopenAPI.getSupportTicketById(selectedTicket.TicketID);
+        if (updatedTicket.success) {
+          setSelectedTicket(updatedTicket.data);
+        }
+      } else {
+        showToast(result.error || 'Failed to send message', 'error');
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      showToast('Failed to send message', 'error');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  // Close ticket
+  const handleCloseTicket = async () => {
+    try {
+      setClosingTicket(true);
+      const result = await refopenAPI.closeSupportTicket(selectedTicket.TicketID);
+      
+      if (result.success) {
+        showToast('Ticket closed successfully', 'success');
+        setSelectedTicket({ ...selectedTicket, Status: 'Closed' });
+        loadTickets(); // Refresh list
+      } else {
+        showToast(result.error || 'Failed to close ticket', 'error');
+      }
+    } catch (error) {
+      console.error('Error closing ticket:', error);
+      showToast('Failed to close ticket', 'error');
+    } finally {
+      setClosingTicket(false);
+    }
+  };
+
   const handleSubmit = async () => {
     // Clear previous messages
     setErrorMessage('');
@@ -120,18 +203,15 @@ export default function SupportScreen() {
     
     // Validation
     if (!category) {
-      setErrorMessage('Please select a category');
-      if (Platform.OS !== 'web') Alert.alert('Required', 'Please select a category');
+      showToast('Please select a category', 'error');
       return;
     }
     if (!subject.trim() || subject.trim().length < 5) {
-      setErrorMessage('Please enter a subject (at least 5 characters)');
-      if (Platform.OS !== 'web') Alert.alert('Required', 'Please enter a subject (at least 5 characters)');
+      showToast('Please enter a subject (at least 5 characters)', 'error');
       return;
     }
     if (!message.trim() || message.trim().length < 10) {
-      setErrorMessage('Please describe your issue in detail (at least 10 characters)');
-      if (Platform.OS !== 'web') Alert.alert('Required', 'Please describe your issue in detail (at least 10 characters)');
+      showToast('Please describe your issue in detail (at least 10 characters)', 'error');
       return;
     }
 
@@ -144,36 +224,17 @@ export default function SupportScreen() {
       });
 
       if (result.success) {
-        setSuccessMessage('Your support ticket has been created. We will respond within 24-48 hours.');
-        if (Platform.OS !== 'web') {
-          Alert.alert(
-            '✅ Ticket Submitted',
-            'Your support ticket has been created. We will respond within 24-48 hours.',
-            [{ text: 'OK', onPress: () => {
-              setCategory('');
-              setSubject('');
-              setMessage('');
-              setActiveTab('history');
-            }}]
-          );
-        } else {
-          // On web, reset form after a short delay
-          setTimeout(() => {
-            setCategory('');
-            setSubject('');
-            setMessage('');
-            setSuccessMessage('');
-            setActiveTab('history');
-          }, 2000);
-        }
+        showToast('Ticket submitted successfully!', 'success');
+        setCategory('');
+        setSubject('');
+        setMessage('');
+        setActiveTab('history');
       } else {
-        setErrorMessage(result.error || 'Failed to submit ticket. Please try again.');
-        if (Platform.OS !== 'web') Alert.alert('Error', result.error || 'Failed to submit ticket. Please try again.');
+        showToast(result.error || 'Failed to submit ticket', 'error');
       }
     } catch (error) {
       console.error('Submit ticket error:', error);
-      setErrorMessage('Something went wrong. Please try again later.');
-      if (Platform.OS !== 'web') Alert.alert('Error', 'Something went wrong. Please try again later.');
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -292,12 +353,17 @@ export default function SupportScreen() {
   const renderTicketDetails = () => {
     if (!selectedTicket) return null;
     const statusConfig = STATUS_CONFIG[selectedTicket.Status] || STATUS_CONFIG.Open;
+    const isClosed = selectedTicket.Status === 'Closed';
 
     return (
       <View style={styles.ticketDetailsContainer}>
         <TouchableOpacity
           style={styles.backToListButton}
-          onPress={() => setSelectedTicket(null)}
+          onPress={() => {
+            setSelectedTicket(null);
+            setMessages([]);
+            setReplyMessage('');
+          }}
         >
           <Ionicons name="arrow-back" size={20} color={colors.primary} />
           <Text style={styles.backToListText}>Back to tickets</Text>
@@ -326,35 +392,100 @@ export default function SupportScreen() {
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>Your Message</Text>
-          <View style={styles.messageBox}>
-            <Text style={styles.messageText}>{selectedTicket.Message}</Text>
-          </View>
-
-          {selectedTicket.AdminResponse && (
-            <>
-              <Text style={styles.sectionLabel}>Our Response</Text>
-              <View style={[styles.messageBox, styles.responseBox]}>
-                <View style={styles.responseHeader}>
-                  <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                  <Text style={styles.responseFrom}>Refopen Support</Text>
+          {/* Conversation Thread */}
+          <Text style={styles.sectionLabel}>Conversation</Text>
+          
+          {loadingMessages ? (
+            <View style={styles.loadingMessagesBox}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingMessagesText}>Loading messages...</Text>
+            </View>
+          ) : messages.length > 0 ? (
+            <View style={styles.conversationContainer}>
+              {messages.map((msg, index) => (
+                <View 
+                  key={msg.MessageID || index} 
+                  style={[
+                    styles.conversationMessage,
+                    msg.SenderType === 'Admin' ? styles.adminMessage : styles.userMessage
+                  ]}
+                >
+                  <View style={styles.messageSenderRow}>
+                    <Ionicons 
+                      name={msg.SenderType === 'Admin' ? 'shield-checkmark' : 'person'} 
+                      size={14} 
+                      color={msg.SenderType === 'Admin' ? colors.primary : colors.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.messageSender,
+                      msg.SenderType === 'Admin' && { color: colors.primary }
+                    ]}>
+                      {msg.SenderType === 'Admin' ? 'Refopen Support' : 'You'}
+                    </Text>
+                    <Text style={styles.messageTime}>{formatDate(msg.CreatedAt)}</Text>
+                  </View>
+                  <Text style={styles.conversationText}>{msg.Message}</Text>
                 </View>
-                <Text style={styles.messageText}>{selectedTicket.AdminResponse}</Text>
-                {selectedTicket.ResolvedAt && (
-                  <Text style={styles.resolvedDate}>
-                    Responded on {formatDate(selectedTicket.ResolvedAt)}
-                  </Text>
-                )}
-              </View>
-            </>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.messageBox}>
+              <Text style={styles.messageText}>{selectedTicket.Message}</Text>
+            </View>
           )}
 
-          {!selectedTicket.AdminResponse && (
-            <View style={styles.pendingBox}>
-              <Ionicons name="hourglass-outline" size={24} color={colors.warning} />
-              <Text style={styles.pendingText}>
-                We're reviewing your ticket. You'll be notified when we respond.
-              </Text>
+          {/* Reply Section - only if not closed */}
+          {!isClosed && (
+            <View style={styles.replySection}>
+              <Text style={styles.sectionLabel}>Send a Reply</Text>
+              <TextInput
+                style={styles.replyInput}
+                placeholder="Type your reply..."
+                placeholderTextColor={colors.textSecondary}
+                value={replyMessage}
+                onChangeText={setReplyMessage}
+                multiline
+                numberOfLines={3}
+              />
+              <TouchableOpacity
+                style={[styles.sendReplyButton, sendingReply && styles.buttonDisabled]}
+                onPress={handleSendReply}
+                disabled={sendingReply}
+              >
+                {sendingReply ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="send" size={18} color={colors.white} />
+                    <Text style={styles.sendReplyText}>Send Reply</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Close Ticket Button */}
+          {!isClosed && (
+            <TouchableOpacity
+              style={[styles.closeTicketButton, closingTicket && styles.buttonDisabled]}
+              onPress={handleCloseTicket}
+              disabled={closingTicket}
+            >
+              {closingTicket ? (
+                <ActivityIndicator color={colors.error} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done" size={18} color={colors.success} />
+                  <Text style={styles.closeTicketText}>Mark as Resolved & Close</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {isClosed && (
+            <View style={styles.closedBanner}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={styles.closedBannerText}>This ticket has been closed</Text>
             </View>
           )}
         </View>
@@ -403,7 +534,7 @@ export default function SupportScreen() {
             <TouchableOpacity
               key={ticket.TicketID}
               style={styles.ticketCard}
-              onPress={() => setSelectedTicket(ticket)}
+              onPress={() => handleSelectTicket(ticket)}
             >
               <View style={styles.ticketHeader}>
                 <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
@@ -892,5 +1023,132 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     lineHeight: 20,
+  },
+  
+  // Conversation styles
+  loadingMessagesBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 20,
+  },
+  loadingMessagesText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  conversationContainer: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  conversationMessage: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  userMessage: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    marginLeft: 20,
+  },
+  adminMessage: {
+    backgroundColor: colors.primary + '08',
+    borderColor: colors.primary + '30',
+    marginRight: 20,
+  },
+  messageSenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  messageSender: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  messageTime: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginLeft: 'auto',
+  },
+  conversationText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  
+  // Reply section
+  replySection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  replyInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 14,
+    color: colors.text,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  sendReplyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  sendReplyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  
+  // Close ticket button
+  closeTicketButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.success + '15',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: colors.success + '30',
+  },
+  closeTicketText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.success,
+  },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.success + '15',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  closedBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.success,
   },
 });

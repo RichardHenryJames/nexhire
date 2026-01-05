@@ -292,3 +292,137 @@ export const getTicketStats = withAuth(async (
         };
     }
 });
+
+/**
+ * Add message to ticket conversation
+ * POST /support/tickets/:ticketId/messages
+ */
+export const addMessage = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
+    try {
+        const ticketId = req.params.ticketId;
+        const body = await extractRequestBody(req);
+        
+        if (!ticketId) {
+            throw new ValidationError('Ticket ID is required');
+        }
+        
+        const { message } = body;
+        
+        if (!message || typeof message !== 'string' || message.trim().length < 1) {
+            throw new ValidationError('Message is required');
+        }
+        
+        if (message.length > 5000) {
+            throw new ValidationError('Message must not exceed 5000 characters');
+        }
+        
+        const isAdmin = user.userType?.toLowerCase() === 'admin';
+        const senderType = isAdmin ? 'Admin' : 'User';
+        
+        const newMessage = await SupportService.addMessage(
+            ticketId,
+            user.userId,
+            senderType,
+            message.trim()
+        );
+        
+        return {
+            status: 201,
+            jsonBody: successResponse(newMessage, 'Message sent successfully')
+        };
+    } catch (error: any) {
+        context.error('Add message error:', error);
+        const status = error instanceof NotFoundError ? 404 : 
+                      error instanceof AuthorizationError ? 403 : 
+                      error instanceof ValidationError ? 400 : 500;
+        return {
+            status,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to send message',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});
+
+/**
+ * Get messages for a ticket
+ * GET /support/tickets/:ticketId/messages
+ */
+export const getMessages = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
+    try {
+        const ticketId = req.params.ticketId;
+        
+        if (!ticketId) {
+            throw new ValidationError('Ticket ID is required');
+        }
+        
+        const isAdmin = user.userType?.toLowerCase() === 'admin';
+        const messages = await SupportService.getMessages(ticketId, user.userId, isAdmin);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(messages, 'Messages retrieved successfully')
+        };
+    } catch (error: any) {
+        context.error('Get messages error:', error);
+        const status = error instanceof NotFoundError ? 404 : 
+                      error instanceof AuthorizationError ? 403 : 500;
+        return {
+            status,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get messages',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});
+
+/**
+ * Close ticket (User or Admin)
+ * POST /support/tickets/:ticketId/close
+ */
+export const closeTicket = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
+    try {
+        const ticketId = req.params.ticketId;
+        
+        if (!ticketId) {
+            throw new ValidationError('Ticket ID is required');
+        }
+        
+        const isAdmin = user.userType?.toLowerCase() === 'admin';
+        const ticket = await SupportService.closeTicket(ticketId, user.userId, isAdmin);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(ticket, 'Ticket closed successfully')
+        };
+    } catch (error: any) {
+        context.error('Close ticket error:', error);
+        const status = error instanceof NotFoundError ? 404 : 
+                      error instanceof AuthorizationError ? 403 : 
+                      error instanceof ValidationError ? 400 : 500;
+        return {
+            status,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to close ticket',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});

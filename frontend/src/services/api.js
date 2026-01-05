@@ -2854,6 +2854,56 @@ if (!resumeId) {
 
     return this.apiCall('/support/admin/stats');
   }
+
+  /**
+   * Get messages for a support ticket
+   */
+  async getSupportTicketMessages(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/messages`);
+  }
+
+  /**
+   * Send a message on a support ticket
+   */
+  async sendSupportTicketMessage(ticketId, message) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  /**
+   * Close a support ticket
+   */
+  async closeSupportTicket(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/close`, {
+      method: 'POST',
+    });
+  }
 }
 
 export default new RefOpenAPI();

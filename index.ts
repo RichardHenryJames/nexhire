@@ -187,6 +187,9 @@ import {
   updateTicket,
   getAllTickets,
   getTicketStats,
+  addMessage,
+  getMessages,
+  closeTicket,
 } from "./src/controllers/support.controller";
 
 // Import profile services
@@ -1459,6 +1462,33 @@ app.http("support-admin-stats", {
   authLevel: "anonymous",
   route: "support/admin/stats",
   handler: withErrorHandling(getTicketStats),
+});
+
+// Ticket messages (conversation)
+app.http("support-ticket-messages", {
+  methods: ["GET", "POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/messages",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "OPTIONS") {
+      return { status: 200 };
+    }
+    if (req.method === "POST") {
+      return addMessage(req, context);
+    }
+    if (req.method === "GET") {
+      return getMessages(req, context);
+    }
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+// Close ticket
+app.http("support-close-ticket", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/close",
+  handler: withErrorHandling(closeTicket),
 });
 
 // ========================================================================

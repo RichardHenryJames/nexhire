@@ -7,12 +7,12 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   Modal,
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
+import { showToast } from '../../components/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,7 +49,7 @@ const CATEGORY_ICONS = {
 
 export default function AdminSupportScreen() {
   const navigation = useNavigation();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isAdmin } = useAuth();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -74,6 +74,10 @@ export default function AdminSupportScreen() {
   const [newStatus, setNewStatus] = useState('');
   const [newPriority, setNewPriority] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // Conversation state
+  const [messages, setMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   // Detail modal
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -143,12 +147,32 @@ export default function AdminSupportScreen() {
     loadData();
   }, [loadData]);
 
-  const openResponseModal = (ticket) => {
+  const openResponseModal = async (ticket) => {
     setSelectedTicket(ticket);
-    setAdminResponse(ticket.AdminResponse || '');
+    setAdminResponse('');
     setNewStatus(ticket.Status);
     setNewPriority(ticket.Priority);
     setResponseModalVisible(true);
+    
+    // Load conversation messages
+    await loadMessages(ticket.TicketID);
+  };
+
+  const loadMessages = async (ticketId) => {
+    try {
+      setLoadingMessages(true);
+      const result = await refopenAPI.getSupportTicketMessages(ticketId);
+      if (result.success) {
+        setMessages(result.data || []);
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    } finally {
+      setLoadingMessages(false);
+    }
   };
 
   const closeResponseModal = () => {
@@ -157,16 +181,19 @@ export default function AdminSupportScreen() {
     setAdminResponse('');
     setNewStatus('');
     setNewPriority('');
+    setMessages([]);
   };
 
-  const openDetailModal = (ticket) => {
+  const openDetailModal = async (ticket) => {
     setDetailTicket(ticket);
     setDetailModalVisible(true);
+    await loadMessages(ticket.TicketID);
   };
 
   const closeDetailModal = () => {
     setDetailModalVisible(false);
     setDetailTicket(null);
+    setMessages([]);
   };
 
   const handleUpdateTicket = async () => {
@@ -174,51 +201,46 @@ export default function AdminSupportScreen() {
 
     try {
       setUpdating(true);
-      const updateData = {};
       
+      // If there's a new message, send it via messages API
+      if (adminResponse.trim()) {
+        const messageResult = await refopenAPI.sendSupportTicketMessage(
+          selectedTicket.TicketID, 
+          adminResponse.trim()
+        );
+        if (!messageResult.success) {
+          showToast(messageResult.error || 'Failed to send message', 'error');
+          return;
+        }
+      }
+      
+      // Update status/priority if changed
+      const updateData = {};
       if (newStatus && newStatus !== selectedTicket.Status) {
         updateData.status = newStatus;
       }
       if (newPriority && newPriority !== selectedTicket.Priority) {
         updateData.priority = newPriority;
       }
-      if (adminResponse.trim() && adminResponse !== selectedTicket.AdminResponse) {
-        updateData.adminResponse = adminResponse.trim();
-      }
 
-      if (Object.keys(updateData).length === 0) {
-        if (Platform.OS === 'web') {
-          alert('No changes to update');
-        } else {
-          Alert.alert('Info', 'No changes to update');
+      if (Object.keys(updateData).length > 0) {
+        const response = await refopenAPI.updateSupportTicket(selectedTicket.TicketID, updateData);
+        if (!response.success) {
+          showToast(response.error || 'Failed to update ticket', 'error');
+          return;
         }
-        return;
       }
-
-      const response = await refopenAPI.updateSupportTicket(selectedTicket.TicketID, updateData);
       
-      if (response.success) {
-        if (Platform.OS === 'web') {
-          alert('Ticket updated successfully');
-        } else {
-          Alert.alert('Success', 'Ticket updated successfully');
-        }
+      if (adminResponse.trim() || Object.keys(updateData).length > 0) {
+        showToast('Ticket updated successfully', 'success');
         closeResponseModal();
         loadData();
       } else {
-        if (Platform.OS === 'web') {
-          alert(response.error || 'Failed to update ticket');
-        } else {
-          Alert.alert('Error', response.error || 'Failed to update ticket');
-        }
+        showToast('No changes to update', 'info');
       }
     } catch (error) {
       console.error('Error updating ticket:', error);
-      if (Platform.OS === 'web') {
-        alert('Something went wrong');
-      } else {
-        Alert.alert('Error', 'Something went wrong');
-      }
+      showToast('Something went wrong', 'error');
     } finally {
       setUpdating(false);
     }
@@ -239,40 +261,44 @@ export default function AdminSupportScreen() {
   const renderStats = () => {
     if (!stats) return null;
 
+    // Use theme-aware colors for stat cards
+    const statCardBg = isDark ? colors.surface : colors.gray100;
+    const statLabelColor = colors.textSecondary;
+
     return (
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
-            <Ionicons name="mail-unread" size={24} color="#3B82F6" />
-            <Text style={[styles.statNumber, { color: '#3B82F6' }]}>{stats.OpenTickets || 0}</Text>
-            <Text style={styles.statLabel}>Open</Text>
+          <View style={[styles.statCard, { backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF' }]}>
+            <Ionicons name="mail-unread" size={24} color={colors.info} />
+            <Text style={[styles.statNumber, { color: colors.info }]}>{stats.OpenTickets || 0}</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>Open</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FFFBEB' }]}>
-            <Ionicons name="time" size={24} color="#F59E0B" />
-            <Text style={[styles.statNumber, { color: '#F59E0B' }]}>{stats.InProgressTickets || 0}</Text>
-            <Text style={styles.statLabel}>In Progress</Text>
+          <View style={[styles.statCard, { backgroundColor: isDark ? '#422006' : '#FFFBEB' }]}>
+            <Ionicons name="time" size={24} color={colors.warning} />
+            <Text style={[styles.statNumber, { color: colors.warning }]}>{stats.InProgressTickets || 0}</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>In Progress</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#ECFDF5' }]}>
-            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-            <Text style={[styles.statNumber, { color: '#10B981' }]}>{stats.ResolvedTickets || 0}</Text>
-            <Text style={styles.statLabel}>Resolved</Text>
+          <View style={[styles.statCard, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5' }]}>
+            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+            <Text style={[styles.statNumber, { color: colors.success }]}>{stats.ResolvedTickets || 0}</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>Resolved</Text>
           </View>
         </View>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: '#FEE2E2' }]}>
-            <Ionicons name="alert-circle" size={24} color="#DC2626" />
-            <Text style={[styles.statNumber, { color: '#DC2626' }]}>{stats.UrgentPending || 0}</Text>
-            <Text style={styles.statLabel}>Urgent</Text>
+          <View style={[styles.statCard, { backgroundColor: isDark ? '#450A0A' : '#FEE2E2' }]}>
+            <Ionicons name="alert-circle" size={24} color={colors.error} />
+            <Text style={[styles.statNumber, { color: colors.error }]}>{stats.UrgentPending || 0}</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>Urgent</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#F3F4F6' }]}>
-            <Ionicons name="today" size={24} color="#6B7280" />
-            <Text style={[styles.statNumber, { color: '#6B7280' }]}>{stats.Last24Hours || 0}</Text>
-            <Text style={styles.statLabel}>Last 24h</Text>
+          <View style={[styles.statCard, { backgroundColor: statCardBg }]}>
+            <Ionicons name="today" size={24} color={colors.textSecondary} />
+            <Text style={[styles.statNumber, { color: colors.text }]}>{stats.Last24Hours || 0}</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>Last 24h</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.statCard, { backgroundColor: statCardBg }]}>
             <Ionicons name="documents" size={24} color={colors.primary} />
             <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.TotalTickets || 0}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={[styles.statLabel, { color: statLabelColor }]}>Total</Text>
           </View>
         </View>
       </View>
@@ -404,11 +430,52 @@ export default function AdminSupportScreen() {
           </View>
 
           {selectedTicket && (
-            <>
+            <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
               <Text style={styles.modalSubject}>{selectedTicket.Subject}</Text>
               <Text style={styles.modalUserInfo}>
                 From: {selectedTicket.UserName} ({selectedTicket.UserEmail})
               </Text>
+
+              {/* Conversation Thread */}
+              <Text style={styles.modalLabel}>Conversation</Text>
+              {loadingMessages ? (
+                <View style={styles.loadingMessagesBox}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingMessagesText}>Loading conversation...</Text>
+                </View>
+              ) : messages.length > 0 ? (
+                <View style={styles.conversationContainer}>
+                  {messages.map((msg, index) => (
+                    <View 
+                      key={msg.MessageID || index} 
+                      style={[
+                        styles.conversationMessage,
+                        msg.SenderType === 'Admin' ? styles.adminMessageBubble : styles.userMessageBubble
+                      ]}
+                    >
+                      <View style={styles.messageSenderRow}>
+                        <Ionicons 
+                          name={msg.SenderType === 'Admin' ? 'shield-checkmark' : 'person'} 
+                          size={14} 
+                          color={msg.SenderType === 'Admin' ? colors.primary : colors.textSecondary} 
+                        />
+                        <Text style={[
+                          styles.messageSender,
+                          msg.SenderType === 'Admin' && { color: colors.primary }
+                        ]}>
+                          {msg.SenderType === 'Admin' ? (msg.SenderName || 'Admin') : selectedTicket.UserName}
+                        </Text>
+                        <Text style={styles.messageTime}>{formatDate(msg.CreatedAt)}</Text>
+                      </View>
+                      <Text style={styles.conversationText}>{msg.Message}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.originalMessageBox}>
+                  <Text style={styles.conversationText}>{selectedTicket.Message}</Text>
+                </View>
+              )}
 
               {/* Status Selection */}
               <Text style={styles.modalLabel}>Update Status</Text>
@@ -455,15 +522,15 @@ export default function AdminSupportScreen() {
               </View>
 
               {/* Response Input */}
-              <Text style={styles.modalLabel}>Admin Response</Text>
+              <Text style={styles.modalLabel}>Send Reply</Text>
               <TextInput
                 style={styles.responseInput}
-                placeholder="Type your response to the user..."
+                placeholder="Type your reply to the user..."
                 placeholderTextColor={colors.textSecondary}
                 value={adminResponse}
                 onChangeText={setAdminResponse}
                 multiline
-                numberOfLines={5}
+                numberOfLines={4}
                 textAlignVertical="top"
               />
 
@@ -486,7 +553,7 @@ export default function AdminSupportScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-            </>
+            </ScrollView>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -649,7 +716,11 @@ export default function AdminSupportScreen() {
   );
 }
 
-const createStyles = (colors, responsive = {}) => StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isDesktop, isTablet, contentWidth } = responsive;
+  const maxWidth = isDesktop ? 1200 : isTablet ? 900 : '100%';
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -658,8 +729,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: isDesktop ? 24 : 16,
     paddingBottom: 32,
+    maxWidth: maxWidth,
+    width: '100%',
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -674,41 +748,42 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
 
   // Stats
   statsContainer: {
-    marginBottom: 16,
-    gap: 10,
+    marginBottom: isDesktop ? 24 : 16,
+    gap: isDesktop ? 16 : 10,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: isDesktop ? 16 : 10,
   },
   statCard: {
     flex: 1,
-    padding: 14,
+    padding: isDesktop ? 20 : 14,
     borderRadius: 12,
     alignItems: 'center',
     gap: 6,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: isDesktop ? 32 : 24,
     fontWeight: '700',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: isDesktop ? 14 : 12,
     color: colors.textSecondary,
     fontWeight: '500',
   },
 
   // Filters
   filtersContainer: {
-    marginBottom: 16,
+    marginBottom: isDesktop ? 24 : 16,
   },
   filterGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: isDesktop ? 12 : 8,
+    flexWrap: isDesktop ? 'wrap' : 'nowrap',
   },
   filterLabel: {
-    fontSize: 13,
+    fontSize: isDesktop ? 14 : 13,
     fontWeight: '600',
     color: colors.textSecondary,
     marginRight: 4,
@@ -739,24 +814,32 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: isDesktop ? 16 : 12,
   },
   ticketsTitle: {
-    fontSize: 18,
+    fontSize: isDesktop ? 20 : 18,
     fontWeight: '700',
     color: colors.text,
   },
 
   // Ticket Card
   ticketsList: {
-    gap: 12,
+    gap: isDesktop ? 16 : 12,
+    ...(isDesktop && {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    }),
   },
   ticketCard: {
     backgroundColor: colors.surface,
     borderRadius: 12,
-    padding: 16,
+    padding: isDesktop ? 20 : 16,
     borderWidth: 1,
     borderColor: colors.border,
+    ...(isDesktop && {
+      width: '48%',
+      minWidth: 400,
+    }),
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -1008,4 +1091,72 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 8,
     textAlign: 'right',
   },
+  
+  // Conversation styles
+  modalScrollContent: {
+    flex: 1,
+  },
+  loadingMessagesBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 20,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  loadingMessagesText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  conversationContainer: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  conversationMessage: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  userMessageBubble: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    marginRight: 24,
+  },
+  adminMessageBubble: {
+    backgroundColor: colors.primary + '10',
+    borderColor: colors.primary + '30',
+    marginLeft: 24,
+  },
+  messageSenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  messageSender: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  messageTime: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginLeft: 'auto',
+  },
+  conversationText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  originalMessageBox: {
+    backgroundColor: colors.background,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+  },
 });
+};
