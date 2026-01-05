@@ -52,14 +52,14 @@ if ([string]::IsNullOrEmpty($FunctionAppName) -or [string]::IsNullOrEmpty($Resou
         }
         "staging" {
             # RefOpen Staging Infrastructure
-            $FunctionAppName = "refopen-api-staging"
+            $FunctionAppName = "refopen-api-func-staging"
             $ResourceGroup = "refopen-dev-rg"
             $InfrastructureName = "RefOpen"
             Write-Host "🎯 Using RefOpen Staging Infrastructure" -ForegroundColor Yellow
         }
         "dev" {
             # RefOpen Development Infrastructure
-            $FunctionAppName = "refopen-api-func"
+            $FunctionAppName = "refopen-api-func-dev"
             $ResourceGroup = "refopen-dev-rg"
             $InfrastructureName = "RefOpen"
             Write-Host "🎯 Using RefOpen Development Infrastructure" -ForegroundColor Cyan

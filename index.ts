@@ -1414,18 +1414,23 @@ app.http("manual-payment-admin-reject", {
 // SUPPORT TICKET ENDPOINTS - Customer Support System
 // ========================================================================
 
-app.http("support-create-ticket", {
-  methods: ["POST", "OPTIONS"],
+// Combined handler for POST (create) and GET (list my tickets)
+app.http("support-tickets", {
+  methods: ["POST", "GET", "OPTIONS"],
   authLevel: "anonymous",
   route: "support/tickets",
-  handler: withErrorHandling(createTicket),
-});
-
-app.http("support-get-my-tickets", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "support/tickets",
-  handler: withErrorHandling(getMyTickets),
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "OPTIONS") {
+      return { status: 200 };
+    }
+    if (req.method === "POST") {
+      return createTicket(req, context);
+    }
+    if (req.method === "GET") {
+      return getMyTickets(req, context);
+    }
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
 });
 
 app.http("support-get-ticket-by-id", {

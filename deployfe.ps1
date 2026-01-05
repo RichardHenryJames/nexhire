@@ -25,7 +25,7 @@ $azureResources = switch ($normalizedEnv) {
         @{ 
             ResourceGroup = "refopen-dev-rg"
             StaticAppName = "refopen-frontend-dev"
-            FunctionAppName = "refopen-api-dev"
+            FunctionAppName = "refopen-api-func-dev"
             Infrastructure = "RefOpen"
         }
     }
@@ -33,7 +33,7 @@ $azureResources = switch ($normalizedEnv) {
         @{ 
             ResourceGroup = "refopen-dev-rg"
             StaticAppName = "refopen-frontend-staging"
-            FunctionAppName = "refopen-api-staging"
+            FunctionAppName = "refopen-api-func-staging"
             Infrastructure = "RefOpen"
         }
     }
