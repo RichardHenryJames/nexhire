@@ -30,7 +30,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     // ========================================
 
     'new_referral_request': {
-        subject: '🎯 New referral request at {{companyName}} - Help {{seekerName}} get referred & earn rewards!',
+        subject: '🎯 New referral request received - Help someone get referred & earn rewards!',
         html: `
 <!DOCTYPE html>
 <html>
@@ -73,13 +73,13 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </table>
                             
                             <!-- Rewards Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; margin: 25px 0;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #e8f5e9; border-radius: 8px; margin: 25px 0; border: 1px solid #c8e6c9;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0; color: #166534; font-size: 16px; font-weight: 600;">
+                                        <p style="margin: 0; color: #1b5e20; font-size: 16px; font-weight: 600;">
                                             💰 Earn up to <strong>₹100</strong> per referral!
                                         </p>
-                                        <p style="margin: 10px 0 0 0; color: #166534; font-size: 14px;">
+                                        <p style="margin: 10px 0 0 0; color: #2e7d32; font-size: 14px;">
                                             ⚡ Quick response bonus if you refer within 24 hours!
                                         </p>
                                     </td>
