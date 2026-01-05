@@ -8,15 +8,26 @@ import { SupportService } from '../services/support.service';
 import { 
     withErrorHandling, 
     authenticate,
-    authenticateAdmin
+    withAuth
 } from '../middleware';
 import { 
     successResponse, 
     extractRequestBody,
     ValidationError,
     NotFoundError,
-    ForbiddenError
+    AuthorizationError
 } from '../utils/validation';
+
+// Helper to verify admin access
+const verifyAdmin = (user: any): HttpResponseInit | null => {
+    if (user.userType?.toLowerCase() !== 'admin') {
+        return {
+            status: 403,
+            jsonBody: { success: false, error: 'Access denied. Admin only.' }
+        };
+    }
+    return null;
+};
 
 // Valid categories for support tickets
 const VALID_CATEGORIES = ['Technical', 'Payment', 'Account', 'Referrals', 'Jobs', 'Employer', 'Other', 'General'];
@@ -123,7 +134,8 @@ export const getTicketById = withErrorHandling(async (req: HttpRequest, context:
             throw new ValidationError('Ticket ID is required');
         }
         
-        const ticket = await SupportService.getTicketById(ticketId, user.userId, user.isAdmin);
+        const isAdmin = user.userType?.toLowerCase() === 'admin';
+        const ticket = await SupportService.getTicketById(ticketId, user.userId, isAdmin);
         
         if (!ticket) {
             throw new NotFoundError('Ticket not found');
@@ -136,7 +148,7 @@ export const getTicketById = withErrorHandling(async (req: HttpRequest, context:
     } catch (error: any) {
         context.error('Get ticket error:', error);
         const status = error instanceof NotFoundError ? 404 : 
-                      error instanceof ForbiddenError ? 403 : 500;
+                      error instanceof AuthorizationError ? 403 : 500;
         return {
             status,
             jsonBody: { 
@@ -152,9 +164,15 @@ export const getTicketById = withErrorHandling(async (req: HttpRequest, context:
  * Update ticket (Admin only - respond to ticket)
  * PATCH /support/tickets/:ticketId
  */
-export const updateTicket = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+export const updateTicket = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
     try {
-        const user = authenticateAdmin(req);
+        const adminCheck = verifyAdmin(user);
+        if (adminCheck) return adminCheck;
+        
         const ticketId = req.params.ticketId;
         const body = await extractRequestBody(req);
         
@@ -188,7 +206,7 @@ export const updateTicket = withErrorHandling(async (req: HttpRequest, context: 
     } catch (error: any) {
         context.error('Update ticket error:', error);
         const status = error instanceof NotFoundError ? 404 : 
-                      error instanceof ForbiddenError ? 403 : 
+                      error instanceof AuthorizationError ? 403 : 
                       error instanceof ValidationError ? 400 : 500;
         return {
             status,
@@ -205,9 +223,14 @@ export const updateTicket = withErrorHandling(async (req: HttpRequest, context: 
  * Get all tickets (Admin only)
  * GET /support/admin/tickets
  */
-export const getAllTickets = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+export const getAllTickets = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
     try {
-        const user = authenticateAdmin(req);
+        const adminCheck = verifyAdmin(user);
+        if (adminCheck) return adminCheck;
         
         // Get filter params
         const url = new URL(req.url);
@@ -225,7 +248,7 @@ export const getAllTickets = withErrorHandling(async (req: HttpRequest, context:
         };
     } catch (error: any) {
         context.error('Get all tickets error:', error);
-        const status = error instanceof ForbiddenError ? 403 : 500;
+        const status = error instanceof AuthorizationError ? 403 : 500;
         return {
             status,
             jsonBody: { 
@@ -241,9 +264,14 @@ export const getAllTickets = withErrorHandling(async (req: HttpRequest, context:
  * Get ticket statistics (Admin only)
  * GET /support/admin/stats
  */
-export const getTicketStats = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+export const getTicketStats = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
     try {
-        const user = authenticateAdmin(req);
+        const adminCheck = verifyAdmin(user);
+        if (adminCheck) return adminCheck;
         
         const stats = await SupportService.getTicketStats();
         
@@ -253,7 +281,7 @@ export const getTicketStats = withErrorHandling(async (req: HttpRequest, context
         };
     } catch (error: any) {
         context.error('Get ticket stats error:', error);
-        const status = error instanceof ForbiddenError ? 403 : 500;
+        const status = error instanceof AuthorizationError ? 403 : 500;
         return {
             status,
             jsonBody: { 
