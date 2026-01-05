@@ -63,7 +63,6 @@ import TermsScreen from "../screens/legal/TermsScreen";
 import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
 import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
 import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
-import ContactUsScreen from "../screens/legal/ContactUsScreen";
 import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
@@ -86,7 +85,6 @@ const linking = {
       PrivacyPolicy: "privacy",
       RefundPolicy: "refund",
       ShippingDelivery: "shipping",
-      ContactUs: "contact",
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
@@ -823,15 +821,6 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Shipping & Delivery",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="ContactUs"
-        component={ContactUsScreen}
-        options={{
-          headerShown: true,
-          title: "Contact Us",
           headerBackTitleVisible: false,
         }}
       />
