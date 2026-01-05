@@ -181,8 +181,7 @@ Refopen is a career networking platform that provides:
         <Text style={styles.text}>
           For questions about these Terms, please contact us at:
           {'\n\n'}Refopen Solutions
-          {'\n'}Email: legal@refopen.com
-     {'\n'}Support: support@refopen.com
+          {'\n'}Support: Create a ticket via Help & Support
           {'\n'}Website: www.refopen.com
         </Text>
 

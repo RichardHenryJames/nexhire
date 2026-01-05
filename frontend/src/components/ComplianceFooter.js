@@ -22,7 +22,7 @@ export default function ComplianceFooter({ currentPage }) {
   };
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:support@refopen.com');
+    navigation.navigate('Support');
   };
 
   const handleWebsitePress = () => {
@@ -56,7 +56,7 @@ export default function ComplianceFooter({ currentPage }) {
 
         <View style={styles.contactRow}>
           <TouchableOpacity onPress={handleEmailPress}>
-            <Text style={styles.contactLink}>support@refopen.com</Text>
+            <Text style={styles.contactLink}>Contact Support</Text>
           </TouchableOpacity>
           <Text style={styles.separator}>•</Text>
           <TouchableOpacity onPress={handleWebsitePress}>

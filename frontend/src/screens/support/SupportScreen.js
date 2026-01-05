@@ -344,7 +344,7 @@ export default function SupportScreen() {
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={20} color={colors.primary} />
         <Text style={styles.infoText}>
-          We typically respond within 24-48 hours. For urgent issues, email us directly at support@refopen.com
+          We typically respond within 24-48 hours during business days.
         </Text>
       </View>
     </View>

@@ -697,21 +697,27 @@ const ManualRechargeScreen = ({ navigation }) => {
         {/* Help Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Need Help?</Text>
-          <Text style={{ color: colors.gray500, marginBottom: 8 }}>
-            If you face any issues with your payment, please contact us:
+          <Text style={{ color: colors.gray500, marginBottom: 16 }}>
+            If you face any issues with your payment, our support team is here to help.
           </Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={[styles.infoValue, { color: colors.primary }]}>
-              {settings?.supportEmail || 'support@refopen.com'}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: colors.primary,
+              paddingVertical: 14,
+              paddingHorizontal: 20,
+              borderRadius: 10,
+            }}
+            onPress={() => navigation.navigate('Support')}
+          >
+            <Ionicons name="chatbubbles" size={20} color={colors.white} />
+            <Text style={{ color: colors.white, fontSize: 15, fontWeight: '600' }}>
+              Contact Support
             </Text>
-          </View>
-          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={[styles.infoValue, { color: colors.primary }]}>
-              {settings?.supportPhone || '+91-XXXXXXXXXX'}
-            </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

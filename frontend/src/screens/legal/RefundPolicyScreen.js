@@ -139,7 +139,7 @@ export default function RefundPolicyScreen() {
         <Text style={styles.subsectionTitle}>7.1. How to Request a Refund</Text>
         <Text style={styles.text}>
           To request a refund:
-          {'\n\n'}1. Email: support@refopen.com
+          {'\n\n'}1. Create a support ticket from the app
           {'\n'}2. Subject: "Refund Request - [Transaction ID]"
           {'\n'}3. Include:
        {'\n'}   • Your registered email address
@@ -182,7 +182,7 @@ export default function RefundPolicyScreen() {
         <Text style={styles.sectionTitle}>9. Disputed Transactions</Text>
         <Text style={styles.text}>
    If you dispute a transaction with your bank or payment provider:
-      {'\n\n'}• Contact us first at support@refopen.com to resolve the issue
+      {'\n\n'}• Contact us first via support ticket to resolve the issue
 {'\n'}• Chargebacks may result in immediate account suspension
           {'\n'}• We will provide transaction records to verify legitimate charges
           {'\n'}• Account access may be restored once the dispute is resolved
@@ -194,7 +194,7 @@ export default function RefundPolicyScreen() {
      If payment is deducted but service is not activated:
           {'\n\n'}• Wait 30 minutes for automatic processing
        {'\n'}• Check your email for transaction confirmation
-       {'\n'}• If issue persists, contact support@refopen.com with:
+       {'\n'}• If issue persists, create a support ticket with:
           {'\n'}  - Transaction ID
           {'\n'}  - Payment receipt/screenshot
     {'\n'}  - Bank reference number
@@ -242,9 +242,7 @@ export default function RefundPolicyScreen() {
         <Text style={styles.text}>
      For questions about refunds or cancellations:
           {'\n\n'}Refopen Solutions
-  {'\n'}Email: support@refopen.com
-   {'\n'}Refund Department: refunds@refopen.com
-          {'\n'}Phone: Available through app support
+  {'\n'}Support: Create a ticket via Help & Support
           {'\n'}Website: www.refopen.com
           {'\n\n'}Response Time: We aim to respond within 24-48 hours on business days.
   </Text>

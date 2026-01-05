@@ -2695,8 +2695,8 @@ if (!resumeId) {
           minAmount: 100,
           maxAmount: 50000,
           processingTime: '1 business day',
-          supportEmail: 'support@refopen.com',
-          supportPhone: '+91-9876543210'
+          supportContact: 'Contact Support via Help & Support',
+          supportPhone: ''
         }
       };
     }

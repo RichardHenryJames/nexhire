@@ -140,11 +140,11 @@ export default function ShippingDeliveryScreen() {
 
         <Text style={styles.subsectionTitle}>6.3. Support Assistance</Text>
         <Text style={styles.text}>
-          For delivery-related issues, contact:
-          {'\n\n'}• Email: support@refopen.com
+          For delivery-related issues:
+          {'\n\n'}• Create a support ticket via Help & Support
         {'\n'}• Include: Transaction ID, registered email, service purchased
           {'\n'}• Response time: 24-48 hours on business days
-          {'\n'}• Urgent issues: Marked as "High Priority" in subject line
+          {'\n'}• Urgent issues: Mark as "High Priority" in your ticket
         </Text>
 
         <Text style={styles.sectionTitle}>7. No Physical Shipping</Text>
@@ -261,8 +261,7 @@ export default function ShippingDeliveryScreen() {
      <Text style={styles.text}>
           For any service delivery concerns:
           {'\n\n'}Refopen Solutions
-       {'\n'}Email: support@refopen.com
-          {'\n'}Technical Support: tech@refopen.com
+       {'\n'}Support: Create a ticket via Help & Support
           {'\n'}Website: www.refopen.com
        {'\n'}In-App Support: Available through help section
     </Text>

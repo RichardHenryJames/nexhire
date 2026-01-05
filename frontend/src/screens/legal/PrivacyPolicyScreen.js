@@ -247,9 +247,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.text}>
         For privacy-related questions or to exercise your privacy rights, contact us at:
           {'\n\n'}Refopen Solutions
-          {'\n'}Email: privacy@refopen.com
-   {'\n'}Data Protection Officer: dpo@refopen.com
-      {'\n'}Support: support@refopen.com
+          {'\n'}Support: Create a ticket via Help & Support
           {'\n'}Website: www.refopen.com
     </Text>
 
