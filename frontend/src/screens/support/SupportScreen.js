@@ -54,6 +54,8 @@ export default function SupportScreen() {
   const [category, setCategory] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Navigation header
   useEffect(() => {
@@ -112,17 +114,24 @@ export default function SupportScreen() {
   }, []);
 
   const handleSubmit = async () => {
+    // Clear previous messages
+    setErrorMessage('');
+    setSuccessMessage('');
+    
     // Validation
     if (!category) {
-      Alert.alert('Required', 'Please select a category');
+      setErrorMessage('Please select a category');
+      if (Platform.OS !== 'web') Alert.alert('Required', 'Please select a category');
       return;
     }
     if (!subject.trim() || subject.trim().length < 5) {
-      Alert.alert('Required', 'Please enter a subject (at least 5 characters)');
+      setErrorMessage('Please enter a subject (at least 5 characters)');
+      if (Platform.OS !== 'web') Alert.alert('Required', 'Please enter a subject (at least 5 characters)');
       return;
     }
     if (!message.trim() || message.trim().length < 10) {
-      Alert.alert('Required', 'Please describe your issue in detail (at least 10 characters)');
+      setErrorMessage('Please describe your issue in detail (at least 10 characters)');
+      if (Platform.OS !== 'web') Alert.alert('Required', 'Please describe your issue in detail (at least 10 characters)');
       return;
     }
 
@@ -135,23 +144,36 @@ export default function SupportScreen() {
       });
 
       if (result.success) {
-        Alert.alert(
-          '✅ Ticket Submitted',
-          'Your support ticket has been created. We will respond within 24-48 hours.',
-          [{ text: 'OK', onPress: () => {
-            // Reset form and switch to history
+        setSuccessMessage('Your support ticket has been created. We will respond within 24-48 hours.');
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            '✅ Ticket Submitted',
+            'Your support ticket has been created. We will respond within 24-48 hours.',
+            [{ text: 'OK', onPress: () => {
+              setCategory('');
+              setSubject('');
+              setMessage('');
+              setActiveTab('history');
+            }}]
+          );
+        } else {
+          // On web, reset form after a short delay
+          setTimeout(() => {
             setCategory('');
             setSubject('');
             setMessage('');
+            setSuccessMessage('');
             setActiveTab('history');
-          }}]
-        );
+          }, 2000);
+        }
       } else {
-        Alert.alert('Error', result.error || 'Failed to submit ticket. Please try again.');
+        setErrorMessage(result.error || 'Failed to submit ticket. Please try again.');
+        if (Platform.OS !== 'web') Alert.alert('Error', result.error || 'Failed to submit ticket. Please try again.');
       }
     } catch (error) {
       console.error('Submit ticket error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again later.');
+      setErrorMessage('Something went wrong. Please try again later.');
+      if (Platform.OS !== 'web') Alert.alert('Error', 'Something went wrong. Please try again later.');
     } finally {
       setSubmitting(false);
     }
@@ -224,6 +246,22 @@ export default function SupportScreen() {
         numberOfLines={6}
         textAlignVertical="top"
       />
+
+      {/* Error Message */}
+      {errorMessage ? (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={20} color="#DC2626" />
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      ) : null}
+
+      {/* Success Message */}
+      {successMessage ? (
+        <View style={styles.successBox}>
+          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      ) : null}
 
       {/* Submit Button */}
       <TouchableOpacity
@@ -601,6 +639,38 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#FEE2E2',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  successBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#D1FAE5',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  successText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '500',
   },
 
   // Ticket List

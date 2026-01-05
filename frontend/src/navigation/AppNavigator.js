@@ -71,6 +71,7 @@ import SupportScreen from "../screens/support/SupportScreen";
 // Admin Screen
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
 import AdminPaymentsScreen from "../screens/admin/AdminPaymentsScreen";
+import AdminSupportScreen from "../screens/admin/AdminSupportScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -142,6 +143,7 @@ const linking = {
               Profile: "profile",
               Admin: "admin",
               AdminPayments: "AdminPayments",
+              AdminSupport: "AdminSupport",
             },
           },
 
@@ -327,6 +329,8 @@ function MainTabNavigator() {
             iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
           } else if (route.name === "AdminPayments") {
             iconName = focused ? "cash" : "cash-outline";
+          } else if (route.name === "AdminSupport") {
+            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -419,6 +423,14 @@ function MainTabNavigator() {
           name="AdminPayments"
           component={AdminPaymentsScreen}
           options={{ title: "Payments" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminSupport"
+          component={AdminSupportScreen}
+          options={{ title: "Support" }}
         />
       )}
 
@@ -652,6 +664,15 @@ function MainStack() {
         options={{
           headerShown: true,
           title: "Payment Approvals",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="AdminSupport"
+        component={AdminSupportScreen}
+        options={{
+          headerShown: true,
+          title: "Support Tickets",
           headerBackTitleVisible: false,
         }}
       />
