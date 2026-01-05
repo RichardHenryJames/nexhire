@@ -33,11 +33,12 @@ export const login = withErrorHandling(async (req: HttpRequest, context: Invocat
     };
 });
 
-// ?? NEW: Google OAuth Login
+/**
+ * Google OAuth Login
+ * POST /auth/google
+ */
 export const googleLogin = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { accessToken, idToken, user: googleUser } = await extractRequestBody(req);
-    
-    console.log('Google login attempt for:', googleUser?.email);
     
     try {
         // Verify Google token and find/create user
@@ -66,11 +67,12 @@ export const googleLogin = withErrorHandling(async (req: HttpRequest, context: I
     }
 });
 
-// ? NEW: Google OAuth Registration
+/**
+ * Google OAuth Registration
+ * POST /auth/google-register
+ */
 export const googleRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { accessToken, idToken, user: googleUser, userType, ...additionalData } = await extractRequestBody(req);
-    
-    console.log('Google registration attempt for:', googleUser?.email, 'as', userType);
     
     try {
         // Register new user with Google data
@@ -101,18 +103,14 @@ export const googleRegister = withErrorHandling(async (req: HttpRequest, context
     }
 });
 
-// Logout user
+/**
+ * Logout user
+ * POST /auth/logout
+ */
 export const logout = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
-        console.log('User logout:', user.userId, user.email);
-        
-        // Here you could add additional logout logic like:
-        // - Invalidate refresh tokens in database
-        // - Log logout activity
-        // - Clear any user sessions
-        
-        // For now, we'll just acknowledge the logout
-        // The client will clear the tokens locally
+        // Client will clear the tokens locally
+        // Additional logout logic (invalidate refresh tokens, log activity) can be added here
         
         return {
             status: 200,

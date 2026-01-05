@@ -1,26 +1,26 @@
 import { app } from "@azure/functions";
 import type { InvocationContext, Timer } from "@azure/functions";
 
-// FIXED: Import CORS middleware
 import { withErrorHandling, corsHeaders } from "./src/middleware";
 
-// Import controllers
+// User controllers
 import {
   register,
   login,
-  logout, // FIXED: Add logout import
+  logout,
   getProfile,
   updateProfile,
-  updateEducation, // NEW: Add education update import
+  updateEducation,
   changePassword,
   verifyEmail,
   getDashboardStats,
   deactivateAccount,
   refreshToken,
-  googleLogin, // NEW: Google OAuth login
-  googleRegister, // NEW: Google OAuth registration
-  getMyReferralCode, // NEW: Get user's referral code and stats
+  googleLogin,
+  googleRegister,
+  getMyReferralCode,
 } from "./src/controllers/user.controller";
+// Job controllers
 import {
   createJob,
   getJobs,
@@ -32,9 +32,8 @@ import {
   searchJobs,
   getJobsByOrganization,
   getCurrencies,
-  getAIRecommendedJobs, // NEW: AI job recommendations with wallet deduction
-  getAIJobFilters, // NEW: Get AI filters (FREE - for preview)
-  checkAIAccessStatus, // NEW: Check if user has active 24hr AI access
+  getAIRecommendedJobs,
+  getAIJobFilters,
 } from "./src/controllers/job.controller";
 import {
   applyForJob,
@@ -45,17 +44,18 @@ import {
   getApplicationDetails,
   getApplicationStats,
 } from "./src/controllers/job-application.controller";
+// Reference controllers
 import {
   getOrganizations,
   getOrganizationById,
   getColleges,
   getUniversitiesByCountry,
   getIndustries,
-  getCountries, // NEW: Add countries import
+  getCountries,
 } from "./src/controllers/reference.controller";
 import { initializeEmployer } from "./src/controllers/employer.controller";
 
-// NEW: Reference Metadata controller
+// Reference metadata controllers
 import {
   getReferenceMetadata,
   getCategoriesByType,
@@ -63,7 +63,7 @@ import {
   getReferenceById,
 } from "./src/controllers/reference-metadata.controller";
 
-// NEW: Work experience controllers
+// Work experience controllers
 import {
   getMyWorkExperiences,
   getWorkExperiences,
@@ -78,7 +78,7 @@ import {
   getMySavedJobs as getMySavedJobsCtrl,
 } from "./src/controllers/saved-jobs.controller";
 
-// Import referral controllers
+// Referral controllers
 import {
   getReferralPlans,
   purchaseReferralPlan,
@@ -86,20 +86,22 @@ import {
   checkReferralEligibility,
   createReferralRequest,
   getMyReferralRequests,
-  getAvailableRequests, // FIXED: Correct import name
+  getAvailableRequests,
   claimReferralRequest,
-  submitReferralProof,
   verifyReferralCompletion,
   getMyReferrerRequests,
+  getCompletedReferrals,
   getReferralAnalytics,
-  claimReferralRequest as claimReferralRequestWithProof, // FIXED: Use alias for now
+  claimReferralRequest as claimReferralRequestWithProof,
   cancelReferralRequest,
   getReferrerStats,
-  getReferralPointsHistory, // NEW: Add points history import
-  convertPointsToWallet, // NEW: Convert points to wallet
+  getReferralPointsHistory,
+  convertPointsToWallet,
+  logReferralStatus,
+  getReferralStatusHistory,
 } from "./src/controllers/referral.controller";
 
-// NEW: Payment controllers - Razorpay Integration
+// Payment controllers
 import {
   createRazorpayOrder,
   verifyPaymentAndActivateSubscription,
@@ -116,7 +118,17 @@ import {
   getRechargeHistory,
   getWalletStats,
   debitWallet,
+  getWithdrawableBalance,
+  requestWithdrawal,
+  getWithdrawalHistory,
 } from "./src/controllers/wallet.controller";
+
+// NEW: Company Email Verification controller
+import {
+  sendCompanyEmailOTP,
+  verifyCompanyEmailOTP,
+  getVerificationStatus,
+} from "./src/controllers/companyEmailVerification.controller";
 
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from "./src/controllers/storage.controller";
@@ -139,12 +151,46 @@ import {
   getBlockedUsers,
   recordProfileView,
   getMyProfileViews,
+  purchaseProfileViewAccess,
   getPublicProfile,
   searchUsers, // ?? User search
 } from "./src/controllers/messaging.controller";
 
 // ?? Import SignalR controller
 import "./src/controllers/signalr.controller";
+
+// Import pricing controller
+import { getPricing } from "./src/controllers/pricing.controller";
+
+// Import unified access controller
+import { checkAccessStatus } from "./src/controllers/access.controller";
+
+// Import admin dashboard controller
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions } from "./src/controllers/admin.controller";
+
+// Import manual payment controller
+import {
+  getPaymentSettings as getManualPaymentSettings,
+  submitPaymentProof,
+  getMySubmissions as getMyManualPaymentSubmissions,
+  getAdminPendingPayments,
+  getAdminAllPayments,
+  approvePayment,
+  rejectPayment,
+} from "./src/controllers/manualPayment.controller";
+
+// Import support ticket controller
+import {
+  createTicket,
+  getMyTickets,
+  getTicketById,
+  updateTicket,
+  getAllTickets,
+  getTicketStats,
+  addMessage,
+  getMessages,
+  closeTicket,
+} from "./src/controllers/support.controller";
 
 // Import profile services
 import {
@@ -248,6 +294,88 @@ app.http("users-referral-code", {
   authLevel: "anonymous",
   route: "users/referral-code",
   handler: withErrorHandling(getMyReferralCode),
+});
+
+// ========================================================================
+// NOTIFICATION PREFERENCES endpoints
+// ========================================================================
+app.http("notification-preferences", {
+  methods: ["GET", "PUT", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "notifications/preferences",
+  handler: withErrorHandling(async (req, context) => {
+    // Handle CORS
+    if (req.method === "OPTIONS") {
+      return { status: 204, headers: corsHeaders };
+    }
+
+    // Get user from auth token
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Unauthorized" })
+      };
+    }
+
+    const { AuthService } = await import("./src/services/auth.service");
+    const token = authHeader.replace("Bearer ", "");
+    const decoded = AuthService.verifyToken(token);
+    
+    if (!decoded?.userId) {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Invalid token" })
+      };
+    }
+
+    const { NotificationService } = await import("./src/services/notificationService");
+
+    // GET - Fetch preferences
+    if (req.method === "GET") {
+      const preferences = await NotificationService.getFullPreferences(decoded.userId);
+      return {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true, preferences })
+      };
+    }
+
+    // PUT - Update preferences
+    if (req.method === "PUT") {
+      const body = await req.json() as Partial<{
+        EmailEnabled?: boolean;
+        PushEnabled?: boolean;
+        InAppEnabled?: boolean;
+        ReferralRequestEmail?: boolean;
+        ReferralRequestPush?: boolean;
+        ReferralClaimedEmail?: boolean;
+        ReferralClaimedPush?: boolean;
+        ReferralVerifiedEmail?: boolean;
+        ReferralVerifiedPush?: boolean;
+        MessageReceivedEmail?: boolean;
+        MessageReceivedPush?: boolean;
+        WeeklyDigestEmail?: boolean;
+      }>;
+      const success = await NotificationService.updatePreferences(decoded.userId, body);
+      return {
+        status: success ? 200 : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          success, 
+          message: success ? "Preferences updated" : "Failed to update preferences" 
+        })
+      };
+    }
+
+    return {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ success: false, message: "Method not allowed" })
+    };
+  }),
 });
 
 // ========================================================================
@@ -536,14 +664,6 @@ app.http("ai-job-filters", {
   authLevel: "anonymous",
   route: "jobs/ai-filters",
   handler: getAIJobFilters,
-});
-
-// NEW: Check AI access status (24hr validity)
-app.http("ai-access-status", {
-  methods: ["GET", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "jobs/ai-access-status",
-  handler: checkAIAccessStatus,
 });
 
 // ========================================================================
@@ -1019,14 +1139,6 @@ app.http("referral-claim", {
   handler: withErrorHandling(claimReferralRequest), // Same pattern as work experience
 });
 
-// NEW: Proof Submission & Verification
-app.http("referral-proof-submit", {
-  methods: ["POST", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "referral/requests/{requestId}/proof",
-  handler: withErrorHandling(submitReferralProof), // Same pattern as work experience
-});
-
 app.http("referral-verify", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
@@ -1047,6 +1159,13 @@ app.http("referral-my-referrer-requests", {
   authLevel: "anonymous",
   route: "referral/my-referrer-requests",
   handler: withErrorHandling(getMyReferrerRequests), // Same pattern as work experience
+});
+
+app.http("referral-completed", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/completed",
+  handler: withErrorHandling(getCompletedReferrals), // Get all completed referrals by user (for closed tab)
 });
 
 app.http("referral-analytics", {
@@ -1091,6 +1210,22 @@ app.http("referral-points-convert", {
   authLevel: "anonymous",
   route: "referral/points/convert-to-wallet",
   handler: withErrorHandling(convertPointsToWallet),
+});
+
+// NEW: Log referral request status change
+app.http("referral-status-log", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/requests/{id}/status",
+  handler: withErrorHandling(logReferralStatus),
+});
+
+// NEW: Get referral request status history
+app.http("referral-status-history", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "referral/requests/{id}/history",
+  handler: withErrorHandling(getReferralStatusHistory),
 });
 
 // ========================================================================
@@ -1201,6 +1336,240 @@ app.http("wallet-debit", {
   authLevel: "anonymous",
   route: "wallet/debit",
   handler: withErrorHandling(debitWallet),
+});
+
+app.http("wallet-withdrawable", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "wallet/withdrawable",
+  handler: withErrorHandling(getWithdrawableBalance),
+});
+
+app.http("wallet-withdraw", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "wallet/withdraw",
+  handler: withErrorHandling(requestWithdrawal),
+});
+
+app.http("wallet-withdrawals", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "wallet/withdrawals",
+  handler: withErrorHandling(getWithdrawalHistory),
+});
+
+// ========================================================================
+// MANUAL PAYMENT ENDPOINTS - Bank Transfer/UPI while Razorpay is pending
+// ========================================================================
+
+app.http("manual-payment-settings", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/settings",
+  handler: withErrorHandling(getManualPaymentSettings),
+});
+
+app.http("manual-payment-submit", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/submit",
+  handler: withErrorHandling(submitPaymentProof),
+});
+
+app.http("manual-payment-my-submissions", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/my-submissions",
+  handler: withErrorHandling(getMyManualPaymentSubmissions),
+});
+
+// Admin endpoints for manual payments
+app.http("manual-payment-admin-pending", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/pending",
+  handler: withErrorHandling(getAdminPendingPayments),
+});
+
+app.http("manual-payment-admin-all", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/all",
+  handler: withErrorHandling(getAdminAllPayments),
+});
+
+app.http("manual-payment-admin-approve", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/approve/{submissionId}",
+  handler: withErrorHandling(approvePayment),
+});
+
+app.http("manual-payment-admin-reject", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "manual-payment/admin/reject/{submissionId}",
+  handler: withErrorHandling(rejectPayment),
+});
+
+// ========================================================================
+// SUPPORT TICKET ENDPOINTS - Customer Support System
+// ========================================================================
+
+// Combined handler for POST (create) and GET (list my tickets)
+app.http("support-tickets", {
+  methods: ["POST", "GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "OPTIONS") {
+      return { status: 200 };
+    }
+    if (req.method === "POST") {
+      return createTicket(req, context);
+    }
+    if (req.method === "GET") {
+      return getMyTickets(req, context);
+    }
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+app.http("support-get-ticket-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}",
+  handler: withErrorHandling(getTicketById),
+});
+
+app.http("support-update-ticket", {
+  methods: ["PATCH", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/update",
+  handler: withErrorHandling(updateTicket),
+});
+
+app.http("support-admin-all-tickets", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/admin/tickets",
+  handler: withErrorHandling(getAllTickets),
+});
+
+app.http("support-admin-stats", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/admin/stats",
+  handler: withErrorHandling(getTicketStats),
+});
+
+// Ticket messages (conversation)
+app.http("support-ticket-messages", {
+  methods: ["GET", "POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/messages",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "OPTIONS") {
+      return { status: 200 };
+    }
+    if (req.method === "POST") {
+      return addMessage(req, context);
+    }
+    if (req.method === "GET") {
+      return getMessages(req, context);
+    }
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+// Close ticket
+app.http("support-close-ticket", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/close",
+  handler: withErrorHandling(closeTicket),
+});
+
+// ========================================================================
+// COMPANY EMAIL VERIFICATION ENDPOINTS - Verified Referrer Feature
+// ========================================================================
+
+app.http("verification-send-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/company-email/send-otp",
+  handler: withErrorHandling(sendCompanyEmailOTP),
+});
+
+app.http("verification-verify-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/company-email/verify-otp",
+  handler: withErrorHandling(verifyCompanyEmailOTP),
+});
+
+app.http("verification-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/status",
+  handler: withErrorHandling(getVerificationStatus),
+});
+
+// ========================================================================
+// PRICING ENDPOINTS - DB-driven pricing settings
+// ========================================================================
+
+app.http("pricing-get", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "pricing",
+  handler: withErrorHandling(getPricing),
+});
+
+// ========================================================================
+// UNIFIED ACCESS STATUS ENDPOINT
+// ========================================================================
+
+app.http("access-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "access/status",
+  handler: withErrorHandling(checkAccessStatus),
+});
+
+// ========================================================================
+// ADMIN DASHBOARD ENDPOINTS (Admin only)
+// NOTE: "admin" is a reserved prefix in Azure Functions, use "management" instead
+// Split into 4 fast endpoints for lazy loading per tab
+// ========================================================================
+
+app.http("admin-dashboard-overview", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/overview",
+  handler: withErrorHandling(getAdminDashboardOverview),
+});
+
+app.http("admin-dashboard-users", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/users",
+  handler: withErrorHandling(getAdminDashboardUsers),
+});
+
+app.http("admin-dashboard-referrals", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/referrals",
+  handler: withErrorHandling(getAdminDashboardReferrals),
+});
+
+app.http("admin-dashboard-transactions", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/transactions",
+  handler: withErrorHandling(getAdminDashboardTransactions),
 });
 
 // ========================================================================
@@ -1339,6 +1708,14 @@ app.http("messaging-my-profile-views", {
   authLevel: "anonymous",
   route: "users/profile-views",
   handler: withErrorHandling(getMyProfileViews),
+});
+
+// Purchase profile view access
+app.http("messaging-purchase-profile-view-access", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "users/profile-views/purchase",
+  handler: withErrorHandling(purchaseProfileViewAccess),
 });
 
 app.http("messaging-get-public-profile", {
@@ -1641,7 +2018,7 @@ app.http("scraping-cleanup", {
         };
       }
 
-      const { daysOld = 90, source = null } = req.query as any;
+      const { daysOld = 60, source = null } = req.query as any;
 
       if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
         return {
@@ -1974,8 +2351,8 @@ app.http("job-archival-trigger", {
 
       console.log("Manual job archival triggered by admin:", payload.userId);
 
-      // Get daysOld parameter (default: 30)
-      const { daysOld = 30 } = (await req.json().catch(() => ({}))) as any;
+      // Get daysOld parameter (default: 60)
+      const { daysOld = 60 } = (await req.json().catch(() => ({}))) as any;
 
       if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
         return {
@@ -2185,7 +2562,7 @@ app.timer("jobArchivalTimer", {
     const runStartTime = new Date();
 
     try {
-      context.log("\nStarting job archival process (jobs older than 90 days, batch 100)...\n");
+      context.log("\nStarting job archival process (jobs older than 60 days, batch 100)...\n");
 
       // Import and initialize archive service
       const { JobArchiveService } = await import("./src/services/job-archive.service");
@@ -2193,8 +2570,8 @@ app.timer("jobArchivalTimer", {
       // Initialize archive logs table if needed
       await JobArchiveService.initializeArchiveLogs();
 
-      // Archive jobs older than 90 days, max 100 per run
-      const daysOld = 90;
+      // Archive jobs older than 60 days, max 100 per run
+      const daysOld = 60;
       const result = await JobArchiveService.archiveOldJobs(daysOld);
 
       const runEndTime = new Date();
@@ -2603,7 +2980,48 @@ export {};
 * GET    /messages/profile-views - Get my profile views
 * GET    /messages/public-profile/{userId} - Get public profile details
 *
+* NOTIFICATION SYSTEM (1 Timer Trigger): Email/Push Notifications
+* TIMER  /notificationProcessorTimer - Process notification queue every 1 minute
+*
 * ========================================================================
-* TOTAL: 68 HTTP endpoints + 2 Timer Triggers = 70 functions
+* TOTAL: 68 HTTP endpoints + 3 Timer Triggers = 71 functions
 * ========================================================================
 */
+
+// ========================================================================
+// TIMER TRIGGER - NOTIFICATION QUEUE PROCESSOR (Every 1 minute)
+// ========================================================================
+
+app.timer("notificationProcessorTimer", {
+  schedule: "0 */1 * * * *", // Every 1 minute
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      // Import notification queue service
+      const { NotificationQueueService } = await import("./src/services/notificationQueueService");
+
+      // Process pending notifications
+      const result = await NotificationQueueService.processQueue(50);
+
+      const duration = Date.now() - startTime;
+
+      if (result.processed > 0) {
+        context.log(`📬 Notification Queue Processed [${executionId}]`);
+        context.log(`   Processed: ${result.processed}`);
+        context.log(`   Sent: ${result.sent}`);
+        context.log(`   Failed: ${result.failed}`);
+        context.log(`   Duration: ${duration}ms`);
+        
+        if (result.errors.length > 0) {
+          context.warn(`   Errors: ${result.errors.slice(0, 3).join('; ')}`);
+        }
+      }
+      // Don't log if nothing was processed (to reduce noise)
+
+    } catch (error: any) {
+      context.error(`❌ Notification queue error: ${error.message}`);
+    }
+  }
+});

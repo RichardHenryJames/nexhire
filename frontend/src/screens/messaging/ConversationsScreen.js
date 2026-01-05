@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,37 @@ import {
   Image,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
-import { colors } from '../../styles/theme';
+import MessagingLayoutDesktop from './MessagingLayoutDesktop';
 
+// Wrapper component to handle desktop vs mobile layout
 export default function ConversationsScreen() {
+  const responsive = useResponsive();
+
+  // On desktop web, use WhatsApp-style split view layout
+  if (Platform.OS === 'web' && responsive.isDesktop) {
+    return <MessagingLayoutDesktop />;
+  }
+
+  // On mobile/tablet, use the standard single-screen layout
+  return <ConversationsScreenMobile />;
+}
+
+function ConversationsScreenMobile() {
   const navigation = useNavigation();
+  const { colors } = useTheme();
+  const { user, isAdmin, userType } = useAuth();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,12 +52,35 @@ export default function ConversationsScreen() {
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
+  // ✅ Set dark theme header with + button for new chat (admin only)
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Messages',
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerTintColor: colors.text,
+      headerRight: isAdmin ? () => (
+        <TouchableOpacity
+          onPress={() => setShowNewMessageModal(true)}
+          style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="add" size={28} color={colors.text} />
+        </TouchableOpacity>
+      ) : undefined,
+    });
+  }, [navigation, colors, isAdmin]);
+
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
       const result = await messagingApi.getMyConversations();
  if (result.success) {
-        setConversations(result.data || []);
+        // Filter out conversations with no messages
+        const validConversations = (result.data || []).filter(
+          conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
+        );
+        setConversations(validConversations);
       }
 
       // Load unread count
@@ -219,24 +264,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-   <Text style={styles.headerTitle}>Messages</Text>
-        {unreadCount > 0 && (
-          <View style={styles.headerBadge}>
-    <Text style={styles.headerBadgeText}>{unreadCount}</Text>
-          </View>
-    )}
-     
-      {/* ?? NEW: Add New Message Button */}
-        <TouchableOpacity 
- style={styles.newMessageButton}
-          onPress={() => setShowNewMessageModal(true)}
-        >
-          <Ionicons name="create-outline" size={24} color={colors.white} />
-  </TouchableOpacity>
-      </View>
-
+      <View style={styles.innerContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
@@ -254,6 +282,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
       data={filteredConversations}
         renderItem={renderConversation}
         keyExtractor={(item) => item.ConversationID}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -267,6 +296,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
      </View>
         }
       />
+      </View>
       
  {/* ?? NEW: New Message Modal */}
       <Modal
@@ -288,7 +318,10 @@ onRequestClose={() => {
       }}>
     <Ionicons name="close" size={24} color={colors.text} />
    </TouchableOpacity>
- <Text style={styles.modalTitle}>New Message</Text>
+ <View style={styles.modalTitleContainer}>
+              <Ionicons name="add-circle" size={24} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.modalTitle}>New Message</Text>
+            </View>
         <View style={{ width: 24 }} />
           </View>
           
@@ -357,65 +390,38 @@ onRequestClose={() => {
    )}
       </View>
    </Modal>
+      
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.primary,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    flex: 1,
-  },
-  headerBadge: {
-    backgroundColor: colors.error,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    marginRight: 12,
-  },
-  headerBadgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  newMessageButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.surface,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-backgroundColor: colors.gray100,
- borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: colors.gray100,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   searchIcon: {
     marginRight: 8,
@@ -423,15 +429,16 @@ backgroundColor: colors.gray100,
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.gray900,
+    color: colors.text,
+    outlineStyle: 'none',
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   avatar: {
     width: 56,
@@ -451,7 +458,7 @@ paddingHorizontal: 20,
     borderRadius: 28,
     backgroundColor: colors.gray300,
     justifyContent: 'center',
-  alignItems: 'center',
+    alignItems: 'center',
   },
   avatarUnread: {
     backgroundColor: colors.primary,
@@ -470,7 +477,7 @@ paddingHorizontal: 20,
     borderRadius: 8,
     backgroundColor: colors.error,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: colors.surface,
   },
   conversationInfo: {
     flex: 1,
@@ -479,28 +486,28 @@ paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
- marginBottom: 4,
+    marginBottom: 4,
   },
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   userNameUnread: {
     fontWeight: 'bold',
-    color: colors.gray900,
+    color: colors.text,
   },
   timestamp: {
     fontSize: 12,
-    color: colors.gray500,
+    color: colors.textMuted,
   },
   messagePreview: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   messagePreviewUnread: {
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   unreadBadge: {
     backgroundColor: colors.primary,
@@ -526,20 +533,19 @@ paddingHorizontal: 20,
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
+    color: colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
- paddingHorizontal: 40,
+    paddingHorizontal: 40,
   },
-  // ?? NEW: Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -548,26 +554,31 @@ paddingHorizontal: 20,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
- fontSize: 18,
- fontWeight: 'bold',
-    color: colors.gray900,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
- paddingHorizontal: 20,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-  backgroundColor: colors.gray100,
- borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    backgroundColor: colors.gray100,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.gray900,
+    color: colors.text,
+    outlineStyle: 'none',
   },
   modalLoadingContainer: {
     flex: 1,
@@ -576,7 +587,7 @@ paddingHorizontal: 20,
   },
   modalLoadingText: {
     fontSize: 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 12,
   },
   userResultItem: {
@@ -590,10 +601,10 @@ paddingHorizontal: 20,
     height: 48,
     borderRadius: 24,
     marginRight: 12,
-},
+  },
   userResultAvatarImage: {
     width: 48,
-  height: 48,
+    height: 48,
     borderRadius: 24,
   },
   userResultAvatarPlaceholder: {
@@ -610,27 +621,43 @@ paddingHorizontal: 20,
     color: colors.white,
   },
   userResultName: {
-  flex: 1,
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   },
   modalEmptyState: {
     flex: 1,
     justifyContent: 'center',
- alignItems: 'center',
+    alignItems: 'center',
     paddingHorizontal: 40,
   },
   modalEmptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   modalEmptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
-  marginTop: 8,
-  textAlign: 'center',
+    color: colors.textMuted,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 100,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });

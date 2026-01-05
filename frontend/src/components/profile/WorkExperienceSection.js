@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useEditing } from './ProfileSection';
+import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
+import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
@@ -37,6 +40,59 @@ const normalizeString = (v) => {
   return typeof v === 'string' ? v.trim() : String(v);
 };
 
+// Helper functions for company email verification
+const extractDomainFromEmail = (email) => {
+  if (!email || !email.includes('@')) return null;
+  return email.split('@')[1]?.toLowerCase();
+};
+
+const normalizeCompanyName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') // Remove special chars
+    .replace(/\s+/g, ''); // Remove spaces
+};
+
+// Get suggested company email domain based on company name
+const getSuggestedDomain = (companyName) => {
+  if (!companyName) return 'company.com';
+  let normalized = normalizeCompanyName(companyName);
+  // Remove common suffixes for cleaner domain
+  const suffixes = ['inc', 'llc', 'ltd', 'pvtltd', 'pvt', 'corp', 'corporation', 'limited', 'company', 'technologies', 'tech', 'software', 'solutions', 'services', 'group', 'india', 'global'];
+  suffixes.forEach(suffix => {
+    normalized = normalized.replace(new RegExp(suffix + '$', 'i'), '');
+  });
+  return normalized ? `${normalized}.com` : 'company.com';
+};
+
+const isValidCompanyEmail = (email, companyName) => {
+  if (!email || !companyName) return false;
+  const domain = extractDomainFromEmail(email);
+  if (!domain) return false;
+  
+  // Extract company part from domain (before first dot)
+  const domainParts = domain.split('.');
+  const domainCompany = domainParts[0];
+  
+  // Normalize company name (remove spaces, special chars, common suffixes)
+  let normalizedCompany = normalizeCompanyName(companyName);
+  
+  // Remove common company suffixes
+  const suffixes = ['inc', 'llc', 'ltd', 'pvtltd', 'pvt', 'corp', 'corporation', 'limited', 'company', 'technologies', 'tech', 'software', 'solutions', 'services', 'group', 'india', 'global'];
+  suffixes.forEach(suffix => {
+    normalizedCompany = normalizedCompany.replace(new RegExp(suffix + '$', 'i'), '');
+  });
+  
+  // Strict matching - domain must exactly match or company name must start with the domain
+  // This prevents typos like "microsofty" passing for "microsoft"
+  // e.g., "microsoft.com" is valid for "Microsoft" or "Microsoft Corporation"
+  // e.g., "ms.com" is valid for "MS" but "microsofty.com" is NOT valid for "Microsoft"
+  return domainCompany === normalizedCompany || 
+         normalizedCompany.startsWith(domainCompany) ||
+         (normalizedCompany.length >= 3 && domain.split('.').some(part => part === normalizedCompany));
+};
+
 // ? SMART WORK EXPERIENCE VALIDATION - Added validation functions
 const shouldHideCurrentToggle = (startDate, existingWorkExperiences, excludeWorkExperienceId = null) => {
   if (!startDate) return false;
@@ -64,10 +120,15 @@ const isEndDateRequired = (formData, existingWorkExperiences, excludeWorkExperie
   return !formData.isCurrent || shouldHideCurrentToggle(formData.startDate, existingWorkExperiences, excludeWorkExperienceId);
 };
 
-const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
+const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, colors, styles, userIsVerifiedReferrer }) => {
   const start = item.StartDate || item.startDate;
   const end = item.EndDate || item.endDate;
   const isCurrent = item.IsCurrent || !end;
+  const workExpVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
+  
+  // For current job: use user-level IsVerifiedReferrer
+  // For historical jobs: use work experience level CompanyEmailVerified
+  const isVerified = isCurrent ? userIsVerifiedReferrer : workExpVerified;
   
   const formatDate = (date) => {
     if (!date) return '';
@@ -107,7 +168,22 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
           {/* Job info */}
           <View style={styles.timelineCardContent}>
             <Text style={styles.itemTitle}>{item.JobTitle || item.jobTitle || 'Untitled role'}</Text>
-            <Text style={styles.itemCompany}>{companyName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.itemCompany}>{companyName}</Text>
+              {isVerified ? (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                </View>
+              ) : editable && (
+                <TouchableOpacity 
+                  style={styles.clickToVerifyBadge}
+                  onPress={() => onVerify(item)}
+                >
+                  <Ionicons name="shield-outline" size={10} color={colors.primary} />
+                  <Text style={[styles.clickToVerifyText, { color: colors.primary }]}>Click to Verify</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.dateRow}>
               <Ionicons name="calendar-outline" size={12} color={colors.gray500} />
               <Text style={styles.itemDates}>{startStr} - {endStr}</Text>
@@ -136,12 +212,15 @@ const ExperienceItem = ({ item, onEdit, onDelete, editable, isLast }) => {
   );
 };
 
-export default function WorkExperienceSection({ editing, showHeader = false }) {
+export default function WorkExperienceSection({ editing, showHeader = false, onLoadingChange }) {
   const ctxEditing = useEditing();
   const isEditing = typeof editing === 'boolean' ? editing : ctxEditing;
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [experiences, setExperiences] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -153,6 +232,12 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [jobTitleSearch, setJobTitleSearch] = useState('');
   const [jobRoles, setJobRoles] = useState([]);
   const [loadingJobRoles, setLoadingJobRoles] = useState(false);
+
+  // Department dropdown
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  const [departmentSearch, setDepartmentSearch] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
 
   // Extended form fields
   const [form, setForm] = useState({
@@ -183,6 +268,25 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Company Email Verification state
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [emailPrefix, setEmailPrefix] = useState(''); // Just the prefix before @
+  const [useCustomDomain, setUseCustomDomain] = useState(false); // Toggle for full email input
+  const [emailDomainValid, setEmailDomainValid] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false); // Work exp level verification
+  const [userLevelVerified, setUserLevelVerified] = useState(false); // User level IsVerifiedReferrer
+  const [verificationError, setVerificationError] = useState('');
+  const [otpExpiryTime, setOtpExpiryTime] = useState(null);
+  const otpInputRefs = useRef([]);
+
+  // ✅ Verified Referrer Overlay state
+  const [showVerifiedReferrerOverlay, setShowVerifiedReferrerOverlay] = useState(false);
+  const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
+
   // Organization search state
   const [orgQuery, setOrgQuery] = useState('');
   const debouncedOrgQuery = useDebounce(orgQuery, 300);
@@ -208,6 +312,152 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     }));
   };
 
+  // Get suggested domain for current company
+  const suggestedDomain = getSuggestedDomain(form.companyName);
+
+  // Company Email Verification Handlers
+  const handleEmailPrefixChange = (prefix) => {
+    // Remove @ if user types it
+    const cleanPrefix = prefix.replace(/@.*$/, '');
+    setEmailPrefix(cleanPrefix);
+    
+    // Build full email with suggested domain
+    const fullEmail = cleanPrefix ? `${cleanPrefix}@${suggestedDomain}` : '';
+    setCompanyEmail(fullEmail);
+    setVerificationError('');
+    
+    // Auto-validate since we're using the correct domain
+    setEmailDomainValid(cleanPrefix.length > 0);
+  };
+
+  const handleCompanyEmailChange = (email) => {
+    setCompanyEmail(email);
+    setVerificationError('');
+    
+    // Extract prefix if user pastes full email
+    if (email.includes('@')) {
+      const prefix = email.split('@')[0];
+      setEmailPrefix(prefix);
+    }
+    
+    // Validate domain against company name
+    const valid = isValidCompanyEmail(email, form.companyName);
+    setEmailDomainValid(valid);
+  };
+
+  const handleSendOtp = async () => {
+    // Build the email to send - if in prefix mode, construct it; otherwise use companyEmail directly
+    const emailToSend = useCustomDomain 
+      ? companyEmail 
+      : (emailPrefix ? `${emailPrefix}@${suggestedDomain}` : companyEmail);
+    
+    if (!emailToSend || !emailDomainValid) {
+      setVerificationError('Please enter a valid company email');
+      return;
+    }
+    
+    const workExpId = editingItem ? getId(editingItem) : null;
+    if (!workExpId) {
+      setVerificationError('Please save the work experience first, then edit it to verify your email');
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+      setVerificationError('');
+      console.log('Sending OTP to:', emailToSend); // Debug log
+      const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
+      
+      if (response.success) {
+        setShowOtpInput(true);
+        setOtp(['', '', '', '']);
+        setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
+        Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
+      } else {
+        setVerificationError(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      setVerificationError(error.message || 'Failed to send OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleOtpChange = (value, index) => {
+    // Only allow numbers
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    const newOtp = [...otp];
+    newOtp[index] = numericValue.slice(-1); // Take only last character
+    setOtp(newOtp);
+    setVerificationError('');
+
+    // Auto-focus next input
+    if (numericValue && index < 3) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (e, index) => {
+    // Handle backspace - move to previous input
+    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length !== 4) {
+      setVerificationError('Please enter complete 4-digit OTP');
+      return;
+    }
+
+    const workExpId = editingItem ? getId(editingItem) : null;
+    if (!workExpId) {
+      setVerificationError('Invalid work experience');
+      return;
+    }
+
+    try {
+      setVerifyingOtp(true);
+      setVerificationError('');
+      const response = await refopenAPI.verifyCompanyEmailOTP(workExpId, otpCode);
+      
+      if (response.success) {
+        setEmailVerified(true);
+        setUserLevelVerified(true); // Also update user-level status
+        setShowOtpInput(false);
+        
+        // ✅ Show the Verified Referrer Overlay instead of simple alert
+        const companyName = form.companyName || editingItem?.CompanyName || editingItem?.OrganizationName || 'your company';
+        setVerifiedCompanyName(companyName);
+        setShowVerifiedReferrerOverlay(true);
+      } else {
+        setVerificationError(response.message || 'Verification failed');
+        if (response.data?.remainingAttempts !== undefined) {
+          setVerificationError(`${response.message} (${response.data.remainingAttempts} attempts left)`);
+        }
+      }
+    } catch (error) {
+      setVerificationError(error.message || 'Verification failed');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const resetVerificationState = () => {
+    setCompanyEmail('');
+    setEmailPrefix('');
+    setEmailDomainValid(false);
+    setShowOtpInput(false);
+    setOtp(['', '', '', '']);
+    setVerificationError('');
+    setEmailVerified(false);
+    setUserLevelVerified(false);
+    setOtpExpiryTime(null);
+    setUseCustomDomain(false);
+  };
+
   const applyOrgFilter = (list, q) => {
     if (!Array.isArray(list)) return [];
     if (!q || !q.trim()) return list;
@@ -217,34 +467,55 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     );
   };
 
-  const loadJobRoles = useCallback(async () => {
+  // Load both JobRole and Department in a single bulk API call
+  const loadReferenceData = useCallback(async () => {
     try {
       setLoadingJobRoles(true);
-      const response = await refopenAPI.getReferenceMetadata('JobRole');
-      if (response.success && Array.isArray(response.data)) {
-        const sorted = response.data.sort((a, b) => 
-          (a.Value || '').localeCompare(b.Value || '')
-        );
-        setJobRoles(sorted);
+      setLoadingDepartments(true);
+      const response = await refopenAPI.getBulkReferenceMetadata(['JobRole', 'Department']);
+      if (response.success && response.data) {
+        // JobRoles
+        if (Array.isArray(response.data.JobRole)) {
+          const sortedRoles = response.data.JobRole.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          );
+          setJobRoles(sortedRoles);
+        }
+        // Departments
+        if (Array.isArray(response.data.Department)) {
+          const sortedDepts = response.data.Department.sort((a, b) => 
+            (a.Value || '').localeCompare(b.Value || '')
+          );
+          setDepartments(sortedDepts);
+        }
       }
     } catch (error) {
-      console.error('Error loading job roles:', error);
+      console.error('Error loading reference data:', error);
     } finally {
       setLoadingJobRoles(false);
+      setLoadingDepartments(false);
     }
   }, []);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [expRes, curRes] = await Promise.all([
+      if (onLoadingChange) onLoadingChange(true);
+      const [expRes, curRes, verifyRes] = await Promise.all([
         refopenAPI.getMyWorkExperiences(),
-        refopenAPI.getCurrencies().catch(() => ({ success: false }))
+        refopenAPI.getCurrencies().catch(() => ({ success: false })),
+        refopenAPI.getVerificationStatus().catch(() => ({ success: false }))
       ]);
       if (expRes && expRes.success) {
         setExperiences(Array.isArray(expRes.data) ? expRes.data : []);
       } else {
         setExperiences([]);
+      }
+      // Set user-level verification status
+      if (verifyRes && verifyRes.success) {
+        setUserLevelVerified(verifyRes.data?.isVerifiedReferrer || false);
+      } else {
+        setUserLevelVerified(false);
       }
       if (curRes && curRes.success) {
         setCurrencies(curRes.data);
@@ -256,8 +527,9 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       setExperiences([]);
     } finally {
       setLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
     }
-  }, []);
+  }, [onLoadingChange]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -304,8 +576,10 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setShowOrgPicker(false);
     setJobTitleSearch('');
     setShowJobTitleDropdown(false);
+    setDepartmentSearch('');
+    setShowDepartmentDropdown(false);
     setShowModal(true);
-    loadJobRoles();
+    loadReferenceData();
   };
 
   const openEdit = (item) => {
@@ -338,8 +612,33 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
     setShowOrgPicker(false);
     setJobTitleSearch('');
     setShowJobTitleDropdown(false);
+    
+    // Reset and load verification state
+    resetVerificationState();
+    if (item.CompanyEmail) {
+      setCompanyEmail(item.CompanyEmail);
+      // Extract prefix for the prefix input
+      if (item.CompanyEmail.includes('@')) {
+        setEmailPrefix(item.CompanyEmail.split('@')[0]);
+      }
+      setEmailDomainValid(true);
+    }
+    if (item.CompanyEmailVerified) {
+      setEmailVerified(true);
+    }
+    
+    // Fetch user-level verification status for current jobs
+    const isCurrent = item.IsCurrent === 1 || item.IsCurrent === true || (!item.EndDate);
+    if (isCurrent) {
+      refopenAPI.getVerificationStatus().then(res => {
+        if (res.success) {
+          setUserLevelVerified(res.data?.isVerifiedReferrer || false);
+        }
+      }).catch(() => setUserLevelVerified(false));
+    }
+    
     setShowModal(true);
-    loadJobRoles();
+    loadReferenceData();
   };
 
   const handleDeletePress = (item) => { setPendingDelete(item); setShowDeleteModal(true); };
@@ -377,8 +676,6 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
   };
 
   const saveForm = async () => {
-    console.log('[WorkExp] Save pressed. Editing item:', editingItem && getId(editingItem));
-    console.log('[WorkExp] Current form:', JSON.stringify(form));
     const errors = {};
     if (!form.jobTitle || !normalizeString(form.jobTitle)) {
       errors.jobTitle = 'Job title is required';
@@ -427,16 +724,13 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
         managerContact: normalizeString(form.managerContact),
         canContact: !!form.canContact,
       };
-      console.log('[WorkExp] Payload:', payload);
       if (editingItem) {
         const id = getId(editingItem);
         if (!id) throw new Error('Invalid experience id');
         const res = await refopenAPI.updateWorkExperienceById(id, payload);
-        console.log('[WorkExp] Update response:', res);
         if (!res?.success) throw new Error(res?.error || 'Update failed');
       } else {
         const res = await refopenAPI.createWorkExperience(payload);
-        console.log('[WorkExp] Create response:', res);
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }
       await loadData();
@@ -501,8 +795,12 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             item={item}
             editable={isEditing}
             onEdit={openEdit}
+            onVerify={openEdit}
             onDelete={handleDeletePress}
             isLast={index === validExperiences.length - 1}
+            colors={colors}
+            styles={styles}
+            userIsVerifiedReferrer={userLevelVerified}
           />
         )}
         ListEmptyComponent={renderEmpty}
@@ -512,16 +810,17 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
       {/* Add/Edit Modal */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
-            {/* Removed Save button from header */}
-            <View style={{ width: 24 }} />
-          </View>
+          <View style={styles.modalInner}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
+              {/* Removed Save button from header */}
+              <View style={{ width: 24 }} />
+            </View>
 
-          <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Job Title *</Text>
             <View style={{ position: 'relative', zIndex: 1000 }}>
               <TextInput
@@ -580,94 +879,301 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
             </View>
             {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
 
-            {/* Company picker with inline manual entry */}
-            <View style={{ position: 'relative', zIndex: 1 }}>
-              <Text style={styles.label}>Company</Text>
-              <TouchableOpacity
-                style={styles.orgPicker}
-                onPress={() => { setShowOrgPicker(true); if (orgResults.length === 0) setOrgQuery(''); }}
+            {/* Company picker - shows dropdown on focus, filter as you type */}
+            <Text style={styles.label}>Company</Text>
+            <View style={{ position: 'relative', zIndex: 999 }}>
+              <TouchableOpacity 
+                style={styles.input}
+                onPress={() => setShowOrgPicker(true)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.orgPickerText}>
-                  {form.companyName ? `${form.companyName}${form.organizationId ? '' : ' (manual)'}` : 'Select or search company'}
-                </Text>
-                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray600} />
+                <TextInput
+                  style={styles.companyInput}
+                  value={orgQuery || form.companyName}
+                  onChangeText={(t) => { 
+                    setOrgQuery(t);
+                    setForm({ ...form, companyName: t, organizationId: null }); 
+                  }}
+                  onFocus={() => {
+                    if (form.companyName) {
+                      setOrgQuery('');
+                    }
+                    setShowOrgPicker(true);
+                  }}
+                  placeholder="e.g., Google, Microsoft"
+                  placeholderTextColor={colors.gray400}
+                  autoCapitalize="words"
+                />
+                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray500} />
               </TouchableOpacity>
-            </View>
-
-            {showOrgPicker ? (
-              <View style={styles.orgPickerModal}>
-                <View style={styles.orgSearchRow}>
-                  <Ionicons name="search" size={16} color={colors.gray600} />
-                  <TextInput
-                    style={styles.orgSearchInput}
-                    value={orgQuery}
-                    onChangeText={setOrgQuery}
-                    placeholder={manualOrgMode ? 'Enter company name' : 'Search organizations...'}
-                    placeholderTextColor={colors.gray400}
-                    autoCapitalize="words"
-                  />
-                  {manualOrgMode ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        const name = (orgQuery || '').trim();
-                        if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
-                        setForm((prev) => ({ ...prev, organizationId: null, companyName: name }));
-                        setShowOrgPicker(false);
-                      }}
-                    >
-                      <Ionicons name="checkmark" size={18} color={colors.primary} />
-                    </TouchableOpacity>
-                  ) : (
-                    orgLoading ? (
+              {showOrgPicker && (
+                <View style={styles.jobTitleDropdown}>
+                  {orgLoading ? (
+                    <View style={styles.dropdownLoading}>
                       <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <TouchableOpacity onPress={() => setOrgQuery(orgQuery)}>
-                        <Ionicons name="refresh" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    )
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {orgResults.slice(0, 15).map((org) => (
+                        <TouchableOpacity
+                          key={org.id}
+                          style={styles.orgDropdownItem}
+                          onPress={() => {
+                            setForm({ ...form, organizationId: org.id, companyName: org.name });
+                            setOrgQuery('');
+                            setShowOrgPicker(false);
+                          }}
+                        >
+                          {org.logoURL ? (
+                            <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
+                          ) : (
+                            <View style={styles.orgLogoPlaceholderSmall}>
+                              <Ionicons name="business" size={14} color={colors.gray400} />
+                            </View>
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.dropdownItemText}>{org.name}</Text>
+                            {org.industry && org.industry !== 'Other' && (
+                              <Text style={styles.orgMetaSmall}>{org.industry}</Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                      {orgResults.length === 0 && orgQuery.length > 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
+                        </View>
+                      )}
+                    </ScrollView>
                   )}
                 </View>
+              )}
+            </View>
 
-                <TouchableOpacity style={styles.manualToggleRow} onPress={() => setManualOrgMode(v => !v)}>
-                  <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
-                  <Text style={styles.manualEntryText}> My company is not listed</Text>
-                </TouchableOpacity>
-
-                {!manualOrgMode && (
-                  <FlatList
-                    data={orgResults}
-                    keyExtractor={(o) => String(o.id)}
-                    style={styles.orgList}
-                    keyboardShouldPersistTaps="handled"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity style={styles.orgItem} onPress={() => pickOrg(item)}>
-                        {item.logoURL ? (
-                          <Image source={{ uri: item.logoURL }} style={styles.orgLogo} />
-                        ) : (
-                          <View style={styles.orgLogoPlaceholder}>
-                            <Ionicons name="business" size={16} color={colors.gray400} />
-                          </View>
-                        )}
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.orgName}>{item.name}</Text>
-                          {item.industry && item.industry !== 'Other' ? <Text style={styles.orgMeta}>{item.industry}</Text> : null}
+            {/* Company Email Verification Section - Only for current jobs */}
+            {editingItem && form.companyName && form.isCurrent && (
+              <View style={styles.verificationSection}>
+                {/* Check if database also has IsCurrent = true AND company hasn't changed, otherwise user needs to save first */}
+                {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) || 
+                 (form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()) ? (
+                  <View style={styles.saveFirstContainer}>
+                    <Ionicons name="information-circle" size={20} color={colors.warning} />
+                    <Text style={[styles.verificationSubtitle, { color: colors.warning, marginLeft: 8 }]}>
+                      {form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()
+                        ? 'You changed the company. Please save first before verifying your email.'
+                        : 'Please save your changes first before verifying your company email.'}
+                    </Text>
+                  </View>
+                ) : userLevelVerified ? (
+                  <View style={styles.verifiedContainer}>
+                    <Ionicons name="shield-checkmark" size={22} color="#10B981" />
+                    <View style={styles.verifiedTextContainer}>
+                      <Text style={styles.verifiedText}>Verified Employee</Text>
+                      <Text style={styles.verifiedEmail}>{companyEmail || editingItem?.CompanyEmail}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.verificationHeader}>
+                      <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+                      <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
+                    </View>
+                    <Text style={styles.verificationSubtitle}>
+                      Verify your company email to become a verified referrer and earn rewards.
+                    </Text>
+                    {/* Email Input - Either prefix with domain OR full email */}
+                    <View style={styles.emailInputRow}>
+                      {useCustomDomain ? (
+                        <TextInput
+                          style={[
+                            styles.emailInput,
+                            emailDomainValid && styles.emailInputValid,
+                            companyEmail && !emailDomainValid && styles.emailInputInvalid
+                          ]}
+                          value={companyEmail}
+                          onChangeText={handleCompanyEmailChange}
+                          placeholder={`your.name@${suggestedDomain}`}
+                          placeholderTextColor={colors.gray400}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          editable={!showOtpInput}
+                        />
+                      ) : (
+                        <View style={[
+                          styles.emailInputContainer,
+                          emailDomainValid && styles.emailInputValid,
+                          emailPrefix && !emailDomainValid && styles.emailInputInvalid
+                        ]}>
+                          <TextInput
+                            style={styles.emailPrefixInput}
+                            value={emailPrefix}
+                            onChangeText={handleEmailPrefixChange}
+                            placeholder="your.name"
+                            placeholderTextColor={colors.gray400}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            editable={!showOtpInput}
+                          />
+                          <Text style={styles.emailDomainSuffix}>@{suggestedDomain}</Text>
                         </View>
+                      )}
+                      {!showOtpInput && (
+                        <TouchableOpacity
+                          style={[
+                            styles.verifyButton,
+                            (!emailDomainValid || sendingOtp) && styles.verifyButtonDisabled
+                          ]}
+                          onPress={handleSendOtp}
+                          disabled={!emailDomainValid || sendingOtp}
+                        >
+                          {sendingOtp ? (
+                            <ActivityIndicator size="small" color={colors.white} />
+                          ) : (
+                            <Text style={styles.verifyButtonText}>Verify</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Option to use different domain / switch back */}
+                    {!showOtpInput && (
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setUseCustomDomain(!useCustomDomain);
+                          // Reset email state when switching
+                          setCompanyEmail('');
+                          setEmailPrefix('');
+                          setEmailDomainValid(false);
+                        }}
+                      >
+                        <Text style={styles.differentDomainLink}>
+                          {useCustomDomain ? `Use @${suggestedDomain}` : 'Use different email domain?'}
+                        </Text>
                       </TouchableOpacity>
                     )}
-                  />
+
+                    {/* Domain validation hint for custom domain */}
+                    {useCustomDomain && companyEmail && !emailDomainValid && (
+                      <Text style={styles.domainHint}>
+                        Email domain should match your company ({form.companyName || 'company'})
+                      </Text>
+                    )}
+
+                    {/* OTP Input Section */}
+                    {showOtpInput && (
+                      <View style={styles.otpSection}>
+                        <Text style={styles.otpLabel}>Enter 4-digit verification code</Text>
+                        <View style={styles.otpInputContainer}>
+                          {[0, 1, 2, 3].map((index) => (
+                            <TextInput
+                              key={index}
+                              ref={(ref) => otpInputRefs.current[index] = ref}
+                              style={styles.otpInput}
+                              value={otp[index]}
+                              onChangeText={(value) => handleOtpChange(value, index)}
+                              onKeyPress={(e) => handleOtpKeyPress(e, index)}
+                              keyboardType="number-pad"
+                              maxLength={1}
+                              selectTextOnFocus
+                            />
+                          ))}
+                        </View>
+                        
+                        <View style={styles.otpActions}>
+                          <TouchableOpacity
+                            style={styles.resendButton}
+                            onPress={handleSendOtp}
+                            disabled={sendingOtp}
+                          >
+                            <Text style={styles.resendButtonText}>
+                              {sendingOtp ? 'Sending...' : 'Resend Code'}
+                            </Text>
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            style={[
+                              styles.submitOtpButton,
+                              (otp.join('').length !== 4 || verifyingOtp) && styles.submitOtpButtonDisabled
+                            ]}
+                            onPress={handleVerifyOtp}
+                            disabled={otp.join('').length !== 4 || verifyingOtp}
+                          >
+                            {verifyingOtp ? (
+                              <ActivityIndicator size="small" color={colors.white} />
+                            ) : (
+                              <Text style={styles.submitOtpButtonText}>Submit</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Error message */}
+                    {verificationError ? (
+                      <Text style={styles.verificationError}>{verificationError}</Text>
+                    ) : null}
+                  </>
                 )}
               </View>
-            ) : null}
+            )}
 
             {/* Extended fields follow... */}
             <Text style={styles.label}>Department</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.department} 
-              onChangeText={(t) => setForm({ ...form, department: t })} 
-              placeholder="e.g., Engineering" 
-              placeholderTextColor={colors.gray400}
-            />
+            <View style={{ position: 'relative', zIndex: 998 }}>
+              <TextInput
+                style={styles.input}
+                value={departmentSearch || form.department}
+                onChangeText={(t) => { 
+                  setDepartmentSearch(t);
+                  setShowDepartmentDropdown(t.length > 0);
+                  setForm({ ...form, department: t }); 
+                }}
+                onFocus={() => {
+                  if (form.department) {
+                    setDepartmentSearch('');
+                  }
+                  setShowDepartmentDropdown(true);
+                }}
+                placeholder="e.g., Engineering"
+                placeholderTextColor={colors.gray400}
+              />
+              {showDepartmentDropdown && (departmentSearch.length > 0 || departments.length > 0) && (
+                <View style={styles.jobTitleDropdown}>
+                  {loadingDepartments ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                      {departments
+                        .filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase()))
+                        .slice(0, 15)
+                        .map((dept) => (
+                          <TouchableOpacity
+                            key={dept.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setForm({ ...form, department: dept.Value });
+                              setDepartmentSearch('');
+                              setShowDepartmentDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{dept.Value}</Text>
+                          </TouchableOpacity>
+                        ))
+                      }
+                      {departments.filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
+                        <View style={styles.dropdownEmpty}>
+                          <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+            </View>
 
             {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
 
@@ -851,11 +1357,12 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
               </TouchableOpacity>
             </View>
           </ScrollView>
+          </View>
         </View>
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+      <Modal visible={showDeleteModal} transparent onRequestClose={() => setShowDeleteModal(false)}>
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmCard}>
             <Ionicons name="trash-outline" size={36} color={colors.danger} />
@@ -872,11 +1379,18 @@ export default function WorkExperienceSection({ editing, showHeader = false }) {
           </View>
         </View>
       </Modal>
+
+      {/* ✅ Verified Referrer Celebration Overlay */}
+      <VerifiedReferrerOverlay
+        visible={showVerifiedReferrerOverlay}
+        onClose={() => setShowVerifiedReferrerOverlay(false)}
+        companyName={verifiedCompanyName}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   sectionContainer: { marginHorizontal: 4 },
   inlineHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   inlineAddButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, backgroundColor: colors.background },
@@ -991,6 +1505,24 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights?.semibold || '600',
     color: '#047857',
   },
+  verifiedBadge: {
+    backgroundColor: '#ECFDF5',
+    padding: 4,
+    borderRadius: 10,
+  },
+  clickToVerifyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 3,
+  },
+  clickToVerifyText: {
+    fontSize: 10,
+    fontWeight: typography.weights?.semibold || '600',
+  },
   timelineCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1011,14 +1543,24 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.gray600, marginBottom: 8 },
   addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   addButtonText: { color: colors.white, marginLeft: 6 },
-  modalContainer: { flex: 1, backgroundColor: colors.background },
+  modalContainer: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? { alignItems: 'center' } : {}),
+  },
+  modalInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+  },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   // Removed saveButton style as it's now in footer
   formContainer: { padding: 20, paddingBottom: 40 },
   formScroll: { flex: 1 },
   label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12 },
+  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12, flexDirection: 'row', alignItems: 'center', outlineStyle: 'none' },
+  companyInput: { flex: 1, fontSize: typography.sizes?.md || 16, color: colors.text, padding: 0, outlineStyle: 'none' },
   inputDisabled: { opacity: 0.6 },
   // ? ADDED STYLES FOR SMART VALIDATION
   errorInput: { 
@@ -1122,9 +1664,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface || '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border || '#e0e0e0',
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -1145,11 +1687,12 @@ const styles = StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border || '#f0f0f0',
+    backgroundColor: colors.surface || '#fff',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text || '#333',
   },
   dropdownEmpty: {
     padding: 20,
@@ -1157,7 +1700,232 @@ const styles = StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted || '#999',
     fontStyle: 'italic',
+  },
+  orgDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border || '#f0f0f0',
+    backgroundColor: colors.surface || '#fff',
+    gap: 10,
+  },
+  orgLogoSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
+  orgLogoPlaceholderSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.gray200 || '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  orgMetaSmall: {
+    fontSize: 12,
+    color: colors.gray500 || '#6B7280',
+    marginTop: 2,
+  },
+  // Company Email Verification Styles
+  verificationSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: colors.gray50 || '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+  },
+  verificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  verificationTitle: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.text,
+  },
+  verificationSubtitle: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray600 || '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  emailInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'nowrap',
+  },
+  emailInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
+    minWidth: 0, // Allow shrinking
+  },
+  emailPrefixInput: {
+    flex: 1,
+    minWidth: 80,
+    padding: 12,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text,
+  },
+  emailDomainSuffix: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray500 || '#6B7280',
+    backgroundColor: colors.gray100 || '#F3F4F6',
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border || '#E5E7EB',
+    flexShrink: 0, // Don't shrink the domain
+  },
+  differentDomainLink: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.primary || '#6366F1',
+    marginTop: 6,
+    textDecorationLine: 'underline',
+  },
+  emailInput: {
+    flex: 1,
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text,
+  },
+  emailInputValid: {
+    borderColor: '#10B981',
+    borderWidth: 2,
+  },
+  emailInputInvalid: {
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+  },
+  verifyButton: {
+    backgroundColor: colors.primary || '#6366F1',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  verifyButtonDisabled: {
+    backgroundColor: colors.gray400 || '#9CA3AF',
+  },
+  verifyButtonText: {
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.semibold || '600',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  domainHint: {
+    fontSize: typography.sizes?.xs || 12,
+    color: '#F59E0B',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  otpSection: {
+    marginTop: 16,
+  },
+  otpLabel: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.gray700 || '#374151',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  otpInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  otpInput: {
+    width: 50,
+    height: 50,
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderWidth: 2,
+    borderColor: colors.border || '#E5E7EB',
+    borderRadius: 10,
+    fontSize: 24,
+    fontWeight: typography.weights?.bold || 'bold',
+    textAlign: 'center',
+    color: colors.text,
+  },
+  otpActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  resendButton: {
+    padding: 8,
+  },
+  resendButtonText: {
+    color: colors.primary || '#6366F1',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  submitOtpButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  submitOtpButtonDisabled: {
+    backgroundColor: colors.gray400 || '#9CA3AF',
+  },
+  submitOtpButtonText: {
+    color: colors.white || '#FFFFFF',
+    fontWeight: typography.weights?.semibold || '600',
+    fontSize: typography.sizes?.sm || 14,
+  },
+  saveFirstContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warning + '15',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  verifiedTextContainer: {
+    flex: 1,
+  },
+  verifiedText: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: '#065F46',
+  },
+  verifiedEmail: {
+    fontSize: typography.sizes?.sm || 14,
+    color: '#047857',
+    marginTop: 2,
+  },
+  verificationError: {
+    color: colors.danger || '#E53E3E',
+    fontSize: typography.sizes?.sm || 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

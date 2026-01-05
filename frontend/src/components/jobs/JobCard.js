@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const resolveNameById = (list, id, idKey, nameKey) => {
   if (!id) return '';
@@ -30,6 +31,9 @@ const JobCard = ({
   onPublish = null,
   showPublish = false
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   if (!job) return null;
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -118,17 +122,17 @@ const JobCard = ({
           {!hideSave && (
             savedContext ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color="#0d47a1" />
-                <Text style={styles.saveText}>Saved</Text>
+                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : isSaved ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color="#0d47a1" />
-                <Text style={styles.saveText}>Saved</Text>
+                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-                <Ionicons name="bookmark-outline" size={18} color="#0d47a1" />
+                <Ionicons name="bookmark-outline" size={18} color={colors.primary} />
                 <Text style={styles.saveText}>Save</Text>
               </TouchableOpacity>
             )
@@ -179,14 +183,14 @@ const JobCard = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     padding: 14,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -208,17 +212,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray100,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   titleContent: {
     flex: 1,
@@ -226,12 +230,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111',
+    color: colors.text,
     marginBottom: 2,
   },
   company: {
     fontSize: 14,
-    color: '#444',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   metaRow: {
@@ -248,21 +252,21 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
   },
   metaBadge: {
     fontSize: 12,
-    color: '#0d47a1',
-    backgroundColor: '#e3f2fd',
+    color: colors.primary,
+    backgroundColor: colors.primaryLight + '30',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
     marginRight: 8,
   },
-  dot: { color: '#bbb' },
+  dot: { color: colors.gray300 },
   salary: {
     fontSize: 13,
-    color: '#0b6',
+    color: colors.success,
     fontWeight: '600',
   },
   salaryRow: {
@@ -280,73 +284,73 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10, // Reduced padding to fit 3 buttons
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
   savedPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10, // Reduced padding to fit 3 buttons
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.primary,
   },
-  saveText: { color: '#0d47a1', marginLeft: 6, fontWeight: '600', fontSize: 13 },
-  // NEW: Ask Referral button styles
+  saveText: { color: colors.primary, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  savedText: { color: colors.white, marginLeft: 6, fontWeight: '600', fontSize: 13 },
   referralBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#fff3e0',
+    backgroundColor: colors.warning + '20',
     borderWidth: 1,
-    borderColor: '#ff6600',
+    borderColor: colors.warning,
   },
-  referralText: { color: '#ff6600', marginLeft: 6, fontWeight: '600', fontSize: 13 },
-  // ✅ NEW: Referred status pill styles
+  referralText: { color: colors.warning, marginLeft: 6, fontWeight: '600', fontSize: 13 },
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.success + '15',
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: colors.success,
   },
-  referredText: { color: '#10b981', marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  referredText: { color: colors.success, marginLeft: 6, fontWeight: '600', fontSize: 13 },
   requestingPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#fff7ed',
+    backgroundColor: colors.warning + '15',
     borderWidth: 1,
-    borderColor: '#f59e0b'
+    borderColor: colors.warning
   },
-  requestingText: { color: '#f59e0b', marginLeft: 6, fontWeight: '600', fontSize: 13 },
-  // RESTORED: Publish button styles
+  requestingText: { color: colors.warning, marginLeft: 6, fontWeight: '600', fontSize: 13 },
   publishBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
   },
-  publishText: { color: '#fff', marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  publishText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12, // Reduced padding to fit 3 buttons
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primary,
   },
-  applyText: { color: '#fff', marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  applyText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
 });
 
 export default JobCard;

@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const GoogleSignInButton = ({ onPress, loading = false, disabled = false, style = {}, size = 'large' }) => {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [isPressed, setIsPressed] = useState(false);
 
   const handlePress = () => {
@@ -32,7 +35,7 @@ const GoogleSignInButton = ({ onPress, loading = false, disabled = false, style 
     >
       <View style={styles.buttonContent}>
         {loading ? (
-          <ActivityIndicator size="small" color="#757575" style={styles.icon} />
+          <ActivityIndicator size="small" color={colors.textSecondary} style={styles.icon} />
         ) : (
           <Ionicons 
             name="logo-google" 
@@ -50,11 +53,11 @@ const GoogleSignInButton = ({ onPress, loading = false, disabled = false, style 
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   button: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#dadce0',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -65,9 +68,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buttonSmall: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#dadce0',
+    borderColor: colors.border,
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -78,12 +81,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buttonPressed: {
-    backgroundColor: '#f8f9fa',
-    borderColor: '#c4c7c5',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   buttonDisabled: {
-    backgroundColor: '#f1f3f4',
-    borderColor: '#e8eaed',
+    backgroundColor: colors.gray200,
+    borderColor: colors.border,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -94,19 +97,19 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   buttonText: {
-    color: '#3c4043',
+    color: colors.text,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
     fontFamily: 'Roboto, sans-serif', // Google's font
   },
   buttonTextSmall: {
-    color: '#3c4043',
+    color: colors.text,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     fontFamily: 'Roboto, sans-serif',
   },
   buttonTextDisabled: {
-    color: '#9aa0a6',
+    color: colors.textSecondary,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,44 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 
 export default function WalletRechargeScreen({ navigation }) {
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // ✅ Smart back navigation for hard refresh scenarios
+  React.useEffect(() => {
+    navigation.setOptions({
+      title: 'Add Money to Wallet',
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16, padding: 4 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Wallet');
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   // Quick amount buttons
   const quickAmounts = [100, 200, 300, 500, 1000];
@@ -167,23 +201,14 @@ export default function WalletRechargeScreen({ navigation }) {
       });
 
       if (verifyResult.success) {
-        Alert.alert(
-          '💰 Payment Successful',
-          `₹${rechargeAmount} added to your wallet!\n\nNew Balance: ₹${verifyResult.data.balanceAfter}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setAmount('');
-                // Navigate to wallet screen and force refresh
-                navigation.navigate('Wallet', { 
-                  refresh: true,
-                  timestamp: Date.now() // Force re-render
-                });
-              },
-            },
-          ]
-        );
+        setAmount('');
+        // Navigate to Payment Success screen for tracking and confirmation
+        navigation.navigate('PaymentSuccess', {
+          amount: rechargeAmount,
+          balanceAfter: verifyResult.data.balanceAfter,
+          transactionId: verifyResult.data.transactionId || '',
+          paymentId: response.razorpay_payment_id,
+        });
       } else {
         throw new Error(verifyResult.error || 'Payment verification failed');
       }
@@ -196,9 +221,11 @@ export default function WalletRechargeScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={styles.innerContainer}>
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+          {/* Header */}
+          <View style={styles.header}>
         <Ionicons name="wallet" size={48} color="#007AFF" />
         <Text style={styles.headerTitle}>Recharge Wallet</Text>
         <Text style={styles.headerSubtitle}>Add money to your wallet</Text>
@@ -288,32 +315,45 @@ export default function WalletRechargeScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
-      {/* Payment Methods */}
-      <View style={styles.paymentMethods}>
-        <Text style={styles.paymentMethodsTitle}>Accepted Payment Methods</Text>
-        <View style={styles.paymentMethodsIcons}>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="card" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>Cards</Text>
+          {/* Payment Methods */}
+          <View style={styles.paymentMethods}>
+            <Text style={styles.paymentMethodsTitle}>Accepted Payment Methods</Text>
+            <View style={styles.paymentMethodsIcons}>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="card" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>Cards</Text>
+              </View>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="phone-portrait" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>UPI</Text>
+              </View>
+              <View style={styles.paymentMethodItem}>
+                <Ionicons name="business" size={32} color="#666" />
+                <Text style={styles.paymentMethodText}>Netbanking</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="phone-portrait" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>UPI</Text>
-          </View>
-          <View style={styles.paymentMethodItem}>
-            <Ionicons name="business" size={32} color="#666" />
-            <Text style={styles.paymentMethodText}>Netbanking</Text>
-          </View>
-        </View>
+        </ScrollView>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   contentContainer: {
     padding: 16,
@@ -321,19 +361,19 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 24,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.text,
     marginTop: 12,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -342,7 +382,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
     marginBottom: 12,
   },
   quickAmountsContainer: {
@@ -351,23 +391,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickAmountButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     minWidth: 100,
     alignItems: 'center',
   },
   quickAmountButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   quickAmountText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   quickAmountTextSelected: {
     color: '#FFF',
@@ -375,23 +415,23 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     paddingHorizontal: 16,
   },
   currencySymbol: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginRight: 8,
   },
   input: {
     flex: 1,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.text,
     paddingVertical: 16,
   },
   errorText: {
@@ -401,30 +441,32 @@ const styles = StyleSheet.create({
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
     gap: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#1976D2',
+    color: colors.text,
     lineHeight: 20,
   },
   rechargeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
     marginBottom: 24,
   },
   rechargeButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: colors.gray400 || '#6B7280',
   },
   rechargeButtonText: {
     fontSize: 18,
@@ -432,14 +474,14 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   paymentMethods: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
   },
   paymentMethodsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -453,6 +495,6 @@ const styles = StyleSheet.create({
   },
   paymentMethodText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
   },
 });

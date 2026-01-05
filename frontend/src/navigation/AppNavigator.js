@@ -1,26 +1,25 @@
 import React from "react";
-import { createStackNavigator } from "@react-navigation/stack";
+import { TouchableOpacity, Platform } from "react-native";
+import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
-import UserTypeSelectionScreen from "../screens/auth/registration/UserTypeSelectionScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
-import RegisterScreen from "../screens/auth/RegisterScreen";
 
 // Job Seeker Registration Flow
 import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
 import WorkExperienceScreen from "../screens/auth/registration/jobseeker/WorkExperienceScreen";
 import EducationDetailsScreen from "../screens/auth/registration/jobseeker/EducationDetailsScreen";
-import JobPreferencesScreen from "../screens/auth/registration/jobseeker/JobPreferencesScreen";
 import PersonalDetailsScreen from "../screens/auth/registration/jobseeker/PersonalDetailsScreen";
 
 // Employer Registration Flow
 import EmployerTypeSelectionScreen from "../screens/auth/registration/employer/EmployerTypeSelectionScreen";
-import EmployerOrganizationDetailsScreen from "../screens/auth/registration/employer/OrganizationDetailsScreen";
+import CreateOrganizationScreen from "../screens/auth/registration/employer/CreateOrganizationScreen";
 import EmployerPersonalDetailsScreen from "../screens/auth/registration/employer/EmployerPersonalDetailsScreen";
 import EmployerAccountScreen from "../screens/auth/registration/employer/EmployerAccountScreen";
 
@@ -36,9 +35,12 @@ import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
 import AIRecommendedJobsScreen from "../screens/jobs/AIRecommendedJobsScreen"; // NEW: AI Recommended Jobs screen
 import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
-import ProfileScreen from "../screens/profile/ProfileScreenNew";
+import ProfileScreen from "../screens/profile/ProfileScreen";
+import SettingsScreen from "../screens/profile/SettingsScreen";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
+import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
+import ReferralTrackingScreen from "../screens/referral/ReferralTrackingScreen";
 import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 // ?? NEW: Messaging screens
@@ -46,22 +48,30 @@ import ConversationsScreen from "../screens/messaging/ConversationsScreen";
 import ChatScreen from "../screens/messaging/ChatScreen";
 // ?? NEW: Profile viewing screen
 import ViewProfileScreen from "../screens/profile/ViewProfileScreen";
+// ?? NEW: Profile Views screen (who viewed my profile)
+import ProfileViewsScreen from "../screens/ProfileViewsScreen";
 // ?? NEW: Wallet screens
 import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
 import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
+import ManualRechargeScreen from "../screens/wallet/ManualRechargeScreen";
+import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
+import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
 import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
 import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
 import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
-import ContactUsScreen from "../screens/legal/ContactUsScreen";
-import AboutUsScreen from "../screens/legal/AboutUsScreen";
+import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
+import SupportScreen from "../screens/support/SupportScreen";
 
-import { colors } from "../styles/theme";
+// Admin Screen
+import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminPaymentsScreen from "../screens/admin/AdminPaymentsScreen";
+import AdminSupportScreen from "../screens/admin/AdminSupportScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -76,18 +86,19 @@ const linking = {
       PrivacyPolicy: "privacy",
       RefundPolicy: "refund",
       ShippingDelivery: "shipping",
-      ContactUs: "contact",
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
+      Support: "support",
+      
+      // Public Ask Referral screen - accessible without auth but actions require login
+      AskReferralPublic: "ask-referral",
 
       // Auth Stack
       Auth: {
         path: "auth",
         screens: {
           Login: "login",
-          Register: "register",
-          UserTypeSelection: "register/select-type",
 
           // Direct skip screens for web navigation
           PersonalDetailsScreenDirect: "register/complete-profile",
@@ -100,7 +111,6 @@ const linking = {
               ExperienceTypeSelection: "experience",
               WorkExperienceScreen: "work",
               EducationDetailsScreen: "education",
-              JobPreferencesScreen: "preferences",
               PersonalDetails: "details",
             },
           },
@@ -128,9 +138,12 @@ const linking = {
               Home: "",
               Jobs: "jobs",
               CreateJob: "create-job",
-              Messages: "messages",
+              AskReferral: "ask-for-referral",
               Referrals: "referrals",
               Profile: "profile",
+              Admin: "admin",
+              AdminPayments: "AdminPayments",
+              AdminSupport: "AdminSupport",
             },
           },
 
@@ -139,11 +152,14 @@ const linking = {
           AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
+          Messages: "messages",
           ViewProfile: "profile/:userId",
           Chat: "chat/:conversationId",
-          AskReferral: "ask-referral",
           ReferralPlans: "plans",
           Payment: "payment",
+          MyReferralRequests: "referrals/my-requests",
+          ReferralTracking: "referrals/tracking/:requestId",
+          Settings: "settings",
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
@@ -152,6 +168,12 @@ const linking = {
           Wallet: "wallet",
           WalletTransactions: "wallet/transactions",
           WalletRecharge: "wallet/recharge",
+          ManualRecharge: "wallet/manual-recharge",
+          WithdrawalRequests: "wallet/withdrawals",
+          PaymentSuccess: "wallet/payment-success",
+          
+          // Profile Views screen
+          ProfileViews: "ProfileViews",
         },
       },
     },
@@ -178,10 +200,6 @@ function JobSeekerFlow() {
         name="EducationDetailsScreen"
         component={EducationDetailsScreen}
       />
-      <Stack.Screen
-        name="JobPreferencesScreen"
-        component={JobPreferencesScreen}
-      />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
     </Stack.Navigator>
   );
@@ -200,8 +218,8 @@ function EmployerFlow() {
         component={EmployerTypeSelectionScreen}
       />
       <Stack.Screen
-        name="OrganizationDetailsScreen"
-        component={EmployerOrganizationDetailsScreen}
+        name="CreateOrganizationScreen"
+        component={CreateOrganizationScreen}
       />
       <Stack.Screen
         name="EmployerPersonalDetailsScreen"
@@ -223,7 +241,7 @@ function AuthStack() {
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
     if (hasPendingGoogleAuth) {
-      return "UserTypeSelection";
+      return "JobSeekerFlow";
     }
     return "Login";
   };
@@ -236,22 +254,38 @@ function AuthStack() {
       initialRouteName={getInitialRoute()}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen
-        name="UserTypeSelection"
-        component={UserTypeSelectionScreen}
-        // Pass Google user data automatically when coming from Google auth
+        name="JobSeekerFlow"
+        component={JobSeekerFlow}
         initialParams={
           hasPendingGoogleAuth
             ? {
-                googleUser: pendingGoogleAuth?.user,
-                fromGoogleAuth: true,
+                screen: "ExperienceTypeSelection",
+                params: {
+                  userType: "JobSeeker",
+                  fromGoogleAuth: true,
+                  googleUser: pendingGoogleAuth?.user,
+                },
               }
             : undefined
         }
       />
-      <Stack.Screen name="JobSeekerFlow" component={JobSeekerFlow} />
-      <Stack.Screen name="EmployerFlow" component={EmployerFlow} />
+      <Stack.Screen
+        name="EmployerFlow"
+        component={EmployerFlow}
+        initialParams={
+          hasPendingGoogleAuth
+            ? {
+                screen: "EmployerTypeSelection",
+                params: {
+                  userType: "Employer",
+                  fromGoogleAuth: true,
+                  googleUser: pendingGoogleAuth?.user,
+                },
+              }
+            : undefined
+        }
+      />
 
       {/* NEW: Add PersonalDetails directly to AuthStack for skip navigation */}
       <Stack.Screen
@@ -270,7 +304,8 @@ function AuthStack() {
 
 // Main App Tab Navigator
 function MainTabNavigator() {
-  const { userType, isEmployer, isJobSeeker } = useAuth();
+  const { userType, isEmployer, isJobSeeker, isAdmin, isVerifiedReferrer } = useAuth();
+  const { colors } = useTheme();
 
   return (
     <Tab.Navigator
@@ -284,12 +319,18 @@ function MainTabNavigator() {
             iconName = focused ? "briefcase" : "briefcase-outline";
           } else if (route.name === "CreateJob") {
             iconName = focused ? "add-circle" : "add-circle-outline";
-          } else if (route.name === "Messages") {
-            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+          } else if (route.name === "AskReferral") {
+            iconName = focused ? "person-add" : "person-add-outline";
           } else if (route.name === "Referrals") {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
+          } else if (route.name === "Admin") {
+            iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
+          } else if (route.name === "AdminPayments") {
+            iconName = focused ? "cash" : "cash-outline";
+          } else if (route.name === "AdminSupport") {
+            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -297,12 +338,20 @@ function MainTabNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray500,
         tabBarStyle: {
-          backgroundColor: colors.white,
+          backgroundColor: colors.surface,
           borderTopWidth: 1,
-          borderTopColor: colors.gray200,
+          borderTopColor: colors.border,
           paddingBottom: 8,
           paddingTop: 8,
           height: 70,
+          ...(Platform.OS === 'web'
+            ? {
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }
+            : null),
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -311,18 +360,24 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ title: "Home" }}
-      />
+      {/* Hide Home and Jobs tabs for Admin users */}
+      {!isAdmin && (
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{ title: "Home" }}
+        />
+      )}
 
       {/* FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
-      <Tab.Screen
-        name="Jobs"
-        component={isEmployer ? EmployerJobsScreen : JobsScreen}
-        options={{ title: "Jobs" }}
-      />
+      {/* Hide Jobs tab for Admin users */}
+      {!isAdmin && (
+        <Tab.Screen
+          name="Jobs"
+          component={isEmployer ? EmployerJobsScreen : JobsScreen}
+          options={{ title: "Jobs" }}
+        />
+      )}
 
       {isEmployer && (
         <Tab.Screen
@@ -332,17 +387,50 @@ function MainTabNavigator() {
         />
       )}
 
-      <Tab.Screen
-        name="Messages"
-        component={ConversationsScreen}
-        options={{ title: "Messages" }}
-      />
+      {isJobSeeker && (
+        <Tab.Screen
+          name="AskReferral"
+          component={AskReferralScreen}
+          options={{ title: "Ask Referral" }}
+        />
+      )}
 
+      {/* ✅ FIXED: Always render Referrals tab for job seekers to support deep linking */}
+      {/* Hide tab button for non-verified referrers, but screen is still accessible via deep link */}
+      {/* Access control is handled inside ReferralScreen based on isVerifiedReferrer */}
       {isJobSeeker && (
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
-          options={{ title: "Referrals" }}
+          options={{ 
+            title: "Refer",
+            // Hide tab from tab bar if not verified, but keep screen for deep linking
+            tabBarButton: isVerifiedReferrer ? undefined : () => null,
+          }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminDashboardScreen}
+          options={{ title: "Admin Dashboard" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminPayments"
+          component={AdminPaymentsScreen}
+          options={{ title: "Payments" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminSupport"
+          component={AdminSupportScreen}
+          options={{ title: "Support" }}
         />
       )}
 
@@ -357,6 +445,8 @@ function MainTabNavigator() {
 
 // Main Stack Navigator with nested Tab Navigator
 function MainStack() {
+  const { colors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -364,6 +454,17 @@ function MainStack() {
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+      <Stack.Screen
+        name="ProfileFromHome"
+        component={ProfileScreen}
+        initialParams={{ openedFromHome: true }}
+        options={{
+          headerShown: false,
+          gestureEnabled: true,
+          gestureDirection: "horizontal-inverted",
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
       <Stack.Screen
         name="JobDetails"
         component={JobDetailsScreen}
@@ -387,6 +488,13 @@ function MainStack() {
           headerShown: true,
           title: "Saved Jobs",
           headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
         }}
       />
       <Stack.Screen
@@ -396,6 +504,71 @@ function MainStack() {
           headerShown: true,
           title: "My Applications",
           headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+        }}
+      />
+      <Stack.Screen
+        name="MyReferralRequests"
+        component={MyReferralRequestsScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          title: "My Referral Requests",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                const navState = navigation.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+
+                if (navigation.canGoBack() && routes.length > 1 && currentIndex > 0) {
+                  navigation.goBack();
+                  return;
+                }
+
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'AskReferral',
+                  },
+                });
+              }}
+              style={{ paddingLeft: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      {/* ?? NEW: Referral Tracking screen */}
+      <Stack.Screen
+        name="ReferralTracking"
+        component={ReferralTrackingScreen}
+        options={{
+          headerShown: true,
+          title: "Referral Tracking",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
         }}
       />
       {/* ?? NEW: Chat screen for messaging */}
@@ -406,10 +579,63 @@ function MainStack() {
           headerShown: false, // Custom header in component
         }}
       />
+      {/* ?? NEW: Messages/Conversations screen */}
+      <Stack.Screen
+        name="Messages"
+        component={ConversationsScreen}
+        options={({ navigation }) => ({
+          headerShown: true,
+          title: "Messages",
+          headerBackTitleVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                const navState = navigation.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+                
+                // If we have more than 1 route in the stack, go back normally
+                if (routes.length > 1 && currentIndex > 0) {
+                  navigation.goBack();
+                } else {
+                  // Hard refresh scenario - navigate to Home tab
+                  navigation.navigate('Main', {
+                    screen: 'MainTabs',
+                    params: {
+                      screen: 'Home'
+                    }
+                  });
+                }
+              }}
+              style={{ paddingLeft: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
+      />
       {/* ?? NEW: View other user's profile */}
       <Stack.Screen
         name="ViewProfile"
         component={ViewProfileScreen}
+        options={{
+          headerShown: false, // Custom header in component
+        }}
+      />
+      {/* Settings Screen */}
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          title: 'Settings',
+          headerShown: false, // Custom header in component
+        }}
+      />
+      {/* ?? NEW: Profile Views - Who viewed my profile */}
+      <Stack.Screen
+        name="ProfileViews"
+        component={ProfileViewsScreen}
         options={{
           headerShown: false, // Custom header in component
         }}
@@ -421,6 +647,32 @@ function MainStack() {
         options={{
           headerShown: true,
           title: "Company Details",
+          headerBackTitleVisible: false,
+        }}
+      />
+      {/* Admin Dashboard - Admin only */}
+      <Stack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="AdminPayments"
+        component={AdminPaymentsScreen}
+        options={{
+          headerShown: true,
+          title: "Payment Approvals",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="AdminSupport"
+        component={AdminSupportScreen}
+        options={{
+          headerShown: true,
+          title: "Support Tickets",
           headerBackTitleVisible: false,
         }}
       />
@@ -481,11 +733,29 @@ function MainStack() {
       />
       <Stack.Screen
         name="WalletRecharge"
-        component={WalletRechargeScreen}
+        component={ManualRechargeScreen}
         options={{
           headerShown: true,
           title: "Add Money to Wallet",
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="WithdrawalRequests"
+        component={WithdrawalRequestsScreen}
+        options={{
+          headerShown: true,
+          title: "Withdrawal Requests",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="PaymentSuccess"
+        component={PaymentSuccessScreen}
+        options={{
+          headerShown: false,
+          title: "Payment Successful",
+          gestureEnabled: false, // Prevent swipe back
         }}
       />
     </Stack.Navigator>
@@ -576,20 +846,11 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
-        name="ContactUs"
-        component={ContactUsScreen}
-        options={{
-          headerShown: true,
-          title: "Contact Us",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
         name="AboutUs"
         component={AboutUsScreen}
         options={{
-          headerShown: true,
-          title: "About Us",
+          headerShown: false,
+          title: "About RefOpen - Job Referral Platform",
           headerBackTitleVisible: false,
         }}
       />
@@ -608,6 +869,26 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "FAQ",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="Support"
+        component={SupportScreen}
+        options={{
+          headerShown: true,
+          title: "Help & Support",
+          headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Public Ask Referral Screen - accessible without auth but actions require login */}
+      <Stack.Screen
+        name="AskReferralPublic"
+        component={AskReferralScreen}
+        options={{
+          headerShown: true,
+          title: "Ask for Referral",
           headerBackTitleVisible: false,
         }}
       />

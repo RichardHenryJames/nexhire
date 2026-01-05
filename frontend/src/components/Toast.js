@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, Text, StyleSheet, View } from 'react-native';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 let queue = [];
 let updateRef = null;
@@ -14,6 +15,8 @@ export function showToast(message, type = 'success', duration = 2500) {
 }
 
 export const ToastHost = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const anim = useRef(new Animated.Value(0)).current;
   const [toast, setToast] = React.useState(null);
   const hideTimeout = useRef(null);
@@ -46,7 +49,7 @@ export const ToastHost = () => {
   }, [toast]);
 
   if (!toast) return null;
-  const bg = toast.type === 'error' ? colors.danger : toast.type === 'warning' ? colors.warning : colors.success;
+  const bg = toast.type === 'error' ? (colors.error || colors.danger) : toast.type === 'warning' ? colors.warning : colors.success;
 
   return (
     <View pointerEvents="none" style={styles.wrapper}>
@@ -57,8 +60,8 @@ export const ToastHost = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   wrapper:{ position:'absolute', top:60, left:0, right:0, alignItems:'center', zIndex:9999 },
-  toast:{ paddingHorizontal:16, paddingVertical:12, borderRadius:24, maxWidth:'90%', shadowColor:'#000', shadowOpacity:0.2, shadowRadius:6, elevation:4 },
-  text:{ color:'#fff', fontSize:typography.sizes.sm, fontWeight:typography.weights.medium }
+  toast:{ paddingHorizontal:16, paddingVertical:12, borderRadius:24, maxWidth:'90%', shadowColor:colors.shadow, shadowOpacity:0.2, shadowRadius:6, elevation:4 },
+  text:{ color:colors.textInverse, fontSize:typography.sizes.sm, fontWeight:typography.weights.medium }
 });

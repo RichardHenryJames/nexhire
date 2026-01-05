@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Appearance } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const THEME_PREFERENCE_KEY = 'themePreference';
 
 // THEME CONFIGURATION
 const lightTheme = {
@@ -15,13 +18,17 @@ const lightTheme = {
   
   // Text colors
   text: '#1F2937',
+  textPrimary: '#1F2937',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
+  textLight: '#9CA3AF',
+  textInverse: '#FFFFFF',
   
   // Status colors
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
+  danger: '#EF4444',
   info: '#3B82F6',
   
   // Neutral colors
@@ -41,6 +48,9 @@ const lightTheme = {
   // Border colors
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
+  
+  // Input colors
+  inputBackground: '#F5F5F7',
   
   // Shadow colors
   shadow: '#000000',
@@ -63,13 +73,17 @@ const darkTheme = {
   
   // Text colors
   text: '#F9FAFB',
+  textPrimary: '#F9FAFB',
   textSecondary: '#D1D5DB',
   textMuted: '#9CA3AF',
+  textLight: '#9CA3AF',
+  textInverse: '#111827',
   
   // Status colors
   success: '#34D399',
   warning: '#FBBF24',
   error: '#F87171',
+  danger: '#F87171',
   info: '#60A5FA',
   
   // Neutral colors
@@ -90,6 +104,9 @@ const darkTheme = {
   border: '#374151',
   borderLight: '#4B5563',
   
+  // Input colors
+  inputBackground: '#374151',
+  
   // Shadow colors
   shadow: '#000000',
   
@@ -101,30 +118,80 @@ const darkTheme = {
 // THEME CONTEXT
 const ThemeContext = createContext({
   theme: 'light',
+  preference: 'system',
   colors: lightTheme,
   toggleTheme: () => {},
+  setPreference: () => {},
   isDark: false,
 });
 
 // THEME PROVIDER
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('light');
+  const [preference, setPreferenceState] = useState('system'); // 'system' | 'light' | 'dark'
+  const [theme, setTheme] = useState('light'); // effective theme
 
   useEffect(() => {
-    // Listen to system theme changes
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setTheme(colorScheme || 'light');
-    });
+    let subscription;
 
-    // Set initial theme
-    const initialTheme = Appearance.getColorScheme() || 'light';
-    setTheme(initialTheme);
+    const init = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(THEME_PREFERENCE_KEY);
+        if (stored === 'light' || stored === 'dark') {
+          setPreferenceState(stored);
+          setTheme(stored);
+        } else {
+          setPreferenceState('system');
+          const initialTheme = Appearance.getColorScheme() || 'light';
+          setTheme(initialTheme);
+        }
+      } catch (e) {
+        setPreferenceState('system');
+        const initialTheme = Appearance.getColorScheme() || 'light';
+        setTheme(initialTheme);
+      }
 
-    return () => subscription?.remove();
+      subscription = Appearance.addChangeListener(({ colorScheme }) => {
+        // Only follow system if user hasn't explicitly chosen a theme.
+        setPreferenceState(prevPref => {
+          if (prevPref !== 'system') return prevPref;
+          setTheme(colorScheme || 'light');
+          return prevPref;
+        });
+      });
+    };
+
+    init();
+
+    return () => subscription?.remove?.();
   }, []);
 
+  useEffect(() => {
+    if (preference === 'system') {
+      const system = Appearance.getColorScheme() || 'light';
+      setTheme(system);
+    } else {
+      setTheme(preference);
+    }
+  }, [preference]);
+
+  const setPreference = async (nextPreference) => {
+    const normalized = nextPreference === 'dark' ? 'dark' : nextPreference === 'light' ? 'light' : 'system';
+    setPreferenceState(normalized);
+    try {
+      if (normalized === 'system') {
+        await AsyncStorage.removeItem(THEME_PREFERENCE_KEY);
+      } else {
+        await AsyncStorage.setItem(THEME_PREFERENCE_KEY, normalized);
+      }
+    } catch (e) {
+      // ignore persistence errors
+    }
+  };
+
   const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    // Toggle based on current effective theme, not preference
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setPreference(newTheme);
   };
 
   const isDark = theme === 'dark';
@@ -133,8 +200,10 @@ export const ThemeProvider = ({ children }) => {
   return (
     <ThemeContext.Provider value={{
       theme,
+      preference,
       colors,
       toggleTheme,
+      setPreference,
       isDark,
     }}>
       {children}

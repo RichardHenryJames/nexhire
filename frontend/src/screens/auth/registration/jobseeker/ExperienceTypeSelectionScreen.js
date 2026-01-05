@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [selectedType, setSelectedType] = useState(null);
   const { pendingGoogleAuth } = useAuth(); // 🔧 Get from context
   
   const { 
-    userType, 
+    userType = 'JobSeeker', 
     fromGoogleAuth: fromGoogleAuthParam = false, 
     googleUser: routeGoogleUser = null 
   } = route.params || {};
@@ -32,20 +39,42 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   // 🔧 IMPROVED: Guard against hard refresh with lost Google data
   useEffect(() => {
     if (fromGoogleAuth && !googleUser && !pendingGoogleAuth) {
-      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to user type selection');
+      console.warn('⚠️ Hard refresh detected with lost Google data - redirecting to login');
       
       // 🔧 For web: Use window.location for reliable redirect
       if (typeof window !== 'undefined') {
-        window.location.href = '/register';
+        window.location.href = '/login';
         return;
       }
       
-      // For native: Use navigation replace to UserTypeSelection
+      // For native: Reset to Login
       setTimeout(() => {
-        navigation.replace('UserTypeSelectionScreen');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
       }, 100);
     }
   }, [fromGoogleAuth, googleUser, pendingGoogleAuth, navigation]);
+
+  const handleSwitchToEmployer = () => {
+    const parentNav = navigation.getParent?.();
+    const target = {
+      screen: 'EmployerTypeSelection',
+      params: {
+        userType: 'Employer',
+        fromGoogleAuth,
+        googleUser,
+      },
+    };
+
+    if (parentNav?.replace) {
+      parentNav.replace('EmployerFlow', target);
+      return;
+    }
+
+    navigation.navigate('EmployerFlow', target);
+  };
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -72,7 +101,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  // FIXED: Handle Skip to final screen - using same logic as UserTypeSelectionScreen
+  // Handle Skip to final screen
   const handleSkipToFinal = () => {
     if (!selectedType) {
       Alert.alert('Selection Required', 'Please select your experience level first');
@@ -80,7 +109,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
 
     
-    // Navigate directly to PersonalDetailsScreenDirect (same route used in UserTypeSelectionScreen)
+    // Navigate directly to PersonalDetailsScreenDirect
     navigation.navigate('PersonalDetailsScreenDirect', {
       userType,
       experienceType: selectedType,
@@ -122,18 +151,42 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   );
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
+    <View style={styles.mainContainer}>
+      {/* Decorative circles */}
+      <View style={styles.decorationCircle1} />
+      <View style={styles.decorationCircle2} />
+      
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.innerContainer}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.topBar}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.primary} />
+            </TouchableOpacity>
+
+            {!!selectedType && (
+              <TouchableOpacity
+                style={styles.skipPillButton}
+                onPress={handleSkipToFinal}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="flash-outline" size={14} color={colors.primary} />
+                <Text style={styles.skipPillButtonText}>Skip</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Show Google user info if available */}
           {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
@@ -184,62 +237,88 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedType && styles.continueButtonDisabled
-          ]}
+          style={[styles.continueButton, !selectedType && styles.continueButtonDisabled]}
           onPress={handleContinue}
           disabled={!selectedType}
         >
-          <Text style={[
-            styles.continueButtonText,
-            !selectedType && styles.continueButtonTextDisabled
-          ]}>
+          <Text style={[styles.continueButtonText, !selectedType && styles.continueButtonTextDisabled]}>
             Continue with Full Setup
           </Text>
           <Ionicons 
             name="arrow-forward" 
             size={20} 
-            color={!selectedType ? colors.gray400 : colors.white} 
+            color={selectedType ? colors.white : colors.gray400} 
           />
         </TouchableOpacity>
 
-        {/* FIXED: Single "Skip to Profile Register" button - always shown */}
         <TouchableOpacity
-          style={[
-            styles.skipButton,
-            !selectedType && styles.skipButtonFaded
-          ]}
-          onPress={handleSkipToFinal}
+          style={styles.switchFlowButton}
+          onPress={handleSwitchToEmployer}
           activeOpacity={0.7}
         >
           <Ionicons 
-            name="flash-outline" 
+            name="business-outline" 
             size={20} 
-            color={!selectedType ? colors.gray500 : colors.primary} 
+            color={colors.primary} 
           />
-          <Text style={[
-            styles.skipButtonText,
-            !selectedType && styles.skipButtonTextFaded
-          ]}>
-            Skip to Profile Register
+          <Text style={styles.switchFlowButtonText}>
+            I'm looking to hire
           </Text>
         </TouchableOpacity>
-        
-        {!selectedType && (
-          <Text style={styles.skipHintText}>
-            💡 Select your experience level above to enable skip option
-          </Text>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+       
+          </View>
+        </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  decorationCircle1: {
+    position: 'absolute',
+    bottom: -80,
+    right: -60,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: colors.primary + '12',
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  decorationCircle2: {
+    position: 'absolute',
+    bottom: -120,
+    left: -100,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: colors.info + '08',
+    borderWidth: 1,
+    borderColor: colors.info + '15',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
   },
   content: {
     flex: 1,
@@ -253,6 +332,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     padding: 8,
     marginBottom: 16,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
   },
   title: {
     fontSize: typography.sizes.xl,
@@ -271,7 +352,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     padding: 16,
-    backgroundColor: colors.success + '10',
+    backgroundColor: colors.success + '15',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.success,
@@ -311,7 +392,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 2,
     borderColor: colors.border,
-    shadowColor: colors.text,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -319,7 +400,7 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    backgroundColor: colors.primary + '15',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -357,7 +438,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    marginTop: 24, // ADDED: Equal spacing above button
+    marginTop: 24,
     gap: 8,
     marginBottom: 16,
   },
@@ -372,7 +453,6 @@ const styles = StyleSheet.create({
   continueButtonTextDisabled: {
     color: colors.gray400,
   },
-  // Skip button styles (matching UserTypeSelectionScreen)
   skipButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,11 +463,11 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 2,
     borderColor: colors.primary,
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
   },
   skipButtonFaded: {
-    borderColor: colors.gray400,
-    backgroundColor: colors.gray50,
+    borderColor: colors.gray600,
+    backgroundColor: colors.gray600 + '30',
     opacity: 0.6,
   },
   skipButtonText: {
@@ -396,7 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
   skipButtonTextFaded: {
-    color: colors.gray600,
+    color: colors.gray500,
   },
   skipHintText: {
     fontSize: typography.sizes.sm,
@@ -405,5 +485,56 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 16,
     fontStyle: 'italic',
+  },
+  switchFlowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    backgroundColor: 'transparent',
+  },
+  switchFlowButtonText: {
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  skipPillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  skipPillButtonText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  headerSwitchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+  },
+  headerSwitchButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
 });

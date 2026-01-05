@@ -1,7 +1,8 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ? NEW: Create context for editing state
 const EditingContext = createContext(false);
@@ -22,24 +23,19 @@ export default function ProfileSection({
   hideHeaderActions = false, // NEW: hide Edit/Save/Cancel (for smart-save sections)
   hideSaveButton = false // NEW: hide only the Save button (e.g., Work Experience section has its own internal save)
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [localEditing, setLocalEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   // ? FIX: Track if user manually toggled, if not, follow defaultCollapsed prop
   const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
   const [userToggled, setUserToggled] = useState(false);
   
-  // ? DEBUG: Log when defaultCollapsed changes
-  useEffect(() => {
- console.log(`[${title}] defaultCollapsed prop changed to:`, defaultCollapsed);
-  }, [defaultCollapsed, title]);
-  
   // ? FIX: Update collapsed state when defaultCollapsed changes (data loads) ONLY if user hasn't manually toggled
   useEffect(() => {
     if (!userToggled) {
-    console.log(`[${title}] Auto-updating collapsed state to:`, !!defaultCollapsed);
       setCollapsed(!!defaultCollapsed);
-    } else {
-      console.log(`[${title}] User toggled - ignoring defaultCollapsed change`);
     }
   }, [defaultCollapsed, userToggled, title]);
   
@@ -199,7 +195,7 @@ onPress={handleCancelPress}
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface || '#FFFFFF',
     margin: 16,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,10 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
@@ -29,7 +32,10 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function EmployerTypeSelectionScreen({ navigation, route }) {
-  const { userType = 'Employer' } = route?.params || {};
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
 
   // Employer type selection
   const [selectedType, setSelectedType] = useState(null); // 'company' | 'startup' | 'freelancer'
@@ -92,13 +98,15 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       setSelectedCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown'
+        industry: org.industry || 'Unknown',
+        logoURL: org.logoURL || null,
       });
     } else if (orgPickerContext === 'startup') {
       setStartupCompany({
         id: org.id,
         name: org.name,
-        industry: org.industry || 'Unknown'
+        industry: org.industry || 'Unknown',
+        logoURL: org.logoURL || null,
       });
     }
     closeOrgModal();
@@ -108,9 +116,9 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
     const name = (orgQuery || '').trim();
     if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
     if (orgPickerContext === 'established') {
-      setSelectedCompany({ id: null, name });
+      setSelectedCompany({ id: null, name, logoURL: null });
     } else if (orgPickerContext === 'startup') {
-      setStartupCompany({ id: null, name });
+      setStartupCompany({ id: null, name, logoURL: null });
     }
     closeOrgModal();
   };
@@ -136,10 +144,29 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       navigation.navigate('EmployerPersonalDetailsScreen', routeParams);
     } else if (selectedType === 'startup') {
       // Startup/new company always routes to organization details to allow extra info
-      navigation.navigate('OrganizationDetailsScreen', routeParams);
+      navigation.navigate('CreateOrganizationScreen', routeParams);
     } else if (selectedType === 'freelancer') {
       navigation.navigate('EmployerPersonalDetailsScreen', routeParams);
     }
+  };
+
+  const handleSwitchToJobSeeker = () => {
+    const parentNav = navigation.getParent?.();
+    const target = {
+      screen: 'ExperienceTypeSelection',
+      params: {
+        userType: 'JobSeeker',
+        fromGoogleAuth,
+        googleUser,
+      },
+    };
+
+    if (parentNav?.replace) {
+      parentNav.replace('JobSeekerFlow', target);
+      return;
+    }
+
+    navigation.navigate('JobSeekerFlow', target);
   };
 
   const EmployerTypeCard = ({ type, title, subtitle, icon, description, showOrgButton = false, orgContext }) => (
@@ -163,11 +190,35 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
           style={styles.companySelector}
             onPress={() => openOrgModal(orgContext)}
         >
-          <Text style={styles.companySelectorLabel}>
-            {orgContext === 'established'
-              ? (selectedCompany ? selectedCompany.name : 'Select or search company')
-              : (startupCompany ? startupCompany.name : 'Select or search company (optional)')}
-          </Text>
+          <View style={styles.companySelectorLeft}>
+            {orgContext === 'established' ? (
+              selectedCompany?.name ? (
+                selectedCompany?.logoURL ? (
+                  <Image source={{ uri: selectedCompany.logoURL }} style={styles.selectedCompanyLogo} resizeMode="contain" />
+                ) : (
+                  <View style={styles.selectedCompanyLogoPlaceholder}>
+                    <Ionicons name="business" size={14} color={colors.gray400} />
+                  </View>
+                )
+              ) : null
+            ) : (
+              startupCompany?.name ? (
+                startupCompany?.logoURL ? (
+                  <Image source={{ uri: startupCompany.logoURL }} style={styles.selectedCompanyLogo} resizeMode="contain" />
+                ) : (
+                  <View style={styles.selectedCompanyLogoPlaceholder}>
+                    <Ionicons name="business" size={14} color={colors.gray400} />
+                  </View>
+                )
+              ) : null
+            )}
+
+            <Text style={styles.companySelectorLabel}>
+              {orgContext === 'established'
+                ? (selectedCompany ? selectedCompany.name : 'Select or search company')
+                : (startupCompany ? startupCompany.name : 'Select or search company (optional)')}
+            </Text>
+          </View>
           <Ionicons name="chevron-forward" size={20} color={colors.primary} />
         </TouchableOpacity>
       )}
@@ -176,12 +227,27 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.topBar}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Login')}>
+                <Ionicons name="arrow-back" size={24} color={colors.primary} />
+              </TouchableOpacity>
+              
+              {/* Skip pill button - appears when selection made */}
+              {selectedType && (
+                <TouchableOpacity
+                  style={styles.skipPillButton}
+                  onPress={handleContinue}
+                >
+                  <Text style={styles.skipPillButtonText}>Skip</Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
             <Text style={styles.title}>What type of organization are you with?</Text>
             <Text style={styles.subtitle}>This helps us set up your hiring profile correctly</Text>
           </View>
@@ -227,6 +293,15 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               color={(!selectedType || (selectedType === 'company' && !selectedCompany)) ? colors.gray400 : colors.white}
             />
           </TouchableOpacity>
+
+          {/* Switch to job seeker flow - at bottom */}
+          <TouchableOpacity
+            style={styles.switchFlowButton}
+            onPress={handleSwitchToJobSeeker}
+          >
+            <Ionicons name="search-outline" size={18} color={colors.primary} />
+            <Text style={styles.switchFlowButtonText}>I'm looking for jobs</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -238,6 +313,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
         onRequestClose={closeOrgModal}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={closeOrgModal}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -251,6 +327,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -315,18 +392,31 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
               )}
             />
           )}
+          </View>
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
+  },
   scrollContainer: { flex: 1 },
   content: { padding: 20, paddingTop: 20 },
   header: { marginBottom: 32 },
-  backButton: { alignSelf: 'flex-start', padding: 8, marginBottom: 16 },
+  backButton: { padding: 8 },
   title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginBottom: 8 },
   subtitle: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 22 },
   cardsContainer: { gap: 16, marginBottom: 32 },
@@ -339,13 +429,53 @@ const styles = StyleSheet.create({
   cardSubtitle: { fontSize: typography.sizes.sm, color: colors.gray500, fontWeight: typography.weights.medium },
   cardDescription: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 20, marginBottom: 8 },
   companySelector: { backgroundColor: colors.background, borderRadius: 8, padding: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.primary },
-  companySelectorLabel: { fontSize: typography.sizes.sm, color: colors.primary, fontWeight: typography.weights.medium },
+  companySelectorLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 10 },
+  selectedCompanyLogo: { width: 22, height: 22, borderRadius: 6 },
+  selectedCompanyLogoPlaceholder: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center' },
+  companySelectorLabel: { fontSize: typography.sizes.sm, color: colors.primary, fontWeight: typography.weights.medium, flexShrink: 1 },
   continueButton: { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 12, gap: 8 },
   continueButtonDisabled: { backgroundColor: colors.gray300 },
   continueButtonText: { color: colors.white, fontSize: typography.sizes.md, fontWeight: typography.weights.bold },
   continueButtonTextDisabled: { color: colors.gray400 },
-  modalContainer: { flex: 1, backgroundColor: colors.background },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border },
+  switchFlowButton: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  switchFlowButtonText: {
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  skipPillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.primary + '15',
+  },
+  skipPillButtonText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+  modalContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, zIndex: 9999 } : {}) },
+  modalInnerContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { flex: 'none', width: '100%', maxWidth: 600, height: '80vh', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' } : {}) },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
   textInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 16, fontSize: typography.sizes.md, color: colors.text },
   modalItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },

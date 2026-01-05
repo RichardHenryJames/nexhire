@@ -1,11 +1,48 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../styles/theme';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function DisclaimerScreen() {
+  const navigation = useNavigation();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+    <ScrollView style={styles.scrollView}>
+    <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Disclaimer</Text>
     <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
@@ -153,7 +190,7 @@ export default function DisclaimerScreen() {
 
   <Text style={styles.sectionTitle}>15. Indemnification</Text>
         <Text style={styles.text}>
-        You agree to indemnify and hold harmless Refopen Technologies Pvt. Ltd., its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including legal fees) arising from:
+        You agree to indemnify and hold harmless Refopen Solutions, its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including legal fees) arising from:
       {'\n\n'}• Your use of the platform
  {'\n'}• Your violation of these terms or disclaimers
        {'\n'}• Your violation of any rights of third parties
@@ -203,7 +240,7 @@ export default function DisclaimerScreen() {
       <Text style={styles.sectionTitle}>23. Contact</Text>
         <Text style={styles.text}>
           For questions about this disclaimer:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
   {'\n'}Email: legal@refopen.com
        {'\n'}Website: www.refopen.com
      </Text>
@@ -216,14 +253,28 @@ export default function DisclaimerScreen() {
 
         <ComplianceFooter currentPage="disclaimer" />
    </View>
+    </View>
     </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    alignSelf: 'center',
   },
   content: {
     padding: 20,
@@ -237,39 +288,39 @@ fontWeight: 'bold',
   },
   lastUpdated: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   intro: {
     fontSize: 16,
-    color: colors.gray800,
+    color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
   marginTop: 20,
     marginBottom: 10,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
   marginBottom: 12,
   },
   warningBox: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: colors.warning + '20',
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.warning,
   padding: 16,
     borderRadius: 8,
     marginBottom: 12,
 },
   warningText: {
     fontSize: 15,
-    color: '#856404',
+    color: colors.text,
   fontWeight: '600',
     lineHeight: 22,
   },
@@ -282,7 +333,7 @@ fontWeight: 'bold',
   },
   acknowledgmentText: {
     fontSize: 15,
-    color: colors.gray800,
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',

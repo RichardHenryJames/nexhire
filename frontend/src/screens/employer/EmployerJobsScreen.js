@@ -1,11 +1,16 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
-import { styles as jobStyles } from '../jobs/JobsScreen.styles';
+import WalletRechargeModal from '../../components/WalletRechargeModal';
+import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
+import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
+import useResponsive from '../../hooks/useResponsive';
 
 /*
 EmployerJobsScreen
@@ -18,6 +23,12 @@ const TABS = [ 'draft', 'published' ];
 
 export default function EmployerJobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const jobStyles = useMemo(() => createJobStyles(colors, responsive), [colors, responsive]);
+  const localStyles = useMemo(() => createLocalStyles(colors, responsive), [colors, responsive]);
+  
   const [activeTab, setActiveTab] = useState('draft');
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +36,13 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(true);
   const [pagination, setPagination] = useState({ page:1, pageSize:50, total:0, totalPages:1 });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
+  
+  // 💎 NEW: Publish confirmation modal state
+  const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost, jobId: null, jobTitle: '' });
+  
   const abortRef = useRef(null);
 
   // Redirect job seekers
@@ -93,25 +111,63 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const onSearchSubmit = () => load(1);
 
-  const publishJob = async (jobId) => {
+  const initiatePublishJob = async (jobId, jobTitle) => {
+    const PUBLISH_JOB_FEE = 50;
+
+    try {
+      // Check wallet balance
+      const walletBalance = await refopenAPI.getWalletBalance();
+      
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setPublishConfirmData({ 
+          currentBalance: balance, 
+          requiredAmount: PUBLISH_JOB_FEE,
+          jobId: jobId,
+          jobTitle: jobTitle || 'this job'
+        });
+        setShowPublishConfirmModal(true);
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance?.error);
+        showToast('Unable to check wallet balance', 'error');
+      }
+    } catch (e) {
+      console.error('Failed to check wallet balance:', e);
+      showToast('Unable to check wallet balance', 'error');
+    }
+  };
+
+  const handlePublishConfirmProceed = async () => {
+    setShowPublishConfirmModal(false);
+    const { jobId, currentBalance, requiredAmount } = publishConfirmData;
+
+    // Double check balance (though modal handles UI, logic safety)
+    if (currentBalance < requiredAmount) {
+      setWalletModalData({ currentBalance, requiredAmount });
+      setShowWalletModal(true);
+      return;
+    }
+
     try {
       const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
-        showToast('Job published', 'success');
+        showToast('Job published successfully', 'success');
         
-        // ? CRITICAL FIX: Remove published job from current list immediately
+        // Remove published job from current list immediately
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
         
-        // ? CRITICAL FIX: Reload BOTH tabs to ensure data is fresh
+        // Reload BOTH tabs to ensure data is fresh
         await load(1);
-        
-        // ? OPTIONAL: Auto-switch to Published tab to show the newly published job
-        // setTimeout(() => setActiveTab('published'), 500);
+        return;
       }
-      else Alert.alert('Error', res.error || 'Publish failed');
+
+      const message = res?.error || res?.message || 'Publish failed';
+      showToast(message, 'error');
     } catch(e) { 
-      console.error('? Publish error:', e);
-      Alert.alert('Error', e.message || 'Publish failed'); 
+      console.error('Publish error:', e);
+      showToast(e?.message || 'Publish failed', 'error');
     }
   };
 
@@ -138,14 +194,15 @@ export default function EmployerJobsScreen({ navigation, route }) {
           hideSave
           // ? NEW: Pass publish props to JobCard
           showPublish={isDraft}
-          onPublish={isDraft ? () => publishJob(job.JobID) : null}
+          onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title) : null}
         />
       </View>
     );
   };
 
   return (
-    <View style={jobStyles.container}>
+    <View style={localStyles.container}>
+      <View style={localStyles.innerContainer}>
       {/* Search + Filter Bar */}
       <View style={jobStyles.searchHeader}>
         <View style={jobStyles.searchContainer}>
@@ -174,19 +231,19 @@ export default function EmployerJobsScreen({ navigation, route }) {
       </View>
 
       {/* Tabs */}
-      <View style={{ flexDirection:'row', backgroundColor:'#fff', borderBottomWidth:1, borderBottomColor:'#e9ecef' }}>
+      <View style={{ flexDirection:'row', backgroundColor:colors.surface, borderBottomWidth:1, borderBottomColor:colors.border }}>
         {TABS.map(t => {
           const active = (activeTab === t);
           const label = t === 'draft' ? 'Draft' : 'Published';
           return (
-            <TouchableOpacity key={t} onPress={()=> setActiveTab(t)} style={{ flex:1, paddingVertical:12, alignItems:'center', borderBottomWidth:2, borderBottomColor: active? '#0066cc':'transparent' }}>
-              <Text style={{ color: active? '#0066cc':'#555', fontWeight: active? '700':'600' }}>{label}</Text>
+            <TouchableOpacity key={t} onPress={()=> setActiveTab(t)} style={{ flex:1, paddingVertical:12, alignItems:'center', borderBottomWidth:2, borderBottomColor: active? colors.primary:'transparent' }}>
+              <Text style={{ color: active? colors.primary:colors.textSecondary, fontWeight: active? '700':'600' }}>{label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <ScrollView style={jobStyles.jobList} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>        
+      <ScrollView style={jobStyles.jobList} contentContainerStyle={{ paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {loading && jobs.length===0 ? (
           <View style={jobStyles.loadingContainer}><Text style={jobStyles.loadingText}>Loading...</Text></View>
         ) : jobs.length===0 ? (
@@ -234,24 +291,67 @@ export default function EmployerJobsScreen({ navigation, route }) {
           jobs.map(renderJob).filter(Boolean)
         )}
       </ScrollView>
+      </View>
+
+      <WalletRechargeModal
+        visible={showWalletModal}
+        currentBalance={walletModalData.currentBalance}
+        requiredAmount={walletModalData.requiredAmount}
+        onAddMoney={() => {
+          setShowWalletModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowWalletModal(false)}
+      />
+
+      <PublishJobConfirmModal
+        visible={showPublishConfirmModal}
+        currentBalance={publishConfirmData.currentBalance}
+        requiredAmount={publishConfirmData.requiredAmount}
+        jobTitle={publishConfirmData.jobTitle}
+        onProceed={handlePublishConfirmProceed}
+        onCancel={() => setShowPublishConfirmModal(false)}
+        onAddMoney={() => {
+          setShowPublishConfirmModal(false);
+          setWalletModalData({ 
+            currentBalance: publishConfirmData.currentBalance, 
+            requiredAmount: publishConfirmData.requiredAmount 
+          });
+          setShowWalletModal(true);
+        }}
+      />
     </View>
   );
 }
 
-const localStyles = {
+const createLocalStyles = (colors, responsive = {}) => {
+  const { isDesktop = false } = responsive;
+  const MAX_CONTENT_WIDTH = 1200;
+  
+  return {
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  innerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: isDesktop ? MAX_CONTENT_WIDTH : '100%',
+  },
   toggleScope:{
     marginLeft:8,
-    backgroundColor:'#fff',
+    backgroundColor:colors.surface,
     flexDirection:'row',
     alignItems:'center',
     paddingHorizontal:12,
     borderRadius:8,
     borderWidth:1,
-    borderColor:'#e1e5e9'
+    borderColor:colors.border
   },
   toggleText:{
     marginLeft:6,
-    color:'#555'
+    color:colors.textSecondary
   },
   actionBtn:{
     flexDirection:'row',
@@ -288,17 +388,18 @@ const localStyles = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#0066cc',
+    borderColor: colors.primary,
   },
   viewDraftsButtonText: {
-    color: '#0066cc',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   }
+};
 };

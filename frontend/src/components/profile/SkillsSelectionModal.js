@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 
 /**
@@ -28,6 +29,9 @@ export default function SkillsSelectionModal({
   initialSecondarySkills = [],
   title = "Select Skills"
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,8 +60,6 @@ export default function SkillsSelectionModal({
       setLoading(true);
       const response = await refopenAPI.getReferenceMetadata('Skill');
       
-      console.log('Skills API response:', response);
-      
       if (response.success && response.data) {
         // Ensure data is an array and filter out invalid entries
         const skillsArray = Array.isArray(response.data) ? response.data : [];
@@ -70,7 +72,6 @@ export default function SkillsSelectionModal({
           return aValue.localeCompare(bValue);
         });
         
-        console.log('Loaded skills count:', sortedSkills.length);
         setAllSkills(sortedSkills);
       } else {
         console.error('Invalid skills response:', response);
@@ -321,10 +322,10 @@ export default function SkillsSelectionModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background || '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border || '#e0e0e0',
   },
   closeButton: {
     padding: 4,
@@ -360,8 +361,8 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#f8f8f8',
+    borderBottomColor: colors.border || '#e0e0e0',
+    backgroundColor: colors.gray100 || '#f8f8f8',
   },
   tab: {
     flex: 1,
@@ -371,12 +372,12 @@ const styles = StyleSheet.create({
   tabActive: {
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface || '#fff',
   },
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666',
+    color: colors.textSecondary || '#666',
   },
   tabTextActive: {
     color: colors.primary,
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f0f7ff',
+    backgroundColor: colors.primary + '15',
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
@@ -394,13 +395,13 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary || '#666',
     flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.inputBackground || '#f5f5f5',
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 15,
-    color: '#666',
+    color: colors.textSecondary || '#666',
   },
   skillsList: {
     flex: 1,
@@ -444,19 +445,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.inputBackground || '#f5f5f5',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border || '#e0e0e0',
     marginRight: 8,
     marginBottom: 8,
   },
   skillChipSelected: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.primary + '20',
     borderColor: colors.primary,
   },
   skillChipText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text || '#333',
   },
   skillChipTextSelected: {
     color: colors.primary,
@@ -475,13 +476,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary || '#666',
     textAlign: 'center',
   },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted || '#999',
     textAlign: 'center',
   },
   retryButton: {
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: colors.white || '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -500,20 +501,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.surface || '#f9f9f9',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border || '#e0e0e0',
   },
   selectedSkillsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text || '#333',
     marginBottom: 8,
   },
   noSelectionText: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textMuted || '#999',
     fontStyle: 'italic',
   },
   selectedSkillsGrid: {
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
   },
   selectedSkillText: {
     fontSize: 13,
-    color: '#fff',
+    color: colors.white || '#fff',
     fontWeight: '500',
   },
   removeSkillButton: {
@@ -550,16 +551,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface || '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border || '#f0f0f0',
   },
   dropdownItemSelected: {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: colors.primary + '15',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text || '#333',
     flex: 1,
   },
   dropdownItemTextSelected: {
@@ -581,7 +582,7 @@ const styles = StyleSheet.create({
   instructionText: {
     marginTop: 16,
     fontSize: 15,
-    color: '#999',
+    color: colors.textMuted || '#999',
     textAlign: 'center',
   },
   summaryContainer: {
@@ -590,9 +591,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.gray100 || '#f8f8f8',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border || '#e0e0e0',
   },
   summaryTitle: {
     fontSize: 14,
@@ -601,6 +602,6 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary || '#666',
   },
 });

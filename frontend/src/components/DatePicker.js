@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Cross-platform DatePicker component
@@ -31,10 +32,39 @@ export default function DatePicker({
   mode = 'date',
   error,
   noMargin = false,
-  buttonStyle
+  buttonStyle,
+  labelStyle,
+  requiredStyle,
+  textStyle,
+  placeholderStyle,
+  errorTextStyle,
+  textColor,
+  placeholderTextColor,
+  iconColor,
+  placeholderIconColor,
+  pickerTextColor,
+  containerStyle,
+  colors: colorsProp, // Allow passing custom colors to override theme
 }) {
+  const { colors: themeColors } = useTheme();
+  const colors = colorsProp || themeColors; // Use custom colors if provided
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [show, setShow] = useState(false);
   const webInputRef = useRef(null);
+  
+  // Detect if dark mode based on background color
+  const isDarkMode = (() => {
+    if (!colors.background) return false;
+    const bg = colors.background.toLowerCase();
+    // Check for common dark backgrounds
+    if (bg === '#0f0f23' || bg === '#1a1a2e' || bg === '#121212' || bg === '#111827') return true;
+    // Check if hex color is dark (first digit of RGB is 0-3)
+    if (bg.startsWith('#') && bg.length >= 4) {
+      const firstHex = bg.charAt(1);
+      return ['0', '1', '2', '3'].includes(firstHex);
+    }
+    return false;
+  })();
   
   // Convert value to Date object
   const dateValue = value 
@@ -85,15 +115,63 @@ export default function DatePicker({
   };
 
   const displayValue = dateValue ? formatDate(dateValue) : '';
+  const resolvedTextColor = displayValue
+    ? (textColor ?? colors.textPrimary)
+    : (placeholderTextColor ?? colors.textLight);
+  const resolvedIconColor = displayValue
+    ? (iconColor ?? colors.textPrimary)
+    : (placeholderIconColor ?? colors.textLight);
+
+  const toPx = (value) => (typeof value === 'number' ? `${value}px` : value);
+
+  const normalizeWebButtonStyle = (style) => {
+    if (!style || typeof style !== 'object') return {};
+
+    // Allow passing either web CSS style keys or RN style keys.
+    const web = { ...style };
+
+    // Convert RN border props into CSS border shorthand.
+    const borderWidth = style.borderWidth;
+    const borderColor = style.borderColor;
+    if (borderWidth != null || borderColor != null) {
+      const width = borderWidth ?? 1;
+      const color = borderColor ?? colors.border;
+      web.border = `${width}px solid ${color}`;
+      delete web.borderWidth;
+      delete web.borderColor;
+    }
+
+    if (style.borderRadius != null) {
+      web.borderRadius = toPx(style.borderRadius);
+    }
+    if (style.padding != null) {
+      web.padding = toPx(style.padding);
+    }
+    if (style.paddingVertical != null) {
+      web.paddingTop = toPx(style.paddingVertical);
+      web.paddingBottom = toPx(style.paddingVertical);
+      delete web.paddingVertical;
+    }
+    if (style.paddingHorizontal != null) {
+      web.paddingLeft = toPx(style.paddingHorizontal);
+      web.paddingRight = toPx(style.paddingHorizontal);
+      delete web.paddingHorizontal;
+    }
+
+    // RN uses backgroundColor; CSS accepts it too.
+    return web;
+  };
 
   // ? FIX: For web, render actual HTML input that's clickable
   if (Platform.OS === 'web') {
+    const normalizedWebButtonStyle = normalizeWebButtonStyle(buttonStyle);
+
     return (
-      <View style={[styles.container, noMargin && { marginBottom: 0 }]}>
+      <View style={[styles.container, noMargin && { marginBottom: 0 }, containerStyle]}>
         {label && (
-          <Text style={styles.label}>
+          <Text style={[styles.label, labelStyle]}>
             {label}
-            {required && <Text style={styles.required}> *</Text>}
+            {required && <Text style={[styles.required, requiredStyle]}> *</Text>}
           </Text>
         )}
         
@@ -103,16 +181,14 @@ export default function DatePicker({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: colors.white,
+            backgroundColor: colors.surface,
             border: `1px solid ${error ? colors.error : colors.border}`,
             borderRadius: '8px',
             padding: '16px', // Default padding
             cursor: 'pointer',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-            // ? Apply custom styles (will override defaults like padding)
-            ...(buttonStyle && typeof buttonStyle.padding === 'number' 
-              ? { padding: `${buttonStyle.padding}px` }
-              : buttonStyle),
+            // ✅ Apply custom styles (will override defaults like padding)
+            ...normalizedWebButtonStyle,
           }}
           onClick={() => webInputRef.current?.showPicker?.()}
         >
@@ -120,14 +196,16 @@ export default function DatePicker({
             <Ionicons 
               name="calendar-outline" 
               size={20} 
-              color={displayValue ? colors.textPrimary : colors.textLight} 
+              color={resolvedIconColor} 
             />
             <span style={{
               fontSize: `${typography.sizes.base}px`,
               fontWeight: typography.weights.normal,
-              color: displayValue ? colors.textPrimary : colors.textLight,
+              color: resolvedTextColor,
               flex: 1,
               fontFamily: 'inherit',
+              ...(textStyle || {}),
+              ...(!displayValue ? (placeholderStyle || {}) : {}),
             }}>
               {displayValue || placeholder}
             </span>
@@ -158,12 +236,13 @@ export default function DatePicker({
               height: '100%',
               opacity: 0,
               cursor: 'pointer',
+              colorScheme: isDarkMode ? 'dark' : 'light',
             }}
           />
         </div>
 
         {error && (
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, errorTextStyle]}>{error}</Text>
         )}
       </View>
     );
@@ -171,11 +250,11 @@ export default function DatePicker({
 
   // Native mobile rendering (iOS/Android)
   return (
-    <View style={[styles.container, noMargin && { marginBottom: 0 }]}>
+    <View style={[styles.container, noMargin && { marginBottom: 0 }, containerStyle]}>
       {label && (
-        <Text style={styles.label}>
+        <Text style={[styles.label, labelStyle]}>
           {label}
-          {required && <Text style={styles.required}> *</Text>}
+          {required && <Text style={[styles.required, requiredStyle]}> *</Text>}
         </Text>
       )}
       
@@ -191,11 +270,14 @@ export default function DatePicker({
           <Ionicons 
             name="calendar-outline" 
             size={20} 
-            color={displayValue ? colors.textPrimary : colors.textLight} 
+            color={resolvedIconColor} 
           />
           <Text style={[
             styles.buttonText,
-            !displayValue && styles.placeholder
+            !displayValue && styles.placeholder,
+            textStyle,
+            !displayValue && placeholderStyle,
+            { color: resolvedTextColor },
           ]}>
             {displayValue || placeholder}
           </Text>
@@ -204,7 +286,7 @@ export default function DatePicker({
       </TouchableOpacity>
 
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, errorTextStyle]}>{error}</Text>
       )}
 
       {show && (
@@ -226,7 +308,7 @@ export default function DatePicker({
                 onChange={handleChange}
                 minimumDate={minimumDate}
                 maximumDate={maximumDate}
-                textColor={colors.textPrimary}
+                textColor={pickerTextColor ?? colors.textPrimary}
               />
             </View>
           )}
@@ -247,7 +329,7 @@ export default function DatePicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     marginBottom: 16, // ? RESTORED: Default margin for standalone usage
     position: 'relative',

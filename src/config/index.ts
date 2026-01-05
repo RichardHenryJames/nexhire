@@ -3,12 +3,12 @@ export const dbConfig = {
     server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
     database: process.env.DB_NAME || 'refopen-sql-db',
     user: process.env.DB_USER || 'sqladmin',
-    password: process.env.DB_PASSWORD || 'RefOpen@2024!Secure',
+    password: process.env.DB_PASSWORD || '',  // REQUIRED: Set via environment variable
     options: {
         encrypt: true,
         trustServerCertificate: false,
-        connectTimeout: 30000,
-        requestTimeout: 30000,
+        connectTimeout: 60000,
+        requestTimeout: 60000,
         pool: {
             max: 10,
             min: 0,
@@ -20,8 +20,8 @@ export const dbConfig = {
 // JWT Configuration
 export const jwtConfig = {
     secret: process.env.JWT_SECRET || 'refopen-super-secret-key-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
 };
 
 // Azure Blob Storage Configuration

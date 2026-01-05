@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 
 // Add debounce hook for smooth search
@@ -34,480 +37,33 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-const DEGREE_TYPES = [
-  // Engineering & Technology
-  { id: 'btech', name: 'B.Tech / B.E', category: 'Engineering & Technology' },
-  { id: 'mtech', name: 'M.Tech / M.E', category: 'Engineering & Technology' },
-  { id: 'diploma_eng', name: 'Diploma (Engineering)', category: 'Engineering & Technology' },
-  
-  // Medical & Health Sciences
-  { id: 'mbbs', name: 'MBBS', category: 'Medical & Health Sciences' },
-  { id: 'bds', name: 'BDS', category: 'Medical & Health Sciences' },
-  { id: 'bams', name: 'BAMS', category: 'Medical & Health Sciences' },
-  { id: 'bhms', name: 'BHMS', category: 'Medical & Health Sciences' },
-  { id: 'bpt', name: 'BPT', category: 'Medical & Health Sciences' },
-  { id: 'md', name: 'MD/MS', category: 'Medical & Health Sciences' },
-  { id: 'nursing', name: 'B.Sc Nursing', category: 'Medical & Health Sciences' },
-  
-  // Business & Economics
-  { id: 'bba', name: 'BBA', category: 'Business & Economics' },
-  { id: 'bcom', name: 'B.Com', category: 'Business & Economics' },
-  { id: 'mba', name: 'MBA', category: 'Business & Economics' },
-  { id: 'mcom', name: 'M.Com', category: 'Business & Economics' },
-  
-  // Arts & Sciences
-  { id: 'ba', name: 'B.A', category: 'Arts & Sciences' },
-  { id: 'bsc', name: 'B.Sc', category: 'Arts & Sciences' },
-  { id: 'ma', name: 'M.A', category: 'Arts & Sciences' },
-  { id: 'msc', name: 'M.Sc', category: 'Arts & Sciences' },
-  
-  // Law & Public Policy
-  { id: 'llb', name: 'LLB', category: 'Law & Public Policy' },
-  { id: 'llm', name: 'LLM', category: 'Law & Public Policy' },
-  { id: 'jd', name: 'JD (US)', category: 'Law & Public Policy' },
-  
-  // Architecture & Design
-  { id: 'barch', name: 'B.Arch', category: 'Architecture & Design' },
-  { id: 'bdes', name: 'B.Des', category: 'Architecture & Design' },
-  { id: 'march', name: 'M.Arch', category: 'Architecture & Design' },
-  { id: 'mdes', name: 'M.Des', category: 'Architecture & Design' },
-  
-  // Agriculture & Veterinary
-  { id: 'bsc_agri', name: 'B.Sc Agriculture', category: 'Agriculture & Veterinary' },
-  { id: 'bvsc', name: 'BVSc', category: 'Agriculture & Veterinary' },
-  { id: 'msc_agri', name: 'M.Sc Agriculture', category: 'Agriculture & Veterinary' },
-  
-  // Hospitality & Tourism
-  { id: 'bhm', name: 'BHM', category: 'Hospitality & Tourism' },
-  { id: 'bttm', name: 'BTTM', category: 'Hospitality & Tourism' },
-  { id: 'aviation', name: 'Aviation', category: 'Hospitality & Tourism' },
-  
-  // Performing & Fine Arts
-  { id: 'bfa', name: 'BFA', category: 'Performing & Fine Arts' },
-  { id: 'music', name: 'Music', category: 'Performing & Fine Arts' },
-  { id: 'dance', name: 'Dance', category: 'Performing & Fine Arts' },
-  
-  // PhD & Research
-  { id: 'phd', name: 'PhD/Doctorate', category: 'Research' },
-  
-  // Certificate & Others
-  { id: 'certificate', name: 'Certificate Program', category: 'Others' },
-  { id: 'diploma', name: 'Diploma', category: 'Others' },
-  { id: 'other', name: 'Other', category: 'Others' }
-];
-
-const FIELDS_OF_STUDY = {
-  // Engineering & Technology
-  'btech': [
-    'Computer Science & Engineering',
-    'Information Technology', 
-    'Electronics & Communication Engineering',
-    'Electrical Engineering',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Chemical Engineering',
-    'Metallurgical Engineering',
-    'Petroleum Engineering',
-    'Mining Engineering',
-    'Textile Engineering',
-    'Aerospace Engineering',
-    'Agricultural Engineering',
-    'Marine Engineering',
-    'Naval Architecture',
-    'Robotics Engineering',
-    'Artificial Intelligence',
-    'Data Science',
-    'Cybersecurity',
-    'Internet of Things (IoT)',
-    'Nanotechnology',
-    'Environmental Engineering',
-    'Structural Engineering',
-    'Mechatronics Engineering',
-    'Automotive Engineering',
-    'Production Engineering',
-    'Biotechnology Engineering'
-  ],
-  'mtech': [
-    'Computer Science & Engineering',
-    'Information Technology',
-    'Electronics & Communication Engineering',
-    'Electrical Engineering',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Chemical Engineering',
-    'Artificial Intelligence & Machine Learning',
-    'Cloud Computing',
-    'Quantum Computing',
-    'Sustainability Engineering',
-    'Advanced Materials',
-    'Renewable Energy',
-    'Smart Systems',
-    'Biomedical Engineering'
-  ],
-  'diploma_eng': [
-    'Civil Engineering',
-    'Mechanical Engineering',
-    'Electrical Engineering',
-    'Computer Applications',
-    'Automobile Engineering',
-    'Electronics Engineering'
-  ],
-
-  // Medical & Health Sciences
-  'mbbs': [
-    'General Medicine',
-    'Surgery',
-    'Pediatrics',
-    'Orthopedics',
-    'Cardiology',
-    'Neurology',
-    'Oncology',
-    'Nephrology',
-    'Urology',
-    'Endocrinology',
-    'Gastroenterology',
-    'Dermatology',
-    'Psychiatry',
-    'Radiology',
-    'Ophthalmology',
-    'ENT (Otolaryngology)',
-    'Anesthesiology',
-    'Pulmonology',
-    'Rheumatology',
-    'Immunology',
-    'Emergency Medicine'
-  ],
-  'bds': [
-    'Oral Surgery',
-    'Orthodontics',
-    'Periodontics',
-    'Prosthodontics',
-    'Pedodontics'
-  ],
-  'bams': [
-    'Ayurvedic Medicine',
-    'Panchakarma',
-    'Herbal Sciences'
-  ],
-  'bhms': [
-    'Homeopathy',
-    'Clinical Practice'
-  ],
-  'bpt': [
-    'Physiotherapy',
-    'Sports Physiotherapy',
-    'Neuro Rehabilitation',
-    'Cardio-Pulmonary Physiotherapy'
-  ],
-  'md': [
-    'Internal Medicine',
-    'Pediatrics',
-    'Surgery',
-    'Orthopedics',
-    'Cardiology',
-    'Neurology',
-    'Oncology',
-    'Radiology',
-    'Pathology',
-    'Anesthesiology'
-  ],
-  'nursing': [
-    'General Nursing',
-    'Critical Care Nursing',
-    'Pediatric Nursing',
-    'Psychiatric Nursing',
-    'Community Health Nursing'
-  ],
-
-  // Business & Economics
-  'bba': [
-    'General Management',
-    'Finance',
-    'Marketing',
-    'Human Resources',
-    'Logistics',
-    'International Business'
-  ],
-  'bcom': [
-    'Accounting',
-    'Banking',
-    'Taxation',
-    'Finance',
-    'Economics'
-  ],
-  'mba': [
-    'Finance',
-    'Marketing',
-    'Human Resources',
-    'Operations Management',
-    'Business Analytics',
-    'International Business',
-    'Entrepreneurship',
-    'IT Management',
-    'Supply Chain Management',
-    'Healthcare Management',
-    'Hospitality Management',
-    'Aviation Management',
-    'Real Estate',
-    'Energy Management',
-    'Sustainability',
-    'Agribusiness'
-  ],
-  'mcom': [
-    'Advanced Accounting',
-    'Corporate Finance',
-    'Economics'
-  ],
-
-  // Arts & Sciences
-  'ba': [
-    'English Literature',
-    'History',
-    'Political Science',
-    'Sociology',
-    'Psychology',
-    'Philosophy',
-    'Economics',
-    'Journalism & Mass Communication',
-    'Anthropology',
-    'Fine Arts',
-    'Geography',
-    'Linguistics',
-    'French Language',
-    'German Language',
-    'Spanish Language',
-    'Japanese Language',
-    'Hindi Literature',
-    'Sanskrit'
-  ],
-  'bsc': [
-    'Physics',
-    'Chemistry',
-    'Mathematics',
-    'Statistics',
-    'Computer Science',
-    'Electronics',
-    'Biotechnology',
-    'Microbiology',
-    'Zoology',
-    'Botany',
-    'Psychology',
-    'Environmental Science',
-    'Forensic Science',
-    'Food Science & Technology',
-    'Geology',
-    'Biochemistry'
-  ],
-  'ma': [
-    'English Literature',
-    'History',
-    'Political Science',
-    'Sociology',
-    'Psychology',
-    'Philosophy',
-    'Economics',
-    'Journalism & Mass Communication',
-    'Anthropology',
-    'Fine Arts',
-    'Geography',
-    'Linguistics'
-  ],
-  'msc': [
-    'Physics',
-    'Chemistry',
-    'Mathematics',
-    'Statistics',
-    'Computer Science',
-    'Electronics',
-    'Biotechnology',
-    'Microbiology',
-    'Zoology',
-    'Botany',
-    'Environmental Science',
-    'Forensic Science',
-    'Food Science & Technology',
-    'Data Science',
-    'Bioinformatics'
-  ],
-
-  // Law & Public Policy
-  'llb': [
-    'Criminal Law',
-    'Corporate Law',
-    'International Law',
-    'Constitutional Law',
-    'Intellectual Property Law',
-    'Cyber Law',
-    'Environmental Law',
-    'Human Rights Law',
-    'Labor Law'
-  ],
-  'llm': [
-    'Advanced Corporate Law',
-    'Comparative Law',
-    'Human Rights',
-    'Maritime Law',
-    'International Trade Law',
-    'Tax Law'
-  ],
-  'jd': [
-    'Professional Doctorate in Law'
-  ],
-
-  // Architecture & Design
-  'barch': [
-    'Urban Planning',
-    'Interior Design',
-    'Landscape Architecture',
-    'Sustainable Architecture',
-    'Construction Management'
-  ],
-  'bdes': [
-    'Fashion Design',
-    'Graphic Design',
-    'Industrial Design',
-    'Product Design',
-    'Animation',
-    'Game Design',
-    'Textile Design',
-    'UI/UX Design',
-    'Interior Design'
-  ],
-  'march': [
-    'Advanced Urban Planning',
-    'Smart Cities',
-    'Green Architecture',
-    'Heritage Conservation'
-  ],
-  'mdes': [
-    'Product Innovation',
-    'Interaction Design',
-    'Advanced Animation',
-    'Luxury Design',
-    'Design Research'
-  ],
-
-  // Agriculture & Veterinary
-  'bsc_agri': [
-    'Agronomy',
-    'Horticulture',
-    'Soil Science',
-    'Crop Science',
-    'Plant Genetics',
-    'Food Technology'
-  ],
-  'bvsc': [
-    'Animal Husbandry',
-    'Veterinary Surgery',
-    'Dairy Science'
-  ],
-  'msc_agri': [
-    'Advanced Crop Science',
-    'Agro-Ecology',
-    'Genetic Engineering',
-    'Sustainable Agriculture'
-  ],
-
-  // Hospitality & Tourism
-  'bhm': [
-    'Hotel Management',
-    'Culinary Arts',
-    'Catering Technology',
-    'Food Production'
-  ],
-  'bttm': [
-    'Travel & Tourism',
-    'Event Management'
-  ],
-  'aviation': [
-    'Pilot Training',
-    'Aeronautical Management',
-    'Air Traffic Control',
-    'Airport Operations'
-  ],
-
-  // Performing & Fine Arts
-  'bfa': [
-    'Painting',
-    'Sculpture',
-    'Applied Arts',
-    'Photography'
-  ],
-  'music': [
-    'Classical Music',
-    'Western Music',
-    'Instrumental Music',
-    'Vocal Music',
-    'Musicology'
-  ],
-  'dance': [
-    'Classical Dance',
-    'Modern Dance',
-    'Choreography'
-  ],
-
-  // PhD & Research
-  'phd': [
-    'Engineering Research',
-    'Medical Research',
-    'Management Research',
-    'Science Research',
-    'Humanities Research',
-    'Legal Research',
-    'Architecture Research',
-    'Agriculture Research',
-    'Design Research',
-    'Arts Research'
-  ],
-
-  // Others
-  'certificate': [
-    'Digital Marketing',
-    'Data Analytics',
-    'Cybersecurity',
-    'Cloud Computing',
-    'Project Management',
-    'Financial Planning',
-    'Interior Design',
-    'Culinary Arts',
-    'Photography',
-    'Foreign Languages'
-  ],
-  'diploma': [
-    'Computer Applications',
-    'Electronics',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Hotel Management',
-    'Fashion Design',
-    'Mass Communication'
-  ],
-  'other': [
-    'Custom Field of Study'
-  ]
-};
-
-const YEARS_IN_COLLEGE = [
-  'First Year (Freshman)',
-  'Second Year (Sophomore)',
-  'Third Year (Junior)',
-  'Fourth Year (Senior)',
-  'Graduate Student',
-  'Recently Graduated (0-1 year)',
-  'Other'
-];
+// Degree types and fields of study are fetched from ReferenceMetadata.
+// RefType values:
+//  - DegreeType (Category = degreeKey, Description = group/category label)
+//  - FieldOfStudy (Category = degreeKey)
 
 export default function EducationDetailsScreen({ navigation, route }) {
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [formData, setFormData] = useState({
     college: null,
     customCollege: '',
     degreeType: '',
+    degreeTypeKey: '',
     fieldOfStudy: '',
     yearInCollege: '',
     selectedCountry: 'India',
     graduationYear: '',  // NEW: Add graduation year
     gpa: '',            // NEW: Add GPA
   });
+
+  const [degreeTypes, setDegreeTypes] = useState([]);
+  const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
+  const [yearsInCollege, setYearsInCollege] = useState([]);
+  const [loadingDegrees, setLoadingDegrees] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [loadingYears, setLoadingYears] = useState(false);
   
   const [allColleges, setAllColleges] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -536,6 +92,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
   useEffect(() => {
     loadCountries();
     loadColleges();
+    loadEducationReferenceData();
   }, []);
 
   useEffect(() => {
@@ -543,6 +100,88 @@ export default function EducationDetailsScreen({ navigation, route }) {
       loadColleges();
     }
   }, [formData.selectedCountry]);
+
+  const loadReferenceTypes = async (types) => {
+    const wantsDegrees = Array.isArray(types) && types.includes('DegreeType');
+    const wantsYears = Array.isArray(types) && types.includes('YearInCollege');
+
+    try {
+      if (wantsDegrees) setLoadingDegrees(true);
+      if (wantsYears) setLoadingYears(true);
+
+      // ✅ OPTIMIZED: Use bulk endpoint to fetch multiple types in one call
+      const response = await refopenAPI.getBulkReferenceMetadata(types);
+
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.error || 'Failed to load reference metadata');
+      }
+
+      if (wantsDegrees) {
+        const items = Array.isArray(response.data.DegreeType) ? response.data.DegreeType : [];
+        const transformed = items
+          .filter(item => item && item.Value)
+          .map(item => ({
+            id: item.Category || String(item.ReferenceID),
+            name: item.Value,
+            category: item.Description || 'Others',
+          }));
+        setDegreeTypes(transformed);
+      }
+
+      if (wantsYears) {
+        const items = Array.isArray(response.data.YearInCollege) ? response.data.YearInCollege : [];
+        const transformed = items
+          .filter(item => item && item.Value)
+          .map(item => item.Value);
+        setYearsInCollege(transformed);
+      }
+    } catch (error) {
+      console.error('Error loading reference metadata:', error);
+      if (wantsDegrees) setDegreeTypes([]);
+      if (wantsYears) setYearsInCollege([]);
+    } finally {
+      if (wantsDegrees) setLoadingDegrees(false);
+      if (wantsYears) setLoadingYears(false);
+    }
+  };
+
+  const loadEducationReferenceData = async () => {
+    return loadReferenceTypes(['DegreeType', 'YearInCollege']);
+  };
+
+  const loadDegreeTypes = async () => {
+    return loadReferenceTypes(['DegreeType']);
+  };
+
+  const loadFieldsOfStudy = async (degreeKey) => {
+    if (!degreeKey) {
+      setFieldsOfStudy([]);
+      return;
+    }
+
+    try {
+      setLoadingFields(true);
+      const response = await refopenAPI.getReferenceMetadata('FieldOfStudy', degreeKey);
+
+      if (response.success && Array.isArray(response.data)) {
+        const transformed = response.data
+          .filter(item => item && item.Value)
+          .map(item => item.Value);
+        setFieldsOfStudy(transformed);
+      } else {
+        throw new Error(response.error || 'Failed to load fields of study');
+      }
+    } catch (error) {
+      console.error('Error loading fields of study:', error);
+      setFieldsOfStudy([]);
+    } finally {
+      setLoadingFields(false);
+    }
+  };
+
+  const loadYearsInCollege = async () => {
+    return loadReferenceTypes(['YearInCollege']);
+  };
 
   const loadCountries = async () => {
     try {
@@ -649,7 +288,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
     } else if (activeModal === 'degree') {
       if (!debouncedSearchTerm.trim()) {
         // Group degrees by category for better organization
-        const groupedDegrees = DEGREE_TYPES.reduce((acc, degree) => {
+        const groupedDegrees = degreeTypes.reduce((acc, degree) => {
           if (!acc[degree.category]) {
             acc[degree.category] = [];
           }
@@ -667,29 +306,55 @@ export default function EducationDetailsScreen({ navigation, route }) {
       }
       
       const searchLower = debouncedSearchTerm.toLowerCase();
-      return DEGREE_TYPES.filter(degree => 
+      return degreeTypes.filter(degree => 
         degree.name.toLowerCase().includes(searchLower) ||
         degree.category.toLowerCase().includes(searchLower)
       );
     } else if (activeModal === 'field') {
-      // Get fields based on selected degree
-      const selectedDegree = DEGREE_TYPES.find(d => d.name === formData.degreeType);
-      const availableFields = selectedDegree ? FIELDS_OF_STUDY[selectedDegree.id] || [] : [];
-      
+      const availableFields = fieldsOfStudy;
+
       if (!debouncedSearchTerm.trim()) return availableFields;
       const searchLower = debouncedSearchTerm.toLowerCase();
       return availableFields.filter(field => field.toLowerCase().includes(searchLower));
     } else if (activeModal === 'year') {
-      if (!debouncedSearchTerm.trim()) return YEARS_IN_COLLEGE;
+      if (!debouncedSearchTerm.trim()) return yearsInCollege;
       const searchLower = debouncedSearchTerm.toLowerCase();
-      return YEARS_IN_COLLEGE.filter(year => year.toLowerCase().includes(searchLower));
+      return yearsInCollege.filter(year => year.toLowerCase().includes(searchLower));
     }
     return [];
-  }, [activeModal, debouncedSearchTerm, allColleges, countries, formData.degreeType]);
+  }, [activeModal, debouncedSearchTerm, allColleges, countries, degreeTypes, fieldsOfStudy, yearsInCollege]);
+
+  const isCollegeProvided = (() => {
+    const customCollege = String(formData.customCollege || '').trim();
+    if (!formData.college) return !!customCollege;
+    if (formData.college?.name === 'Other') return !!customCollege;
+    return true;
+  })();
+
+  const isGraduationYearValid = (() => {
+    if (experienceType !== 'Student') return true;
+    const year = String(formData.graduationYear || '').trim();
+    return /^\d{4}$/.test(year);
+  })();
+
+  const isContinueEnabled = Boolean(
+    isCollegeProvided &&
+      formData.degreeTypeKey &&
+      formData.degreeType &&
+      formData.fieldOfStudy &&
+      (experienceType !== 'Student' || formData.yearInCollege) &&
+      isGraduationYearValid
+  );
 
   const handleContinue = async () => {
-    if (!formData.college && !formData.customCollege) {
+    const customCollege = String(formData.customCollege || '').trim();
+
+    if (!formData.college && !customCollege) {
       Alert.alert('Required Field', 'Please select your college/school');
+      return;
+    }
+    if (formData.college?.name === 'Other' && !customCollege) {
+      Alert.alert('Required Field', 'Please enter your college/school name');
       return;
     }
     if (!formData.degreeType) {
@@ -704,6 +369,10 @@ export default function EducationDetailsScreen({ navigation, route }) {
       Alert.alert('Required Field', 'Please select your current year');
       return;
     }
+    if (experienceType === 'Student' && !/^\d{4}$/.test(String(formData.graduationYear || '').trim())) {
+      Alert.alert('Required Field', 'Please enter a valid graduation year (YYYY)');
+      return;
+    }
 
     // Enhanced: Include graduation year and GPA in the final data
     const finalFormData = {
@@ -714,11 +383,13 @@ export default function EducationDetailsScreen({ navigation, route }) {
     };
 
     
-    navigation.navigate('JobPreferencesScreen', { 
+    navigation.navigate('PersonalDetailsScreenDirect', { 
       userType, 
       experienceType,
       workExperienceData,
-      educationData: finalFormData
+      educationData: finalFormData,
+      fromGoogleAuth: route?.params?.fromGoogleAuth,
+      googleUser: route?.params?.googleUser,
     });
   };
 
@@ -754,11 +425,24 @@ export default function EducationDetailsScreen({ navigation, route }) {
         break;
       case 'degree':
         // Reset field of study when degree changes since fields are degree-dependent
-        setFormData({ 
-          ...formData, 
-          degreeType: typeof item === 'string' ? item : item.name,
-          fieldOfStudy: '' // Reset field when degree changes
-        });
+        if (typeof item === 'string') {
+          setFormData({ 
+            ...formData, 
+            degreeType: item,
+            degreeTypeKey: '',
+            fieldOfStudy: ''
+          });
+          setFieldsOfStudy([]);
+        } else {
+          setFormData({ 
+            ...formData, 
+            degreeType: item.name,
+            degreeTypeKey: item.id,
+            fieldOfStudy: '' // Reset field when degree changes
+          });
+          setFieldsOfStudy([]);
+          loadFieldsOfStudy(item.id);
+        }
         break;
       case 'field':
         setFormData({ ...formData, fieldOfStudy: item });
@@ -907,6 +591,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -948,31 +633,32 @@ export default function EducationDetailsScreen({ navigation, route }) {
               required={true}
             />
 
-            <SelectionButton
-              label="Field of Study"
-              value={formData.fieldOfStudy}
-              placeholder={
-                formData.degreeType 
-                  ? `Select field for ${formData.degreeType}` 
-                  : "Select degree type first"
-              }
-              onPress={() => {
-                if (!formData.degreeType) {
-                  Alert.alert('Select Degree First', 'Please select your degree type before choosing field of study');
-                  return;
-                }
-                openModal('field');
-              }}
-              disabled={!formData.degreeType}
-              required={true}
-            />
+            {!!formData.degreeTypeKey && (
+              <SelectionButton
+                label="Field of Study"
+                value={formData.fieldOfStudy}
+                placeholder={`Select field for ${formData.degreeType || 'your degree'}`}
+                onPress={() => {
+                  if (!fieldsOfStudy.length && !loadingFields) {
+                    loadFieldsOfStudy(formData.degreeTypeKey);
+                  }
+                  openModal('field');
+                }}
+                required={true}
+              />
+            )}
 
             {experienceType === 'Student' && (
               <SelectionButton
                 label="Current Year"
                 value={formData.yearInCollege}
                 placeholder="Select your current year"
-                onPress={() => openModal('year')}
+                onPress={() => {
+                  if (!yearsInCollege.length && !loadingYears) {
+                    loadYearsInCollege();
+                  }
+                  openModal('year');
+                }}
                 required={true}
               />
             )}
@@ -1023,8 +709,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
           </View>
 
           <TouchableOpacity
-            style={styles.continueButton}
+            style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
             onPress={handleContinue}
+            disabled={!isContinueEnabled}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
             <Ionicons name="arrow-forward" size={20} color={colors.white} />
@@ -1040,6 +727,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
         onRequestClose={closeModal}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={closeModal}>
               <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -1092,11 +780,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
             </View>
           )}
 
-          {((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country')) && (
+          {((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country') || (loadingDegrees && activeModal === 'degree') || (loadingFields && activeModal === 'field') || (loadingYears && activeModal === 'year')) && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>
-                {activeModal === 'country' ? 'Loading countries with flag emojis...' : `Loading universities from ${formData.selectedCountry}...`}
+                {activeModal === 'country' ? 'Loading countries with flag emojis...' :
+                 activeModal === 'college' ? `Loading universities from ${formData.selectedCountry}...` :
+                 activeModal === 'degree' ? 'Loading degree types...' :
+                 activeModal === 'year' ? 'Loading years...' :
+                 'Loading fields of study...'}
               </Text>
             </View>
           )}
@@ -1146,16 +838,26 @@ export default function EducationDetailsScreen({ navigation, route }) {
               })}
             />
           )}
+          </View>
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,
@@ -1256,6 +958,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
+  continueButtonDisabled: {
+    backgroundColor: colors.gray300,
+  },
   continueButtonText: {
     color: colors.white,
     fontSize: typography.sizes.base,
@@ -1265,13 +970,38 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

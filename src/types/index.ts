@@ -28,8 +28,8 @@ export interface QueryParams extends Record<string, any> {
 export interface User {
     UserID: string;
     Email: string;
-    Password: string; // Added missing Password field
-    UserType: 'JobSeeker' | 'Employer' | 'Admin'; // ? UPDATED: Added Admin
+    Password: string;
+    UserType: 'JobSeeker' | 'Employer' | 'Admin';
     FirstName: string;
     LastName: string;
     Phone?: string;
@@ -45,13 +45,13 @@ export interface User {
     UpdatedAt: Date;
     IsActive: boolean;
     TwoFactorEnabled: boolean;
-    LoginAttempts: number; // Added missing field
-    AccountLockoutEnd?: Date; // Added missing field
+    LoginAttempts: number;
+    AccountLockoutEnd?: Date;
 
-    // ?? NEW: Google OAuth fields
+    /** Google OAuth fields */
     GoogleId?: string;
-    LoginMethod?: string; // 'Password', 'Google', etc.
-    GoogleAccessToken?: string; // Optional: store for potential token revocation
+    LoginMethod?: string;
+    GoogleAccessToken?: string;
 }
 
 export interface Organization {
@@ -131,7 +131,8 @@ export interface Job {
     Tags?: string;
     InternalNotes?: string;
     ExternalJobID?: string;
-    ApplicationURL?: string; // ? NEW: Application URL from scraped sources
+    /** Application URL from scraped job sources */
+    ApplicationURL?: string;
     SearchScore?: number;
     FeaturedUntil?: Date;
 }
@@ -218,18 +219,18 @@ export interface ApplicationTracking {
     LastUpdatedAt: Date;
 }
 
-// FIXED: Updated UserRegistrationRequest to include Admin and organization fields for employers
+/** User registration request with support for all user types */
 export interface UserRegistrationRequest {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
-    userType: 'JobSeeker' | 'Employer' | 'Admin'; // ? UPDATED: Added Admin
+    userType: 'JobSeeker' | 'Employer' | 'Admin';
     phone?: string;
     dateOfBirth?: Date;
     gender?: string;
     
-    // Organization fields for employers
+    /** Organization fields for employers */
     organizationName?: string;
     organizationIndustry?: string;
     organizationSize?: string;
@@ -239,7 +240,7 @@ export interface UserRegistrationRequest {
     organizationType?: string;
     establishedDate?: Date;
     
-    // ? NEW: Admin-specific fields
+    /** Admin-specific fields */
     adminLevel?: string;
     permissions?: string[];
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,15 +16,26 @@ import { Ionicons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
+import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import PublishJobConfirmModal from '../../components/PublishJobConfirmModal';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
+import useResponsive from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
 export default function JobDetailsScreen({ route, navigation }) {
 const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
+  const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,11 +55,20 @@ const { jobId, fromReferralRequest } = route.params || {};
   
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
   
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralSuccess, setPendingReferralSuccess] = useState(false);
+
+  // 💎 NEW: Publish confirmation modal state
+  const [showPublishConfirmModal, setShowPublishConfirmModal] = useState(false);
+  const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
 
   // Initialize default cover letter when job loads (only once)
   useEffect(() => {
@@ -273,7 +293,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         const balance = walletBalance.data?.balance || 0;
         
         // Show confirmation modal (works for both sufficient and insufficient balance)
-        setReferralConfirmData({ currentBalance: balance, requiredAmount: 50 });
+        setReferralConfirmData({ currentBalance: balance, requiredAmount: pricing.referralRequestCost });
         setShowReferralConfirmModal(true);
         return;
         
@@ -346,9 +366,14 @@ const { jobId, fromReferralRequest } = route.params || {};
           referralMessage: referralMessage.trim() || undefined
         });
         if (res.success) {
-          setHasReferred(true);
+          // 🎉 Store pending - will mark as referred when overlay closes
+          setPendingReferralSuccess(true);
           
-          const amountDeducted = res.data?.amountDeducted || 50;
+          // 🎉 Show fullscreen success overlay for 1 second
+          setReferralCompanyName(job?.OrganizationName || '');
+          setShowReferralSuccessOverlay(true);
+          
+          const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
           let message = 'Referral request sent';
@@ -359,12 +384,15 @@ const { jobId, fromReferralRequest } = route.params || {};
           showToast(message, 'success');
           setReferralMessage('');
           setShowReferralMessageInput(false);
+          
+          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
+          setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || 50;
+            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance, requiredAmount });
@@ -494,9 +522,14 @@ const { jobId, fromReferralRequest } = route.params || {};
         referralMessage: referralMessage.trim() || undefined
       });
       if (res?.success) {
-        setHasReferred(true);
+        // 🎉 Store pending - will mark as referred when overlay closes
+        setPendingReferralSuccess(true);
         
-        const amountDeducted = res.data?.amountDeducted || 50;
+        // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(job?.OrganizationName || '');
+        setShowReferralSuccessOverlay(true);
+        
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
         let message = 'Referral sent to ALL employees who can refer!';
@@ -511,7 +544,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -569,33 +602,65 @@ const { jobId, fromReferralRequest } = route.params || {};
     if (!job?.JobID) {
       return;
     }
-    
+
+    const PUBLISH_JOB_FEE = 50;
+
+    try {
+      // Check wallet balance
+      const walletBalance = await refopenAPI.getWalletBalance();
+      
+      if (walletBalance?.success) {
+        const balance = walletBalance.data?.balance || 0;
+        
+        // Show confirmation modal (works for both sufficient and insufficient balance)
+        setPublishConfirmData({ currentBalance: balance, requiredAmount: PUBLISH_JOB_FEE });
+        setShowPublishConfirmModal(true);
+      } else {
+        console.error('Failed to check wallet balance:', walletBalance?.error);
+        showToast('Unable to check wallet balance', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to check wallet balance:', error);
+      showToast('Unable to check wallet balance', 'error');
+    }
+  };
+
+  const handlePublishConfirmProceed = async () => {
+    setShowPublishConfirmModal(false);
+    const { currentBalance, requiredAmount } = publishConfirmData;
+
+    // Double check balance
+    if (currentBalance < requiredAmount) {
+      setWalletModalData({ currentBalance, requiredAmount });
+      setShowWalletModal(true);
+      return;
+    }
+
     try {
       setPublishing(true);
-      
       const result = await refopenAPI.publishJob(job.JobID);
-      
+
       if (result.success) {
         showToast('Job published successfully!', 'success');
-        // Update job status locally to reflect the change
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
-        // Navigate back with parameters to switch to Published tab
         setTimeout(() => {
-          // Navigate to MainTabs and then to Jobs screen with parameters
           navigation.navigate('MainTabs', {
             screen: 'Jobs',
-            params: { 
+            params: {
               switchToTab: 'published',
               publishedJobId: job.JobID,
               successMessage: `${job.Title} has been published successfully!`
             }
           });
         }, 1500);
-      } else {
-        Alert.alert('Error', result.error || 'Failed to publish job');
+        return;
       }
+
+      const message = result?.error || result?.message || 'Failed to publish job';
+      showToast(message, 'error');
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to publish job');
+      const message = error?.message || 'Failed to publish job';
+      showToast(message, 'error');
     } finally {
       setPublishing(false);
     }
@@ -656,13 +721,56 @@ const { jobId, fromReferralRequest } = route.params || {};
   const parseJobTags = () => {
     if (!job.Tags) return [];
     
+    // Job source identifiers that should NOT be shown as skills
+    const sourcePatterns = [
+      /^Adzuna/i,           // Adzuna_IN, Adzuna_US, etc.
+      /^RemoteOK/i,         // RemoteOK
+      /^WeWorkRemotely/i,   // WeWorkRemotely
+      /^HackerNews/i,       // HackerNews
+      /^LinkedIn/i,         // LinkedIn
+      /^Indeed/i,           // Indeed
+      /^Glassdoor/i,        // Glassdoor
+    ];
+    
+    // Job types and workplace types to filter out
+    const nonSkillTags = ['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid', 'Internship', 'Freelance', 'Temporary'];
+    
     // Split by comma and clean up tags
     return job.Tags
       .split(',')
       .map(tag => tag.trim())
       .filter(tag => tag.length > 0)
-      .filter(tag => !['Full-time', 'Part-time', 'Contract', 'Remote', 'Onsite', 'Hybrid'].includes(tag))
+      .filter(tag => !nonSkillTags.includes(tag))
+      .filter(tag => !sourcePatterns.some(pattern => pattern.test(tag)))
       .slice(0, 10); // Limit to 10 tags
+  };
+
+  // Clean up truncated descriptions - if ends with "..." cut back to last full stop
+  const cleanDescription = (description) => {
+    if (!description) return '';
+    
+    let cleaned = description.trim();
+    
+    // Check if description ends with truncation indicators
+    if (cleaned.endsWith('...') || cleaned.endsWith('…') || cleaned.endsWith('a...') || cleaned.endsWith('a…')) {
+      // Remove the truncation marker
+      cleaned = cleaned.replace(/\.{3}$|…$/, '').trim();
+      
+      // Find the last full stop (sentence end)
+      const lastPeriod = cleaned.lastIndexOf('.');
+      const lastExclamation = cleaned.lastIndexOf('!');
+      const lastQuestion = cleaned.lastIndexOf('?');
+      
+      // Get the position of the last sentence-ending punctuation
+      const lastSentenceEnd = Math.max(lastPeriod, lastExclamation, lastQuestion);
+      
+      if (lastSentenceEnd > 0) {
+        // Cut at the last complete sentence
+        cleaned = cleaned.substring(0, lastSentenceEnd + 1);
+      }
+    }
+    
+    return cleaned;
   };
 
   const openExternalApplication = () => {
@@ -761,7 +869,8 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ResponsiveContainer style={styles.contentWrapper}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.companyHeader}>
@@ -785,7 +894,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                 />
               ) : (
                 <View style={styles.logoPlaceholder}>
-                  <Ionicons name="business-outline" size={32} color="#666" />
+                  <Ionicons name="business-outline" size={32} color={colors.textSecondary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -822,7 +931,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                       }
                     }}
                   >
-                    <Ionicons name="globe-outline" size={16} color="#0066cc" />
+                    <Ionicons name="globe-outline" size={16} color={colors.primary} />
                     <Text style={styles.websiteText}>Visit Website</Text>
                   </TouchableOpacity>
                 )}
@@ -841,7 +950,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                       }
                     }}
                   >
-                    <Ionicons name="logo-linkedin" size={16} color="#0066cc" />
+                    <Ionicons name="logo-linkedin" size={16} color={colors.primary} />
                     <Text style={styles.linkedinText}>LinkedIn Profile</Text>
                   </TouchableOpacity>
                 )}
@@ -897,8 +1006,8 @@ const { jobId, fromReferralRequest } = route.params || {};
         ) : null}
       </View>
 
-      {/* ✅ NEW: Job Tags Section */}
-      {job.Tags && (
+      {/* ✅ NEW: Job Tags Section - Only show if there are valid skills after filtering */}
+      {job.Tags && parseJobTags().length > 0 && (
         <View style={styles.jobTagsSection}>
           <Text style={styles.jobTagsSectionTitle}>Skills & Technologies</Text>
           <View style={styles.jobTagsContainer}>
@@ -917,7 +1026,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           <Text style={styles.sectionTitle}>Job Description</Text>
           <RenderHtml
             contentWidth={width}
-            source={{ html: job.Description }}
+            source={{ html: cleanDescription(job.Description) }}
             renderers={customRenderers}
             tagsStyles={{
               body: {
@@ -1201,7 +1310,7 @@ Highlight your relevant experience, skills, and why you're excited about this sp
                 <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
               )}
               <Text style={styles.publishButtonText}>
-                {publishing ? 'Publishing...' : 'Publish Job'}
+                {publishing ? 'Publishing...' : 'Publish Job (₹50)'}
               </Text>
             </TouchableOpacity>
           )}
@@ -1250,14 +1359,60 @@ Highlight your relevant experience, skills, and why you're excited about this sp
         }}
         onCancel={() => setShowReferralConfirmModal(false)}
       />
+
+      {/* 💎 NEW: Publish Confirmation Modal */}
+      <PublishJobConfirmModal
+        visible={showPublishConfirmModal}
+        currentBalance={publishConfirmData.currentBalance}
+        requiredAmount={publishConfirmData.requiredAmount}
+        jobTitle={job?.Title || 'this job'}
+        onProceed={handlePublishConfirmProceed}
+        onCancel={() => setShowPublishConfirmModal(false)}
+        onAddMoney={() => {
+          setShowPublishConfirmModal(false);
+          setWalletModalData({ 
+            currentBalance: publishConfirmData.currentBalance, 
+            requiredAmount: publishConfirmData.requiredAmount 
+          });
+          setShowWalletModal(true);
+        }}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark as referred after overlay closes
+          if (pendingReferralSuccess) {
+            setHasReferred(true);
+            setPendingReferralSuccess(false);
+          }
+        }}
+        duration={3500}
+        companyName={referralCompanyName}
+      />
+      </ResponsiveContainer>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false, contentWidth = 400 } = responsive;
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  contentWrapper: {
+    width: '100%',
+    maxWidth: isDesktop ? 900 : '100%',
+    paddingHorizontal: isMobile ? 0 : 24,
   },
   loadingContainer: {
     flex: 1,
@@ -1268,7 +1423,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -1286,7 +1441,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -1302,10 +1457,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   header: {
-    padding: 20,
+    padding: isMobile ? 20 : 32,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    ...(isDesktop && {
+      borderRadius: 12,
+      marginTop: 16,
+      marginHorizontal: 0,
+      borderWidth: 1,
+    }),
   },
   companyHeader: {
     marginBottom: 16,
@@ -1316,15 +1477,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   companyLogo: {
-    width: 60,
-    height: 60,
+    width: isMobile ? 60 : 80,
+    height: isMobile ? 60 : 80,
     borderRadius: 12,
     backgroundColor: colors.gray100,
     marginRight: 16,
   },
   logoPlaceholder: {
-    width: 60,
-    height: 60,
+    width: isMobile ? 60 : 80,
+    height: isMobile ? 60 : 80,
     borderRadius: 12,
     backgroundColor: colors.gray100,
     justifyContent: 'center',
@@ -1335,6 +1496,17 @@ const styles = StyleSheet.create({
   },
   companyDetails: {
     flex: 1,
+  },
+  title: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  company: {
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   companyLinksContainer: {
     flexDirection: 'row',
@@ -1347,13 +1519,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#e8f4fd',
+    backgroundColor: 'transparent',
     borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
   websiteText: {
     fontSize: typography.sizes.sm,
-    color: '#0066cc',
-    fontWeight: typography.weights.medium,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
     marginLeft: 6,
   },
   linkedinButton: {
@@ -1399,8 +1573,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning + '20',
   },
   statusTag: {
-    color: colors.gray600,
-    backgroundColor: colors.gray200,
+    color: colors.textSecondary,
+    backgroundColor: colors.gray100,
   },
   infoSection: {
     padding: 20,
@@ -1418,7 +1592,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   infoValue: {
@@ -1427,12 +1601,18 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   section: {
-    padding: 20,
+    padding: isMobile ? 20 : 32,
     backgroundColor: colors.surface,
     marginTop: 8,
+    ...(isDesktop && {
+      borderRadius: 12,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    }),
   },
   sectionTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: isDesktop ? typography.sizes.xl : typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 16,
@@ -1460,7 +1640,7 @@ const styles = StyleSheet.create({
   additionalLabel: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   additionalValue: {
@@ -1483,7 +1663,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   applyButtonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
   },
   applyButtonText: {
     fontSize: typography.sizes.md,
@@ -1509,16 +1689,15 @@ const styles = StyleSheet.create({
   },
   referralButtonDisabled: {
     opacity: 0.7,
-    backgroundColor: '#f3f4f6',
-    borderColor: '#d1d5db',
+    backgroundColor: colors.gray100,
+    borderColor: colors.gray300,
   },
   headerButton: {
     padding: 8,
   },
-  // 🆕 MOVED: Referral message styles - updated margin since now above buttons
   referralMessageSection: {
     margin: 20,
-    marginBottom: 8, // Reduced margin since action buttons come after this
+    marginBottom: 8,
   },
   addMessageButton: {
     flexDirection: 'row',
@@ -1566,7 +1745,6 @@ const styles = StyleSheet.create({
     maxHeight: 160,
     textAlignVertical: 'top',
   },
-  // 🆕 NEW: Cover letter section styles
   coverLetterSection: {
     margin: 20,
     marginTop: 0,
@@ -1593,15 +1771,14 @@ const styles = StyleSheet.create({
   },
   referralMessageHint: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
     flex: 1,
   },
   characterCount: {
     fontSize: typography.sizes.sm,
-    color: colors.gray400,
+    color: colors.textMuted,
     fontWeight: typography.weights.medium,
   },
-  // ✅ NEW: External application styles
   externalApplicationSection: {
     padding: 20,
     borderTopWidth: 1,
@@ -1622,7 +1799,7 @@ const styles = StyleSheet.create({
   },
   externalApplicationDescription: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   externalApplicationButton: {
@@ -1640,7 +1817,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     marginLeft: 8,
   },
-  // ✅ NEW: Job tags styles
   jobTagsSection: {
     padding: 20,
     backgroundColor: colors.surface,
@@ -1670,7 +1846,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
-  // ✅ NEW: Publish button styles
   publishButton: {
     flex: 1,
     flexDirection: 'row',
@@ -1681,7 +1856,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   publishButtonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: colors.gray300,
   },
   publishButtonText: {
     color: colors.white,
@@ -1702,7 +1877,8 @@ const styles = StyleSheet.create({
   archivedNoticeText: {
     flex: 1,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
 });
+};

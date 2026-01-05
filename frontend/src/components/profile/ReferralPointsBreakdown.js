@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
+import useResponsive from '../../hooks/useResponsive';
 
 const ReferralPointsBreakdown = ({ 
   totalPoints = 0, 
@@ -14,10 +16,48 @@ const ReferralPointsBreakdown = ({
   visible,
   onConversionSuccess // NEW: Callback to refresh data after conversion
 }) => {
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const { isMobile, isDesktop } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation();
   const [showConversionModal, setShowConversionModal] = useState(false);
   const [converting, setConverting] = useState(false);
+  
+  // Withdraw feature states
+  const [withdrawableData, setWithdrawableData] = useState({
+    withdrawableAmount: 0,
+    totalEarned: 0,
+    totalWithdrawn: 0,
+    canWithdraw: false,
+    minimumWithdrawal: 500
+  });
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [upiId, setUpiId] = useState('');
+  const [loadingWithdrawable, setLoadingWithdrawable] = useState(false);
+
+  // Load withdrawable balance when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadWithdrawableBalance();
+    }
+  }, [visible]);
+
+  const loadWithdrawableBalance = async () => {
+    try {
+      setLoadingWithdrawable(true);
+      const response = await refopenAPI.getWithdrawableBalance();
+      if (response.success && response.data) {
+        setWithdrawableData(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading withdrawable balance:', error);
+    } finally {
+      setLoadingWithdrawable(false);
+    }
+  };
 
   // Debug logging
   
@@ -208,12 +248,8 @@ const ReferralPointsBreakdown = ({
     try {
       setConverting(true);
       
-      console.log(`Converting ${totalPoints} points to wallet...`);
-      
       // Call the real API endpoint
       const response = await refopenAPI.convertPointsToWallet();
-      
-      console.log('Conversion API response:', response);
       
       if (response.success) {
         const { pointsConverted, walletAmount, newWalletBalance } = response.data;
@@ -247,36 +283,153 @@ const ReferralPointsBreakdown = ({
     }
   };
 
+  const handleWithdraw = async () => {
+    if (!upiId.trim()) {
+      Alert.alert('Error', 'Please enter your UPI ID');
+      return;
+    }
+    
+    if (!withdrawableData.canWithdraw) {
+      Alert.alert('Not Eligible', `You need at least ₹${withdrawableData.minimumWithdrawal} to withdraw`);
+      return;
+    }
+    
+    try {
+      setWithdrawing(true);
+      
+      const response = await refopenAPI.requestWithdrawal(withdrawableData.withdrawableAmount, upiId.trim());
+      
+      if (response.success) {
+        setShowWithdrawModal(false);
+        setUpiId('');
+        
+        Alert.alert(
+          'Withdrawal Requested! 🎉',
+          `Your withdrawal request for ₹${withdrawableData.withdrawableAmount} has been submitted.\n\nAmount will be credited to your UPI within 24-48 hours.`,
+          [{ text: 'OK' }]
+        );
+        
+        // Refresh withdrawable balance
+        loadWithdrawableBalance();
+        
+        // Refresh parent data
+        if (onConversionSuccess) {
+          await onConversionSuccess();
+        }
+      } else {
+        throw new Error(response.error || 'Withdrawal request failed');
+      }
+    } catch (error) {
+      console.error('Error requesting withdrawal:', error);
+      Alert.alert(
+        'Withdrawal Failed',
+        error.message || 'Failed to request withdrawal. Please try again.'
+      );
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Referral Points Breakdown</Text>
-          <View style={styles.placeholder} />
-        </View>
+        <View style={styles.innerContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>RefPoints Breakdown</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Total Points Card */}
-          <View style={styles.totalPointsCard}>
-            <View style={styles.pointsIcon}>
-              <Text style={styles.pointsEmoji}>🏆</Text>
-            </View>
-            <Text style={styles.totalPointsNumber}>{totalPoints || 0}</Text>
-            <Text style={styles.totalPointsLabel}>Total Referral Points</Text>
-            
-            {/* Quick Stats Row */}
-            <View style={styles.quickStatsRow}>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referral Made</Text>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Top Cards Row - Side by side on desktop, stacked on mobile */}
+          <View style={styles.topCardsRow}>
+            {/* Withdraw Earnings Section - MOVED FIRST */}
+            <View style={[styles.withdrawSection, !isMobile && styles.topCardHalf]}>
+              <View style={styles.withdrawHeader}>
+                <View style={styles.withdrawTitleRow}>
+                  <Ionicons name="wallet" size={20} color="#10b981" />
+                  <Text style={styles.withdrawTitle}>Referral Earnings</Text>
+                </View>
+                <Text style={styles.withdrawSubtitle}>
+                  Earn money when job seekers verify your referrals
+                </Text>
               </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
-                <Text style={styles.quickStatLabel}>Referral Verified</Text>
+              
+              {/* Liquid Fill Withdraw Button */}
+              <TouchableOpacity 
+                style={styles.withdrawButtonContainer}
+                onPress={() => setShowWithdrawModal(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.withdrawButtonOuter}>
+                  {/* Background liquid fill based on amount */}
+                  <View 
+                    style={[
+                      styles.withdrawButtonFill,
+                      { 
+                        height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
+                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                      }
+                    ]} 
+                  />
+                  <View style={styles.withdrawButtonContent}>
+                    <Ionicons 
+                      name={withdrawableData.canWithdraw ? "cash" : "water"} 
+                      size={24} 
+                      color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+                    />
+                    <Text style={[
+                      styles.withdrawButtonAmount,
+                      { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
+                    ]}>
+                      ₹{withdrawableData.withdrawableAmount}
+                    </Text>
+                    <Text style={[
+                      styles.withdrawButtonLabel,
+                      { color: withdrawableData.withdrawableAmount > 0 ? 'rgba(255,255,255,0.8)' : '#9ca3af' }
+                    ]}>
+                      {withdrawableData.canWithdraw ? 'Withdraw Now' : `₹${withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to withdraw`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.withdrawProgressBar}>
+                  <View 
+                    style={[
+                      styles.withdrawProgressFill,
+                      { 
+                        width: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
+                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.withdrawProgressText}>
+                  {withdrawableData.withdrawableAmount} / {withdrawableData.minimumWithdrawal} required
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Total Points Card */}
+            <View style={[styles.totalPointsCard, !isMobile && styles.topCardHalf]}>
+              <View style={styles.pointsIcon}>
+                <Text style={styles.pointsEmoji}>🏆</Text>
+              </View>
+              <Text style={styles.totalPointsNumber}>{totalPoints || 0}</Text>
+              <Text style={styles.totalPointsLabel}>Total RefPoints</Text>
+              
+              {/* Quick Stats Row */}
+              <View style={styles.quickStatsRow}>
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Referral Made</Text>
+                </View>
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatNumber}>{referralStats.verifiedReferrals || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Referral Verified</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -284,7 +437,7 @@ const ReferralPointsBreakdown = ({
           {/* Points Breakdown by Type */}
           {Object.keys(pointsBreakdown).length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📊 Points Breakdown by Type</Text>
+              <Text style={styles.sectionTitle}>📊 RefPoints Breakdown by Type</Text>
               
               {Object.values(pointsBreakdown).map((category) => {
                 const typeInfo = getPointTypeInfo(category.type);
@@ -332,7 +485,7 @@ const ReferralPointsBreakdown = ({
           ) : (
             <View style={styles.section}>
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateEmoji}>0</Text>
+                <Text style={styles.emptyStateEmoji}>🎯</Text>
                 <Text style={styles.emptyStateTitle}>No Points Yet</Text>
                 <Text style={styles.emptyStateDescription}>
                   Start earning points by referring candidates for jobs at your company!
@@ -370,54 +523,123 @@ const ReferralPointsBreakdown = ({
               </View>
             </View>
           </View>
-
-          {/* Convert Points to Wallet Button */}
-          {totalPoints > 0 && (
-            <View style={styles.conversionSection}>
-              <TouchableOpacity 
-                style={styles.convertButton}
-                onPress={() => setShowConversionModal(true)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.convertButtonContent}>
-                  <Ionicons name="wallet" size={24} color="#fff" style={styles.convertIcon} />
-                  <View style={styles.convertTextContainer}>
-                    <Text style={styles.convertButtonText}>Convert Points to Wallet</Text>
-                    <Text style={styles.convertButtonSubtext}>
-                      {totalPoints} points = ₹{(totalPoints * 0.5).toFixed(2)}
-                    </Text>
-                  </View>
-                  <Ionicons name="arrow-forward" size={20} color="#fff" />
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* NEW: Redirect Button to Referrals Page */}
-          <View style={styles.redirectSection}>
-            <TouchableOpacity 
-              style={styles.redirectButton}
-              onPress={handleNavigateToReferrals}
-              activeOpacity={0.7}
-            >
-              <View style={styles.redirectButtonContent}>
-                <Ionicons name="people" size={24} color="#fff" style={styles.redirectIcon} />
-                <View style={styles.redirectTextContainer}>
-                  <Text style={styles.redirectButtonText}>View All Referrals</Text>
-                  <Text style={styles.redirectButtonSubtext}>Manage your referral requests</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </View>
-            </TouchableOpacity>
-          </View>
         </ScrollView>
+        </View>
       </Animated.View>
+
+      {/* Withdraw Modal */}
+      <Modal
+        visible={showWithdrawModal}
+        transparent
+        onRequestClose={() => !withdrawing && setShowWithdrawModal(false)}
+      >
+        <View style={styles.conversionModalOverlay}>
+          <View style={styles.conversionModalContent}>
+            <View style={styles.conversionModalHeader}>
+              <Ionicons name="wallet" size={48} color="#10b981" />
+            </View>
+            <Text style={styles.conversionModalTitle}>Withdraw Earnings</Text>
+            <Text style={styles.conversionModalDescription}>
+              Withdraw your referral earnings to your bank/UPI
+            </Text>
+            
+            {/* Liquid Fill Display */}
+            <View style={styles.withdrawLiquidContainer}>
+              <View style={styles.withdrawLiquidOuter}>
+                <View 
+                  style={[
+                    styles.withdrawLiquidFill,
+                    { 
+                      height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
+                      backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                    }
+                  ]} 
+                />
+                <View style={styles.withdrawLiquidContent}>
+                  <Ionicons 
+                    name={withdrawableData.canWithdraw ? "checkmark-circle" : "water"} 
+                    size={32} 
+                    color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+                  />
+                  <Text style={[
+                    styles.withdrawLiquidAmount,
+                    { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
+                  ]}>
+                    ₹{withdrawableData.withdrawableAmount}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.withdrawMinimumText}>
+                Minimum withdrawal: ₹{withdrawableData.minimumWithdrawal}
+              </Text>
+            </View>
+
+            {withdrawableData.canWithdraw ? (
+              <>
+                <View style={styles.upiInputContainer}>
+                  <Text style={styles.upiLabel}>Enter UPI ID</Text>
+                  <TextInput
+                    style={styles.upiInput}
+                    placeholder="yourname@upi"
+                    placeholderTextColor="#9ca3af"
+                    value={upiId}
+                    onChangeText={setUpiId}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                
+                <View style={styles.conversionModalButtons}>
+                  <TouchableOpacity
+                    style={styles.conversionCancelButton}
+                    onPress={() => setShowWithdrawModal(false)}
+                    disabled={withdrawing}
+                  >
+                    <Text style={styles.conversionCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.conversionConfirmButton, 
+                      { backgroundColor: '#10b981' },
+                      (withdrawing || !upiId.trim()) && styles.conversionConfirmButtonDisabled
+                    ]}
+                    onPress={handleWithdraw}
+                    disabled={withdrawing || !upiId.trim()}
+                  >
+                    {withdrawing ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.conversionConfirmText}>Withdraw</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.withdrawInfoBox}>
+                  <Ionicons name="information-circle" size={20} color="#f59e0b" />
+                  <Text style={styles.withdrawInfoText}>
+                    You need ₹{withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to be eligible for withdrawal.
+                    Keep referring and verifying to earn more!
+                  </Text>
+                </View>
+                
+                <TouchableOpacity
+                  style={[styles.conversionCancelButton, { marginTop: 20, alignSelf: 'center', width: '50%' }]}
+                  onPress={() => setShowWithdrawModal(false)}
+                >
+                  <Text style={styles.conversionCancelText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Conversion Confirmation Modal */}
       <Modal
         visible={showConversionModal}
         transparent
-        animationType="fade"
         onRequestClose={() => !converting && setShowConversionModal(false)}
       >
         <View style={styles.conversionModalOverlay}>
@@ -425,18 +647,18 @@ const ReferralPointsBreakdown = ({
             <View style={styles.conversionModalHeader}>
               <Ionicons name="swap-horizontal" size={48} color={colors.primary} />
             </View>
-            <Text style={styles.conversionModalTitle}>Convert Points to Wallet</Text>
+            <Text style={styles.conversionModalTitle}>Convert RefPoints to Wallet</Text>
             <Text style={styles.conversionModalDescription}>
-              Convert your referral points to wallet balance
+              Convert your RefPoints to wallet balance
             </Text>
             
             <View style={styles.conversionRate}>
-              <Text style={styles.conversionRateText}>1 Point = ₹0.50</Text>
+              <Text style={styles.conversionRateText}>1 RefPoint = ₹0.50</Text>
             </View>
 
             <View style={styles.conversionDetails}>
               <View style={styles.conversionRow}>
-                <Text style={styles.conversionLabel}>Your Points:</Text>
+                <Text style={styles.conversionLabel}>Your RefPoints:</Text>
                 <Text style={styles.conversionValue}>{totalPoints}</Text>
               </View>
               <View style={styles.conversionRow}>
@@ -474,10 +696,16 @@ const ReferralPointsBreakdown = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    alignItems: responsive.isDesktop ? 'center' : 'stretch',
+  },
+  innerContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: responsive.isDesktop ? 800 : '100%',
   },
   header: {
     flexDirection: 'row',
@@ -503,12 +731,22 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  // Responsive top cards row
+  topCardsRow: {
+    flexDirection: responsive.isMobile ? 'column' : 'row',
+    gap: 16,
+    marginBottom: responsive.isMobile ? 0 : 24,
+  },
+  topCardHalf: {
+    flex: 1,
+    marginBottom: 0,
+  },
   totalPointsCard: {
     backgroundColor: colors.surface || colors.background,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: responsive.isMobile ? 24 : 0,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -532,7 +770,7 @@ const styles = StyleSheet.create({
   },
   totalPointsLabel: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   quickStatsRow: {
@@ -550,7 +788,7 @@ const styles = StyleSheet.create({
   },
   quickStatLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -595,7 +833,7 @@ const styles = StyleSheet.create({
   },
   breakdownDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   breakdownPointsColumn: {
@@ -607,7 +845,7 @@ const styles = StyleSheet.create({
   },
   breakdownCount: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   entryRow: {
@@ -621,7 +859,7 @@ const styles = StyleSheet.create({
   },
   entryDate: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   entryPoints: {
     fontSize: typography.sizes?.sm || 14,
@@ -647,7 +885,7 @@ const styles = StyleSheet.create({
   },
   emptyStateDescription: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -674,7 +912,7 @@ const styles = StyleSheet.create({
   },
   tipDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   conversionSection: {
     marginTop: 8,
@@ -792,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   conversionModalDescription: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
@@ -824,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   conversionLabel: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   conversionValue: {
     fontSize: 16,
@@ -871,6 +1109,165 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  
+  // Withdraw Feature Styles
+  withdrawSection: {
+    backgroundColor: colors.surface || colors.background,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: responsive.isMobile ? 24 : 0,
+    borderWidth: 1,
+    borderColor: '#10b98133',
+  },
+  withdrawHeader: {
+    marginBottom: 16,
+  },
+  withdrawTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  withdrawTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  withdrawSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginLeft: 28,
+  },
+  withdrawButtonContainer: {
+    alignItems: 'center',
+  },
+  withdrawButtonOuter: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.background,
+    borderWidth: 3,
+    borderColor: '#10b98155',
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  withdrawButtonFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderRadius: 0,
+  },
+  withdrawButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  withdrawButtonAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  withdrawButtonLabel: {
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
+    paddingHorizontal: 8,
+  },
+  withdrawProgressBar: {
+    width: '100%',
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    marginTop: 16,
+    overflow: 'hidden',
+  },
+  withdrawProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  withdrawProgressText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  
+  // Withdraw Modal Styles
+  withdrawLiquidContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  withdrawLiquidOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.background,
+    borderWidth: 3,
+    borderColor: '#10b98155',
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  withdrawLiquidFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  withdrawLiquidContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  withdrawLiquidAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  withdrawMinimumText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 12,
+  },
+  upiInputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  upiLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  upiInput: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: colors.text,
+  },
+  withdrawInfoBox: {
+    flexDirection: 'row',
+    backgroundColor: '#f59e0b22',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  withdrawInfoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#f59e0b',
+    lineHeight: 20,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   FlatList,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import ProfileSection, { useEditing } from './ProfileSection';
 
@@ -188,6 +190,9 @@ export default function EducationSection({
   setProfile, 
   onUpdate 
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [loading, setLoading] = useState(false);
   const [allColleges, setAllColleges] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -511,6 +516,9 @@ export default function EducationSection({
         selectedCountry={selectedCountry}
         countries={countries}
         allColleges={allColleges}
+        // Theme props
+        styles={styles}
+        colors={colors}
       />
     </ProfileSection>
   );
@@ -537,7 +545,10 @@ const EducationContent = ({
   renderModalItem,
   selectedCountry,
   countries,
-  allColleges
+  allColleges,
+  // Theme props
+  styles,
+  colors
 }) => {
   // ? Now we properly use the ProfileSection's editing context
   const isEditing = useEditing();
@@ -784,7 +795,7 @@ const EducationContent = ({
 };
 
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface || '#FFFFFF',
     margin: 16,
@@ -911,7 +922,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

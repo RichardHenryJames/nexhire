@@ -1,26 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
-import { colors, typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
+
+// Ad configuration - Google AdSense
+const AD_CONFIG = {
+  enabled: true,                              // Toggle ads on/off
+  frequency: 5,                               // Show ad after every N application cards
+};
 
 export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
+  const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,22 +52,32 @@ export default function ApplicationsScreen({ navigation }) {
 
   // NEW: Referral state management
   const [referredJobIds, setReferredJobIds] = useState(new Set());
-  const [referralEligibility, setReferralEligibility] = useState({
-    isEligible: true,
-    dailyQuotaRemaining: 5,
-    hasActiveSubscription: false,
-    reason: null
-  });
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [pendingJobForApplication, setPendingJobForApplication] = useState(null);
   const [referralMode, setReferralMode] = useState(false);
   const [primaryResume, setPrimaryResume] = useState(null);
   // Web withdraw confirmation state
   const [withdrawTarget, setWithdrawTarget] = useState(null);
+  // Optimistic withdraw rollback store: ApplicationID -> { application, index }
+  const optimisticWithdrawRollbackRef = useRef(new Map());
+
+  // 💎 NEW: Referral confirmation modal state (match Jobs/JobDetails)
+  const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
+  const [referralConfirmData, setReferralConfirmData] = useState({
+    currentBalance: 0,
+    requiredAmount: pricing.referralRequestCost,
+    jobTitle: 'this job',
+    job: null,
+  });
 
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralJobId, setPendingReferralJobId] = useState(null);
 
   // Mount effect: Initial load
   useEffect(() => {
@@ -70,6 +99,42 @@ export default function ApplicationsScreen({ navigation }) {
       });
     }
   }, [pagination.total, isEmployer, navigation]);
+
+  // ✅ Smart back navigation (hard-refresh safe) - mirror JobDetailsScreen
+  // Also set header style for dark mode support
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: {
+        backgroundColor: colors.surface,
+      },
+      headerTintColor: colors.text,
+      headerTitleStyle: {
+        color: colors.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => {
+            const navState = navigation.getState?.();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: { screen: 'Profile' },
+              });
+            }
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
@@ -123,18 +188,11 @@ export default function ApplicationsScreen({ navigation }) {
   const loadReferralData = async () => {
     if (!user || !isJobSeeker) return;
     try {
-      const [referralRes, eligibilityRes] = await Promise.all([
-        refopenAPI.getMyReferralRequests(1, 500),
-        refopenAPI.checkReferralEligibility()
-      ]);
+      const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
       
       if (referralRes?.success && referralRes.data?.requests) {
         const ids = new Set(referralRes.data.requests.map(r => r.JobID));
         setReferredJobIds(ids);
-      }
-      
-      if (eligibilityRes?.success) {
-        setReferralEligibility(eligibilityRes.data);
       }
     } catch (e) {
       console.warn('Failed to load referral data:', e.message);
@@ -278,14 +336,16 @@ export default function ApplicationsScreen({ navigation }) {
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
 
-        // Check if balance >= ₹50
-        if (balance < 50) {
-          
-          // 💎 NEW: Show beautiful modal instead of ugly alert
-          setWalletModalData({ currentBalance: balance, requiredAmount: 50 });
-          setShowWalletModal(true);
-          return;
-        }
+        // ✅ Match Jobs/JobDetails: always show the same confirmation popup
+        setReferralConfirmData({
+          currentBalance: balance,
+          requiredAmount: pricing.referralRequestCost,
+          jobTitle: job.JobTitle || job.Title || 'this job',
+          companyName: job.OrganizationName || job.CompanyName || '',
+          job,
+        });
+        setShowReferralConfirmModal(true);
+        return;
 
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
@@ -298,89 +358,7 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
 
-    // Double-check no existing request
-    try {
-      const existing = await refopenAPI.getMyReferralRequests(1, 100);
-      if (existing.success && existing.data?.requests) {
-        const already = existing.data.requests.some(r => r.JobID === jobId);
-        if (already) {
-          if (Platform.OS === 'web') {
-            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-              navigation.navigate('Referrals');
-            }
-            return;
-          }
-          Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-            { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-            { text: 'OK' }
-          ]);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Referral pre-check failed:', e.message);
-    }
-
-    // If user has primary resume, create referral directly
-    if (primaryResume?.ResumeID) {
-      await quickReferral(job, primaryResume.ResumeID);
-      return;
-    }
-    
-    // Otherwise show resume modal
-    setReferralMode(true);
-    setPendingJobForApplication(job);
-    setShowResumeModal(true);
-  };
-
-  // Complete subscription modal with all features
-  const showSubscriptionModal = async (reasonOverride = null, hasActiveSubscription = false) => {
-    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
-    const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
-    const body = hasActiveSubscription
-      ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
-      : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
-
-    if (Platform.OS === 'web') {
-      navigation.navigate('ReferralPlans');
-      return;
-    }
-    
-    try {
-      Alert.alert(
-        'Upgrade Required',
-        body,
-        [
-          { 
-            text: 'Maybe Later', 
-            style: 'cancel'
-          },
-          { 
-            text: 'View Plans', 
-            onPress: () => {
-              try {
-                navigation.navigate('ReferralPlans');
-              } catch (navError) {
-                console.error('Navigation error:', navError);
-                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
-              }
-            }
-          }
-        ]
-      );
-      
-      // Fallback: ensure navigation if user does not pick (defensive • some platforms auto-dismiss custom buttons)
-      setTimeout(() => {
-        const state = navigation.getState?.();
-        const currentRoute = state?.routes?.[state.index]?.name;
-        if (currentRoute !== 'ReferralPlans' && referralEligibility.dailyQuotaRemaining === 0) {
-            try { navigation.navigate('ReferralPlans'); } catch (e) { console.warn('Fallback navigation failed', e); }
-        }
-      }, 3000);
-    } catch (error) {
-      console.error('Error showing subscription modal:', error);
-      Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
-    }
+    // NOTE: Remaining steps happen on confirmation modal proceed.
   };
 
   // Enhanced resume selected handler
@@ -398,14 +376,14 @@ export default function ApplicationsScreen({ navigation }) {
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
-          setReferredJobIds(prev => new Set([...prev, id]));
-          setReferralEligibility(prev => ({
-            ...prev,
-            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-            isEligible: prev.dailyQuotaRemaining > 1
-          }));
+          // 🎉 Store pending - will mark as referred when overlay closes
+          setPendingReferralJobId(id);
           
-          const amountDeducted = res.data?.amountDeducted || 50;
+          // 🎉 Show fullscreen success overlay for 1 second
+          setReferralCompanyName(referralConfirmData.companyName || '');
+          setShowReferralSuccessOverlay(true);
+          
+          const amountDeducted = res.data?.amountDeducted || 39;
           const balanceAfter = res.data?.walletBalanceAfter;
           
           let message = 'Referral request sent successfully';
@@ -414,12 +392,15 @@ export default function ApplicationsScreen({ navigation }) {
           }
           
           showToast(message, 'success');
+          
+          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
+          setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || 50;
+            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance, requiredAmount });
@@ -448,14 +429,14 @@ export default function ApplicationsScreen({ navigation }) {
         resumeID: resumeId
       });
       if (res?.success) {
-        setReferredJobIds(prev => new Set([...prev, id]));
-        setReferralEligibility(prev => ({ 
-          ...prev, 
-          dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-          isEligible: prev.dailyQuotaRemaining > 1
-        }));
+        // 🎉 Store pending - will mark as referred when overlay closes
+        setPendingReferralJobId(id);
         
-        const amountDeducted = res.data?.amountDeducted || 50;
+        // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(job.OrganizationName || job.CompanyName || '');
+        setShowReferralSuccessOverlay(true);
+        
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
         let message = 'Referral request sent to ALL employees who can refer!';
@@ -468,7 +449,7 @@ export default function ApplicationsScreen({ navigation }) {
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -499,30 +480,97 @@ export default function ApplicationsScreen({ navigation }) {
     );
   };
 
-  // Withdraw application function
+  // Withdraw application function with immediate optimistic UI update
   const withdrawApplication = async (application) => {
+    if (!application?.ApplicationID) return;
+
+    const applicationId = application.ApplicationID;
+    let wasRemoved = false;
+    let removedIndex = -1;
+
+    // 🔥 OPTIMISTIC UI UPDATE: Remove from list immediately (before API call)
+    setApplications((prevApplications) => {
+      const idx = prevApplications.findIndex(
+        (app) => app.ApplicationID === applicationId
+      );
+      
+      if (idx === -1) {
+        console.warn('Application not found in list:', applicationId);
+        return prevApplications;
+      }
+
+      removedIndex = idx;
+      wasRemoved = true;
+
+      // Store for rollback in case API fails
+      optimisticWithdrawRollbackRef.current.set(applicationId, {
+        application: prevApplications[idx],
+        index: idx,
+      });
+
+      // Create new array without the removed item
+      const newApplications = [...prevApplications];
+      newApplications.splice(idx, 1);
+      
+      return newApplications;
+    });
+
+    // 🔥 OPTIMISTIC UI UPDATE: Decrement count immediately
+    setPagination((prev) => {
+      const newTotal = Math.max((prev.total || 0) - 1, 0);
+      return {
+        ...prev,
+        total: newTotal,
+      };
+    });
+
+    // Now make the API call
     try {
-      const res = await refopenAPI.withdrawApplication(application.ApplicationID);
+      const res = await refopenAPI.withdrawApplication(applicationId);
       
       if (res.success) {
-        // Remove the application from the list
-        setApplications(prevApplications => 
-          prevApplications.filter(app => app.ApplicationID !== application.ApplicationID)
-        );
-        
-        // Update pagination total
-        setPagination(prev => ({
-          ...prev,
-          total: Math.max(prev.total - 1, 0)
-        }));
-        
+        // Success! Clear rollback data
+        optimisticWithdrawRollbackRef.current.delete(applicationId);
         showToast('Application withdrawn successfully', 'success');
       } else {
-        console.error('Withdraw API error:', res.error || res.message);
-        Alert.alert('Withdrawal Failed', res.error || res.message || 'Failed to withdraw application');
+        console.error('❌ Withdraw API error:', res.error || res.message);
+        throw new Error(res.error || res.message || 'Failed to withdraw application');
       }
     } catch (error) {
-      console.error('Withdraw application error:', error);
+      console.error('❌ Withdraw application error:', error);
+
+      // 🔄 ROLLBACK: Restore the application to the list
+      const rollback = optimisticWithdrawRollbackRef.current.get(applicationId);
+      optimisticWithdrawRollbackRef.current.delete(applicationId);
+      
+      if (rollback?.application) {
+        setApplications((prev) => {
+          // Double-check it's not already in the list
+          if (prev.some((a) => a.ApplicationID === applicationId)) {
+            return prev;
+          }
+          
+          const next = [...prev];
+          const insertAt =
+            typeof rollback.index === 'number' &&
+            rollback.index >= 0 &&
+            rollback.index <= next.length
+              ? rollback.index
+              : next.length;
+          next.splice(insertAt, 0, rollback.application);
+          
+          return next;
+        });
+        
+        setPagination((prev) => {
+          const newTotal = (prev.total || 0) + 1;
+          return { ...prev, total: newTotal };
+        });
+      } else if (wasRemoved) {
+        // Fallback: if we removed but didn't capture rollback, refetch everything
+        fetchApplications(true);
+      }
+
       Alert.alert('Error', error.message || 'Failed to withdraw application');
     }
   };
@@ -759,24 +807,36 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Applications List */}
-      <FlatList
-        data={applications}
-        renderItem={({ item }) => <ApplicationCard application={item} />}
-        keyExtractor={(item) => item.ApplicationID}
-        contentContainerStyle={applications.length === 0 ? styles.emptyContainer : styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        onEndReached={loadMoreApplications}
-        onEndReachedThreshold={0.2}
-        ListEmptyComponent={<EmptyState />}
-        ListFooterComponent={<LoadingFooter />}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-      />
+      <View style={styles.innerContainer}>
+        {/* Applications List */}
+        <FlatList
+          data={applications}
+          renderItem={({ item, index }) => (
+            <>
+              <ApplicationCard application={item} />
+              {/* Insert ad after every N applications */}
+              {AD_CONFIG.enabled && (index + 1) % AD_CONFIG.frequency === 0 && index < applications.length - 1 && (
+                <View style={{ marginBottom: 12 }}>
+                  <AdCard variant="applications" />
+                </View>
+              )}
+            </>
+          )}
+          keyExtractor={(item) => item.ApplicationID}
+          contentContainerStyle={applications.length === 0 ? styles.emptyContainer : styles.listContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          onEndReached={loadMoreApplications}
+          onEndReachedThreshold={0.2}
+          ListEmptyComponent={<EmptyState />}
+          ListFooterComponent={<LoadingFooter />}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+        />
+      </View>
 
       {/* NEW: Resume Upload Modal */}
       <ResumeUploadModal
@@ -803,33 +863,147 @@ export default function ApplicationsScreen({ navigation }) {
         onCancel={() => setShowWalletModal(false)}
       />
 
+      {/* 💎 NEW: Referral Confirmation Modal (same as Jobs/JobDetails) */}
+      <ReferralConfirmModal
+        visible={showReferralConfirmModal}
+        currentBalance={referralConfirmData.currentBalance}
+        requiredAmount={referralConfirmData.requiredAmount}
+        jobTitle={referralConfirmData.jobTitle}
+        onProceed={async () => {
+          setShowReferralConfirmModal(false);
+
+          const job = referralConfirmData.job;
+          if (!job) {
+            Alert.alert('Error', 'Job not found. Please try again.');
+            return;
+          }
+
+          // Safety: if balance is insufficient, route to wallet recharge
+          if ((referralConfirmData.currentBalance || 0) < (referralConfirmData.requiredAmount || pricing.referralRequestCost)) {
+            navigation.navigate('WalletRecharge');
+            return;
+          }
+
+          const jobId = job.JobID || job.id;
+
+          // Double-check no existing request (race condition safety)
+          try {
+            const existing = await refopenAPI.getMyReferralRequests(1, 100);
+            if (existing.success && existing.data?.requests) {
+              const already = existing.data.requests.some(r => r.JobID === jobId);
+              if (already) {
+                if (Platform.OS === 'web') {
+                  if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
+                    navigation.navigate('Referrals');
+                  }
+                  return;
+                }
+                Alert.alert('Already Requested', 'You have already requested a referral for this job', [
+                  { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
+                  { text: 'OK' }
+                ]);
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn('Referral pre-check failed:', e.message);
+          }
+
+          // If user has primary resume, create referral directly
+          if (primaryResume?.ResumeID) {
+            await quickReferral(job, primaryResume.ResumeID);
+            return;
+          }
+
+          // Otherwise show resume modal
+          setReferralMode(true);
+          setPendingJobForApplication(job);
+          setShowResumeModal(true);
+        }}
+        onAddMoney={() => {
+          setShowReferralConfirmModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark as referred after overlay closes
+          if (pendingReferralJobId) {
+            setReferredJobIds(prev => new Set([...prev, pendingReferralJobId]));
+            setPendingReferralJobId(null);
+          }
+        }}
+        duration={3500}
+        companyName={referralCompanyName}
+      />
+
       {/* Custom Withdraw Confirmation (web only) */}
-      {withdrawTarget && (
-        <View style={styles.confirmOverlay} pointerEvents="auto">
-          <View style={styles.confirmBox}>
+      <Modal
+        visible={!!withdrawTarget}
+        transparent
+        onRequestClose={() => setWithdrawTarget(null)}
+      >
+        <Pressable
+          style={styles.confirmOverlay}
+          onPress={() => setWithdrawTarget(null)}
+        >
+          <Pressable style={styles.confirmBox} onPress={() => {}}>
             <Text style={styles.confirmTitle}>Withdraw Application</Text>
-            <Text style={styles.confirmMessage} numberOfLines={4}>
-              Are you sure you want to withdraw your application for {withdrawTarget.JobTitle || 'this job'}? This action cannot be undone.
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to withdraw your application for{' '}
+              <Text style={{ fontWeight: typography.weights.bold, color: colors.text }}>
+                {withdrawTarget?.JobTitle || 'this job'}
+              </Text>
+              ? This action cannot be undone.
             </Text>
             <View style={styles.confirmActions}>
-              <TouchableOpacity style={[styles.confirmBtn, styles.cancelBtn]} onPress={() => { setWithdrawTarget(null); }}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.cancelBtn]}
+                onPress={() => setWithdrawTarget(null)}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmBtn, styles.dangerBtn]} onPress={() => { const target = withdrawTarget; setWithdrawTarget(null); withdrawApplication(target); }}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.dangerBtn]}
+                onPress={() => {
+                  const target = withdrawTarget;
+                  setWithdrawTarget(null);
+                  if (target) withdrawApplication(target);
+                }}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.dangerBtnText}>Withdraw</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
+  },
+  headerButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -840,7 +1014,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   header: {
     padding: 20,
@@ -856,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   listContainer: {
     padding: 16,
@@ -869,7 +1043,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: colors.black,
+    shadowColor: colors.shadow,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -933,7 +1107,7 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   websiteButton: {
@@ -941,14 +1115,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: '#e8f4fd',
+    backgroundColor: colors.primaryLight,
     borderRadius: 12,
     alignSelf: 'flex-start',
     marginBottom: 4,
   },
   websiteText: {
     fontSize: typography.sizes.xs,
-    color: '#0066cc',
+    color: colors.primary,
     fontWeight: typography.weights.medium,
     marginLeft: 4,
   },
@@ -995,12 +1169,12 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginLeft: 6,
   },
   coverLetterPreview: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 12,
     lineHeight: 18,
@@ -1016,11 +1190,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: colors.error,
   },
   withdrawButtonText: {
     fontSize: typography.sizes.sm,
-    color: colors.danger,
+    color: colors.error,
     fontWeight: typography.weights.medium,
   },
   // MATCH JobsScreen: Referral button styles (exact match)
@@ -1047,14 +1221,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 8,
     borderRadius: 6,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.success + '15',
     borderWidth: 1,
-    borderColor: '#10b981',
+    borderColor: colors.success,
     gap: 4,
   },
   referredText: {
     fontSize: typography.sizes.sm,
-    color: '#10b981',
+    color: colors.success,
     fontWeight: typography.weights.medium,
   },
   // Empty state styles
@@ -1073,7 +1247,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
@@ -1102,16 +1276,23 @@ const styles = StyleSheet.create({
   },
   completionText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   // Withdraw confirm styles (web)
   confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...Platform.select({
+      web: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      },
+      default: {
+        flex: 1,
+      },
+    }),
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1121,10 +1302,10 @@ const styles = StyleSheet.create({
   confirmBox: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.15,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -1139,7 +1320,7 @@ const styles = StyleSheet.create({
   confirmMessage: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   confirmActions: {
@@ -1154,20 +1335,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cancelBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderColor: colors.border,
   },
   dangerBtn: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#dc2626',
+    backgroundColor: colors.error + '15',
+    borderColor: colors.error,
   },
   cancelBtnText: {
-    color: colors.gray700,
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   dangerBtnText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '700',
   },

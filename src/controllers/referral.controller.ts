@@ -1,13 +1,12 @@
 /**
  * Referral Controllers - HTTP Request Handlers
  * RefOpen Referral System API Endpoints
- * ? ALL USING WORKING AUTHENTICATION PATTERN
  */
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { 
     withErrorHandling, 
-    authenticate  // ? Use authenticate like work experience controllers
+    authenticate
 } from '../middleware';
 import { 
     successResponse, 
@@ -22,13 +21,13 @@ import {
 import { 
     ReferralService
 } from '../services/referral.service';
+import { PricingService } from '../services/pricing.service';
 import { 
     PurchaseReferralPlanDto, 
     ReferralRequestsFilter,
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
-    ClaimReferralRequestWithProofDto,
-    SubmitReferralProofDto,
+    SubmitReferralWithProofDto,
     VerifyReferralDto
 } from '../types/referral.types';
 
@@ -146,7 +145,7 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
             throw new ValidationError('Resume ID is required');
         }
 
-        // ? NEW SCHEMA: Validate based on presence of jobID vs extJobID
+        // Validate based on presence of jobID vs extJobID
         const hasJobID = !!requestData.jobID;
         const hasExtJobID = !!requestData.extJobID;
         
@@ -186,12 +185,15 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
         const applicantId = applicantResult.recordset[0].ApplicantID;
         const request = await ReferralService.createReferralRequest(applicantId, requestData);
         
+        // Get referral cost from DB for response message
+        const referralCost = await PricingService.getReferralCost();
+        
         return {
             status: 201,
-            jsonBody: successResponse(request, `Referral request created successfully. ₹50 deducted from wallet.`)
+            jsonBody: successResponse(request, `Referral request created successfully. ₹${referralCost} deducted from wallet.`)
         };
     } catch (error: any) {
-        // ? NEW: Handle insufficient wallet balance error
+        // Handle insufficient wallet balance error
         if (error instanceof ValidationError && error.message === 'INSUFFICIENT_WALLET_BALANCE') {
             return {
                 status: 402, // Payment Required
@@ -224,7 +226,7 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
@@ -239,7 +241,7 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
         
-        // ? FIX: Use the service method instead of direct SQL
+        // Use the service method
         const result = await ReferralService.getMyReferralRequests(applicantId, page, pageSize);
         
         return {
@@ -266,15 +268,16 @@ export const getAvailableRequests = withErrorHandling(async (req: HttpRequest, c
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
         
-        const filters: ReferralRequestsFilter = {
+        const filters: ReferralRequestsFilter & { tab?: string } = {
             jobTitle: params.jobTitle as string,
             companyName: params.companyName as string,
             dateFrom: params.dateFrom ? new Date(params.dateFrom as string) : undefined,
-            dateTo: params.dateTo ? new Date(params.dateTo as string) : undefined
+            dateTo: params.dateTo ? new Date(params.dateTo as string) : undefined,
+            tab: (params.tab as string) || 'open' // 'open' or 'closed'
         };
 
         // Get applicant ID
@@ -312,7 +315,7 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
     try {
         const user = authenticate(req);
         const requestId = (req as any).params?.requestId;
-        const claimData = await extractRequestBody(req) as ClaimReferralRequestWithProofDto;
+        const claimData = await extractRequestBody(req) as SubmitReferralWithProofDto;
         
         if (!requestId || !isValidGuid(requestId)) {
             throw new ValidationError('Valid Request ID is required');
@@ -333,7 +336,7 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
         }
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
-        const request = await ReferralService.claimReferralRequestWithProof(applicantId, {
+        const request = await ReferralService.submitReferralWithProof(applicantId, user.userId, {
             requestID: requestId,
             proofFileURL: claimData.proofFileURL,
             proofFileType: claimData.proofFileType,
@@ -350,55 +353,6 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
             jsonBody: { 
                 success: false, 
                 error: error?.message || 'Failed to claim referral request'
-            }
-        };
-    }
-});
-
-/**
- * Submit proof of referral
- * POST /referral/requests/{requestId}/proof
- */
-export const submitReferralProof = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    try {
-        const user = authenticate(req);
-        const requestId = (req as any).params?.requestId;
-        const proofData = await extractRequestBody(req) as SubmitReferralProofDto;
-
-        if (!requestId || !isValidGuid(requestId)) {
-            throw new ValidationError('Valid Request ID is required');
-        }
-
-        if (!proofData.fileURL || !proofData.fileType) {
-            throw new ValidationError('File URL and file type are required');
-        }
-
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
-        const proof = await ReferralService.submitReferralProof(applicantId, {
-            requestID: requestId,
-            fileURL: proofData.fileURL,
-            fileType: proofData.fileType
-        });
-
-        return {
-            status: 201,
-            jsonBody: successResponse(proof, 'Referral proof submitted successfully')
-        };
-    } catch (error: any) {
-        return {
-            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
-            jsonBody: { 
-                success: false, 
-                error: error?.message || 'Failed to submit referral proof'
             }
         };
     }
@@ -455,7 +409,7 @@ export const verifyReferralCompletion = withErrorHandling(async (req: HttpReques
 });
 
 /**
- * Get my requests as referrer (claimed/completed requests)
+ * Get my requests as referrer (completed requests)
  * GET /referral/my-referrer-requests
  */
 export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
@@ -463,21 +417,12 @@ export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, 
         const user = authenticate(req);
         const params = extractQueryParams(req);
         
-        // ? FIX: Ensure pagination parameters are integers
+        // Ensure pagination parameters are integers
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
-        const result = await ReferralService.getMyReferrerRequests(applicantId, page, pageSize);
+        // AssignedReferrerID now stores UserID, so pass userId directly
+        const result = await ReferralService.getMyReferrerRequests(user.userId, page, pageSize);
         
         return {
             status: 200,
@@ -489,6 +434,36 @@ export const getMyReferrerRequests = withErrorHandling(async (req: HttpRequest, 
             jsonBody: { 
                 success: false, 
                 error: error?.message || 'Failed to get my referrer requests'
+            }
+        };
+    }
+});
+
+/**
+ * Get completed referrals by current user (for closed tab - all completed referrals regardless of company)
+ * GET /referral/completed
+ */
+export const getCompletedReferrals = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const params = extractQueryParams(req);
+        
+        const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
+        const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
+
+        // Pass userId directly - AssignedReferrerID stores UserID
+        const result = await ReferralService.getCompletedReferralsByUser(user.userId, page, pageSize);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, 'Completed referrals retrieved successfully')
+        };
+    } catch (error: any) {
+        return {
+            status: error instanceof NotFoundError ? 404 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get completed referrals'
             }
         };
     }
@@ -512,7 +487,7 @@ export const getReferralAnalytics = withErrorHandling(async (req: HttpRequest, c
         }
 
         const applicantId = applicantResult.recordset[0].ApplicantID;
-        const analytics = await ReferralService.getReferralAnalytics(applicantId);
+        const analytics = await ReferralService.getReferralAnalytics(applicantId, user.userId);
         
         return {
             status: 200,
@@ -710,6 +685,98 @@ export const convertPointsToWallet = withErrorHandling(async (req: HttpRequest, 
             jsonBody: { 
                 success: false, 
                 error: error?.message || 'Failed to convert points to wallet'
+            }
+        };
+    }
+});
+
+// ===== REFERRAL STATUS TRACKING =====
+
+/**
+ * Log a status change for tracking (Viewed, Claimed states)
+ * POST /referral/requests/{requestId}/status
+ */
+export const logReferralStatus = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const requestId = req.params.id;
+        
+        if (!requestId || !isValidGuid(requestId)) {
+            throw new ValidationError('Valid Request ID is required');
+        }
+
+        const body = await extractRequestBody(req) as { status: string; message?: string };
+        
+        if (!body.status) {
+            throw new ValidationError('Status is required');
+        }
+
+        // Allowed intermediate statuses that can be logged
+        const allowedStatuses = ['Viewed', 'Claimed'];
+        if (!allowedStatuses.includes(body.status)) {
+            throw new ValidationError(`Status must be one of: ${allowedStatuses.join(', ')}`);
+        }
+
+        // Get user name from database
+        const { dbService } = await import('../services/database.service');
+        const nameQuery = 'SELECT FirstName, LastName FROM Users WHERE UserID = @param0';
+        const nameResult = await dbService.executeQuery(nameQuery, [user.userId]);
+        const actorName = nameResult.recordset?.[0] 
+            ? `${nameResult.recordset[0].FirstName || ''} ${nameResult.recordset[0].LastName || ''}`.trim() 
+            : 'Unknown';
+
+        // Log the status change with userId
+        const result = await ReferralService.logStatusChange(
+            requestId,
+            body.status,
+            user.userId,  // Pass userId directly
+            'referrer',
+            actorName,
+            body.message
+        );
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, `Status '${body.status}' logged successfully`)
+        };
+    } catch (error: any) {
+        console.error('Error logging referral status:', error);
+        return {
+            status: error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 400 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to log referral status'
+            }
+        };
+    }
+});
+
+/**
+ * Get status history for a referral request (for tracking screen)
+ * GET /referral/requests/{requestId}/history
+ */
+export const getReferralStatusHistory = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const requestId = req.params.id;
+        
+        if (!requestId || !isValidGuid(requestId)) {
+            throw new ValidationError('Valid Request ID is required');
+        }
+
+        const history = await ReferralService.getStatusHistory(requestId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(history, 'Status history retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Error getting referral status history:', error);
+        return {
+            status: error instanceof NotFoundError ? 404 : 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get status history'
             }
         };
     }

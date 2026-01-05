@@ -237,19 +237,16 @@ export class JobScraperService {
   // Load Adzuna API keys with fallback to your provided keys
   private static loadAdzunaApiKeys(): { appId: string; appKey: string } | null {
     try {
-      // Try environment variables first
-      let appId = process.env.ADZUNA_APP_ID;
-      let appKey = process.env.ADZUNA_APP_KEY;
+      // Get API keys from environment variables only - no hardcoded fallbacks
+      const appId = process.env.ADZUNA_APP_ID;
+      const appKey = process.env.ADZUNA_APP_KEY;
       
-      // 🔑 FALLBACK: Use your provided keys if env vars not available
       if (!appId || !appKey) {
-        appId = 'f88adc65';
-        appKey = 'f10e165aae13d06f9c74709a38ed4e53';
-        console.log('🔑 Using provided Adzuna API keys');
-      } else {
-        console.log('🔑 Using environment Adzuna API keys');
+        console.error('❌ Adzuna API keys not configured. Set ADZUNA_APP_ID and ADZUNA_APP_KEY environment variables.');
+        return null;
       }
       
+      console.log('🔑 Using environment Adzuna API keys');
       return { appId, appKey };
       
     } catch (error: any) {
@@ -261,17 +258,15 @@ export class JobScraperService {
   // Load Clearbit API key (optional - for enhanced enrichment)
   private static loadClearbitApiKey(): string | null {
     try {
-      // Try environment variable first
-      let apiKey = process.env.CLEARBIT_API_KEY;
+      // Get API key from environment variable only - NO HARDCODED KEYS
+      const apiKey = process.env.CLEARBIT_API_KEY;
       
-      // 🔑 FALLBACK: Use hardcoded key if env var not available (same as PowerShell script)
       if (!apiKey) {
-        apiKey = 'sk_2c8c9b5e8f5a4c5d9b3a7f1e2d4c6b8a'; // Clearbit API key
-        console.log('🔑 Using hardcoded Clearbit API key for enrichment');
-      } else {
-        console.log('🔑 Using environment Clearbit API key for enhanced enrichment');
+        console.log('⚠️ CLEARBIT_API_KEY not configured - enrichment disabled');
+        return null;
       }
       
+      console.log('🔑 Using environment Clearbit API key for enhanced enrichment');
       return apiKey;
     } catch (error: any) {
       return null;
@@ -703,6 +698,385 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return simpleMatch ? simpleMatch[1].trim() : '';
   }
 
+  // 🗂️ KNOWN DUPLICATE COMPANY MAPPINGS
+  // Maps alternate names to canonical names to prevent duplicate organizations
+  private static readonly DUPLICATE_COMPANY_MAP: { [key: string]: string } = {
+    // Ameriprise
+    'ameriprise': 'Ameriprise Financial',
+    'ameriprise financial services': 'Ameriprise Financial',
+    
+    // American Express
+    'amex': 'American Express',
+    'american express company': 'American Express',
+    
+    // ADM
+    'archer daniels midland': 'ADM',
+    'archer-daniels-midland': 'ADM',
+    
+    // Becton Dickinson
+    'bd': 'Becton Dickinson',
+    'bd biosciences': 'Becton Dickinson',
+    
+    // Boeing
+    'the boeing company': 'Boeing',
+    'boeing company': 'Boeing',
+    
+    // Booz Allen
+    'booz allen': 'Booz Allen Hamilton',
+    'booz-allen': 'Booz Allen Hamilton',
+    
+    // Chipotle
+    'chipotle': 'Chipotle Mexican Grill',
+    
+    // Cigna
+    'cigna': 'Cigna Group',
+    'cigna healthcare': 'Cigna Group',
+    
+    // Con Edison
+    'con edison': 'Consolidated Edison',
+    'coned': 'Consolidated Edison',
+    
+    // Danaher
+    'danaher': 'Danaher Corporation',
+    
+    // Disney
+    'the walt disney company': 'Disney',
+    'walt disney company': 'Disney',
+    'walt disney': 'Disney',
+    
+    // Eli Lilly
+    'eli lilly': 'Eli Lilly and Company',
+    'lilly': 'Eli Lilly and Company',
+    
+    // Emerson
+    'emerson electric': 'Emerson',
+    'emerson electric company': 'Emerson',
+    
+    // Fifth Third
+    'fifth third bancorp': 'Fifth Third Bank',
+    'fifth third': 'Fifth Third Bank',
+    
+    // First American
+    'first american financial': 'First American',
+    'first american financial corporation': 'First American',
+    
+    // Ford
+    'ford': 'Ford Motor',
+    'ford motor company': 'Ford Motor',
+    
+    // Gap
+    'the gap': 'Gap',
+    'gap inc': 'Gap',
+    
+    // GE
+    'ge': 'GE Aerospace',
+    'general electric': 'GE Aerospace',
+    
+    // GM
+    'gm': 'General Motors',
+    'general motors company': 'General Motors',
+    
+    // Genuine Parts
+    'genuine parts': 'Genuine Parts Company',
+    
+    // HII
+    'hii': 'Huntington Ingalls Industries',
+    'huntington ingalls': 'Huntington Ingalls Industries',
+    
+    // Hyatt
+    'hyatt': 'Hyatt Hotels',
+    'hyatt corporation': 'Hyatt Hotels',
+    
+    // ITW
+    'itw': 'Illinois Tool Works',
+    
+    // IPG
+    'ipg': 'Interpublic Group',
+    'interpublic': 'Interpublic Group',
+    
+    // Jacobs
+    'jacobs engineering': 'Jacobs',
+    'jacobs engineering group': 'Jacobs',
+    
+    // JLL
+    'jones lang lasalle': 'JLL',
+    
+    // Labcorp
+    'laboratory corporation of america': 'Labcorp',
+    'labcorp holdings': 'Labcorp',
+    
+    // Liberty Mutual
+    'liberty mutual insurance': 'Liberty Mutual',
+    'liberty mutual group': 'Liberty Mutual',
+    
+    // Manpower
+    'manpower': 'ManpowerGroup',
+    'manpower inc': 'ManpowerGroup',
+    
+    // Nationwide
+    'nationwide': 'Nationwide Mutual Insurance',
+    'nationwide insurance': 'Nationwide Mutual Insurance',
+    
+    // NextEra
+    'nextera': 'NextEra Energy',
+    
+    // PNC
+    'pnc': 'PNC Financial Services Group',
+    'pnc bank': 'PNC Financial Services Group',
+    'pnc financial services': 'PNC Financial Services Group',
+    
+    // Prudential
+    'prudential': 'Prudential Financial',
+    
+    // PwC
+    'pricewaterhousecoopers': 'PwC',
+    'pwc llp': 'PwC',
+    
+    // Quest
+    'quest': 'Quest Diagnostics',
+    
+    // Raymond James
+    'raymond james': 'Raymond James Financial',
+    
+    // Regions
+    'regions financial': 'Regions Bank',
+    'regions financial corporation': 'Regions Bank',
+    
+    // Reliance
+    'reliance industries': 'Reliance Industries Limited',
+    
+    // Stanley Black & Decker
+    'stanley black and decker': 'Stanley Black & Decker',
+    'stanley works': 'Stanley Black & Decker',
+    
+    // Synchrony
+    'synchrony financial': 'Synchrony',
+    
+    // Unity
+    'unity': 'Unity Technologies',
+    
+    // UPS
+    'united parcel service': 'UPS',
+    'united parcel': 'UPS',
+    
+    // US Bank
+    'us bancorp': 'U.S. Bank',
+    'usbank': 'U.S. Bank',
+    'us bank': 'U.S. Bank',
+    
+    // Additional common duplicates
+    'coca-cola': 'The Coca-Cola Company',
+    'coca cola': 'The Coca-Cola Company',
+    'coke': 'The Coca-Cola Company',
+    
+    'mcdonalds': "McDonald's",
+    'mcdonald': "McDonald's",
+    
+    'att': 'AT&T',
+    'at and t': 'AT&T',
+    
+    'jpmorgan': 'JPMorgan Chase',
+    'jp morgan': 'JPMorgan Chase',
+    'jpmorgan chase & co': 'JPMorgan Chase',
+    'chase': 'JPMorgan Chase',
+    
+    'johnson and johnson': 'Johnson & Johnson',
+    'jnj': 'Johnson & Johnson',
+    
+    'proctor and gamble': 'Procter & Gamble',
+    'procter gamble': 'Procter & Gamble',
+    'p&g': 'Procter & Gamble',
+    'pg': 'Procter & Gamble',
+    
+    'tcs': 'Tata Consultancy Services',
+    'tata consultancy': 'Tata Consultancy Services',
+    
+    'infosys technologies': 'Infosys',
+    'infosys limited': 'Infosys',
+    
+    'wipro technologies': 'Wipro',
+    'wipro limited': 'Wipro',
+    
+    'hcl': 'HCL Technologies',
+    'hcl tech': 'HCL Technologies',
+    
+    'tech mahindra limited': 'Tech Mahindra',
+    
+    'microsoft corporation': 'Microsoft',
+    
+    'google llc': 'Google',
+    'alphabet': 'Google',
+    
+    'meta platforms': 'Meta',
+    'facebook': 'Meta',
+    
+    'amazon.com': 'Amazon',
+    'amazon web services': 'Amazon',
+    'aws': 'Amazon',
+    
+    'apple inc': 'Apple',
+    
+    'netflix inc': 'Netflix',
+    
+    'salesforce.com': 'Salesforce',
+    'salesforce inc': 'Salesforce',
+    
+    'oracle corporation': 'Oracle',
+    
+    'ibm corporation': 'IBM',
+    'international business machines': 'IBM',
+    
+    'cisco systems': 'Cisco',
+    
+    'intel corporation': 'Intel',
+    
+    'nvidia corporation': 'NVIDIA',
+    
+    'adobe systems': 'Adobe',
+    'adobe inc': 'Adobe',
+    
+    'vmware inc': 'VMware',
+    
+    'dell technologies': 'Dell',
+    'dell inc': 'Dell',
+    
+    'hp inc': 'HP',
+    'hewlett packard': 'HP',
+    'hewlett-packard': 'HP',
+    
+    'accenture plc': 'Accenture',
+    'accenture llp': 'Accenture',
+    
+    'deloitte touche': 'Deloitte',
+    'deloitte llp': 'Deloitte',
+    'deloitte consulting': 'Deloitte',
+    
+    'ernst young': 'EY',
+    'ernst & young': 'EY',
+    
+    'kpmg llp': 'KPMG',
+    
+    'mckinsey': 'McKinsey & Company',
+    'mckinsey and company': 'McKinsey & Company',
+    
+    'boston consulting': 'Boston Consulting Group',
+    'bcg': 'Boston Consulting Group',
+    
+    'bain company': 'Bain & Company',
+    'bain and company': 'Bain & Company',
+    
+    'goldman sachs group': 'Goldman Sachs',
+    'goldman sachs & co': 'Goldman Sachs',
+    
+    'morgan stanley & co': 'Morgan Stanley',
+    
+    'bank of america corporation': 'Bank of America',
+    'bofa': 'Bank of America',
+    
+    'wells fargo & company': 'Wells Fargo',
+    'wells fargo bank': 'Wells Fargo',
+    
+    'citibank': 'Citigroup',
+    'citi': 'Citigroup',
+    
+    'capital one financial': 'Capital One',
+    
+    'american express co': 'American Express',
+    
+    'paypal holdings': 'PayPal',
+    
+    'visa inc': 'Visa',
+    
+    'mastercard incorporated': 'Mastercard',
+    'mastercard inc': 'Mastercard',
+    
+    'uber technologies': 'Uber',
+    
+    'lyft inc': 'Lyft',
+    
+    'airbnb inc': 'Airbnb',
+    
+    'doordash inc': 'DoorDash',
+    
+    'twitter': 'X',
+    'twitter inc': 'X',
+    
+    'snap inc': 'Snap',
+    'snapchat': 'Snap',
+    
+    'pinterest inc': 'Pinterest',
+    
+    'zoom video': 'Zoom',
+    'zoom video communications': 'Zoom',
+    
+    'slack technologies': 'Slack',
+    
+    'dropbox inc': 'Dropbox',
+    
+    'box inc': 'Box',
+    
+    'workday inc': 'Workday',
+    
+    'servicenow inc': 'ServiceNow',
+    
+    'atlassian corporation': 'Atlassian',
+    'atlassian inc': 'Atlassian',
+    
+    'hubspot inc': 'HubSpot',
+    
+    'crowdstrike holdings': 'CrowdStrike',
+    
+    'palo alto networks inc': 'Palo Alto Networks',
+    
+    'okta inc': 'Okta',
+    
+    'snowflake inc': 'Snowflake',
+    
+    'databricks inc': 'Databricks',
+    
+    'mongodb inc': 'MongoDB',
+    
+    'twilio inc': 'Twilio',
+    
+    'stripe inc': 'Stripe',
+    
+    'square inc': 'Square',
+    'block inc': 'Block',
+  };
+
+  /**
+   * 🔍 Get canonical company name from duplicate map
+   * Returns canonical name if found, otherwise returns original name
+   */
+  private static getCanonicalCompanyName(companyName: string): string {
+    if (!companyName) return companyName;
+    
+    const normalized = companyName.toLowerCase().trim()
+      .replace(/[.,]/g, '')
+      .replace(/\s+/g, ' ');
+    
+    // Check exact match first
+    if (this.DUPLICATE_COMPANY_MAP[normalized]) {
+      console.log(`📋 Duplicate detected: "${companyName}" → "${this.DUPLICATE_COMPANY_MAP[normalized]}"`);
+      return this.DUPLICATE_COMPANY_MAP[normalized];
+    }
+    
+    // Check partial matches (company name contains the key)
+    for (const [key, canonical] of Object.entries(this.DUPLICATE_COMPANY_MAP)) {
+      if (normalized.includes(key) || key.includes(normalized)) {
+        // Only match if significant overlap (at least 80% of shorter string)
+        const shorter = normalized.length < key.length ? normalized : key;
+        const longer = normalized.length >= key.length ? normalized : key;
+        if (longer.includes(shorter) && shorter.length >= longer.length * 0.6) {
+          console.log(`📋 Partial duplicate detected: "${companyName}" → "${canonical}"`);
+          return canonical;
+        }
+      }
+    }
+    
+    return companyName;
+  }
+
   // 🧹 SMART COMPANY NAME NORMALIZATION
   /**
    * Removes noise, leading numbers (smartly), and normalizes company names
@@ -887,15 +1261,36 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         }
       }
       
-      // SECOND: Try exact match on normalized name (case-insensitive, no spaces)
+      // SECOND: Try normalized match - strip common suffixes from BOTH sides
+      // This catches "Databricks" vs "Databricks Inc." duplicates
       const exactQuery = `
         SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
         FROM Organizations 
-        WHERE LOWER(REPLACE(Name, ' ', '')) = @param0
+        WHERE LOWER(
+          REPLACE(
+            REPLACE(
+              REPLACE(
+                REPLACE(
+                  REPLACE(REPLACE(Name, ' ', ''), ',', ''),
+                '.', ''),
+              'inc', ''),
+            'llc', ''),
+          'ltd', '')
+        ) = @param0
           AND IsActive = 1
       `;
       
-      const exactMatch = await dbService.executeQuery(exactQuery, [normalizedName.replace(/\s/g, '').toLowerCase()]);
+      // Strip same suffixes from search term
+      const strippedNormalized = normalizedName
+        .replace(/\s/g, '')
+        .replace(/,/g, '')
+        .replace(/\./g, '')
+        .replace(/inc$/i, '')
+        .replace(/llc$/i, '')
+        .replace(/ltd$/i, '')
+        .toLowerCase();
+      
+      const exactMatch = await dbService.executeQuery(exactQuery, [strippedNormalized]);
       if (exactMatch.recordset.length > 0) {
         console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
         return exactMatch.recordset[0];
@@ -999,7 +1394,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         'Published', this.calculateJobPriority(job, jobAge), 'Public',
         actualPostedDate, this.calculateExpiryDate(actualPostedDate, jobAge),
         actualPostedDate, now, job.externalJobId,
-        `${job.source}, ${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 100) : ''}`,
+        `${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 200) : ''}`,  // Note: Source NOT included in tags - only skills
         0, job.applicationUrl
       ];
       
@@ -1076,12 +1471,16 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       throw new Error(`Invalid company name: ${validation.reason}`);
     }
     
-    // 🌟 STEP 1: Check Fortune 500 list first for canonical name
-    const fortune500Match = findFortune500Match(cleanName);
-    const canonicalName = fortune500Match ? fortune500Match.canonicalName : cleanName;
+    // 🗂️ STEP 0.5: Check duplicate company map FIRST (before Fortune 500)
+    const mappedCanonical = this.getCanonicalCompanyName(cleanName);
+    const wasMapped = mappedCanonical !== cleanName;
+    
+    // 🌟 STEP 1: Check Fortune 500 list for canonical name (use mapped name if available)
+    const fortune500Match = findFortune500Match(wasMapped ? mappedCanonical : cleanName);
+    const canonicalName = fortune500Match ? fortune500Match.canonicalName : (wasMapped ? mappedCanonical : cleanName);
     const isFortune500 = !!fortune500Match;
     
-    console.log(`🔍 Processing company: "${cleanName}"${fortune500Match ? ` → Fortune 500: "${canonicalName}"` : ''}`);
+    console.log(`🔍 Processing company: "${cleanName}"${wasMapped ? ` → Mapped: "${mappedCanonical}"` : ''}${fortune500Match ? ` → Fortune 500: "${canonicalName}"` : ''}`);
     
     // 🧹 STEP 2: Normalize for matching (use canonical name if Fortune 500)
     const normalizedName = this.normalizeCompanyName(canonicalName);
@@ -1289,7 +1688,13 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       try {
         // 3. Try to find website using common domain patterns
         if (!website) {
-          website = await this.searchCompanyWebsiteFast(companyName);
+          const foundWebsite = await this.searchCompanyWebsiteFast(companyName);
+          // ✅ NEW: Validate website matches company name before using
+          if (foundWebsite && this.isValidCompanyWebsite(foundWebsite, companyName)) {
+            website = foundWebsite;
+          } else if (foundWebsite) {
+            console.log(`⚠️ Rejected mismatched website for ${companyName}: ${foundWebsite}`);
+          }
         }
         
         // 4. Get Clearbit logo if we have a website (single fast API call)
@@ -1360,7 +1765,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   }
 
   // 🛡️ Validate if URL is a legitimate company website (not social media)
-  private static isValidCompanyWebsite(url: string): boolean {
+  private static isValidCompanyWebsite(url: string, companyName?: string): boolean {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.toLowerCase().replace('www.', '');
@@ -1378,7 +1783,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         'wikimedia.org',
         'wiki.',
         'github.com',  // GitHub is profile, not company website
-        'medium.com'   // Medium is blog platform, not company website
+        'medium.com',  // Medium is blog platform, not company website
+        'duckduckgo.com',  // Search engine, not company website
+        'google.com',
+        'bing.com'
       ];
       
       // Check if hostname contains any blocked domain
@@ -1387,8 +1795,30 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       );
       
       if (isBlocked) {
-        console.log(`⚠️ Rejected social media/wiki URL as company website: ${url}`);
+        console.log(`⚠️ Rejected blocked domain as company website: ${url}`);
         return false;
+      }
+      
+      // ✅ NEW: If company name provided, validate domain matches company name
+      if (companyName) {
+        const companySlug = companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        
+        const domainSlug = hostname
+          .replace(/\.(com|io|co|net|org|ai|app)$/, '')
+          .replace(/[^a-z0-9]/g, '');
+        
+        // Check if domain contains at least 50% of company name characters
+        // This prevents "duckduckgo.com" from being assigned to "LinkedIn"
+        const minMatchLength = Math.min(companySlug.length, 4);
+        const hasMatch = domainSlug.includes(companySlug.substring(0, minMatchLength)) || 
+                        companySlug.includes(domainSlug.substring(0, minMatchLength));
+        
+        if (!hasMatch && companySlug.length > 3) {
+          console.log(`⚠️ Domain "${hostname}" doesn't match company "${companyName}"`);
+          return false;
+        }
       }
       
       return true;
@@ -1544,7 +1974,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         return null;
       }
       
-      const logoUrl = `https://logo.clearbit.com/${cleanDomain}`;
+      // 🔄 UPDATED: Use Google's favicon API instead of Clearbit (blocked in India)
+      const logoUrl = `https://www.google.com/s2/favicons?domain=${cleanDomain}&sz=128`;
       
       // Quick HEAD request to check if logo exists
       const response = await axios.head(logoUrl, {
@@ -1553,7 +1984,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       });
       
       if (response.status === 200) {
-        console.log(`🎨 Found Clearbit logo for ${cleanDomain}`);
+        console.log(`🎨 Found Google favicon for ${cleanDomain}`);
         return logoUrl;
       }
       

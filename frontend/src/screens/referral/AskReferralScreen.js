@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,17 +13,44 @@ import {
   Modal,
   FlatList,
   Image,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import ReferralConfirmModal from '../../components/ReferralConfirmModal';
+import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 
 export default function AskReferralScreen({ navigation, route }) {
-const { user, isJobSeeker } = useAuth();
+const { user, isJobSeeker, isAuthenticated } = useAuth();
+const { colors } = useTheme();
+const { pricing } = usePricing(); // 💰 DB-driven pricing
+const responsive = useResponsive();
+const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+
+// 🔐 Helper to check auth and redirect to login if needed
+const requireAuth = (action) => {
+  if (!isAuthenticated || !user) {
+    // Save the current route to return after login
+    navigation.navigate('Auth', {
+      screen: 'Login',
+      params: {
+        returnTo: 'AskReferral',
+        returnParams: route?.params,
+      }
+    });
+    return false;
+  }
+  return true;
+};
   
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingWallet, setLoadingWallet] = useState(true);
@@ -32,6 +59,14 @@ const [loadingCompanies, setLoadingCompanies] = useState(false);
 const [submitting, setSubmitting] = useState(false);
   
 const [resumes, setResumes] = useState([]);
+
+// 🎯 NEW: Dynamic Fortune 500 company showcase
+const [fortune500Companies, setFortune500Companies] = useState([]);
+const [currentCompanyIndex, setCurrentCompanyIndex] = useState(0);
+const fadeAnim = useState(new Animated.Value(1))[0];
+const [showRotationTick, setShowRotationTick] = useState(false);
+const rotationTimeoutRef = useRef(null);
+const tickTimeoutRef = useRef(null);
 
 // NEW: Company/Organization state
 const [companies, setCompanies] = useState([]);
@@ -55,11 +90,18 @@ const [errors, setErrors] = useState({});
   
 // Wallet-based eligibility instead of subscription
 const [walletBalance, setWalletBalance] = useState(0);
-const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 const [showWalletModal, setShowWalletModal] = useState(false);
   
 // ✅ NEW: Resume Upload Modal state
 const [showResumeModal, setShowResumeModal] = useState(false);
+
+// 🎉 NEW: Referral success overlay state
+const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+const [referralCompanyName, setReferralCompanyName] = useState('');
+
+// 🆕 NEW: Referral confirm modal state (like JobsScreen)
+const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 
   // ✅ FIX: Ensure navigation header is properly configured on mount and doesn't disappear after hard refresh
   useEffect(() => {
@@ -79,7 +121,7 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       },
       headerLeft: () => (
         <TouchableOpacity 
-          style={styles.headerButton}
+          style={{ marginLeft: 16, padding: 4 }}
           onPress={() => {
             // ✅ Smart back navigation - go back if possible, otherwise go to Home tab
             if (navigation.canGoBack()) {
@@ -96,25 +138,123 @@ const [showResumeModal, setShowResumeModal] = useState(false);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text || colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors]);
 
   // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
-    loadWalletBalance(); // Load immediately for banner
-    loadResumesLazily(); // Load resumes after a delay
-    loadCompaniesInBackground(); // Load companies in background
+    // Only load wallet and resumes if authenticated
+    if (isAuthenticated && user) {
+      loadWalletBalance(); // Load immediately for banner
+      loadResumesLazily(); // Load resumes after a delay
+    } else {
+      // For unauthenticated users, set loading states to false
+      setLoadingWallet(false);
+      setLoadingResumes(false);
+    }
+    
+    // Always load companies (public data)
+    loadCompaniesInBackground(); // Load companies in background (includes Fortune 500)
     
     // ✅ NEW: Auto-select organization if passed from route params
     if (preSelectedOrganization) {
-      console.log('🔍 Pre-selected organization received:', preSelectedOrganization);
       setSelectedCompany(preSelectedOrganization);
       setFormData(prev => ({ ...prev, companyName: preSelectedOrganization.name }));
     }
   }, [preSelectedOrganization]);
+
+  // 🎯 NEW: Filter and rotate Fortune 500 company logos with random timing
+  useEffect(() => {
+    // Filter Fortune 500 companies with logos from already loaded companies
+    const f500WithLogos = companies
+      .filter(org => org.isFortune500 && org.logoURL);
+    
+    if (f500WithLogos.length === 0) return;
+    
+    // Check if current time is between 9 AM and 1 AM (active hours)
+    const checkActiveHours = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      // Show between 9 AM (9) and 1 AM (1) - that's 9-23 (11 PM) and 0 (midnight)
+      return hour >= 9 || hour <= 1;
+    };
+    
+    // Only show during active hours
+    if (!checkActiveHours()) return;
+    
+    // Shuffle for random display (only once when companies load)
+    let rotationCompanies = fortune500Companies;
+    if (rotationCompanies.length === 0) {
+      rotationCompanies = [...f500WithLogos].sort(() => Math.random() - 0.5);
+      setFortune500Companies(rotationCompanies);
+    }
+
+    const getRandomDelayMs = () => {
+      // 1s to 10s
+      return Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+    };
+
+    const scheduleNextRotation = () => {
+      if (rotationTimeoutRef.current) {
+        clearTimeout(rotationTimeoutRef.current);
+      }
+      rotationTimeoutRef.current = setTimeout(rotateCompany, getRandomDelayMs());
+    };
+
+    const rotateCompany = () => {
+      // Check active hours before rotating
+      if (!checkActiveHours()) return;
+      if (!rotationCompanies || rotationCompanies.length === 0) return;
+      
+      // Fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        // Change company
+        setCurrentCompanyIndex((prevIndex) => 
+          (prevIndex + 1) % rotationCompanies.length
+        );
+
+        // Show tick briefly on every company change
+        setShowRotationTick(true);
+        if (tickTimeoutRef.current) {
+          clearTimeout(tickTimeoutRef.current);
+        }
+        tickTimeoutRef.current = setTimeout(() => {
+          setShowRotationTick(false);
+        }, 2000);
+
+        // Fade in
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+
+        // Schedule next rotation with random delay (0.5-10 seconds)
+        scheduleNextRotation();
+      });
+    };
+
+    // Start first rotation
+    scheduleNextRotation();
+
+    return () => {
+      if (rotationTimeoutRef.current) {
+        clearTimeout(rotationTimeoutRef.current);
+        rotationTimeoutRef.current = null;
+      }
+      if (tickTimeoutRef.current) {
+        clearTimeout(tickTimeoutRef.current);
+        tickTimeoutRef.current = null;
+      }
+    };
+  }, [companies, fortune500Companies, fadeAnim]);
 
   // Debug useEffect to log form state changes
   useEffect(() => {
@@ -147,12 +287,28 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       const resumesRes = await refopenAPI.getUserResumes();
       if (resumesRes?.success && resumesRes.data) {
         const resumeList = resumesRes.data || [];
-        setResumes(resumeList);
         
-        // Auto-select primary resume if available
-        const primaryResume = resumeList.find(r => r?.IsPrimary);
-        if (primaryResume?.ResumeID) {
-          setFormData(prev => ({ ...prev, selectedResumeId: primaryResume.ResumeID }));
+        // Sort resumes: Primary first, then by upload date (newest first)
+        const sortedResumes = [...resumeList].sort((a, b) => {
+          // Primary always comes first in the list
+          if (a.IsPrimary && !b.IsPrimary) return -1;
+          if (!a.IsPrimary && b.IsPrimary) return 1;
+          // Then sort by upload date (newest first)
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        });
+        setResumes(sortedResumes);
+        
+        // Auto-select the most recently uploaded resume (by date, not primary)
+        const mostRecentResume = [...resumeList].sort((a, b) => {
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        })[0];
+        
+        if (mostRecentResume?.ResumeID) {
+          setFormData(prev => ({ ...prev, selectedResumeId: mostRecentResume.ResumeID }));
         }
       } else {
         setResumes([]);
@@ -285,24 +441,27 @@ const [showResumeModal, setShowResumeModal] = useState(false);
     return errorCount === 0;
   };
 
+  // 🆕 NEW: Handler when user clicks "Ask Referral" button - shows confirmation modal
+  const handleAskReferralClick = () => {
+    // 🔐 Check authentication first
+    if (!requireAuth('ask referral')) {
+      return;
+    }
+    
+    // Validate form FIRST
+    if (!validateForm()) {
+      return;
+    }
+    
+    // Show confirmation modal (handles both sufficient and insufficient balance)
+    setShowReferralConfirmModal(true);
+  };
+
+  // 🆕 UPDATED: Called when user clicks "Proceed" in confirm modal
   const handleSubmit = async () => {
     
     try {
       setSubmitting(true);
-      
-      // ✅ NEW: Check wallet balance FIRST (before validation)
-      if (walletBalance < 50) {
-        
-        // Show beautiful wallet modal instead of ugly alert
-        setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
-        setShowWalletModal(true);
-        return;
-      }
-      
-      // Validate form
-      if (!validateForm()) {
-        return;
-      }
 
       // ✅ NEW SCHEMA: Send extJobID (external) with jobID as null
       const requestData = {
@@ -321,8 +480,12 @@ const [showResumeModal, setShowResumeModal] = useState(false);
 
       if (result?.success) {
         
+        // 🎉 Show fullscreen success overlay for 1 second
+        setReferralCompanyName(selectedCompany?.name || '');
+        setShowReferralSuccessOverlay(true);
+        
         // ✅ NEW: Show wallet deduction info
-        const amountDeducted = result.data?.amountDeducted || 50;
+        const amountDeducted = result.data?.amountDeducted || 39;
         const balanceAfter = result.data?.walletBalanceAfter;
         
         let message = 'Referral request submitted successfully!';
@@ -342,13 +505,15 @@ const [showResumeModal, setShowResumeModal] = useState(false);
         // Reset form
         resetForm();
         
-        // Navigate back or to success screen
-        navigation.goBack();
+        // Navigate back after overlay completes (2 second delay)
+        setTimeout(() => {
+          navigation.goBack();
+        }, 2000);
       } else {
         // ✅ NEW: Handle insufficient balance error
         if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = result.data?.currentBalance || 0;
-          const requiredAmount = result.data?.requiredAmount || 50;
+          const requiredAmount = result.data?.requiredAmount || pricing.referralRequestCost;
           
           // Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -404,8 +569,8 @@ const [showResumeModal, setShowResumeModal] = useState(false);
   };
 
   // ⚡ Remove the global loading screen - show form immediately
-  // Only check if user is job seeker
-  if (!isJobSeeker) {
+  // Only check if user is job seeker (allow unauthenticated users to see the form)
+  if (isAuthenticated && !isJobSeeker) {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="lock-closed" size={64} color={colors.gray400} />
@@ -424,72 +589,56 @@ const [showResumeModal, setShowResumeModal] = useState(false);
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* ✅ Wallet Balance Banner - Shows immediately with loading state */}
-        {loadingWallet ? (
-          <View style={styles.quotaBanner}>
-            <View style={styles.quotaBannerContent}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.quotaBannerText}>Loading wallet balance...</Text>
-            </View>
-          </View>
-        ) : (
-          <View style={[
-            styles.quotaBanner,
-            hasSufficientBalance ? styles.quotaBannerSuccess : styles.quotaBannerWarning
-          ]}>
-            <View style={styles.quotaBannerContent}>
-              <Ionicons 
-                name={hasSufficientBalance ? "wallet" : "warning"} 
-                size={20} 
-                color={hasSufficientBalance ? colors.success : colors.warning} 
-                style={styles.quotaBannerIcon}
-              />
-              <Text style={[
-                styles.quotaBannerText, 
-                hasSufficientBalance ? styles.quotaBannerSuccessText : styles.quotaBannerWarningText
-              ]}>
-                {hasSufficientBalance 
-                  ? `Wallet Balance: ₹${walletBalance.toFixed(2)}`
-                  : `Insufficient balance: ₹${walletBalance.toFixed(2)}`
-                }
-              </Text>
-              {!hasSufficientBalance && (
-                <TouchableOpacity
-                  style={styles.addMoneyChip}
-                  onPress={() => {
-                    setWalletModalData({ currentBalance: walletBalance, requiredAmount: 50 });
-                    setShowWalletModal(true);
-                  }}
-                >
-                  <Ionicons name="add-circle" size={16} color={colors.warning} />
-                  <Text style={styles.addMoneyText}>Add</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
+      <View style={styles.innerContainer}>
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 80 : 120 }}>
+          {/* Google AdSense Ad at top - Referral page style */}
+          <AdCard variant="referral" />
 
-        {/* ✅ IMPROVED: More compelling and catchy description */}
+        {/* ✅ NEW: Dynamic Fortune 500 Company Showcase */}
         <View style={styles.introSection}>
-          <Text style={styles.introTitle}>🚀 Boost Your Job Application Success Rate</Text>
-          <Text style={styles.introText}>
-            Get referred by current employees and increase your chances of landing your dream job by up to 5x! Our platform connects you with professionals who can advocate for your skills and help you stand out from hundreds of other applicants.
+          <Text style={styles.introTitle}>🚀 Join Thousands Getting Referred</Text>
+          <Text style={styles.introSubtitle}>
+            Top companies accept referrals every day
           </Text>
-          <View style={styles.benefitsContainer}>
-            <View style={styles.benefitItem}>
-              <Ionicons name="trending-up" size={16} color={colors.success} />
-              <Text style={styles.benefitText}>5x higher interview rate</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="people" size={16} color={colors.primary} />
-              <Text style={styles.benefitText}>Skip the ATS black hole</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Ionicons name="flash" size={16} color={colors.warning} />
-              <Text style={styles.benefitText}>Faster hiring process</Text>
-            </View>
-          </View>
+          
+          {/* Animated Company Logo Display */}
+          {fortune500Companies.length > 0 && (
+            <Animated.View style={[styles.companyShowcase, { opacity: fadeAnim }]}>
+              <View style={styles.showcaseContent}>
+                <View style={styles.showcaseLogoContainer}>
+                  <Image
+                    source={{ uri: fortune500Companies[currentCompanyIndex]?.logoURL }}
+                    style={styles.showcaseLogo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.showcaseTextContainer}>
+                  <Text style={styles.showcaseText}>
+                    Referral submitted for
+                  </Text>
+                  <Text style={styles.showcaseCompanyName}>
+                    {fortune500Companies[currentCompanyIndex]?.name}
+                  </Text>
+                </View>
+                <View style={styles.showcaseCheckmark}>
+                  <View style={styles.tickSlot}>
+                    {showRotationTick ? (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+                    ) : null}
+                  </View>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>LIVE</Text>
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
+          )}
+          
+          {/* Value Proposition - Short & Impactful */}
+          <Text style={styles.valueText}>
+            Get referrals from employees working at your dream company who are ready to refer candidates. <Text style={styles.valueHighlight}>Increase your chances by 15x.</Text>
+          </Text>
         </View>
 
         {/* Form */}
@@ -532,85 +681,83 @@ const [showResumeModal, setShowResumeModal] = useState(false);
             )}
           </View>
 
-          {/* Job ID */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Job ID <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.jobId && styles.inputError]}
-              placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobId}
-              onChangeText={(value) => updateFormData('jobId', value)}
-              maxLength={100}
-            />
-            {errors.jobId && (
-              <Text style={styles.errorText}>{errors.jobId}</Text>
-            )}
-            <Text style={styles.helperText}>
-              Enter the job ID or reference number from the company's job posting
-            </Text>
+              {/* Job ID */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Job ID <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.jobId && styles.inputError]}
+                  placeholder="e.g., job-12345, REQ-2024-001, or external job identifier"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobId}
+                  onChangeText={(value) => updateFormData('jobId', value)}
+                  maxLength={100}
+                />
+                {errors.jobId && (
+                  <Text style={styles.errorText}>{errors.jobId}</Text>
+                )}
+                <Text style={styles.helperText}>
+                  Enter the job ID or reference number from the company's job posting
+                </Text>
+              </View>
+
+              {/* Job Title */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Job Title <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.jobTitle && styles.inputError]}
+                  placeholder="e.g., Senior Software Engineer, Product Manager"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobTitle}
+                  onChangeText={(value) => updateFormData('jobTitle', value)}
+                  maxLength={200}
+                />
+                {errors.jobTitle && (
+                  <Text style={styles.errorText}>{errors.jobTitle}</Text>
+                )}
+              </View>
+
+              {/* Job URL */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Job URL</Text>
+                <TextInput
+                  style={[styles.input, errors.jobUrl && styles.inputError]}
+                  placeholder="https://careers.company.com/job/12345"
+                  placeholderTextColor={colors.gray500}
+                  value={formData.jobUrl}
+                  onChangeText={(value) => updateFormData('jobUrl', value)}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                />
+                {errors.jobUrl && (
+                  <Text style={styles.errorText}>{errors.jobUrl}</Text>
+                )}
           </View>
 
-          {/* Job Title */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Job Title <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.jobTitle && styles.inputError]}
-              placeholder="e.g., Senior Software Engineer, Product Manager"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobTitle}
-              onChangeText={(value) => updateFormData('jobTitle', value)}
-              maxLength={200}
-            />
-            {errors.jobTitle && (
-              <Text style={styles.errorText}>{errors.jobTitle}</Text>
-            )}
-          </View>
-
-          {/* Job URL (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Job URL (Optional)</Text>
-            <TextInput
-              style={[styles.input, errors.jobUrl && styles.inputError]}
-              placeholder="https://careers.company.com/job/12345"
-              placeholderTextColor={colors.gray500}
-              value={formData.jobUrl}
-              onChangeText={(value) => updateFormData('jobUrl', value)}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-            {errors.jobUrl && (
-              <Text style={styles.errorText}>{errors.jobUrl}</Text>
-            )}
-          </View>
-
-          {/* Referral Message */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Referral Message</Text>
-            <TextInput
-              style={[styles.textArea, errors.referralMessage && styles.inputError]}
-              placeholder="Tell the referrer about yourself and why you're interested in this role... 
-              
-Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns with my passion for building scalable web applications. I'd be grateful for any referral help!'"
-              placeholderTextColor={colors.gray500}
-              value={formData.referralMessage}
-              onChangeText={(value) => updateFormData('referralMessage', value)}
-              multiline
-              numberOfLines={4}
-              maxLength={1000}
-              textAlignVertical="top"
-            />
-            {errors.referralMessage && (
-              <Text style={styles.errorText}>{errors.referralMessage}</Text>
-            )}
-            <Text style={styles.helperText}>
-              Optional: Help referrers understand your background and interest in the role (max 1000 characters)
-            </Text>
-          </View>
+              {/* Referral Message */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Referral Message</Text>
+                <TextInput
+                  style={[styles.textArea, errors.referralMessage && styles.inputError]}
+                  placeholder="Tell the referrer about yourself and why you're interested in this role..."
+                  placeholderTextColor={colors.gray500}
+                  value={formData.referralMessage}
+                  onChangeText={(value) => updateFormData('referralMessage', value)}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={1000}
+                  textAlignVertical="top"
+                />
+                {errors.referralMessage && (
+                  <Text style={styles.errorText}>{errors.referralMessage}</Text>
+                )}
+                <Text style={styles.helperText}>
+                  Help referrers understand your background and interest in the role (max 1000 characters)
+                </Text>
+              </View>
 
           {/* Resume Selection - ✅ Shows loading state */}
           <View style={styles.inputGroup}>
@@ -629,7 +776,11 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                 <Text style={styles.noResumeText}>No resumes found</Text>
                 <TouchableOpacity
                   style={styles.uploadResumeButton}
-                  onPress={() => setShowResumeModal(true)} // ✅ CHANGED: Open modal instead of navigate
+                  onPress={() => {
+                    if (requireAuth('upload resume')) {
+                      setShowResumeModal(true);
+                    }
+                  }}
                 >
                   <Text style={styles.uploadResumeText}>Upload Resume</Text>
                 </TouchableOpacity>
@@ -673,6 +824,19 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
                     </View>
                   </TouchableOpacity>
                 ))}
+                
+                {/* Option to upload a new resume */}
+                <TouchableOpacity
+                  style={styles.uploadNewResumeButton}
+                  onPress={() => {
+                    if (requireAuth('upload resume')) {
+                      setShowResumeModal(true);
+                    }
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                  <Text style={styles.uploadNewResumeText}>Upload New Resume</Text>
+                </TouchableOpacity>
               </View>
             )}
             
@@ -680,52 +844,31 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
               <Text style={styles.errorText}>{errors.resume}</Text>
             )}
           </View>
-        </View>
 
-        {/* Enhanced Info Card */}
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={20} color={colors.primary} />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>How our referral system works:</Text>
-            <Text style={styles.infoText}>
-              1. Submit your request with job details (₹50 deducted from wallet){'\n'}
-              2. Employees get notified and can review your profile{'\n'}
-              3. They refer you internally and earn rewards{'\n'}
-              4. You get fast-tracked in the hiring process{'\n'}
-              5. Land the job with insider advocacy!
-            </Text>
+          {/* Submit Button - Inside form */}
+          <View style={styles.submitButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                submitting && styles.submitButtonDisabled
+              ]}
+              onPress={handleAskReferralClick}
+              disabled={!isFormReady || submitting || loadingWallet}
+            >
+              {(!isFormReady || loadingWallet) ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.white} />
+                  <Text style={styles.submitButtonText}>Loading...</Text>
+                </>
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {submitting ? 'Submitting...' : 'Ask Referral'}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-
-      {/* Submit Button - Only enabled when everything is loaded */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!isFormReady || submitting || !hasSufficientBalance) && styles.submitButtonDisabled
-          ]}
-          onPress={() => {
-            handleSubmit();
-          }}
-          disabled={!isFormReady || submitting || !hasSufficientBalance}
-        >
-          {!isFormReady ? (
-            <>
-              <ActivityIndicator size="small" color={colors.white} />
-              <Text style={styles.submitButtonText}>Loading...</Text>
-            </>
-          ) : (
-            <Text style={[
-              styles.submitButtonText,
-              (submitting || !hasSufficientBalance) && styles.submitButtonTextDisabled
-            ]}>
-              {submitting ? 'Submitting...' : 
-               !hasSufficientBalance ? 'Insufficient Balance - Add Money' :
-               'Ask Referral (₹50)'}
-            </Text>
-          )}
-        </TouchableOpacity>
       </View>
 
       {/* NEW: Company Selection Modal */}
@@ -844,14 +987,47 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
         }}
         onCancel={() => setShowWalletModal(false)}
       />
+
+      {/* � Referral Confirm Modal - like JobsScreen */}
+      <ReferralConfirmModal
+        visible={showReferralConfirmModal}
+        currentBalance={walletBalance}
+        requiredAmount={pricing.referralRequestCost}
+        jobTitle={formData.jobTitle || 'this job'}
+        onProceed={async () => {
+          setShowReferralConfirmModal(false);
+          await handleSubmit();
+        }}
+        onAddMoney={() => {
+          setShowReferralConfirmModal(false);
+          navigation.navigate('WalletRecharge');
+        }}
+        onCancel={() => setShowReferralConfirmModal(false)}
+      />
+
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => setShowReferralSuccessOverlay(false)}
+        duration={3500}
+        companyName={referralCompanyName}
+      />
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -862,7 +1038,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -901,17 +1077,120 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   introTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.primary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  introText: {
+  introSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  
+  // 🎯 NEW: Company showcase styles
+  companyShowcase: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  showcaseContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  showcaseLogoContainer: {
+    width: 56,
+    height: 56,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  showcaseLogo: {
+    width: 48,
+    height: 48,
+  },
+  showcaseTextContainer: {
+    flex: 1,
+  },
+  showcaseText: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray600,
+    marginBottom: 2,
+  },
+  showcaseCompanyName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+  },
+  showcaseCheckmark: {
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tickSlot: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.success + '15',
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success,
+    marginRight: 6,
+  },
+  liveText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+    letterSpacing: 0.6,
+  },
+  
+  valueText: {
     fontSize: typography.sizes.md,
     color: colors.gray700,
     textAlign: 'center',
+    marginTop: 16,
     lineHeight: 22,
+  },
+  
+  valueHighlight: {
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+  },
+  
+  introText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray700,
+    textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 16,
   },
   
@@ -961,8 +1240,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
-    backgroundColor: colors.white,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   inputError: {
     borderColor: colors.danger,
@@ -974,8 +1253,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
-    backgroundColor: colors.white,
+    color: colors.text,
+    backgroundColor: colors.surface,
     minHeight: 100,
   },
   charCount: {
@@ -1026,11 +1305,25 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
   },
+  uploadNewResumeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  uploadNewResumeText: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+  },
   resumeList: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   resumeItem: {
     flexDirection: 'row',
@@ -1109,11 +1402,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  bottomContainer: {
-    padding: 16,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  submitButtonContainer: {
+    marginTop: 24,
+    marginBottom: 16,
   },
   submitButton: {
     flexDirection: 'row',
@@ -1123,9 +1414,18 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     gap: 8,
+    // On desktop, limit button width
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      maxWidth: 400,
+      alignSelf: 'center',
+      width: '100%',
+    } : {}),
   },
   submitButtonDisabled: {
     backgroundColor: colors.gray300,
+  },
+  addMoneyButton: {
+    backgroundColor: colors.warning,
   },
   submitButtonText: {
     color: colors.white,
@@ -1146,7 +1446,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   companySelectorContent: {
     flexDirection: 'row',
@@ -1158,7 +1458,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   companySelectorLogoPlaceholder: {
     width: 24,
@@ -1214,13 +1514,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: typography.sizes.md,
-    color: colors.textPrimary,
+    color: colors.text,
+    outlineStyle: 'none',
   },
   modalLoadingContainer: {
     flex: 1,
@@ -1246,7 +1547,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1298,7 +1599,7 @@ const styles = StyleSheet.create({
   // ✅ NEW: Enhanced wallet balance banner styles
   quotaBanner: {
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
@@ -1315,7 +1616,8 @@ const styles = StyleSheet.create({
   quotaBannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   quotaBannerIcon: {
     marginRight: 12,
@@ -1335,7 +1637,7 @@ const styles = StyleSheet.create({
   addMoneyChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -1347,3 +1649,4 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
 });
+

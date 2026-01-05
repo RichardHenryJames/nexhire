@@ -277,3 +277,102 @@ export const debitWallet = withErrorHandling(async (req: HttpRequest, context: I
         };
     }
 });
+
+/**
+ * Get withdrawable balance (referral earnings)
+ * GET /wallet/withdrawable
+ */
+export const getWithdrawableBalance = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const withdrawable = await WalletService.getWithdrawableBalance(user.userId);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(withdrawable, 'Withdrawable balance retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Get withdrawable balance error:', error);
+        return {
+            status: 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get withdrawable balance',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});
+
+/**
+ * Request withdrawal of referral earnings
+ * POST /wallet/withdraw
+ */
+export const requestWithdrawal = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        const { amount, upiId, bankAccount, ifscCode, accountHolderName } = await extractRequestBody(req);
+        
+        if (!amount || typeof amount !== 'number' || amount <= 0) {
+            throw new ValidationError('Valid amount is required');
+        }
+
+        if (!upiId && !bankAccount) {
+            throw new ValidationError('Either UPI ID or bank account details are required');
+        }
+
+        const result = await WalletService.requestWithdrawal(user.userId, amount, {
+            upiId,
+            bankAccount,
+            ifscCode,
+            accountHolderName
+        });
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, result.message)
+        };
+    } catch (error: any) {
+        console.error('Request withdrawal error:', error);
+        const status = error instanceof ValidationError ? 400 : 500;
+        return {
+            status,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to request withdrawal',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});
+
+/**
+ * Get withdrawal history
+ * GET /wallet/withdrawals
+ */
+export const getWithdrawalHistory = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+        const user = authenticate(req);
+        
+        const url = new URL(req.url);
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+        const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize') || '20')));
+        
+        const history = await WalletService.getWithdrawalHistory(user.userId, page, pageSize);
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(history, 'Withdrawal history retrieved successfully')
+        };
+    } catch (error: any) {
+        console.error('Get withdrawal history error:', error);
+        return {
+            status: 500,
+            jsonBody: { 
+                success: false, 
+                error: error?.message || 'Failed to get withdrawal history',
+                errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});

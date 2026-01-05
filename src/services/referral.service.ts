@@ -5,7 +5,9 @@
 
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
-import { WalletService } from './wallet.service'; // ✅ NEW: Import wallet service
+import { WalletService } from './wallet.service';
+import { PricingService } from './pricing.service';
+import { NotificationService } from './notificationService';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -16,8 +18,7 @@ import {
     ReferrerStats,
     CreateReferralRequestDto,
     ClaimReferralRequestDto,
-    ClaimReferralRequestWithProofDto,
-    SubmitReferralProofDto,
+    SubmitReferralWithProofDto,
     VerifyReferralDto,
     PurchaseReferralPlanDto,
     ReferralAnalytics,
@@ -26,8 +27,7 @@ import {
     PaginatedReferralRequests
 } from '../types/referral.types';
 
-// ✅ NEW: Referral cost constant
-const REFERRAL_REQUEST_COST = 50; // ₹50 per referral request
+// Note: Pricing now fetched from DB via PricingService
 
 export class ReferralService {
     
@@ -146,11 +146,14 @@ export class ReferralService {
     
     /**
      * Create a new referral request (supports both internal and external)
-     * ✅ NEW: Requires ₹50 wallet balance - deducted before creating request
+     * Requires wallet balance - deducted before creating request
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
-            // ✅ NEW: Get user ID for wallet operations
+            // Get referral cost from database
+            const REFERRAL_REQUEST_COST = await PricingService.getReferralCost();
+            
+            // Get user ID for wallet operations
             const userQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
             const userResult = await dbService.executeQuery(userQuery, [applicantId]);
             
@@ -160,7 +163,7 @@ export class ReferralService {
             
             const userId = userResult.recordset[0].UserID;
 
-            // ✅ NEW: Check wallet balance FIRST (before any other validation)
+            // Check wallet balance first
             const walletBalance = await WalletService.getBalance(userId);
             
             if (walletBalance.balance < REFERRAL_REQUEST_COST) {
@@ -172,9 +175,7 @@ export class ReferralService {
                 });
             }
 
-            // ✅ REMOVED: No longer checking eligibility (daily quota) - wallet-based model only
-
-            // ✅ NEW SCHEMA: Determine referral type from presence of ExtJobID vs JobID
+            // Determine referral type from presence of ExtJobID vs JobID
             const isExternal = !!dto.extJobID && !dto.jobID; // External if ExtJobID provided and JobID is null
             const isInternal = !!dto.jobID && !dto.extJobID; // Internal if JobID provided and ExtJobID is null
             
@@ -183,8 +184,7 @@ export class ReferralService {
             }
 
             if (isExternal) {
-                // EXTERNAL REFERRAL VALIDATION
-                // ✅ FIXED: Only require jobTitle (companyName derived from organizationId)
+                // External referral validation - only require jobTitle
                 if (!dto.jobTitle) {
                     throw new ValidationError('Job title is required for external referrals');
                 }
@@ -224,7 +224,7 @@ export class ReferralService {
                 throw new ValidationError('Invalid resume selection');
             }
 
-            // ✅ NEW: Debit ₹50 from wallet BEFORE creating the request
+            // Debit from wallet before creating the request
             const debitResult = await WalletService.debitWallet(
                 userId,
                 REFERRAL_REQUEST_COST,
@@ -232,12 +232,10 @@ export class ReferralService {
                 `Referral request for ${dto.jobTitle || 'job'} at ${dto.companyName || 'company'}`
             );
 
-            console.log(`💰 Wallet debited: ₹${REFERRAL_REQUEST_COST} for referral request. New balance: ₹${debitResult.BalanceAfter}`);
-
             const requestId = AuthService.generateUniqueId();
 
             if (isExternal) {
-                // ✅ CREATE EXTERNAL REFERRAL REQUEST with JobTitle and JobURL
+                // Create external referral request with JobTitle and JobURL
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
                         RequestID, ExtJobID, ApplicantID, ResumeID, Status, RequestedAt,
@@ -280,7 +278,39 @@ export class ReferralService {
 
             const createdRequest = await this.getReferralRequestById(requestId);
             
-            // ✅ NEW: Add wallet balance info to response
+            // ✅ NEW: Log initial status history for tracking screen
+            try {
+                await this.logInitialStatus(requestId, createdRequest.ApplicantName || 'Job Seeker');
+            } catch (err) {
+                console.warn('Non-critical: Failed to log initial status history:', err);
+            }
+            
+            // ✅ NEW: Send email notifications to eligible referrers
+            try {
+                // Cast to any to access query-derived fields not in the interface
+                const requestData = createdRequest as any;
+                const companyName = requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
+                const jobTitle = requestData.JobTitle || requestData.InternalJobTitle || dto.jobTitle || 'Unknown Position';
+                const organizationIdRaw = isExternal 
+                    ? (dto.organizationId ? parseInt(dto.organizationId, 10) : null)
+                    : (requestData.OrganizationID ? parseInt(requestData.OrganizationID, 10) : null);
+
+                if (organizationIdRaw) {
+                    const notifyResult = await NotificationService.notifyNewReferralRequest({
+                        requestId: requestId,
+                        organizationId: organizationIdRaw,
+                        jobId: dto.jobID || undefined,
+                        jobTitle: jobTitle,
+                        companyName: companyName,
+                        seekerName: createdRequest.ApplicantName || 'Job Seeker',
+                        seekerId: applicantId
+                    });
+                }
+            } catch (notifyErr) {
+                // Non-critical: notification failure shouldn't block referral creation
+            }
+            
+            // Add wallet balance info to response
             return {
                 ...createdRequest,
                 walletBalanceBefore: debitResult.BalanceBefore,
@@ -329,11 +359,8 @@ export class ReferralService {
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
-                -- Referrer data (optional)
-                LEFT JOIN Applicants ar_ref ON rr.AssignedReferrerID = ar_ref.ApplicantID
-                LEFT JOIN Users ur ON ar_ref.UserID = ur.UserID
-                -- Proof data (optional)
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
+                LEFT JOIN Users ur ON rr.AssignedReferrerID = ur.UserID
                 WHERE rr.RequestID = @param0
             `;
             
@@ -393,19 +420,20 @@ export class ReferralService {
 
     /**
      * Get available referral requests for a referrer (same organization)
+     * ✅ FIXED: Added IsActive = 1 to exclude soft-deleted work experiences
      */
     static async getAvailableRequests(referrerId: string, page: number = 1, pageSize: number = 20, filters?: ReferralRequestsFilter): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // ✅ FIX: Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
-            // Get referrer's current organization
+            // ✅ FIXED: Get referrer's current ACTIVE organization (IsActive = 1 excludes soft-deleted)
             const referrerOrgQuery = `
                 SELECT we.OrganizationID
                 FROM WorkExperiences we
                 INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1
+                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND we.IsActive = 1
             `;
             const referrerOrgResult = await dbService.executeQuery(referrerOrgQuery, [referrerId]);
             
@@ -415,9 +443,14 @@ export class ReferralService {
             
             const organizationId = referrerOrgResult.recordset[0].OrganizationID;
             
-            // Build where clause with filters - ✅ FIXED: Include both internal and external referrals
+            // Return ALL requests for this organization (frontend will filter by tab)
+            // Exclude only Cancelled requests - everything else should be visible
+            // Multiple people can claim the same request until someone completes it
+            const statusFilter = `rr.Status NOT IN ('Cancelled')`;
+            
+            // Build where clause - show requests for this referrer's organization
             let whereClause = `
-                WHERE rr.Status = 'Pending' 
+                WHERE ${statusFilter}
                 AND (
                     -- Internal referrals: Match by job's organization
                     (rr.JobID IS NOT NULL AND j.OrganizationID = @param0)
@@ -464,7 +497,7 @@ export class ReferralService {
             const offset = (safePageNumber - 1) * safePageSize;
             const dataQuery = `
                 SELECT 
-                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.OrganizationID, rr.JobURL,
                     -- For INTERNAL referrals (JobID not null)
@@ -480,10 +513,17 @@ export class ReferralService {
                     COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
-                    ar.ResumeLabel,
+                    u.UserID as ApplicantUserID,
+                    u.ProfilePictureURL as ApplicantProfilePictureURL,
+                    rr.ResumeID as ResumeID,
+                    ar.ResumeLabel as ResumeLabel,
+                    ar.ResumeURL as ResumeURL,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
-                    rp.Description as ProofDescription
+                    rp.Description as ProofDescription,
+                    rr.ReferralMessage as ReferralMessage,
+                    -- ✅ AssignedReferrerID now stores UserID directly
+                    rr.AssignedReferrerID as AssignedReferrerUserID
                 FROM ReferralRequests rr
                 -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
                 LEFT JOIN Jobs j ON rr.JobID = j.JobID
@@ -500,7 +540,6 @@ export class ReferralService {
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -516,147 +555,7 @@ export class ReferralService {
         }
     }
 
-    /**
-     * Claim a referral request
-     */
-    static async claimReferralRequest(referrerId: string, dto: ClaimReferralRequestDto): Promise<ReferralRequest> {
-        try {
-            // Check if request is still available
-            const requestQuery = `
-                SELECT RequestID, Status, JobID
-                FROM ReferralRequests
-                WHERE RequestID = @param0 AND Status = 'Pending'
-            `;
-            const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID]);
-            
-            if (!requestResult.recordset || requestResult.recordset.length === 0) {
-                throw new ValidationError('Request not available for claiming');
-            }
-            
-            const jobId = requestResult.recordset[0].JobID;
-            
-            // Verify referrer is eligible (same organization)
-            const eligibilityQuery = `
-                SELECT we.OrganizationID
-                FROM WorkExperiences we
-                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                INNER JOIN Jobs j ON j.OrganizationID = we.OrganizationID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND j.JobID = @param1
-            `;
-            const eligibilityResult = await dbService.executeQuery(eligibilityQuery, [referrerId, jobId]);
-            
-            if (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0) {
-                throw new ValidationError('You are not eligible to refer for this job');
-            }
-            
-            // Claim the request
-            const updateQuery = `
-                UPDATE ReferralRequests
-                SET Status = 'Claimed', AssignedReferrerID = @param1, ReferredAt = GETUTCDATE()
-                WHERE RequestID = @param0
-            `;
-            
-            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId]);
-            
-            // Update referrer stats
-            await this.updateReferrerStats(referrerId);
-            
-            return await this.getReferralRequestById(dto.requestID);
-        } catch (error) {
-            console.error('Error claiming referral request:', error);
-            throw error;
-        }
-    }
-
-    // ===== NEW: PROOF SUBMISSION & VERIFICATION =====
-
-    /**
-     * Submit proof of referral (screenshot, URL, etc.)
-     */
-    static async submitReferralProof(referrerId: string, dto: SubmitReferralProofDto): Promise<ReferralProof> {
-        try {
-            // Verify request exists and is claimed by this referrer
-            const requestQuery = `
-                SELECT RequestID, Status, AssignedReferrerID, RequestedAt, ReferredAt
-                FROM ReferralRequests
-                WHERE RequestID = @param0 AND AssignedReferrerID = @param1 AND Status = 'Claimed'
-            `;
-            const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID, referrerId]);
-            
-            if (!requestResult.recordset || requestResult.recordset.length === 0) {
-                throw new ValidationError('Request not found or not claimed by you');
-            }
-
-            // Check if proof already exists
-            const existingProofQuery = `
-                SELECT ProofID FROM ReferralProofs 
-                WHERE RequestID = @param0 AND ReferrerID = @param1
-            `;
-            const existingProofResult = await dbService.executeQuery(existingProofQuery, [dto.requestID, referrerId]);
-            
-            if (existingProofResult.recordset && existingProofResult.recordset.length > 0) {
-                throw new ConflictError('Proof already submitted for this request');
-            }
-
-            // Create proof record
-            const proofId = AuthService.generateUniqueId();
-            const insertQuery = `
-                INSERT INTO ReferralProofs (
-                    ProofID, RequestID, ReferrerID, FileURL, FileType, SubmittedAt
-                ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, GETUTCDATE()
-                )
-            `;
-            
-            await dbService.executeQuery(insertQuery, [
-                proofId, dto.requestID, referrerId, dto.fileURL, dto.fileType
-            ]);
-
-            // Update request status to 'Completed'
-            await dbService.executeQuery(
-                'UPDATE ReferralRequests SET Status = \'Completed\' WHERE RequestID = @param0',
-                [dto.requestID]
-            );
-
-            // ?? FIX: Award points for proof submission with separate quick response bonus tracking
-            const request = requestResult.recordset[0];
-            let baseProofPoints = 15; // Base points for submitting proof
-            
-            // Award base proof submission points first
-            console.log(`Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
-            await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
-            
-            // Calculate and award quick response bonus separately for better tracking  
-            const requestedAt = new Date(request.RequestedAt);
-            const referredAt = new Date(request.ReferredAt);
-            const now = new Date();
-            const hoursFromClaim = (now.getTime() - referredAt.getTime()) / (1000 * 60 * 60);
-            
-            if (hoursFromClaim <= 24) {
-                const quickBonusPoints = 10; // Quick response bonus
-                console.log(`Quick response bonus awarded! Completed in ${hoursFromClaim.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
-                await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
-            }
-
-            // Get the created proof
-            const proofQuery = `
-                SELECT ProofID, RequestID, ReferrerID, FileURL, FileType, SubmittedAt
-                FROM ReferralProofs
-                WHERE ProofID = @param0
-            `;
-            const proofResult = await dbService.executeQuery<ReferralProof>(proofQuery, [proofId]);
-            
-            console.log(`Proof submitted for request ${dto.requestID} by referrer ${referrerId} - base points and any bonus points awarded`);
-            
-            // TODO: Notify seeker that proof was submitted
-            // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
-
-            return proofResult.recordset[0];
-        } catch (error) {
-            console.error('Error submitting referral proof:', error);
-            throw error;
-        }
-    }
+    // ===== VERIFICATION =====
 
     /**
      * Verify referral completion by seeker
@@ -685,17 +584,68 @@ export class ReferralService {
                 WHERE RequestID = @param0
             `;
             
-            const newStatus = dto.verified ? 'Verified' : 'Completed';
+            const newStatus = dto.verified ? 'Verified' : 'Unverified';
             await dbService.executeQuery(updateQuery, [dto.requestID, newStatus, dto.verified ? 1 : 0]);
 
-            // If verified, award ADDITIONAL verification points to referrer
+            // Log status change to history table
+            const historyId = AuthService.generateUniqueId();
+            const statusMessage = dto.verified 
+                ? 'Referral verified by job seeker' 
+                : 'Referral marked as unverified by job seeker';
+            const historyQuery = `
+                INSERT INTO ReferralRequestStatusHistory (
+                    HistoryID, RequestID, Status, StatusMessage, ActorID, ActorType, ActorName, CreatedAt
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5, @param6, GETUTCDATE()
+                )
+            `;
+            
+            // Get applicant name for history
+            const applicantQuery = `SELECT FirstName, LastName FROM Users WHERE UserID = @param0`;
+            const applicantResult = await dbService.executeQuery(applicantQuery, [applicantId]);
+            const applicantName = applicantResult.recordset?.[0] 
+                ? `${applicantResult.recordset[0].FirstName} ${applicantResult.recordset[0].LastName}`
+                : 'Job Seeker';
+            
+            await dbService.executeQuery(historyQuery, [
+                historyId,
+                dto.requestID,
+                newStatus,
+                statusMessage,
+                applicantId,
+                'seeker',
+                applicantName
+            ]);
+
+            // If verified, award ADDITIONAL verification money to referrer's wallet
+            // Amount varies based on whether referrer got quick response bonus
             if (dto.verified && referrerId) {
-                const verificationPoints = 25; // Higher points for verified referrals
-                await this.awardReferralPoints(referrerId, dto.requestID, verificationPoints, 'verification');
-                console.log(`🔍 Referral verified! ${verificationPoints} additional points awarded to referrer ${referrerId}`);
-                
-                // TODO: Notify referrer about points earned
-                // await ReferralNotificationService.notifyReferralVerified(dto.requestID, referrerId, verificationPoints);
+                // Check if referrer received quick response bonus for this request
+                const quickBonusCheckQuery = `
+                    SELECT COUNT(*) as HasQuickBonus 
+                    FROM ReferralRewards 
+                    WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointsType = 'quick_response_bonus'
+                `;
+                const quickBonusResult = await dbService.executeQuery(quickBonusCheckQuery, [referrerId, dto.requestID]);
+                const hasQuickBonus = quickBonusResult.recordset?.[0]?.HasQuickBonus > 0;
+
+                // Calculate verification reward amount (in rupees):
+                // - With quick bonus: random 25-35 rupees (rewarding fast referrers more)
+                // - Without quick bonus: random 5-24 rupees (still rewarding but less)
+                let verificationAmount: number;
+                if (hasQuickBonus) {
+                    verificationAmount = Math.floor(Math.random() * 11) + 25; // ₹25-35
+                } else {
+                    verificationAmount = Math.floor(Math.random() * 20) + 5; // ₹5-24
+                }
+
+                // Add money to referrer's wallet (NO points recording - direct money only)
+                await WalletService.creditBonus(
+                    referrerId,
+                    verificationAmount,
+                    'REFERRAL_BONUS',
+                    `Referral verification reward for request ${dto.requestID}`
+                );
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -706,11 +656,11 @@ export class ReferralService {
     }
 
     /**
-     * Get my requests as referrer (claimed/completed requests)
+     * Get my requests as referrer (completed requests)
      */
     static async getMyReferrerRequests(referrerId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
@@ -755,7 +705,6 @@ export class ReferralService {
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Don't add OFFSET/FETCH params to queryParams - embed directly in SQL
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
             return {
@@ -772,11 +721,93 @@ export class ReferralService {
     }
 
     /**
+     * Get completed referrals by UserID (for closed tab - shows ALL completed referrals regardless of company)
+     * AssignedReferrerID stores UserID, so we match directly against that
+     */
+    static async getCompletedReferralsByUser(userId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
+        try {
+            const safePageNumber = Math.max(1, Math.floor(page) || 1);
+            const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
+
+            // Filter by completed statuses AND this user as the assigned referrer
+            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified', 'Unverified')";
+            const whereClause = `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;
+            const queryParams = [userId];
+
+            // Count total
+            const countQuery = `
+                SELECT COUNT(*) as Total
+                FROM ReferralRequests rr
+                ${whereClause}
+            `;
+            
+            const countResult = await dbService.executeQuery(countQuery, queryParams);
+            const total = countResult.recordset[0]?.Total || 0;
+            const totalPages = Math.ceil(total / safePageSize);
+
+            // Get paginated data - support both internal and external referrals
+            const offset = (safePageNumber - 1) * safePageSize;
+            const dataQuery = `
+                SELECT 
+                    rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
+                    rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
+                    rr.OrganizationID, rr.JobURL,
+                    -- For INTERNAL referrals (JobID not null)
+                    j.Title as InternalJobTitle,
+                    jo.Name as InternalCompanyName,
+                    jo.LogoURL as InternalLogoURL,
+                    -- For EXTERNAL referrals (ExtJobID not null)
+                    eo.Name as ExternalCompanyName,
+                    eo.LogoURL as ExternalLogoURL,
+                    -- Use stored JobTitle column with proper COALESCE
+                    COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    u.FirstName + ' ' + u.LastName as ApplicantName,
+                    u.Email as ApplicantEmail,
+                    u.UserID as ApplicantUserID,
+                    u.ProfilePictureURL as ApplicantProfilePictureURL,
+                    ar.ResumeLabel as ResumeLabel,
+                    ar.ResumeURL as ResumeURL,
+                    rp.FileURL as ProofFileURL,
+                    rp.FileType as ProofFileType,
+                    rp.Description as ProofDescription,
+                    rr.AssignedReferrerID as AssignedReferrerUserID
+                FROM ReferralRequests rr
+                LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
+                INNER JOIN Users u ON a.UserID = u.UserID
+                INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
+                LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
+                ${whereClause}
+                ORDER BY rr.ReferredAt DESC
+                OFFSET ${offset} ROWS
+                FETCH NEXT ${safePageSize} ROWS ONLY
+            `;
+            
+            const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
+            
+            return {
+                requests: dataResult.recordset || [],
+                total,
+                page: safePageNumber,
+                pageSize: safePageSize,
+                totalPages
+            };
+        } catch (error) {
+            console.error('Error getting completed referrals by user:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get my referral requests as a seeker (requests I made)
      */
     static async getMyReferralRequests(applicantId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
         try {
-            // ? FIX: Ensure parameters are integers
+            // Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
@@ -825,16 +856,15 @@ export class ReferralService {
                 -- ✅ NEW: JOIN for external organization data
                 LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
-                LEFT JOIN Applicants a_ref ON rr.AssignedReferrerID = a_ref.ApplicantID
-                LEFT JOIN Users ur ON a_ref.UserID = ur.UserID
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
+                LEFT JOIN Users ur ON rr.AssignedReferrerID = ur.UserID
                 ${whereClause}
                 ORDER BY rr.RequestedAt DESC
                 OFFSET ${offset} ROWS
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
             
-            // ? FIX: Pass integers as strings for SQL Server
+            // Pass integers as strings for SQL Server
             queryParams.push(offset.toString(), safePageSize.toString());
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
             
@@ -867,7 +897,7 @@ export class ReferralService {
             const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId, pointType]);
             
             if (existingRewardResult.recordset && existingRewardResult.recordset.length > 0) {
-                console.log(`Points already awarded for request ${requestId} (${pointType})`);
+                // Points already awarded for this type
                 return;
             }
 
@@ -891,8 +921,6 @@ export class ReferralService {
             `;
             
             await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
-            
-            console.log(`Awarded ${points} ${pointType} points to referrer ${referrerId} for request ${requestId}`);
         } catch (error) {
             console.error('Error awarding referral points:', error);
             // Don't rethrow - we don't want to break the main referral flow if points can't be awarded
@@ -1065,20 +1093,22 @@ export class ReferralService {
 
     /**
      * Get referral analytics for an applicant
+     * @param applicantId - Used for ApplicantID queries (seeker's requests)
+     * @param userId - Used for AssignedReferrerID queries (referrer's completed)
      */
-    static async getReferralAnalytics(applicantId: string): Promise<ReferralAnalytics> {
+    static async getReferralAnalytics(applicantId: string, userId: string): Promise<ReferralAnalytics> {
         try {
             const analyticsQuery = `
                 SELECT 
                     (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0) as TotalRequestsMade,
-                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0) as TotalRequestsReceived,
-                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param0 AND Status IN ('Completed', 'Verified')) as CompletedReferrals,
+                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param1) as TotalRequestsReceived,
+                    (SELECT COUNT(*) FROM ReferralRequests WHERE AssignedReferrerID = @param1 AND Status IN ('Completed', 'Verified')) as CompletedReferrals,
                     (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0 AND Status = 'Pending') as PendingRequests,
                     (SELECT ISNULL(SUM(PointsEarned), 0) FROM ReferralRewards WHERE ReferrerID = @param0) as TotalPointsEarned,
                     (SELECT COUNT(*) FROM ReferralRequests WHERE ApplicantID = @param0 AND CAST(RequestedAt AS DATE) = CAST(GETUTCDATE() AS DATE)) as DailyQuotaUsed
             `;
 
-            const result = await dbService.executeQuery(analyticsQuery, [applicantId]);
+            const result = await dbService.executeQuery(analyticsQuery, [applicantId, userId]);
             const data = result.recordset[0];
 
             const subscription = await this.getCurrentSubscription(applicantId);
@@ -1142,7 +1172,7 @@ export class ReferralService {
 
                 UNION ALL
 
-                -- Points converted to wallet
+                -- Points converted to wallet (only POINTS_CONVERSION, not REFERRAL_BONUS which is direct earnings)
                 SELECT 
                     wt.TransactionID as ID,
                     'converted' as TransactionType,
@@ -1159,7 +1189,7 @@ export class ReferralService {
                 INNER JOIN Wallets w ON wt.WalletID = w.WalletID
                 INNER JOIN Applicants a ON w.UserID = a.UserID
                 WHERE a.ApplicantID = @param0
-                AND wt.Source = 'REFERRAL_BONUS'
+                AND wt.Source = 'POINTS_CONVERSION'  -- Only actual point conversions, not direct referral earnings
                 AND wt.Amount > 0  -- Credits only (conversions)
 
                 ORDER BY TransactionDate DESC
@@ -1206,13 +1236,6 @@ export class ReferralService {
                 color: '#F59E0B', // Warning amber
                 category: 'bonus'
             },
-            conversion: {
-                icon: '\uD83D\uDCB8', // 💸 Money with wings emoji
-                title: 'Points Converted',
-                description: 'Points converted to wallet balance (1 point = ₹0.50)',
-                color: '#7EB900', // Green (negative/spent)
-                category: 'conversion'
-            },
             // 🚀 FUTURE: Any new point types can be added here without frontend changes
             monthly_bonus: {
                 icon: '\uD83C\uDF81', // 🎁 Gift emoji
@@ -1241,13 +1264,13 @@ export class ReferralService {
     /**
      * Claim a referral request with mandatory proof upload
      */
-    static async claimReferralRequestWithProof(referrerId: string, dto: ClaimReferralRequestWithProofDto): Promise<ReferralRequest> {
+    static async submitReferralWithProof(referrerId: string, userId: string, dto: SubmitReferralWithProofDto): Promise<ReferralRequest> {
         try {
-            // Check if request is still available - ✅ FIXED: Also retrieve ExtJobID and OrganizationID
+            // Check if request is available - allow Pending OR Claimed (by same user for continue flow)
             const requestQuery = `
-                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt
+                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID
                 FROM ReferralRequests
-                WHERE RequestID = @param0 AND Status = 'Pending'
+                WHERE RequestID = @param0 AND Status IN ('Pending', 'Claimed', 'Viewed', 'NotifiedToReferrers')
             `;
             const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID]);
             
@@ -1256,7 +1279,12 @@ export class ReferralService {
             }
             
             const request = requestResult.recordset[0];
-            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt } = request;
+            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt, Status: currentStatus, AssignedReferrerID: assignedReferrerId } = request;
+            
+            // If already claimed, only the same user can continue
+            if (currentStatus === 'Claimed' && assignedReferrerId && assignedReferrerId !== userId) {
+                throw new ValidationError('This request has already been claimed by another referrer');
+            }
             
             // Determine referral type
             const isExternal = !!extJobId && !jobId;
@@ -1303,13 +1331,14 @@ export class ReferralService {
             const referredAt = new Date();
             
             // Claim the request and mark as completed with proof
+            // AssignedReferrerID now stores UserID for easy frontend comparison
             const updateQuery = `
                 UPDATE ReferralRequests
                 SET Status = 'Completed', AssignedReferrerID = @param1, ReferredAt = @param2
                 WHERE RequestID = @param0
             `;
             
-            await dbService.executeQuery(updateQuery, [dto.requestID, referrerId, referredAt]);
+            await dbService.executeQuery(updateQuery, [dto.requestID, userId, referredAt]);
             
             // Create proof record immediately
             const proofId = AuthService.generateUniqueId();
@@ -1324,12 +1353,44 @@ export class ReferralService {
             await dbService.executeQuery(insertProofQuery, [
                 proofId, dto.requestID, referrerId, dto.proofFileURL, dto.proofFileType, dto.proofDescription || null, referredAt
             ]);
+
+            // ✅ NEW: Get referrer name for status history
+            const referrerQuery = `SELECT u.FirstName + ' ' + u.LastName as ReferrerName FROM Applicants a INNER JOIN Users u ON a.UserID = u.UserID WHERE a.ApplicantID = @param0`;
+            const referrerResult = await dbService.executeQuery(referrerQuery, [referrerId]);
+            const referrerName = referrerResult.recordset?.[0]?.ReferrerName || 'Referrer';
+
+            // ✅ NEW: Log ProofUploaded status
+            try {
+                await this.logStatusChange(
+                    dto.requestID,
+                    'ProofUploaded',
+                    userId,
+                    'referrer',
+                    referrerName,
+                    'Referral proof screenshot uploaded'
+                );
+            } catch (err) {
+                console.warn('Non-critical: Failed to log ProofUploaded status:', err);
+            }
+
+            // ✅ NEW: Log Completed status
+            try {
+                await this.logStatusChange(
+                    dto.requestID,
+                    'Completed',
+                    userId,
+                    'referrer',
+                    referrerName,
+                    'Referral successfully submitted to company'
+                );
+            } catch (err) {
+                console.warn('Non-critical: Failed to log Completed status:', err);
+            }
             
-            // ?? FIX: Award points for proof submission with quick response bonus
+            // Award points for proof submission with quick response bonus
             let baseProofPoints = 15; // Base points for submitting proof
             
             // Award base proof submission points first
-            console.log(`🎯 Awarding ${baseProofPoints} base proof submission points to referrer ${referrerId}`);
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
 
             // Calculate and award quick response bonus separately for better tracking
@@ -1339,22 +1400,11 @@ export class ReferralService {
             
             if (hoursFromRequest <= 24) {
                 const quickBonusPoints = 10; // Quick response bonus
-                console.log(`⚡ Quick response bonus awarded! Completed in ${hoursFromRequest.toFixed(1)} hours - awarding ${quickBonusPoints} bonus points`);
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
             
             // Update referrer stats
             await this.updateReferrerStats(referrerId);
-            
-            let totalPointsAwarded = baseProofPoints;
-            if (hoursFromRequest <= 24) {
-                totalPointsAwarded += 10; // Add quick bonus to display total
-            }
-            
-            console.log(`🎯 Referral request ${dto.requestID} claimed with proof by ${referrerId} - ${totalPointsAwarded} total points awarded`);
-            
-            // TODO: Notify seeker that referral was completed
-            // await ReferralNotificationService.notifyReferralCompleted(dto.requestID, referrerId, seekerId);
             
             return await this.getReferralRequestById(dto.requestID);
         } catch (error) {
@@ -1428,8 +1478,6 @@ export class ReferralService {
         transactionId: string;
     }> {
         try {
-            console.log(`💱 Converting points to wallet for applicant ${applicantId}, user ${userId}`);
-
             // Get current referral points
             const pointsQuery = `
                 SELECT ISNULL(ReferralPoints, 0) as CurrentPoints
@@ -1452,8 +1500,6 @@ export class ReferralService {
             const CONVERSION_RATE = 0.5;
             const walletAmount = currentPoints * CONVERSION_RATE;
 
-            console.log(`💰 Converting ${currentPoints} points to ₹${walletAmount.toFixed(2)}`);
-
             // Credit wallet using existing WalletService.creditBonus method
             const creditResult = await WalletService.creditBonus(
                 userId,
@@ -1474,8 +1520,6 @@ export class ReferralService {
             `;
             await dbService.executeQuery(resetQuery, [applicantId]);
 
-            console.log(`✅ Successfully converted ${currentPoints} points to ₹${walletAmount.toFixed(2)} for user ${userId}`);
-
             return {
                 success: true,
                 pointsConverted: currentPoints,
@@ -1486,6 +1530,225 @@ export class ReferralService {
         } catch (error) {
             console.error('Error converting points to wallet:', error);
             throw error;
+        }
+    }
+
+    // ===== STATUS HISTORY TRACKING =====
+
+    /**
+     * Log a status change to the history table for tracking
+     * Also updates the main ReferralRequests table status (with protection for Claimed status)
+     */
+    static async logStatusChange(
+        requestId: string,
+        status: string,
+        actorId?: string,
+        actorType?: 'system' | 'seeker' | 'referrer',
+        actorName?: string,
+        statusMessage?: string
+    ): Promise<{ success: boolean; historyId: string }> {
+        try {
+            const historyId = AuthService.generateUniqueId();
+            
+            // Get current status first to check if we should update
+            const currentStatusQuery = `SELECT Status FROM ReferralRequests WHERE RequestID = @param0`;
+            const currentResult = await dbService.executeQuery(currentStatusQuery, [requestId]);
+            const currentStatus = currentResult.recordset?.[0]?.Status;
+            
+            // Status protection rules:
+            // 1. "Viewed" only updates once (from Pending/NotifiedToReferrers)
+            // 2. "Claimed" should not downgrade to "Viewed"
+            // 3. Any status at "Claimed" or beyond should not go back to "Viewed"
+            const protectedStatuses = ['Viewed', 'Claimed', 'ProofUploaded', 'Completed', 'Verified'];
+            const shouldUpdateStatus = !(status === 'Viewed' && protectedStatuses.includes(currentStatus));
+            
+            if (shouldUpdateStatus) {
+                // Update the main ReferralRequests table status
+                // If status is 'Claimed' and actorType is 'referrer', set AssignedReferrerID (stores UserID)
+                let updateMainQuery: string;
+                let updateParams: any[];
+                
+                if (status === 'Claimed' && actorType === 'referrer' && actorId) {
+                    updateMainQuery = `
+                        UPDATE ReferralRequests 
+                        SET Status = @param0, AssignedReferrerID = @param1, ReferredAt = GETUTCDATE()
+                        WHERE RequestID = @param2
+                    `;
+                    updateParams = [status, actorId, requestId];
+                } else {
+                    updateMainQuery = `
+                        UPDATE ReferralRequests 
+                        SET Status = @param0
+                        WHERE RequestID = @param1
+                    `;
+                    updateParams = [status, requestId];
+                }
+                await dbService.executeQuery(updateMainQuery, updateParams);
+            }
+            
+            // Always insert into history table (logs the view even if status not updated)
+            const insertQuery = `
+                INSERT INTO ReferralRequestStatusHistory (
+                    HistoryID, RequestID, Status, StatusMessage, ActorID, ActorType, ActorName, CreatedAt
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5, @param6, GETUTCDATE()
+                )
+            `;
+            
+            await dbService.executeQuery(insertQuery, [
+                historyId,
+                requestId,
+                status,
+                statusMessage || null,
+                actorId || null,
+                actorType || 'system',
+                actorName || null
+            ]);
+            
+            return { success: true, historyId };
+        } catch (error) {
+            console.error('Error logging status change:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get complete status history for a referral request
+     * Also returns full request details for the tracking screen
+     */
+    static async getStatusHistory(requestId: string): Promise<{
+        requestId: string;
+        currentStatus: string;
+        request: any;
+        history: Array<{
+            historyId: string;
+            status: string;
+            statusMessage?: string;
+            actorId?: string;
+            actorName?: string;
+            actorType?: string;
+            createdAt: Date;
+        }>;
+        referrerUserIds: string[];
+    }> {
+        try {
+            // Get full request details
+            const requestQuery = `
+                SELECT 
+                    rr.RequestID,
+                    rr.ApplicantID,
+                    rr.Status,
+                    rr.RequestedAt,
+                    rr.AssignedReferrerID as AssignedReferrerUserID,
+                    rr.OrganizationID,
+                    rr.JobID,
+                    rr.ExtJobID,
+                    rr.JobTitle as StoredJobTitle,
+                    rr.JobURL as StoredJobURL,
+                    j.Title as InternalJobTitle,
+                    COALESCE(jo.Name, eo.Name) as CompanyName,
+                    COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
+                    u.FirstName + ' ' + u.LastName as AssignedReferrerName
+                FROM ReferralRequests rr
+                LEFT JOIN Jobs j ON j.JobID = rr.JobID
+                LEFT JOIN Organizations jo ON jo.OrganizationID = j.OrganizationID
+                LEFT JOIN Organizations eo ON eo.OrganizationID = rr.OrganizationID AND rr.ExtJobID IS NOT NULL
+                LEFT JOIN Users u ON u.UserID = rr.AssignedReferrerID
+                WHERE rr.RequestID = @param0
+            `;
+            const requestResult = await dbService.executeQuery(requestQuery, [requestId]);
+            
+            if (!requestResult.recordset || requestResult.recordset.length === 0) {
+                throw new NotFoundError('Referral request not found');
+            }
+
+            const row = requestResult.recordset[0];
+            const currentStatus = row.Status;
+            
+            // Build request object with proper fallbacks for external jobs
+            const requestData = {
+                RequestID: row.RequestID,
+                ApplicantID: row.ApplicantID,
+                Status: row.Status,
+                RequestedAt: row.RequestedAt,
+                AssignedReferrerUserID: row.AssignedReferrerUserID,
+                AssignedReferrerName: row.AssignedReferrerName,
+                OrganizationID: row.OrganizationID,
+                JobID: row.JobID,
+                ExtJobID: row.ExtJobID,
+                JobTitle: row.InternalJobTitle || row.StoredJobTitle || 'Job Title',
+                JobURL: row.StoredJobURL, // JobURL is only in ReferralRequests table
+                CompanyName: row.CompanyName || 'Company',
+                OrganizationLogo: row.OrganizationLogo,
+            };
+
+            // Get history with ActorID for referrers
+            const historyQuery = `
+                SELECT HistoryID, Status, StatusMessage, ActorID, ActorName, ActorType, CreatedAt
+                FROM ReferralRequestStatusHistory
+                WHERE RequestID = @param0
+                ORDER BY CreatedAt ASC
+            `;
+            
+            const historyResult = await dbService.executeQuery(historyQuery, [requestId]);
+            
+            const history = (historyResult.recordset || []).map((row: any) => ({
+                historyId: row.HistoryID,
+                status: row.Status,
+                statusMessage: row.StatusMessage,
+                actorId: row.ActorID,
+                actorName: row.ActorName,
+                actorType: row.ActorType,
+                createdAt: row.CreatedAt
+            }));
+
+            // Get unique referrer UserIDs from history (actors with type 'referrer')
+            const referrerUserIds = [...new Set(
+                history
+                    .filter((h: any) => h.actorType === 'referrer' && h.actorId)
+                    .map((h: any) => h.actorId)
+            )];
+
+            return {
+                requestId,
+                currentStatus,
+                request: requestData,
+                history,
+                referrerUserIds // List of all referrers who interacted with this request
+            };
+        } catch (error) {
+            console.error('Error getting status history:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Auto-log initial status when request is created
+     */
+    static async logInitialStatus(requestId: string, seekerName: string): Promise<void> {
+        try {
+            // Log Pending status
+            await this.logStatusChange(
+                requestId,
+                'Pending',
+                undefined,
+                'system',
+                undefined,
+                'Referral request created'
+            );
+
+            // Immediately log NotifiedToReferrers
+            await this.logStatusChange(
+                requestId,
+                'NotifiedToReferrers',
+                undefined,
+                'system',
+                undefined,
+                'Request is now visible to employees at this company'
+            );
+        } catch (error) {
+            console.warn('Failed to log initial status:', error);
+            // Don't throw - this is non-critical
         }
     }
 }

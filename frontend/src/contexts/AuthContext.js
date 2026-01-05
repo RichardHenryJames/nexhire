@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
+import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
 
 const AuthContext = createContext();
 
@@ -49,6 +50,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingRedirect, setPendingRedirect] = useState(null);
+  const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false);
   
   // IMPROVED: Initialize from sessionStorage on mount
   const [pendingGoogleAuth, setPendingGoogleAuthState] = useState(() => {
@@ -61,12 +64,36 @@ export const AuthProvider = ({ children }) => {
     savePendingGoogleAuthToStorage(data);
   };
 
+  // Check for pending redirect on mount
+  useEffect(() => {
+    const checkPendingRedirect = async () => {
+      const savedRoute = await getAndClearRedirectRoute();
+      if (savedRoute) {
+        setPendingRedirect(savedRoute);
+      }
+    };
+    checkPendingRedirect();
+  }, []);
+
   // Initialize smart auth methods
   const smartMethods = createSmartAuthMethods(refopenAPI, setUser, setError);
 
   // Initialize auth state on app start
   useEffect(() => {
     checkAuthState();
+  }, []);
+
+  // Global session-expired hook: any API call that detects expired/invalid token forces user back to Login
+  useEffect(() => {
+    refopenAPI.setOnSessionExpired(() => {
+      setUser(null);
+      setError(null);
+      setPendingGoogleAuth(null);
+    });
+
+    return () => {
+      refopenAPI.setOnSessionExpired(null);
+    };
   }, []);
 
   // DEBUG: Track pendingGoogleAuth state changes
@@ -84,6 +111,10 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
+          // Fetch verification status for job seekers
+          if (result.data?.UserType === 'JobSeeker') {
+            refreshVerificationStatus();
+          }
         } else {
           await refopenAPI.clearTokens();
           // FIXED: Don't set error for normal token expiration
@@ -102,6 +133,18 @@ export const AuthProvider = ({ children }) => {
       setError(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Refresh verification status
+  const refreshVerificationStatus = async () => {
+    try {
+      const response = await refopenAPI.getVerificationStatus();
+      if (response.success) {
+        setIsVerifiedReferrer(response.data?.isVerifiedReferrer || false);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch verification status:', error);
     }
   };
 
@@ -145,7 +188,11 @@ export const AuthProvider = ({ children }) => {
         if (loginResult.success) {
           
           setUser(loginResult.data.user);
-          return { success: true, user: loginResult.data.user };
+          
+          // Check for pending redirect after successful Google login
+          handlePostLoginRedirect();
+          
+          return { success: true, user: loginResult.data.user, hasPendingRedirect: !!pendingRedirect };
         }
         
         // Check if it's a user not found error
@@ -201,7 +248,22 @@ export const AuthProvider = ({ children }) => {
     setPendingGoogleAuth(null);
   };
 
-  // Existing login method (unchanged)
+  // Handle redirect after successful login
+  const handlePostLoginRedirect = () => {
+    if (pendingRedirect) {
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        const navigated = navigateToRoute(pendingRedirect);
+        if (navigated) {
+          setPendingRedirect(null);
+        }
+      }, 100);
+      return true;
+    }
+    return false;
+  };
+
+  // Existing login method - now with redirect support
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -213,7 +275,11 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         
         setUser(result.data.user);
-        return { success: true, user: result.data.user };
+        
+        // Check for pending redirect after successful login
+        handlePostLoginRedirect();
+        
+        return { success: true, user: result.data.user, hasPendingRedirect: !!pendingRedirect };
       } else {
         const errorMessage = result.message || 'Login failed';
         console.error('Login failed:', errorMessage);
@@ -503,6 +569,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     pendingGoogleAuth, // NEW: Expose pending Google auth data
+    pendingRedirect, // Expose pending redirect route (for session expiry redirect back)
     
     // Authentication methods
     login,
@@ -510,6 +577,7 @@ export const AuthProvider = ({ children }) => {
     clearPendingGoogleAuth, // NEW: Clear pending Google auth
     register,
     logout,
+    handlePostLoginRedirect, // Handle redirect after login
     
     // Profile methods
     updateProfile,           
@@ -526,6 +594,8 @@ export const AuthProvider = ({ children }) => {
     isEmployer: user?.UserType === 'Employer',
     isJobSeeker: user?.UserType === 'JobSeeker',
     isAdmin: user?.UserType === 'Admin',
+    isVerifiedReferrer,
+    refreshVerificationStatus,
     userType: user?.UserType || null,
     userName: user ? `${user.FirstName} ${user.LastName}` : null,
     userEmail: user?.Email || null,
@@ -536,6 +606,7 @@ export const AuthProvider = ({ children }) => {
     isGoogleUser: user?.LoginMethod === 'Google',
     hasPendingGoogleAuth: !!pendingGoogleAuth,
     googleAuthAvailable: googleAuth.isConfigured(),
+    hasPendingRedirect: !!pendingRedirect,
   };
 
   return (

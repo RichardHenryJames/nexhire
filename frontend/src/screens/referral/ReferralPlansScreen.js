@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,24 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 
 export default function ReferralPlansScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState(null);
-  const [eligibility, setEligibility] = useState(null);
 
   // Add navigation check at component load
   useEffect(() => {
@@ -28,10 +34,9 @@ export default function ReferralPlansScreen({ navigation }) {
   const loadPlansAndSubscription = async () => {
     try {
       setLoading(true);
-      const [plansRes, subscriptionRes, eligibilityRes] = await Promise.all([
+      const [plansRes, subscriptionRes] = await Promise.all([
         refopenAPI.getReferralPlans(),
-        refopenAPI.getCurrentReferralSubscription(),
-        refopenAPI.checkReferralEligibility()
+        refopenAPI.getCurrentReferralSubscription()
       ]);
 
       if (plansRes.success) {
@@ -40,10 +45,6 @@ export default function ReferralPlansScreen({ navigation }) {
 
       if (subscriptionRes.success) {
         setCurrentSubscription(subscriptionRes.data);
-      }
-
-      if (eligibilityRes.success) {
-        setEligibility(eligibilityRes.data);
       }
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -178,27 +179,23 @@ export default function ReferralPlansScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Upgrade Your Referral Power</Text>
+      <View style={styles.innerContainer}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Upgrade Your Referral Power</Text>
         <Text style={styles.subtitle}>
           Choose a plan that fits your job search needs and boost your chances of getting referred!
         </Text>
 
         {/* Current Status */}
-        {eligibility && (
+        {currentSubscription && (
           <View style={styles.statusCard}>
             <View style={styles.statusHeader}>
               <Ionicons name="information-circle" size={20} color={colors.primary} />
               <Text style={styles.statusTitle}>Current Status</Text>
             </View>
             <Text style={styles.statusText}>
-              Daily quota: {eligibility.dailyQuotaRemaining} of {eligibility.hasActiveSubscription ? currentSubscription?.ReferralsPerDay || 0 : 5} remaining
+              Active plan: {currentSubscription.PlanName}
             </Text>
-            {currentSubscription && (
-              <Text style={styles.statusText}>
-                Active plan: {currentSubscription.PlanName}
-              </Text>
-            )}
           </View>
         )}
 
@@ -251,15 +248,24 @@ export default function ReferralPlansScreen({ navigation }) {
             All plans include secure payments through Razorpay and can be canceled anytime.
           </Text>
         </View>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

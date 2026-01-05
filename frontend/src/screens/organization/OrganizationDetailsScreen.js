@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,36 +13,37 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 
 export default function OrganizationDetailsScreen({ route, navigation }) {
-// ? Handle both route params and URL query params (for web deep linking)
-const getOrganizationId = () => {
-  // First try route.params
-  if (route.params?.organizationId) {
-    return route.params.organizationId;
-  }
-    
-  // For web, check URL query parameters
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryOrgId = urlParams.get('organizationId');
-    if (queryOrgId) {
-      return queryOrgId;
-    }
-  }
-    
-  return null;
-};
-  
-const organizationId = getOrganizationId();
-const [loading, setLoading] = useState(true);
-const [organization, setOrganization] = useState(null);
-const [recentJobs, setRecentJobs] = useState([]);
-const [loadingJobs, setLoadingJobs] = useState(false);
-const [error, setError] = useState(null);
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  // ? Navigation header with smart back button
+  // Handle both route params and URL query params (for web deep linking)
+  const getOrganizationId = () => {
+    if (route.params?.organizationId) {
+      return route.params.organizationId;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryOrgId = urlParams.get('organizationId');
+      if (queryOrgId) return queryOrgId;
+    }
+    return null;
+  };
+  
+  const organizationId = getOrganizationId();
+  const [loading, setLoading] = useState(true);
+  const [organization, setOrganization] = useState(null);
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Navigation header
   useEffect(() => {
     navigation.setOptions({
       title: 'Company Details',
@@ -60,24 +61,18 @@ const [error, setError] = useState(null);
       },
       headerLeft: () => (
         <TouchableOpacity 
-          style={styles.headerButton} 
+          style={{ padding: 8, marginLeft: 8 }} 
           onPress={() => {
-            // ? Smart back navigation - check if we have meaningful navigation history
             const navState = navigation.getState();
             const routes = navState?.routes || [];
             const currentIndex = navState?.index || 0;
             
-            // If we have more than 1 route in the stack, go back normally
-            // This handles: Jobs -> OrganizationDetails (back should go to Jobs)
             if (routes.length > 1 && currentIndex > 0) {
               navigation.goBack();
             } else {
-              // Hard refresh scenario - navigate to Home tab
               navigation.navigate('Main', {
                 screen: 'MainTabs',
-                params: {
-                  screen: 'Home'
-                }
+                params: { screen: 'Home' }
               });
             }
           }} 
@@ -87,7 +82,7 @@ const [error, setError] = useState(null);
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors]);
 
   useEffect(() => {
     if (!organizationId) {
@@ -107,14 +102,13 @@ const [error, setError] = useState(null);
       
       if (result.success && result.data) {
         setOrganization(result.data);
-        // Load recent jobs after organization details
         loadRecentJobs(result.data.id);
       } else {
         setError(result.error || 'Failed to load organization details');
       }
     } catch (err) {
       console.error('Error loading organization details:', err);
-      setError(err.message || 'An error occurred while loading organization details');
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -122,91 +116,33 @@ const [error, setError] = useState(null);
 
   const loadRecentJobs = async (orgId) => {
     try {
-      console.log('????????????????????????????????????????');
-      console.log('?? [OrganizationDetails] LOADING RECENT JOBS');
-      console.log('????????????????????????????????????????');
-      console.log('?? Organization ID:', orgId);
-      console.log('?? Organization ID Type:', typeof orgId);
-      
       setLoadingJobs(true);
       
-      // Get jobs from this organization posted in last 24 hours
       const filters = {
         organizationIds: [orgId].join(','),
         postedWithinDays: 1,
         sortBy: 'PublishedAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        dontPersonalize: true
       };
-      
-      console.log('?? [OrganizationDetails] API Request Details:');
-      console.log('   - URL: /api/jobs');
-      console.log('   - Page: 1');
-      console.log('   - PageSize: 10');
-      console.log('   - Filters:', JSON.stringify(filters, null, 2));
       
       const result = await refopenAPI.getJobs(1, 10, filters);
       
-      console.log('????????????????????????????????????????');
-      console.log('?? [OrganizationDetails] API RESPONSE RECEIVED');
-      console.log('????????????????????????????????????????');
-      console.log('? Success:', result.success);
-      console.log('? Has Data:', !!result.data);
-      console.log('? Data Type:', typeof result.data);
-      console.log('? Is Array:', Array.isArray(result.data));
-      console.log('? Data Length:', result.data?.length || 0);
-      console.log('? Error:', result.error || 'none');
-      
-      if (result.data && Array.isArray(result.data)) {
-        console.log('????????????????????????????????????????');
-        console.log('?? [OrganizationDetails] JOBS DATA DETAILS');
-        console.log('????????????????????????????????????????');
-        result.data.forEach((job, index) => {
-          console.log(`\n?? Job ${index + 1}:`);
-          console.log('   - JobID:', job.JobID);
-          console.log('   - Title:', job.Title);
-          console.log('   - OrganizationName:', job.OrganizationName);
-          console.log('   - OrganizationID:', job.OrganizationID);
-          console.log('   - PublishedAt:', job.PublishedAt);
-          console.log('   - CreatedAt:', job.CreatedAt);
-          console.log('   - Location:', job.Location);
-          console.log('   - JobTypeName:', job.JobTypeName);
-        });
-      } else {
-        console.log('?? [OrganizationDetails] Data is not an array or is null');
-        console.log('   Raw data:', result.data);
-      }
-      
       if (result.success && result.data && Array.isArray(result.data)) {
-        const jobsToShow = result.data.slice(0, 5);
-        console.log('\n? [OrganizationDetails] Setting recentJobs state');
-        console.log('   - Jobs to show:', jobsToShow.length);
-        console.log('   - Job IDs:', jobsToShow.map(j => j.JobID));
-        setRecentJobs(jobsToShow);
+        setRecentJobs(result.data.slice(0, 5));
       } else {
-        console.warn('?? [OrganizationDetails] No jobs found or API failed');
-        console.warn('   - Setting empty array');
         setRecentJobs([]);
       }
-      
-      console.log('????????????????????????????????????????\n');
     } catch (err) {
-      console.error('????????????????????????????????????????');
-      console.error('? [OrganizationDetails] ERROR LOADING JOBS');
-      console.error('????????????????????????????????????????');
-      console.error('Error Type:', err.constructor.name);
-      console.error('Error Message:', err.message);
-      console.error('Full Error:', err);
-      console.error('????????????????????????????????????????\n');
+      console.error('Error loading recent jobs:', err);
       setRecentJobs([]);
     } finally {
       setLoadingJobs(false);
-      console.log('?? [OrganizationDetails] loadRecentJobs completed\n');
     }
   };
 
   const openURL = (url) => {
     if (!url) return;
-    
     try {
       if (Platform.OS === 'web') {
         window.open(url, '_blank');
@@ -218,85 +154,29 @@ const [error, setError] = useState(null);
     }
   };
 
-  const InfoRow = ({ icon, label, value, onPress, isLink = false }) => {
-    if (!value) return null;
-
-    const content = (
-      <View style={styles.infoRow}>
-        <View style={styles.infoIconContainer}>
-          <Ionicons name={icon} size={20} color={colors.primary} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={styles.infoLabel}>{label}</Text>
-          <Text style={[styles.infoValue, isLink && styles.infoValueLink]}>
-            {value}
-          </Text>
-        </View>
-        {isLink && (
-          <Ionicons name="open-outline" size={18} color={colors.primary} />
-        )}
-      </View>
-    );
-
-    if (onPress) {
-      return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-          {content}
-        </TouchableOpacity>
-      );
-    }
-
-    return content;
+  const formatDate = (job) => {
+    const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
+    if (!dateString) return 'Recently posted';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Recently posted';
+    
+    const now = new Date();
+    const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (hours < 1) return 'Just posted';
+    if (hours < 24) return `${hours} hours ago`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} days ago`;
+    
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} weeks ago`;
+    
+    return date.toLocaleDateString();
   };
 
-  const JobCard = ({ job }) => {
-    const formatDate = (job) => {
-      const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
-      
-      if (!dateString) return 'Recently posted';
-      
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Recently posted';
-      
-      const now = new Date();
-      const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
-      if (hours < 1) return 'Just posted';
-      if (hours < 24) return `${hours} hours ago`;
-      
-      const days = Math.floor(hours / 24);
-      if (days < 7) return `${days} days ago`;
-      
-      const weeks = Math.floor(days / 7);
-      if (weeks < 4) return `${weeks} weeks ago`;
-      
-      return date.toLocaleDateString();
-    };
-
-    return (
-      <TouchableOpacity
-        style={styles.jobCard}
-        onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-      >
-        <View style={styles.jobHeader}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.Title}
-          </Text>
-          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
-        </View>
-        <Text style={styles.jobLocation}>{job.Location}</Text>
-        <View style={styles.jobMeta}>
-          <View style={styles.jobTypeTag}>
-            <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
-          </View>
-          <Text style={styles.jobDate}>
-            {formatDate(job)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
+  // Loading state
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -306,16 +186,14 @@ const [error, setError] = useState(null);
     );
   }
 
+  // Error state
   if (error || !organization) {
     return (
       <View style={styles.centerContainer}>
         <Ionicons name="business-outline" size={64} color={colors.gray400} />
         <Text style={styles.errorTitle}>Unable to Load</Text>
         <Text style={styles.errorText}>{error || 'Organization not found'}</Text>
-        <TouchableOpacity 
-          style={styles.retryButton}
-          onPress={loadOrganizationDetails}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={loadOrganizationDetails}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>
@@ -323,97 +201,132 @@ const [error, setError] = useState(null);
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.headerBackground} />
-        
-        {/* Logo Container */}
-        <View style={styles.logoContainer}>
-          {organization.logoURL ? (
-            <Image 
-              source={{ uri: organization.logoURL }} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="business" size={48} color={colors.gray400} />
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.innerContainer}>
+        {/* Header Card */}
+        <View style={styles.headerCard}>
+          {/* Company Header Row */}
+          <View style={styles.companyHeaderRow}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              {organization.logoURL ? (
+                <Image 
+                  source={{ uri: organization.logoURL }} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.logoPlaceholder}>
+                  <Ionicons name="business" size={40} color={colors.gray400} />
+                </View>
+              )}
             </View>
-          )}
+
+            {/* Company Info */}
+            <View style={styles.companyInfo}>
+              <Text style={styles.companyName}>{organization.name}</Text>
+              
+              {/* Badges Row */}
+              <View style={styles.badgesRow}>
+                {!!organization.verification && (
+                  <View style={[
+                    styles.badge,
+                    { backgroundColor: organization.verification === 'Verified' ? colors.success + '15' : colors.warning + '15' }
+                  ]}>
+                    <Ionicons 
+                      name={organization.verification === 'Verified' ? 'checkmark-circle' : 'shield-outline'} 
+                      size={14} 
+                      color={organization.verification === 'Verified' ? colors.success : colors.warning} 
+                    />
+                    <Text style={[
+                      styles.badgeText,
+                      { color: organization.verification === 'Verified' ? colors.success : colors.warning }
+                    ]}>
+                      {organization.verification}
+                    </Text>
+                  </View>
+                )}
+                
+                {(organization.isFortune500 === true || organization.isFortune500 === 1) && (
+                  <View style={[styles.badge, styles.fortune500Badge]}>
+                    <Ionicons name="trophy" size={14} color="#B8860B" />
+                    <Text style={styles.fortune500Text}>Fortune 500</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Quick Links */}
+              <View style={styles.quickLinksRow}>
+                {organization.website && (
+                  <TouchableOpacity 
+                    style={styles.quickLinkBtn}
+                    onPress={() => openURL(organization.website)}
+                  >
+                    <Ionicons name="globe-outline" size={16} color={colors.primary} />
+                    <Text style={styles.quickLinkText}>Visit Website</Text>
+                  </TouchableOpacity>
+                )}
+                {organization.linkedIn && (
+                  <TouchableOpacity 
+                    style={styles.quickLinkBtn}
+                    onPress={() => openURL(organization.linkedIn)}
+                  >
+                    <Ionicons name="logo-linkedin" size={16} color={colors.primary} />
+                    <Text style={styles.quickLinkText}>LinkedIn Profile</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
         </View>
 
-        {/* Company Name and Verification */}
-        <View style={styles.headerInfo}>
-          <Text style={styles.companyName}>{organization.name}</Text>
-          
-          {/* Verification Badge */}
-          {!!organization.verification && (
-            <View style={styles.verificationBadge}>
-              <Ionicons 
-                name={organization.verification === 'Verified' ? 'checkmark-circle' : 'shield-outline'} 
-                size={16} 
-                color={organization.verification === 'Verified' ? colors.success : colors.warning} 
-              />
-              <Text style={[
-                styles.verificationText,
-                organization.verification === 'Verified' ? styles.verifiedText : styles.unverifiedText
-              ]}>
-                {organization.verification}
-              </Text>
-            </View>
-          )}
-
-          {/* Fortune 500 Badge */}
-          {(organization.isFortune500 === true || organization.isFortune500 === 1) && (
-            <View style={styles.fortune500Badge}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
-              <Text style={styles.fortune500Text}>Fortune 500</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Recent Jobs Section - Posted in Last 24 Hours */}
+        {/* Recent Jobs Section */}
         {!loadingJobs && recentJobs.length > 0 && (
-          <View style={styles.recentJobsSection}>
-            <View style={styles.recentJobsHeader}>
-              <View style={styles.recentJobsHeaderLeft}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
                 <Ionicons name="time-outline" size={20} color={colors.primary} />
-                <Text style={styles.recentJobsTitle}>
-                  Recent Jobs ({recentJobs.length})
-                </Text>
+                <Text style={styles.sectionTitle}>Recent Jobs ({recentJobs.length})</Text>
               </View>
               {recentJobs.length >= 5 && (
-                <TouchableOpacity 
-                  onPress={() => {
-                    navigation.navigate('Jobs', { 
-                      organizationId: organization.id,
-                      postedWithinDays: 1
-                    });
-                  }}
-                >
+                <TouchableOpacity onPress={() => navigation.navigate('Jobs', { organizationId: organization.id })}>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.recentJobsSubtitle}>Posted in last 24 hours</Text>
+            <Text style={styles.sectionSubtitle}>Posted in last 24 hours</Text>
+            
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
+              contentContainerStyle={styles.jobsScrollContent}
             >
               {recentJobs.map((job, index) => (
-                <JobCard key={job.JobID || index} job={job} />
+                <TouchableOpacity
+                  key={job.JobID || index}
+                  style={styles.jobCard}
+                  onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+                >
+                  <Text style={styles.jobTitle} numberOfLines={2}>{job.Title}</Text>
+                  <Text style={styles.jobLocation} numberOfLines={1}>{job.Location}</Text>
+                  <View style={styles.jobMeta}>
+                    <View style={styles.jobTypeTag}>
+                      <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+                    </View>
+                    <Text style={styles.jobDate}>{formatDate(job)}</Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
         )}
 
         {loadingJobs && (
-          <View style={styles.recentJobsSection}>
+          <View style={styles.section}>
             <View style={styles.loadingJobsContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.loadingJobsText}>Loading recent jobs...</Text>
@@ -421,82 +334,75 @@ const [error, setError] = useState(null);
           </View>
         )}
 
-        {/* Description Section */}
+        {/* About Section */}
         {organization.description && !organization.description.includes('Auto-created') && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.description}>{organization.description}</Text>
+            <View style={styles.card}>
+              <Text style={styles.description}>{organization.description}</Text>
+            </View>
           </View>
         )}
 
-        {/* Quick Info Section */}
+        {/* Company Information Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Company Information</Text>
-          
-          <InfoRow 
-            icon="business-outline"
-            label="Industry"
-            value={organization.industry}
-          />
-          
-          {organization.size && organization.size !== 'Unknown' && (
-            <InfoRow 
-              icon="people-outline"
-              label="Company Size"
-              value={organization.size}
-            />
-          )}
-          
-          {organization.location && (
-            <InfoRow 
-              icon="location-outline"
-              label="Location"
-              value={organization.location}
-            />
-          )}
-          
-          {organization.foundedYear && (
-            <InfoRow 
-              icon="calendar-outline"
-              label="Founded"
-              value={organization.foundedYear}
-            />
-          )}
-        </View>
-
-        {/* Links Section */}
-        {(organization.website || organization.linkedIn) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Connect</Text>
-            
-            {organization.website && (
-              <InfoRow 
-                icon="globe-outline"
-                label="Website"
-                value={organization.website}
-                isLink={true}
-                onPress={() => openURL(organization.website)}
-              />
+          <View style={styles.card}>
+            {organization.industry && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="business-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Industry</Text>
+                  <Text style={styles.infoValue}>{organization.industry}</Text>
+                </View>
+              </View>
             )}
             
-            {organization.linkedIn && (
-              <InfoRow 
-                icon="logo-linkedin"
-                label="LinkedIn"
-                value="View LinkedIn Profile"
-                isLink={true}
-                onPress={() => openURL(organization.linkedIn)}
-              />
+            {organization.size && organization.size !== 'Unknown' && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="people-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Company Size</Text>
+                  <Text style={styles.infoValue}>{organization.size}</Text>
+                </View>
+              </View>
+            )}
+            
+            {organization.location && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="location-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoValue}>{organization.location}</Text>
+                </View>
+              </View>
+            )}
+            
+            {organization.foundedYear && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Founded</Text>
+                  <Text style={styles.infoValue}>{organization.foundedYear}</Text>
+                </View>
+              </View>
             )}
           </View>
-        )}
+        </View>
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <View style={styles.actionSection}>
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => {
-              // Navigate to AskReferral screen with organization pre-selected
               navigation.navigate('AskReferral', { 
                 preSelectedOrganization: {
                   id: organization.id,
@@ -512,7 +418,7 @@ const [error, setError] = useState(null);
           </TouchableOpacity>
         </View>
 
-        {/* Footer Info */}
+        {/* Footer */}
         {(organization.createdAt || organization.updatedAt) && (
           <View style={styles.footer}>
             {organization.createdAt && (
@@ -532,323 +438,334 @@ const [error, setError] = useState(null);
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-  },
-  errorTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
-  header: {
-    position: 'relative',
-    paddingBottom: 24,
-    backgroundColor: colors.surface,
-  },
-  headerBackground: {
-    height: 120,
-    backgroundColor: colors.primary + '15',
-  },
-  logoContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.white,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerInfo: {
-    marginTop: 0,
-    paddingLeft: 140,
-    paddingRight: 20,
-  },
-  companyName: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 8,
-  },
-  verificationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.success + '15',
-    marginBottom: 8,
-  },
-  verificationText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    marginLeft: 4,
-  },
-  verifiedText: {
-    color: colors.success,
-  },
-  unverifiedText: {
-    color: colors.warning,
-  },
-  fortune500Badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#FFD70020',
-    borderWidth: 1,
-    borderColor: '#FFD700',
-  },
-  fortune500Text: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: '#B8860B',
-    marginLeft: 4,
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: typography.sizes.md,
-    color: colors.gray700,
-    lineHeight: 24,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  infoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray600,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  infoValueLink: {
-    color: colors.primary,
-  },
-  actionSection: {
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  actionButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    marginLeft: 8,
-  },
-  footer: {
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray500,
-    marginBottom: 4,
-  },
-  headerButton: {
-    padding: 8,
-  },
-  recentJobsSection: {
-    marginBottom: 24,
-  },
-  recentJobsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  recentJobsHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recentJobsTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginLeft: 8,
-  },
-  recentJobsSubtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    marginBottom: 12,
-    marginTop: -8,
-  },
-  seeAllText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-  horizontalScroll: {
-    paddingRight: 20,
-  },
-  jobCard: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    width: 280,
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false } = responsive;
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  jobHeader: {
-    marginBottom: 8,
-  },
-  jobTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  jobCompany: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    fontWeight: typography.weights.medium,
-  },
-  jobLocation: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    marginBottom: 12,
-  },
-  jobMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  jobTypeTag: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  jobTypeText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-  jobDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
-  },
-  loadingJobsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-  },
-  loadingJobsText: {
-    marginLeft: 12,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-  },
-});
+    scrollContent: {
+      flexGrow: 1,
+      alignItems: isDesktop ? 'center' : 'stretch',
+      paddingBottom: 40,
+    },
+    innerContainer: {
+      width: '100%',
+      maxWidth: isDesktop ? 900 : '100%',
+      paddingHorizontal: isMobile ? 0 : 24,
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 40,
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    errorTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    errorText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    retryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    
+    // Header Card
+    headerCard: {
+      backgroundColor: colors.surface,
+      padding: isMobile ? 16 : 24,
+      marginBottom: 16,
+      ...(isMobile ? {} : {
+        borderRadius: 16,
+        marginTop: 16,
+      }),
+    },
+    companyHeaderRow: {
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'center' : 'flex-start',
+    },
+    logoContainer: {
+      width: isMobile ? 100 : 120,
+      height: isMobile ? 100 : 120,
+      borderRadius: 16,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: isMobile ? 16 : 0,
+      marginRight: isMobile ? 0 : 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    logo: {
+      width: isMobile ? 80 : 100,
+      height: isMobile ? 80 : 100,
+      borderRadius: 12,
+    },
+    logoPlaceholder: {
+      width: isMobile ? 80 : 100,
+      height: isMobile ? 80 : 100,
+      borderRadius: 12,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    companyInfo: {
+      flex: 1,
+      alignItems: isMobile ? 'center' : 'flex-start',
+    },
+    companyName: {
+      fontSize: isMobile ? 22 : 28,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 12,
+      textAlign: isMobile ? 'center' : 'left',
+    },
+    badgesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: isMobile ? 'center' : 'flex-start',
+      gap: 8,
+      marginBottom: 16,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      gap: 4,
+    },
+    badgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    fortune500Badge: {
+      backgroundColor: '#FFD70020',
+      borderWidth: 1,
+      borderColor: '#FFD700',
+    },
+    fortune500Text: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#B8860B',
+    },
+    quickLinksRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: isMobile ? 'center' : 'flex-start',
+      gap: 12,
+    },
+    quickLinkBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '10',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      gap: 6,
+    },
+    quickLinkText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.primary,
+    },
+    
+    // Sections
+    section: {
+      marginBottom: 20,
+      paddingHorizontal: isMobile ? 16 : 0,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    seeAllText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    
+    // Cards
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+    },
+    
+    // Info Rows
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    infoIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.primary + '15',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    infoContent: {
+      flex: 1,
+    },
+    infoLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 2,
+    },
+    infoValue: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    
+    // Jobs
+    jobsScrollContent: {
+      paddingRight: 16,
+    },
+    jobCard: {
+      backgroundColor: colors.surface,
+      padding: 16,
+      borderRadius: 12,
+      marginRight: 12,
+      width: 260,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    jobTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 6,
+      lineHeight: 20,
+    },
+    jobLocation: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    jobMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    jobTypeTag: {
+      backgroundColor: colors.primary + '15',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    jobTypeText: {
+      fontSize: 11,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    jobDate: {
+      fontSize: 11,
+      color: colors.textSecondary,
+    },
+    loadingJobsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+    },
+    loadingJobsText: {
+      marginLeft: 12,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    
+    // Description
+    description: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
+    
+    // Action Section
+    actionSection: {
+      paddingHorizontal: isMobile ? 16 : 0,
+      marginTop: 8,
+      marginBottom: 24,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      gap: 8,
+    },
+    actionButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    
+    // Footer
+    footer: {
+      paddingTop: 16,
+      paddingHorizontal: isMobile ? 16 : 0,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      alignItems: 'center',
+      gap: 4,
+    },
+    footerText: {
+      fontSize: 12,
+      color: colors.gray500,
+    },
+  });
+};

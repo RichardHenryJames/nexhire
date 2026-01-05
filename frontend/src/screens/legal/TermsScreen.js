@@ -1,17 +1,54 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { colors } from '../../styles/theme';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function TermsScreen() {
+  const navigation = useNavigation();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.innerContainer}>
+          <View style={styles.content}>
         <Text style={styles.title}>Terms and Conditions</Text>
         <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
         <Text style={styles.intro}>
-          Welcome to Refopen. These Terms and Conditions ("Terms") govern your access to and use of the Refopen platform operated by Refopen Technologies Pvt. Ltd. ("Refopen", "we", "us", or "our").
+          Welcome to Refopen. These Terms and Conditions ("Terms") govern your access to and use of the Refopen platform operated by Refopen Solutions ("Refopen", "we", "us", or "our").
         </Text>
 
         <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
@@ -93,9 +130,9 @@ Refopen is a career networking platform that provides:
 
         <Text style={styles.sectionTitle}>11. Intellectual Property</Text>
         <Text style={styles.text}>
-        11.1. Platform Rights: All content, features, and functionality of the Refopen platform are owned by Refopen Technologies Pvt. Ltd. and protected by intellectual property laws.
+        11.1. Platform Rights: All content, features, and functionality of the Refopen platform are owned by Refopen Solutions and protected by intellectual property laws.
           {'\n\n'}11.2. User Content: You retain ownership of content you submit but grant us a worldwide, non-exclusive license to use, display, and distribute such content.
-          {'\n\n'}11.3. Trademarks: "Refopen" and associated logos are trademarks of Refopen Technologies Pvt. Ltd.
+          {'\n\n'}11.3. Trademarks: "Refopen" and associated logos are trademarks of Refopen Solutions.
     </Text>
 
         <Text style={styles.sectionTitle}>12. Data Privacy</Text>
@@ -113,12 +150,12 @@ Refopen is a career networking platform that provides:
 
         <Text style={styles.sectionTitle}>14. Limitation of Liability</Text>
         <Text style={styles.text}>
-  To the maximum extent permitted by law, Refopen Technologies Pvt. Ltd. shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform. Our total liability shall not exceed the amount you paid to us in the twelve months preceding the claim.
+  To the maximum extent permitted by law, Refopen Solutions shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform. Our total liability shall not exceed the amount you paid to us in the twelve months preceding the claim.
         </Text>
 
         <Text style={styles.sectionTitle}>15. Indemnification</Text>
         <Text style={styles.text}>
-          You agree to indemnify and hold harmless Refopen Technologies Pvt. Ltd., its officers, directors, employees, and agents from any claims, damages, losses, or expenses arising from your use of the platform or violation of these Terms.
+          You agree to indemnify and hold harmless Refopen Solutions, its officers, directors, employees, and agents from any claims, damages, losses, or expenses arising from your use of the platform or violation of these Terms.
         </Text>
 
         <Text style={styles.sectionTitle}>16. Termination</Text>
@@ -143,7 +180,7 @@ Refopen is a career networking platform that provides:
         <Text style={styles.sectionTitle}>19. Contact Information</Text>
         <Text style={styles.text}>
           For questions about these Terms, please contact us at:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
           {'\n'}Email: legal@refopen.com
      {'\n'}Support: support@refopen.com
           {'\n'}Website: www.refopen.com
@@ -164,15 +201,29 @@ Refopen is a career networking platform that provides:
         </View>
 
  <ComplianceFooter currentPage="terms" />
+          </View>
+        </View>
+      </ScrollView>
     </View>
-    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
- flex: 1,
-  backgroundColor: colors.white,
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    alignSelf: 'center',
   },
   content: {
     padding: 20,
@@ -186,25 +237,25 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   intro: {
     fontSize: 16,
-    color: colors.gray800,
+    color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -217,7 +268,7 @@ const styles = StyleSheet.create({
   },
   acknowledgmentText: {
     fontSize: 15,
-    color: colors.gray800,
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',

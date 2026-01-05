@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,16 +16,34 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
-import { colors } from "../../styles/theme";
+import { useTheme } from "../../contexts/ThemeContext";
+import useResponsive from '../../hooks/useResponsive';
 
-export default function ChatScreen() {
+export default function ChatScreen({ 
+  // Props for embedded mode (desktop WhatsApp-style layout)
+  embedded = false,
+  embeddedConversationId,
+  embeddedOtherUserName,
+  embeddedOtherUserId,
+  embeddedOtherUserProfilePic,
+  onConversationUpdate,
+  hideHeader = false,
+}) {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  const { conversationId, otherUserName, otherUserId, otherUserProfilePic } = route.params;
+  // Use props if embedded, otherwise use route.params
+  const routeParams = route?.params || {};
+  const conversationId = embedded ? embeddedConversationId : routeParams.conversationId;
+  const otherUserName = embedded ? embeddedOtherUserName : routeParams.otherUserName;
+  const otherUserId = embedded ? embeddedOtherUserId : routeParams.otherUserId;
+  const otherUserProfilePic = embedded ? embeddedOtherUserProfilePic : routeParams.otherUserProfilePic;
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,15 +69,6 @@ export default function ChatScreen() {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
   };
-
-  if (!user || !currentUserId) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.emptyText}>Loading user data...</Text>
-      </View>
-    );
-  }
 
   const loadMessages = useCallback(
     async (pageNum = 1, append = false) => {
@@ -281,6 +290,8 @@ export default function ChatScreen() {
               : msg
           )
         );
+        // Notify parent to refresh conversation list (for embedded mode)
+        onConversationUpdate?.();
       }
     } catch (error) {
       console.error("? Error sending message:", error);
@@ -460,16 +471,6 @@ export default function ChatScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
   // Handle back navigation - works even after hard refresh
   const handleBackPress = () => {
     // Check if we can go back in the navigation history
@@ -481,35 +482,71 @@ export default function ChatScreen() {
     }
   };
 
+  // Early returns for loading/no conversation states - placed AFTER all hooks
+  if (!user || !currentUserId) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.emptyText}>Loading user data...</Text>
+      </View>
+    );
+  }
+
+  // For embedded mode - show placeholder when no conversation selected
+  if (embedded && !conversationId) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="chatbubbles-outline" size={80} color={colors.gray400} />
+        <Text style={[styles.emptyTitle, { color: colors.text, marginTop: 16 }]}>Select a conversation</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          Choose from your existing conversations or start a new one
+        </Text>
+      </View>
+    );
+  }
+
   // WEB LAYOUT
   if (Platform.OS === "web") {
     return (
       <div
         style={{
-   display: "flex",
+          display: "flex",
           flexDirection: "column",
           height: "100vh",
-       backgroundColor: colors.gray50,
+          backgroundColor: colors.background,
+          alignItems: responsive.isDesktop ? "center" : "stretch",
         }}
       >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            maxWidth: responsive.isDesktop ? 900 : "100%",
+            height: "100%",
+          }}
+        >
         <div
         style={{
   display: "flex",
          alignItems: "center",
   padding: "12px 16px",
-          backgroundColor: colors.primary,
+          backgroundColor: colors.surface,
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
      zIndex: 10,
          position: "sticky",
             top: 0,
           }}
         >
+          {/* Only show back button if not embedded (desktop split view) */}
+          {!embedded && (
           <TouchableOpacity
           onPress={handleBackPress}
             style={{ padding: 4, marginRight: 12 }}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
+          )}
 
           {/* Clickable Profile Section */}
           <div
@@ -520,7 +557,11 @@ export default function ChatScreen() {
               cursor: "pointer",
             }}
             onClick={() =>
-              navigation.navigate("ViewProfile", { userId: otherUserId })
+              navigation.navigate("ViewProfile", { 
+                userId: otherUserId,
+                userName: otherUserName,
+                userProfilePic: otherUserProfile?.profilePictureUrl || otherUserProfilePic
+              })
             }
           >
             {/* Profile Picture */}
@@ -551,28 +592,12 @@ export default function ChatScreen() {
             {/* Name Only */}
             <div style={{ flex: 1 }}>
               <div
-                style={{ fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+                style={{ fontSize: 16, fontWeight: "600", color: colors.text, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
               >
                 {otherUserName}
               </div>
             </div>
           </div>
-
-          {/* Call Button */}
-          <TouchableOpacity
-            onPress={() => window.alert("Feature Coming Soon\nCall feature is under development")}
-            style={{ padding: 4, marginRight: 12 }}
-          >
-            <Ionicons name="call" size={24} color={colors.white} />
-          </TouchableOpacity>
-
-          {/* Video Call Button */}
-          <TouchableOpacity
-            onPress={() => window.alert("Feature Coming Soon\nVideo call feature is under development")}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="videocam" size={24} color={colors.white} />
-          </TouchableOpacity>
         </div>
 
         <div
@@ -582,10 +607,27 @@ export default function ChatScreen() {
             display: "flex",
             flexDirection: "column-reverse",
             padding: "8px",
-            backgroundColor: colors.gray50,
+            backgroundColor: colors.background,
           }}
         >
-          {messages.length === 0 ? (
+          {loading ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+              }}
+            >
+              <ActivityIndicator size="large" color={colors.primary} />
+              <div
+                style={{ fontSize: 14, color: colors.gray500, marginTop: 16 }}
+              >
+                Loading messages...
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <div
               style={{
                 display: "flex",
@@ -660,7 +702,7 @@ export default function ChatScreen() {
                           );
                       }}
                       style={{
-                        backgroundColor: isMine ? colors.primary : colors.white,
+                        backgroundColor: isMine ? colors.primary : colors.surface,
                         borderRadius: "12px",
                         padding: "8px 12px",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
@@ -676,7 +718,7 @@ export default function ChatScreen() {
                         style={{
                           fontSize: 14,
                           lineHeight: "20px",
-                          color: isMine ? colors.white : colors.gray900,
+                          color: isMine ? colors.white : colors.text,
                           wordWrap: "break-word",
                           whiteSpace: "pre-wrap",
                           marginBottom: "4px",
@@ -763,7 +805,7 @@ export default function ChatScreen() {
             display: "flex",
             alignItems: "center",
             padding: "8px 12px",
-            backgroundColor: colors.white,
+            backgroundColor: colors.surface,
             borderTop: `1px solid ${colors.border}`,
             position: "sticky",
             bottom: 0,
@@ -772,7 +814,7 @@ export default function ChatScreen() {
           <TextInput
             style={{
               flex: 1,
-              backgroundColor: colors.gray100,
+              backgroundColor: colors.background,
               borderRadius: 24,
               paddingHorizontal: 16,
               paddingVertical: 10,
@@ -781,6 +823,7 @@ export default function ChatScreen() {
               marginRight: 8,
               outline: "none",
               border: "none",
+              color: colors.text,
             }}
             placeholder="Type a message"
             placeholderTextColor={colors.gray400}
@@ -812,6 +855,7 @@ export default function ChatScreen() {
             )}
           </TouchableOpacity>
         </div>
+        </div>
       </div>
     );
   }
@@ -819,19 +863,25 @@ export default function ChatScreen() {
   // MOBILE LAYOUT
   return (
     <View style={styles.container}>
+      <View style={styles.innerContainer}>
+      {!hideHeader && (
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBackPress}
           style={styles.backButton}
         >
-       <Ionicons name="arrow-back" size={24} color={colors.white} />
+       <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
         {/* Clickable Profile Section */}
         <TouchableOpacity
           style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
           onPress={() =>
-            navigation.navigate("ViewProfile", { userId: otherUserId })
+            navigation.navigate("ViewProfile", { 
+              userId: otherUserId,
+              userName: otherUserName,
+              userProfilePic: otherUserProfile?.profilePictureUrl || otherUserProfilePic
+            })
           }
         >
           {/* Profile Picture */}
@@ -851,23 +901,8 @@ export default function ChatScreen() {
             <Text style={styles.headerName}>{otherUserName}</Text>
           </View>
         </TouchableOpacity>
-
-        {/* Call Button */}
-        <TouchableOpacity
-          onPress={() => Alert.alert("Feature Coming Soon", "Call feature is under development")}
-          style={[styles.menuButton, { marginRight: 12 }]}
-        >
-          <Ionicons name="call" size={24} color={colors.white} />
-        </TouchableOpacity>
-
-        {/* Video Call Button */}
-        <TouchableOpacity
-          onPress={() => Alert.alert("Feature Coming Soon", "Video call feature is under development")}
-          style={styles.menuButton}
-        >
-          <Ionicons name="videocam" size={24} color={colors.white} />
-        </TouchableOpacity>
       </View>
+      )}
 
       <FlatList
         ref={flatListRef}
@@ -886,17 +921,24 @@ export default function ChatScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="chatbubbles-outline"
-              size={64}
-              color={colors.gray300}
-            />
-            <Text style={styles.emptyText}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>
-              Send a message to start the conversation
-            </Text>
-          </View>
+          loading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.emptySubtext}>Loading messages...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="chatbubbles-outline"
+                size={64}
+                color={colors.gray300}
+              />
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>
+                Send a message to start the conversation
+              </Text>
+            </View>
+          )
         }
       />
 
@@ -925,24 +967,36 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.gray50 },
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface,
     elevation: 4,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
@@ -963,19 +1017,19 @@ const styles = StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
   headerInfo: { flex: 1 },
-  headerName: { fontSize: 16, fontWeight: "600", color: colors.white, fontFamily: "System" },
+  headerName: { fontSize: 16, fontWeight: "600", color: colors.text, fontFamily: "System" },
   menuButton: { padding: 4 },
   messagesList: {
     paddingHorizontal: 8,
     paddingVertical: 8,
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.background,
   },
   messageContainer: { marginVertical: 2, maxWidth: "75%" },
   myMessageContainer: { alignSelf: "flex-end" },
   theirMessageContainer: { alignSelf: "flex-start" },
   senderName: {
     fontSize: 16,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 2,
     marginLeft: 8,
     fontWeight: "600",
@@ -995,11 +1049,11 @@ const styles = StyleSheet.create({
   messageSending: { opacity: 0.7 },
   messageFailed: { opacity: 0.5, borderWidth: 1, borderColor: colors.danger },
   myMessageBubble: { backgroundColor: colors.primary },
-  theirMessageBubble: { backgroundColor: colors.white },
-  messageText: { fontSize: 14, lineHeight: 20, color: colors.gray900, fontFamily: "System" },
+  theirMessageBubble: { backgroundColor: colors.surface },
+  messageText: { fontSize: 14, lineHeight: 20, color: colors.text, fontFamily: "System" },
   messageTextFaded: { opacity: 0.8 },
   myMessageText: { color: colors.white },
-  theirMessageText: { color: colors.gray900 },
+  theirMessageText: { color: colors.text },
   messageFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -1009,7 +1063,7 @@ const styles = StyleSheet.create({
   },
   messageTime: { fontSize: 11, fontWeight: "400" },
   myMessageTime: { color: colors.gray100 },
-  theirMessageTime: { color: colors.gray500 },
+  theirMessageTime: { color: colors.textSecondary },
   readReceipt: { marginLeft: 3 },
   readReceiptContainer: { marginLeft: 3 },
   sendingIndicator: { width: 16, height: 16 },
@@ -1018,19 +1072,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   input: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.background,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,
     marginRight: 8,
+    color: colors.text,
   },
   sendButton: {
     width: 44,
@@ -1052,12 +1107,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 8,
     textAlign: "center",
     paddingHorizontal: 40,

@@ -10,9 +10,11 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection';
 
@@ -46,6 +48,9 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
   { profile, setProfile, editing, onUpdate, embedded = false, compact = true },
   ref
 ) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [currencies, setCurrencies] = useState([]);
@@ -440,7 +445,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
       </ScrollView>
 
       {/* Simple picker without filtering */}
-      <Modal visible={pickerState.visible} transparent animationType="fade" onRequestClose={closePicker}>
+      <Modal visible={pickerState.visible} transparent onRequestClose={closePicker}>
         <View style={styles.pickerOverlay}>
           <View style={styles.pickerCard}>
             <View style={styles.pickerHeader}>
@@ -581,7 +586,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
 export default SalaryBreakdownSection;
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { backgroundColor: colors.surface || '#FFFFFF', margin: 16, marginBottom: 8, padding: 20, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -599,7 +604,7 @@ const styles = StyleSheet.create({
   noDataText: { fontSize: typography.sizes?.sm || 14, color: colors.gray500 || '#9CA3AF', textAlign: 'center', padding: 20, fontStyle: 'italic' },
 
   modalContainer: { flex: 1, backgroundColor: colors.background || '#FFFFFF' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text || '#000000' },
 
   segmented: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
