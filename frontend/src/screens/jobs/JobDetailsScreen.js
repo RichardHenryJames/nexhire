@@ -48,9 +48,9 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [hasReferred, setHasReferred] = useState(false);
   const [primaryResume, setPrimaryResume] = useState(null);
   const [referralMessage, setReferralMessage] = useState('');
-  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
+  const [showReferralMessageInput, setShowReferralMessageInput] = useState(true);
   const [coverLetter, setCoverLetter] = useState('');
-  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
+  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(true);
   const [referralRequesting, setReferralRequesting] = useState(false);
   
   // 💎 NEW: Beautiful wallet modal state
@@ -71,11 +71,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
 
   // Initialize default cover letter when job loads (only once)
-  useEffect(() => {
-    if (job?.Title && !coverLetter) {
-      setCoverLetter(`I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`);
-    }
-  }, [job?.Title]);
+  // Removed default text - user should write their own cover letter
 
   // Helper builder for cover letter
   const buildCoverLetter = useCallback(() => {
@@ -1224,9 +1220,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               </View>
               <TextInput
                 style={styles.coverLetterInput}
-                placeholder="Write a personalized cover letter to stand out...
-
-Highlight your relevant experience, skills, and why you're excited about this specific role and company."
+                placeholder="Tell job poster what makes you the ideal fit..."
                 value={coverLetter}
                 onChangeText={setCoverLetter}
                 multiline
