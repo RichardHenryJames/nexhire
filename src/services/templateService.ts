@@ -580,7 +580,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                                     </td>
                                     <td style="padding-left: 10px;">
                                         <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Apply Directly or Ask Referral</p>
-                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request goes to ALL employees at that company!</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request goes to verified employees at that company!</p>
                                     </td>
                                 </tr>
                             </table>
@@ -604,7 +604,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                                     <td style="padding: 25px;">
                                         <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">✨ Why Job Seekers Love RefOpen</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request reaches ALL employees at a company</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request reaches verified employees at a company</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Skip the resume black hole - get noticed by real people</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ External referrals: Found a job elsewhere? We'll find referrers!</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Track applications & referrals in real-time</td></tr>
@@ -625,23 +625,24 @@ const templates: Record<string, { subject: string; html: string }> = {
                                 </tr>
                             </table>
                             
-                            <!-- Referrer CTA -->
+                            <!-- Referrer Benefits Section -->
                             <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin: 0 0 20px 0;">
                                 <tr>
-                                    <td style="padding: 20px; text-align: center;">
-                                        <p style="margin: 0 0 10px 0; color: #92400e; font-size: 15px; font-weight: 600;">
-                                            💰 Already employed? Earn up to ₹100 per referral!
-                                        </p>
-                                        <p style="margin: 0; color: #a16207; font-size: 13px;">
-                                            Verify your work email and turn LinkedIn spam into rewards.
+                                    <td style="padding: 25px;">
+                                        <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 16px; text-align: center;">💰 Already Employed? Become a Referrer!</h3>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💵 Earn up to ₹100 for every successful referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">🏆 Get verified badges & build your reputation</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">📩 No more LinkedIn DMs - candidates come to you</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">⚡ One-click referrals - we handle all paperwork</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💳 Instant withdrawals to UPI or bank account</td></tr>
+                                        </table>
+                                        <p style="margin: 15px 0 0 0; color: #a16207; font-size: 13px; text-align: center;">
+                                            Verify your work email to start earning today!
                                         </p>
                                     </td>
                                 </tr>
                             </table>
-                            
-                            <p style="color: #888; font-size: 14px; line-height: 1.6; text-align: center;">
-                                Questions? Reply to this email or reach us at support@refopen.com
-                            </p>
                         </td>
                     </tr>
                     

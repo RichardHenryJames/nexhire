@@ -77,7 +77,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How is Refopen different from other job portals?',
-          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, ALL employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 15x more likely to get hired.'
+          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, verified employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 15x more likely to get hired.'
         },
         {
           question: 'Is Refopen available as a mobile app?',
@@ -115,7 +115,7 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'How do I request a referral?',
-          answer: 'Requesting a referral is easy:\n1. Find a job you are interested in\n2. Click "Ask for Referral"\n3. Your request is sent to ALL employees of that company on Refopen\n4. Employees review your profile and can choose to refer you\n5. You get notified when someone accepts your request\n6. The employee submits your referral through their company\'s system'
+          answer: 'Requesting a referral is easy:\n1. Find a job you are interested in\n2. Click "Ask for Referral"\n3. Your request is sent to verified employees of that company on Refopen\n4. Employees review your profile and can choose to refer you\n5. You get notified when someone accepts your request\n6. The employee submits your referral through their company\'s system'
         },
         {
           question: 'Does getting a referral guarantee me a job?',

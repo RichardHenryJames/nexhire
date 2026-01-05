@@ -188,9 +188,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
 
-        let message = 'Referral sent to ALL employees who can refer!';
+        let message = 'Referral sent to verified employees who can refer!';
         if (balanceAfter !== undefined) {
-          message = `Referral sent to ALL employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+          message = `Referral sent to verified employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
         }
 
         Alert.alert('Success', message);

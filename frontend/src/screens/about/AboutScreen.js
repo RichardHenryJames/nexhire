@@ -178,7 +178,7 @@ const ALL_TESTIMONIALS = [
   { quote: "Got referred to my dream company within a week. The resume went straight to the hiring manager apparently.", name: "Karthik R.", role: "ML Engineer", company: "Now at OpenAI", gradient: 'gradientPrimary' },
   { quote: "Was skeptical about paying for referrals but honestly? Best career investment I've made. ROI is insane.", name: "Michelle T.", role: "Backend Engineer", company: "Now at Netflix", gradient: 'gradientAccent' },
   { quote: "3 months of job hunting vs 2 weeks on RefOpen. Wish I found this earlier.", name: "David C.", role: "DevOps Engineer", company: "Now at Datadog", gradient: 'gradientBlue' },
-  { quote: "The fact that my request goes to ALL employees at a company? Game changer. Way better odds.", name: "Sneha G.", role: "iOS Developer", company: "Now at Apple", gradient: 'gradientSuccess' },
+  { quote: "The fact that my request goes to verified employees at a company? Game changer. Way better odds.", name: "Sneha G.", role: "iOS Developer", company: "Now at Apple", gradient: 'gradientSuccess' },
   { quote: "Used the external referral for a job at Coinbase I found on their careers page. Got referred same day!", name: "Alex W.", role: "Blockchain Dev", company: "Now at Coinbase", gradient: 'gradientWarning' },
   { quote: "Interview rate went from 2% to like 40% after I started using referrals. Numbers don't lie.", name: "Neha S.", role: "Full Stack Dev", company: "Now at Shopify", gradient: 'gradientPrimary' },
   { quote: "No more 'Thanks for applying, we'll keep your resume on file' emails. Actually getting calls now.", name: "James H.", role: "Cloud Architect", company: "Now at AWS", gradient: 'gradientSecondary' },
@@ -1051,7 +1051,7 @@ export default function AboutScreen() {
               </View>
               
               {/* Step 2 */}
-              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to ALL employees at that company!" icon="send" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
+              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to verified employees at that company!" icon="send" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={AskRefSentImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
@@ -1071,7 +1071,7 @@ export default function AboutScreen() {
               >
                 <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
                 <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
-                <BenefitItem icon="people" text="One referral request reaches ALL employees" color={COLORS.primary} COLORS={COLORS} />
+                <BenefitItem icon="people" text="One referral request reaches verified employees" color={COLORS.primary} COLORS={COLORS} />
                 <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
                 <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
                 <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
@@ -1195,7 +1195,7 @@ export default function AboutScreen() {
                   {[
                     'One platform for all job applications ✨',
                     'Apply directly OR get referred - your choice',
-                    'One referral request = ALL employees notified',
+                    'One referral request = verified employees notified',
                     'External referral for jobs found anywhere',
                     'Real-time tracking for everything',
                   ].map((item, index) => (
