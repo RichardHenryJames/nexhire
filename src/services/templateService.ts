@@ -397,6 +397,102 @@ const templates: Record<string, { subject: string; html: string }> = {
 </body>
 </html>
         `
+    },
+
+    'new_manual_payment': {
+        subject: '💰 New Payment Deposit Request: ₹{{amount}}',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">💰 Payment Deposit Request</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">A user has submitted payment proof for verification</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <!-- Amount Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; margin: 0 0 25px 0;">
+                                <tr>
+                                    <td style="padding: 30px; text-align: center;">
+                                        <p style="margin: 0 0 5px 0; color: #065f46; font-size: 14px;">Amount Submitted</p>
+                                        <p style="margin: 0; color: #047857; font-size: 42px; font-weight: 700;">₹{{amount}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Payment Details Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 8px; margin: 0 0 25px 0; border-left: 4px solid #10b981;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Payment Details</h3>
+                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                                            <strong>Submission ID:</strong> {{submissionId}}
+                                        </p>
+                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                                            <strong>Payment Method:</strong> {{paymentMethod}}
+                                        </p>
+                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                                            <strong>Reference Number:</strong> {{referenceNumber}}
+                                        </p>
+                                        <p style="margin: 0; color: #666; font-size: 14px;">
+                                            <strong>Payment Date:</strong> {{paymentDate}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- User Info -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin: 0 0 25px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0 0 5px 0; color: #888; font-size: 12px; text-transform: uppercase;">User Details</p>
+                                        <p style="margin: 0; color: #333; font-size: 16px; font-weight: 600;">{{userName}}</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">{{userEmail}}</p>
+                                        <p style="margin: 5px 0 0 0; color: #999; font-size: 12px;">User ID: {{userId}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- User Remarks (conditionally rendered) -->
+                            {{userRemarksSection}}
+                            
+                            <p style="color: #6b7280; font-size: 13px; margin: 0;">
+                                Submitted: {{submittedAt}}
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                Please verify and process this payment in the Admin Panel.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
     }
 };
 

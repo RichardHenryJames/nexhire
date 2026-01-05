@@ -8,8 +8,11 @@ import { ValidationError, NotFoundError, AuthorizationError } from '../utils/val
 import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 
-// Admin notification email for new tickets
-const ADMIN_NOTIFICATION_EMAIL = 'parimalkumar261@gmail.com';
+// Admin notification emails - supports comma-separated list from env
+const getAdminEmails = (): string[] => {
+  const emails = process.env.ADMIN_NOTIFICATION_EMAILS || '';
+  return emails.split(',').map(e => e.trim()).filter(e => e.length > 0);
+};
 
 export interface SupportTicket {
     TicketID: string;
@@ -126,11 +129,17 @@ export class SupportService {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                     timeZone: 'Asia/Kolkata'
-                })
+                });
             });
             
+            const adminEmails = getAdminEmails();
+            if (adminEmails.length === 0) {
+                console.warn('⚠️ No admin emails configured, skipping ticket notification');
+                return;
+            }
+            
             await EmailService.send({
-                to: ADMIN_NOTIFICATION_EMAIL,
+                to: adminEmails,
                 subject: subject,
                 html: html,
                 text: text,
@@ -139,7 +148,7 @@ export class SupportService {
                 referenceId: ticket.TicketID
             });
             
-            console.log(`✅ New ticket notification sent to ${ADMIN_NOTIFICATION_EMAIL} for ticket ${ticket.TicketID}`);
+            console.log(`✅ New ticket notification sent to ${adminEmails.join(', ')} for ticket ${ticket.TicketID}`);
         } catch (error) {
             console.error('Error sending new ticket notification:', error);
         }
