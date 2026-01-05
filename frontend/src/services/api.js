@@ -2734,6 +2734,126 @@ if (!resumeId) {
 
     return this.apiCall('/manual-payment/my-submissions');
   }
+
+  // ========================================================================
+  // SUPPORT TICKET APIs - Customer Support System
+  // ========================================================================
+
+  /**
+   * Create a new support ticket
+   * @param {Object} ticketData - { category, subject, message, contactEmail? }
+   */
+  async createSupportTicket(ticketData) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(ticketData),
+    });
+  }
+
+  /**
+   * Get user's support tickets
+   * @param {Object} params - { page?, limit?, status? }
+   */
+  async getMySupportTickets(params = {}) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required', data: { tickets: [], total: 0 } };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.status) queryParams.append('status', params.status);
+
+    const queryString = queryParams.toString();
+    return this.apiCall(`/support/tickets${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Get a specific support ticket by ID
+   * @param {string} ticketId - The ticket ID
+   */
+  async getSupportTicketById(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}`);
+  }
+
+  /**
+   * Get all support tickets (Admin only)
+   * @param {Object} params - { page?, limit?, status?, category?, priority? }
+   */
+  async getAdminSupportTickets(params = {}) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.priority) queryParams.append('priority', params.priority);
+
+    const queryString = queryParams.toString();
+    return this.apiCall(`/support/admin/tickets${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Update a support ticket (Admin only)
+   * @param {string} ticketId - The ticket ID
+   * @param {Object} updateData - { status?, priority?, adminResponse? }
+   */
+  async updateSupportTicket(ticketId, updateData) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  /**
+   * Get support ticket statistics (Admin only)
+   */
+  async getSupportTicketStats() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/support/admin/stats');
+  }
 }
 
 export default new RefOpenAPI();

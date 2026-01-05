@@ -94,11 +94,11 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'How do I create an account?',
-          answer: 'Creating an account is simple:\n1. Visit www.refopen.com or open the app\n2. Click "Sign Up"\n3. Choose your account type (Job Seeker or Employer)\n4. Sign up using your email, Google account, or LinkedIn\n5. Complete your profile with work experience, skills, and preferences\n6. Start exploring jobs and requesting referrals!'
+          answer: 'Creating an account is simple:\n1. Visit www.refopen.com or open the app\n2. Click "Sign Up"\n3. Sign up using your email or Google account\n4. Complete your profile with work experience, skills, and preferences\n5. Start exploring jobs and requesting referrals!'
         },
         {
           question: 'Is Refopen free to use?',
-          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nPremium features like referral requests, AI-powered job recommendations, and job posting are available on a pay-per-use basis through our wallet system.'
+          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests cost ₹39 per request (paid from wallet credits). New users get ₹50 welcome bonus on signup!\n\nAdd money to wallet via bank transfer or UPI.'
         },
         {
           question: 'How do I complete my profile?',
@@ -106,7 +106,7 @@ export default function FAQScreen() {
         },
         {
           question: 'Can I use Refopen if I am currently employed?',
-          answer: 'Absolutely! Many of our users are working professionals looking for better opportunities. Your job search is completely confidential. You can:\n• Hide your current company from searches\n• Set your profile to "Open to Opportunities" discreetly\n• Control who can see your activity\n• Receive referral requests from others at your company'
+          answer: 'Absolutely! Many of our users are working professionals looking for better opportunities. Your job search is completely confidential. You can:\n• Toggle \"Hide Current Company\" to keep your employer hidden\n• Set \"Open to Work\" in your profile settings\n• Control your profile visibility (Public/Private)\n• Help others by providing referrals while searching yourself'
         }
       ]
     },
@@ -123,7 +123,7 @@ export default function FAQScreen() {
         },
         {
           question: 'What happens if no one accepts my referral request?',
-          answer: 'If your referral request is not accepted:\n• You can try again after improving your profile\n• Apply directly to the job (always an option)\n• Request referrals for similar roles at other companies\n• Upgrade to Premium for higher visibility and priority placement\n• Your wallet credits are not deducted for unaccepted requests'
+          answer: 'If your referral request is not accepted:\n• Your wallet credits are still deducted (referral fee is non-refundable)\n• You can try again after improving your profile\n• Apply directly to the job (always an option)\n• Request referrals for similar roles at other companies\n• Make sure your resume and profile are complete to increase acceptance chances'
         },
         {
           question: 'How do I provide referrals to others?',
@@ -144,7 +144,7 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'How do I search for jobs?',
-          answer: 'Use our powerful search features:\n• Search by job title, company, or keywords\n• Filter by location, experience level, salary range\n• Filter by job type (Full-time, Contract, Remote)\n• Filter by top companies (Fortune 500)\n• Save searches for quick access\n• Enable job alerts to get notified of new matches'
+          answer: 'Use our powerful search features:\n• Search by job title, company, or keywords\n• Filter by location, experience level, salary range\n• Filter by job type (Full-time, Part-time, Contract)\n• Filter by workplace type (Remote, On-site, Hybrid)\n• Filter by top companies (Fortune 500)\n• Use AI-powered job recommendations for personalized matches'
         },
         {
           question: 'Can I apply directly without a referral?',
@@ -152,7 +152,11 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I track my job applications?',
-          answer: 'Go to your Profile → My Applications to see:\n• All jobs you have applied to\n• Current application status\n• Referral request status\n• Interview schedules (if any)\n• Employer responses and messages'
+          answer: 'Go to the Applications tab to see:\n• All jobs you have applied to\n• Current application status (Applied, In Review, Interview, etc.)\n• Referral request status\n• Filter by status to quickly find specific applications'
+        },
+        {
+          question: 'What is AI Jobs feature?',
+          answer: 'AI Jobs uses your profile to find personalized job matches:\n• Analyzes your skills, experience, and preferences\n• Recommends jobs that best match your profile\n• Costs ₹99 for 15 days of access\n• Access from the Home screen → AI Jobs section\n\nThis helps you discover opportunities you might have missed!'
         },
         {
           question: 'What types of jobs are available on Refopen?',
@@ -165,44 +169,35 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'What payment methods are accepted?',
-          answer: 'We accept all major payment methods in India:\n• Credit Cards (Visa, Mastercard, Rupay)\n• Debit Cards\n• UPI (Google Pay, PhonePe, Paytm, etc.)\n• Net Banking (All major banks)\n• Digital Wallets\n\nAll payments are processed securely through RBI-compliant payment gateways (Razorpay, PhonePe, PayU, Cashfree).'
+          answer: 'We accept the following payment methods:\n• Bank Transfer (NEFT/IMPS/RTGS)\n• UPI Transfer\n\nSimply transfer the amount to our bank account or UPI ID, then submit your payment proof for verification.'
         },
         {
           question: 'How does the Refopen Wallet work?',
-          answer: 'The Refopen Wallet is your in-app payment account:\n• Add money anytime using any payment method\n• Use credits for referral requests, subscriptions, and premium features\n• Track all transactions in wallet history\n• Receive rewards and cashback directly in wallet\n• Credits never expire while your account is active'
+          answer: 'The Refopen Wallet is your in-app payment account:\n1. Go to Wallet → Add Money\n2. Note down our bank account details or UPI ID\n3. Transfer the desired amount using your preferred method\n4. Submit payment proof with transaction reference number\n5. Our team verifies and credits your wallet within 24 hours\n6. Use wallet credits for referral requests (₹39 each) and AI Jobs (₹99 for 15 days)\n\nCredits never expire while your account is active.'
+        },
+        {
+          question: 'How do I add money to my wallet?',
+          answer: 'Adding money is simple:\n1. Go to Wallet → Add Money\n2. You will see our bank account details and UPI ID\n3. Transfer the amount via Bank Transfer or UPI\n4. Click "Submit Payment Proof"\n5. Enter the amount, transaction reference number, and payment date\n6. Submit the form\n7. Once verified, credits are added to your wallet\n\nProcessing time: Typically within 24 hours (business days).'
         },
         {
           question: 'Are my payments secure?',
-          answer: 'Absolutely! We prioritize your security:\n• PCI-DSS compliant payment processing\n• SSL/TLS encryption for all transactions\n• No card details stored on our servers\n• Trusted payment partners (Razorpay, PhonePe)\n• Two-factor authentication available\n• Instant transaction confirmations via email and SMS'
+          answer: 'Absolutely! We prioritize your security:\n• All transfers go directly to our verified company bank account\n• SSL/TLS encryption for all data transmission\n• Payment verification by our dedicated team\n• Instant confirmation once payment is verified\n• Transaction history available in your wallet'
+        },
+        {
+          question: 'How long does payment verification take?',
+          answer: 'Payment verification typically takes:\n• 2-4 hours during business hours (9 AM - 6 PM IST)\n• Up to 24 hours for payments submitted outside business hours\n• Weekend submissions processed on next business day\n\nYou will receive a notification once your payment is verified and wallet is credited.'
         },
         {
           question: 'Do wallet credits expire?',
-          answer: 'No, your wallet credits do not expire as long as your account remains active. You can use them anytime for:\n• Referral request fees\n• Premium subscriptions\n• Featured profile placements\n• Any other paid services'
+          answer: 'No, your wallet credits do not expire as long as your account remains active. You can use them anytime for:\n• Referral request fees (₹39 per request)\n• AI-powered job recommendations (₹99 for 15-day access)\n• Future premium features'
         },
         {
           question: 'How do I get a refund?',
-          answer: 'Refunds are processed as per our Refund Policy:\n• Request within 7 days of transaction\n• Email support@refopen.com with transaction details\n• Refunds for technical failures are automatic\n• Subscription refunds are pro-rated\n• Processing time: 5-7 business days\n\nNote: Referral fees for accepted requests are non-refundable.'
-        }
-      ]
-    },
-    {
-      category: 'Subscriptions & Premium',
-      questions: [
-        {
-          question: 'What are the premium subscription plans?',
-          answer: 'We offer flexible plans:\n\n• Basic (Free): Browse jobs, apply directly, limited referral requests\n• Pro (₹299/month): Unlimited referral requests, priority visibility, advanced filters\n• Premium (₹599/month): All Pro features + featured profile, direct recruiter access, resume review\n\nAnnual plans available with up to 40% discount!'
+          answer: 'Refunds are processed as per our Refund Policy:\n• Email support@refopen.com with transaction details\n• Refunds for technical failures are processed automatically\n• Processing time: 5-7 business days\n\nNote: Referral request fees and AI Jobs access fees are non-refundable once service is used. Wallet recharge amounts can be refunded if unused.'
         },
         {
-          question: 'How do I subscribe or upgrade?',
-          answer: 'Upgrading is easy:\n1. Go to Profile → Subscription\n2. Choose your preferred plan\n3. Select billing cycle (monthly/annual)\n4. Complete payment\n5. Features activated instantly!\n\nYou can upgrade, downgrade, or cancel anytime.'
-        },
-        {
-          question: 'Can I cancel my subscription?',
-          answer: 'Yes, you can cancel anytime:\n• Go to Profile → Subscription → Cancel\n• Access continues until the billing period ends\n• No refunds for partial periods\n• You can resubscribe whenever you want\n• Disable auto-renewal to prevent future charges'
-        },
-        {
-          question: 'What happens when my subscription ends?',
-          answer: 'When your subscription ends:\n• You retain access to basic free features\n• Saved preferences and data are preserved\n• You can continue applying to jobs\n• Premium features become unavailable\n• You can renew anytime to restore full access'
+          question: 'What if my payment verification is rejected?',
+          answer: 'If your payment proof is rejected:\n• Check the rejection reason in your submissions history\n• Common reasons: incorrect reference number, amount mismatch, unclear details\n• Resubmit with correct information\n• For issues, contact support@refopen.com with your transaction details\n\nNote: If the transfer was successful but rejected due to wrong details, your money is safe and we will help resolve it.'
         }
       ]
     },
@@ -215,11 +210,11 @@ export default function FAQScreen() {
         },
         {
           question: 'How much does it cost to post jobs?',
-          answer: 'We offer flexible pricing for employers:\n• Free Tier: Limited job posts per month\n• Starter: ₹999/job with 30-day visibility\n• Professional: ₹4,999/month for unlimited posts\n• Enterprise: Custom pricing for high-volume hiring\n\nContact partnerships@refopen.com for enterprise solutions.'
+          answer: 'Job posting is currently free for employers during our launch phase. Contact partnerships@refopen.com for enterprise solutions and bulk posting options.'
         },
         {
           question: 'How do I find candidates?',
-          answer: 'Multiple ways to discover talent:\n• Receive applications directly on posted jobs\n• Get referred candidates (higher quality!)\n• Search our candidate database (Premium)\n• Use AI-powered candidate matching\n• Set up talent alerts for specific skills'
+          answer: 'Multiple ways to discover talent:\n• Receive applications directly on posted jobs\n• Get referred candidates (higher quality!)\n• View candidate profiles with work history and skills\n• Review resumes attached to applications'
         },
         {
           question: 'What makes referred candidates better?',
@@ -236,7 +231,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I delete my account?',
-          answer: 'To delete your account:\n1. Go to Profile → Settings → Account\n2. Click "Delete Account"\n3. Confirm deletion\n\nNote: This action is permanent. All data will be deleted within 30 days. Unused wallet credits are forfeited. Download any data you need before deletion.'
+          answer: 'To delete your account, please email support@refopen.com with your registered email and request for account deletion.\n\nNote: This action is permanent. All data will be deleted within 30 days as per our data retention policy. Unused wallet credits are forfeited.'
         },
         {
           question: 'Is my data safe with Refopen?',
@@ -244,11 +239,11 @@ export default function FAQScreen() {
         },
         {
           question: 'Who can see my profile?',
-          answer: 'You control your visibility:\n• Public: All recruiters and employers can view\n• Limited: Only when you apply or request referral\n• Hidden: Profile not searchable, only accessible via direct link\n\nYou can always hide sensitive information like current salary or employer.'
+          answer: 'You control your visibility:\n• Public: Your profile is visible to recruiters and employers\n• Private: Your profile is hidden from searches\n\nAdditional privacy controls:\n• Toggle "Hide Current Company" to keep your job search confidential\n• Toggle "Hide Salary" to keep compensation private\n\nThese settings are in Profile → Privacy Settings section.'
         },
         {
           question: 'How do I update my email or phone number?',
-          answer: 'To update contact information:\n1. Go to Profile → Settings → Account\n2. Click on email or phone number\n3. Enter new information\n4. Verify via OTP sent to new email/phone\n5. Update confirmed!\n\nNote: You may need to re-verify your account after changing email.'
+          answer: 'To update your contact information, please email support@refopen.com with:\n• Your current registered email\n• The new email/phone number you want to use\n• Brief reason for change\n\nOur team will verify and update your account within 24-48 hours.'
         }
       ]
     },
@@ -260,12 +255,12 @@ export default function FAQScreen() {
           answer: 'Check these settings:\n1. In-app: Profile → Settings → Notifications (enable all)\n2. Phone settings: Allow notifications for Refopen\n3. Email: Check spam folder, add @refopen.com to contacts\n4. Browser: Allow notifications when prompted\n\nIf issues persist, contact support@refopen.com.'
         },
         {
-          question: 'My payment failed but money was deducted. What now?',
-          answer: 'Don\'t worry! If payment was deducted:\n1. Wait 30 minutes for automatic processing\n2. Check your wallet for credit\n3. If not credited, email support@refopen.com with:\n   - Transaction ID\n   - Amount deducted\n   - Bank reference number\n4. Refunds processed within 5-7 business days'
+          question: 'I transferred money but my wallet is not credited. What now?',
+          answer: 'Don\'t worry! Your money is safe. Here\'s what to check:\n1. Ensure you submitted the payment proof with correct transaction reference number\n2. Check your submission status in Wallet → My Submissions\n3. Verification typically takes 2-4 hours during business hours\n4. If rejected, check the reason and resubmit with correct details\n5. If still not resolved, email support@refopen.com with:\n   - Transaction reference number\n   - Amount transferred\n   - Date of transfer\n   - Screenshot of bank transaction'
         },
         {
           question: 'I cannot login to my account. Help!',
-          answer: 'Try these steps:\n1. Reset password using "Forgot Password"\n2. Clear browser cache and cookies\n3. Try a different browser or device\n4. Check if your account was deactivated\n5. If using Google/LinkedIn login, ensure correct account\n\nStill stuck? Email support@refopen.com with your registered email.'
+          answer: 'Try these steps:\n1. Reset password using "Forgot Password"\n2. Clear browser cache and cookies\n3. Try a different browser or device\n4. Check if your account was deactivated\n5. If using Google login, ensure you are using the correct Google account\n\nStill stuck? Email support@refopen.com with your registered email.'
         },
         {
           question: 'The app is not loading properly.',
@@ -273,7 +268,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I report a fake job or scam?',
-          answer: 'Your safety is our priority! To report suspicious activity:\n1. Click "Report" on the job listing or profile\n2. Select the reason (fake, scam, inappropriate)\n3. Add details about the issue\n4. Submit report\n\nOr email safety@refopen.com directly. We investigate all reports within 24 hours.'
+          answer: 'Your safety is our priority! To report suspicious activity, email safety@refopen.com with:\n• The job title and company name\n• Reason for concern (fake posting, scam, inappropriate content)\n• Any screenshots or details\n\nWe investigate all reports within 24 hours and take appropriate action.'
         }
       ]
     }
@@ -343,14 +338,21 @@ export default function FAQScreen() {
           <Text style={styles.helpText}>
             Our support team is here to help you with anything not covered above.
           </Text>
+          
+          {/* Create Support Ticket Button */}
+          <TouchableOpacity 
+            style={styles.supportButton}
+            onPress={() => navigation.navigate('Support')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+            <Text style={styles.supportButtonText}>Create Support Ticket</Text>
+          </TouchableOpacity>
+          
           <View style={styles.contactOptions}>
             <View style={styles.contactRow}>
               <Ionicons name="mail-outline" size={18} color={colors.primary} />
               <Text style={styles.contactItem}>support@refopen.com</Text>
-            </View>
-            <View style={styles.contactRow}>
-              <Ionicons name="globe-outline" size={18} color={colors.primary} />
-              <Text style={styles.contactItem}>www.refopen.com</Text>
             </View>
             <View style={styles.contactRow}>
               <Ionicons name="time-outline" size={18} color={colors.primary} />
@@ -505,6 +507,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
+  },
+  supportButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  supportButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   contactOptions: {
     backgroundColor: colors.surface,

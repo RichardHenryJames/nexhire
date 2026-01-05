@@ -67,6 +67,7 @@ import ContactUsScreen from "../screens/legal/ContactUsScreen";
 import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
+import SupportScreen from "../screens/support/SupportScreen";
 
 // Admin Screen
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
@@ -89,6 +90,7 @@ const linking = {
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
+      Support: "support",
       
       // Public Ask Referral screen - accessible without auth but actions require login
       AskReferralPublic: "ask-referral",
@@ -857,6 +859,15 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "FAQ",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="Support"
+        component={SupportScreen}
+        options={{
+          headerShown: true,
+          title: "Help & Support",
           headerBackTitleVisible: false,
         }}
       />

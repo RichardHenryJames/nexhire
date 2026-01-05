@@ -179,6 +179,16 @@ import {
   rejectPayment,
 } from "./src/controllers/manualPayment.controller";
 
+// Import support ticket controller
+import {
+  createTicket,
+  getMyTickets,
+  getTicketById,
+  updateTicket,
+  getAllTickets,
+  getTicketStats,
+} from "./src/controllers/support.controller";
+
 // Import profile services
 import {
   ApplicantService,
@@ -1398,6 +1408,52 @@ app.http("manual-payment-admin-reject", {
   authLevel: "anonymous",
   route: "manual-payment/admin/reject/{submissionId}",
   handler: withErrorHandling(rejectPayment),
+});
+
+// ========================================================================
+// SUPPORT TICKET ENDPOINTS - Customer Support System
+// ========================================================================
+
+app.http("support-create-ticket", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets",
+  handler: withErrorHandling(createTicket),
+});
+
+app.http("support-get-my-tickets", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets",
+  handler: withErrorHandling(getMyTickets),
+});
+
+app.http("support-get-ticket-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}",
+  handler: withErrorHandling(getTicketById),
+});
+
+app.http("support-update-ticket", {
+  methods: ["PATCH", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}",
+  handler: withErrorHandling(updateTicket),
+});
+
+app.http("support-admin-all-tickets", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/admin/tickets",
+  handler: withErrorHandling(getAllTickets),
+});
+
+app.http("support-admin-stats", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/admin/stats",
+  handler: withErrorHandling(getTicketStats),
 });
 
 // ========================================================================

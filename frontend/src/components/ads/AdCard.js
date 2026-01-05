@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -7,6 +7,10 @@ import useResponsive from '../../hooks/useResponsive';
 
 // Generate unique ID for each ad instance
 let adInstanceCounter = 0;
+
+// Track if AdSense script has been loaded globally
+let adSenseScriptLoaded = false;
+let adSenseScriptLoading = false;
 
 // Ad slot IDs for each page (created in Google AdSense dashboard)
 const AD_SLOTS = {
@@ -17,8 +21,66 @@ const AD_SLOTS = {
   applications: '8368297727', // Applications screen ad slot
 };
 
+// AdSense Publisher ID
+const AD_CLIENT = 'ca-pub-7167287641762329';
+
+/**
+ * Dynamically load AdSense script only when needed
+ * This ensures ads only load on pages with actual content
+ */
+const loadAdSenseScript = () => {
+  return new Promise((resolve) => {
+    if (Platform.OS !== 'web') {
+      resolve(false);
+      return;
+    }
+
+    // Already loaded
+    if (adSenseScriptLoaded || window.adsbygoogle) {
+      adSenseScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+
+    // Currently loading
+    if (adSenseScriptLoading) {
+      const checkInterval = setInterval(() => {
+        if (adSenseScriptLoaded || window.adsbygoogle) {
+          clearInterval(checkInterval);
+          resolve(true);
+        }
+      }, 100);
+      return;
+    }
+
+    adSenseScriptLoading = true;
+
+    const script = document.createElement('script');
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    
+    script.onload = () => {
+      adSenseScriptLoaded = true;
+      adSenseScriptLoading = false;
+      resolve(true);
+    };
+    
+    script.onerror = () => {
+      adSenseScriptLoading = false;
+      resolve(false);
+    };
+
+    document.head.appendChild(script);
+  });
+};
+
 /**
  * AdCard Component - Displays Google AdSense ads
+ * 
+ * IMPORTANT: AdSense script is loaded dynamically only when this component
+ * renders, ensuring ads only appear on pages with actual content.
+ * This fixes the "ads on screens without publisher content" violation.
  * 
  * Each variant uses EXACT CSS matching its parent page:
  * - home: Matches quickActionCard style from HomeScreen
@@ -27,7 +89,7 @@ const AD_SLOTS = {
  * - about: Matches AboutScreen card style
  */
 const AdCard = ({ 
-  adClient = 'ca-pub-7167287641762329',
+  adClient = AD_CLIENT,
   variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home' | 'applications'
   style = {},
 }) => {
@@ -36,12 +98,32 @@ const AdCard = ({
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [adId] = useState(() => `ad-${variant}-${++adInstanceCounter}`);
   const [adLoaded, setAdLoaded] = useState(false);
+  const [scriptReady, setScriptReady] = useState(false);
+  const mountedRef = useRef(true);
   
   // Get the correct ad slot for this variant
   const adSlot = AD_SLOTS[variant] || AD_SLOTS.jobs;
 
+  // Load AdSense script dynamically when component mounts
   useEffect(() => {
-    if (Platform.OS === 'web' && !adLoaded) {
+    mountedRef.current = true;
+    
+    if (Platform.OS === 'web') {
+      loadAdSenseScript().then((loaded) => {
+        if (mountedRef.current && loaded) {
+          setScriptReady(true);
+        }
+      });
+    }
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Initialize ad after script is ready
+  useEffect(() => {
+    if (Platform.OS === 'web' && scriptReady && !adLoaded) {
       const timer = setTimeout(() => {
         try {
           const adElement = document.getElementById(adId);
@@ -55,7 +137,7 @@ const AdCard = ({
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [adId, adLoaded]);
+  }, [adId, adLoaded, scriptReady]);
 
   // ========================================
   // HOME VARIANT - Matches quickActionCard from HomeScreen exactly

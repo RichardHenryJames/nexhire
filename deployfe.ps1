@@ -167,10 +167,9 @@ if (Test-Path $indexPath) {
     $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Job Referrals | Find Jobs & Apply | Get Referred to Top Companies</title>'
     
     # Add SEO meta tags after <meta charset>
+    # NOTE: Google AdSense script is loaded dynamically by AdCard component
+    # to avoid "ads on screens without publisher content" violation
     $seoTags = @"
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7167287641762329"
-     crossorigin="anonymous"></script>
     <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
     <meta name="description" content="RefOpen - The leading job referral platform. Ask for referrals from employees at Google, Amazon, Microsoft & 500+ top companies. Find jobs, apply & get referred faster. Referred candidates are 15x more likely to get hired." />
     <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement" />

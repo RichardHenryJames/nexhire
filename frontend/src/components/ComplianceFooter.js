@@ -15,6 +15,7 @@ export default function ComplianceFooter({ currentPage }) {
     { id: 'about', label: 'About Us', screen: 'AboutUs' },
     { id: 'contact', label: 'Contact Us', screen: 'ContactUs' },
     { id: 'faq', label: 'FAQ', screen: 'FAQ' },
+    { id: 'support', label: 'Help & Support', screen: 'Support' },
   ];
 
   const handleLinkPress = (screen) => {

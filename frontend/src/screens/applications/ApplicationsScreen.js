@@ -361,48 +361,6 @@ export default function ApplicationsScreen({ navigation }) {
     // NOTE: Remaining steps happen on confirmation modal proceed.
   };
 
-  // Complete subscription modal with all features
-  const showSubscriptionModal = async (reasonOverride = null, hasActiveSubscription = false) => {
-    // On web, Alert only supports a single OK button (RN Web polyfill). Navigate directly.
-    const exhaustedMsg = reasonOverride || `You've used all referral requests allowed in your current plan today.`;
-    const body = hasActiveSubscription
-      ? `${exhaustedMsg}\n\nUpgrade your plan to increase daily referral limit and continue boosting your job search.`
-      : `You've used all 5 free referral requests for today!\n\nUpgrade to continue making referral requests and boost your job search.`;
-
-    if (Platform.OS === 'web') {
-      navigation.navigate('ReferralPlans');
-      return;
-    }
-    
-    try {
-      Alert.alert(
-        'Upgrade Required',
-        body,
-        [
-          { 
-            text: 'Maybe Later', 
-            style: 'cancel'
-          },
-          { 
-            text: 'View Plans', 
-            onPress: () => {
-              try {
-                navigation.navigate('ReferralPlans');
-              } catch (navError) {
-                console.error('Navigation error:', navError);
-                Alert.alert('Navigation Error', 'Unable to open plans. Please try again.');
-              }
-            }
-          }
-        ]
-      );
-      
-    } catch (error) {
-      console.error('Error showing subscription modal:', error);
-      Alert.alert('Error', 'Failed to load subscription options. Please try again later.');
-    }
-  };
-
   // Enhanced resume selected handler
   const handleResumeSelected = async (resumeData) => {
     if (!pendingJobForApplication) return;
