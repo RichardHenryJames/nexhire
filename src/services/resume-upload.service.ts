@@ -34,12 +34,6 @@ export class ResumeStorageService {
    */
   async uploadResume(uploadData: ResumeUploadRequest): Promise<string> {
     try {
-      console.log('=== AZURE STORAGE UPLOAD DEBUG ===');
-      console.log('User ID:', uploadData.userId);
-      console.log('File name:', uploadData.fileName);
-      console.log('MIME type:', uploadData.mimeType);
-      console.log('File data length:', uploadData.fileData?.length || 0);
-
       // Create container client
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       
@@ -54,7 +48,6 @@ export class ResumeStorageService {
 
       // Convert base64 to buffer (same as profile images)
       const buffer = Buffer.from(uploadData.fileData, 'base64');
-      console.log('Buffer size:', buffer.length);
 
       // Upload with proper content type
       const uploadResult = await blockBlobClient.upload(buffer, buffer.length, {
@@ -73,8 +66,6 @@ export class ResumeStorageService {
 
       // Get the public URL
       const resumeUrl = blockBlobClient.url;
-      console.log('Resume uploaded successfully:', resumeUrl);
-      console.log('=== END AZURE STORAGE UPLOAD DEBUG ===');
 
       return resumeUrl;
 
@@ -111,13 +102,11 @@ export class ResumeStorageService {
       }
 
       const blobName = urlParts.slice(containerIndex + 1).join('/');
-      console.log('??? Deleting old resume:', blobName);
 
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       
       await blockBlobClient.deleteIfExists();
-      console.log('Old resume deleted successfully');
 
     } catch (error: unknown) {
       console.error('Error deleting old resume:', error);
@@ -206,10 +195,6 @@ function validateResumeUpload(data: any): ResumeUploadRequest {
  */
 export async function uploadResume(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    console.log('=== RESUME UPLOAD HANDLER ===');
-    console.log('Method:', req.method);
-    console.log('Headers:', Object.keys(req.headers));
-
     // Handle OPTIONS for CORS (same as profile image)
     if (req.method === 'OPTIONS') {
       return {
@@ -235,16 +220,7 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
 
     // Parse and validate request body (same as profile image)
     const requestBody = await req.json() as any;
-    console.log('Request body keys:', requestBody ? Object.keys(requestBody) : []);
-    
     const uploadData = validateResumeUpload(requestBody);
-    console.log('Validated upload data:', {
-      fileName: uploadData.fileName,
-      userId: uploadData.userId,
-      mimeType: uploadData.mimeType,
-      resumeLabel: uploadData.resumeLabel,
-      fileDataLength: uploadData.fileData.length
-    });
 
     // Initialize storage service
     const storageService = new ResumeStorageService();
@@ -288,12 +264,6 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
         isPrimary: isPrimaryResume // Only set as primary if it's the first resume
       });
 
-      console.log('Resume saved to ApplicantResumes table', {
-        resumeId,
-        isPrimary: isPrimaryResume,
-        totalResumes: existingResumes.length + 1
-      });
-
       // Recalculate profile completeness (centralized)
       try {
         const { UserService } = await import('./user.service');
@@ -303,11 +273,6 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
       console.error('Failed to save resume to database:', error);
       // Continue anyway - resume is uploaded successfully to storage
     }
-
-    // ? FIXED: Don't delete old resume files - let users manage multiple resumes
-    // The user can delete specific resumes they don't want through the UI
-    console.log('Resume upload completed successfully - keeping existing resumes');
-    console.log('=== END RESUME UPLOAD HANDLER ===');
 
     return {
       status: 200,

@@ -4,17 +4,171 @@ import { Job, PaginationParams, QueryParams, JobCreateRequest } from '../types';
 import {
     ValidationError,
     NotFoundError,
+    InsufficientBalanceError,
     validateRequest,
     jobCreateSchema,
     paginationSchema
 } from '../utils/validation';
 import { appConstants } from '../config';
+import { WalletService } from './wallet.service';
 
 // Pagination caps
 const MAX_PAGE_SIZE = 100;
-const MAX_UNPAGED_TOTAL = 500; // only allow all=true when total <= this
+const MAX_UNPAGED_TOTAL = 500; // when all=true, cap results to this many
 
 export class JobService {
+    private static async getApplicantPersonalization(userId?: string): Promise<{
+        preferredJobTypes: string | null;
+        preferredWorkTypes: string | null;
+        preferredLocations: string | null;
+        preferredCompanySize: string | null;
+        latestJobTitle: string | null;
+    }> {
+        if (!userId) {
+            return {
+                preferredJobTypes: null,
+                preferredWorkTypes: null,
+                preferredLocations: null,
+                preferredCompanySize: null,
+                latestJobTitle: null
+            };
+        }
+
+        const query = `
+            SELECT TOP 1
+                a.PreferredJobTypes AS preferredJobTypes,
+                a.PreferredWorkTypes AS preferredWorkTypes,
+                a.PreferredLocations AS preferredLocations,
+                a.PreferredCompanySize AS preferredCompanySize,
+                (
+                    SELECT TOP 1 we.JobTitle
+                    FROM WorkExperiences we
+                    WHERE we.ApplicantID = a.ApplicantID
+                      AND (we.IsActive = 1 OR we.IsActive IS NULL)
+                    ORDER BY
+                      CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
+                      we.EndDate DESC,
+                      we.StartDate DESC
+                ) AS latestJobTitle
+            FROM Applicants a
+            WHERE a.UserID = @param0;
+        `;
+
+        const result = await dbService.executeQuery(query, [userId]);
+        const row = result.recordset?.[0];
+        return {
+            preferredJobTypes: row?.preferredJobTypes ?? null,
+            preferredWorkTypes: row?.preferredWorkTypes ?? null,
+            preferredLocations: row?.preferredLocations ?? null,
+            preferredCompanySize: row?.preferredCompanySize ?? null,
+            latestJobTitle: row?.latestJobTitle ?? null
+        };
+    }
+
+    private static buildPreferenceScoreSql(
+        preferredJobTypesParam: string,
+        preferredWorkTypesParam: string,
+        preferredLocationsParam: string,
+        preferredCompanySizeParam: string
+    ): string {
+        // Scores are additive; higher means better match.
+        // Weights (simple + stable): JobType=3, WorkplaceType=2, Location=2, CompanySize=1
+        // PERF: expects CTEs `pjt`, `pwt`, `ploc` to exist so STRING_SPLIT runs once per request.
+        return `(
+            (CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM pjt
+                    WHERE pjt.v = LOWER(REPLACE(LTRIM(RTRIM(jt.Value)), ' ', ''))
+                )
+                THEN 3 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(wt.Value)), '') IS NOT NULL
+                 AND EXISTS (
+                    SELECT 1
+                    FROM pwt
+                    WHERE pwt.v = LOWER(REPLACE(LTRIM(RTRIM(wt.Value)), ' ', ''))
+                 )
+                THEN 2 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM ploc
+                    WHERE
+                        j.Location LIKE '%' + ploc.v + '%'
+                        OR j.City LIKE '%' + ploc.v + '%'
+                        OR j.Country LIKE '%' + ploc.v + '%'
+                )
+                THEN 2 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(${preferredCompanySizeParam})), '') IS NOT NULL
+                 AND NULLIF(LTRIM(RTRIM(o.Size)), '') IS NOT NULL
+                 AND LOWER(LTRIM(RTRIM(o.Size))) = LOWER(LTRIM(RTRIM(${preferredCompanySizeParam})))
+                THEN 1 ELSE 0
+            END)
+        )`;
+    }
+
+    private static buildRoleTitleScoreSql(latestJobTitleParam: string): string {
+        // Boost jobs whose title matches the user's latest/current role title.
+        // Uses WorkExperiences (current first, then most recent end/start).
+        // PERF: expects CTE `rtok` to exist so STRING_SPLIT runs once per request.
+        return `(
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(${latestJobTitleParam})), '') IS NOT NULL
+                 AND j.Title LIKE '%' + LTRIM(RTRIM(${latestJobTitleParam})) + '%'
+                THEN 6 ELSE 0
+            END)
+            +
+            (CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM rtok
+                    WHERE j.Title LIKE '%' + rtok.v + '%'
+                )
+                THEN 4 ELSE 0
+            END)
+        )`;
+    }
+
+    private static buildPersonalizationCtesSql(
+        preferredJobTypesParam: string,
+        preferredWorkTypesParam: string,
+        preferredLocationsParam: string,
+        latestJobTitleParam: string
+    ): string {
+        // These CTEs are independent of Jobs, so SQL Server can compute them once.
+        return `
+            ;WITH
+            pjt AS (
+                SELECT LOWER(REPLACE(LTRIM(RTRIM(value)), ' ', '')) AS v
+                FROM STRING_SPLIT(${preferredJobTypesParam}, ',')
+                WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
+            ),
+            pwt AS (
+                SELECT LOWER(REPLACE(LTRIM(RTRIM(value)), ' ', '')) AS v
+                FROM STRING_SPLIT(${preferredWorkTypesParam}, ',')
+                WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
+            ),
+            ploc AS (
+                SELECT LTRIM(RTRIM(value)) AS v
+                FROM STRING_SPLIT(${preferredLocationsParam}, ',')
+                WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
+            ),
+            rtok AS (
+                SELECT LTRIM(RTRIM(value)) AS v
+                FROM STRING_SPLIT(${latestJobTitleParam}, ' ')
+                WHERE LEN(LTRIM(RTRIM(value))) >= 3
+            )
+        `;
+    }
+
     /**
      * \ud83d\ude80 OPTIMIZATION: Shared filter builder to avoid code duplication between getJobs and searchJobs
      * Builds WHERE clause and parameters for job queries with common filters
@@ -95,22 +249,33 @@ export class JobService {
                 queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
                 paramIndex += 2;
             } else {
-                // For longer searches (5+ chars), use CONTAINS fulltext for all fields
-                const tokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
-                const tokenClauses: string[] = [];
+                // For longer searches (5+ chars), use fulltext.
+                // PERF: avoid N*tokens OR predicates; build a single fulltext query string.
+                const rawTokens = searchTerm.split(/\s+/).filter(Boolean).slice(0, 10);
+                const tokens = rawTokens
+                    .map(t => t.replace(/[^0-9A-Za-z]/g, ''))
+                    .filter(Boolean)
+                    .slice(0, 10);
 
-                // Search in Title, Location, City, Country, Organization using fulltext
-                tokens.forEach(tok => {
-                    tokenClauses.push(`CONTAINS((j.Title, j.Location, j.City, j.Country), @param${paramIndex})`);
-                    queryParams.push(`${tok}*`);
-                    paramIndex += 1;
-                    
-                    tokenClauses.push(`CONTAINS(o.Name, @param${paramIndex})`);
-                    queryParams.push(`${tok}*`);
-                    paramIndex += 1;
-                });
+                // Example: "software*" OR "engineer*"
+                const ftQuery = tokens.length > 0
+                    ? tokens.map(t => `"${t}*"`).join(' OR ')
+                    : `"${searchTerm.replace(/[^0-9A-Za-z]/g, '')}*"`;
 
-                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+                // Set-based full-text filter (evaluated once) instead of per-row CONTAINS predicates.
+                // Preserves behavior: include jobs where either job fields match OR organization name matches.
+                whereClause += ` AND (
+                    j.JobID IN (
+                        SELECT [KEY]
+                        FROM CONTAINSTABLE(Jobs, (Title, Location, City, Country), @param${paramIndex})
+                    )
+                    OR j.OrganizationID IN (
+                        SELECT [KEY]
+                        FROM CONTAINSTABLE(Organizations, Name, @param${paramIndex})
+                    )
+                )`;
+                queryParams.push(ftQuery);
+                paramIndex += 1;
             }
         }
 
@@ -128,18 +293,15 @@ export class JobService {
             paramIndex++;
         }
 
-        // Organization filter (multiple organizations support) - uses OrganizationID from Jobs table
+        // Organization filter (multiple organizations support)
         if (f.organizationIds) {
             const orgIdsStr = String(f.organizationIds).trim();
-            console.log('🔍 [BACKEND] Organization filter received:', { orgIdsStr });
             
             if (orgIdsStr) {
                 // Parse comma-separated organization IDs and convert to integers
                 const orgIds = orgIdsStr.split(',')
-                    .map(s => parseInt(s.trim(), 10))  // ✅ FIXED: Convert to integers
-                    .filter(n => !isNaN(n) && n > 0);   // ✅ FIXED: Filter out invalid numbers
-                
-                console.log('🔍 [BACKEND] Parsed organization IDs:', orgIds);
+                    .map(s => parseInt(s.trim(), 10))
+                    .filter(n => !isNaN(n) && n > 0);
                 
                 if (orgIds.length > 0) {
                     // Build IN clause with parameterized values
@@ -150,10 +312,7 @@ export class JobService {
                     }).join(',');
                     
                     whereClause += ` AND j.OrganizationID IN (${placeholders})`;
-                    queryParams.push(...orgIds);  // Now pushing integers instead of strings
-                    
-                    console.log('🔍 [BACKEND] WHERE clause addition:', `j.OrganizationID IN (${placeholders})`);
-                    console.log('🔍 [BACKEND] Query params added:', orgIds);
+                    queryParams.push(...orgIds);
                 }
             }
         }
@@ -197,6 +356,14 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🏢 Fortune 500 filter - filter jobs from Fortune 500 companies
+        if (f.isFortune500 !== undefined && f.isFortune500 !== null) {
+            const isFortune500Value = f.isFortune500 === true || f.isFortune500 === 'true' || f.isFortune500 === 1 || f.isFortune500 === '1';
+            whereClause += ` AND o.IsFortune500 = @param${paramIndex}`;
+            queryParams.push(isFortune500Value ? 1 : 0);
+            paramIndex++;
+        }
+
         return { whereClause, queryParams, paramIndex };
     }
 
@@ -213,8 +380,16 @@ export class JobService {
         // WorkplaceTypeID (FK) from textual workplaceType (optional). Default to first WorkplaceType if not found
         let workplaceTypeId: number = 443; // Default to Onsite (ReferenceID from ReferenceMetadata)
         if (validated.workplaceType) {
+            const rawWorkplaceType = String(validated.workplaceType).trim();
+            const workplaceTypeNormalized = (() => {
+                const lower = rawWorkplaceType.toLowerCase();
+                if (lower === 'onsite' || lower === 'on-site' || lower === 'on site') return 'Onsite';
+                if (lower === 'remote') return 'Remote';
+                if (lower === 'hybrid') return 'Hybrid';
+                return rawWorkplaceType;
+            })();
             const wtQuery = 'SELECT ReferenceID FROM ReferenceMetadata WHERE RefType = @param0 AND Value = @param1';
-            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', validated.workplaceType]);
+            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', workplaceTypeNormalized]);
             if (wtResult.recordset && wtResult.recordset.length > 0) {
                 workplaceTypeId = wtResult.recordset[0].ReferenceID;
             }
@@ -314,7 +489,7 @@ export class JobService {
     }
 
     // Get all jobs with filtering and pagination (page-based only) - OPTIMIZED for performance
-    static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; total: number; totalPages: number; hasMore: boolean; nextCursor: any | null }> {
+    static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; hasMore: boolean; nextCursor: any | null }> {
         const { page, pageSize, excludeUserApplications } = params;
         let { sortBy = 'PublishedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
@@ -335,32 +510,31 @@ export class JobService {
         const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
         let paramIndex = currentParamIndex;
 
-        // 🚀 OPTIMIZATION: Count query with Organizations join for search
-        const countQuery = `
-            SELECT COUNT(*) as total
-            FROM Jobs j
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            ${whereClause}
-        `;
-
-        const countResult = await dbService.executeQuery(countQuery, queryParams);
-        const total = countResult.recordset?.[0]?.total || 0;
-        
-        // 🔍 DEBUG: Log WHERE clause and parameters
-        console.log('🔍 [getJobs] WHERE clause:', whereClause);
-        console.log('🔍 [getJobs] Parameters:', queryParams);
-        console.log('🔍 [getJobs] Total count:', total);
-        
-        if (total === 0) return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
-
+        // NOTE: We intentionally do not run COUNT(*) for perf.
+        // If all=true is requested, we cap to MAX_UNPAGED_TOTAL and signal more via hasMore.
         const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
-        const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
-        const noPaging = !!allowUnpaged;
+        const noPaging = !!requestedAll;
         const pageNum = Math.max(Number(page) || 1, 1);
-        const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+        const pageSizeNum = noPaging
+            ? MAX_UNPAGED_TOTAL
+            : Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+
+        // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
+        const personalization = await this.getApplicantPersonalization(excludeUserApplications);
+
+        // Add personalization parameters once; used in ORDER BY scoring.
+        const dataParams: any[] = [...queryParams];
+
+        const pjtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredJobTypes); paramIndex++;
+        const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
+        const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
+        const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
+        const latestTitleParam = `@param${paramIndex}`; dataParams.push(personalization.latestJobTitle); paramIndex++;
+
+        const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam, latestTitleParam);
 
         // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
-        let dataQuery = `
+        let dataQuery = `${personalizationCtes}
             SELECT
                 j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
                 j.OrganizationID,
@@ -378,28 +552,39 @@ export class JobService {
             ${whereClause}
         `;
 
-        const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
-        const dataParams: any[] = [...queryParams];
+        const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+        const roleTitleScoreSql = this.buildRoleTitleScoreSql(latestTitleParam);
+        const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
+        const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
+            || f.roleTitlePersonalization === false
+            || f.roleTitlePersonalization === 0;
+        // NEW: Skip personalization if dontPersonalize=true is passed from frontend
+        const skipPersonalization = f.dontPersonalize === true;
+        const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
+        const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
-        if (!noPaging) {
-            const offset = (pageNum - 1) * pageSizeNum;
-            // 🚀 OPTIMIZATION: Use indexed PublishedAt column for sorting
-            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
-                          OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-                          OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
-            dataParams.push(offset, pageSizeNum);
-            paramIndex += 2;
-        } else {
-            dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
-        }
+        const orderPrefix = skipPersonalization
+            ? '' // No personalization ordering
+            : (hasSearchText
+                ? `${preferenceScoreSql} DESC, `
+                : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `));
+
+        // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
+        const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
+        // 🚀 OPTIMIZATION: Use indexed PublishedAt column for sorting
+        dataQuery += ` ORDER BY ${orderPrefix}${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
+                      OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+                      OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
+        dataParams.push(offset, pageSizeNum + 1);
+        paramIndex += 2;
 
         const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-        const rows = dataResult.recordset || [];
+        const fetched = dataResult.recordset || [];
 
-        // Page-based hasMore logic
-        const hasMore = !noPaging && rows.length === pageSizeNum && pageNum < totalPages;
+        const hasMore = fetched.length > pageSizeNum;
+        const rows = hasMore ? fetched.slice(0, pageSizeNum) : fetched;
 
-        return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
+        return { jobs: rows, hasMore, nextCursor: null };
     }
 
     // Get job by ID - ENHANCED: Search SQL first, then archived jobs in blob storage
@@ -431,18 +616,15 @@ export class JobService {
         const result = await dbService.executeQuery<Job>(query, [jobId]);
         
         if (result.recordset && result.recordset.length > 0) {
-            console.log(`[JobService] Job ${jobId} found in SQL database`);
             return result.recordset[0];
         }
 
         // If not found in SQL, search in archived jobs (blob storage)
         try {
-            console.log(`[JobService] Job ${jobId} not found in SQL, searching archives...`);
             const { JobArchiveService } = await import('./job-archive.service');
             const archivedJob = await JobArchiveService.getArchivedJob(jobId);
             
             if (archivedJob) {
-                console.log(`[JobService] Job ${jobId} found in archive`);
                 // Add flag that this is an archived job
                 // Frontend uses IsArchived flag to hide Apply/Refer buttons
                 return {
@@ -452,10 +634,9 @@ export class JobService {
                 } as Job;
             }
         } catch (archiveError: any) {
-            console.error(`[JobService] Error searching archives for job ${jobId}:`, archiveError.message);
+            console.error(`Error searching archives for job ${jobId}:`, archiveError.message);
         }
 
-        console.log(`[JobService] Job ${jobId} not found in SQL or archives`);
         return null;
     }
 
@@ -529,6 +710,10 @@ export class JobService {
             throw new NotFoundError('Job not found');
         }
 
+        if (job.Status !== 'Draft') {
+            throw new ValidationError('Only draft jobs can be published');
+        }
+
         // Check permissions
         if (job.PostedByUserID !== userId) {
             const permissionQuery = `
@@ -540,6 +725,13 @@ export class JobService {
             if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
+        }
+
+        // Charge ₹50 to publish a draft job
+        const PUBLISH_JOB_FEE = 50;
+        const wallet = await WalletService.getOrCreateWallet(userId);
+        if (wallet.Balance < PUBLISH_JOB_FEE) {
+            throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
         }
 
         // Update job status to Published
@@ -556,6 +748,31 @@ export class JobService {
         `;
 
         await dbService.executeQuery(query, [jobId]);
+
+        // Deduct fee after successful publish; if debit fails, revert publish.
+        try {
+            await WalletService.debitWallet(
+                userId,
+                PUBLISH_JOB_FEE,
+                'JOB_PUBLISH',
+                `Publish job - ${job.Title || jobId}`
+            );
+        } catch (error) {
+            try {
+                await dbService.executeQuery(
+                    `UPDATE Jobs
+                     SET Status = 'Draft',
+                         PublishedAt = NULL,
+                         ExpiresAt = NULL,
+                         UpdatedAt = GETUTCDATE()
+                     WHERE JobID = @param0`,
+                    [jobId]
+                );
+            } catch (revertError) {
+                console.error('Failed to revert job after wallet debit failure:', revertError);
+            }
+            throw error;
+        }
 
         const publishedJob = await this.getJobById(jobId);
         if (!publishedJob) {
@@ -692,11 +909,11 @@ export class JobService {
         return result.recordset || [];
     }
 
-    // Search jobs with advanced filters (page-based only) - OPTIMIZED for performance
-    static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; total: number; totalPages?: number; hasMore?: boolean; nextCursor?: any | null }> {
-        const searchStartTime = Date.now();
-        console.log('🔍 searchJobs started:', { searchParams, timestamp: new Date().toISOString() });
-
+    /**
+     * Search jobs with advanced filters and pagination
+     * Supports personalization based on user preferences
+     */
+    static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; hasMore: boolean; nextCursor: any | null }> {
         try {
             const { page = 1, pageSize = 20, excludeUserApplications, ...rest } = searchParams || {};
             const f = { ...rest } as any;
@@ -705,41 +922,32 @@ export class JobService {
             const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
             let paramIndex = currentParamIndex;
 
-            // 🚀 OPTIMIZATION: Count query with Organizations join for search
-            const countStartTime = Date.now();
-            const countQuery = `
-                SELECT COUNT(*) as total
-                FROM Jobs j
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                ${whereClause}
-            `;
-
-            console.log('🔍 Executing count query:', { 
-                query: countQuery.substring(0, 500), 
-                paramCount: queryParams.length,
-                params: queryParams.slice(0, 5) 
-            });
-            const countResult = await dbService.executeQuery(countQuery, queryParams);
-            const countTime = Date.now() - countStartTime;
-            const total = countResult.recordset?.[0]?.total || 0;
-
-            console.log('✅ Count query completed:', { total, countTime: `${countTime}ms` });
-
-            if (total === 0) {
-                const totalTime = Date.now() - searchStartTime;
-                console.log('🔍 searchJobs completed (no results):', { totalTime: `${totalTime}ms` });
-                return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
-            }
-
+            // NOTE: We intentionally do not run COUNT(*) for perf.
+            // If all=true is requested, we cap to MAX_UNPAGED_TOTAL and signal more via hasMore.
             const requestedAll = (f.all === true || f.all === 'true' || f.all === 1 || f.all === '1' || Number(pageSize) <= 0);
-            const allowUnpaged = requestedAll && total <= MAX_UNPAGED_TOTAL;
-            const noPaging = !!allowUnpaged;
+            const noPaging = !!requestedAll;
             const pageNum = Math.max(Number(page) || 1, 1);
-            const pageSizeNum = Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+            const pageSizeNum = noPaging
+                ? MAX_UNPAGED_TOTAL
+                : Math.min(Math.max(Number(pageSize) || 20, 1), MAX_PAGE_SIZE);
+
+            // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
+            const personalization = await this.getApplicantPersonalization(excludeUserApplications);
+
+            // Add personalization parameters once; used in ORDER BY scoring.
+            const dataParams: any[] = [...queryParams];
+
+            const pjtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredJobTypes); paramIndex++;
+            const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
+            const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
+            const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
+            const latestTitleParam = `@param${paramIndex}`; dataParams.push(personalization.latestJobTitle); paramIndex++;
+
+            const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam, latestTitleParam);
 
             // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
             const dataStartTime = Date.now();
-            let dataQuery = `
+            let dataQuery = `${personalizationCtes}
                 SELECT
                     j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
                     j.OrganizationID,
@@ -757,47 +965,41 @@ export class JobService {
                 ${whereClause}
             `;
 
-            const totalPages = noPaging ? 1 : Math.max(Math.ceil(total / pageSizeNum), 1);
-            const dataParams: any[] = [...queryParams];
+            const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+            const roleTitleScoreSql = this.buildRoleTitleScoreSql(latestTitleParam);
+            const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
+            const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
+                || f.roleTitlePersonalization === false
+                || f.roleTitlePersonalization === 0;
+            // NEW: Skip personalization if dontPersonalize=true is passed from frontend
+            const skipPersonalization = f.dontPersonalize === true;
+            const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
+            const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
-            if (!noPaging) {
-                const offset = (pageNum - 1) * pageSizeNum;
-                // 🚀 OPTIMIZATION: Use indexed PublishedAt instead of PublishedDate
-                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC 
-                              OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-                              OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
-                dataParams.push(offset, pageSizeNum);
-                paramIndex += 2;
-            } else {
-                dataQuery += ` ORDER BY j.PublishedAt DESC, j.JobID DESC`;
-            }
+            const orderPrefix = skipPersonalization
+                ? '' // No personalization ordering
+                : (hasSearchText
+                    ? `${preferenceScoreSql} DESC, `
+                    : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `));
 
-            console.log('🔍 Executing data query');
+            // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
+            const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
+            // 🚀 OPTIMIZATION: Use indexed PublishedAt instead of PublishedDate
+            dataQuery += ` ORDER BY ${orderPrefix}j.PublishedAt DESC, j.JobID DESC 
+                          OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
+                          OPTION (OPTIMIZE FOR (@param${paramIndex} = 0))`;
+            dataParams.push(offset, pageSizeNum + 1);
+            paramIndex += 2;
+
             const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-            const dataTime = Date.now() - dataStartTime;
-            const rows = dataResult.recordset || [];
+            const fetched = dataResult.recordset || [];
+            const hasMore = fetched.length > pageSizeNum;
+            const rows = hasMore ? fetched.slice(0, pageSizeNum) : fetched;
 
-            console.log('✅ Data query completed:', { rowCount: rows.length, dataTime: `${dataTime}ms` });
-
-            const hasMore = !noPaging && rows.length === pageSizeNum && pageNum < totalPages;
-
-            const totalTime = Date.now() - searchStartTime;
-            console.log('✅ searchJobs completed:', {
-                totalTime: `${totalTime}ms`,
-                countTime: `${countTime}ms`,
-                dataTime: `${dataTime}ms`,
-                total,
-                returned: rows.length
-            });
-
-            return { jobs: rows, total, totalPages, hasMore, nextCursor: null };
+            return { jobs: rows, hasMore, nextCursor: null };
         } catch (error) {
-            const totalTime = Date.now() - searchStartTime;
-            console.error('❌ Error in JobService.searchJobs:', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                totalTime: `${totalTime}ms`
-            });
-            return { jobs: [], total: 0, totalPages: 1, hasMore: false, nextCursor: null };
+            console.error('Error in JobService.searchJobs:', error instanceof Error ? error.message : 'Unknown error');
+            return { jobs: [], hasMore: false, nextCursor: null };
         }
     }
 }

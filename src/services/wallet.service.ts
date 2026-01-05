@@ -7,6 +7,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
+import { PricingService } from './pricing.service';
 import { ValidationError, NotFoundError, InsufficientBalanceError } from '../utils/validation';
 import { config } from '../config/appConfig';
 
@@ -191,8 +192,6 @@ export class WalletService {
         expiresAt
       ]);
 
-      console.log(`Wallet recharge order created: ${order.id} for user ${userId}`);
-
       return {
         orderId: order.id,
         amount: order.amount,
@@ -305,8 +304,6 @@ export class WalletService {
          WHERE OrderID = @param0`,
         [order.OrderID, verificationData.razorpayPaymentId, verificationData.razorpaySignature]
       );
-
-      console.log(`Wallet credited: ?${order.Amount} for user ${userId}. New balance: ?${balanceAfter}`);
 
       return {
         success: true,
@@ -624,8 +621,6 @@ export class WalletService {
     description: string
   ): Promise<{ success: boolean; transactionId: string; newBalance: number }> {
     try {
-      console.log(`?? Crediting ${source} of ?${amount} to user ${userId}`);
-
       if (amount <= 0) {
         throw new ValidationError('Bonus amount must be greater than 0');
       }
@@ -667,8 +662,6 @@ export class WalletService {
         ]
       );
 
-      console.log(`? Bonus credited: ?${amount} to user ${userId}. New balance: ?${balanceAfter}`);
-
       return {
         success: true,
         transactionId,
@@ -681,12 +674,13 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give welcome bonus to new user (₹100)
+   * Give welcome bonus to new user
    * Called automatically during user registration
+   * Amount is fetched from PricingSettings table in database
    */
   static async giveWelcomeBonus(userId: string): Promise<{ success: boolean; amount: number }> {
     try {
-      const WELCOME_BONUS_AMOUNT = 100;
+      const WELCOME_BONUS_AMOUNT = await PricingService.getSetting('WELCOME_BONUS');
 
       // Check if bonus already given
       const checkQuery = `
@@ -697,7 +691,6 @@ export class WalletService {
       const checkResult = await dbService.executeQuery(checkQuery, [userId]);
 
       if (checkResult.recordset[0]?.WalletBonusGiven) {
-        console.log(`?? Welcome bonus already given to user ${userId}`);
         return { success: false, amount: 0 };
       }
 
@@ -717,8 +710,6 @@ export class WalletService {
         [userId]
       );
 
-      console.log(`?? Welcome bonus of ?${WELCOME_BONUS_AMOUNT} credited to user ${userId}`);
-
       return { success: true, amount: WELCOME_BONUS_AMOUNT };
     } catch (error) {
       console.error('Error giving welcome bonus:', error);
@@ -727,7 +718,7 @@ export class WalletService {
   }
 
   /**
-   * ? NEW: Give referral bonuses (₹50 to both referrer and referee)
+   * Give referral bonuses to both referrer and referee
    * Called when a new user registers with a referral code
    */
   static async giveReferralBonuses(
@@ -753,11 +744,177 @@ export class WalletService {
         `Referral bonus for referring a new user`
       );
 
-      console.log(`?? Referral bonuses credited: ?${REFERRAL_BONUS_AMOUNT} each to ${newUserId} and ${referrerId}`);
-
       return { success: true, amount: REFERRAL_BONUS_AMOUNT };
     } catch (error) {
       console.error('Error giving referral bonuses:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get withdrawable balance (money earned from referral verification rewards)
+   * Only REFERRAL_BONUS transactions are withdrawable
+   */
+  static async getWithdrawableBalance(userId: string): Promise<{
+    withdrawableAmount: number;
+    totalEarned: number;
+    totalWithdrawn: number;
+    canWithdraw: boolean;
+    minimumWithdrawal: number;
+  }> {
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+      
+      // Get total earned from referral bonuses (verification rewards)
+      const earnedQuery = `
+        SELECT COALESCE(SUM(Amount), 0) as TotalEarned
+        FROM WalletTransactions
+        WHERE WalletID = @param0 
+          AND TransactionType = 'Credit'
+          AND Source = 'REFERRAL_BONUS'
+          AND Status = 'Completed'
+      `;
+      const earnedResult = await dbService.executeQuery(earnedQuery, [wallet.WalletID]);
+      const totalEarned = earnedResult.recordset?.[0]?.TotalEarned || 0;
+
+      // Get total already withdrawn
+      const withdrawnQuery = `
+        SELECT COALESCE(SUM(Amount), 0) as TotalWithdrawn
+        FROM WalletWithdrawals
+        WHERE UserID = @param0 
+          AND Status IN ('Completed', 'Pending', 'Processing')
+      `;
+      const withdrawnResult = await dbService.executeQuery(withdrawnQuery, [userId]);
+      const totalWithdrawn = withdrawnResult.recordset?.[0]?.TotalWithdrawn || 0;
+
+      const withdrawableAmount = Math.max(0, totalEarned - totalWithdrawn);
+      const minimumWithdrawal = 500; // Minimum ₹500 required to withdraw
+      const canWithdraw = withdrawableAmount >= minimumWithdrawal;
+
+      return {
+        withdrawableAmount,
+        totalEarned,
+        totalWithdrawn,
+        canWithdraw,
+        minimumWithdrawal
+      };
+    } catch (error) {
+      console.error('Error getting withdrawable balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Request withdrawal of referral earnings
+   */
+  static async requestWithdrawal(userId: string, amount: number, paymentDetails: {
+    upiId?: string;
+    bankAccount?: string;
+    ifscCode?: string;
+    accountHolderName?: string;
+  }): Promise<{ success: boolean; withdrawalId: string; message: string }> {
+    try {
+      const wallet = await this.getOrCreateWallet(userId);
+      const withdrawable = await this.getWithdrawableBalance(userId);
+      
+      if (amount > withdrawable.withdrawableAmount) {
+        throw new ValidationError(`Insufficient withdrawable balance. Available: ₹${withdrawable.withdrawableAmount}`);
+      }
+      
+      if (amount < withdrawable.minimumWithdrawal) {
+        throw new ValidationError(`Minimum withdrawal amount is ₹${withdrawable.minimumWithdrawal}`);
+      }
+
+      // Create withdrawal request
+      const withdrawalId = AuthService.generateUniqueId();
+      const insertQuery = `
+        INSERT INTO WalletWithdrawals (
+          WithdrawalID, WalletID, UserID, Amount, CurrencyID, 
+          UPI_ID, BankAccountNumber, BankIFSC, BankAccountName,
+          Status, RequestedAt
+        ) VALUES (
+          @param0, @param1, @param2, @param3, 4,
+          @param4, @param5, @param6, @param7,
+          'Pending', GETUTCDATE()
+        )
+      `;
+      
+      await dbService.executeQuery(insertQuery, [
+        withdrawalId,
+        wallet.WalletID,
+        userId,
+        amount,
+        paymentDetails.upiId || null,
+        paymentDetails.bankAccount || null,
+        paymentDetails.ifscCode || null,
+        paymentDetails.accountHolderName || null
+      ]);
+
+      return {
+        success: true,
+        withdrawalId,
+        message: `Withdrawal request for ₹${amount} has been submitted. It will be processed within 24-48 hours.`
+      };
+    } catch (error) {
+      console.error('Error requesting withdrawal:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's withdrawal history
+   */
+  static async getWithdrawalHistory(userId: string, page: number = 1, pageSize: number = 20): Promise<{
+    withdrawals: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    try {
+      const safePage = Math.max(1, Math.floor(page) || 1);
+      const safePageSize = Math.min(50, Math.max(1, Math.floor(pageSize) || 20));
+      const offset = (safePage - 1) * safePageSize;
+
+      // Count total
+      const countQuery = `
+        SELECT COUNT(*) as Total
+        FROM WalletWithdrawals
+        WHERE UserID = @param0
+      `;
+      const countResult = await dbService.executeQuery(countQuery, [userId]);
+      const total = countResult.recordset?.[0]?.Total || 0;
+      const totalPages = Math.ceil(total / safePageSize);
+
+      // Get withdrawals
+      const dataQuery = `
+        SELECT 
+          WithdrawalID,
+          Amount,
+          UPI_ID as UpiId,
+          BankAccountNumber,
+          Status,
+          RequestedAt,
+          ProcessedAt,
+          PaymentReference,
+          RejectionReason
+        FROM WalletWithdrawals
+        WHERE UserID = @param0
+        ORDER BY RequestedAt DESC
+        OFFSET ${offset} ROWS
+        FETCH NEXT ${safePageSize} ROWS ONLY
+      `;
+      const dataResult = await dbService.executeQuery(dataQuery, [userId]);
+
+      return {
+        withdrawals: dataResult.recordset || [],
+        total,
+        page: safePage,
+        pageSize: safePageSize,
+        totalPages
+      };
+    } catch (error) {
+      console.error('Error getting withdrawal history:', error);
       throw error;
     }
   }

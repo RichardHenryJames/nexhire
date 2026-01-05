@@ -7,7 +7,7 @@
  * 3. Smart handling of resume limits and error states
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import refopenAPI from '../services/api';
-import { colors, typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { typography } from '../styles/theme';
 
 const ResumeUploadModal = ({ 
   visible, 
@@ -30,6 +31,9 @@ const ResumeUploadModal = ({
   user,
   jobTitle 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const [uploading, setUploading] = useState(false);
   const [existingResumes, setExistingResumes] = useState([]);
   const [hasCheckedResumes, setHasCheckedResumes] = useState(false);
@@ -50,7 +54,17 @@ const ResumeUploadModal = ({
       const response = await refopenAPI.getMyResumes();
       
       if (response && response.success && Array.isArray(response.data)) {
-        setExistingResumes(response.data);
+        // Sort resumes: Primary first, then by upload date (newest first)
+        const sortedResumes = [...response.data].sort((a, b) => {
+          // Primary always comes first
+          if (a.IsPrimary && !b.IsPrimary) return -1;
+          if (!a.IsPrimary && b.IsPrimary) return 1;
+          // Then sort by upload date (newest first)
+          const dateA = new Date(a.UploadedAt || a.CreatedAt || 0);
+          const dateB = new Date(b.UploadedAt || b.CreatedAt || 0);
+          return dateB - dateA;
+        });
+        setExistingResumes(sortedResumes);
       } else {
         setExistingResumes([]);
       }
@@ -84,21 +98,9 @@ const ResumeUploadModal = ({
           }
           setUploading(true);
           try {
-            console.log('Starting upload process...');
-            
-            // TEMPORARY: Skip prompt and use default label for testing
-            console.log('STEP 1: Using default resume label...');
-            const resumeLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
-            console.log('STEP 2: Resume label set to:', resumeLabel);
-            
-            console.log('STEP 3: Calling uploadResume API...');
-            console.log('API call parameters:', {
-              fileName: file.name,
-              fileSize: file.size,
-              userObject: user,
-              userId: user.userId || user.UserID || user.id || user.sub,
-              resumeLabel: resumeLabel
-            });
+            // Use actual file name as the resume label
+            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
             
             // ENSURE we have a valid user ID
             const actualUserId = user.userId || user.UserID || user.id || user.sub;
@@ -106,10 +108,7 @@ const ResumeUploadModal = ({
               throw new Error('User ID not found. Please log in again.');
             }
             
-            console.log('Using userId:', actualUserId);
-            
             const uploadResult = await refopenAPI.uploadResume(file, actualUserId, resumeLabel);
-            console.log('STEP 4: Upload result received:', uploadResult);
             
             if (uploadResult.success) {
               const resumeData = {
@@ -118,9 +117,9 @@ const ResumeUploadModal = ({
                 ResumeLabel: resumeLabel,
                 IsPrimary: existingResumes.length === 0
               };
-              console.log('STEP 5: Resume data prepared:', resumeData);
               onResumeSelected(resumeData);
-              onClose();
+              // ✅ FIX: Don't call onClose() here - let the parent handle closing
+              // onResumeSelected callback will close the modal and handle cleanup
             } else {
               console.error('Upload failed:', uploadResult);
               Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
@@ -148,8 +147,6 @@ const ResumeUploadModal = ({
         multiple: false
       });
 
-      console.log('Document picker result (native):', result);
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploading(true);
         const file = result.assets[0];
@@ -158,7 +155,9 @@ const ResumeUploadModal = ({
           setUploading(false);
           return;
         }
-        const resumeLabel = await promptForResumeLabel(jobTitle);
+        // Use actual file name as the resume label
+        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+        const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
         const uploadResult = await refopenAPI.uploadResume({
           name: file.name,
           size: file.size,
@@ -173,12 +172,11 @@ const ResumeUploadModal = ({
             IsPrimary: existingResumes.length === 0
           };
           onResumeSelected(resumeData);
-          onClose();
+          // ✅ FIX: Don't call onClose() here - let the parent handle closing
+          // onResumeSelected callback will close the modal and handle cleanup
         } else {
           Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
         }
-      } else {
-        console.log('Document picker canceled');
       }
     } catch (error) {
       console.error('Resume upload error:', error);
@@ -192,29 +190,21 @@ const ResumeUploadModal = ({
     return new Promise((resolve) => {
       const defaultLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
       
-      console.log('promptForResumeLabel called with jobTitle:', jobTitle);
-      console.log('Default label:', defaultLabel);
-      
       // WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
       Alert.alert(
         'Resume Label',
         `Give this resume a name. Default: "${defaultLabel}"`,
         [
           { text: 'Use Default', onPress: () => {
-            console.log('User selected default label:', defaultLabel);
             resolve(defaultLabel);
           }},
           { text: 'Custom Name', onPress: () => {
-            console.log('User wants custom name...');
             // For web, we'll use the default for now
             // In a full implementation, you'd use a custom modal
             try {
               const customName = prompt(`Enter resume name (or leave empty for default):`) || defaultLabel;
-              console.log('Custom name received:', customName);
               resolve(customName);
             } catch (error) {
-              console.error('Error with prompt:', error);
-              console.log('Falling back to default label');
               resolve(defaultLabel);
             }
           }}
@@ -225,7 +215,8 @@ const ResumeUploadModal = ({
 
   const handleSelectExistingResume = (resume) => {
     onResumeSelected(resume);
-    onClose();
+    // ✅ FIX: Don't call onClose() here - let the parent handle closing
+    // onResumeSelected callback will close the modal and handle cleanup
   };
 
   const renderContent = () => {
@@ -339,7 +330,6 @@ const ResumeUploadModal = ({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
@@ -352,7 +342,7 @@ const ResumeUploadModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -361,7 +351,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     width: '100%',
     maxWidth: 400,
@@ -381,7 +371,7 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -401,7 +391,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
+    marginLeft: 8,
   },
   resumeOption: {
     flexDirection: 'row',
@@ -432,7 +422,7 @@ const styles = StyleSheet.create({
   },
   resumeDate: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textMuted,
   },
   uploadNewOption: {
     flexDirection: 'row',
@@ -451,14 +441,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
-    marginLeft: 8, // WEB FIX: Replace gap with marginLeft
+    marginLeft: 8,
   },
   cancelButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   cancelButtonText: {
-    color: colors.gray600,
+    color: colors.textSecondary,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
   },

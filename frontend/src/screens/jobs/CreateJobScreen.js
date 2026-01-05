@@ -1,23 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
 
 export default function CreateJobScreen({ navigation }) {
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  
   const [loading, setLoading] = useState(false);
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
   const [currencies, setCurrencies] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
   const [errors, setErrors] = useState({});
   const [applicationDeadline, setApplicationDeadline] = useState('');
   const [targetHiringDate, setTargetHiringDate] = useState('');
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState('');
   const [selectedDateKey, setSelectedDateKey] = useState('');
+
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [departmentSearch, setDepartmentSearch] = useState('');
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
 
   const [jobData, setJobData] = useState({
     title: '',
@@ -60,9 +74,10 @@ export default function CreateJobScreen({ navigation }) {
   const loadReferenceData = async () => {
     try {
       // ✅ OPTIMIZED: Use bulk endpoint to fetch multiple types in one call
-      const [refData, cur] = await Promise.all([
-        refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
-        refopenAPI.getCurrencies()
+      const [refData, cur, countriesRes] = await Promise.all([
+        refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType', 'Department']),
+        refopenAPI.getCurrencies(),
+        refopenAPI.getCountries(),
       ]);
 
       // Handle JobType data
@@ -90,6 +105,17 @@ export default function CreateJobScreen({ navigation }) {
         }
       }
 
+      // Handle Department reference data
+      if (refData?.success && refData.data?.Department) {
+        const departmentItems = Array.isArray(refData.data.Department) ? refData.data.Department : [];
+        const values = departmentItems
+          .map(item => item?.Value)
+          .filter(Boolean)
+          .map(v => String(v));
+        const uniqueSorted = Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+        setDepartmentOptions(uniqueSorted);
+      }
+
       // Handle currencies
       if (cur?.success) {
         const sorted = [...cur.data].sort((a,b)=>a.Code.localeCompare(b.Code));
@@ -97,8 +123,27 @@ export default function CreateJobScreen({ navigation }) {
         const inr = sorted.find(c => c.Code === 'INR');
         setJobData(prev => ({ ...prev, currencyID: (inr || sorted[0])?.CurrencyID || null }));
       }
+
+      // Handle countries (third-party/ref endpoint)
+      if (countriesRes?.success && countriesRes.data?.countries) {
+        const transformedCountries = countriesRes.data.countries
+          .map(c => ({
+            name: c.name,
+            flag: c.flag,
+            region: c.region,
+            id: c.id,
+          }))
+          .filter(c => c.name);
+        setCountries(transformedCountries);
+      } else {
+        setCountries([]);
+      }
     } catch (e) {
       console.error('Reference load failed', e);
+      setCountries([]);
+    }
+    finally {
+      setLoadingCountries(false);
     }
   };
 
@@ -107,7 +152,9 @@ export default function CreateJobScreen({ navigation }) {
     if (!jobData.title.trim()) v.title = 'Title required';
     else if (jobData.title.length < 5) v.title = 'Min 5 chars';
     if (!jobData.jobTypeID) v.jobTypeID = 'Job type required';
+    if (!jobData.department?.trim()) v.department = 'Department required';
     if (!jobData.description.trim()) v.description = 'Description required';
+    else if (jobData.description.trim().length < 20) v.description = 'Min 20 chars';
     if (jobData.salaryRangeMin && jobData.salaryRangeMax) {
       const min = parseFloat(jobData.salaryRangeMin); const max = parseFloat(jobData.salaryRangeMax);
       if (!isNaN(min) && !isNaN(max) && min >= max) v.salaryRange = 'Max must be > Min';
@@ -124,7 +171,7 @@ export default function CreateJobScreen({ navigation }) {
       const payload = {
         title: jobData.title.trim(),
         jobTypeID: parseInt(jobData.jobTypeID),
-        department: jobData.department?.trim() || undefined,
+        department: jobData.department.trim(),
         description: jobData.description.trim(),
         responsibilities: jobData.responsibilities?.trim() || undefined,
         benefitsOffered: jobData.benefitsOffered?.trim() || undefined,
@@ -158,6 +205,7 @@ export default function CreateJobScreen({ navigation }) {
         internalNotes: jobData.internalNotes?.trim() || undefined
       };
 
+
       const result = await refopenAPI.createJob(payload);
       if (result.success) {
         showToast('Job created successfully!', 'success');
@@ -174,7 +222,22 @@ export default function CreateJobScreen({ navigation }) {
       }
     } catch (e) {
       console.error('Create job error:', e);
-      Alert.alert('Error', e?.message || 'Failed to create job');
+      const details = e?.data?.details;
+      if (Array.isArray(details) && details.length) {
+        const mapped = {};
+        for (const d of details) {
+          const field = (d?.field || '').toString();
+          const message = (d?.message || '').toString();
+          if (!field) continue;
+          mapped[field] = message || 'Invalid value';
+        }
+        if (Object.keys(mapped).length) {
+          setErrors(prev => ({ ...prev, ...mapped }));
+        }
+        Alert.alert('Validation', 'Please fix highlighted fields and try again.');
+      } else {
+        Alert.alert('Error', e?.message || 'Failed to create job');
+      }
     } finally { setLoading(false); }
   };
 
@@ -212,6 +275,36 @@ export default function CreateJobScreen({ navigation }) {
     );
   };
 
+  const renderSelect = (key, label, placeholder, onPress, opts = {}) => {
+    const { required = false } = opts;
+    const value = jobData[key] ? String(jobData[key]) : '';
+    const hasError = Boolean(errors[key]);
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>{label} {required && <Text style={styles.required}>*</Text>}</Text>
+        <TouchableOpacity
+          style={[styles.selectInput, hasError && styles.inputError]}
+          onPress={onPress}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.selectInputText, !value && styles.selectPlaceholder]}>
+            {value || placeholder}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color={colors.gray500} />
+        </TouchableOpacity>
+        {hasError && <Text style={styles.errorText}>{errors[key]}</Text>}
+      </View>
+    );
+  };
+
+  const filteredDepartments = departmentSearch.trim()
+    ? departmentOptions.filter(d => d.toLowerCase().includes(departmentSearch.trim().toLowerCase()))
+    : departmentOptions;
+
+  const filteredCountries = countrySearch.trim()
+    ? countries.filter(c => (c?.name || '').toLowerCase().includes(countrySearch.trim().toLowerCase()))
+    : countries;
+
   const renderChips = (key, label, data, valueProp, labelProp) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -246,7 +339,8 @@ export default function CreateJobScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.innerContainer}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <Text style={styles.title}>Post a New Job</Text>
           <Text style={styles.subtitle}>Provide core details only – simplified form</Text>
@@ -268,7 +362,13 @@ export default function CreateJobScreen({ navigation }) {
               </View>
               {errors.jobTypeID && <Text style={styles.errorText}>{errors.jobTypeID}</Text>}
             </View>
-            {renderInput('department','Department','e.g. Engineering',{maxLength:100})}
+            {renderSelect(
+              'department',
+              'Department',
+              'Select department',
+              () => setShowDepartmentModal(true),
+              { required: true }
+            )}
           </View>
 
           <View style={styles.section}>
@@ -281,7 +381,12 @@ export default function CreateJobScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location & Work Type</Text>
             {renderInput('location','Location','e.g. Bengaluru, KA',{maxLength:200})}
-            {renderInput('country','Country','India',{maxLength:100})}
+            {renderSelect(
+              'country',
+              'Country',
+              (loadingCountries ? 'Loading countries...' : 'Select country'),
+              () => setShowCountryModal(true)
+            )}
             {renderInput('state','State / Province','Karnataka',{maxLength:100})}
             {renderInput('city','City','Bengaluru',{maxLength:100})}
             {renderInput('postalCode','Postal Code','560001',{maxLength:20})}
@@ -369,6 +474,7 @@ export default function CreateJobScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+      </View>
       {datePickerVisible && (
         <DatePicker
           mode={datePickerMode}
@@ -377,13 +483,141 @@ export default function CreateJobScreen({ navigation }) {
           onCancel={() => setDatePickerVisible(false)}
         />
       )}
+
+      {/* Department Picker */}
+      <Modal
+        visible={showDepartmentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDepartmentModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowDepartmentModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Department</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.modalSearchRow}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, styles.modalSearchInput]}
+              placeholder="Search departments..."
+              placeholderTextColor={colors.gray400}
+              value={departmentSearch}
+              onChangeText={setDepartmentSearch}
+            />
+          </View>
+
+          <FlatList
+            data={filteredDepartments}
+            keyExtractor={(item) => String(item)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const selected = item === jobData.department;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalItem, selected && styles.modalItemSelected]}
+                  onPress={() => {
+                    setJobData(prev => ({ ...prev, department: item }));
+                    setDepartmentSearch('');
+                    setShowDepartmentModal(false);
+                    if (errors.department) setErrors(prev => ({ ...prev, department: null }));
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selected && styles.modalItemTextSelected]}>{item}</Text>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="layers" size={48} color={colors.gray400} />
+                <Text style={styles.emptyText}>No departments found</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
+
+      {/* Country Picker */}
+      <Modal
+        visible={showCountryModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCountryModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowCountryModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Country</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.modalSearchRow}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, styles.modalSearchInput]}
+              placeholder="Search countries..."
+              placeholderTextColor={colors.gray400}
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+            />
+          </View>
+
+          <FlatList
+            data={filteredCountries}
+            keyExtractor={(item) => String(item.id ?? item.name)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const display = `${item.flag ? item.flag + ' ' : ''}${item.name}`;
+              const selected = item.name === jobData.country;
+              return (
+                <TouchableOpacity
+                  style={[styles.modalItem, selected && styles.modalItemSelected]}
+                  onPress={() => {
+                    setJobData(prev => ({ ...prev, country: item.name }));
+                    setCountrySearch('');
+                    setShowCountryModal(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selected && styles.modalItemTextSelected]}>{display}</Text>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="flag" size={48} color={colors.gray400} />
+                <Text style={styles.emptyText}>No countries found</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container:{flex:1,backgroundColor:colors.background},
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
+  },
   scrollContainer:{flex:1},
+  scrollContent:{paddingBottom:100},
   content:{padding:20},
   title:{fontSize:typography.sizes.xxl,fontWeight:typography.weights.bold,color:colors.text,marginBottom:8},
   subtitle:{fontSize:typography.sizes.md,color:colors.gray600,marginBottom:32},
@@ -392,10 +626,13 @@ const styles = StyleSheet.create({
   fieldContainer:{marginBottom:20},
   fieldLabel:{fontSize:typography.sizes.md,fontWeight:typography.weights.medium,color:colors.text,marginBottom:8},
   required:{color:colors.danger},
-  input:{backgroundColor:colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,fontSize:typography.sizes.md,color:colors.text},
+  input:{backgroundColor:colors.inputBackground || colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,fontSize:typography.sizes.md,color:colors.text},
   inputError:{borderColor:colors.danger},
   textArea:{height:100,textAlignVertical:'top'},
   errorText:{color:colors.danger,fontSize:typography.sizes.sm,marginTop:4},
+  selectInput:{backgroundColor:colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
+  selectInputText:{flex:1,fontSize:typography.sizes.md,color:colors.text},
+  selectPlaceholder:{color:colors.gray400},
   pickerContainer:{flexDirection:'row',flexWrap:'wrap',gap:8},
   pickerButton:{paddingHorizontal:16,paddingVertical:8,borderRadius:20,borderWidth:1,borderColor:colors.border,backgroundColor:colors.background},
   pickerButtonActive:{backgroundColor:colors.primary,borderColor:colors.primary},
@@ -416,4 +653,15 @@ const styles = StyleSheet.create({
   datePickerLabel:{fontSize:typography.sizes.md,color:colors.text},
   datePickerText:{fontSize:typography.sizes.md,color:colors.text},
   datePickerIcon:{marginLeft:8},
+  modalContainer:{flex:1,backgroundColor:colors.background},
+  modalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:20,paddingBottom:12,paddingTop:Platform.OS==='ios'?60:20,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:colors.background},
+  modalTitle:{fontSize:typography.sizes.lg,fontWeight:typography.weights.bold,color:colors.text},
+  modalSearchRow:{padding:16,flexDirection:'row',alignItems:'center',gap:10},
+  modalSearchInput:{flex:1,paddingVertical:12},
+  modalItem:{paddingHorizontal:20,paddingVertical:16,borderBottomWidth:1,borderBottomColor:colors.border,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  modalItemSelected:{backgroundColor:colors.primaryLight},
+  modalItemText:{fontSize:typography.sizes.md,color:colors.text},
+  modalItemTextSelected:{color:colors.primary,fontWeight:typography.weights.bold},
+  emptyContainer:{flex:1,justifyContent:'center',alignItems:'center',padding:40,marginTop:40},
+  emptyText:{fontSize:typography.sizes.md,color:colors.gray600,textAlign:'center',marginTop:16},
 });

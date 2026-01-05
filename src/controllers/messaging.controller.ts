@@ -384,6 +384,33 @@ export const getMyProfileViews = withAuth(async (req: HttpRequest, context: Invo
   }
 });
 
+// Purchase profile view access
+export const purchaseProfileViewAccess = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+  try {
+    const result = await MessagingService.purchaseProfileViewAccess(user.userId);
+
+    if (!result.success) {
+      return {
+        status: 400,
+        jsonBody: {
+          success: false,
+          error: result.error,
+          currentBalance: result.currentBalance,
+          requiredAmount: result.requiredAmount
+        }
+      };
+    }
+
+    return {
+      status: 200,
+      jsonBody: successResponse(result, 'Profile view access purchased successfully')
+    };
+  } catch (error) {
+    console.error('Error in purchaseProfileViewAccess:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to purchase profile view access' } };
+  }
+});
+
 // Get public profile (for viewing other users)
 export const getPublicProfile = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
   try {
@@ -450,6 +477,9 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         CurrentCompanyName: profile.HideCurrentCompany ? null : profile.CurrentCompanyName,
         CurrentJobTitle: profile.HideCurrentCompany ? null : profile.CurrentJobTitle,
         salaryBreakdown: profile.HideSalaryDetails ? null : profile.salaryBreakdown,
+
+        // Privacy preferences for frontend to respect
+        AllowRecruitersToContact: profile.AllowRecruitersToContact !== false,
 
         // Always hide wallet/referral info
         ReferralPoints: undefined,

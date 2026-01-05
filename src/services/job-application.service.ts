@@ -23,7 +23,6 @@ export class JobApplicationService {
         
         if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
             // Create applicant profile if it doesn't exist
-            console.log('Creating applicant profile for user:', applicantUserId);
             applicantId = AuthService.generateUniqueId();
             
             const createApplicantQuery = `
@@ -79,10 +78,10 @@ export class JobApplicationService {
         if (existingResult.recordset && existingResult.recordset.length > 0) {
             const existing = existingResult.recordset[0];
             if (existing.StatusID === 6) {
-                // Previously withdrawn – allow reapply by reviving this row
+                // Previously withdrawn ï¿½ allow reapply by reviving this row
                 resurrectApplicationId = existing.ApplicationID;
             } else {
-                // Active (or any non-withdrawn) application already exists – block
+                // Active (or any non-withdrawn) application already exists ï¿½ block
                 try { await dbService.executeQuery('DELETE FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1', [validatedData.jobID, applicantId]); } catch {}
                 throw new ConflictError('You have already applied for this job');
             }

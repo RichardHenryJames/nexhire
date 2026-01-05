@@ -1,17 +1,23 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../styles/theme';
+import React, { useMemo } from 'react';
+import { ScrollView, View, Text, StyleSheet, Platform } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function ShippingDeliveryScreen() {
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+    <ScrollView style={styles.scrollView}>
+    <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Shipping and Delivery Policy</Text>
       <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
         <Text style={styles.intro}>
-          Refopen Technologies Pvt. Ltd. ("Refopen") provides digital services exclusively. This policy explains how our digital products and services are delivered to users.
+          Refopen Solutions ("Refopen") provides digital services exclusively. This policy explains how our digital products and services are delivered to users.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Nature of Services</Text>
@@ -254,7 +260,7 @@ export default function ShippingDeliveryScreen() {
         <Text style={styles.sectionTitle}>17. Contact for Delivery Issues</Text>
      <Text style={styles.text}>
           For any service delivery concerns:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
        {'\n'}Email: support@refopen.com
           {'\n'}Technical Support: tech@refopen.com
           {'\n'}Website: www.refopen.com
@@ -269,14 +275,28 @@ export default function ShippingDeliveryScreen() {
 
    <ComplianceFooter currentPage="shipping" />
       </View>
+    </View>
     </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-  backgroundColor: colors.white,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    alignSelf: 'center',
   },
   content: {
     padding: 20,
@@ -290,32 +310,32 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   intro: {
     fontSize: 16,
-  color: colors.gray800,
+  color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
   fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
   },
   subsectionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.gray800,
+    color: colors.text,
 marginTop: 12,
     marginBottom: 8,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -328,7 +348,7 @@ marginTop: 12,
   },
   acknowledgmentText: {
     fontSize: 15,
-    color: colors.gray800,
+    color: colors.text,
     fontWeight: '500',
  lineHeight: 22,
     textAlign: 'center',

@@ -14,10 +14,6 @@ export class ReferralNotificationService {
     static async notifyNewReferralRequest(requestId: string, organizationId: number): Promise<void> {
         try {
             // This would integrate with your notification system
-            // For now, we'll just log and potentially send emails
-            
-            console.log(`New referral request ${requestId} for organization ${organizationId}`);
-            
             // TODO: Integrate with email service or push notification service
             // Example:
             // await this.sendEmailToEligibleReferrers(requestId, organizationId);
@@ -30,27 +26,10 @@ export class ReferralNotificationService {
     }
 
     /**
-     * Send notification when referral request is claimed
-     */
-    static async notifyReferralClaimed(requestId: string, referrerId: string, seekerId: string): Promise<void> {
-        try {
-            console.log(`Referral request ${requestId} claimed by ${referrerId} for seeker ${seekerId}`);
-            
-            // Notify the seeker that their request was claimed
-            // TODO: Send email/push notification to seeker
-            
-        } catch (error) {
-            console.error('Error sending referral claimed notification:', error);
-        }
-    }
-
-    /**
      * Send notification when referral is completed
      */
     static async notifyReferralCompleted(requestId: string, referrerId: string, seekerId: string): Promise<void> {
         try {
-            console.log(`Referral request ${requestId} completed by ${referrerId} for seeker ${seekerId}`);
-            
             // Notify the seeker that their referral was submitted
             // TODO: Send email/push notification to seeker
             
@@ -64,8 +43,6 @@ export class ReferralNotificationService {
      */
     static async notifyReferralVerified(requestId: string, referrerId: string, pointsEarned: number): Promise<void> {
         try {
-            console.log(`Referral request ${requestId} verified, ${pointsEarned} points awarded to ${referrerId}`);
-            
             // Notify the referrer about points earned
             // TODO: Send email/push notification to referrer
             
@@ -79,8 +56,6 @@ export class ReferralNotificationService {
      */
     static async sendDailyReferralDigest(): Promise<void> {
         try {
-            console.log('Sending daily referral digest...');
-            
             // Get all referrers who opted in for daily digest
             const query = `
                 SELECT DISTINCT a.ApplicantID, u.Email, u.FirstName
@@ -96,7 +71,6 @@ export class ReferralNotificationService {
             
             for (const referrer of result.recordset || []) {
                 // TODO: Send personalized daily digest email
-                console.log(`Would send daily digest to ${referrer.Email} (${referrer.PendingCount} pending)`);
             }
             
         } catch (error) {
@@ -109,8 +83,6 @@ export class ReferralNotificationService {
      */
     static async updateReferrerBadgeCounts(): Promise<void> {
         try {
-            console.log('Updating referrer badge counts...');
-            
             // This is typically run as a background job every few minutes
             const updateQuery = `
                 MERGE ReferrerStats rs
@@ -136,7 +108,6 @@ export class ReferralNotificationService {
             `;
             
             await dbService.executeQuery(updateQuery, []);
-            console.log('Referrer badge counts updated');
             
         } catch (error) {
             console.error('Error updating referrer badge counts:', error);
@@ -160,7 +131,6 @@ export class ReferralAnalyticsService {
                     -- Request Metrics
                     COUNT(DISTINCT rr.RequestID) as TotalRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Pending' THEN rr.RequestID END) as PendingRequests,
-                    COUNT(DISTINCT CASE WHEN rr.Status = 'Claimed' THEN rr.RequestID END) as ClaimedRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Completed' THEN rr.RequestID END) as CompletedRequests,
                     COUNT(DISTINCT CASE WHEN rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedRequests,
                     
@@ -181,7 +151,8 @@ export class ReferralAnalyticsService {
                     SUM(ISNULL(a.ReferralPoints, 0)) as TotalPointsDistributed
                     
                 FROM ReferralRequests rr
-                LEFT JOIN Applicants a ON rr.AssignedReferrerID = a.ApplicantID
+                LEFT JOIN Users u ON rr.AssignedReferrerID = u.UserID
+                LEFT JOIN Applicants a ON u.UserID = a.UserID
                 LEFT JOIN ApplicantReferralSubscriptions ars ON a.ApplicantID = ars.ApplicantID AND ars.IsActive = 1
                 LEFT JOIN ReferralPlans rp ON ars.PlanID = rp.PlanID
                 WHERE rr.RequestedAt >= DATEADD(day, -30, GETUTCDATE()) -- Last 30 days
@@ -208,18 +179,6 @@ export class ReferralAnalyticsService {
                     100.0 as Percentage
                 FROM ReferralRequests
                 WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())
-                
-                UNION ALL
-                
-                SELECT 
-                    'Requests Claimed' as Stage,
-                    COUNT(*) as Count,
-                    CASE WHEN (SELECT COUNT(*) FROM ReferralRequests WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())) > 0
-                        THEN (COUNT(*) * 100.0) / (SELECT COUNT(*) FROM ReferralRequests WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE()))
-                        ELSE 0 END as Percentage
-                FROM ReferralRequests
-                WHERE Status IN ('Claimed', 'Completed', 'Verified')
-                AND RequestedAt >= DATEADD(day, -30, GETUTCDATE())
                 
                 UNION ALL
                 
@@ -271,9 +230,9 @@ export class ReferralAnalyticsService {
                     SUM(ISNULL(rewards.PointsEarned, 0)) as TotalPointsEarned,
                     AVG(CASE WHEN rr.ReferredAt IS NOT NULL 
                         THEN DATEDIFF(hour, rr.RequestedAt, rr.ReferredAt) END) as AvgResponseTimeHours
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                INNER JOIN ReferralRequests rr ON a.ApplicantID = rr.AssignedReferrerID
+                FROM Users u
+                INNER JOIN ReferralRequests rr ON u.UserID = rr.AssignedReferrerID
+                INNER JOIN Applicants a ON u.UserID = a.UserID
                 LEFT JOIN ReferralRewards rewards ON a.ApplicantID = rewards.ReferrerID
                 WHERE rr.RequestedAt >= DATEADD(day, -30, GETUTCDATE())
                 GROUP BY a.ApplicantID, u.FirstName, u.LastName, u.Email

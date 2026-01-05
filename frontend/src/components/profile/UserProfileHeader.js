@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -82,6 +82,7 @@ export default function UserProfileHeader({
   showProgress = true // NEW: hide circular progress ring when viewing others' profiles
 }) {
   const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
@@ -90,34 +91,6 @@ export default function UserProfileHeader({
   useEffect(() => {
     calculateProfileCompleteness();
   }, [profile, jobSeekerProfile, employerProfile, userType]);
-
-  // ? NEW: Force re-render when key profile fields change
-  useEffect(() => {
-    // Track when critical fields change for debugging
-    console.log('🔍 Profile Header Data Debug:', {
-      hasWorkExperience: !!(jobSeekerProfile?.currentJobTitle && jobSeekerProfile?.currentCompany),
-      currentJobTitle: jobSeekerProfile?.currentJobTitle,
-      currentCompany: jobSeekerProfile?.currentCompany,
-      hasEducation: !!(jobSeekerProfile?.highestEducation || jobSeekerProfile?.fieldOfStudy || jobSeekerProfile?.institution),
-      highestEducation: jobSeekerProfile?.highestEducation,
-      fieldOfStudy: jobSeekerProfile?.fieldOfStudy,
-      institution: jobSeekerProfile?.institution,
-      headline: jobSeekerProfile?.headline,
-      summary: jobSeekerProfile?.summary
-    });
-  }, [
-    jobSeekerProfile?.currentJobTitle,
-    jobSeekerProfile?.currentCompany,
-    jobSeekerProfile?.highestEducation,
-    jobSeekerProfile?.fieldOfStudy,
-    jobSeekerProfile?.institution,
-    jobSeekerProfile?.headline,
-    jobSeekerProfile?.summary,
-    jobSeekerProfile?.minimumSalary,
-    jobSeekerProfile?.yearsOfExperience,
-    jobSeekerProfile?.primarySkills,
-    jobSeekerProfile?.preferredWorkTypes
-  ]);
 
   const calculateProfileCompleteness = () => {
     const requiredFields = userType === 'JobSeeker' ? [
@@ -349,13 +322,6 @@ export default function UserProfileHeader({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0];
-        console.log('Selected image:', {
-          uri: selectedImage.uri,
-          type: selectedImage.type,
-          width: selectedImage.width,
-          height: selectedImage.height,
-          fileSize: selectedImage.fileSize
-        });
 
         await uploadImage(selectedImage);
       }
@@ -369,7 +335,6 @@ export default function UserProfileHeader({
   const uploadImage = async (imageAsset) => {
     try {
       setUploading(true);
-      console.log('Starting image upload...');
 
       // Validate image asset
       if (!imageAsset || !imageAsset.uri) {
@@ -414,18 +379,7 @@ export default function UserProfileHeader({
         mimeType = mimeType.split(';')[0].replace('data:', '');
       }
 
-      console.log('Upload details:', {
-        fileName,
-        mimeType,
-        fileExtension,
-        originalType: imageAsset.type,
-        imageWidth: imageAsset.width,
-        imageHeight: imageAsset.height,
-        uriType: imageAsset.uri.startsWith('data:') ? 'data URL' : 'file URL'
-      });
-
       // Convert to base64
-      console.log('Converting image to base64...');
       const base64 = await CrossPlatformFileHandler.readAsBase64(imageAsset.uri);
 
       if (!base64) {
@@ -440,17 +394,10 @@ export default function UserProfileHeader({
       // Check base64 size
       const base64Size = base64.length;
       const estimatedSizeKB = Math.round((base64Size * 3) / 4 / 1024);
-      
-      console.log('Base64 details:', {
-        length: base64Size,
-        estimatedSizeKB: estimatedSizeKB,
-        first50chars: base64.substring(0, 50),
-        last50chars: base64.substring(base64.length - 50)
-      });
 
       // If image is too large (>1MB base64), show warning
       if (base64Size > 1024 * 1024) {
-        console.warn('Large image detected, this might cause upload issues');
+        // Large image detected
       }
 
       // Final validation
@@ -460,7 +407,6 @@ export default function UserProfileHeader({
       }
 
       // Upload to Azure Storage
-      console.log('Uploading to Azure Storage...');
       const uploadResult = await refopenAPI.uploadProfileImage({
         fileName,
         fileData: base64,
@@ -469,8 +415,6 @@ export default function UserProfileHeader({
       });
 
       if (uploadResult && uploadResult.success) {
-        console.log('Upload successful:', uploadResult.data?.imageUrl);
-        
         // Update local profile state
         const updatedProfile = {
           ...profile,
@@ -482,9 +426,7 @@ export default function UserProfileHeader({
           await refopenAPI.updateProfile({
             profilePictureURL: uploadResult.data.imageUrl,
           });
-          console.log('Profile updated successfully');
         } catch (updateError) {
-          console.warn('Profile update warning:', updateError.message);
           // Continue anyway - image uploaded successfully
         }
 
@@ -602,7 +544,6 @@ export default function UserProfileHeader({
                     <Image 
                       source={{ uri: profile.profilePictureURL }} 
                       style={styles.profileImage}
-                      onError={() => console.log('Failed to load profile image')}
                     />
                   ) : (
                     <View style={styles.profileImagePlaceholder}>
@@ -637,7 +578,6 @@ export default function UserProfileHeader({
                 <Image 
                   source={{ uri: profile.profilePictureURL }} 
                   style={styles.profileImageStandaloneImg}
-                  onError={() => console.log('Failed to load profile image')}
                 />
               ) : (
                 <View style={styles.profileImagePlaceholderStandalone}>
@@ -753,7 +693,6 @@ export default function UserProfileHeader({
       <Modal
         visible={showImagePickerModal}
         transparent={true}
-        animationType="fade"
         onRequestClose={() => setShowImagePickerModal(false)}
       >
         <View style={styles.modalOverlay}>
@@ -795,19 +734,13 @@ export default function UserProfileHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   // Main Header Card
   headerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: colors.surface,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: 12,
   },
 
   // Main Content Layout
@@ -844,7 +777,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -858,14 +791,14 @@ const styles = StyleSheet.create({
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#3B82F6' + '20',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
   initialsText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: colors.primary,
   },
   uploadingOverlay: {
     position: 'absolute',
@@ -882,14 +815,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
   },
 
   // Standalone Profile Image (without progress ring)
@@ -897,7 +830,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -911,7 +844,7 @@ const styles = StyleSheet.create({
   profileImagePlaceholderStandalone: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#3B82F6' + '20',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -924,12 +857,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: colors.text,
     marginBottom: 4,
   },
   jobTitle: {
     fontSize: 16,
-    color: '#4B5563',
+    color: colors.textSecondary,
     marginBottom: 6,
     lineHeight: 20,
   },
@@ -940,7 +873,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginLeft: 4,
   },
 
@@ -973,12 +906,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: colors.primary,
     lineHeight: 20,
   },
   statLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -991,7 +924,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imagePickerModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     width: '80%',
@@ -1000,7 +933,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1011,11 +944,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray100,
   },
   pickerOptionText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: colors.text,
     marginLeft: 10,
     fontWeight: '500',
   },
@@ -1023,12 +956,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     alignItems: 'center',
   },
   cancelOptionText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '500',
   },
 });

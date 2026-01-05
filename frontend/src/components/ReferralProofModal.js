@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import refopenAPI from '../services/api';
 import { showToast } from './Toast';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function ReferralProofModal({ 
   visible, 
@@ -25,6 +26,8 @@ export default function ReferralProofModal({
   referralRequest,
   jobTitle = 'this job'
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [proofImage, setProofImage] = useState(null);
   const [description, setDescription] = useState('');
@@ -272,7 +275,7 @@ export default function ReferralProofModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -290,7 +293,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   content: {
     flex: 1,
@@ -305,17 +308,17 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
     marginBottom: 4,
   },
   jobSubtitle: {
     fontSize: typography.sizes.base,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   helperText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   section: {
@@ -324,33 +327,33 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    color: colors.text,
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
   uploadButton: {
     borderWidth: 2,
-    borderColor: colors.gray300,
+    borderColor: colors.border,
     borderStyle: 'dashed',
     borderRadius: 12,
     padding: 32,
     alignItems: 'center',
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.background,
   },
   uploadButtonText: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.medium,
-    color: colors.gray700,
+    color: colors.text,
     marginTop: 8,
   },
   uploadButtonSubtext: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   imageContainer: {
@@ -360,7 +363,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.background,
   },
   changeImageButton: {
     flexDirection: 'row',
@@ -383,14 +386,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: typography.sizes.base,
-    color: colors.textPrimary,
+    color: colors.text,
     backgroundColor: colors.surface,
     textAlignVertical: 'top',
     minHeight: 100,
   },
   characterCount: {
     fontSize: typography.sizes.xs,
-    color: colors.gray500,
+    color: colors.textSecondary,
     textAlign: 'right',
     marginTop: 8,
   },
@@ -414,7 +417,7 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: typography.sizes.sm,
-    color: colors.gray700,
+    color: colors.textSecondary,
     marginLeft: 8,
   },
   footer: {

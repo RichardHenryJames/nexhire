@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -31,6 +35,9 @@ const useDebounce = (value, delay = 300) => {
 };
 
 export default function PersonalDetailsScreen({ navigation, route }) {
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
   
   // 🔧 Add safety checks for route params
@@ -43,7 +50,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     jobPreferences = null, 
     fromGoogleAuth = false, 
     skipEmailPassword = false,
-    skippedSteps = false, // 🔧 NEW: Check if user skipped from UserTypeSelection
+    skippedSteps = false, // Check if user skipped steps
   } = routeParams;
 
   // 🔧 Check if this is a Google user
@@ -103,6 +110,24 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [loadingJobRoles, setLoadingJobRoles] = useState(false);
   const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
   const [jobTitleSearch, setJobTitleSearch] = useState('');
+
+  // 🎁 NEW: Welcome bonus amount from pricing API
+  const [welcomeBonus, setWelcomeBonus] = useState(50); // Default fallback
+
+  // Fetch welcome bonus from pricing API
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const result = await refopenAPI.getPricing();
+        if (result.success && result.data?.welcomeBonus) {
+          setWelcomeBonus(result.data.welcomeBonus);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch pricing:', error);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   // Pre-populate Google user data
   useEffect(() => {
@@ -613,10 +638,17 @@ styles.selectionButton,
   );
 
   return (
+    <LinearGradient
+      colors={['#0F172A', '#1E293B', '#0F172A']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -624,7 +656,7 @@ styles.selectionButton,
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             
             {/* Show Google user info if applicable */}
@@ -659,6 +691,22 @@ styles.selectionButton,
                 : 'Just a few more details and you\'re all set!'
               }
             </Text>
+          </View>
+
+          {/* 🎉 NEW: Welcome Bonus Banner */}
+          <View style={styles.welcomeBonusBanner}>
+            <View style={styles.welcomeBonusIconContainer}>
+              <Ionicons name="gift" size={28} color="#FFD700" />
+            </View>
+            <View style={styles.welcomeBonusContent}>
+              <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
+              <Text style={styles.welcomeBonusText}>
+                RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
+              </Text>
+              <Text style={styles.welcomeBonusSubtext}>
+                Use it to get referrals, AI job search and more
+              </Text>
+            </View>
           </View>
 
           <View style={styles.form}>
@@ -732,6 +780,7 @@ styles.selectionButton,
               placeholder="Select your date of birth"
               maximumDate={new Date()} // Can't be born in the future
               error={errors.dateOfBirth}
+              colors={colors}
             />
             
             {renderInput('location', 'Current Location', false, 'default')}
@@ -750,7 +799,7 @@ styles.selectionButton,
             userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
                 <View style={styles.companyFieldsNotice}>
-                  <Ionicons name="information-circle" size={16} color={colors.primary} />
+                  <Ionicons name="information-circle" size={16} color={colors.info} />
                   <Text style={styles.companyFieldsNoticeText}>
                     Please provide your role details at {formData.currentCompany}
                   </Text>
@@ -840,6 +889,7 @@ styles.selectionButton,
                     maximumDate={new Date()} // Can't start in the future
                     required={true}
                     error={errors.startDate}
+                    colors={colors}
                   />
                 </View>
               </>
@@ -1020,6 +1070,7 @@ styles.selectionButton,
         onRequestClose={() => setShowOrgModal(false)}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowOrgModal(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -1033,6 +1084,7 @@ styles.selectionButton,
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder={manualOrgMode ? 'Enter company name' : 'Search companies...'}
+              placeholderTextColor={colors.gray400}
               value={orgQuery}
               onChangeText={setOrgQuery}
               autoCapitalize="words"
@@ -1106,16 +1158,27 @@ styles.selectionButton,
               windowSize={8}
             />
           )}
+          </View>
         </View>
       </Modal>
+      </View>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,
@@ -1125,12 +1188,14 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   header: {
-    marginBottom: 24, // CHANGED: Reduced from 32 to 24
+    marginBottom: 24,
   },
   backButton: {
     alignSelf: 'flex-start',
     padding: 8,
     marginBottom: 16,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
   },
   // 🔧 Google user info styles
   googleUserInfo: {
@@ -1138,7 +1203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     padding: 20,
-    backgroundColor: colors.success + '10',
+    backgroundColor: colors.success + '15',
     borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.success,
@@ -1189,19 +1254,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    color: colors.gray600,
     marginBottom: 24,
   },
   form: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: 16,
-    padding: 20, // CHANGED: Reduced from 24 to 20
-    paddingTop: 24, // CHANGED: Reduced from 32 to 24
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 0,
+    paddingTop: 0,
   },
   row: {
     flexDirection: 'row',
@@ -1239,7 +1299,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   inputPrefilled: {
-    backgroundColor: colors.success + '08', // Very light green background
+    backgroundColor: colors.success + '08',
     borderColor: colors.success,
     borderWidth: 1.5,
   },
@@ -1281,6 +1341,50 @@ const styles = StyleSheet.create({
     color: colors.success,
     marginLeft: 6,
     flex: 1,
+  },
+  // 🎉 Welcome Bonus Banner Styles
+  welcomeBonusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  welcomeBonusIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  welcomeBonusContent: {
+    flex: 1,
+  },
+  welcomeBonusTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#22C55E',
+    marginBottom: 4,
+  },
+  welcomeBonusText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  welcomeBonusAmount: {
+    fontWeight: typography.weights.bold,
+    color: '#FFD700',
+    fontSize: typography.sizes.md,
+  },
+  welcomeBonusSubtext: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray400,
+    marginTop: 2,
   },
   selectionButton: {
     backgroundColor: colors.surface,
@@ -1399,6 +1503,34 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 16,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      paddingTop: 0,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1474,9 +1606,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -1497,11 +1629,11 @@ const styles = StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -1509,7 +1641,7 @@ const styles = StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.gray500,
     fontStyle: 'italic',
   },
 });

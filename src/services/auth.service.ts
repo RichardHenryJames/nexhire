@@ -121,6 +121,7 @@ export class AuthService {
         switch (userType) {
             case appConstants.userTypes.ADMIN:
                 return [
+                    'read:profile', 'write:profile',
                     'read:users', 'write:users', 'delete:users',
                     'read:jobs', 'write:jobs', 'delete:jobs',
                     'read:applications', 'write:applications', 'delete:applications',

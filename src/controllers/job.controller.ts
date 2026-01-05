@@ -1,6 +1,7 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { JobService } from '../services/job.service';
 import { AIJobRecommendationService } from '../services/ai-job-recommendation.service';
+import { PricingService } from '../services/pricing.service';
 import { dbService } from '../services/database.service';
 import { 
     withErrorHandling, 
@@ -13,7 +14,8 @@ import {
     validateRequest,
     paginationSchema,
     isValidGuid,
-    InsufficientBalanceError
+    InsufficientBalanceError,
+    ValidationError
 } from '../utils/validation';
 import { PaginationParams } from '../types';
 
@@ -42,6 +44,16 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
         return { status: 201, jsonBody: successResponse(job, 'Job created successfully') };
     } catch (error) {
         console.error('Error in createJob:', error);
+        if (error instanceof ValidationError) {
+            return {
+                status: 400,
+                jsonBody: {
+                    success: false,
+                    error: 'Validation failed',
+                    details: error.details
+                }
+            };
+        }
         if (error instanceof Error && error.message.includes('Invalid column name')) {
             return { status: 500, jsonBody: { success: false, error: 'Database schema error', message: 'Please contact support - database schema needs updating' } };
         }
@@ -49,7 +61,10 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['write:jobs']);
 
-// Get all jobs (paged, supports cursor) - FIXED: User-aware filtering
+/**
+ * Get all active jobs with pagination
+ * Excludes jobs the user has already applied to
+ */
 export const getJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const params = extractQueryParams(req);
@@ -75,8 +90,6 @@ export const getJobs = withAuth(async (req: HttpRequest, context: InvocationCont
             jsonBody: successResponse(result.jobs, 'Jobs retrieved successfully', {
                 page: combined.page,
                 pageSize: combined.pageSize,
-                total: result.total,
-                totalPages: result.totalPages,
                 hasMore: result.hasMore,
                 nextCursor: result.nextCursor
             })
@@ -127,6 +140,17 @@ export const publishJob = withAuth(async (req: HttpRequest, context: InvocationC
         return { status: 200, jsonBody: successResponse(published, 'Job published successfully') };
     } catch (error) {
         console.error('Error in publishJob:', error);
+        // Mirror createJob behavior: validation/insufficient funds -> 400
+        if (error instanceof ValidationError || error instanceof InsufficientBalanceError) {
+            return {
+                status: 400,
+                jsonBody: {
+                    success: false,
+                    error: (error as any).name || 'ValidationError',
+                    message: (error as any).message || 'Validation failed'
+                }
+            };
+        }
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to publish job' } };
     }
 }, ['write:jobs']);
@@ -159,95 +183,48 @@ export const deleteJob = withAuth(async (req: HttpRequest, context: InvocationCo
     }
 }, ['delete:jobs']);
 
-// Search jobs (paged, supports cursor) - FIXED: User-aware filtering
+/**
+ * Search jobs with filters and pagination
+ * Excludes jobs the user has already applied to or saved
+ */
 export const searchJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    // ?? START: Measure total API response time
-    const apiStartTime = Date.now();
-    console.log('?? /search/jobs API called:', {
-        userId: user.userId,
-        timestamp: new Date().toISOString()
-    });
-
- try {
+    try {
         const searchParams = extractQueryParams(req);
-        
-        console.log('?? Search params received:', {
-     search: searchParams.search,
- page: searchParams.page,
-    pageSize: searchParams.pageSize,
-     filters: Object.keys(searchParams).filter(k => !['search', 'page', 'pageSize'].includes(k)),
-       timestamp: new Date().toISOString()
-        });
 
         const safeParams = { 
-        ...searchParams, 
-       page: searchParams.page || 1, 
-pageSize: searchParams.pageSize || 20,
-       // Add user filtering for applied/saved exclusion
-     excludeUserApplications: user.userId
+            ...searchParams, 
+            page: searchParams.page || 1, 
+            pageSize: searchParams.pageSize || 20,
+            excludeUserApplications: user.userId
         } as any;
    
-        // ?? Measure service call
-const serviceStartTime = Date.now();
-  const result = await JobService.searchJobs(safeParams);
-        const serviceTime = Date.now() - serviceStartTime;
-   
-        console.log('? JobService.searchJobs completed:', {
-       serviceTime: `${serviceTime}ms`,
- jobsReturned: result.jobs.length,
-      total: result.total,
-  timestamp: new Date().toISOString()
-        });
-
-        const totalPages = Math.max(Math.ceil((result.total || 0) / (Number(safeParams.pageSize) || 20)), 1);
-     const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
-        
-        const totalTime = Date.now() - apiStartTime;
-        console.log('? /search/jobs API response ready:', {
-      totalApiTime: `${totalTime}ms`,
-            serviceTime: `${serviceTime}ms`,
-            overheadTime: `${totalTime - serviceTime}ms`,
-      timestamp: new Date().toISOString()
-    });
+        const result = await JobService.searchJobs(safeParams);
+        const searchQuery = (safeParams as any).search || (safeParams as any).q || '';
 
         return {
             status: 200,
             jsonBody: successResponse(result.jobs, 'Jobs search completed', {
-    page: safeParams.page,
-    pageSize: safeParams.pageSize,
-      total: result.total,
-    totalPages,
-     hasMore: result.hasMore,
+                page: safeParams.page,
+                pageSize: safeParams.pageSize,
+                hasMore: result.hasMore,
                 nextCursor: result.nextCursor,
-        searchQuery,
-_performanceMs: totalTime // Include in response for frontend monitoring
+                searchQuery
             })
         };
     } catch (error) {
-        const totalTime = Date.now() - apiStartTime;
-  console.error('? Error in searchJobs:', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-   totalTime: `${totalTime}ms`,
-      timestamp: new Date().toISOString()
-        });
+        console.error('Error in searchJobs:', error);
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to search jobs' } };
     }
 }, ['read:jobs']);
 
-// Get jobs by organization
+/**
+ * Get jobs for a specific organization
+ * Requires employer access to the organization
+ */
 export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     const organizationId = req.params.organizationId;
     const params = extractQueryParams(req);
-    const postedByUserId = user.userId; // Always use the authenticated user's ID
-    
-    // ?? DEBUG: Log received params
-    console.log('?? Backend getJobsByOrganization params:', {
-        organizationId,
-        status: params.status,
-        page: params.page,
-        search: params.search,
-        postedByUserId // This will always be the authenticated user
-    });
+    const postedByUserId = user.userId;
     
     let validated: PaginationParams;
     try {
@@ -258,7 +235,6 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
 
     if (!organizationId) return { status: 400, jsonBody: { success: false, error: 'Organization ID is required' } };
     
-    // ? FIXED: Validate it's a valid integer, but keep as string for service method
     const orgIdNum = parseInt(organizationId);
     if (isNaN(orgIdNum) || orgIdNum <= 0) {
         return { status: 400, jsonBody: { success: false, error: 'Invalid Organization ID - must be a positive integer' } };
@@ -272,16 +248,13 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
             return { status: 403, jsonBody: { success: false, error: 'Access denied to this organization' } };
         }
 
-        // ?? CRITICAL FIX: Normalize and explicitly pass status
         const normalizedStatus = params.status ? String(params.status).trim() : undefined;
-        console.log('?? Normalized status:', normalizedStatus);
         
-        // ? SECURITY: Always filter by authenticated user's ID
         const extendedParams = {
             ...validated,
-            status: normalizedStatus, // ?? Explicitly pass normalized status
+            status: normalizedStatus,
             search: params.search,
-            postedByUserId // ? Always use authenticated user's ID
+            postedByUserId
         };
         
         // ?? DEBUG: Log params being sent to service
@@ -327,10 +300,13 @@ export const getCurrencies = withErrorHandling(async (): Promise<HttpResponseIni
 /**
  * Get AI-recommended jobs with wallet deduction
  * GET /jobs/ai-recommendations
- * Deducts ₹100 from wallet and returns personalized job recommendations
+ * Deducts cost from wallet (DB-driven) and returns personalized job recommendations
  */
 export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
+        // Get pricing from DB
+        const aiJobsCost = await PricingService.getAIJobsCost();
+        
         // Extract limit from query params (default 50)
         const url = new URL(req.url);
         const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '50')));
@@ -343,12 +319,15 @@ export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: I
             jsonBody: successResponse(result.jobs, 'AI-recommended jobs retrieved successfully', {
                 filters: result.filters,
                 total: result.total,
-                cost: 100, // ₹100 deducted
+                cost: aiJobsCost, // DB-driven cost
                 limit: limit
             })
         };
     } catch (error: any) {
         console.error('Error in getAIRecommendedJobs:', error);
+        
+        // Get pricing from DB for error response
+        const aiJobsCost = await PricingService.getAIJobsCost();
         
         // Handle insufficient balance error
         if (error instanceof InsufficientBalanceError || error?.name === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -359,7 +338,7 @@ export const getAIRecommendedJobs = withAuth(async (req: HttpRequest, context: I
                     error: 'Insufficient wallet balance',
                     errorCode: 'INSUFFICIENT_WALLET_BALANCE',
                     message: 'Please recharge your wallet to access AI-recommended jobs',
-                    requiredAmount: 100
+                    requiredAmount: aiJobsCost
                 }
             };
         }
@@ -404,36 +383,3 @@ export const getAIJobFilters = withAuth(async (req: HttpRequest, context: Invoca
     }
 }, ['read:jobs']);
 
-/**
- * Check if user has active AI access (paid within 24 hours)
- * GET /jobs/ai-access-status
- * Returns whether user needs to pay or has active access
- */
-export const checkAIAccessStatus = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
-    try {
-        const hasAccess = await AIJobRecommendationService.hasActiveAIAccess(user.userId);
-        
-        return {
-            status: 200,
-            jsonBody: successResponse({
-                hasActiveAccess: hasAccess,
-                requiresPayment: !hasAccess,
-                cost: hasAccess ? 0 : 100,
-                message: hasAccess 
-                    ? 'You have active AI access (valid for 24 hours)' 
-                    : 'Payment required for AI recommendations'
-            }, 'AI access status retrieved successfully')
-        };
-    } catch (error: any) {
-        console.error('Error in checkAIAccessStatus:', error);
-        
-        return {
-            status: 500,
-            jsonBody: {
-                success: false,
-                error: 'Failed to check AI access status',
-                message: error?.message || 'Internal server error'
-            }
-        };
-    }
-}, ['read:jobs']);

@@ -1,17 +1,54 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../styles/theme';
+import React, { useMemo, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
+import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 export default function PrivacyPolicyScreen() {
+  const navigation = useNavigation();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+
+  // ✅ Navigation header with smart back button (hard-refresh safe)
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ marginLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+    <ScrollView style={styles.scrollView}>
+    <View style={styles.innerContainer}>
    <View style={styles.content}>
      <Text style={styles.title}>Privacy Policy</Text>
         <Text style={styles.lastUpdated}>Last Updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
         <Text style={styles.intro}>
-        Refopen Technologies Pvt. Ltd. ("Refopen", "we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Refopen platform.
+        Refopen Solutions ("Refopen", "we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Refopen platform.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Information We Collect</Text>
@@ -209,7 +246,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.sectionTitle}>13. Contact Us</Text>
         <Text style={styles.text}>
         For privacy-related questions or to exercise your privacy rights, contact us at:
-          {'\n\n'}Refopen Technologies Pvt. Ltd.
+          {'\n\n'}Refopen Solutions
           {'\n'}Email: privacy@refopen.com
    {'\n'}Data Protection Officer: dpo@refopen.com
       {'\n'}Support: support@refopen.com
@@ -225,14 +262,28 @@ export default function PrivacyPolicyScreen() {
 
    <ComplianceFooter currentPage="privacy" />
       </View>
+    </View>
     </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-  backgroundColor: colors.white,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    alignSelf: 'center',
   },
   content: {
     padding: 20,
@@ -246,32 +297,32 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   intro: {
 fontSize: 16,
-    color: colors.gray800,
+    color: colors.text,
     lineHeight: 24,
     marginBottom: 20,
   },
   sectionTitle: {
 fontSize: 20,
     fontWeight: '600',
-    color: colors.gray900,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
   },
   subsectionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.gray800,
+    color: colors.text,
     marginTop: 12,
     marginBottom: 8,
   },
   text: {
     fontSize: 15,
-    color: colors.gray700,
+    color: colors.textSecondary,
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -284,7 +335,7 @@ borderRadius: 8,
   },
   acknowledgmentText: {
     fontSize: 15,
-    color: colors.gray800,
+    color: colors.text,
     fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',

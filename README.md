@@ -427,6 +427,9 @@ $connectionString = "Server=your-server.database.windows.net;Database=refopen-db
 # Run main database schema
 .\src\database_scripts\setup-database.ps1 -ConnectionString $connectionString
 
+# Ensure reference metadata (JobRole, Department, etc.)
+.\src\database_scripts\ensure-reference-metadata.ps1 -ConnectionString $connectionString
+
 # Set up referral system
 .\src\database_scripts\referral-schema.ps1 -ConnectionString $connectionString
 

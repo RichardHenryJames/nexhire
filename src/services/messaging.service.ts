@@ -1,5 +1,7 @@
 import { dbService } from "./database.service";
 import { SignalRService } from "./signalr.service";
+import { WalletService } from "./wallet.service";
+import { PricingService } from "./pricing.service";
 
 // Azure SignalR connection string
 const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || "";
@@ -304,7 +306,7 @@ export class MessagingService {
       CASE WHEN @User1ID = @param1 THEN @User2ID ELSE @User1ID END as ReceiverUserID
     `;
 
-    // ✅ OPTIMIZATION 2: Execute as single batch query
+    // Execute as single batch query for performance
     const result = await dbService.executeQuery(combinedQuery, [
       conversationId,
       senderUserId,
@@ -321,22 +323,10 @@ export class MessagingService {
     const newMessage = result.recordset[0];
     const receiverUserId = newMessage.ReceiverUserID;
 
-    console.log(
-      `📤 Attempting to emit message via SignalR to receiver: ${receiverUserId}`
-    );
-
-    // ✅ OPTIMIZATION 3: Fire SignalR async (don't await - let it run in background)
-    // This makes the API response instant
+    // Fire SignalR async (don't await - makes API response instant)
     SignalRService.emitNewMessage(conversationId, newMessage, receiverUserId)
-      .then(() => console.log(`✅ SignalR emission completed successfully`))
       .catch((err) => {
-        console.error("❌ SignalR emit error (non-critical):", err);
-        console.error("Error details:", {
-          message: err.message,
-          stack: err.stack,
-          conversationId,
-          receiverUserId,
-        });
+        console.error("SignalR emit error (non-critical):", err.message);
       });
 
     // Remove internal field from response
@@ -746,6 +736,79 @@ WHERE pv.ViewedUserID = @param0
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  /**
+   * Check if user has active profile view access (paid within configured duration)
+   */
+  static async hasActiveProfileViewAccess(userId: string): Promise<boolean> {
+    try {
+      const profileViewCost = await PricingService.getProfileViewCost();
+      const accessDurationHours = await PricingService.getProfileViewAccessDurationHours();
+
+      const query = `
+        SELECT TOP 1 wt.CreatedAt
+        FROM WalletTransactions wt
+        INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+        WHERE w.UserID = @param0
+          AND wt.Source = 'Profile_View_Access'
+          AND wt.TransactionType = 'Debit'
+          AND wt.Amount = @param1
+          AND wt.CreatedAt >= DATEADD(HOUR, -@param2, GETDATE())
+        ORDER BY wt.CreatedAt DESC
+      `;
+
+      const result = await dbService.executeQuery(query, [userId, profileViewCost, accessDurationHours]);
+      return result.recordset && result.recordset.length > 0;
+    } catch (error) {
+      console.error('Error checking profile view access:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Purchase profile view access
+   */
+  static async purchaseProfileViewAccess(userId: string) {
+    const profileViewCost = await PricingService.getProfileViewCost();
+    const accessDurationHours = await PricingService.getProfileViewAccessDurationHours();
+    const durationDays = Math.floor(accessDurationHours / 24);
+
+    // Check if already has access
+    const hasAccess = await this.hasActiveProfileViewAccess(userId);
+    if (hasAccess) {
+      return { 
+        success: true, 
+        alreadyHadAccess: true, 
+        message: 'You already have active profile view access' 
+      };
+    }
+
+    // Check wallet balance
+    const wallet = await WalletService.getOrCreateWallet(userId);
+    if (wallet.Balance < profileViewCost) {
+      return {
+        success: false,
+        error: 'Insufficient balance',
+        currentBalance: wallet.Balance,
+        requiredAmount: profileViewCost
+      };
+    }
+
+    // Deduct from wallet
+    await WalletService.debitWallet(
+      userId,
+      profileViewCost,
+      'Profile_View_Access',
+      `Unlock profile views - ${durationDays}-day access`
+    );
+
+    return {
+      success: true,
+      alreadyHadAccess: false,
+      message: `Profile view access unlocked for ${durationDays} days`,
+      newBalance: wallet.Balance - profileViewCost
     };
   }
 }

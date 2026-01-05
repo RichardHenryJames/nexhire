@@ -179,7 +179,7 @@ export const cleanupScrapedJobs = withErrorHandling(async (req: HttpRequest, con
         };
     }
 
-    const { daysOld = 90, source = null } = req.query as any;
+    const { daysOld = 60, source = null } = req.query as any;
     
     if (isNaN(daysOld) || daysOld < 1 || daysOld > 365) {
         return {

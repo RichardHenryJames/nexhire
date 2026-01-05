@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, RefreshControl, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, FlatList, RefreshControl, Alert, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import JobCard from '../../components/jobs/JobCard';
 import refopenAPI from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import useResponsive from '../../hooks/useResponsive';
 
 const SavedJobsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [savedJobs, setSavedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,12 +46,46 @@ const SavedJobsScreen = ({ navigation }) => {
 
   // Update navigation header with count
   useEffect(() => {
-    if (savedCount > 0) {
-      navigation.setOptions({
-        headerTitle: `Saved Jobs (${savedCount})`,
-      });
-    }
+    navigation.setOptions({
+      headerTitle: savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs',
+    });
   }, [savedCount, navigation]);
+
+  // ✅ Smart back navigation (hard-refresh safe) - same as JobDetails/Applications
+  // Also set header style for dark mode support
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: {
+        backgroundColor: colors.surface,
+      },
+      headerTintColor: colors.text,
+      headerTitleStyle: {
+        color: colors.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            const navState = navigation.getState?.();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: { screen: 'Profile' },
+              });
+            }
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   // Refresh handler
   const onRefresh = () => {
@@ -114,25 +153,19 @@ const SavedJobsScreen = ({ navigation }) => {
     if (loading) return null;
     
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <Ionicons name="bookmark-outline" size={64} color="#cbd5e1" />
-        <Text style={{ fontSize: 20, fontWeight: '600', color: '#1e293b', marginTop: 16, marginBottom: 8 }}>
+      <View style={styles.emptyContainer}>
+        <Ionicons name="bookmark-outline" size={64} color={colors.gray400} />
+        <Text style={styles.emptyTitle}>
           No saved jobs yet
         </Text>
-        <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 20 }}>
+        <Text style={styles.emptySubtitle}>
           Start saving jobs you're interested in to view them here
         </Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('Jobs')}
-          style={{
-            marginTop: 24,
-            paddingHorizontal: 24,
-            paddingVertical: 12,
-            backgroundColor: '#0066cc',
-            borderRadius: 8,
-          }}
+          style={styles.browseButton}
         >
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+          <Text style={styles.browseButtonText}>
             Browse Jobs
           </Text>
         </TouchableOpacity>
@@ -143,33 +176,92 @@ const SavedJobsScreen = ({ navigation }) => {
   // Loading state
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0066cc" />
-        <Text style={{ marginTop: 16, fontSize: 14, color: '#64748b' }}>Loading saved jobs...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading saved jobs...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
-      {/* Job list */}
-      <FlatList
-        data={savedJobs}
-        renderItem={renderJobCard}
-        keyExtractor={(item) => `saved-${item.JobID}`}
-        contentContainerStyle={savedJobs.length === 0 ? { flex: 1 } : { paddingBottom: 16 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#0066cc"
-            colors={['#0066cc']}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-      />
+    <View style={styles.container}>
+      <View style={styles.innerContainer}>
+        {/* Job list */}
+        <FlatList
+          data={savedJobs}
+          renderItem={renderJobCard}
+          keyExtractor={(item) => `saved-${item.JobID}`}
+          contentContainerStyle={savedJobs.length === 0 ? { flex: 1 } : { paddingBottom: 16 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+        />
+      </View>
     </View>
   );
 };
+
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: colors.gray500,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: colors.gray500,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  browseButton: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  browseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
 
 export default SavedJobsScreen;

@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
+import { resetToLogin } from '../navigation/navigationRef';
 
 // FIXED: Use environment variable or fallback to production API
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
@@ -10,12 +11,62 @@ class RefOpenAPI {
   constructor() {
     this.token = null;
     this.refreshToken = null;
+    this.onSessionExpired = null;
+    this._handlingSessionExpired = false;
+    this._isRefreshing = false;
+    this._refreshSubscribers = [];
     this.baseURL = frontendConfig.api.baseUrl;
     this.timeout = frontendConfig.api.timeout;
     
     // Log configuration on initialization
     if (frontendConfig.shouldLog('debug')) {
       this.logConfigStatus();
+    }
+  }
+
+  // Subscribe to token refresh completion
+  _subscribeTokenRefresh(callback) {
+    this._refreshSubscribers.push(callback);
+  }
+
+  // Notify all subscribers when token is refreshed
+  _onTokenRefreshed(newToken) {
+    this._refreshSubscribers.forEach(callback => callback(newToken));
+    this._refreshSubscribers = [];
+  }
+
+  // Attempt to refresh the access token using refresh token
+  async _tryRefreshToken() {
+    const storedRefreshToken = await this.getToken('refopen_refresh_token');
+    
+    if (!storedRefreshToken) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.data?.accessToken) {
+        await this.setTokens(data.data.accessToken, data.data.refreshToken || storedRefreshToken);
+        return data.data.accessToken;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return null;
     }
   }
 
@@ -124,8 +175,69 @@ class RefOpenAPI {
         });
       }
 
+      // Global session-expired handling: try to refresh token first
+      try {
+        const status = error?.status;
+        const message = (error?.message || '').toString();
+        const dataMessage = (error?.data?.message || error?.data?.error || '').toString();
+        const isTokenExpired = /token\s*expired/i.test(message) || /token\s*expired/i.test(dataMessage);
+        const isAuthStatus = status === 401;
+
+        // Only try refresh for 401 errors, not 403 (forbidden)
+        if ((isAuthStatus || isTokenExpired) && !this._handlingSessionExpired && !options._isRetry) {
+          // If already refreshing, wait for it to complete
+          if (this._isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this._subscribeTokenRefresh(async (newToken) => {
+                if (newToken) {
+                  // Retry the original request with new token
+                  try {
+                    const result = await this.apiCall(endpoint, { ...options, _isRetry: true });
+                    resolve(result);
+                  } catch (retryError) {
+                    reject(retryError);
+                  }
+                } else {
+                  reject(error);
+                }
+              });
+            });
+          }
+
+          // Try to refresh the token
+          this._isRefreshing = true;
+          const newToken = await this._tryRefreshToken();
+          this._isRefreshing = false;
+          this._onTokenRefreshed(newToken);
+
+          if (newToken) {
+            // Retry the original request with new token
+            return await this.apiCall(endpoint, { ...options, _isRetry: true });
+          }
+
+          // Refresh failed, logout
+          this._handlingSessionExpired = true;
+          await this.clearTokens();
+          if (typeof this.onSessionExpired === 'function') {
+            await this.onSessionExpired({ status, message: dataMessage || message });
+          }
+          resetToLogin();
+
+          // Allow future expiries after a short delay (prevents many parallel calls from spamming)
+          setTimeout(() => {
+            this._handlingSessionExpired = false;
+          }, 1000);
+        }
+      } catch (e) {
+        // Never block the original error path
+      }
+
       throw error;
     }
+  }
+
+  setOnSessionExpired(handler) {
+    this.onSessionExpired = handler;
   }
 
   // Token management
@@ -155,11 +267,8 @@ class RefOpenAPI {
 
   async removeToken(key) {
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem(key);
-      } else {
-        await SecureStore.deleteItemAsync(key);
-      }
+      // Tokens are stored in AsyncStorage in this codebase; remove them from the same store.
+      await AsyncStorage.removeItem(key);
     } catch (error) {
       console.error('Error removing token:', error);
     }
@@ -464,6 +573,68 @@ class RefOpenAPI {
     });
   }
 
+  // ==========================================
+  // COMPANY EMAIL VERIFICATION (Verified Referrer)
+  // ==========================================
+  
+  /**
+   * Send OTP to company email for verification
+   * @param {string} workExperienceId - The work experience ID to verify
+   * @param {string} companyEmail - The company email to send OTP to
+   */
+  async sendCompanyEmailOTP(workExperienceId, companyEmail) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/company-email/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ workExperienceId, companyEmail }),
+    });
+  }
+
+  /**
+   * Verify OTP sent to company email
+   * @param {string} workExperienceId - The work experience ID being verified
+   * @param {string} otp - The 4-digit OTP code
+   */
+  async verifyCompanyEmailOTP(workExperienceId, otp) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/company-email/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ workExperienceId, otp }),
+    });
+  }
+
+  /**
+   * Get user's verification status (isVerifiedReferrer, current work experience verification)
+   */
+  async getVerificationStatus() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      console.error('❌ No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    return this.apiCall('/verification/status');
+  }
+
   // NEW: Update job preferences data
   async updateJobPreferences(jobPreferencesData) {
     
@@ -503,6 +674,10 @@ class RefOpenAPI {
       payload.preferredLocations = Array.isArray(jobPreferencesData.preferredLocations)
         ? jobPreferencesData.preferredLocations.join(', ')
         : jobPreferencesData.preferredLocations;
+    }
+
+    if (jobPreferencesData.preferredCompanySize) {
+      payload.preferredCompanySize = jobPreferencesData.preferredCompanySize;
     }
 
     if (jobPreferencesData.minimumSalary != null) {
@@ -582,18 +757,6 @@ class RefOpenAPI {
 
     const params = new URLSearchParams(cleaned);
     
-    // 🔍 DEBUG: Log full request details
-    console.log('🌐 [API] getJobs Request:');
-    console.log('   Base URL:', this.baseURL);
-    console.log('   Endpoint:', `/jobs?${params}`);
-    console.log('   Full URL:', `${this.baseURL}/jobs?${params}`);
-    console.log('   Filters before cleaning:', filters);
-    console.log('   Filters after cleaning:', cleaned);
-    if (filters.organizationIds) {
-      console.log('   ⚠️ Organization Filter:', filters.organizationIds);
-      console.log('   ⚠️ Organization IDs in URL:', cleaned.organizationIds);
-    }
-    
     return this.apiCall(`/jobs?${params}`, fetchOptions);
   }
 
@@ -601,7 +764,7 @@ class RefOpenAPI {
     return this.apiCall(`/jobs/${jobId}`);
   }
 
-  // NEW: Get AI-recommended jobs (deducts ₹100 from wallet)
+  // NEW: Get AI-recommended jobs (deducts ₹99 from wallet, 15-day access)
   async getAIRecommendedJobs(limit = 50) {
     const params = new URLSearchParams({ limit: limit.toString() });
     return this.apiCall(`/jobs/ai-recommendations?${params}`);
@@ -986,7 +1149,7 @@ class RefOpenAPI {
   }
 
   // NEW: Get organizations for employer registration - Optimized with database index
-  async getOrganizations(searchTerm = '', limit = null, offset = 0) {
+  async getOrganizations(searchTerm = '', limit = null, offset = 0, options = {}) {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
@@ -995,6 +1158,11 @@ class RefOpenAPI {
         params.append('limit', limit.toString());
       }
       if (offset > 0) params.append('offset', offset.toString());
+      
+      // Add isFortune500 filter if provided
+      if (options.isFortune500) {
+        params.append('isFortune500', 'true');
+      }
       
       const endpoint = `/reference/organizations${params.toString() ? `?${params.toString()}` : ''}`;
       
@@ -1021,15 +1189,17 @@ class RefOpenAPI {
         
         
         // The backend already transforms the data correctly, so we can use it directly
-        // Just ensure we have the "My company is not listed" option
-        const hasNotListedOption = organizationsArray.some(org => org.id === 999999);
-        if (!hasNotListedOption) {
-          organizationsArray.push({
-            id: 999999,
-            name: 'My company is not listed',
-            logoURL: null,
-            industry: 'Other'
-          });
+        // Just ensure we have the "My company is not listed" option (not for F500 filter)
+        if (!options.isFortune500) {
+          const hasNotListedOption = organizationsArray.some(org => org.id === 999999);
+          if (!hasNotListedOption) {
+            organizationsArray.push({
+              id: 999999,
+              name: 'My company is not listed',
+              logoURL: null,
+              industry: 'Other'
+            });
+          }
         }
         
         
@@ -1620,6 +1790,52 @@ if (!resumeId) {
   }
 
   // ========================================================================
+  // PRICING SYSTEM APIs - DB-driven pricing
+  // ========================================================================
+  
+  // 💰 Get all pricing settings from database (cached for 5 mins on server)
+  async getPricing() {
+    try {
+      const response = await this.apiCall('/pricing');
+      if (response.success && response.data) {
+        // Cache pricing locally for quick access
+        this._pricingCache = response.data;
+        this._pricingCacheTime = Date.now();
+      }
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to load pricing:', error);
+      // Return cached values if available
+      if (this._pricingCache) {
+        return { success: true, data: this._pricingCache };
+      }
+      // Return defaults if no cache
+      return { 
+        success: true, 
+        data: {
+          aiJobsCost: 99,
+          aiAccessDurationHours: 360,
+          aiAccessDurationDays: 15,
+          referralRequestCost: 39,
+          jobPublishCost: 50,
+          welcomeBonus: 50,
+          referralSignupBonus: 50
+        }
+      };
+    }
+  }
+  
+  // Get cached pricing or fetch if not available
+  async getCachedPricing() {
+    // Return cache if less than 5 minutes old
+    if (this._pricingCache && this._pricingCacheTime && (Date.now() - this._pricingCacheTime) < 5 * 60 * 1000) {
+      return this._pricingCache;
+    }
+    const response = await this.getPricing();
+    return response.data;
+  }
+
+  // ========================================================================
   // WALLET SYSTEM APIs - Complete Integration
   // ========================================================================
 
@@ -1679,6 +1895,34 @@ if (!resumeId) {
     return this.apiCall(`/wallet/transactions?${params}`);
   }
 
+  // 💰 NEW: Get withdrawable balance (referral earnings)
+  async getWithdrawableBalance() {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    return this.apiCall('/wallet/withdrawable');
+  }
+
+  // 💰 NEW: Request withdrawal of referral earnings
+  async requestWithdrawal(amount, upiId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    return this.apiCall('/wallet/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ amount, upiId }),
+    });
+  }
+
+  // 💰 NEW: Get withdrawal history
+  async getWithdrawalHistory(page = 1, pageSize = 20) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/wallet/withdrawals?${params}`);
+  }
+
   // 💰 NEW: Create wallet recharge order
   async createWalletRechargeOrder(amount, currencyId = 4) {
     if (!this.token) return { success: false, error: 'Authentication required' };
@@ -1706,12 +1950,6 @@ if (!resumeId) {
   // Get referral plans (public endpoint)
   async getReferralPlans() {
     return this.apiCall('/referral/plans');
-  }
-
-  // Check referral eligibility
-  async checkReferralEligibility() {
-    if (!this.token) return { success: false, error: 'Authentication required' };
-    return this.apiCall('/referral/eligibility');
   }
 
   // Create referral request (supports both internal and external)
@@ -1797,7 +2035,8 @@ if (!resumeId) {
   }
 
   // Get available referral requests (as potential referrer)
-  async getAvailableReferralRequests(page = 1, pageSize = 20) {
+  // Returns ALL requests for the referrer's organization (frontend filters by status)
+  async getAvailableReferralRequests(page = 1, pageSize = 100) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -1806,6 +2045,18 @@ if (!resumeId) {
     });
     
     return this.apiCall(`/referral/available?${params}`);
+  }
+
+  // Get completed referrals by current user (for closed tab - all past completed referrals regardless of company)
+  async getCompletedReferrals(page = 1, pageSize = 100) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    return this.apiCall(`/referral/completed?${params}`);
   }
 
   // Claim a referral request (as referrer)
@@ -1818,7 +2069,7 @@ if (!resumeId) {
   }
 
   // NEW: Claim a referral request with proof upload (enhanced flow)
-  async claimReferralRequestWithProof(requestId, proofData) {
+  async submitReferralWithProof(requestId, proofData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     if (!proofData.proofFileURL || !proofData.proofFileType) {
@@ -1832,12 +2083,16 @@ if (!resumeId) {
   }
 
   // Submit proof of referral
-  async submitReferralProof(requestId, fileURL, fileType) {
+  async submitReferralProof(requestId, proofData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     return this.apiCall(`/referral/requests/${requestId}/proof`, {
       method: 'POST',
-      body: JSON.stringify({ fileURL, fileType }),
+      body: JSON.stringify({
+        fileURL: proofData.proofFileURL,
+        fileType: proofData.proofFileType,
+        description: proofData.proofDescription
+      }),
     });
   }
 
@@ -2010,6 +2265,50 @@ if (!resumeId) {
     }
   }
 
+  // ===== REFERRAL STATUS TRACKING =====
+
+  // ✅ NEW: Log referral status change (Viewed, Claimed)
+  async logReferralStatus(requestId, status, message = null) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    if (!requestId) {
+      return { success: false, error: 'Request ID is required' };
+    }
+
+    const validStatuses = ['Viewed', 'Claimed'];
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` };
+    }
+
+    try {
+      const result = await this.apiCall(`/referral/requests/${requestId}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status, message }),
+      });
+      return result;
+    } catch (error) {
+      console.error('❌ Log referral status failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ✅ NEW: Get referral status history for tracking screen
+  async getReferralStatusHistory(requestId) {
+    if (!this.token) return { success: false, error: 'Authentication required' };
+    
+    if (!requestId) {
+      return { success: false, error: 'Request ID is required' };
+    }
+
+    try {
+      const result = await this.apiCall(`/referral/requests/${requestId}/history`);
+      return result;
+    } catch (error) {
+      console.error('❌ Get status history failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
   // ✅ NEW: Razorpay payment integration
   async createRazorpayOrder(orderData) {
     if (!this.token) return { success: false, error: 'Authentication required' };
@@ -2127,8 +2426,14 @@ if (!resumeId) {
       
       return result;
     } catch (error) {
-      console.error('❌ Publish job failed:', error.message);
-      return { success: false, error: error.message || 'Failed to publish job' };
+      const serverMessage = error?.data?.error || error?.data?.message;
+      console.error('❌ Publish job failed:', serverMessage || error.message);
+      return {
+        success: false,
+        error: serverMessage || error.message || 'Failed to publish job',
+        status: error?.status,
+        data: error?.data,
+      };
     }
   }
 
@@ -2318,6 +2623,286 @@ if (!resumeId) {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
     };
     return mimeToExt[mimeType] || 'jpg';
+  }
+
+  // ========================================
+  // NOTIFICATION PREFERENCES
+  // ========================================
+  
+  async getNotificationPreferences() {
+    try {
+      const result = await this.apiCall('/notifications/preferences');
+      return result;
+    } catch (error) {
+      console.error('Failed to get notification preferences:', error);
+      // Return defaults on error
+      return {
+        success: true,
+        preferences: {
+          EmailEnabled: true,
+          PushEnabled: true,
+          InAppEnabled: true,
+          ReferralRequestEmail: true,
+          ReferralRequestPush: true,
+          ReferralClaimedEmail: true,
+          ReferralClaimedPush: true,
+          ReferralVerifiedEmail: true,
+          ReferralVerifiedPush: true,
+          JobApplicationEmail: true,
+          MessageReceivedEmail: true,
+          MessageReceivedPush: true,
+          WeeklyDigestEmail: true
+        }
+      };
+    }
+  }
+
+  async updateNotificationPreferences(preferences) {
+    try {
+      return await this.apiCall('/notifications/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences),
+      });
+    } catch (error) {
+      console.error('Failed to update notification preferences:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // MANUAL PAYMENT / WALLET RECHARGE
+  // ========================================
+
+  /**
+   * Get manual payment settings (bank/UPI details)
+   */
+  async getManualPaymentSettings() {
+    try {
+      return await this.apiCall('/manual-payment/settings');
+    } catch (error) {
+      console.error('Failed to get manual payment settings:', error);
+      // Return default settings if API fails
+      return {
+        success: true,
+        data: {
+          upiId: 'refopen@ybl',
+          upiName: 'RefOpen Technologies',
+          bankName: 'HDFC Bank',
+          bankAccountName: 'RefOpen Technologies Pvt Ltd',
+          bankAccountNumber: '50200012345678',
+          bankIfsc: 'HDFC0001234',
+          bankBranch: 'Mumbai Main Branch',
+          minAmount: 100,
+          maxAmount: 50000,
+          processingTime: '1 business day',
+          supportEmail: 'support@refopen.com',
+          supportPhone: '+91-9876543210'
+        }
+      };
+    }
+  }
+
+  /**
+   * Submit manual payment proof
+   */
+  async submitManualPayment(data) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/manual-payment/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get user's manual payment submissions
+   */
+  async getMyManualPaymentSubmissions() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required', data: [] };
+    }
+
+    return this.apiCall('/manual-payment/my-submissions');
+  }
+
+  // ========================================================================
+  // SUPPORT TICKET APIs - Customer Support System
+  // ========================================================================
+
+  /**
+   * Create a new support ticket
+   * @param {Object} ticketData - { category, subject, message, contactEmail? }
+   */
+  async createSupportTicket(ticketData) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(ticketData),
+    });
+  }
+
+  /**
+   * Get user's support tickets
+   * @param {Object} params - { page?, limit?, status? }
+   */
+  async getMySupportTickets(params = {}) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required', data: { tickets: [], total: 0 } };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.status) queryParams.append('status', params.status);
+
+    const queryString = queryParams.toString();
+    return this.apiCall(`/support/tickets${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Get a specific support ticket by ID
+   * @param {string} ticketId - The ticket ID
+   */
+  async getSupportTicketById(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}`);
+  }
+
+  /**
+   * Get all support tickets (Admin only)
+   * @param {Object} params - { page?, limit?, status?, category?, priority? }
+   */
+  async getAdminSupportTickets(params = {}) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.priority) queryParams.append('priority', params.priority);
+
+    const queryString = queryParams.toString();
+    return this.apiCall(`/support/admin/tickets${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Update a support ticket (Admin only)
+   * @param {string} ticketId - The ticket ID
+   * @param {Object} updateData - { status?, priority?, adminResponse? }
+   */
+  async updateSupportTicket(ticketId, updateData) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/update`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  /**
+   * Get support ticket statistics (Admin only)
+   */
+  async getSupportTicketStats() {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/support/admin/stats');
+  }
+
+  /**
+   * Get messages for a support ticket
+   */
+  async getSupportTicketMessages(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/messages`);
+  }
+
+  /**
+   * Send a message on a support ticket
+   */
+  async sendSupportTicketMessage(ticketId, message) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  /**
+   * Close a support ticket
+   */
+  async closeSupportTicket(ticketId) {
+    if (!this.token) {
+      await this.init();
+    }
+    
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall(`/support/tickets/${ticketId}/close`, {
+      method: 'POST',
+    });
   }
 }
 

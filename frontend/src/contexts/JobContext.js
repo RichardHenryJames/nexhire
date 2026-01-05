@@ -20,8 +20,7 @@ export const JobProvider = ({ children }) => {
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
-    total: 0,
-    totalPages: 0,
+    hasMore: false,
   });
 
   // Load initial data
@@ -70,8 +69,7 @@ export const JobProvider = ({ children }) => {
         setPagination({
           page: result.meta?.page || page,
           pageSize: result.meta?.pageSize || pageSize,
-          total: result.meta?.total || 0,
-          totalPages: result.meta?.totalPages || 0,
+          hasMore: result.meta?.hasMore ?? ((result.data || []).length === pageSize),
         });
       } else {
         setError(result.message || 'Failed to load jobs');
@@ -93,11 +91,13 @@ export const JobProvider = ({ children }) => {
 
       if (result.success) {
         setJobs(result.data);
+
+        const pageSize = Number(result.meta?.pageSize) || 20;
+        const effectivePage = Number(result.meta?.page) || 1;
         setPagination({
-          page: 1,
-          pageSize: 20,
-          total: result.total || 0,
-          totalPages: Math.ceil((result.total || 0) / 20),
+          page: effectivePage,
+          pageSize,
+          hasMore: result.meta?.hasMore ?? ((result.data || []).length === pageSize),
         });
       } else {
         setError(result.message || 'Search failed');
@@ -163,7 +163,7 @@ export const JobProvider = ({ children }) => {
   };
 
   const loadMore = () => {
-    if (pagination.page < pagination.totalPages && !loading) {
+    if (pagination.hasMore && !loading) {
       loadJobs(pagination.page + 1);
     }
   };
@@ -188,7 +188,7 @@ export const JobProvider = ({ children }) => {
     loadMore,
 
     // Computed values
-    hasMore: pagination.page < pagination.totalPages,
+    hasMore: pagination.hasMore,
     isEmpty: jobs.length === 0 && !loading,
   };
 

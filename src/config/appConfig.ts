@@ -130,7 +130,7 @@ class ConfigService {
         server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
         name: process.env.DB_NAME || 'refopen-sql-db',
         user: process.env.DB_USER || 'sqladmin',
-        password: process.env.DB_PASSWORD || 'RefOpen@2024!Secure',
+        password: process.env.DB_PASSWORD || '',  // REQUIRED: Set via environment variable
         connectionString: process.env.DB_CONNECTION_STRING || this.buildConnectionString(),
         encrypt: process.env.DB_ENCRYPT !== 'false',
         trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
@@ -139,8 +139,8 @@ class ConfigService {
 
       auth: {
         jwtSecret: process.env.JWT_SECRET || 'your-super-secret-development-key',
-        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
-        refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d',
+        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d',
+        refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
         bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),
       },
 
@@ -157,8 +157,8 @@ class ConfigService {
       },
 
       razorpay: {
-        keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_RHBUKjg4k9qx4J',
-        keySecret: process.env.RAZORPAY_KEY_SECRET || 'IGx3G02rEoPHqS32Jk70DfGW',
+        keyId: process.env.RAZORPAY_KEY_ID || '',  // REQUIRED: Set via environment variable
+        keySecret: process.env.RAZORPAY_KEY_SECRET || '',  // REQUIRED: Set via environment variable
         webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
         isProduction: process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live_') || false,
       },

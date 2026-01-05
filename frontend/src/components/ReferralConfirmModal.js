@@ -1,348 +1,308 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import WalletRechargeModal from './WalletRechargeModal';
 
 /**
- * Beautiful confirmation modal for referral requests
- * Shows ₹50 deduction and benefits clearly
+ * 🎨 Premium Request Referral Modal
+ * Beautiful, tight, and polished design matching the reference UI
+ * Shows cost breakdown and benefits clearly
  */
 export default function ReferralConfirmModal({
   visible,
   currentBalance = 0,
-  requiredAmount = 50,
+  requiredAmount = 39,
   onProceed,
   onCancel,
-  onAddMoney, // NEW: Handler for "Add Money" button
+  onAddMoney,
   jobTitle = 'this job',
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   const balanceAfter = currentBalance - requiredAmount;
   const hasInsufficientBalance = currentBalance < requiredAmount;
+
+  if (hasInsufficientBalance) {
+    return (
+      <WalletRechargeModal
+        visible={visible}
+        currentBalance={currentBalance}
+        requiredAmount={requiredAmount}
+        title="Wallet Recharge Required"
+        subtitle="Insufficient wallet balance"
+        note={`Recharge your wallet to request a referral for ${jobTitle}.`}
+        primaryLabel="Add Money"
+        secondaryLabel="Cancel"
+        onAddMoney={onAddMoney}
+        onCancel={onCancel}
+      />
+    );
+  }
 
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
       onRequestClose={onCancel}
     >
-      <TouchableOpacity 
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onCancel}
-      >
-        <TouchableOpacity 
-          style={styles.modalContainer}
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.header}>
+            <Ionicons name="people" size={24} color={colors.textPrimary} />
+            <Text style={styles.headerTitle}>Request Referral</Text>
+          </View>
+
+          {/* 📄 Content Area */}
           <ScrollView 
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
+            showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            {/* Header with Icon - Purple background */}
-            <View style={styles.header}>
-              <Ionicons name="people" size={32} color="#fff"/>
-              <Text style={styles.title}>Request Referral</Text>
+            {/* Job Title */}
+            <View style={styles.jobTitleSection}>
+              <Text style={styles.jobTitle}>Request referral for {jobTitle}</Text>
             </View>
 
-            {/* Content */}
-            <View style={styles.content}>
-              <Text style={styles.message}>
-                Request referral for {jobTitle}
-              </Text>
-
-              {/* Cost and Balance Info */}
-              <View style={styles.costSection}>
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabel}>Cost</Text>
-                  <Text style={styles.costValue}>₹{requiredAmount.toFixed(2)}</Text>
-                </View>
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabel}>Current Balance</Text>
-                  <Text style={[styles.costValue, { color: hasInsufficientBalance ? '#ef4444' : '#10b981' }]}>
-                    ₹{currentBalance.toFixed(2)}
-                  </Text>
-                </View>
-                {!hasInsufficientBalance && (
-                  <>
-                    <View style={styles.divider} />
-                    <View style={styles.costRow}>
-                      <Text style={styles.costLabelBold}>Balance After</Text>
-                      <Text style={[styles.costValueBold, { color: colors.text }]}>
-                        ₹{balanceAfter.toFixed(2)}
-                      </Text>
-                    </View>
-                  </>
-                )}
+            <View style={styles.costCard}>
+              <View style={styles.kvRow}>
+                <Text style={styles.kvLabel}>Cost</Text>
+                <Text style={styles.kvValue}>₹{requiredAmount.toFixed(2)}</Text>
               </View>
-
-              {hasInsufficientBalance ? (
-                /* Insufficient Balance Warning */
-                <View style={styles.warningSection}>
-                  <Ionicons name="warning" size={16} color="#f59e0b" />
-                  <Text style={styles.warningText}>
-                    Insufficient balance. Please recharge your wallet to continue.
-                  </Text>
-                </View>
-              ) : (
-                /* Benefits Section */
-                <View style={styles.benefitsSection}>
-                  <Text style={styles.benefitsTitle}>What you'll get:</Text>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="people" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Request sent to ALL employees who can refer you
-                    </Text>
+              <View style={styles.kvRow}>
+                <Text style={styles.kvLabel}>Current Balance</Text>
+                <Text style={[styles.kvValue, hasInsufficientBalance ? styles.kvValueDanger : styles.kvValueOk]}>
+                  ₹{currentBalance.toFixed(2)}
+                </Text>
+              </View>
+              {!hasInsufficientBalance && (
+                <>
+                  <View style={styles.kvDivider} />
+                  <View style={styles.kvRow}>
+                    <Text style={styles.kvLabelBold}>Balance After</Text>
+                    <Text style={styles.kvValueBold}>₹{balanceAfter.toFixed(2)}</Text>
                   </View>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Multiple employees can refer you simultaneously
-                    </Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="briefcase" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Higher chance of getting interview callback
-                    </Text>
-                  </View>
-                  <View style={styles.benefitItem}>
-                    <Ionicons name="trending-up" size={16} color="#10b981" />
-                    <Text style={styles.benefitText}>
-                      Your application stands out to recruiters
-                    </Text>
-                  </View>
-                </View>
+                </>
               )}
             </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onCancel}
-              >
-                <Text style={styles.cancelButtonText}>
-                  {hasInsufficientBalance ? 'Maybe Later' : 'Cancel'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={hasInsufficientBalance ? onAddMoney : onProceed}
-              >
-                <Ionicons 
-                  name={hasInsufficientBalance ? "card" : "flash"} 
-                  size={16} 
-                  color="#fff" 
-                />
-                <Text style={styles.primaryButtonText}>
-                  {hasInsufficientBalance ? 'Add Money' : 'Proceed'}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.benefitsBox}>
+              <Text style={styles.benefitsHeading}>What happens next:</Text>
+              <Text style={styles.benefitItem}>• Submit your request immediately</Text>
+              <Text style={styles.benefitItem}>• Employees at that company get notified</Text>
+              <Text style={styles.benefitItem}>• Improves your chances of getting a referral</Text>
+              <Text style={styles.benefitItem}>• Can help you get fast-tracked</Text>
             </View>
           </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+
+          {/* 🎯 Action Buttons - Clean Design */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onCancel}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.proceedBtn}
+              onPress={onProceed}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name={"paper-plane"} 
+                size={18} 
+                color={colors.white} 
+              />
+              <Text style={styles.proceedBtnText}>
+                Proceed
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.background,
+    borderRadius: 14,
     width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
+    maxWidth: 420,
+    maxHeight: '90%',
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
-      },
-    }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+
+  // 📄 Scroll Content
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
+    paddingBottom: 0,
   },
-  header: {
-    backgroundColor: '#6366f1', // Purple background (indigo-500)
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
+
+  // 💼 Job Title Section
+  jobTitleSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: '#fff',
-    textAlign: 'center',
-  },
-  content: {
-    padding: 20,
-  },
-  message: {
-    fontSize: typography.sizes.lg,
+  jobTitle: {
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 20,
+    lineHeight: 22,
   },
-  costSection: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
+
+  // 💰 Cost Card - Clean & Tight
+  costCard: {
+    marginHorizontal: 16,
+    backgroundColor: colors.background,
     borderRadius: 12,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  costRow: {
+  kvRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    paddingVertical: 8,
   },
-  costLabel: {
-    fontSize: typography.sizes.md,
+  kvLabel: {
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
   },
-  costLabelBold: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-  },
-  costValue: {
-    fontSize: typography.sizes.md,
+  kvValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
   },
-  costValueBold: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-  },
-  divider: {
+  kvDivider: {
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 8,
   },
-  warningSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#fef3c7',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#fcd34d',
-    gap: 12,
-  },
-  warningText: {
-    flex: 1,
+  kvLabelBold: {
     fontSize: typography.sizes.sm,
-    color: '#92400e',
-    lineHeight: 20,
-  },
-  benefitsSection: {
-    backgroundColor: '#f0f9ff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#93c5fd',
-  },
-  benefitsTitle: {
-    fontSize: typography.sizes.md,
+    color: colors.textPrimary,
     fontWeight: typography.weights.bold,
-    color: colors.text,
+  },
+  kvValueBold: {
+    fontSize: typography.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.bold,
+  },
+  kvValueOk: {
+    color: colors.success,
+  },
+  kvValueDanger: {
+    color: colors.danger,
+  },
+
+
+  // ✨ Benefits Box - Numbered Steps Only
+  benefitsBox: {
+    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginBottom: 16,
   },
-  benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
+  benefitsHeading: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+    marginBottom: 8,
   },
-  benefitText: {
-    flex: 1,
+  benefitItem: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
-    lineHeight: 20,
+    marginBottom: 6,
   },
-  actions: {
+
+  // 🎯 Footer Actions - Clean Buttons
+  footer: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 20,
-    paddingTop: 0,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  button: {
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelBtnText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  proceedBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
     gap: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
   },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  cancelButtonText: {
-    fontSize: typography.sizes.md,
+  proceedBtnText: {
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.gray700,
-  },
-  primaryButton: {
-    backgroundColor: '#6366f1',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 3px 10px rgba(99, 102, 241, 0.3)',
-      },
-    }),
-  },
-  primaryButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: '#fff',
+    color: colors.white,
   },
 });
+

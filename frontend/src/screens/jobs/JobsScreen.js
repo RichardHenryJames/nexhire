@@ -1,15 +1,30 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
+import AdCard from '../../components/ads/AdCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ReferralConfirmModal from '../../components/ReferralConfirmModal';
-import { styles } from './JobsScreen.styles';
+import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
+import { typography } from '../../styles/theme';
+import useResponsive from '../../hooks/useResponsive';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
+
+// Ad configuration - Google AdSense
+const AD_CONFIG = {
+  enabled: true,                              // Toggle ads on/off
+  adClient: 'ca-pub-7167287641762329',        // Your AdSense Publisher ID
+  adSlot: '1062213844',                       // RefOpen Job Feeds ad slot
+  frequency: 5,                               // Show ad after every N job cards
+};
 
 // Debounce hook
 const useDebounce = (value, delay = 300) => {
@@ -71,18 +86,170 @@ const isFiltersDirty = (f) => {
   });
 };
 
+const createAiModalStyles = (colors) => StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerAI: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.error,
+  },
+  headerTitleAI: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  headerTitleDanger: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+  },
+  body: {
+    padding: 16,
+  },
+  subtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  benefits: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  benefitsTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.semibold,
+    marginBottom: 8,
+  },
+  benefitItem: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  benefitNote: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
+  kvRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  kvLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  kvValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.semibold,
+  },
+  kvDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+  kvLabelBold: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.bold,
+  },
+  kvValueBold: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.bold,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  btnSecondary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  btnSecondaryText: {
+    color: colors.text,
+    fontWeight: typography.weights.semibold,
+  },
+  btnPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  btnPrimaryText: {
+    color: colors.white,
+    fontWeight: typography.weights.semibold,
+  },
+});
+
 export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
+  const { colors } = useTheme();
+  const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet, gridColumns, contentWidth } = responsive;
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
-  const { successMessage, appliedJobId } = route.params || {};
+  const { successMessage, appliedJobId, filterF500 } = route.params || {};
+
+  // 🔧 Reset filterF500 when Jobs tab is pressed directly (not from HomeScreen's "See All")
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress', (e) => {
+      // When tab is pressed, clear the filterF500 param so it shows all jobs
+      if (filterF500) {
+        navigation.setParams({ filterF500: undefined });
+      }
+    });
+    return unsubscribe;
+  }, [navigation, filterF500]);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 30, total: 0, totalPages: 0, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 30, hasMore: true });
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -110,11 +277,123 @@ export default function JobsScreen({ navigation, route }) {
 
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 50 });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
 
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: 50, jobTitle: '' });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '', companyName: '' });
+
+  // 🎉 NEW: Referral success overlay state
+  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [referralCompanyName, setReferralCompanyName] = useState('');
+  const [pendingReferralJobId, setPendingReferralJobId] = useState(null);
+
+  // 🤖 AI Recommended Jobs access (moved from Home to Jobs)
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
+  const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
+  const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
+
+  const loadWalletBalance = useCallback(async () => {
+    try {
+      const result = await refopenAPI.getWalletBalance();
+      if (result?.success) {
+        setWalletBalance(result.data?.balance || 0);
+      }
+    } catch (e) {
+      // silent
+    }
+  }, []);
+
+  const checkAIAccessStatus = useCallback(async () => {
+    try {
+      // Use unified access API
+      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs');
+      if (result?.success) {
+        setHasActiveAIAccess(!!result.data?.hasActiveAccess);
+      } else {
+        setHasActiveAIAccess(false);
+      }
+    } catch (e) {
+      setHasActiveAIAccess(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user || !isJobSeeker) return;
+    loadWalletBalance();
+    checkAIAccessStatus();
+  }, [user, isJobSeeker, loadWalletBalance, checkAIAccessStatus]);
+
+  const handleSearchWithAI = useCallback(async () => {
+    if (!user) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Please login to view AI recommended jobs.\n\nWould you like to login now?')) {
+          navigation.navigate('Auth');
+        }
+        return;
+      }
+      Alert.alert('Login Required', 'Please login to view AI recommended jobs', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth') },
+      ]);
+      return;
+    }
+    if (!isJobSeeker) {
+      Alert.alert('Access Denied', 'Only job seekers can use AI job recommendations');
+      return;
+    }
+
+    try {
+      // Use unified access API
+      const accessStatus = await refopenAPI.apiCall('/access/status?type=ai_jobs');
+      if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
+        navigation.navigate('AIRecommendedJobs');
+        return;
+      }
+    } catch (e) {
+      // fall through to payment flow
+    }
+
+    const requiredAmount = pricing.aiJobsCost;
+    // Ensure we have latest wallet balance before deciding
+    try {
+      const bal = await refopenAPI.getWalletBalance();
+      const current = bal?.success ? (bal.data?.balance || 0) : walletBalance;
+      setWalletBalance(current);
+      if (current < requiredAmount) {
+        setIsInsufficientBalance(true);
+        setShowAIConfirmModal(true);
+        return;
+      }
+      setIsInsufficientBalance(false);
+      setShowAIConfirmModal(true);
+    } catch (e) {
+      // fallback: show modal with current cached balance
+      const current = walletBalance || 0;
+      if (current < requiredAmount) setIsInsufficientBalance(true);
+      else setIsInsufficientBalance(false);
+      setShowAIConfirmModal(true);
+    }
+  }, [user, isJobSeeker, navigation, walletBalance]);
+
+  const handleAIJobsConfirm = useCallback(() => {
+    setShowAIConfirmModal(false);
+    if (!isInsufficientBalance) {
+      navigation.navigate('AIRecommendedJobs');
+      setTimeout(() => {
+        loadWalletBalance();
+        checkAIAccessStatus();
+      }, 1000);
+    }
+  }, [isInsufficientBalance, navigation, loadWalletBalance, checkAIAccessStatus]);
+
+  const handleAIJobsCancel = useCallback(() => {
+    setShowAIConfirmModal(false);
+    if (isInsufficientBalance) {
+      navigation.navigate('WalletRecharge');
+    }
+  }, [isInsufficientBalance, navigation]);
 
   // Load primary resume once (or first resume as fallback)
   const loadPrimaryResume = useCallback(async () => {
@@ -225,18 +504,6 @@ export default function JobsScreen({ navigation, route }) {
       setJobs(prev => {
         const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
         return filtered;
-      });
-
-      // Update pagination totals to reflect removal
-      setPagination(prev => {
-        const newTotal = Math.max((prev.total || 0) - 1, 0);
-        const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-        return {
-          ...prev,
-          total: newTotal,
-          totalPages: newTotalPages,
-          hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize
-        };
       });
 
       // Add to applied IDs
@@ -491,6 +758,9 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
+    
+        // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
+        if (filterF500) apiFilters.isFortune500 = true;
 
     // 🔍 DEBUG: Log organization filter details
         
@@ -508,8 +778,8 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
 
     const shouldUseSearch = debouncedQuery.trim().length > 0 || (personalizationApplied && Object.keys(smartBoosts).length > 0);
 
-   // ⏱️ START: Measure API response time
-const apiStartTime = performance.now();
+  // ⏱️ START: Measure API response time
+const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         
 
         let result;
@@ -521,7 +791,7 @@ const apiStartTime = performance.now();
         }
 
         // ⏱️ END: Calculate and log response time
- const apiEndTime = performance.now();
+ const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const responseTime = apiEndTime - apiStartTime;
 
       if (controller.signal.aborted) return;
@@ -551,14 +821,16 @@ const apiStartTime = performance.now();
               
        setJobs(list);
   const meta = result.meta || {};
-          const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (meta.page ? (meta.page < (meta.totalPages || 1)) : false);
-          setPagination(prev => ({
-    ...prev,
-        page: meta.page || 1,
- total: meta.total || list.length,
-            totalPages: meta.totalPages || Math.ceil((meta.total || list.length) / (meta.pageSize || prev.pageSize)),
-     hasMore
- }));
+          setPagination(prev => {
+            const nextPageSize = meta.pageSize || prev.pageSize;
+            const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (list.length === nextPageSize);
+            return {
+              ...prev,
+              page: meta.page || 1,
+              pageSize: nextPageSize,
+              hasMore
+            };
+          });
         }
    } catch (e) {
     if (e?.name !== 'AbortError') {
@@ -574,7 +846,7 @@ const apiStartTime = performance.now();
 
     run();
     return () => { try { controller.abort(); } catch {} };
-  }, [debouncedQuery, filters, reloadKey, personalizationApplied, smartBoosts, pagination.pageSize]);
+  }, [debouncedQuery, filters, reloadKey, personalizationApplied, smartBoosts, pagination.pageSize, filterF500]);
 
   // ===== LOAD MORE =====
   const loadMoreJobs = useCallback(async () => {
@@ -586,10 +858,6 @@ const apiStartTime = performance.now();
     }
 
     const nextPage = (pagination.page || 1) + 1;
-    if (pagination.totalPages && nextPage > pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
-      return;
-    }
 
     if (lastAutoLoadPageRef.current === nextPage) {
       return;
@@ -614,9 +882,12 @@ const apiStartTime = performance.now();
       if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
+      
+      // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
+      if (filterF500) apiFilters.isFortune500 = true;
 
-      // ⏱️ START: Measure API response time for pagination
- const apiStartTime = performance.now();
+       // ⏱️ START: Measure API response time for pagination
+     const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 
       let result;
    if (debouncedQuery.trim().length > 0 || hasBoosts) {
@@ -626,7 +897,7 @@ const apiStartTime = performance.now();
       }
 
       // ⏱️ END: Calculate and log response time
-      const apiEndTime = performance.now();
+      const apiEndTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const responseTime = apiEndTime - apiStartTime;
 
    if (controller.signal.aborted) return;
@@ -636,13 +907,16 @@ const apiStartTime = performance.now();
         setJobs(prev => [...prev, ...list]);
 
         const meta = result.meta || {};
-   setPagination(prev => ({
-          ...prev,
-          page: meta.page || nextPage,
-      total: meta.total ?? prev.total,
-  totalPages: meta.totalPages ?? prev.totalPages,
-     hasMore: Boolean(meta.hasMore)
-        }));
+        setPagination(prev => {
+          const nextPageSize = meta.pageSize || prev.pageSize;
+          const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (list.length === nextPageSize);
+          return {
+            ...prev,
+            page: meta.page || nextPage,
+            pageSize: nextPageSize,
+            hasMore
+          };
+        });
 
         if (list.length === 0) {
           setPagination(prev => ({ ...prev, hasMore: false }));
@@ -660,7 +934,7 @@ const apiStartTime = performance.now();
         isLoadingMoreRef.current = false;
       }
     }
-  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, pagination.totalPages, debouncedQuery, filters, hasBoosts]);
+  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize, debouncedQuery, filters, hasBoosts]);
 
   // ===== Infinite scroll =====
   const onScrollNearEnd = useCallback((e) => {
@@ -682,11 +956,6 @@ const apiStartTime = performance.now();
     const lowThreshold = 5;
 
     if (!backendHasMore) {
-      return;
-    }
-
-    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
       return;
     }
 
@@ -918,16 +1187,19 @@ const apiStartTime = performance.now();
       );
     }
 
-    // Simple job cards without animations
-    return data.map((job, index) => {
+    // Simple job cards without animations - with Ad integration
+    const elements = [];
+    
+    data.forEach((job, index) => {
       const id = job.JobID || index;
       const jobKey = job.JobID || job.id;
       const isReferred = referredJobIds.has(jobKey);
       const isSaved = savedIds.has(jobKey);
       const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
 
-      return (
-        <View key={id} style={{ marginBottom: 12 }}>
+      // Add job card - responsive width for grid layout
+      elements.push(
+        <View key={id} style={styles.jobCardWrapper}>
           <JobCard
             job={job}
             jobTypes={jobTypes}
@@ -944,7 +1216,33 @@ const apiStartTime = performance.now();
           />
         </View>
       );
+      
+      // Insert ad card after every N jobs (based on AD_CONFIG.frequency) - only on mobile
+      if (AD_CONFIG.enabled && isMobile && (index + 1) % AD_CONFIG.frequency === 0 && index < data.length - 1) {
+        elements.push(
+          <View key={`ad-${index}`} style={styles.jobCardWrapper}>
+            <AdCard variant="jobs" />
+          </View>
+        );
+      }
     });
+    
+    // On desktop/tablet, wrap in a grid container
+    if (!isMobile) {
+      return (
+        <View style={styles.jobsGrid}>
+          {elements}
+          {/* Show ad at the end on desktop */}
+          {AD_CONFIG.enabled && data.length > 0 && (
+            <View style={styles.jobCardWrapper}>
+              <AdCard variant="jobs" />
+            </View>
+          )}
+        </View>
+      );
+    }
+    
+    return elements;
   };
 
   const openingsCount = jobs.length;
@@ -972,8 +1270,9 @@ const apiStartTime = performance.now();
 
   // NEW: Ask Referral handler
   const handleAskReferral = useCallback(async (job) => {
-
-    if (!job) return;
+    if (!job) {
+      return;
+    }
     if (!user) {
       // Web-compatible alert
       if (Platform.OS === 'web') {
@@ -1020,19 +1319,20 @@ const apiStartTime = performance.now();
         // 💎 NEW: Show confirmation modal (whether sufficient balance or not)
         setReferralConfirmData({
           currentBalance: balance,
-          requiredAmount: 50,
-          jobTitle: job.Title || 'this job'
+          requiredAmount: pricing.referralRequestCost,
+          jobTitle: job.Title || 'this job',
+          companyName: job.OrganizationName || ''
         });
         setShowReferralConfirmModal(true);
         return;
 
       } else {
-        console.error('Failed to check wallet balance:', walletBalance.error);
+        console.error('❌ Failed to check wallet balance:', walletBalance.error);
         Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
         return;
       }
     } catch (e) {
-      console.error('Failed to check wallet balance:', e);
+      console.error('❌ Exception in wallet balance check:', e);
       Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
       return;
     }
@@ -1053,15 +1353,18 @@ const apiStartTime = performance.now();
           resumeID: resumeData.ResumeID
         });
         if (res?.success) {
-          setReferredJobIds(prev => new Set([...prev, id]));
-          setReferralEligibility(prev => ({
-            ...prev,
-            dailyQuotaRemaining: Math.max(0, prev.dailyQuotaRemaining - 1),
-            isEligible: prev.dailyQuotaRemaining > 1
-          }));
+          // 🎉 Store pending job ID - will mark as referred when overlay closes
+          setPendingReferralJobId(id);
+          
+          // 🎉 Show fullscreen success overlay
+          setReferralCompanyName(job.OrganizationName || '');
+          setShowReferralSuccessOverlay(true);
+          
           showToast('Referral request sent successfully', 'success');
 
-          // 🔧 FIXED: Reload primary resume after successful referral
+          // 🔧 FIXED: Set the resume directly and reload
+          setPrimaryResume(resumeData);
+          primaryResumeLoadedRef.current = false;
           await loadPrimaryResume();
         } else {
           Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
@@ -1079,11 +1382,6 @@ const apiStartTime = performance.now();
           // Always remove from saved locally (backend auto-removes later)
             removeSavedJobLocally(id);
           setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-          setPagination(prev => {
-            const newTotal = Math.max((prev.total || 0) - 1, 0);
-            const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-            return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-          });
           showToast('Application submitted successfully', 'success');
 
           // 🔧 FIXED: Reload primary resume after successful application
@@ -1119,11 +1417,6 @@ const apiStartTime = performance.now();
         setAppliedCount(c => (Number(c) || 0) + 1);
         removeSavedJobLocally(id); // ensure removal if it was saved
         setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
-        setPagination(prev => {
-          const newTotal = Math.max((prev.total || 0) - 1, 0);
-          const newTotalPages = Math.max(Math.ceil(newTotal / prev.pageSize), 1);
-          return { ...prev, total: newTotal, totalPages: newTotalPages, hasMore: prev.page < newTotalPages && newTotal > prev.page * prev.pageSize };
-        });
         showToast('Application submitted', 'success');
         try {
           const appliedRes = await refopenAPI.getMyApplications(1, 1);
@@ -1146,10 +1439,15 @@ const apiStartTime = performance.now();
         resumeID: resumeId
       });
       if (res?.success) {
-        setReferredJobIds(prev => new Set([...prev, id]));
+        // 🎉 Store pending job ID - will mark as referred when overlay closes
+        setPendingReferralJobId(id);
+
+        // 🎉 Show fullscreen success overlay
+        setReferralCompanyName(job.OrganizationName || referralConfirmData.companyName || '');
+        setShowReferralSuccessOverlay(true);
 
         // ✅ Show wallet deduction info
-        const amountDeducted = res.data?.amountDeducted || 50;
+        const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
 
         let message = 'Referral request sent to ALL employees who can refer!';
@@ -1165,7 +1463,7 @@ const apiStartTime = performance.now();
         // ✅ NEW: Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || 50;
+          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
 
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -1238,12 +1536,6 @@ const apiStartTime = performance.now();
       return;
     }
 
-    // FIXED: Additional guard - don't trigger if current page >= totalPages
-    if (pagination.totalPages && pagination.page >= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, hasMore: false }));
-      return;
-    }
-
     // Trigger proactive load only once per page and only if not already loading
     if (jobs.length > 0 && jobs.length <= lowThreshold && lastAutoLoadPageRef.current < (pagination.page + 1)) {
       loadMoreJobs();
@@ -1262,114 +1554,182 @@ const apiStartTime = performance.now();
   // ===== Render =====
   return (
     <View style={styles.container}>
-      {/* Search Header */}
-      <View style={styles.searchHeader}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search jobs..."
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              // Clear jobs immediately when user starts typing
-              if (text.trim().length > 0) {
-                setJobs([]);
-                setLoading(true);
-              }
-            }}
-            onSubmitEditing={handleSearchSubmit}
-            placeholderTextColor="#999"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+      {/* Fortune 500 Mode: Show custom header instead of search/filters */}
+      {filterF500 ? (
+        <View style={styles.f500Header}>
+          <TouchableOpacity 
+            style={styles.f500BackButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.f500Title}>Jobs by Top MNCs</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      ) : (
+        <>
+          {/* Search Header */}
+          <View style={styles.searchHeader}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  // Clear jobs immediately when user starts typing
+                  if (text.trim().length > 0) {
+                    setJobs([]);
+                    setLoading(true);
+                  }
+                }}
+                onSubmitEditing={handleSearchSubmit}
+                placeholderTextColor="#999"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+              <Ionicons name="options-outline" size={24} color="#0066cc" />
             </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-          <Ionicons name="options-outline" size={24} color="#0066cc" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Filters Row */}
-        <View style={styles.quickFiltersContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('jobType')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickJobTypeLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('workMode')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickWorkplaceLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
-                  onPress={() => openFilters('postedBy')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
-                    {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickFilterItem}>
-                <TouchableOpacity
-                  style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
-                  onPress={() => openFilters('company')}
-                >
-                  <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
-                    {quickCompanyLabel}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-
-            {isFiltersDirty(filters) && (
-              <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
-                <Text style={styles.clearAllText}>Clear All</Text>
-              </TouchableOpacity>
-            )}
           </View>
+
+          {/* Quick Filters Row */}
+          <View style={styles.quickFiltersContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={styles.quickFilterDropdown}
+                    onPress={handleSearchWithAI}
+                  >
+                    <Text style={styles.quickFilterText}>
+                      AI Jobs
+                    </Text>
+                    <Ionicons
+                      name={'bulb-outline'}
+                      size={14}
+                      color={'#666'}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('jobType')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickJobTypeLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('workMode')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickWorkplaceLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
+                    onPress={() => openFilters('postedBy')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
+                      {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('company')}
+                  >
+                    <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickCompanyLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+
+              {isFiltersDirty(filters) && (
+                <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* Job List Container with FAB */}
+      <View style={{ flex: 1 }}>
+        {/* Floating Action Buttons - Top Right of Job List */}
+        <View style={styles.fabContainerTop}>
+          <TouchableOpacity
+            style={[styles.fab, styles.fabSaved]}
+            onPress={() => navigation.navigate('SavedJobs')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="bookmark" size={20} color="#FFFFFF" />
+            {savedIds.length > 0 && (
+              <View style={styles.fabBadge}>
+                <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.fab, styles.fabApplications]}
+            onPress={() => navigation.navigate('Applications')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="briefcase" size={20} color="#FFFFFF" />
+            {appliedCount > 0 && (
+              <View style={styles.fabBadge}>
+                <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
-      {/* Summary - only show when jobs are loaded */}
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryText}>
-            {formatCount(pagination.total || jobs.length)} jobs found{summaryText ? ` for "${summaryText}"` : ''}
-          </Text>
-        </View>
-
-      {/* Job List */}
-      <ScrollView
-        style={styles.jobList}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onScroll={onScrollNearEnd}
-        scrollEventThrottle={16}
-      >
-        {renderList()}
-      </ScrollView>
+        {/* Job List */}
+        <ScrollView
+          style={styles.jobList}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.jobListContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          onScroll={onScrollNearEnd}
+          scrollEventThrottle={16}
+        >
+          <ResponsiveContainer style={styles.jobListResponsive}>
+            {renderList()}
+          
+          {/* Loading More Indicator */}
+          {loadingMore && (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
+            </View>
+          )}
+          </ResponsiveContainer>
+        </ScrollView>
+      </View>
 
       {/* Filter Modal */}
       <FilterModal
@@ -1414,6 +1774,67 @@ const apiStartTime = performance.now();
         }}
         onCancel={() => setShowWalletModal(false)}
       />
+
+      {/* AI Jobs Confirmation Modal (moved from Home) */}
+      {isInsufficientBalance ? (
+        <WalletRechargeModal
+          visible={showAIConfirmModal}
+          currentBalance={Number(walletBalance || 0)}
+          requiredAmount={pricing.aiJobsCost}
+          title="Wallet Recharge Required"
+          subtitle="Insufficient wallet balance"
+          note={`Unlock 50 AI-matched jobs for ${pricing.aiAccessDurationDays} days.`}
+          primaryLabel="Add Money"
+          secondaryLabel="Maybe Later"
+          onAddMoney={handleAIJobsCancel}
+          onCancel={() => setShowAIConfirmModal(false)}
+        />
+      ) : (
+        <Modal
+          visible={showAIConfirmModal}
+          transparent
+          onRequestClose={() => setShowAIConfirmModal(false)}
+        >
+          <View style={aiModalStyles.overlay}>
+            <View style={aiModalStyles.card}>
+              <View style={aiModalStyles.headerAI}>
+                <Ionicons name="bulb" size={28} color="#FFD700" />
+                <Text style={aiModalStyles.headerTitleAI}>AI Recommended Jobs</Text>
+              </View>
+              <View style={aiModalStyles.body}>
+                <Text style={aiModalStyles.subtitle}>Get 50 personalized job matches</Text>
+                <View style={aiModalStyles.benefits}>
+                  <Text style={aiModalStyles.benefitsTitle}>Why this helps</Text>
+                  <Text style={aiModalStyles.benefitItem}>• Jobs matched to your profile and skills</Text>
+                  <Text style={aiModalStyles.benefitItem}>• Saves time—no need to search manually</Text>
+                  <Text style={aiModalStyles.benefitItem}>• {pricing.aiAccessDurationDays}-day access after purchase</Text>
+                </View>
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabel}>Cost</Text>
+                  <Text style={aiModalStyles.kvValue}>₹{pricing.aiJobsCost.toFixed(2)}</Text>
+                </View>
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabel}>Current Balance</Text>
+                  <Text style={aiModalStyles.kvValue}>₹{Number(walletBalance || 0).toFixed(2)}</Text>
+                </View>
+                <View style={aiModalStyles.kvDivider} />
+                <View style={aiModalStyles.kvRow}>
+                  <Text style={aiModalStyles.kvLabelBold}>Balance After</Text>
+                  <Text style={aiModalStyles.kvValueBold}>₹{(Number(walletBalance || 0) - pricing.aiJobsCost).toFixed(2)}</Text>
+                </View>
+                <View style={aiModalStyles.actions}>
+                  <TouchableOpacity style={aiModalStyles.btnSecondary} onPress={() => setShowAIConfirmModal(false)}>
+                    <Text style={aiModalStyles.btnSecondaryText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={aiModalStyles.btnPrimary} onPress={handleAIJobsConfirm}>
+                    <Text style={aiModalStyles.btnPrimaryText}>Proceed</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* 💎 NEW: Referral Confirmation Modal */}
       <ReferralConfirmModal
@@ -1467,36 +1888,20 @@ const apiStartTime = performance.now();
         onCancel={() => setShowReferralConfirmModal(false)}
       />
 
-      {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
-        {/* Saved Jobs Button */}
-     <TouchableOpacity
-     style={[styles.fab, styles.fabSaved]}
-    onPress={() => navigation.navigate('SavedJobs')}
-       activeOpacity={0.8}
- >
-          <Ionicons name="bookmark" size={20} color="#FFFFFF" />
-      {savedIds.length > 0 && (
-            <View style={styles.fabBadge}>
-              <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
-            </View>
-        )}
-     </TouchableOpacity>
-
-        {/* Applications Button */}
-        <TouchableOpacity
-  style={[styles.fab, styles.fabApplications]}
-          onPress={() => navigation.navigate('Applications')}
-    activeOpacity={0.8}
-   >
-          <Ionicons name="briefcase" size={20} color="#FFFFFF" />
-          {appliedCount > 0 && (
-            <View style={styles.fabBadge}>
-         <Text style={styles.fabBadgeText}>{appliedCount}</Text>
-          </View>
-   )}
-        </TouchableOpacity>
-  </View>
+      {/* 🎉 Referral Success Overlay */}
+      <ReferralSuccessOverlay
+        visible={showReferralSuccessOverlay}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          // ✅ Now mark the job as referred after overlay closes
+          if (pendingReferralJobId) {
+            setReferredJobIds(prev => new Set([...prev, pendingReferralJobId]));
+            setPendingReferralJobId(null);
+          }
+        }}
+        duration={3500}
+        companyName={referralCompanyName}
+      />
     </View>
   );
 }

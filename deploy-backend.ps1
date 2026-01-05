@@ -91,7 +91,16 @@ $targetFunctionApp = switch ($normalizedEnv) {
     default { $FunctionAppName }
 }
 
+# Environment-specific resource group
+$targetResourceGroup = switch ($normalizedEnv) {
+    "dev" { "refopen-dev-rg" }
+    "staging" { "refopen-dev-rg" }
+    "prod" { "refopen-prod-rg" }
+    default { "refopen-prod-rg" }
+}
+
 Write-Host "🎯 Target Function App: $targetFunctionApp" -ForegroundColor Cyan
+Write-Host "   Resource Group: $targetResourceGroup" -ForegroundColor Gray
 Write-Host "   Location: Central India" -ForegroundColor Gray
 Write-Host "   Runtime: Node.js 20" -ForegroundColor Gray
 
@@ -179,7 +188,7 @@ Write-Host "✅ Subscription set: $SubscriptionId" -ForegroundColor Green
 Write-Host "`n🚀 Deploying function code to Azure..." -ForegroundColor Yellow
 Write-Host "   Function App: $targetFunctionApp" -ForegroundColor Cyan
 Write-Host "   Environment: $normalizedEnv" -ForegroundColor Cyan
-Write-Host "   Resource Group: refopen-prod-rg" -ForegroundColor Gray
+Write-Host "   Resource Group: $targetResourceGroup" -ForegroundColor Gray
 Write-Host "" -ForegroundColor White
 Write-Host "💡 Note: Environment variables are configured in Azure Portal" -ForegroundColor Yellow
 Write-Host "   This deployment only uploads the code package" -ForegroundColor Gray

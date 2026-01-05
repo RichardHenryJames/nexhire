@@ -25,7 +25,7 @@ $azureResources = switch ($normalizedEnv) {
         @{ 
             ResourceGroup = "refopen-dev-rg"
             StaticAppName = "refopen-frontend-dev"
-            FunctionAppName = "refopen-api-dev"
+            FunctionAppName = "refopen-api-func-dev"
             Infrastructure = "RefOpen"
         }
     }
@@ -33,7 +33,7 @@ $azureResources = switch ($normalizedEnv) {
         @{ 
             ResourceGroup = "refopen-dev-rg"
             StaticAppName = "refopen-frontend-staging"
-            FunctionAppName = "refopen-api-staging"
+            FunctionAppName = "refopen-api-func-staging"
             Infrastructure = "RefOpen"
         }
     }
@@ -140,6 +140,186 @@ if (-not (Test-Path "web-build/index.html")) {
     Write-Error "Build failed! No index.html found in web-build/"
     Set-Location ..
     exit 1
+}
+
+# Ensure Azure Static Web Apps routing config is included in the deployed output
+if (Test-Path "staticwebapp.config.json") {
+    Copy-Item "staticwebapp.config.json" "web-build/staticwebapp.config.json" -Force
+    Write-Host "Azure SWA config copied to web-build/staticwebapp.config.json" -ForegroundColor Green
+} else {
+    Write-Host "Warning: staticwebapp.config.json not found in frontend/. SPA deep links may 404." -ForegroundColor Yellow
+}
+
+# Copy public folder assets (favicon, etc.) to web-build - but NOT index.html
+if (Test-Path "public") {
+    Get-ChildItem "public" -Exclude "index.html" | ForEach-Object {
+        Copy-Item $_.FullName "web-build/" -Force -Recurse
+    }
+    Write-Host "Public folder assets (excluding index.html) copied to web-build/" -ForegroundColor Green
+}
+
+# Update the Expo-generated index.html with SEO meta tags
+$indexPath = "web-build/index.html"
+if (Test-Path $indexPath) {
+    $indexContent = Get-Content $indexPath -Raw
+    
+    # Replace the title
+    $indexContent = $indexContent -replace '<title>.*?</title>', '<title>RefOpen - Job Referrals | Find Jobs & Apply | Get Referred to Top Companies</title>'
+    
+    # Add SEO meta tags after <meta charset>
+    # NOTE: Google AdSense script is loaded dynamically by AdCard component
+    # to avoid "ads on screens without publisher content" violation
+    $seoTags = @"
+    <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
+    <meta name="description" content="RefOpen - The leading job referral platform. Ask for referrals from employees at Google, Amazon, Microsoft & 500+ top companies. Find jobs, apply & get referred faster. Referred candidates are 15x more likely to get hired." />
+    <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement" />
+    <meta name="author" content="RefOpen" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://refopen.com/" />
+    <meta property="og:title" content="RefOpen - Job Referrals | Find Jobs & Apply | Get Referred Fast" />
+    <meta property="og:description" content="Find jobs, apply & get referrals from employees at top companies. Search jobs & get referred to Google, Amazon, Microsoft. Referred candidates are 15x more likely to be hired." />
+    <meta property="og:image" content="https://refopen.com/refopen-logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:site_name" content="RefOpen" />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RefOpen - Job Referrals | Find Jobs & Apply" />
+    <meta name="twitter:description" content="Find jobs, apply & get referrals from employees at top companies. Referred candidates are 15x more likely to get hired." />
+    <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/refopen-small-logo.jpg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#6366F1" />
+    <link rel="canonical" href="https://refopen.com/" />
+    <meta name="application-name" content="RefOpen" />
+    <meta name="apple-mobile-web-app-title" content="RefOpen" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "RefOpen",
+      "url": "https://refopen.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://refopen.com/refopen-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "image": "https://refopen.com/refopen-logo.png",
+      "sameAs": [
+        "https://www.linkedin.com/company/refopen"
+      ],
+      "description": "The leading job referral platform connecting job seekers with employees at top companies. Get referred to your dream job.",
+      "foundingDate": "2024",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "email": "support@refopen.com"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "RefOpen - Job Referral & Job Search Platform",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "description": "Find jobs, apply, and request referrals from employees at top companies. Browse jobs for free, search openings, and boost your chances with employee referrals.",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I ask for a job referral?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sign up on RefOpen, browse jobs at top companies, and click 'Ask for Referral'. Your request is sent to all employees of that company on the platform who can choose to refer you."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How to find and apply for jobs on RefOpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Search for jobs using keywords, location or company name. Browse thousands of job openings and apply directly or request a referral to increase your chances of getting hired."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What features are free on RefOpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Creating your profile, browsing all job listings, applying to jobs directly, and receiving referral requests as an employee are completely free. Premium features like referral requests use a convenient pay-per-use wallet system."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which companies can I get referred to?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "RefOpen has employees from 500+ companies including Google, Amazon, Microsoft, Flipkart, Swiggy, TCS, Infosys, and many more top companies ready to help with referrals."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I upload my resume on RefOpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, you can upload your resume on RefOpen. Your resume is shared with referrers when you request a job referral, helping them evaluate your profile and increasing your chances of getting referred."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of jobs are available on RefOpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "RefOpen has jobs for freshers, experienced professionals, IT jobs, software developer jobs, remote jobs, work from home jobs, internships and positions across all industries and experience levels."
+          }
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "RefOpen",
+      "url": "https://refopen.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://refopen.com/jobs?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+"@
+    
+    # Only add SEO tags if not already present
+    if ($indexContent -notmatch 'og:title') {
+        $indexContent = $indexContent -replace '(<meta charset="utf-8"\s*/?>)', "`$1`n$seoTags"
+    }
+    
+    Set-Content $indexPath $indexContent -NoNewline
+    Write-Host "SEO meta tags added to index.html" -ForegroundColor Green
 }
 
 $buildSize = (Get-ChildItem -Path "web-build" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB

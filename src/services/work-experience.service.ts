@@ -1,6 +1,7 @@
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
+import { resetVerificationOnNewJob } from './companyEmailVerification.service';
 
 export interface WorkExperienceInput {
   jobTitle: string;
@@ -135,16 +136,14 @@ export class WorkExperienceService {
       await dbService.executeQuery(updateQuery, params);
     }
 
-    // ? NEW: Also save professional summary to Applicants.Summary if provided
+    // Also save professional summary to Applicants.Summary if provided
     // This ensures the summary from registration appears in the profile
     if (data.description) {
-      console.log(`Saving professional summary to Applicants.Summary for applicant ${applicantId}`);
       try {
   await dbService.executeQuery(
           `UPDATE Applicants SET Summary = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
           [applicantId, data.description]
         );
-        console.log(`Successfully saved professional summary to profile`);
       } catch (error) {
         console.warn('Failed to update Applicants.Summary:', error);
     // Don't throw - this is a supplementary operation
@@ -159,6 +158,22 @@ export class WorkExperienceService {
       await UserService.recomputeProfileCompletenessByApplicantId(applicantId);
     } catch (e) { console.warn('Completeness recalculation failed (create):', (e as any)?.message); }
 
+    // Reset verified referrer status if new current job is added (user must re-verify)
+    if (isNewCurrent) {
+      try {
+        // Get UserId from ApplicantID
+        const userResult = await dbService.executeQuery(
+          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
+          [applicantId]
+        );
+        if (userResult.recordset && userResult.recordset.length > 0) {
+          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+        }
+      } catch (e) {
+        console.warn('Failed to reset verified referrer status:', (e as any)?.message);
+      }
+    }
+
     return await this.getWorkExperienceById(id);
   }
 
@@ -167,7 +182,8 @@ export class WorkExperienceService {
     if (!existing) throw new NotFoundError('Work experience not found');
 
     // ? NEW: Handle current work experience logic for updates too
-    const isBeingSetToCurrent = data.isCurrent === true || data.isCurrent === 1;
+    const wasCurrentBefore = existing.IsCurrent === 1 || existing.IsCurrent === true;
+    const isBeingSetToCurrent = (data.isCurrent === true || data.isCurrent === 1) && !wasCurrentBefore;
     let newStartDate: Date | null = null;
 
     if (data.startDate !== undefined) {
@@ -236,6 +252,30 @@ export class WorkExperienceService {
       const { UserService } = await import('./user.service');
       await UserService.recomputeProfileCompletenessByApplicantId(existing.ApplicantID);
     } catch (e) { console.warn('Completeness recalculation failed (update):', (e as any)?.message); }
+
+    // Reset verified referrer if setting to current OR if organization changed on current job
+    // Check if organization actually changed (normalize for comparison)
+    const normalizeCompanyName = (name: string | string[] | null | undefined): string => 
+      (Array.isArray(name) ? name[0] : name || '').toLowerCase().trim();
+    
+    const orgActuallyChanged = 
+      (data.organizationId !== undefined && data.organizationId !== existing.OrganizationID) ||
+      (data.companyName !== undefined && normalizeCompanyName(data.companyName) !== normalizeCompanyName(existing.CompanyName));
+    
+    if (isBeingSetToCurrent || (wasCurrentBefore && orgActuallyChanged)) {
+      try {
+        const userResult = await dbService.executeQuery(
+          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
+          [existing.ApplicantID]
+        );
+        if (userResult.recordset && userResult.recordset.length > 0) {
+          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+        }
+      } catch (e) {
+        console.warn('Failed to reset verified referrer status:', (e as any)?.message);
+      }
+    }
+
     return await this.getWorkExperienceById(workExperienceId);
   }
 
@@ -385,8 +425,6 @@ export class WorkExperienceService {
     excludeWorkExperienceId?: string
   ): Promise<void> {
     try {
-      console.log(`Managing current work experience for applicant ${applicantId}`);
-      
       // Find all current work experiences (excluding the one being updated)
       let currentExpQuery = `
         SELECT WorkExperienceID, StartDate, JobTitle, OrganizationID, CompanyName
@@ -405,34 +443,18 @@ export class WorkExperienceService {
       const currentExperiences = await dbService.executeQuery(currentExpQuery, queryParams);
       
       if (!currentExperiences.recordset || currentExperiences.recordset.length === 0) {
-        console.log(`No existing current work experiences found - proceeding with new current`);
-        return;
+        return; // No existing current work experiences - proceed with new current
       }
       
       // Process each existing current work experience
       for (const existingExp of currentExperiences.recordset) {
         const existingStartDate = new Date(existingExp.StartDate);
         
-        console.log(`Comparing dates:`, {
-          newStartDate: newStartDate.toISOString().split('T')[0],
-          existingStartDate: existingStartDate.toISOString().split('T')[0],
-          newIsLater: newStartDate > existingStartDate
-        });
-        
-        // ? KEY LOGIC: Only update if new start date is GREATER than existing start date
+        // Only update if new start date is GREATER than existing start date
         if (newStartDate > existingStartDate) {
           // Calculate end date for previous experience (new start date - 1 day)
           const newEndDate = new Date(newStartDate);
           newEndDate.setDate(newEndDate.getDate() - 1);
-          
-          console.log(`Auto-updating previous current work experience:`, {
-            workExperienceId: existingExp.WorkExperienceID,
-            company: existingExp.CompanyName || 'Unknown',
-            jobTitle: existingExp.JobTitle,
-            oldStartDate: existingStartDate.toISOString().split('T')[0],
-            newEndDate: newEndDate.toISOString().split('T')[0],
-            markingAsNonCurrent: true
-          });
           
           const updateQuery = `
             UPDATE WorkExperiences 
@@ -444,18 +466,8 @@ export class WorkExperienceService {
           `;
           
           await dbService.executeQuery(updateQuery, [existingExp.WorkExperienceID, newEndDate]);
-          
-          console.log(`Successfully updated previous current work experience ${existingExp.WorkExperienceID}`);
-        } else {
-          console.log(`New start date is NOT greater than existing start date - keeping existing as current:`, {
-            existingCompany: existingExp.CompanyName || 'Unknown',
-            existingStartDate: existingStartDate.toISOString().split('T')[0],
-            newStartDate: newStartDate.toISOString().split('T')[0]
-          });
-          
-          // Optionally, you could throw an error here to prevent adding the new one as current
-          // throw new ValidationError(`Cannot set as current: A more recent work experience already exists starting ${existingStartDate.toISOString().split('T')[0]}`);
         }
+        // If new start date is NOT greater, keep existing as current
       }
       
     } catch (error) {

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { typography } from '../styles/theme';
 
 export default function SkipToFinalButton({ 
   onSkip, 
@@ -10,7 +11,9 @@ export default function SkipToFinalButton({
   selectedValue = null,
   requiredMessage = 'Please make a selection first'
 }) {
-  
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const handleSkip = () => {
     if (disabled || !selectedValue) {
       Alert.alert('Selection Required', requiredMessage);
@@ -56,7 +59,7 @@ export default function SkipToFinalButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   skipButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   skipButtonDisabled: {
-    borderColor: colors.gray300,
+    borderColor: colors.border,
     backgroundColor: colors.gray100,
   },
   skipButtonText: {
@@ -79,6 +82,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   skipButtonTextDisabled: {
-    color: colors.gray400,
+    color: colors.textMuted,
   },
 });

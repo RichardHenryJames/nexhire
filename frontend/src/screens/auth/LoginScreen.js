@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,74 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Image,
+  Animated,
+  Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, typography, borderRadius, styles } from '../../styles/theme';
+import { spacing, typography, borderRadius, styles as themeStyles } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
+import useResponsive from '../../hooks/useResponsive';
+
+const { width, height } = Dimensions.get('window');
+
+// Floating particle component for background effect
+function FloatingParticle({ delay, style }) {
+  const translateY = useRef(new Animated.Value(height)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -100,
+          duration: 8000 + Math.random() * 4000,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0.6,
+            duration: 1000,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 1000,
+            delay: 6000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ translateY }, { translateX }],
+          opacity,
+        },
+      ]}
+    />
+  );
+}
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -23,22 +85,52 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [loginError, setLoginError] = useState(''); // State for login error message
   
-  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable } = useAuth();
+  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
+  const responsive = useResponsive();
+  const { isMobile, isDesktop, isTablet } = responsive;
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles, responsive), [colors, responsive]);
+
+  // Check auth state when screen mounts or comes into focus
+  useEffect(() => {
+    // Re-check auth state when screen mounts (handles case where logged in on another tab)
+    checkAuthState();
+  }, []);
+
+  // Redirect to home if already authenticated (after loading completes)
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      // Check if there's a pending redirect first
+      const hasRedirect = handlePostLoginRedirect();
+      if (!hasRedirect) {
+        // No pending redirect, go to main screen
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+      }
+    }
+  }, [loading, isAuthenticated, navigation, handlePostLoginRedirect]);
 
   // FIXED: Clear error state when screen mounts or comes into focus
   useEffect(() => {
+    setLoginError(''); // Clear local login error on mount
     clearError();
     
     // Also clear when screen comes into focus
     const unsubscribeFocus = navigation.addListener('focus', () => {
+      setLoginError(''); // Clear local login error on focus
       clearError();
+      // Re-check auth state when screen comes into focus
+      checkAuthState();
     });
     
     return () => {
       unsubscribeFocus();
     };
-  }, [navigation, clearError]);
+  }, [navigation, clearError, checkAuthState]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -62,16 +154,19 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     if (!validateForm()) return;
 
+    setLoginError(''); // Clear previous error
     setFormLoading(true);
     const result = await login(email, password);
     setFormLoading(false);
     
     if (!result.success) {
-      Alert.alert(
-        'Login Failed', 
-        result.error || 'Please check your credentials and try again.',
-        [{ text: 'OK' }]
-      );
+      const errorMessage = result.error || 'Please check your credentials and try again.';
+      setLoginError(errorMessage); // Set error to display on UI
+      
+      // Also show alert for mobile
+      if (Platform.OS !== 'web') {
+        Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
+      }
     }
     // If successful, navigation will happen automatically via auth context
   };
@@ -131,37 +226,62 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleRegisterNavigation = () => {
-    navigation.navigate('Register');
+    // For email/password sign up start the Job Seeker registration flow
+    // directly at the experience type selection screen (skip user type)
+    navigation.navigate('JobSeekerFlow', {
+      screen: 'ExperienceTypeSelection',
+      params: {
+        userType: 'JobSeeker',
+        fromGoogleAuth: false,
+        googleUser: null,
+      },
+    });
   };
 
   const isSubmitDisabled = formLoading || loading || !email || !password;
 
   return (
-    <SafeAreaView style={screenStyles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={screenStyles.keyboardContainer}
-      >
-        <ScrollView
-          contentContainerStyle={screenStyles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <View style={screenStyles.mainContainer}>
+      <LinearGradient
+        colors={['#0F172A', '#1E293B', '#0F172A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+        style={Platform.OS === 'web' ? screenStyles.webBackground : StyleSheet.absoluteFill}
+      />
+      
+      {/* Floating Particles */}
+      <FloatingParticle delay={0} style={screenStyles.floatingParticle} />
+      <FloatingParticle delay={1000} style={screenStyles.floatingParticle} />
+      <FloatingParticle delay={2000} style={screenStyles.floatingParticle} />
+      
+      {/* Bottom Decoration */}
+      <View style={screenStyles.bottomDecoration}>
+        <View style={screenStyles.decorationCircle1} />
+        <View style={screenStyles.decorationCircle2} />
+        <View style={screenStyles.decorationCircle3} />
+      </View>
+
+      <SafeAreaView style={screenStyles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={screenStyles.keyboardContainer}
         >
-          {/* Header */}
-          <View style={screenStyles.header}>
-            <View style={screenStyles.logoContainer}>
-              <Ionicons name="briefcase" size={64} color={colors.primary} />
-            </View>
+          <ScrollView
+            contentContainerStyle={screenStyles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={screenStyles.card}>
+              {/* Header */}
+              <View style={screenStyles.header}>
+            <Image
+              source={require('../../../assets/refopen-logo.png')}
+              style={screenStyles.logoImage}
+              resizeMode="contain"
+            />
 
-            <Text style={screenStyles.title}>Welcome to RefOpen!</Text>
-
-           {/*
-           <Text style={screenStyles.subtitle}>
-             India’s first job referral app — making referrals effortless.
-             Sign in to get started.
-           </Text>
-           */}
-
+            <Text style={screenStyles.title}>Your next career opportunity awaits</Text>
           </View>
 
 
@@ -196,7 +316,7 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons 
                   name="mail-outline" 
                   size={20} 
-                  color={colors.gray400} 
+                  color="rgba(255, 255, 255, 0.8)" 
                   style={screenStyles.inputIcon}
                 />
                 <TextInput
@@ -204,10 +324,10 @@ export default function LoginScreen({ navigation }) {
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
-                    clearError(); // FIXED: Clear error when user starts typing
+                    if (errors.email) setErrors(prev => ({ ...prev, email: null }));
                   }}
                   placeholder="Enter your email"
-                  placeholderTextColor={colors.gray400}
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -229,7 +349,7 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons 
                   name="lock-closed-outline" 
                   size={20} 
-                  color={colors.gray400} 
+                  color="rgba(255, 255, 255, 0.8)" 
                   style={screenStyles.inputIcon}
                 />
                 <TextInput
@@ -237,10 +357,10 @@ export default function LoginScreen({ navigation }) {
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
-                    clearError(); // FIXED: Clear error when user starts typing
+                    if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
                   placeholder="Enter your password"
-                  placeholderTextColor={colors.gray400}
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoComplete="password"
@@ -252,7 +372,7 @@ export default function LoginScreen({ navigation }) {
                   <Ionicons 
                     name={showPassword ? "eye-outline" : "eye-off-outline"} 
                     size={20} 
-                    color={colors.gray400} 
+                    color="rgba(255, 255, 255, 0.8)" 
                   />
                 </TouchableOpacity>
               </View>
@@ -272,7 +392,7 @@ export default function LoginScreen({ navigation }) {
             >
               {formLoading || loading ? (
                 <View style={screenStyles.loadingContainer}>
-                  <Ionicons name="reload-outline" size={20} color={colors.white} />
+                  <Ionicons name="reload-outline" size={20} color={colors.primary} />
                   <Text style={[screenStyles.loginButtonText, { marginLeft: spacing.xs }]}>
                     Signing In...
                   </Text>
@@ -282,11 +402,11 @@ export default function LoginScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            {/* Error Message - FIXED: Only show if error exists */}
-            {error && (
+            {/* Error Message - FIXED: Show loginError or context error */}
+            {(loginError || error) && (
               <View style={screenStyles.globalErrorContainer}>
                 <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
-                <Text style={screenStyles.globalError}>{error}</Text>
+                <Text style={screenStyles.globalError}>{loginError || error}</Text>
               </View>
             )}
           </View>
@@ -316,15 +436,51 @@ export default function LoginScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+          {/* About Link */}
+          <TouchableOpacity 
+            style={screenStyles.aboutLink}
+            onPress={() => navigation.navigate('AboutUs')}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+            <Text style={screenStyles.aboutLinkText}>About RefOpen</Text>
+          </TouchableOpacity>
+        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
-const screenStyles = StyleSheet.create({
+const createScreenStyles = (colors, themeStyles, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false } = responsive;
+  
+  return StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#0F172A', // Dark fallback for web
+  },
+  webBackground: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   container: {
-    ...styles.safeArea,
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  card: {
+    backgroundColor: 'transparent',
+    borderRadius: borderRadius.xl,
+    padding: isMobile ? spacing.lg : spacing.xl,
+    marginHorizontal: isMobile ? spacing.md : 'auto',
+    marginVertical: spacing.xl,
+    maxWidth: isDesktop ? 480 : '100%',
+    width: isDesktop ? 480 : '100%',
+    alignSelf: 'center',
   },
   keyboardContainer: {
     flex: 1,
@@ -332,25 +488,78 @@ const screenStyles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.md,
+    paddingVertical: spacing.xl,
+    alignItems: isDesktop ? 'center' : 'stretch',
+  },
+  floatingParticle: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.white,
+    zIndex: 1,
+  },
+  bottomDecoration: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    zIndex: 0,
+  },
+  decorationCircle1: {
+    position: 'absolute',
+    bottom: -80,
+    right: -60,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: colors.white + '12',
+    borderWidth: 1,
+    borderColor: colors.white + '20',
+  },
+  decorationCircle2: {
+    position: 'absolute',
+    bottom: -120,
+    left: -100,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: colors.white + '08',
+    borderWidth: 1,
+    borderColor: colors.white + '15',
+  },
+  decorationCircle3: {
+    position: 'absolute',
+    bottom: 50,
+    right: 30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.white + '10',
+    borderWidth: 2,
+    borderColor: colors.white + '25',
   },
   header: {
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  logoContainer: {
-    marginBottom: spacing.md,
+  logoImage: {
+    width: 240,
+    height: 68,
+    marginBottom: 8,
+    tintColor: colors.white,
   },
   title: {
-    ...styles.heading1,
-    marginBottom: spacing.xs,
+    fontSize: typography.sizes.lg,
+    color: colors.white + 'E6',
     textAlign: 'center',
-  },
-  subtitle: {
-    ...styles.bodyLarge,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    maxWidth: 280,
+    lineHeight: 26,
+    fontWeight: typography.weights.medium,
+    maxWidth: 320,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   // NEW: Google Sign-In styles
   googleSection: {
@@ -364,11 +573,11 @@ const screenStyles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.gray300,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
     marginHorizontal: spacing.md,
-    color: colors.gray500,
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: typography.sizes.sm,
   },
   form: {
@@ -379,54 +588,72 @@ const screenStyles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    ...styles.body,
+    ...themeStyles.body,
     fontWeight: typography.weights.medium,
     marginBottom: spacing.xs,
-    color: colors.textPrimary,
+    color: colors.white,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   inputError: {
     borderColor: colors.danger,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   inputIcon: {
     marginLeft: spacing.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   input: {
     flex: 1,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     fontSize: typography.sizes.base,
-    color: colors.textPrimary,
+    color: colors.white,
   },
   eyeIcon: {
     padding: spacing.sm,
   },
   errorText: {
-    ...styles.caption,
-    color: colors.danger,
+    ...themeStyles.caption,
+    color: '#FFD700', // Gold/Yellow for errors on blue background
     marginTop: spacing.xs,
+    fontWeight: '600',
   },
   loginButton: {
-    ...styles.button,
-    ...styles.buttonPrimary,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#dadce0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginTop: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   buttonDisabled: {
-    ...styles.buttonDisabled,
+    backgroundColor: '#f1f3f4',
+    borderColor: '#e8eaed',
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   loginButtonText: {
-    ...styles.textButton,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    color: '#3c4043',
+    fontFamily: 'Roboto, sans-serif',
   },
   globalErrorContainer: {
     flexDirection: 'row',
@@ -434,14 +661,14 @@ const screenStyles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.sm,
     padding: spacing.sm,
-    backgroundColor: colors.gray50,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
   },
   globalError: {
-    ...styles.bodySmall,
-    color: colors.danger,
+    ...themeStyles.bodySmall,
+    color: '#FFD700',
     marginLeft: spacing.xs,
   },
   footer: {
@@ -450,35 +677,50 @@ const screenStyles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    ...styles.body,
-    color: colors.textSecondary,
+    ...themeStyles.body,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   linkText: {
-    ...styles.body,
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
+    ...themeStyles.body,
+    color: colors.white,
+    fontWeight: typography.weights.bold,
+    textDecorationLine: 'underline',
   },
   // Development helper styles
   devHelper: {
     marginTop: spacing.xl,
     padding: spacing.md,
-    backgroundColor: colors.gray100,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   devHelperTitle: {
-    ...styles.bodySmall,
-    color: colors.textSecondary,
+    ...themeStyles.bodySmall,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: spacing.sm,
   },
   devButton: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.gray300,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: borderRadius.sm,
   },
   devButtonText: {
-    ...styles.caption,
-    color: colors.textPrimary,
+    ...themeStyles.caption,
+    color: colors.white,
+  },
+  aboutLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  aboutLinkText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
 });
+};

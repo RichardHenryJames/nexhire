@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, typography } from '../../styles/theme';
+import { typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
 import { useEditing } from './ProfileSection'; // ? Import the editing context
 
@@ -29,27 +30,26 @@ const ResumeSection = ({
   editing: editingProp, // ? Accept editing prop for standalone usage
   onUpdate 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  
   // ? Determine editing state: Prop takes priority over context
   let editing = true; // Default to true
   
   // If prop is explicitly provided, use it (takes highest priority)
   if (editingProp !== undefined) {
     editing = editingProp;
-    console.log('📝 ResumeSection: Using prop editing:', editing);
   } else {
     // Otherwise try to use context (for old ProfileScreen compatibility)
     try {
       const contextEditing = useEditing();
       if (contextEditing !== undefined) {
         editing = contextEditing;
-        console.log('📝 ResumeSection: Using context editing:', editing);
       }
     } catch (e) {
-      console.log('📝 ResumeSection: Context not available, using default true');
+      // Context not available, using default true
     }
   }
-  
-  console.log('📝 ResumeSection FINAL editing value:', editing);
   
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -237,10 +237,8 @@ const ResumeSection = ({
 
   const setPrimaryResume = async (resumeId) => {
     try {
-      console.log('Setting primary resume:', resumeId);
       setLoading(true);
       const response = await refopenAPI.setPrimaryResume(resumeId);
-      console.log('Set primary response:', response);
       if (response.success) {
         Alert.alert('Success!', 'Primary resume updated successfully');
         await loadResumes();
@@ -284,46 +282,29 @@ const ResumeSection = ({
   };
 
   const performDeleteResume = async (resumeId, resumeLabel) => {
-    console.log('?=== PERFORM DELETE RESUME START ===');
-    console.log('?Resume ID:', resumeId);
-    console.log('?Resume Label:', resumeLabel);
-    console.log('?Current resumes count:', resumes.length);
-    
     try {
-      console.log('?Setting loading state...');
       setDeleting(true);
       
-      // ? FIXED: Ensure we have proper authentication
+      // ✅ FIXED: Ensure we have proper authentication
       if (!refopenAPI.token) {
-        console.error('?No auth token available');
         Alert.alert('Authentication Error', 'Please login again to delete resumes');
         return;
       }
       
-      console.log('?Auth token verified, making API call...');
       const response = await refopenAPI.deleteResume(resumeId);
-      console.log('?API response received:', response);
       
       if (response && response.success) {
-        console.log('? Resume deleted successfully from server');
-        
-        // ? FIXED: Immediately update local state to remove deleted resume
-        console.log('Updating local resumes state...');
+        // ✅ FIXED: Immediately update local state to remove deleted resume
         setResumes(prevResumes => {
           const updatedResumes = prevResumes.filter(r => r.ResumeID !== resumeId);
-          console.log('Updated local resumes count:', updatedResumes.length);
           return updatedResumes;
         });
         
-        // ? FIXED: Update parent profile state as well
+        // ✅ FIXED: Update parent profile state as well
         if (setProfile) {
-          console.log('Updating parent profile state...');
           setProfile(prev => {
             const updatedResumes = (prev.resumes || []).filter(r => r.ResumeID !== resumeId);
             const newPrimaryURL = updatedResumes.find(r => r.IsPrimary)?.ResumeURL || updatedResumes[0]?.ResumeURL || '';
-            
-            console.log('Updated profile resumes count:', updatedResumes.length);
-            console.log('New primary resume URL:', newPrimaryURL);
             
             return {
               ...prev,
@@ -333,11 +314,10 @@ const ResumeSection = ({
           });
         }
         
-        // ? NEW: Show beautiful success message
-        Alert.alert('? Success', 'Resume deleted successfully');
+        // ✅ NEW: Show beautiful success message
+        Alert.alert('✅ Success', 'Resume deleted successfully');
         
-        // ? OPTIONAL: Reload from server as backup verification
-        console.log('Reloading resumes from server for verification...');
+        // ✅ OPTIONAL: Reload from server as backup verification
         setTimeout(() => {
           loadResumes();
         }, 500);
@@ -346,16 +326,12 @@ const ResumeSection = ({
           onUpdate({ resumeDeleted: true });
         }
       } else {
-        console.error('? Delete failed - server response:', response);
         Alert.alert('Error', response?.error || 'Failed to delete resume');
       }
     } catch (error) {
-      console.error('?=== ERROR DELETING RESUME ===');
-      console.error('?Error type:', error.constructor.name);
-      console.error('?Error message:', error.message);
-      console.error('?Full error:', error);
+      console.error('Error deleting resume:', error);
       
-      // ? IMPROVED: Better error messages based on error type
+      // ✅ IMPROVED: Better error messages based on error type
       let errorMessage = 'Failed to delete resume';
       if (error.message?.includes('Authentication')) {
         errorMessage = 'Please login again to delete resumes';
@@ -367,16 +343,12 @@ const ResumeSection = ({
       
       Alert.alert('Error', errorMessage);
     } finally {
-      console.log('?Clearing loading state...');
       setDeleting(false);
-      console.log('?=== PERFORM DELETE RESUME END ===');
     }
   };
 
   const openResume = (resumeURL) => {
     try {
-      console.log('Opening resume:', resumeURL);
-      
       if (Platform.OS === 'web') {
         // On web, open in new tab for download/view
         window.open(resumeURL, '_blank');
@@ -393,8 +365,6 @@ const ResumeSection = ({
       Alert.alert('Resume URL', resumeURL, [
         { text: 'Close', style: 'cancel' },
         { text: 'Copy URL', onPress: () => {
-          // In a real app, you'd copy to clipboard
-          console.log('Resume URL copied:', resumeURL);
           Alert.alert('Copied', 'Resume URL copied to clipboard');
         }}
       ]);
@@ -424,7 +394,12 @@ const ResumeSection = ({
   };
 
   const renderResumeCard = (resume, index) => (
-    <View key={resume.ResumeID} style={styles.resumeCard}>
+    <TouchableOpacity 
+      key={resume.ResumeID} 
+      style={styles.resumeCard}
+      onPress={() => openResume(resume.ResumeURL)}
+      activeOpacity={0.7}
+    >
       {/* Primary Badge */}
       {resume.IsPrimary && (
         <View style={styles.primaryBadge}>
@@ -457,20 +432,15 @@ const ResumeSection = ({
 
       {/* Actions */}
       <View style={styles.resumeActions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => openResume(resume.ResumeURL)}
-        >
-          <Ionicons name="eye" size={12} color={colors.primary} />
-          <Text style={styles.actionButtonText}>View</Text>
-        </TouchableOpacity>
-
         {editing && (
           <>
             {!resume.IsPrimary && (
               <TouchableOpacity 
                 style={[styles.actionButton, styles.primaryButton]}
-                onPress={() => setPrimaryResume(resume.ResumeID)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setPrimaryResume(resume.ResumeID);
+                }}
                 disabled={loading}
               >
                 <Ionicons name="star-outline" size={12} color={colors.warning} />
@@ -480,11 +450,14 @@ const ResumeSection = ({
               </TouchableOpacity>
             )}
 
-            {/* ? FIXED: Only show delete button for non-primary resumes */}
+            {/* ✅ FIXED: Only show delete button for non-primary resumes */}
             {!resume.IsPrimary && (
               <TouchableOpacity 
                 style={[styles.actionButton, styles.deleteButton]}
-                onPress={() => deleteResume(resume.ResumeID, resume.ResumeLabel)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  deleteResume(resume.ResumeID, resume.ResumeLabel);
+                }}
                 disabled={loading || resumes.length <= 1 || deleting}
               >
                 <Ionicons name="trash" size={12} color={colors.danger} />
@@ -496,7 +469,7 @@ const ResumeSection = ({
           </>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (
@@ -713,7 +686,7 @@ const ResumeSection = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     marginVertical: 8,
   },
@@ -736,12 +709,12 @@ const styles = StyleSheet.create({
   },
   resumeCount: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
   },
   primaryIndicator: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     marginTop: 2,
   },
   addButton: {
@@ -808,7 +781,7 @@ const styles = StyleSheet.create({
   },
   fileType: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Smaller file type text
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
     marginTop: 2, // ? REDUCED: Less margin
   },
@@ -825,7 +798,7 @@ const styles = StyleSheet.create({
   },
   resumeDate: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Even smaller date text
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   resumeActions: {
     flexDirection: 'row',
@@ -835,7 +808,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     paddingHorizontal: 10, // ? SLIGHTLY INCREASED: Better button size
     paddingVertical: 5, // ? SLIGHTLY INCREASED: Better button size
     borderRadius: 6,
@@ -843,7 +816,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: typography.sizes?.xs || 11, // ? SLIGHTLY INCREASED: Better readability
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
     fontWeight: typography.weights?.medium || '500',
   },
   primaryButton: {
@@ -901,7 +874,7 @@ const styles = StyleSheet.create({
   },
   deleteModalMessage: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
@@ -913,7 +886,7 @@ const styles = StyleSheet.create({
   },
   deleteModalCancelButton: {
     flex: 1,
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -923,7 +896,7 @@ const styles = StyleSheet.create({
   deleteModalCancelText: {
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.semibold || '600',
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
   },
   deleteModalDeleteButton: {
     flex: 1,
@@ -954,14 +927,14 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: typography.sizes?.lg || 18,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     fontWeight: typography.weights?.medium || '500',
     marginTop: 16, // ? INCREASED: More space from icon
     marginBottom: 8, // ? INCREASED: More space before description
   },
   emptyStateText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 32, // ? INCREASED: More space before button
@@ -997,7 +970,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     marginTop: 8,
   },
   uploadingIndicator: {
@@ -1022,7 +995,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border || '#E5E7EB',
   },
@@ -1037,21 +1010,21 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights?.medium || '500',
   },
   uploadButtonDisabled: {
-    color: colors.gray400 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   modalContent: {
     padding: 20,
   },
   modalDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.textSecondary || '#6B7280',
     lineHeight: 20,
     marginBottom: 20,
   },
   selectedFile: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.background || '#F3F4F6',
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
@@ -1065,16 +1038,16 @@ const styles = StyleSheet.create({
   },
   selectedFileSize: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
   },
   labelInputLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray700 || '#374151',
+    color: colors.text || '#374151',
     fontWeight: typography.weights?.medium || '500',
     marginBottom: 8,
   },
   labelInput: {
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.surface || '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.border || '#E5E7EB',
     borderRadius: 8,
@@ -1085,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   labelHint: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#9CA3AF',
+    color: colors.textSecondary || '#9CA3AF',
     marginBottom: 20,
   },
   uploadingContainer: {

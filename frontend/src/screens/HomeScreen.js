@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,30 @@ import {
   Platform,
   Dimensions,
   Image,
-  Modal,
   TextInput,
   FlatList,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
-import aiJobRecommendations from '../services/aiJobRecommendations';
-import { colors, typography } from '../styles/theme';
+import messagingApi from '../services/messagingApi';
+import { typography } from '../styles/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
+import useResponsive from '../hooks/useResponsive';
+import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker } = useAuth();
+const { colors } = useTheme();
+const responsive = useResponsive();
+const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
+const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
 // Organization search state
@@ -37,26 +46,46 @@ const [showSearchResults, setShowSearchResults] = useState(false);
 // ⚡ NEW: Separate loading states for lazy loading
 const [loadingStats, setLoadingStats] = useState(true);
 const [loadingJobs, setLoadingJobs] = useState(true);
+const [loadingF500Jobs, setLoadingF500Jobs] = useState(true);
 const [loadingApplications, setLoadingApplications] = useState(true);
+
+// 🎯 NEW: Fortune 500 companies for Get Referrals card
+const [fortune500Companies, setFortune500Companies] = useState([]);
+const [f500LogoScrollRef] = useState(useRef(null));
+const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
+const scrollIntervalRef = useRef(null);
+
+// 🎯 NEW: Profile views count
+const [profileViewsCount, setProfileViewsCount] = useState(0);
+
+// 🎯 NEW: Loading state for navigating to verify referrer
+const [navigatingToVerify, setNavigatingToVerify] = useState(false);
+
+// 🎯 NEW: Referrer requests (referrals that came to me)
+const [myReferrerRequests, setMyReferrerRequests] = useState([]);
+
+// 🎯 NEW: Unread message count for messages icon badge
+const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   
 const [dashboardData, setDashboardData] = useState({
   // Enhanced stats from backend
   stats: {},
   recentJobs: [],
+  f500Jobs: [],
   recentApplications: [],
   referralStats: {}
 });
   
-// 🆕 NEW: AI Personalized Jobs state
-const [aiJobs, setAiJobs] = useState([]);
-const [loadingAiJobs, setLoadingAiJobs] = useState(false);
-const [walletBalance, setWalletBalance] = useState(0);
-const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
-const [isInsufficientBalance, setIsInsufficientBalance] = useState(false);
-const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
-  
 // ✅ NEW: Scroll ref for scroll-to-top functionality
   const scrollViewRef = React.useRef(null);
+
+  // Ensure the fixed header never overlays stack screens on web.
+  useFocusEffect(
+    useCallback(() => {
+      setShowHeader(true);
+      return () => setShowHeader(false);
+    }, [])
+  );
 
   // Organization search function with debounce
   const searchOrganizations = useCallback(async (query) => {
@@ -98,89 +127,171 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
-    try {
-      // ⚡ Load stats first (for Quick Actions badges)
-      setLoadingStats(true);
-      const dashboardRes = await refopenAPI.apiCall('/users/dashboard-stats').catch(() => ({ success: false, data: {} }));
-      const stats = dashboardRes.success ? dashboardRes.data : {};
-      
-      setDashboardData(prev => ({ ...prev, stats }));
-      setLoadingStats(false);
+    // ⚡ Start all fetches in parallel for better performance
+    
+    // 1. Dashboard Stats
+    setLoadingStats(true);
+    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats')
+      .then(res => {
+        const stats = res.success ? res.data : {};
+        setDashboardData(prev => ({ ...prev, stats }));
+      })
+      .catch(err => {
+        console.warn('Dashboard stats failed:', err);
+        // Don't alert for stats failure as it's non-critical
+      })
+      .finally(() => setLoadingStats(false));
 
-      // ⚡ Load jobs in parallel (non-blocking)
-      setLoadingJobs(true);
-      const recentJobsRes = isEmployer 
-        ? await refopenAPI.getOrganizationJobs({ page: 1, pageSize: 5, status: 'Published', postedByUserId: user?.UserID || user?.userId || user?.id }).catch(() => ({ success: false, data: [] }))
-        : await refopenAPI.getJobs(1, 5).catch(() => ({ success: false, data: [] }));
-      
-      let recentJobs = [];
-      if (recentJobsRes.success) {
-        if (isEmployer) {
-          recentJobs = (recentJobsRes.data || []).slice(0, 5);
-        } else {
+    // 2. Recommended Jobs
+    setLoadingJobs(true);
+    const jobsPromise = (async () => {
+      try {
+        const recentJobsRes = isEmployer 
+          ? await refopenAPI.getOrganizationJobs({ 
+              page: 1, 
+              pageSize: 5, 
+              status: 'Published', 
+              postedByUserId: user?.UserID || user?.userId || user?.id 
+            })
+          : await refopenAPI.getJobs(1, 5);
+        
+        let recentJobs = [];
+        if (recentJobsRes.success) {
           recentJobs = (recentJobsRes.data || []).slice(0, 5);
         }
+        setDashboardData(prev => ({ ...prev, recentJobs }));
+      } catch (err) {
+        console.warn('Recommended jobs fetch failed:', err);
+      } finally {
+        setLoadingJobs(false);
       }
-      
-      setDashboardData(prev => ({ ...prev, recentJobs }));
-      setLoadingJobs(false);
+    })();
 
-      // ⚡ Load applications (for job seekers)
-      if (isJobSeeker) {
-        setLoadingApplications(true);
-        const applicationsRes = await refopenAPI.getMyApplications(1, 3).catch(() => ({ success: false, data: [] }));
-        const recentApplications = applicationsRes.success ? applicationsRes.data.slice(0, 3) : [];
-        
-        setDashboardData(prev => ({ ...prev, recentApplications }));
-        setLoadingApplications(false);
-
-        // 🤖 Load AI personalized jobs (non-critical, can load last)
-        loadAIPersonalizedJobs();
-        
-        // Load wallet balance for AI feature
-        loadWalletBalance();
-        
-        // Check AI access status (24hr validity)
-        checkAIAccessStatus();
+    // 3. Jobs from Top MNCs (Fortune 500)
+    setLoadingF500Jobs(true);
+    const f500JobsPromise = (async () => {
+      try {
+        if (!isEmployer) {
+          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
+          let f500Jobs = [];
+          if (f500JobsRes.success) {
+            f500Jobs = (f500JobsRes.data || []).slice(0, 5);
+          }
+          setDashboardData(prev => ({ ...prev, f500Jobs }));
+        }
+      } catch (err) {
+        console.warn('F500 jobs fetch failed:', err);
+      } finally {
+        setLoadingF500Jobs(false);
       }
+    })();
 
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
-      setLoadingStats(false);
-      setLoadingJobs(false);
-      setLoadingApplications(false);
+    // 3. Applications (Job Seeker only)
+    let applicationsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      setLoadingApplications(true);
+      applicationsPromise = refopenAPI.getMyApplications(1, 3)
+        .then(res => {
+          const recentApplications = res.success ? res.data.slice(0, 3) : [];
+          setDashboardData(prev => ({ ...prev, recentApplications }));
+        })
+        .catch(err => console.warn('Applications fetch failed:', err))
+        .finally(() => setLoadingApplications(false));
     }
+
+    // 🎯 NEW: Fetch Fortune 500 companies for Get Referrals card (job seekers only)
+    let f500CompaniesPromise = Promise.resolve();
+    if (isJobSeeker) {
+      f500CompaniesPromise = (async () => {
+        try {
+          // Fetch only Fortune 500 companies with the backend filter
+          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true });
+          if (result.success && result.data) {
+            // Filter only companies with logos (already F500 from backend)
+            const f500WithLogos = result.data
+              .filter(org => org.logoURL)
+              .map(org => ({
+                ...org,
+                // Generate random referrer count (0-99, or 99+)
+                referrerCount: Math.floor(Math.random() * 120)
+              }))
+              .sort(() => Math.random() - 0.5); // Shuffle
+            setFortune500Companies(f500WithLogos);
+          }
+        } catch (err) {
+          console.warn('Fortune 500 companies fetch failed:', err);
+        }
+      })();
+    }
+
+    // 🎯 NEW: Fetch profile views count (job seekers only)
+    let profileViewsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      profileViewsPromise = (async () => {
+        try {
+          const result = await messagingApi.getMyProfileViews(1, 1);
+          if (result.success) {
+            // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
+            const count = result.meta?.total || result.total || result.data?.length || 0;
+            setProfileViewsCount(count);
+          }
+        } catch (err) {
+          console.warn('Profile views fetch failed:', err);
+          setProfileViewsCount(0);
+        }
+      })();
+    }
+
+    // 🎯 NEW: Fetch unread message count
+    const unreadCountPromise = (async () => {
+      try {
+        const result = await messagingApi.getUnreadCount();
+        if (result.success && result.data) {
+          setUnreadMessageCount(result.data.TotalUnread || 0);
+        }
+      } catch (err) {
+        console.warn('Unread count fetch failed:', err);
+        setUnreadMessageCount(0);
+      }
+    })();
+
+    // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
+    let referrerRequestsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      referrerRequestsPromise = (async () => {
+        try {
+          const result = await refopenAPI.getMyReferrerRequests(1, 10);
+          if (result.success && result.data) {
+            // Data comes as { requests: [...], total, page, pageSize, totalPages }
+            const requests = result.data.requests || result.data || [];
+            // Only show pending requests (Claimed status removed)
+            const activeRequests = Array.isArray(requests) 
+              ? requests.filter(r => r.StatusID === 1 || r.Status === 'Pending')
+              : [];
+            setMyReferrerRequests(activeRequests);
+          }
+        } catch (err) {
+          console.warn('Referrer requests fetch failed:', err);
+        }
+      })();
+    }
+
+    // We don't await here to allow UI to update progressively
+    // But we catch any unhandled promise rejections just in case
+    Promise.all([
+      statsPromise, 
+      jobsPromise, 
+      f500JobsPromise, 
+      applicationsPromise,
+      f500CompaniesPromise,
+      profileViewsPromise,
+      referrerRequestsPromise,
+      unreadCountPromise
+    ]).catch(err => {
+      console.error('Error in dashboard data fetch:', err);
+    });
+
   }, [isJobSeeker, isEmployer, user]);
-
-  // Load wallet balance
-  const loadWalletBalance = async () => {
-    try {
-      const result = await refopenAPI.getWalletBalance();
-      if (result?.success) {
-        setWalletBalance(result.data?.balance || 0);
-      }
-    } catch (error) {
-      console.error('Error loading wallet balance:', error);
-    }
-  };
-
-  // Check AI access status (24hr validity)
-  const checkAIAccessStatus = async () => {
-    try {
-      const result = await refopenAPI.apiCall('/jobs/ai-access-status');
-      
-      if (result?.success) {
-        const hasAccess = result.data?.hasActiveAccess || false;
-        setHasActiveAIAccess(hasAccess);
-      } else {
-        setHasActiveAIAccess(false);
-      }
-    } catch (error) {
-      console.error('❌ Error checking AI access status:', error);
-      setHasActiveAIAccess(false);
-    }
-  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -200,6 +311,41 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
+
+  // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
+  useEffect(() => {
+    if (fortune500Companies.length > 3 && isJobSeeker) {
+      // Clear any existing interval
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+      
+      const logoItemWidth = 70; // 56px logo + 14px margin
+      const maxScroll = (fortune500Companies.length - 3) * logoItemWidth;
+      
+      scrollIntervalRef.current = setInterval(() => {
+        setF500ScrollPosition(prev => {
+          const next = prev + logoItemWidth;
+          if (next >= maxScroll) {
+            return 0; // Reset to start
+          }
+          return next;
+        });
+      }, 2000); // Scroll every 2 seconds
+      
+      return () => {
+        if (scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+        }
+      };
+    }
+  }, [fortune500Companies.length, isJobSeeker]);
+
+  // Helper function to format referrer count
+  const formatReferrerCount = (count) => {
+    if (count > 99) return '99+';
+    return count.toString();
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -401,83 +547,6 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
     }
   };
 
-  // Handle Show More AI Jobs - check 24hr access first
-  const handleShowMoreAIJobs = async () => {
-    try {
-      
-      // Check if user has active AI access (paid within 24 hours)
-      const accessStatus = await refopenAPI.apiCall('/jobs/ai-access-status');
-      
-      if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
-        // User has active access - navigate directly without payment
-        navigation.navigate('AIRecommendedJobs');
-        return;
-      } else {
-      }
-    } catch (error) {
-      console.error('❌ Error checking AI access status:', error);
-      // Continue to payment flow if check fails
-    }
-
-    const requiredAmount = 100;
-    
-    // Check balance (user needs to pay)
-    if (walletBalance < requiredAmount) {
-      setIsInsufficientBalance(true);
-      setShowAIConfirmModal(true);
-      return;
-    }
-
-    // Show confirmation modal for payment
-    setIsInsufficientBalance(false);
-    setShowAIConfirmModal(true);
-  };
-
-  const handleAIJobsConfirm = () => {
-    setShowAIConfirmModal(false);
-    if (!isInsufficientBalance) {
-      // Navigate - backend will automatically deduct ₹100 when loading AI jobs
-      navigation.navigate('AIRecommendedJobs');
-      // Reload wallet balance after returning
-      setTimeout(() => loadWalletBalance(), 1000);
-    }
-  };
-
-  const handleAIJobsCancel = () => {
-    setShowAIConfirmModal(false);
-    if (isInsufficientBalance) {
-      // Navigate to recharge
-      navigation.navigate('WalletRecharge');
-    }
-  };
-
-  // 🤖 NEW: Load AI Personalized Jobs
-  const loadAIPersonalizedJobs = async () => {
-    try {
-      setLoadingAiJobs(true);
-      const userId = user?.UserID || user?.userId || user?.id;
-      
-      if (!userId) {
-        console.warn('No user ID available for AI recommendations');
-        return;
-      }
-
-      const result = await aiJobRecommendations.getPersonalizedJobs(userId, 5);
-      
-      if (result.success && result.jobs) {
-        setAiJobs(result.jobs);
-      } else {
-        console.warn('🤖 No AI personalized jobs found');
-        setAiJobs([]);
-      }
-    } catch (error) {
-      console.error('🤖 Error loading AI personalized jobs:', error);
-      setAiJobs([]);
-    } finally {
-      setLoadingAiJobs(false);
-    }
-  };
-
   // ⚡ NEW: Section loading component
   const SectionLoader = () => (
     <View style={styles.sectionLoader}>
@@ -489,13 +558,27 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
   // ⚡ Remove the global loading screen - show content immediately
 
   const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
+  const profilePhotoUrl =
+    user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
   return (
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
+      {showHeader && (
       <View style={styles.headerCompact}>
-        {/* Left: Brand name */}
-        <Text style={styles.brandName}>RefOpen</Text>
+        {/* Left: Profile avatar */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('ProfileFromHome')}
+        >
+          {profilePhotoUrl ? (
+            <Image source={{ uri: profilePhotoUrl }} style={styles.profilePicture} />
+          ) : (
+            <View style={styles.profilePicturePlaceholder}>
+              <Ionicons name="person" size={22} color={colors.white} />
+            </View>
+          )}
+        </TouchableOpacity>
         
         {/* Center: Search bar */}
         <View style={styles.searchContainerMain}>
@@ -533,13 +616,6 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                     activeOpacity={0.7}
                     onPress={() => {
                       // ✅ Use onPress instead of onPressIn to allow scrolling
-                      console.log('🔍 [HomeScreen] Search result pressed:', {
-                        id: item.id,
-                        name: item.name,
-                        industry: item.industry
-                      });
-                      
-                      console.log('🔍 [HomeScreen] Navigating to OrganizationDetails with ID:', item.id);
                       
                       // Navigate
                       navigation.navigate('OrganizationDetails', { 
@@ -576,36 +652,37 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
           )}
         </View>
         
-        {/* Right: Profile picture */}
+        {/* Right: Messages button with unread badge */}
         <TouchableOpacity 
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => navigation.navigate('Messages')}
           activeOpacity={0.7}
+          style={styles.messagesButton}
         >
-          {user?.ProfilePictureURL ? (
-            <Image 
-              source={{ uri: user.ProfilePictureURL }} 
-              style={styles.profilePictureSmall}
-            />
-          ) : (
-            <View style={styles.profilePictureSmallPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.white} />
+          <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+          {unreadMessageCount > 0 && (
+            <View style={styles.messagesBadge}>
+              <Text style={styles.messagesBadgeText}>
+                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
+      )}
 
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer style={styles.responsiveContent}>
 
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
           
           {isEmployer ? (
             <>
@@ -641,14 +718,17 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                 badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
                 onPress={() => navigation.navigate('Referrals')}
               />
+              
+              {/* Google AdSense Ad - Employer Home */}
+              <AdCard variant="home" />
             </>
           ) : (
             <>
-              {/* Get Referrals Card - Premium Design */}
+              {/* 🎯 Get Referrals Card - Premium Design with F500 Logo Scroll */}
               <TouchableOpacity 
                 style={styles.premiumActionCard}
                 onPress={() => navigation.navigate('AskReferral')}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
               >
                 <View style={styles.premiumCardGradient}>
                   <View style={styles.premiumCardHeader}>
@@ -661,63 +741,203 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
                   <Text style={styles.premiumActionDescription}>
                     Request referrals for job opportunities
                   </Text>
+                  
+                  {/* 🎯 Fortune 500 Company Logos with Referrer Counts */}
+                  {fortune500Companies.length > 0 && (
+                    <View style={styles.f500LogoContainer}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentOffset={{ x: f500ScrollPosition, y: 0 }}
+                        scrollEnabled={true}
+                        style={styles.f500LogoScroll}
+                      >
+                        {fortune500Companies.map((company, index) => (
+                          <TouchableOpacity
+                            key={company.id || index}
+                            style={styles.f500LogoItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              navigation.navigate('AskReferral', { 
+                                preSelectedOrganization: {
+                                  id: company.id,
+                                  name: company.name,
+                                  logoURL: company.logoURL
+                                }
+                              });
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.f500LogoBadge}>
+                              <Text style={styles.f500BadgeText}>
+                                {formatReferrerCount(company.referrerCount)}
+                              </Text>
+                            </View>
+                            <Image 
+                              source={{ uri: company.logoURL }} 
+                              style={styles.f500Logo}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
 
-              {/* Complete Profile Card - With Circular Progress */}
-              <TouchableOpacity 
-                style={styles.profileActionCard}
-                onPress={() => navigation.navigate('Profile')}
-                activeOpacity={0.8}
-              >
-                <View style={styles.profileCardContent}>
-                  <View style={styles.profileCardLeft}>
-                    <View style={styles.profileCardHeader}>
-                      <View style={[styles.profileIcon, { 
-                        backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
-                      }]}>
-                        <Ionicons 
-                          name="person" 
-                          size={28} 
-                          color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
-                        />
+              {/* Secondary Cards Container - 3 column grid on desktop */}
+              <View style={styles.secondaryCardsContainer}>
+                {/* 🎯 My Referrals Card - Only show if user has incoming referral requests */}
+                {myReferrerRequests.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.quickActionCard}
+                    onPress={() => navigation.navigate('Referrals', { tab: 'referrer' })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                      <Ionicons name="gift" size={24} color={colors.success} />
+                      <View style={styles.quickActionBadge}>
+                        <Text style={styles.quickActionBadgeText}>{myReferrerRequests.length}</Text>
                       </View>
                     </View>
-                    <Text style={styles.profileActionTitle}>Complete Profile</Text>
-                    <Text style={styles.profileActionDescription}>
-                      Improve your profile to stand out
-                    </Text>
-                  </View>
-                  
-                  {/* Circular Progress Indicator */}
-                  <View style={styles.profileCardRight}>
-                    <View style={styles.circularProgress}>
-                      <Text style={[
-                        styles.progressPercentage,
-                        { color: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
-                      ]}>
-                        {stats.profileCompleteness || 0}%
-                      </Text>
-                      <Text style={styles.progressLabel}>Complete</Text>
+                    <View style={styles.quickActionContent}>
+                      <Text style={styles.quickActionTitle}>My Referrals</Text>
+                      <Text style={styles.quickActionDescription}>Help others get their dream job</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+
+                {/* 🎯 Profile Views Card */}
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('ProfileViews')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="eye" size={24} color={colors.info} />
+                    <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
+                      <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
                     </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Profile Views</Text>
+                    <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                {/* 🎯 Complete Profile Card - Compact Style */}
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Settings')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { 
+                    backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                  }]}>
+                    <Ionicons 
+                      name="person" 
+                      size={24} 
+                      color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                    />
+                    <View style={[
+                      styles.quickActionBadge, 
+                      { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                    ]}>
+                      <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Complete Profile</Text>
+                    <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                {/* 🌟 Become Verified Referrer Card - Only show if not verified */}
+                {!stats.isVerifiedReferrer && (
+                  <TouchableOpacity 
+                    style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
+                    onPress={() => {
+                      setNavigatingToVerify(true);
+                      navigation.navigate('Settings', { openModal: 'professional' });
+                      // Reset after navigation completes
+                      setTimeout(() => setNavigatingToVerify(false), 1000);
+                    }}
+                    activeOpacity={0.8}
+                    disabled={navigatingToVerify}
+                  >
+                    <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
+                      {navigatingToVerify ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <Ionicons 
+                          name="shield-checkmark" 
+                          size={24} 
+                          color={colors.primary} 
+                        />
+                      )}
+                    </View>
+                    <View style={styles.quickActionContent}>
+                      <Text style={styles.quickActionTitle}>Become a Verified Referrer</Text>
+                      <Text style={styles.quickActionDescription}>Verify your company email & earn rewards</Text>
+                    </View>
+                    {navigatingToVerify ? (
+                      <ActivityIndicator size="small" color={colors.gray400} />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {/* Google AdSense Ad - Job Seeker Home */}
+                <AdCard variant="home" />
+              </View>
             </>
           )}
         </View>
 
-        {/* Recent Jobs Section */}
+        {/* Jobs from Top MNCs (Fortune 500) - Job Seekers only - MOVED ABOVE Recommended Jobs */}
+        {isJobSeeker && (
+          loadingF500Jobs ? (
+            <View style={styles.recentContainer}>
+              <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
+              <SectionLoader />
+            </View>
+          ) : dashboardData.f500Jobs?.length > 0 ? (
+            <View style={styles.recentContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Jobs', { filterF500: true })}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {dashboardData.f500Jobs.map((job, index) => (
+                  <JobCard key={job.JobID || index} job={job} />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null
+        )}
+
+        {/* Recommended Jobs Section */}
         {loadingJobs ? (
           <View style={styles.recentContainer}>
-            <Text style={styles.sectionTitle}>Recent Jobs</Text>
+            <Text style={styles.sectionTitle}>Recommended Jobs</Text>
             <SectionLoader />
           </View>
         ) : recentJobs.length > 0 ? (
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
+              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -732,82 +952,6 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
             </ScrollView>
           </View>
         ) : null}
-
-        {/* 🤖 AI Personalized Jobs Section - ONLY for Job Seekers */}
-        {isJobSeeker && (
-          <View style={styles.aiJobsContainer}>
-            <View style={styles.aiSectionHeader}>
-              <View style={styles.aiTitleContainer}>
-                <View style={styles.aiSparkleIcon}>
-                  <Ionicons name="bulb-outline" size={24} color="#FFD700" />
-                </View>
-                <View>
-                  <Text style={styles.aiSectionTitle}>AI Recommends</Text>
-                  <Text style={styles.aiSubtitle}>Jobs matched to your profile</Text>
-                </View>
-              </View>
-            </View>
-
-            {loadingAiJobs ? (
-              <View style={styles.aiLoadingContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.aiLoadingText}>AI analyzing your profile...</Text>
-              </View>
-            ) : aiJobs.length > 0 ? (
-              <>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalScroll}
-                >
-                  {aiJobs.map((job, index) => (
-                    <View key={job.JobID || index} style={styles.aiJobCardWrapper}>
-                      <View style={styles.aiJobBadge}>
-                        <Ionicons name="flash-outline" size={12} color="#FFD700" />
-                        <Text style={styles.aiJobBadgeText}>AI Matched</Text>
-                      </View>
-                      <JobCard job={job} />
-                    </View>
-                  ))}
-                </ScrollView>
-                
-                {/* Show More Button */}
-                <TouchableOpacity 
-                  style={styles.showMoreButton}
-                  onPress={handleShowMoreAIJobs}
-                >
-                  <Text style={styles.showMoreText}>Show More</Text>
-                  {!hasActiveAIAccess && (
-                    <View style={styles.showMoreBadge}>
-                      <Text style={styles.showMoreBadgeText}>₹100</Text>
-                    </View>
-                  )}
-                  {/* Debug log */}
-                </TouchableOpacity>
-                
-                <View style={styles.aiTipContainer}>
-                  <Ionicons name="information-circle" size={16} color="#FFD700" />
-                  <Text style={styles.aiTipText}>
-                    Complete your profile with more details for even better AI recommendations
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.aiNoJobsState}>
-                <Ionicons name="search-outline" size={32} color={colors.gray400} />
-                <Text style={styles.aiNoJobsText}>
-                  No matching jobs found right now. Try exploring all jobs or check back later.
-                </Text>
-                <View style={styles.aiTipContainer}>
-                  <Ionicons name="information-circle" size={16} color="#FFD700" />
-                  <Text style={styles.aiTipText}>
-                    Add more skills and experience to your profile for better AI recommendations
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (
@@ -858,164 +1002,29 @@ const [hasActiveAIAccess, setHasActiveAIAccess] = useState(false);
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
+        </ResponsiveContainer>
       </ScrollView>
-
-      {/* AI Jobs Confirmation Modal */}
-      <Modal 
-        visible={showAIConfirmModal} 
-        transparent 
-        animationType="fade" 
-        onRequestClose={() => setShowAIConfirmModal(false)}
-      >
-        <View style={styles.aiModalOverlay}>
-          <View style={styles.aiModalContent}>
-            {isInsufficientBalance ? (
-              <>
-                {/* Header with red gradient */}
-                <View style={styles.insufficientBalanceHeader}>
-                  <Ionicons name="wallet-outline" size={32} color="#FFF" />
-                  <Text style={styles.insufficientBalanceTitle}>Wallet Recharge Required</Text>
-                </View>
-                
-                <View style={styles.insufficientBalanceBody}>
-                  <Text style={styles.insufficientBalanceSubtitle}>Insufficient wallet balance</Text>
-                  
-                  {/* Balance cards */}
-                  <View style={styles.balanceCardsContainer}>
-                    <View style={styles.balanceCardCurrent}>
-                      <Ionicons name="cash-outline" size={24} color="#DC3545" />
-                      <Text style={styles.balanceCardLabel}>Current</Text>
-                      <Text style={styles.balanceCardAmount}>₹{walletBalance.toFixed(2)}</Text>
-                    </View>
-                    
-                    <View style={styles.balanceCardRequired}>
-                      <Ionicons name="checkmark-circle-outline" size={24} color="#28A745" />
-                      <Text style={styles.balanceCardLabel}>Required</Text>
-                      <Text style={styles.balanceCardAmount}>₹100.00</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Why needed section */}
-                  <View style={styles.whyNeededSection}>
-                    <Text style={styles.whyNeededTitle}>Why is this needed?</Text>
-                    
-                    <View style={styles.whyNeededItem}>
-                      <Ionicons name="shield-checkmark" size={20} color="#6C5CE7" />
-                      <Text style={styles.whyNeededText}>Access 50 AI-matched jobs for 24 hours</Text>
-                    </View>
-                    
-                    <View style={styles.whyNeededItem}>
-                      <Ionicons name="people" size={20} color="#6C5CE7" />
-                      <Text style={styles.whyNeededText}>Personalized job recommendations</Text>
-                    </View>
-                    
-                    <View style={styles.whyNeededItem}>
-                      <Ionicons name="repeat" size={20} color="#6C5CE7" />
-                      <Text style={styles.whyNeededText}>Unlimited views within 24 hours</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Action buttons */}
-                  <View style={styles.insufficientBalanceButtons}>
-                    <TouchableOpacity 
-                      style={styles.maybeLaterButton} 
-                      onPress={() => setShowAIConfirmModal(false)}
-                    >
-                      <Text style={styles.maybeLaterText}>Maybe Later</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={styles.addMoneyButton} 
-                      onPress={handleAIJobsCancel}
-                    >
-                      <Ionicons name="wallet" size={20} color="#FFF" />
-                      <Text style={styles.addMoneyText}>Add Money</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                {/* AI Jobs confirmation modal */}
-                <View style={styles.aiConfirmHeader}>
-                  <Ionicons name="bulb" size={32} color="#FFD700" />
-                  <Text style={styles.aiConfirmHeaderTitle}>AI Recommended Jobs</Text>
-                </View>
-                
-                <View style={styles.aiConfirmBody}>
-                  <Text style={styles.aiConfirmSubtitle}>Get 50 personalized job matches</Text>
-                  
-                  {/* Cost and Balance */}
-                  <View style={styles.costBalanceContainer}>
-                    <View style={styles.costBalanceRow}>
-                      <Text style={styles.costBalanceLabel}>Cost</Text>
-                      <Text style={styles.costBalanceValue}>₹100.00</Text>
-                    </View>
-                    <View style={styles.costBalanceRow}>
-                      <Text style={styles.costBalanceLabel}>Current Balance</Text>
-                      <Text style={styles.costBalanceValueGreen}>₹{walletBalance.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.costBalanceDivider} />
-                    <View style={styles.costBalanceRow}>
-                      <Text style={styles.costBalanceLabelBold}>Balance After</Text>
-                      <Text style={styles.costBalanceValueBold}>₹{(walletBalance - 100).toFixed(2)}</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Features section */}
-                  <View style={styles.featuresSection}>
-                    <Text style={styles.featuresSectionTitle}>What you'll get:</Text>
-                    
-                    <View style={styles.featureItem}>
-                      <Ionicons name="checkmark-circle" size={20} color="#28A745" />
-                      <Text style={styles.featureText}>50 AI-matched jobs based on your profile</Text>
-                    </View>
-                    
-                    <View style={styles.featureItem}>
-                      <Ionicons name="time" size={20} color="#28A745" />
-                      <Text style={styles.featureText}>24-hour unlimited access</Text>
-                    </View>
-                    
-                    <View style={styles.featureItem}>
-                      <Ionicons name="refresh" size={20} color="#28A745" />
-                      <Text style={styles.featureText}>No additional charges for 24 hours</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Action buttons */}
-                  <View style={styles.aiConfirmButtons}>
-                    <TouchableOpacity 
-                      style={styles.aiConfirmCancelButton} 
-                      onPress={() => setShowAIConfirmModal(false)}
-                    >
-                      <Text style={styles.aiConfirmCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={styles.aiConfirmProceedButton} 
-                      onPress={handleAIJobsConfirm}
-                    >
-                      <Ionicons name="flash" size={20} color="#FFF" />
-                      <Text style={styles.aiConfirmProceedText}>Proceed</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => {
+  const { isMobile = true, isDesktop = false, isTablet = false, contentWidth = width, statColumns = 2 } = responsive;
+  
+  return StyleSheet.create({
 container: {
   flex: 1,
   backgroundColor: colors.background,
+},
+scrollContent: {
+  flexGrow: 1,
+  paddingBottom: 100,
+  alignItems: isDesktop ? 'center' : 'stretch',
+},
+responsiveContent: {
+  width: '100%',
+  maxWidth: isDesktop ? 1200 : '100%',
+  paddingHorizontal: isMobile ? 0 : 24,
 },
 loadingContainer: {
   flex: 1,
@@ -1063,6 +1072,10 @@ headerCompact: {
     fontWeight: typography.weights.bold,
     color: colors.primary,
     letterSpacing: 0.5,
+  },
+  brandLogo: {
+    width: 92,
+    height: 24,
   },
   searchContainerMain: {
     flex: 1,
@@ -1147,20 +1160,33 @@ headerCompact: {
     fontSize: typography.sizes.xs,
     color: colors.gray600,
   },
-  profilePictureSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  profilePictureSmallPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
+  messagesButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  messagesBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.danger || '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  messagesBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
   },
   headerLeft: {
     flex: 1,
@@ -1238,12 +1264,12 @@ headerCompact: {
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
+    gap: isMobile ? 12 : 16,
+    justifyContent: 'flex-start',
   },
   statCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     borderLeftWidth: 4,
     shadowColor: colors.black,
@@ -1254,13 +1280,15 @@ headerCompact: {
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    width: '48%', // Makes it 2x2 grid with gap
-    minHeight: 120,
+    // Responsive width: 2 cols on mobile, 4 cols on tablet/desktop
+    width: isMobile ? '48%' : isTablet ? '23%' : '23%',
+    minWidth: isMobile ? 150 : 200,
+    minHeight: isMobile ? 120 : 140,
   },
   statCardLarge: {
-    padding: 20,
+    padding: isMobile ? 20 : 24,
     borderLeftWidth: 6,
-    width: '48%', // Keep consistent with regular cards
+    width: isMobile ? '48%' : '23%',
   },
   statContent: {
     flex: 1,
@@ -1329,10 +1357,19 @@ headerCompact: {
     flex: 1,
   },
   actionsContainer: {
-    padding: 20,
+    padding: isMobile ? 16 : 24,
     paddingTop: 0,
   },
-  // Premium Get Referrals Card
+  // Secondary cards container - 3 column grid on desktop
+  secondaryCardsContainer: {
+    ...(isDesktop && {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      marginTop: 8,
+    }),
+  },
+  // Premium Get Referrals Card - Full width on desktop
   premiumActionCard: {
     marginBottom: 16,
     borderRadius: 16,
@@ -1345,6 +1382,10 @@ headerCompact: {
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    // Full width on desktop (takes entire first row)
+    ...(isDesktop && {
+      width: '100%',
+    }),
   },
   premiumCardGradient: {
     backgroundColor: colors.surface,
@@ -1376,6 +1417,124 @@ headerCompact: {
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     lineHeight: 20,
+  },
+  // 🎯 Fortune 500 Logo Scroll Styles
+  f500LogoContainer: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  f500LogoScroll: {
+    flexDirection: 'row',
+  },
+  f500LogoItem: {
+    alignItems: 'center',
+    marginRight: 14,
+    position: 'relative',
+  },
+  f500Logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  f500LogoBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    zIndex: 1,
+  },
+  f500BadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+  },
+  // 🎯 Quick Action Card (Compact Style like employer cards)
+  quickActionCard: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    // On desktop, make cards equal width in 3-column grid
+    ...(isDesktop && {
+      width: 'calc(33.333% - 11px)',
+      marginBottom: 0,
+      minWidth: 280,
+    }),
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    position: 'relative',
+  },
+  quickActionBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 24,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  quickActionBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+  },
+  quickActionContent: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  quickActionDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+  },
+  quickActionRewardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  quickActionRewardText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    marginLeft: 4,
   },
   // Profile Completion Card
   profileActionCard: {
@@ -1462,7 +1621,7 @@ headerCompact: {
   },
   actionCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1475,6 +1634,11 @@ headerCompact: {
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    // On desktop, action cards go in a 2-column grid
+    ...(isDesktop && {
+      width: '48%',
+      minWidth: 350,
+    }),
   },
   actionCardUrgent: {
     borderLeftWidth: 4,
@@ -1527,18 +1691,18 @@ headerCompact: {
     color: colors.gray600,
   },
   recentContainer: {
-    padding: 20,
+    padding: isMobile ? 16 : 24,
     paddingTop: 0,
   },
   horizontalScroll: {
-    paddingRight: 20,
+    paddingRight: isMobile ? 16 : 24,
   },
   jobCard: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     marginRight: 12,
-    width: 280,
+    width: isMobile ? 280 : 320,
     shadowColor: colors.black,
     shadowOffset: {
       width: 0,
@@ -1704,426 +1868,7 @@ headerCompact: {
     fontWeight: typography.weights.semibold,
   },
   bottomSpacing: {
-    height: 20,
-  },
-  // 🤖 AI Personalized Jobs Styles
-  aiJobsContainer: {
-    margin: 20,
-    marginTop: 8,
-    padding: 16,
-    backgroundColor: '#1E1E26',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#3A3A44',
-    borderStyle: 'dashed',
-  },
-  aiSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  aiTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  aiSparkleIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#2C2C34',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    shadowColor: '#FFD700',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  aiSectionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: '#FFD700',
-    marginBottom: 2,
-  },
-  aiSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: '#A0A0AA',
-    fontStyle: 'italic',
-  },
-  aiJobCardWrapper: {
-    position: 'relative',
-  },
-  aiJobBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 20,
-    backgroundColor: '#2C2C34',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 10,
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  aiJobBadgeText: {
-    color: '#FFD700',
-    fontSize: 10,
-    fontWeight: typography.weights.bold,
-    marginLeft: 4,
-  },
-  showMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2C2C34',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 16,
-    marginBottom: 12,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-    gap: 10,
-  },
-  showMoreText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
-  showMoreBadge: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  showMoreBadgeText: {
-    color: '#2C2C34',
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-  },
-  aiLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#2C2C34',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#3A3A44',
-  },
-  aiLoadingText: {
-    marginLeft: 12,
-    fontSize: typography.sizes.sm,
-    color: '#A0A0AA',
-    fontStyle: 'italic',
-  },
-  aiTipContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2C2C34',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  aiTipText: {
-    flex: 1,
-    fontSize: typography.sizes.xs,
-    color: '#A0A0AA',
-    marginLeft: 8,
-    lineHeight: 16,
-  },
-  aiNoJobsState: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#2C2C34',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#3A3A44',
-  },
-  aiNoJobsText: {
-    fontSize: typography.sizes.sm,
-    color: '#A0A0AA',
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 20,
-  },
-  // AI Modal Styles
-  aiModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  aiModalContent: {
-    backgroundColor: colors.surface || '#FFF',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 400,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  // Insufficient Balance Design
-  insufficientBalanceHeader: {
-    backgroundColor: '#DC3545',
-    padding: 24,
-    alignItems: 'center',
-    gap: 12,
-  },
-  insufficientBalanceTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-    textAlign: 'center',
-  },
-  insufficientBalanceBody: {
-    padding: 24,
-  },
-  insufficientBalanceSubtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text || '#000',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  balanceCardsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  balanceCardCurrent: {
-    flex: 1,
-    backgroundColor: '#FFF0F0',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#DC354520',
-  },
-  balanceCardRequired: {
-    flex: 1,
-    backgroundColor: '#E8F8F0',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#28A74520',
-  },
-  balanceCardLabel: {
-    fontSize: 14,
-    color: colors.gray600 || '#666',
-    fontWeight: '500',
-  },
-  balanceCardAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-  },
-  whyNeededSection: {
-    backgroundColor: colors.background || '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  whyNeededTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-    marginBottom: 16,
-  },
-  whyNeededItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  whyNeededText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray600 || '#666',
-    lineHeight: 20,
-  },
-  insufficientBalanceButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  maybeLaterButton: {
-    flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
-    borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  maybeLaterText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text || '#000',
-  },
-  addMoneyButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  addMoneyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  // AI Confirmation Modal (when balance is sufficient)
-  aiConfirmHeader: {
-    backgroundColor: '#6C5CE7',
-    padding: 24,
-    alignItems: 'center',
-    gap: 12,
-  },
-  aiConfirmHeaderTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-    textAlign: 'center',
-  },
-  aiConfirmBody: {
-    padding: 24,
-  },
-  aiConfirmSubtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text || '#000',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  costBalanceContainer: {
-    backgroundColor: colors.background || '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  costBalanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  costBalanceLabel: {
-    fontSize: 14,
-    color: colors.gray600 || '#666',
-  },
-  costBalanceLabelBold: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-  },
-  costBalanceValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text || '#000',
-  },
-  costBalanceValueGreen: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#28A745',
-  },
-  costBalanceValueBold: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-  },
-  costBalanceDivider: {
-    height: 1,
-    backgroundColor: colors.border || '#E5E5EA',
-    marginVertical: 8,
-  },
-  featuresSection: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#007AFF20',
-  },
-  featuresSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-    marginBottom: 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  featureText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.gray600 || '#666',
-    lineHeight: 20,
-  },
-  aiConfirmButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  aiConfirmCancelButton: {
-    flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
-    borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  aiConfirmCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text || '#000',
-  },
-  aiConfirmProceedButton: {
-    flex: 1,
-    backgroundColor: '#6C5CE7',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  aiConfirmProceedText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
+    height: 100,
   },
 });
+};

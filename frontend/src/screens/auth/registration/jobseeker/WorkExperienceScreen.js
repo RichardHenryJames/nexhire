@@ -15,7 +15,10 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../../../styles/theme';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { typography } from '../../../../styles/theme';
+import { authDarkColors } from '../../../../styles/authDarkColors';
+import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 
@@ -38,6 +41,9 @@ const EXPERIENCE_LEVELS = [
 ];
 
 export default function WorkExperienceScreen({ navigation, route }) {
+  const colors = authDarkColors; // Always use dark colors for auth screens
+  const responsive = useResponsive();
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   // Load job types and workplace types from database
   const [jobTypes, setJobTypes] = useState([]);
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
@@ -385,6 +391,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.innerContainer}>
       <ScrollView 
         style={styles.scrollContainer} 
         showsVerticalScrollIndicator={false}
@@ -503,6 +510,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
               placeholder="Select start date"
               required
               maximumDate={new Date()} // Can't start in the future
+              colors={colors}
             />
             
             {/* FIXED: Only show End Date field when on "Previously Worked" tab */}
@@ -515,6 +523,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 required
                 minimumDate={formData.startDate ? new Date(formData.startDate) : undefined} // End date must be after start date
                 maximumDate={new Date()} // Can't end in the future
+                colors={colors}
               />
             )}
 
@@ -545,6 +554,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
         onRequestClose={() => setShowOrgModal(false)}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalInnerContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowOrgModal(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -614,11 +624,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
                   
                   <View style={styles.companyInfo}>
                     <Text style={styles.modalItemText}>{item.name}</Text>
-                    {item.industry && item.industry !== 'Other' && (
-                      <Text style={[styles.modalItemText, { color: colors.gray500, fontSize: typography.sizes.xs }]}>
-                        {item.industry}
-                      </Text>
-                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
                 </TouchableOpacity>
@@ -628,6 +633,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
               windowSize={8}
             />
           )}
+          </View>
         </View>
       </Modal>
 
@@ -667,14 +673,23 @@ export default function WorkExperienceScreen({ navigation, route }) {
           setShowWorkArrangementModal(false);
         }}
       />
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,
@@ -790,13 +805,38 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -874,9 +914,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
@@ -897,11 +937,11 @@ const styles = StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#333',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -909,7 +949,7 @@ const styles = StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.gray400,
     fontStyle: 'italic',
   },
 });

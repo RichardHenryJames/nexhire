@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,14 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, typography } from '../../styles/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { frontendConfig } from '../../config/appConfig'; // Added
 
@@ -32,8 +35,11 @@ const formatINR = (value) => {
 export default function PaymentScreen({ route, navigation }) {
   const { plan, returnScreen = 'ReferralPlans' } = route.params || {};
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
   const [loading, setLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
+  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   useEffect(() => {
     if (!plan) {
@@ -178,6 +184,7 @@ export default function PaymentScreen({ route, navigation }) {
   // Payment initiation screen
   return (
     <ScrollView style={styles.container}>
+      <View style={styles.innerContainer}>
       <View style={styles.content}>
         <View style={styles.planSummary}>
           <Text style={styles.planName}>{plan?.Name}</Text>
@@ -225,14 +232,23 @@ export default function PaymentScreen({ route, navigation }) {
           Your subscription will be activated immediately upon successful payment.
         </Text>
       </View>
+      </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -243,7 +259,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   content: {
     padding: 20,
@@ -271,7 +287,7 @@ const styles = StyleSheet.create({
   },
   planDuration: {
     fontSize: typography.sizes.md,
-    color: colors.gray600,
+    color: colors.textSecondary,
   },
   features: {
     marginBottom: 24,
@@ -324,7 +340,7 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: typography.sizes.xs,
-    color: colors.gray500,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },
