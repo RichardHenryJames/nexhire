@@ -1,4 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#ffffff"/>
-  <text x="32" y="42" font-size="36" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" fill="#000000">R</text>
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0066FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00FF85;stop-opacity:1" />
+    </linearGradient>
+
+    <mask id="arrowCutout">
+      <rect x="-200" y="-200" width="1000" height="1000" fill="white"/>
+      <path d="M -100 -10 L -12 -10 L -12 -28 L 36 0 L -12 28 L -12 10 L -100 10 Z" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="500" height="500" fill="url(#bgGradient)"/>
+
+  <g transform="translate(142, 250)">
+    
+    <circle cx="0" cy="0" r="45" fill="#FFFFFF" mask="url(#arrowCutout)" />
+
+    <text x="42" y="42" fill="#FFFFFF" font-family="'Arial', 'Helvetica', sans-serif" font-weight="800" font-style="italic" font-size="145" letter-spacing="-4">
+      pen
+    </text>
+  </g>
 </svg>
