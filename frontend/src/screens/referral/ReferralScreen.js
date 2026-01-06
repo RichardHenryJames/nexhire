@@ -41,17 +41,16 @@ export default function ReferralScreen({ navigation }) {
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  // ✅ Handle non-verified referrers - show message instead of redirecting
-  // This supports deep linking while still enforcing access control
-  const showNotVerifiedMessage = !authLoading && !isVerifiedReferrer;
+  // ✅ Handle non-verified referrers - show verification prompt only in Open tab
+  // They can still see the Closed tab to view past referrals they received
+  const isNotVerifiedReferrer = !authLoading && !isVerifiedReferrer;
 
   // Refresh data when screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (!showNotVerifiedMessage) {
-        loadData();
-      }
-    }, [showNotVerifiedMessage])
+      // Load data for all users - verified referrers get open requests, all users can see closed
+      loadData();
+    }, [])
   );
 
   // Define which statuses belong to which tab
@@ -466,6 +465,21 @@ export default function ReferralScreen({ navigation }) {
       ? 'No Open Requests'
       : 'No Completed Referrals';
 
+    // For Open tab, show verification prompt if user is not verified
+    if (activeTab === 'open' && isNotVerifiedReferrer) {
+      return (
+        <ScrollView 
+          style={styles.tabContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        >
+          {renderVerificationPrompt()}
+        </ScrollView>
+      );
+    }
+
     return (
       <ScrollView 
         style={styles.tabContent}
@@ -497,31 +511,22 @@ export default function ReferralScreen({ navigation }) {
     );
   }
 
-  // ✅ Show message for non-verified referrers (instead of redirecting)
-  if (showNotVerifiedMessage) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.innerContainer}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Become a Referrer</Text>
-          </View>
-          <View style={[styles.emptyContainer, { flex: 1, justifyContent: 'center' }]}>
-            <Ionicons name="shield-checkmark-outline" size={64} color={colors.gray400} />
-            <Text style={[styles.emptyTitle, { marginTop: 16 }]}>Verification Required</Text>
-            <Text style={[styles.emptyText, { textAlign: 'center', paddingHorizontal: 32 }]}>
-              To refer others, you need to add your current work experience and get verified.
-            </Text>
-            <TouchableOpacity 
-              style={[styles.claimButton, { marginTop: 24, paddingHorizontal: 32 }]}
-              onPress={() => navigation.navigate('Profile')}
-            >
-              <Text style={styles.claimButtonText}>Go to Profile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }
+  // Render verification prompt for Open tab when user is not verified
+  const renderVerificationPrompt = () => (
+    <View style={[styles.emptyState, { paddingVertical: 60 }]}>
+      <Ionicons name="shield-checkmark-outline" size={64} color={colors.gray400} />
+      <Text style={[styles.emptyTitle, { marginTop: 16 }]}>Verification Required</Text>
+      <Text style={[styles.emptyText, { textAlign: 'center', paddingHorizontal: 32 }]}>
+        To see and accept referral requests, you need to add your current work experience and get verified.
+      </Text>
+      <TouchableOpacity 
+        style={[styles.claimButton, { marginTop: 24, paddingHorizontal: 32 }]}
+        onPress={() => navigation.navigate('Profile')}
+      >
+        <Text style={styles.claimButtonText}>Go to Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
