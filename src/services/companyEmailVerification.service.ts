@@ -288,6 +288,7 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
     await dbService.executeQuery(`
       UPDATE Users
       SET IsVerifiedReferrer = 1,
+          IsVerifiedUser = 1,
           UpdatedAt = GETUTCDATE()
       WHERE UserID = @param0
     `, [userId]);
@@ -297,6 +298,7 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
       message: 'Company email verified successfully! You are now a verified referrer.',
       data: {
         isVerifiedReferrer: true,
+        isVerifiedUser: true,
         verifiedEmail: otpRecord.Email
       }
     };
@@ -320,6 +322,7 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
       SELECT 
         u.UserID,
         u.IsVerifiedReferrer,
+        u.IsVerifiedUser,
         we.WorkExperienceID,
         we.CompanyName,
         we.CompanyEmail,
@@ -351,6 +354,7 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
       message: 'Verification status retrieved',
       data: {
         isVerifiedReferrer: user.IsVerifiedReferrer || false,
+        isVerifiedUser: user.IsVerifiedUser || false,
         currentWorkExperience: user.WorkExperienceID ? {
           workExperienceId: user.WorkExperienceID,
           companyName: user.CompanyName || user.OrganizationName,

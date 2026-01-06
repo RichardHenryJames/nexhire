@@ -80,7 +80,7 @@ export default function UserProfileHeader({
   onProfileUpdate,
   showStats = false, // NEW: hide right-side Education/Skills/% Complete by default
   showProgress = true, // NEW: hide circular progress ring when viewing others' profiles
-  isVerifiedReferrer = false // NEW: Show verified badge if user is a verified referrer
+  isVerifiedUser = false // NEW: Show verified badge if user is a permanently verified user
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -609,7 +609,7 @@ export default function UserProfileHeader({
             <Text style={[styles.userName, { marginBottom: 0 }]}>
               {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
             </Text>
-            {isVerifiedReferrer && (
+            {isVerifiedUser && (
               <MaterialIcons 
                 name="verified" 
                 size={20} 

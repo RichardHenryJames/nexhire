@@ -56,6 +56,8 @@ export class ApplicantService {
                     u.Email,
                     u.Phone,
                     u.ProfilePictureURL,
+                    u.IsVerifiedReferrer,
+                    u.IsVerifiedUser,
                     ISNULL(a.ReferralPoints, 0) as ReferralPoints
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID

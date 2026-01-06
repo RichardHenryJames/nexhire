@@ -247,7 +247,8 @@ export default function ProfileScreen({ navigation, route }) {
           try {
             const verifyRes = await refopenAPI.getVerificationStatus();
             if (verifyRes.success) {
-              setIsVerifiedReferrer(verifyRes.data?.isVerifiedReferrer || false);
+              // Prefer isVerifiedUser (permanent) over isVerifiedReferrer
+              setIsVerifiedReferrer(verifyRes.data?.isVerifiedUser || verifyRes.data?.isVerifiedReferrer || false);
             }
           } catch (verifyError) {
             console.warn('Could not load verification status:', verifyError);
@@ -1309,7 +1310,7 @@ export default function ProfileScreen({ navigation, route }) {
             loadExtendedProfile();
           }}
           showStats={false}
-          isVerifiedReferrer={isVerifiedReferrer}
+          isVerifiedUser={isVerifiedReferrer}
         />
 
         {/* Wallet, Referral Points, and Invite & Earn Buttons */}
