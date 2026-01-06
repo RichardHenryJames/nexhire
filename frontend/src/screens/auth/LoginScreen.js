@@ -13,6 +13,7 @@ import {
   Animated,
   Dimensions,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../../components/Toast';
 
 const { width, height } = Dimensions.get('window');
 
@@ -87,6 +89,7 @@ export default function LoginScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [loginError, setLoginError] = useState(''); // State for login error message
   const [isInAppBrowser, setIsInAppBrowser] = useState(false); // Detect in-app browser
+  const [showBrowserModal, setShowBrowserModal] = useState(false); // Modal for in-app browser warning
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
   const responsive = useResponsive();
@@ -199,8 +202,23 @@ export default function LoginScreen({ navigation }) {
     // If successful, navigation will happen automatically via auth context
   };
 
+  // Copy link helper function
+  const handleCopyLink = () => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Link copied! Paste in Safari/Chrome', 'success');
+      setShowBrowserModal(false);
+    }
+  };
+
   // FIXED: Handle Google Sign-In with automatic navigation for new users
   const handleGoogleSignIn = async () => {
+    // Check if in-app browser - show modal instead of proceeding
+    if (isInAppBrowser) {
+      setShowBrowserModal(true);
+      return;
+    }
+    
     try {
       setGoogleLoading(true);
       
@@ -313,30 +331,6 @@ export default function LoginScreen({ navigation }) {
             <Text style={screenStyles.subtitle}>Apply • Hire • Refer • Earn Rewards</Text>
           </View>
 
-          {/* In-App Browser Warning */}
-          {isInAppBrowser && (
-            <View style={screenStyles.inAppBrowserWarning}>
-              <Ionicons name="alert-circle" size={20} color="#f59e0b" style={{ marginRight: 10 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={screenStyles.inAppBrowserWarningTitle}>
-                  Open in Browser Required
-                </Text>
-                <Text style={screenStyles.inAppBrowserWarningText}>
-                  Google blocks sign-in from LinkedIn/social app browsers. Please open in Safari or Chrome.
-                </Text>
-                <TouchableOpacity 
-                  onPress={() => {
-                    const currentUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : 'https://app.refopen.com';
-                    Linking.openURL(currentUrl);
-                  }}
-                  style={screenStyles.openBrowserButton}
-                >
-                  <Text style={screenStyles.openBrowserButtonText}>🔗 Open in Safari/Chrome</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
           {/* NEW: Google Sign-In Section */}
           {googleAuthAvailable && (
             <>
@@ -344,13 +338,8 @@ export default function LoginScreen({ navigation }) {
                 <GoogleSignInButton
                   onPress={handleGoogleSignIn}
                   loading={googleLoading}
-                  disabled={formLoading || loading || isInAppBrowser}
+                  disabled={formLoading || loading}
                 />
-                {isInAppBrowser && (
-                  <Text style={screenStyles.inAppBrowserHint}>
-                    Or use email/password below
-                  </Text>
-                )}
               </View>
 
               <View style={screenStyles.divider}>
@@ -506,6 +495,41 @@ export default function LoginScreen({ navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* In-App Browser Warning Modal */}
+      <Modal
+        visible={showBrowserModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBrowserModal(false)}
+      >
+        <View style={screenStyles.modalOverlay}>
+          <View style={screenStyles.modalContent}>
+            <View style={screenStyles.modalIconContainer}>
+              <Ionicons name="globe-outline" size={40} color="#f59e0b" />
+            </View>
+            <Text style={screenStyles.modalTitle}>Open in Browser</Text>
+            <Text style={screenStyles.modalMessage}>
+              Google blocks sign-in from LinkedIn and other social app browsers for security reasons.
+            </Text>
+            <Text style={screenStyles.modalInstructions}>
+              Tap <Text style={screenStyles.modalBold}>⋮ menu</Text> → <Text style={screenStyles.modalBold}>"Open in Browser"</Text>{'\n'}or copy the link below
+            </Text>
+            
+            <TouchableOpacity style={screenStyles.modalCopyButton} onPress={handleCopyLink}>
+              <Ionicons name="copy-outline" size={18} color="#000" />
+              <Text style={screenStyles.modalCopyButtonText}>Copy Link</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={screenStyles.modalUseEmailButton} 
+              onPress={() => setShowBrowserModal(false)}
+            >
+              <Text style={screenStyles.modalUseEmailText}>Use Email/Password Instead</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -826,6 +850,83 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  // Modal styles for in-app browser warning
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalInstructions: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalBold: {
+    fontWeight: typography.weights.bold,
+    color: '#fbbf24',
+  },
+  modalCopyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    gap: 8,
+    width: '100%',
+    marginBottom: 12,
+  },
+  modalCopyButtonText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#000',
+  },
+  modalUseEmailButton: {
+    paddingVertical: 12,
+  },
+  modalUseEmailText: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textDecorationLine: 'underline',
   },
 });
 };
