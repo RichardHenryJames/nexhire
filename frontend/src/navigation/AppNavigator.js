@@ -341,21 +341,30 @@ function MainTabNavigator() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 70,
+          // Compact styling similar to LinkedIn
+          height: Platform.OS === 'ios' ? 84 : 58,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 6,
+          paddingTop: 6,
           ...(Platform.OS === 'web'
             ? {
                 position: 'fixed',
                 left: 0,
                 right: 0,
                 bottom: 0,
+                height: 52, // Very compact for web
+                paddingBottom: 4,
+                paddingTop: 4,
               }
             : null),
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
+          fontSize: 10, // Smaller font for compact look
+          fontWeight: "600",
+          marginBottom: Platform.OS === 'android' ? 2 : 0,
+        },
+        tabBarItemStyle: {
+          // Tighten up items
+          paddingVertical: 0,
         },
         headerShown: false,
       })}
