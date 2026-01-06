@@ -300,7 +300,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
             onPress={handleSwitchToJobSeeker}
           >
             <Ionicons name="search-outline" size={18} color={colors.primary} />
-            <Text style={styles.switchFlowButtonText}>I'm looking for jobs</Text>
+            <Text style={styles.switchFlowButtonText}>I'm looking for jobs/referrals</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -232,7 +232,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             title="I have work experience"
             icon="briefcase"
             description="Already working or have previous work experience"
-            examples="Seeking new opportunities, career advancement, or career change"
+            examples="Looking to refer, seeking new opportunities, or career change"
           />
         </View>
 
@@ -383,8 +383,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray600,
   },
   cardsContainer: {
-    flex: 1,
     gap: 16,
+    marginBottom: 24,
   },
   card: {
     backgroundColor: colors.surface,
