@@ -341,6 +341,22 @@ export default function EmployerAccountScreen({ navigation, route }) {
           }
         </Text>
 
+        {/* 🎉 Welcome Bonus Banner */}
+        <View style={styles.welcomeBonusBanner}>
+          <View style={styles.welcomeBonusIconContainer}>
+            <Ionicons name="gift" size={28} color="#FFD700" />
+          </View>
+          <View style={styles.welcomeBonusContent}>
+            <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
+            <Text style={styles.welcomeBonusText}>
+              Get <Text style={styles.welcomeBonusAmount}>₹50</Text> wallet bonus on signup!
+            </Text>
+            <Text style={styles.welcomeBonusSubtext}>
+              Use it to post jobs, AI candidate search & more
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
@@ -614,15 +630,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   // 🎁 NEW: Referral code styles
   referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     position: 'relative',
   },
   referralCodeIcon: {
     position: 'absolute',
     left: 12,
-    top: 12,
     zIndex: 1,
   },
   referralCodeInput: {
+    flex: 1,
     paddingLeft: 40, // Make room for the icon
     fontWeight: typography.weights.bold,
     letterSpacing: 1,
@@ -704,5 +722,49 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   placeholderText: {
     color: colors.gray500,
     fontSize: typography.sizes.md,
+  },
+  // Welcome Bonus Banner styles
+  welcomeBonusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  welcomeBonusIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  welcomeBonusContent: {
+    flex: 1,
+  },
+  welcomeBonusTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#22C55E',
+    marginBottom: 4,
+  },
+  welcomeBonusText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  welcomeBonusAmount: {
+    fontWeight: typography.weights.bold,
+    color: '#FFD700',
+    fontSize: typography.sizes.md,
+  },
+  welcomeBonusSubtext: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray400,
+    marginTop: 2,
   },
 });
