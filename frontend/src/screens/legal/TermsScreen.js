@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
@@ -12,6 +12,14 @@ export default function TermsScreen() {
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const scrollRef = useRef(null);
+
+  // Scroll to top when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // ✅ Navigation header with smart back button (hard-refresh safe)
   useEffect(() => {
@@ -41,7 +49,7 @@ export default function TermsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView ref={scrollRef} style={styles.scrollView}>
         <View style={styles.innerContainer}>
           <View style={styles.content}>
         <Text style={styles.title}>Terms and Conditions</Text>

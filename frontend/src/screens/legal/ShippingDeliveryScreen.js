@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, Platform } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import ComplianceFooter from '../../components/ComplianceFooter';
@@ -8,9 +9,18 @@ export default function ShippingDeliveryScreen() {
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const scrollRef = useRef(null);
+
+  // Scroll to top when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
-    <ScrollView style={styles.scrollView}>
+    <ScrollView ref={scrollRef} style={styles.scrollView}>
     <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Shipping and Delivery Policy</Text>

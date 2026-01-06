@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -286,9 +286,18 @@ export default function FAQScreen() {
     })).filter(section => section.questions.length > 0);
   }, [searchQuery, faqData]);
 
+  const scrollRef = useRef(null);
+
+  // Scroll to top when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
-    <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
     <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Frequently Asked Questions</Text>

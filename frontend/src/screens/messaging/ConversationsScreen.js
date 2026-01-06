@@ -74,8 +74,13 @@ function ConversationsScreenMobile() {
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
-      const result = await messagingApi.getMyConversations();
- if (result.success) {
+      // Fetch both in parallel for faster loading
+      const [result, unreadResult] = await Promise.all([
+        messagingApi.getMyConversations(),
+        messagingApi.getUnreadCount()
+      ]);
+      
+      if (result.success) {
         // Filter out conversations with no messages
         const validConversations = (result.data || []).filter(
           conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
@@ -83,8 +88,6 @@ function ConversationsScreenMobile() {
         setConversations(validConversations);
       }
 
-      // Load unread count
-      const unreadResult = await messagingApi.getUnreadCount();
       if (unreadResult.success) {
         setUnreadCount(unreadResult.data.TotalUnread || 0);
       }
@@ -96,12 +99,7 @@ function ConversationsScreenMobile() {
     }
   }, []);
 
-  // Initial load on mount
-  useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
-
-  // Refresh whenever the screen comes into focus (navigating back to Messages)
+  // Refresh whenever the screen comes into focus (also handles initial load)
   useFocusEffect(
     useCallback(() => {
       loadConversations();
@@ -290,9 +288,11 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
  <View style={styles.emptyContainer}>
   <Ionicons name="chatbubbles-outline" size={64} color={colors.gray300} />
             <Text style={styles.emptyText}>No conversations yet</Text>
-    <Text style={styles.emptySubtext}>
+    {isAdmin && (
+      <Text style={styles.emptySubtext}>
               Tap the + button to start a new conversation
          </Text>
+    )}
      </View>
         }
       />
