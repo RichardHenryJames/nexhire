@@ -86,12 +86,40 @@ export default function LoginScreen({ navigation }) {
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [loginError, setLoginError] = useState(''); // State for login error message
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false); // Detect in-app browser
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
   const colors = authDarkColors; // Always use dark colors for auth screens
   const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles, responsive), [colors, responsive]);
+
+  // Detect in-app browser (LinkedIn, Facebook, Instagram, Twitter, etc.)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.navigator) {
+      const ua = window.navigator.userAgent || '';
+      
+      // Only check for known in-app browser patterns - be conservative
+      const inAppBrowserPatterns = [
+        /FBAN|FBAV/i,           // Facebook App
+        /FB_IAB/i,              // Facebook In-App Browser
+        /Instagram/i,           // Instagram App
+        /Twitter/i,             // Twitter App
+        /LinkedInApp/i,         // LinkedIn App explicitly
+        /\[LinkedInApp\]/i,     // LinkedIn App bracket format
+        /Line\//i,              // Line App
+        /Snapchat/i,            // Snapchat App
+        /Pinterest/i,           // Pinterest App
+        /Telegram/i,            // Telegram App
+      ];
+      
+      const isInApp = inAppBrowserPatterns.some(pattern => pattern.test(ua));
+      setIsInAppBrowser(isInApp);
+      
+      // Log for debugging
+      console.log('Browser UA:', ua.substring(0, 100), '| In-app:', isInApp);
+    }
+  }, []);
 
   // Check auth state when screen mounts or comes into focus
   useEffect(() => {
@@ -285,6 +313,29 @@ export default function LoginScreen({ navigation }) {
             <Text style={screenStyles.subtitle}>Apply • Hire • Refer • Earn Rewards</Text>
           </View>
 
+          {/* In-App Browser Warning */}
+          {isInAppBrowser && (
+            <View style={screenStyles.inAppBrowserWarning}>
+              <Ionicons name="alert-circle" size={20} color="#f59e0b" style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={screenStyles.inAppBrowserWarningTitle}>
+                  Open in Browser Required
+                </Text>
+                <Text style={screenStyles.inAppBrowserWarningText}>
+                  Google blocks sign-in from LinkedIn/social app browsers. Please open in Safari or Chrome.
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => {
+                    const currentUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : 'https://app.refopen.com';
+                    Linking.openURL(currentUrl);
+                  }}
+                  style={screenStyles.openBrowserButton}
+                >
+                  <Text style={screenStyles.openBrowserButtonText}>🔗 Open in Safari/Chrome</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* NEW: Google Sign-In Section */}
           {googleAuthAvailable && (
@@ -293,8 +344,13 @@ export default function LoginScreen({ navigation }) {
                 <GoogleSignInButton
                   onPress={handleGoogleSignIn}
                   loading={googleLoading}
-                  disabled={formLoading || loading}
+                  disabled={formLoading || loading || isInAppBrowser}
                 />
+                {isInAppBrowser && (
+                  <Text style={screenStyles.inAppBrowserHint}>
+                    Or use email/password below
+                  </Text>
+                )}
               </View>
 
               <View style={screenStyles.divider}>
@@ -729,6 +785,47 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.medium,
+  },
+  // In-app browser warning styles
+  inAppBrowserWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  inAppBrowserWarningTitle: {
+    fontSize: typography.sizes.base,
+    color: '#fbbf24',
+    fontWeight: typography.weights.bold,
+    marginBottom: 4,
+  },
+  inAppBrowserWarningText: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 18,
+  },
+  openBrowserButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f59e0b',
+    borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
+  },
+  openBrowserButtonText: {
+    fontSize: typography.sizes.sm,
+    color: '#000',
+    fontWeight: typography.weights.bold,
+  },
+  inAppBrowserHint: {
+    fontSize: typography.sizes.xs,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
 });
 };
