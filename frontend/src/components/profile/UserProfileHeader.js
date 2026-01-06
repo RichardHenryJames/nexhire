@@ -79,7 +79,8 @@ export default function UserProfileHeader({
   userType,
   onProfileUpdate,
   showStats = false, // NEW: hide right-side Education/Skills/% Complete by default
-  showProgress = true // NEW: hide circular progress ring when viewing others' profiles
+  showProgress = true, // NEW: hide circular progress ring when viewing others' profiles
+  isVerifiedReferrer = false // NEW: Show verified badge if user is a verified referrer
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -604,9 +605,19 @@ export default function UserProfileHeader({
 
         {/* User Info */}
         <View style={styles.infoSection}>
-          <Text style={styles.userName}>
-            {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={[styles.userName, { marginBottom: 0 }]}>
+              {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
+            </Text>
+            {isVerifiedReferrer && (
+              <MaterialIcons 
+                name="verified" 
+                size={20} 
+                color={colors.primary} 
+                style={{ marginLeft: 6 }} 
+              />
+            )}
+          </View>
           
           {/* Current Job Title or Education for students */}
           {userType === 'JobSeeker' && (

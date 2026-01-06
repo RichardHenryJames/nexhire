@@ -1309,6 +1309,7 @@ export default function ProfileScreen({ navigation, route }) {
             loadExtendedProfile();
           }}
           showStats={false}
+          isVerifiedReferrer={isVerifiedReferrer}
         />
 
         {/* Wallet, Referral Points, and Invite & Earn Buttons */}

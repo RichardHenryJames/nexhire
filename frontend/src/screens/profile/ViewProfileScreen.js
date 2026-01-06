@@ -335,6 +335,7 @@ export default function ViewProfileScreen() {
           onProfileUpdate={null}
           showStats={false}
           showProgress={false}
+          isVerifiedReferrer={profile?.IsVerifiedReferrer}
         />
 
         {/* Action Buttons Row */}
