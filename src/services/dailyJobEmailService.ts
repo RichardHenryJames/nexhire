@@ -304,13 +304,15 @@ export class DailyJobEmailService {
         };
 
         try {
-            // Get specific user details
+            // Get specific user details with notification preference check
             const userQuery = `
                 SELECT 
                     u.UserID,
                     u.Email,
-                    u.FirstName
+                    u.FirstName,
+                    COALESCE(np.DailyJobRecommendationEmail, 1) as DailyJobRecommendationEmail
                 FROM Users u
+                LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
                 WHERE u.UserID = @param0
                   AND u.IsActive = 1
                   AND u.Email IS NOT NULL
@@ -325,6 +327,13 @@ export class DailyJobEmailService {
 
             const user = userResult.recordset[0];
             result.totalUsers = 1;
+
+            // Check if user has daily job recommendation emails enabled
+            if (!user.DailyJobRecommendationEmail) {
+                console.log(`⏭️ Skipping ${user.Email} - DailyJobRecommendationEmail is disabled`);
+                result.errors.push(`User ${user.Email} has DailyJobRecommendationEmail disabled`);
+                return result;
+            }
 
             console.log(`📧 Sending test daily job email to ${user.Email}...`);
 
