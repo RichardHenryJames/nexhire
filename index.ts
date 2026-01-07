@@ -1,5 +1,5 @@
 import { app } from "@azure/functions";
-import type { InvocationContext, Timer } from "@azure/functions";
+import type { HttpRequest, InvocationContext, Timer } from "@azure/functions";
 
 import { withErrorHandling, corsHeaders } from "./src/middleware";
 
@@ -2653,6 +2653,90 @@ app.timer("jobArchivalTimer", {
 });
 
 // ========================================================================
+// MANUAL TRIGGER - DAILY JOB RECOMMENDATION EMAILS (For Testing)
+// ========================================================================
+
+app.http("manual-trigger-daily-email", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "management/trigger-daily-email",
+  handler: async (request: HttpRequest, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `manual_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         MANUAL DAILY JOB EMAIL TRIGGER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+
+    const runStartTime = new Date();
+
+    try {
+      const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+      const { dbService } = await import("./src/services/database.service");
+
+      // TESTING: Get UserID for parimalkumar261@gmail.com and use existing method
+      const userQuery = await dbService.executeQuery(
+        "SELECT UserID FROM Users WHERE Email = @param0",
+        ["parimalkumar261@gmail.com"]
+      );
+      
+      if (!userQuery.recordset || userQuery.recordset.length === 0) {
+        return { status: 404, jsonBody: { error: "User not found" } };
+      }
+
+      const userId = userQuery.recordset[0].UserID;
+      context.log(`\n📧 Testing: Sending daily job email to parimalkumar261@gmail.com (UserID: ${userId})\n`);
+      
+      const result = await DailyJobEmailService.sendDailyJobEmailsForUser(userId);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await DailyJobEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Manual'
+      );
+
+      context.log("\n========================================================================");
+      context.log("        MANUAL EMAIL TRIGGER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Users: ${result.totalUsers}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          executionId,
+          result,
+          duration: `${Math.round(duration / 1000)}s`
+        }
+      };
+
+    } catch (error: any) {
+      context.error(`❌ Manual trigger error: ${error.message}`);
+      
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: error.message,
+          executionId
+        }
+      };
+    }
+  }
+});
+
+// ========================================================================
 // TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours)
 // ========================================================================
 
@@ -3022,6 +3106,99 @@ app.timer("notificationProcessorTimer", {
 
     } catch (error: any) {
       context.error(`❌ Notification queue error: ${error.message}`);
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - DAILY JOB RECOMMENDATION EMAILS (9 PM IST = 3:30 PM UTC)
+// ========================================================================
+
+app.timer("dailyJobRecommendationEmail", {
+  schedule: "0 30 15 * * *", // 3:30 PM UTC = 9:00 PM IST
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         DAILY JOB RECOMMENDATION EMAIL TRIGGER STARTED");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()} (9 PM IST)`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("WARNING: This execution is past its scheduled time!");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      context.log("\n📧 Starting daily job recommendation email service...\n");
+
+      // Import daily job email service
+      const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+
+      // Send emails to all eligible users
+      const result = await DailyJobEmailService.sendDailyJobEmails();
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      const durationSeconds = Math.round(duration / 1000);
+      const durationMinutes = Math.floor(durationSeconds / 60);
+      const remainingSeconds = durationSeconds % 60;
+
+      context.log("\n========================================================================");
+      context.log("        DAILY JOB EMAIL COMPLETED");
+      context.log("========================================================================");
+      context.log(`\nEXECUTION SUMMARY:`);
+      context.log(`   Total Users: ${result.totalUsers}`);
+      context.log(`   Emails Sent: ${result.emailsSent}`);
+      context.log(`   Emails Failed: ${result.emailsFailed}`);
+      context.log(`   Time: ${durationMinutes}m ${remainingSeconds}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`\nERRORS (first 5):`);
+        result.errors.slice(0, 5).forEach((error, i) => context.warn(`   ${i + 1}. ${error}`));
+      }
+
+      // Log to database
+      await DailyJobEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'TimerTrigger'
+      );
+      context.log("\n✅ Logged to database successfully");
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      context.error("\n❌ DAILY JOB EMAIL TRIGGER FAILED");
+      context.error(`   Error: ${error.message}`);
+      context.error(`   Duration: ${Math.round(duration / 1000)}s`);
+
+      // Log failure
+      try {
+        const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+        await DailyJobEmailService.logEmailRun(
+          executionId,
+          runStartTime,
+          runEndTime,
+          {
+            totalUsers: 0,
+            emailsSent: 0,
+            emailsFailed: 0,
+            errors: [error.message]
+          },
+          'TimerTrigger'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
     }
   }
 });

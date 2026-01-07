@@ -111,7 +111,9 @@ const templates: Record<string, { subject: string; html: string }> = {
                                 You're receiving this because you're registered as an employee at {{companyName}} on RefOpen.
                             </p>
                             <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notification preferences</a>
+                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
                                 &nbsp;|&nbsp;
                                 <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
                             </p>
@@ -199,6 +201,8 @@ const templates: Record<string, { subject: string; html: string }> = {
                         <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
                             <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
                                 <a href="{{unsubscribeUrl}}" style="color: #10b981; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #10b981; text-decoration: none;">Help & Support</a>
                                 &nbsp;|&nbsp;
                                 <a href="{{appUrl}}" style="color: #10b981; text-decoration: none;">Open RefOpen</a>
                             </p>
@@ -293,6 +297,8 @@ const templates: Record<string, { subject: string; html: string }> = {
                         <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
                             <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
                                 <a href="{{unsubscribeUrl}}" style="color: #f59e0b; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #f59e0b; text-decoration: none;">Help & Support</a>
                                 &nbsp;|&nbsp;
                                 <a href="{{appUrl}}" style="color: #f59e0b; text-decoration: none;">Open RefOpen</a>
                             </p>
@@ -654,6 +660,97 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </p>
                             <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
                                 <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage preferences</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
+    },
+
+    // ========================================
+    // DAILY JOB RECOMMENDATIONS EMAIL
+    // ========================================
+
+    'daily_job_recommendations': {
+        subject: '🎯 {{firstName}}, here are 5 jobs picked just for you!',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">RefOpen</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your Daily Job Picks 🎯</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                We've found <strong style="color: #667eea;">5 jobs</strong> that match your profile. 
+                                Don't miss out – apply or ask for a referral today!
+                            </p>
+                            
+                            <!-- Job Cards -->
+                            {{jobCardsHtml}}
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 30px 0;">
+                                        <a href="{{appUrl}}/jobs" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);">
+                                            Browse All Jobs →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tips Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0 0 10px 0; color: #333; font-size: 14px; font-weight: 600;">💡 Pro Tips:</p>
+                                        <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 13px; line-height: 1.8;">
+                                            <li>Ask for a referral – referred candidates are <strong>15x more likely</strong> to get a call and hired</li>
+                                            <li>Complete your profile to get better job matches</li>
+                                            <li>Apply early – most jobs get filled within the first week</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{appUrl}}/settings/notifications" style="color: #667eea; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
                                 &nbsp;|&nbsp;
                                 <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
                             </p>

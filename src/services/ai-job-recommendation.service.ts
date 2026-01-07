@@ -607,6 +607,7 @@ export class AIJobRecommendationService {
 
     const filters: any = {
       // Experience range - flexible for students and freshers
+      // For freshers (0 YOE): show jobs with ExperienceMin <= 2
       experienceMin: Math.max(0, yearsOfExperience - 2),
       experienceMax: yearsOfExperience === 0 ? 2 : yearsOfExperience + 2,
       
@@ -626,7 +627,10 @@ export class AIJobRecommendationService {
       search: this.extractSkillsAndKeywords(profile, workExperience, education).join(' '),
       
       // Recent jobs (last 30 days)
-      postedWithinDays: 30
+      postedWithinDays: 30,
+      
+      // 🎓 Skip fresher filter in AI recommendations - we handle experience filtering explicitly above
+      skipFresherFilter: true
     };
 
     // Remove null/undefined values

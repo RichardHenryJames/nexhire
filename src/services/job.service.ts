@@ -23,6 +23,8 @@ export class JobService {
         preferredLocations: string | null;
         preferredCompanySize: string | null;
         latestJobTitle: string | null;
+        isFresher: boolean;
+        totalExperienceMonths: number;
     }> {
         if (!userId) {
             return {
@@ -30,7 +32,9 @@ export class JobService {
                 preferredWorkTypes: null,
                 preferredLocations: null,
                 preferredCompanySize: null,
-                latestJobTitle: null
+                latestJobTitle: null,
+                isFresher: false,
+                totalExperienceMonths: 0
             };
         }
 
@@ -40,6 +44,8 @@ export class JobService {
                 a.PreferredWorkTypes AS preferredWorkTypes,
                 a.PreferredLocations AS preferredLocations,
                 a.PreferredCompanySize AS preferredCompanySize,
+                ISNULL(a.TotalExperienceMonths, 0) AS totalExperienceMonths,
+                a.GraduationYear AS graduationYear,
                 (
                     SELECT TOP 1 we.JobTitle
                     FROM WorkExperiences we
@@ -49,19 +55,40 @@ export class JobService {
                       CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
                       we.EndDate DESC,
                       we.StartDate DESC
-                ) AS latestJobTitle
+                ) AS latestJobTitle,
+                (
+                    SELECT COUNT(*) 
+                    FROM WorkExperiences we2 
+                    WHERE we2.ApplicantID = a.ApplicantID
+                ) AS workExperienceCount
             FROM Applicants a
             WHERE a.UserID = @param0;
         `;
 
         const result = await dbService.executeQuery(query, [userId]);
         const row = result.recordset?.[0];
+        
+        // User is fresher if:
+        // 1. No work experience OR total experience < 12 months
+        // 2. OR graduation year is >= current year (still in college or just graduated)
+        const totalExpMonths = row?.totalExperienceMonths ?? 0;
+        const workExpCount = row?.workExperienceCount ?? 0;
+        const graduationYearStr = row?.graduationYear ?? '';
+        const graduationYear = parseInt(graduationYearStr, 10) || 0;
+        const currentYear = new Date().getFullYear();
+        
+        const isFresherByExperience = workExpCount === 0 || totalExpMonths < 12;
+        const isFresherByEducation = graduationYear > 0 && graduationYear >= currentYear; // Still studying or graduating this year
+        const isFresher = isFresherByExperience || isFresherByEducation;
+        
         return {
             preferredJobTypes: row?.preferredJobTypes ?? null,
             preferredWorkTypes: row?.preferredWorkTypes ?? null,
             preferredLocations: row?.preferredLocations ?? null,
             preferredCompanySize: row?.preferredCompanySize ?? null,
-            latestJobTitle: row?.latestJobTitle ?? null
+            latestJobTitle: row?.latestJobTitle ?? null,
+            isFresher,
+            totalExperienceMonths: totalExpMonths
         };
     }
 
@@ -507,7 +534,7 @@ export class JobService {
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         // 🚀 Use shared filter builder to avoid duplication
-        const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
+        let { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
         let paramIndex = currentParamIndex;
 
         // NOTE: We intentionally do not run COUNT(*) for perf.
@@ -521,6 +548,23 @@ export class JobService {
 
         // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
+
+        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), filter out Senior/Lead roles
+        // Show jobs with "Engineer" keyword but exclude "Senior", "Lead", "Principal", "Staff", "Director", "Head", "Manager" titles
+        if (personalization.isFresher && !f.skipFresherFilter) {
+            // Exclude senior-level job titles for freshers
+            whereClause += ` AND j.Title NOT LIKE '%Senior%'
+                AND j.Title NOT LIKE '%Lead%'
+                AND j.Title NOT LIKE '%Principal%'
+                AND j.Title NOT LIKE '%Staff%'
+                AND j.Title NOT LIKE '%Director%'
+                AND j.Title NOT LIKE '%Head of%'
+                AND j.Title NOT LIKE '%Manager%'
+                AND j.Title NOT LIKE '%VP%'
+                AND j.Title NOT LIKE '%Chief%'
+                AND j.Title NOT LIKE '%Architect%'`;
+            // Note: No new params needed as we're using literal strings
+        }
 
         // Add personalization parameters once; used in ORDER BY scoring.
         const dataParams: any[] = [...queryParams];
