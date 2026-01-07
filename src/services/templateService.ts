@@ -709,9 +709,11 @@ const templates: Record<string, { subject: string; html: string }> = {
                         <td style="padding: 40px 30px;">
                             <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
                             
-                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                                We've found <strong style="color: #667eea;">5 jobs</strong> that match your profile. 
-                                Don't miss out – apply or ask for a referral today!
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 10px 0;">
+                                Here are your <strong style="color: #667eea;">personalized job recommendations</strong> for today!
+                            </p>
+                            <p style="color: #777; font-size: 14px; line-height: 1.5; margin: 0 0 25px 0;">
+                                Don't miss out – apply or ask for a referral. You can also search <strong>100,000+ jobs for free</strong> on RefOpen!
                             </p>
                             
                             <!-- Job Cards -->

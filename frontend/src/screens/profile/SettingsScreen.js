@@ -66,13 +66,14 @@ export default function SettingsScreen({ navigation, route }) {
 
   // Notification preferences state
   const [notificationPrefs, setNotificationPrefs] = useState({
-    EmailEnabled: false,
-    PushEnabled: false,
-    ReferralRequestEmail: false,
-    ReferralClaimedEmail: false,
-    ReferralVerifiedEmail: false,
-    MessageReceivedEmail: false,
-    WeeklyDigestEmail: false,
+    EmailEnabled: true,
+    PushEnabled: true,
+    ReferralRequestEmail: true,
+    ReferralClaimedEmail: true,
+    ReferralVerifiedEmail: true,
+    MessageReceivedEmail: true,
+    WeeklyDigestEmail: true,
+    DailyJobRecommendationEmail: true,
   });
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
@@ -1108,6 +1109,22 @@ export default function SettingsScreen({ navigation, route }) {
                   onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, WeeklyDigestEmail: value }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.WeeklyDigestEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="briefcase-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Daily Job Recommendations</Text>
+                    <Text style={styles.notifToggleDesc}>Personalized job picks every day</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.DailyJobRecommendationEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, DailyJobRecommendationEmail: value }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
                 />
               </View>
 

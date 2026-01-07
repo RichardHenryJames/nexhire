@@ -292,6 +292,7 @@ export class NotificationService {
         MessageReceivedEmail: boolean;
         MessageReceivedPush: boolean;
         WeeklyDigestEmail: boolean;
+        DailyJobRecommendationEmail: boolean;
     }> {
         const result = await dbService.executeQuery(`
             SELECT 
@@ -307,27 +308,29 @@ export class NotificationService {
                 COALESCE(JobApplicationEmail, 0) as JobApplicationEmail,
                 COALESCE(MessageReceivedEmail, 0) as MessageReceivedEmail,
                 COALESCE(MessageReceivedPush, 0) as MessageReceivedPush,
-                COALESCE(WeeklyDigestEnabled, 0) as WeeklyDigestEmail
+                COALESCE(WeeklyDigestEnabled, 0) as WeeklyDigestEmail,
+                COALESCE(DailyJobRecommendationEmail, 1) as DailyJobRecommendationEmail
             FROM NotificationPreferences
             WHERE UserID = @param0
-        `, [userId]);
+        `, [userId])
 
-        // Return defaults if no preferences set (OFF by default - opt-in model)
+        // Return defaults if no preferences set (ON by default for new users)
         if (result.recordset.length === 0) {
             return {
-                EmailEnabled: false,
-                PushEnabled: false,
-                InAppEnabled: false,
-                ReferralRequestEmail: false,
-                ReferralRequestPush: false,
-                ReferralClaimedEmail: false,
-                ReferralClaimedPush: false,
-                ReferralVerifiedEmail: false,
-                ReferralVerifiedPush: false,
-                JobApplicationEmail: false,
-                MessageReceivedEmail: false,
-                MessageReceivedPush: false,
-                WeeklyDigestEmail: false
+                EmailEnabled: true,
+                PushEnabled: true,
+                InAppEnabled: true,
+                ReferralRequestEmail: true,
+                ReferralRequestPush: true,
+                ReferralClaimedEmail: true,
+                ReferralClaimedPush: true,
+                ReferralVerifiedEmail: true,
+                ReferralVerifiedPush: true,
+                JobApplicationEmail: true,
+                MessageReceivedEmail: true,
+                MessageReceivedPush: true,
+                WeeklyDigestEmail: true,
+                DailyJobRecommendationEmail: true
             };
         }
 
@@ -351,6 +354,7 @@ export class NotificationService {
         MessageReceivedEmail?: boolean;
         MessageReceivedPush?: boolean;
         WeeklyDigestEmail?: boolean;
+        DailyJobRecommendationEmail?: boolean;
     }): Promise<boolean> {
         try {
             // Check if user has preferences row
@@ -368,11 +372,11 @@ export class NotificationService {
                         ReferralClaimedEmail, ReferralClaimedPush,
                         ReferralVerifiedEmail, ReferralVerifiedPush,
                         JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
-                        WeeklyDigestEnabled
+                        WeeklyDigestEnabled, DailyJobRecommendationEmail
                     ) VALUES (
                         @param0, @param1, @param2, @param3,
                         @param4, @param5, @param6, @param7,
-                        @param8, @param9, @param10, @param11, @param12, @param13
+                        @param8, @param9, @param10, @param11, @param12, @param13, @param14
                     )
                 `, [
                     userId,
@@ -388,7 +392,8 @@ export class NotificationService {
                     preferences.JobApplicationEmail ?? true,
                     preferences.MessageReceivedEmail ?? true,
                     preferences.MessageReceivedPush ?? true,
-                    preferences.WeeklyDigestEmail ?? true
+                    preferences.WeeklyDigestEmail ?? true,
+                    preferences.DailyJobRecommendationEmail ?? true
                 ]);
             } else {
                 // Update existing row
@@ -407,6 +412,7 @@ export class NotificationService {
                         MessageReceivedEmail = @param11,
                         MessageReceivedPush = @param12,
                         WeeklyDigestEnabled = @param13,
+                        DailyJobRecommendationEmail = @param14,
                         UpdatedAt = GETUTCDATE()
                     WHERE UserID = @param0
                 `, [
@@ -423,7 +429,8 @@ export class NotificationService {
                     preferences.JobApplicationEmail ?? true,
                     preferences.MessageReceivedEmail ?? true,
                     preferences.MessageReceivedPush ?? true,
-                    preferences.WeeklyDigestEmail ?? true
+                    preferences.WeeklyDigestEmail ?? true,
+                    preferences.DailyJobRecommendationEmail ?? true
                 ]);
             }
 

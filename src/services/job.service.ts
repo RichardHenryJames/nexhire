@@ -549,21 +549,20 @@ export class JobService {
         // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
 
-        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), filter out Senior/Lead roles
-        // Show jobs with "Engineer" keyword but exclude "Senior", "Lead", "Principal", "Staff", "Director", "Head", "Manager" titles
+        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), show only entry-level Engineer jobs
+        // Must have "Engineer" in title, exclude any job with senior-level keywords
         if (personalization.isFresher && !f.skipFresherFilter) {
-            // Exclude senior-level job titles for freshers
-            whereClause += ` AND j.Title NOT LIKE '%Senior%'
+            whereClause += ` AND j.Title LIKE '%Engineer%'
+                AND j.Title NOT LIKE '%Senior%'
                 AND j.Title NOT LIKE '%Lead%'
                 AND j.Title NOT LIKE '%Principal%'
                 AND j.Title NOT LIKE '%Staff%'
+                AND j.Title NOT LIKE '%Head%'
                 AND j.Title NOT LIKE '%Director%'
-                AND j.Title NOT LIKE '%Head of%'
                 AND j.Title NOT LIKE '%Manager%'
                 AND j.Title NOT LIKE '%VP%'
                 AND j.Title NOT LIKE '%Chief%'
                 AND j.Title NOT LIKE '%Architect%'`;
-            // Note: No new params needed as we're using literal strings
         }
 
         // Add personalization parameters once; used in ORDER BY scoring.

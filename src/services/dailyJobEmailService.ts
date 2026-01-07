@@ -45,7 +45,7 @@ export class DailyJobEmailService {
 
     /**
      * Get users eligible for daily job emails
-     * Users created after 2025-12-15
+     * Users created after 2025-12-15 AND have DailyJobRecommendationEmail enabled
      */
     static async getEligibleUsers(): Promise<UserForEmail[]> {
         const query = `
@@ -55,11 +55,13 @@ export class DailyJobEmailService {
                 u.FirstName
             FROM Users u
             INNER JOIN Applicants a ON u.UserID = a.UserID
+            LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
             WHERE u.CreatedAt >= '2025-12-15 19:47:35.3700000'
               AND u.IsActive = 1
               AND u.Email IS NOT NULL
               AND u.Email != ''
               AND u.UserType = 'JobSeeker'
+              AND COALESCE(np.DailyJobRecommendationEmail, 1) = 1
             ORDER BY u.CreatedAt DESC
         `;
         
