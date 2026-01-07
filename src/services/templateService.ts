@@ -17,9 +17,9 @@ interface RenderedTemplate {
 // App configuration
 const APP_CONFIG = {
     appName: 'RefOpen',
-    appUrl: process.env.APP_URL || 'https://refopen.com',
+    appUrl: process.env.APP_URL || 'https://www.refopen.com',
     supportEmail: 'support@refopen.com',
-    logoUrl: 'https://refopen.com/logo.png'
+    logoUrl: 'https://www.refopen.com/logo.png'
 };
 
 // Email templates

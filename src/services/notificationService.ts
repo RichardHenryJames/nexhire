@@ -11,7 +11,7 @@ import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 
 // Configuration
-const APP_URL = process.env.APP_URL || 'https://refopen.com';
+const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
 
 // Notification types
 export type NotificationType = 

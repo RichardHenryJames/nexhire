@@ -11,7 +11,7 @@ import { TemplateService } from './templateService';
 import { AIJobRecommendationService } from './ai-job-recommendation.service';
 import { JobService } from './job.service';
 
-const APP_URL = process.env.APP_URL || 'https://refopen.com';
+const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
 
 interface DailyEmailResult {
     totalUsers: number;

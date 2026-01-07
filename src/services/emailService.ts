@@ -15,7 +15,7 @@ const EMAIL_CONFIG = {
     connectionString: process.env.ACS_CONNECTION_STRING || '',
     replyTo: process.env.EMAIL_REPLY_TO || 'support@refopen.com',
     appName: 'RefOpen',
-    appUrl: process.env.APP_URL || 'https://refopen.com'
+    appUrl: process.env.APP_URL || 'https://www.refopen.com'
 };
 
 interface SendEmailOptions {
