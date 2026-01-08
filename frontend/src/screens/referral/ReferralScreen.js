@@ -262,94 +262,103 @@ export default function ReferralScreen({ navigation }) {
         }
       : {};
     
+    // Get initials for avatar
+    const getInitials = (name) => {
+      if (!name) return '?';
+      const parts = name.split(' ').filter(Boolean);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return parts[0][0].toUpperCase();
+    };
+
+    // Generate consistent color from name
+    const getAvatarColor = (name) => {
+      const avatarColors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
+      if (!name) return avatarColors[0];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return avatarColors[Math.abs(hash) % avatarColors.length];
+    };
+
+    const initials = getInitials(applicantName);
+    const avatarColor = getAvatarColor(applicantName);
+    
     return (
       <CardWrapper key={request.RequestID} style={styles.requestCard} {...cardWrapperProps}>
         <View style={styles.requestHeader}>
-          {/* Company Logo */}
-          <View style={styles.logoContainer}>
-            {request.OrganizationLogo ? (
+          {/* Person Avatar - Clickable to open profile */}
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            activeOpacity={applicantUserId ? 0.7 : 1}
+            disabled={!applicantUserId}
+            onPress={() =>
+              applicantUserId
+                ? navigation.navigate('ViewProfile', {
+                    userId: applicantUserId,
+                    userName: applicantName,
+                  })
+                : undefined
+            }
+          >
+            {applicantPhotoUrl ? (
               <Image
-                source={{ uri: request.OrganizationLogo }}
-                style={styles.companyLogo}
+                source={{ uri: applicantPhotoUrl }}
+                style={styles.personAvatar}
                 onError={() => {}}
               />
             ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={24} color={colors.gray500} />
+              <View style={[styles.personAvatarPlaceholder, { backgroundColor: avatarColor }]}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.requestInfo}>
-            {/* ? NEW: Job Type Badge */}
-            <View style={styles.jobTypeBadgeContainer}>
-              <Text style={styles.jobTitle} numberOfLines={1}>
+            {/* Person Name - Primary */}
+            <TouchableOpacity
+              activeOpacity={applicantUserId ? 0.7 : 1}
+              disabled={!applicantUserId}
+              onPress={() =>
+                applicantUserId
+                  ? navigation.navigate('ViewProfile', {
+                      userId: applicantUserId,
+                      userName: applicantName,
+                    })
+                  : undefined
+              }
+            >
+              <Text style={styles.applicantNamePrimary} numberOfLines={1}>
+                {applicantName}
+              </Text>
+            </TouchableOpacity>
+            
+            {/* "wants referral for Job Title" */}
+            <View style={styles.wantsReferralRow}>
+              <Text style={styles.wantsReferralText}>wants referral for </Text>
+              <Text style={styles.jobTitleBold} numberOfLines={1}>
                 {request.JobTitle || 'Job Title'}
               </Text>
-              {isExternalJob && (
-                <View style={styles.externalBadge}>
-                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
-                  <Text style={styles.externalBadgeText}>External</Text>
-                </View>
-              )}
-              {isInternalJob && (
-                <View style={styles.internalBadge}>
-                  <Ionicons name="checkmark-circle-outline" size={10} color="#10B981" />
-                  <Text style={styles.internalBadgeText}>Internal</Text>
-                </View>
-              )}
             </View>
-            
-            <Text style={styles.companyName} numberOfLines={1}>
-              {request.CompanyName || 'Company'}
-            </Text>
-            
-            {/* ? NEW: Show External Job ID for external referrals */}
-            {isExternalJob && request.ExtJobID && (
-              <View style={styles.externalJobIdRow}>
-                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
-                <Text style={styles.externalJobIdText} numberOfLines={1}>
-                  Job ID: {request.ExtJobID}
-                </Text>
-              </View>
-            )}
 
-            <View style={styles.requesterRow}>
-              <Text style={styles.requesterPrefix}>Requested by</Text>
-              {applicantPhotoUrl ? (
-                <Image
-                  source={{ uri: applicantPhotoUrl }}
-                  style={styles.requesterAvatar}
-                  onError={() => {}}
-                />
-              ) : (
-                <View style={styles.requesterAvatarPlaceholder}>
-                  <Ionicons name="person" size={14} color={colors.gray500} />
-                </View>
-              )}
+            {/* Company & Time Row */}
+            <View style={styles.metaRow}>
+              <Text style={styles.companyNameSmall} numberOfLines={1}>
+                {request.CompanyName || 'Company'}
+              </Text>
+              <Text style={styles.metaDot}>•</Text>
+              <Text style={styles.timeAgo}>
+                {formatDate(request.RequestedAt)}
+              </Text>
+            </View>
+
+            {/* Quick Actions Row - Resume left, View/Continue right */}
+            <View style={styles.quickActionsRow}>
+              {/* Resume Button */}
               <TouchableOpacity
-                activeOpacity={applicantUserId ? 0.7 : 1}
-                disabled={!applicantUserId}
-                onPress={() =>
-                  applicantUserId
-                    ? navigation.navigate('ViewProfile', {
-                        userId: applicantUserId,
-                        userName: applicantName,
-                      })
-                    : undefined
-                }
-              >
-                <Text
-                  style={styles.requesterName}
-                  numberOfLines={1}
-                >
-                  {applicantName}
-                </Text>
-              </TouchableOpacity>
-              
-              {/* Inline View Resume Button */}
-              <TouchableOpacity
-                style={[styles.viewResumeBtn, { backgroundColor: colors.primary + '15' }]}
+                style={[styles.quickActionBtn, { backgroundColor: colors.primary + '15' }]}
                 onPress={() => {
                   const resumeUrl = request.ResumeURL;
                   if (resumeUrl) {
@@ -365,82 +374,61 @@ export default function ReferralScreen({ navigation }) {
                   }
                 }}
               >
-                <Ionicons name="document-text-outline" size={12} color={colors.primary} />
-                <Text style={[styles.viewResumeBtnText, { color: colors.primary }]}>Resume</Text>
+                <Ionicons name="document-text-outline" size={14} color={colors.primary} />
+                <Text style={[styles.quickActionText, { color: colors.primary }]}>Resume</Text>
               </TouchableOpacity>
-            </View>
 
-            <View style={styles.timestampRow}>
-              <Ionicons name="time-outline" size={14} color={colors.gray500} />
-              <Text style={styles.requestDate}>
-                {formatDate(request.RequestedAt)}
-              </Text>
+              {/* Spacer */}
+              <View style={{ flex: 1 }} />
+
+              {/* View/Continue Button - Open tab */}
+              {activeTab === 'open' && (
+                <>
+                  {(request.AssignedReferrerUserID || request.AssignedReferrerID) && 
+                   ((request.AssignedReferrerUserID || '').toLowerCase() === (userId || '').toLowerCase() || 
+                    (request.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase()) ? (
+                    <TouchableOpacity 
+                      style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+                      onPress={() => handleViewRequest(request)}
+                    >
+                      <Text style={styles.viewRequestText}>Continue</Text>
+                      <Ionicons name="arrow-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.viewRequestBtn}
+                      onPress={() => handleViewRequest(request)}
+                    >
+                      <Text style={styles.viewRequestText}>View</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              {/* View Proof Button - Closed tab */}
+              {activeTab === 'closed' && request.ProofFileURL && (
+                <TouchableOpacity 
+                  style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open(request.ProofFileURL, '_blank');
+                    } else {
+                      Linking.openURL(request.ProofFileURL);
+                    }
+                  }}
+                >
+                  <Ionicons name="eye" size={14} color="#fff" />
+                  <Text style={styles.viewRequestText}>View Proof</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
-          {/* Only show status badge when Verified */}
+          {/* Verified Badge */}
           {request.Status === 'Verified' && (
-            <View style={[styles.statusBadge, { backgroundColor: colors.gray100 }]}
-            >
-              <Ionicons
-                name={getStatusIcon(request.Status)}
-                size={14}
-                color={getStatusColor(request.Status)}
-              />
-              <Text
-                style={[styles.statusText, { color: getStatusColor(request.Status) }]}
-                numberOfLines={1}
-              >
-                {request.Status}
-              </Text>
+            <View style={styles.verifiedBadgeCorner}>
+              <Ionicons name="trophy" size={14} color="#F59E0B" />
             </View>
-          )}
-        </View>
-        
-        <View style={styles.requestActions}>
-          {/* Show different buttons based on who claimed the request */}
-          {activeTab === 'open' && (
-            <>
-              {/* Check if current user claimed this request - API returns AssignedReferrerUserID */}
-              {(request.AssignedReferrerUserID || request.AssignedReferrerID) && 
-               ((request.AssignedReferrerUserID || '').toLowerCase() === (userId || '').toLowerCase() || 
-                (request.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase()) ? (
-                // Current user claimed - show Continue button
-                <TouchableOpacity 
-                  style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
-                  onPress={() => handleViewRequest(request)}
-                >
-                  <Ionicons name="arrow-forward" size={16} color="#fff" />
-                  <Text style={styles.viewRequestText}>Continue</Text>
-                </TouchableOpacity>
-              ) : (
-                // Not claimed by current user - show View Request button
-                <TouchableOpacity 
-                  style={styles.viewRequestBtn}
-                  onPress={() => handleViewRequest(request)}
-                >
-                  <Ionicons name="eye" size={16} color="#fff" />
-                  <Text style={styles.viewRequestText}>View Request</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-          
-          {/* Show View Proof for closed statuses */}
-          {activeTab === 'closed' && request.ProofFileURL && (
-            <TouchableOpacity 
-              style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  window.open(request.ProofFileURL, '_blank');
-                } else {
-                  Linking.openURL(request.ProofFileURL);
-                }
-              }}
-            >
-              <Ionicons name="eye" size={16} color="#fff" />
-              <Text style={styles.viewRequestText}>View Proof</Text>
-            </TouchableOpacity>
           )}
         </View>
       </CardWrapper>
@@ -756,7 +744,28 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  personAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+  },
+  personAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    fontSize: 18,
+    fontWeight: typography.weights.bold,
+    color: '#FFFFFF',
   },
   logoContainer: {
     marginRight: 10,
@@ -781,6 +790,70 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   requestInfo: {
     flex: 1,
     marginRight: 8,
+  },
+  applicantNamePrimary: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  wantsReferralRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+    gap: 4,
+  },
+  wantsReferralText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  jobTitleBold: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    flexShrink: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  },
+  companyNameSmall: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    flexShrink: 1,
+  },
+  metaDot: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  timeAgo: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    gap: 4,
+  },
+  quickActionText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+  verifiedBadgeCorner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
   jobTitle: {
     fontSize: typography.sizes.md,
@@ -818,105 +891,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-  requesterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 6,
-    maxWidth: '100%',
-  },
-  requesterAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.gray100,
-  },
-  requesterAvatarPlaceholder: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  requesterPrefix: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-  },
-  requesterName: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
-    flexShrink: 1,
-    textDecorationLine: 'underline',
-  },
-  referrerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  seekerInfo: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
-    lineHeight: 14,
-  },
-  requestDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-    marginLeft: 4,
-    lineHeight: 14,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    backgroundColor: colors.gray100,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
-    marginLeft: 3,
-  },
-  requestActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 6,
-  },
-  viewProofBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.primary + '20',
-    borderRadius: 6,
-  },
-  viewProofText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
-  },
-  cancelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.error + '20',
-    borderRadius: 6,
-  },
-  cancelText: {
-    fontSize: typography.sizes.xs,
-    color: colors.error,
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
-  },
   viewRequestBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -930,67 +904,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.white,
     marginLeft: 4,
     fontWeight: typography.weights.bold,
-  },
-  referBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.success,
-    borderRadius: 6,
-  },
-  referText: {
-    fontSize: typography.sizes.xs,
-    color: colors.white,
-    marginLeft: 4,
-    fontWeight: typography.weights.bold,
-  },
-  dismissBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.gray100,
-    borderRadius: 6,
-  },
-  dismissText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
-  },
-  proofBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.warning,
-    borderRadius: 6,
-  },
-  proofText: {
-    fontSize: typography.sizes.xs,
-    color: colors.white,
-    marginLeft: 4,
-    fontWeight: typography.weights.bold,
-  },
-  referrerName: {
-    fontSize: typography.sizes.xs,
-    color: colors.success,
-    fontWeight: typography.weights.medium,
-    marginLeft: 4,
-    lineHeight: 14,
-  },
-  verifyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.success,
-    borderRadius: 6,
-    marginLeft: 6,
-  },
-  verifyText: {
-    fontSize: typography.sizes.xs,
-    color: colors.white,
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
   },
   
   // Cancel Confirmation Modal Styles
@@ -1080,81 +993,5 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.error,
     fontSize: 16,
     fontWeight: typography.weights.bold,
-  },
-  
-  // Job Type Badge Styles
-  jobTypeBadgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 2,
-  },
-  externalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 3,
-  },
-  externalBadgeText: {
-    fontSize: typography.sizes.xxs,
-    color: '#8B5CF6',
-    fontWeight: typography.weights.semibold,
-    letterSpacing: 0.3,
-  },
-  internalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#10B98120',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 3,
-  },
-  internalBadgeText: {
-    fontSize: typography.sizes.xxs,
-    color: '#10B981',
-    fontWeight: typography.weights.semibold,
-    letterSpacing: 0.3,
-  },
-  
-  // External Job ID Row
-  externalJobIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    backgroundColor: colors.gray50,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  externalJobIdText: {
-    fontSize: typography.sizes.xs,
-    color: '#8B5CF6',
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
-    letterSpacing: 0.2,
-  },
-  
-  // Tap Hint for Internal Jobs
-  clickHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  clickHintText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    marginLeft: 4,
-    fontWeight: typography.weights.medium,
-    fontStyle: 'italic',
   },
 });

@@ -224,7 +224,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     },
 
     'referral_verified': {
-        subject: '💰 You earned ₹{{amount}} for your referral!',
+        subject: '🎉 Congrats! Your referral got verified',
         html: `
 <!DOCTYPE html>
 <html>
@@ -669,6 +669,109 @@ const templates: Record<string, { subject: string; html: string }> = {
                                 <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
                                 &nbsp;|&nbsp;
                                 <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
+    },
+
+    // ========================================
+    // REFERRER OPEN REQUESTS NOTIFICATION EMAIL
+    // ========================================
+
+    'referrer_open_requests': {
+        subject: '🤝 {{firstName}}, {{openCount}} candidates need your referral at {{companyName}}!',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">RefOpen</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Help others land their dream job 🤝</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <h2 style="color: #333; margin: 0 0 15px 0; font-size: 22px;">Hi {{firstName}} 👋</h2>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                <strong style="color: #10b981;">{{openCount}} candidates</strong> are looking for a referral at <strong>{{companyName}}</strong>. 
+                                Your help can change someone's career!
+                            </p>
+                            
+                            <h3 style="color: #333; margin: 0 0 15px 0; font-size: 16px; font-weight: 600;">📩 Referral Requests</h3>
+                            
+                            <!-- Request Cards -->
+                            {{requestCardsHtml}}
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 25px 0;">
+                                        <a href="{{appUrl}}/referrals" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+                                            View All Requests →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Benefits Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-radius: 10px; margin: 10px 0; border: 1px solid #fcd34d;">
+                                <tr>
+                                    <td style="padding: 18px;">
+                                        <p style="margin: 0 0 12px 0; color: #92400e; font-size: 14px; font-weight: 600;">🎁 Your Referrer Benefits</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">💰 Earn up to ₹100 per successful referral</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">⚡ Respond quickly to earn bonus rewards</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">🏆 Unlock exclusive badges as you refer more</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">🤝 Help candidates get 15x higher interview chances</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{appUrl}}/settings" style="color: #10b981; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #10b981; text-decoration: none;">Help & Support</a>
+                            </p>
+                            <p style="margin: 12px 0 0 0; color: #aaa; font-size: 11px; text-align: center;">
+                                You're receiving this because you're a verified referrer at {{companyName}}.
+                                <br>
+                                © {{currentYear}} RefOpen. Made with ❤️ in India.
                             </p>
                         </td>
                     </tr>

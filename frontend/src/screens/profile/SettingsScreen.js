@@ -74,6 +74,7 @@ export default function SettingsScreen({ navigation, route }) {
     MessageReceivedEmail: true,
     WeeklyDigestEmail: true,
     DailyJobRecommendationEmail: true,
+    ReferrerNotificationEmail: true,
   });
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
@@ -1052,8 +1053,8 @@ export default function SettingsScreen({ navigation, route }) {
                 <View style={styles.notifToggleLeft}>
                   <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.notifToggleLabel}>Referral Claimed</Text>
-                    <Text style={styles.notifToggleDesc}>When your referral request is claimed</Text>
+                    <Text style={styles.notifToggleLabel}>Referral Submitted</Text>
+                    <Text style={styles.notifToggleDesc}>When someone submits a referral for you</Text>
                   </View>
                 </View>
                 <Switch
@@ -1127,6 +1128,25 @@ export default function SettingsScreen({ navigation, route }) {
                   thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
                 />
               </View>
+
+              {/* Referrer Notification Email - Only show for verified referrers */}
+              {user?.IsVerifiedReferrer && (
+                <View style={styles.notifToggleRow}>
+                  <View style={styles.notifToggleLeft}>
+                    <Ionicons name="people-outline" size={20} color={colors.text} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.notifToggleLabel}>Referrer Notifications</Text>
+                      <Text style={styles.notifToggleDesc}>Daily email about open referral requests</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={notificationPrefs.ReferrerNotificationEmail}
+                    onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferrerNotificationEmail: value }))}
+                    trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                    thumbColor={notificationPrefs.ReferrerNotificationEmail ? colors.primary : colors.gray100}
+                  />
+                </View>
+              )}
 
               <View style={{ height: 40 }} />
             </>

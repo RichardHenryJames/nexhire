@@ -45,12 +45,12 @@ export default function ViewReferralRequestModal({
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
-  // Ref for modal toast
-  const toastRef = useRef(null);
+  // Toast state for modal
+  const [toastState, setToastState] = useState({ visible: false, message: '', type: 'success' });
   
   // Helper function to show toast inside modal
   const showToast = (message, type = 'success') => {
-    toastRef.current?.show(message, type);
+    setToastState({ visible: true, message, type });
   };
   
   // Step state: 'viewing' | 'claimed' (shows proof upload)
@@ -296,7 +296,12 @@ export default function ViewReferralRequestModal({
       <View style={styles.modalOuterContainer}>
         <View style={styles.container}>
           {/* Modal Toast - shows inside modal */}
-          <ModalToast ref={toastRef} />
+          <ModalToast
+            visible={toastState.visible}
+            message={toastState.message}
+            type={toastState.type}
+            onHide={() => setToastState({ ...toastState, visible: false })}
+          />
           
           {/* Header */}
           <View style={styles.header}>
@@ -309,196 +314,164 @@ export default function ViewReferralRequestModal({
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Job & Company Info */}
-          <View style={styles.jobInfo}>
-            <View style={styles.jobHeader}>
-              {referralRequest?.OrganizationLogo ? (
+          {/* Candidate Info Card - Compact at top */}
+          <View style={styles.candidateCardCompact}>
+            <View style={styles.candidateRowCompact}>
+              {referralRequest?.ApplicantProfilePictureURL ? (
                 <Image 
-                  source={{ uri: referralRequest.OrganizationLogo }} 
-                  style={styles.companyLogo}
+                  source={{ uri: referralRequest.ApplicantProfilePictureURL }} 
+                  style={styles.candidateAvatarCompact}
                 />
               ) : (
-                <View style={styles.logoPlaceholder}>
-                  <Ionicons name="business" size={24} color={colors.gray500} />
+                <View style={[styles.avatarPlaceholderCompact, { backgroundColor: '#667eea' }]}>
+                  <Text style={styles.avatarInitialsCompact}>
+                    {applicantName.charAt(0).toUpperCase()}
+                  </Text>
                 </View>
               )}
-              <View style={styles.jobDetails}>
-                <Text style={styles.jobTitle}>{jobTitle}</Text>
-                <Text style={styles.companyName}>{companyName}</Text>
+              <View style={styles.candidateInfoCompact}>
+                <Text style={styles.candidateNameCompact}>{applicantName}</Text>
+                <Text style={styles.wantsReferralForText}>
+                  wants referral for <Text style={styles.jobTitleInline}>{jobTitle}</Text>
+                </Text>
+                <Text style={styles.companyTimeText}>{companyName}</Text>
               </View>
+            </View>
+            
+            {/* Quick Action Buttons */}
+            <View style={styles.candidateActionsCompact}>
+              <TouchableOpacity style={styles.actionPill} onPress={handleOpenResume}>
+                <Ionicons name="document-text-outline" size={14} color={colors.primary} />
+                <Text style={[styles.actionPillText, { color: colors.primary }]}>Resume</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.actionPill, { backgroundColor: colors.gray100 }]} 
+                onPress={handleMessageApplicant}
+                disabled={startingChat}
+              >
+                {startingChat ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <>
+                    <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.actionPillText, { color: colors.textSecondary }]}>Message</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              
+              {/* View Job - Internal only */}
+              {referralRequest?.JobID && !referralRequest?.ExtJobID && (
+                <TouchableOpacity 
+                  style={[styles.actionPill, { backgroundColor: '#10B98120' }]} 
+                  onPress={() => {
+                    onClose();
+                    navigation.navigate('JobDetails', { 
+                      jobId: referralRequest.JobID,
+                      fromReferralRequest: true
+                    });
+                  }}
+                >
+                  <Ionicons name="briefcase-outline" size={14} color="#10B981" />
+                  <Text style={[styles.actionPillText, { color: '#10B981' }]}>View Job</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
-          {/* Job Details Section - Job ID & URL */}
-          {(referralRequest?.ExtJobID || referralRequest?.JobURL) && (
+          {/* Job Details Section - Only for External jobs (Job ID & URL) */}
+          {referralRequest?.ExtJobID && (
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="briefcase-outline" size={20} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Job Details</Text>
-              </View>
-              
-              <View style={styles.jobDetailsCard}>
+              {/* Compact Job Details - single row with Job ID and URL */}
+              <View style={styles.jobDetailsCompact}>
                 {/* Job ID */}
-                {referralRequest?.ExtJobID && (
-                  <View style={styles.jobDetailRow}>
-                    <View style={styles.jobDetailLabelRow}>
-                      <Ionicons name="pricetag-outline" size={16} color={colors.gray500} />
-                      <Text style={styles.jobDetailLabel}>Job ID</Text>
-                    </View>
-                    <View style={styles.jobDetailValueRow}>
-                      <Text style={styles.jobDetailValue} numberOfLines={1}>
-                        {referralRequest.ExtJobID}
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.copyButton}
-                        onPress={async () => {
-                          try {
-                            if (Platform.OS === 'web') {
-                              await navigator.clipboard.writeText(referralRequest.ExtJobID);
-                            }
-                            showToast('Job ID copied!', 'success');
-                          } catch (e) {
-                            showToast('Failed to copy', 'error');
-                          }
-                        }}
-                      >
-                        <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
+                <View style={styles.jobDetailInline}>
+                  <Text style={styles.jobDetailLabelInline}>Job ID:</Text>
+                  <Text style={styles.jobDetailValueInline} numberOfLines={1}>
+                    {referralRequest.ExtJobID}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.copyBtnSmall}
+                    onPress={async () => {
+                      try {
+                        if (Platform.OS === 'web') {
+                          await navigator.clipboard.writeText(referralRequest.ExtJobID);
+                        }
+                        showToast('Copied!', 'success');
+                      } catch (e) {
+                        showToast('Failed to copy', 'error');
+                      }
+                    }}
+                  >
+                    <Ionicons name="copy-outline" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
 
                 {/* Job URL */}
                 {referralRequest?.JobURL && (
-                  <View style={[styles.jobDetailRow, { marginTop: referralRequest?.ExtJobID ? 12 : 0 }]}>
-                    <View style={styles.jobDetailLabelRow}>
-                      <Ionicons name="link-outline" size={16} color={colors.gray500} />
-                      <Text style={styles.jobDetailLabel}>Job URL</Text>
-                    </View>
-                    <View style={styles.jobUrlRow}>
-                      <TouchableOpacity 
-                        style={styles.jobUrlLink}
-                        onPress={() => {
+                  <View style={styles.jobDetailInline}>
+                    <TouchableOpacity 
+                      style={styles.jobUrlInline}
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          window.open(referralRequest.JobURL, '_blank');
+                        } else {
+                          Linking.openURL(referralRequest.JobURL).catch(() => {
+                            showToast('Could not open URL', 'error');
+                          });
+                        }
+                      }}
+                    >
+                      <Ionicons name="link-outline" size={14} color={colors.primary} />
+                      <Text style={styles.jobUrlTextInline} numberOfLines={1}>View Job</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.copyBtnSmall}
+                      onPress={async () => {
+                        try {
                           if (Platform.OS === 'web') {
-                            window.open(referralRequest.JobURL, '_blank');
-                          } else {
-                            Linking.openURL(referralRequest.JobURL).catch(() => {
-                              showToast('Could not open URL', 'error');
-                            });
+                            await navigator.clipboard.writeText(referralRequest.JobURL);
                           }
-                        }}
-                      >
-                        <Text style={styles.jobUrlText} numberOfLines={2}>
-                          {referralRequest.JobURL}
-                        </Text>
-                        <Ionicons name="open-outline" size={16} color={colors.primary} style={{ marginLeft: 4 }} />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.copyButton}
-                        onPress={async () => {
-                          try {
-                            if (Platform.OS === 'web') {
-                              await navigator.clipboard.writeText(referralRequest.JobURL);
-                            }
-                            showToast('URL copied!', 'success');
-                          } catch (e) {
-                            showToast('Failed to copy', 'error');
-                          }
-                        }}
-                      >
-                        <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
+                          showToast('Copied!', 'success');
+                        } catch (e) {
+                          showToast('Failed to copy', 'error');
+                        }
+                      }}
+                    >
+                      <Ionicons name="copy-outline" size={14} color={colors.primary} />
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
             </View>
           )}
 
-          {/* Reward Info Banner - Show on viewing and claimed steps */}
-          {(step === 'viewing' || step === 'claimed') && (
-            <View style={styles.rewardBanner}>
-              <View style={styles.rewardIconContainer}>
-                <Ionicons name="gift" size={24} color="#ffd700" />
-              </View>
-              <View style={styles.rewardTextContainer}>
-                <Text style={styles.rewardTitle}>Earn Guaranteed Rewards!</Text>
-                <Text style={styles.rewardDescription}>
-                  Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> immediately when candidate verifies.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Candidate Info Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Candidate Information</Text>
-            </View>
-            
-            <View style={styles.candidateCard}>
-              <View style={styles.candidateRow}>
-                {referralRequest?.ApplicantProfilePictureURL ? (
-                  <Image 
-                    source={{ uri: referralRequest.ApplicantProfilePictureURL }} 
-                    style={styles.candidateAvatar}
-                  />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Ionicons name="person" size={20} color={colors.gray500} />
-                  </View>
-                )}
-                <View style={styles.candidateInfo}>
-                  <Text style={styles.candidateName}>{applicantName}</Text>
-                  <Text style={styles.candidateEmail}>{referralRequest?.ApplicantEmail || ''}</Text>
-                </View>
-              </View>
-              
-              {/* Action Buttons - Resume and Message */}
-              <View style={styles.candidateActions}>
-                <TouchableOpacity style={styles.resumeButton} onPress={handleOpenResume}>
-                  <Ionicons name="document-text" size={18} color={colors.white} />
-                  <Text style={styles.resumeButtonText}>View Resume</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.messageButton} 
-                  onPress={handleMessageApplicant}
-                  disabled={startingChat}
-                >
-                  {startingChat ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : (
-                    <>
-                      <Ionicons name="chatbubble" size={18} color={colors.white} />
-                      <Text style={styles.messageButtonText}>Message</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+          {/* Reward Info Banner */}
+          <View style={styles.rewardBannerCompact}>
+            <Ionicons name="gift" size={20} color="#ffd700" />
+            <View style={styles.rewardTextContainerCompact}>
+              <Text style={styles.rewardTitleCompact}>Earn Guaranteed Rewards!</Text>
+              <Text style={styles.rewardDescriptionCompact}>
+                Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> immediately.
+              </Text>
             </View>
           </View>
 
           {/* Referral Message Section */}
-          {referralMessage && (
+          {referralMessage ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.primary} />
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Message from Candidate</Text>
               </View>
-              
               <View style={styles.messageCard}>
                 <Text style={styles.messageText}>"{referralMessage}"</Text>
               </View>
             </View>
-          )}
-
-          {/* No Message Placeholder */}
-          {!referralMessage && (
+          ) : (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.gray400} />
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.gray400} />
                 <Text style={[styles.sectionTitle, { color: colors.gray400 }]}>Message from Candidate</Text>
               </View>
               <View style={[styles.messageCard, { backgroundColor: colors.gray100 }]}>
@@ -657,8 +630,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    padding: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
@@ -670,112 +643,154 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   
-  // Job Info Section
-  jobInfo: {
+  // Compact Candidate Card at top
+  candidateCardCompact: {
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 20,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  jobHeader: {
+  candidateRowCompact: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  companyLogo: {
+  candidateAvatarCompact: {
     width: 48,
     height: 48,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: colors.gray100,
   },
-  logoPlaceholder: {
+  avatarPlaceholderCompact: {
     width: 48,
     height: 48,
-    borderRadius: 10,
-    backgroundColor: colors.gray100,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  jobDetails: {
+  avatarInitialsCompact: {
+    fontSize: 18,
+    fontWeight: typography.weights.bold,
+    color: '#FFFFFF',
+  },
+  candidateInfoCompact: {
     flex: 1,
     marginLeft: 12,
   },
-  jobTitle: {
-    fontSize: typography.sizes.lg,
+  candidateNameCompact: {
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.text,
     marginBottom: 2,
   },
-  companyName: {
-    fontSize: typography.sizes.base,
+  wantsReferralForText: {
+    fontSize: typography.sizes.sm,
     color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  jobTitleInline: {
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+  },
+  companyTimeText: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  candidateActionsCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.primary + '15',
+    gap: 4,
+  },
+  actionPillText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+
+  // Compact Reward Banner
+  rewardBannerCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    gap: 10,
+  },
+  rewardTextContainerCompact: {
+    flex: 1,
+  },
+  rewardTitleCompact: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: '#92400e',
+    marginBottom: 2,
+  },
+  rewardDescriptionCompact: {
+    fontSize: typography.sizes.xs,
+    color: '#78350f',
+  },
+  rewardHighlight: {
+    fontWeight: typography.weights.bold,
+    color: '#059669',
   },
   
-  // Job Details Card (Job ID & URL)
-  jobDetailsCard: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+  // Job Details Compact - inline row style
+  jobDetailsCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
   },
-  jobDetailRow: {
-    marginBottom: 0,
-  },
-  jobDetailLabelRow: {
+  jobDetailInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    backgroundColor: colors.gray100,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
   },
-  jobDetailLabel: {
-    fontSize: typography.sizes.sm,
+  jobDetailLabelInline: {
+    fontSize: typography.sizes.xs,
     color: colors.textSecondary,
-    marginLeft: 6,
     fontWeight: typography.weights.medium,
   },
-  jobDetailValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.gray100,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  jobDetailValue: {
-    fontSize: typography.sizes.base,
+  jobDetailValueInline: {
+    fontSize: typography.sizes.sm,
     color: colors.text,
-    fontWeight: typography.weights.medium,
-    flex: 1,
+    fontWeight: typography.weights.semibold,
+    maxWidth: 120,
   },
-  jobUrlRow: {
+  copyBtnSmall: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  jobUrlInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
+    gap: 4,
   },
-  jobUrlLink: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  jobUrlText: {
+  jobUrlTextInline: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    flex: 1,
-    textDecorationLine: 'underline',
-  },
-  copyButton: {
-    padding: 6,
-    marginLeft: 8,
-    borderRadius: 6,
-    backgroundColor: colors.primary + '15',
+    fontWeight: typography.weights.medium,
   },
   
   // Section Styles
@@ -798,85 +813,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
-  },
-  
-  // Candidate Card
-  candidateCard: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  candidateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  candidateAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.gray100,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  candidateInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  candidateName: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  candidateEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-  },
-  candidateActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  resumeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  resumeButtonText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.white,
-    marginLeft: 6,
-  },
-  messageButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.success,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  messageButtonText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.white,
-    marginLeft: 6,
   },
   
   // Message Card
@@ -1015,60 +951,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
     marginLeft: 8,
-  },
-  
-  // Reward Banner Styles
-  rewardBanner: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    alignItems: 'flex-start',
-  },
-  rewardIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(251, 191, 36, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  rewardTextContainer: {
-    flex: 1,
-  },
-  rewardTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-    color: '#fbbf24',
-    marginBottom: 4,
-  },
-  rewardDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  rewardHighlight: {
-    fontWeight: typography.weights.bold,
-    color: '#fbbf24',
-  },
-  rewardTip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
-  },
-  rewardTipText: {
-    fontSize: typography.sizes.xs,
-    color: '#fbbf24',
-    flex: 1,
   },
   
   // Footer

@@ -1202,6 +1202,7 @@ BEGIN
         MessageReceivedEmail BIT NOT NULL DEFAULT ((1)),
         WeeklyDigestEnabled BIT NOT NULL DEFAULT ((1)),
         DailyJobRecommendationEmail BIT NOT NULL DEFAULT ((1)),
+        ReferrerNotificationEmail BIT NOT NULL DEFAULT ((1)),
         CONSTRAINT PK__Notifica__1788CCACE92166D2 PRIMARY KEY (UserID)
     );
     PRINT 'Created table NotificationPreferences';
