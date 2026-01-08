@@ -687,7 +687,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     // ========================================
 
     'daily_job_recommendations': {
-        subject: '🎯 {{firstName}}, here are 5 jobs picked just for you!',
+        subject: '🎯 {{firstName}}, here are 10 jobs picked just for you!',
         html: `
 <!DOCTYPE html>
 <html>

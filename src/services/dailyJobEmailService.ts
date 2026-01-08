@@ -72,65 +72,26 @@ export class DailyJobEmailService {
     }
 
     /**
-     * Get top 5 recommended jobs for a user (FREE - no wallet deduction)
-     * IMPROVED: Prioritize exact job role matching over broad keyword search
+     * Get top 10 recommended jobs for a user (FREE - no wallet deduction)
+     * Uses the SAME logic as Jobs screen - JobService.getJobs with personalization
      */
-    static async getTop5JobsForUser(userId: string): Promise<JobForEmail[]> {
+    static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // First, get user's current job title for better matching
-            const profileQuery = `
-                SELECT 
-                    a.CurrentJobTitle,
-                    a.PreferredRoles,
-                    a.PreferredLocations,
-                    (SELECT TOP 1 we.JobTitle FROM WorkExperiences we 
-                     WHERE we.ApplicantID = a.ApplicantID AND we.IsCurrent = 1) as CurrentWorkExpTitle
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                WHERE u.UserID = @param0
-            `;
-            const profileResult = await dbService.executeQuery(profileQuery, [userId]);
-            const profile = profileResult.recordset?.[0];
-            
-            // Determine the best job title to search for
-            const jobTitle = profile?.CurrentWorkExpTitle || profile?.CurrentJobTitle || profile?.PreferredRoles?.split(',')[0]?.trim();
-            
-            if (jobTitle) {
-                // Use exact job title search (more relevant results)
-                const params = {
-                    page: 1,
-                    pageSize: 7, // Get a few more to have options
-                    excludeUserApplications: userId,
-                    search: jobTitle, // Search by exact job title
-                    postedWithinDays: 14 // Recent jobs only
-                };
-                
-                const result = await JobService.getJobs(params);
-                if (result.jobs && result.jobs.length >= 3) {
-                    return result.jobs.slice(0, 5) as unknown as JobForEmail[];
-                }
-            }
-            
-            // Fallback: Use AI filters if exact match doesn't yield enough results
-            const filters = await AIJobRecommendationService.generateJobFilters(userId);
-            
-            // Remove broad search, use only structured filters
-            const { search, ...structuredFilters } = filters;
-            
+            // Use the SAME logic as Jobs screen - JobService.getJobs with personalization
+            // The backend automatically ranks jobs by user's job title, preferences, etc.
             const params = {
                 page: 1,
-                pageSize: 5,
-                excludeUserApplications: userId,
-                ...structuredFilters
+                pageSize: 10,
+                excludeUserApplications: userId, // This triggers personalization ranking
+                postedWithinDays: 30
             };
             
             const result = await JobService.getJobs(params);
-            return result.jobs as unknown as JobForEmail[];
+            if (result.jobs && result.jobs.length > 0) {
+                return result.jobs as unknown as JobForEmail[];
+            }
             
-        } catch (error: any) {
-            console.warn(`Failed to get jobs for user ${userId}:`, error.message);
-            
-            // Fallback: Get latest 5 published jobs
+            // Fallback: Get latest 5 published jobs if no personalized results
             const fallbackQuery = `
                 SELECT TOP 5
                     j.JobID, j.Title,
@@ -151,6 +112,9 @@ export class DailyJobEmailService {
             `;
             const fallbackResult = await dbService.executeQuery(fallbackQuery, []);
             return fallbackResult.recordset || [];
+        } catch (error: any) {
+            console.warn(`Failed to get jobs for user ${userId}:`, error.message);
+            return [];
         }
     }
 
@@ -233,7 +197,7 @@ export class DailyJobEmailService {
     static async sendEmailToUser(user: UserForEmail): Promise<boolean> {
         try {
             // Get top 5 jobs for this user
-            const jobs = await this.getTop5JobsForUser(user.UserID);
+            const jobs = await this.getTopJobsForUser(user.UserID);
             
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
