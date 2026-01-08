@@ -550,8 +550,13 @@ export class JobService {
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
 
         // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), show only entry-level Engineer jobs
-        // Must have "Engineer" in title, exclude any job with senior-level keywords
-        if (personalization.isFresher && !f.skipFresherFilter) {
+        // BUT: If user has a current job title, prioritize that over fresher status
+        // Example: A user with "Senior Software Engineer" title but only 6 months logged experience
+        //          should still see SSE jobs, not be restricted to entry-level
+        const hasJobTitle = personalization.latestJobTitle && personalization.latestJobTitle.trim().length > 0;
+        
+        if (personalization.isFresher && !f.skipFresherFilter && !hasJobTitle) {
+            // Only apply fresher filter if user has NO job title set
             whereClause += ` AND j.Title LIKE '%Engineer%'
                 AND j.Title NOT LIKE '%Senior%'
                 AND j.Title NOT LIKE '%Lead%'
