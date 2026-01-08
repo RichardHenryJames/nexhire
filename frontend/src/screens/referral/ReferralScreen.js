@@ -744,7 +744,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
   avatarContainer: {
     marginRight: 12,
