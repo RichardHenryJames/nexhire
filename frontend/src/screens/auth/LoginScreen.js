@@ -569,7 +569,6 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
     alignItems: isDesktop ? 'center' : 'stretch',
   },
   floatingParticle: {
