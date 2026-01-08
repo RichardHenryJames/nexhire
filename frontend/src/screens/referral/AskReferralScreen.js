@@ -1030,17 +1030,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1062,11 +1051,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-  },
-  
-  // ✅ ADDED: Header button style for navigation
-  headerButton: {
-    padding: 8,
   },
   
   // ✅ IMPROVED: Enhanced intro section styles with better spacing and visual appeal
@@ -1378,31 +1362,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
   },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    margin: 16,
-    padding: 16,
-    backgroundColor: colors.primary + '10',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
-  },
-  infoContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
   submitButtonContainer: {
     marginTop: 24,
     marginBottom: 16,
@@ -1597,57 +1556,4 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray500,
     marginTop: 4,
   },
-  // ✅ NEW: Enhanced wallet balance banner styles
-  quotaBanner: {
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  quotaBannerSuccess: {
-    backgroundColor: colors.success + '15',
-    borderColor: colors.success + '30',
-  },
-  quotaBannerWarning: {
-    backgroundColor: colors.warning + '15',
-    borderColor: colors.warning + '30',
-  },
-  quotaBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  quotaBannerIcon: {
-    marginRight: 12,
-  },
-  quotaBannerText: {
-    flex: 1,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    lineHeight: 18,
-  },
-  quotaBannerSuccessText: {
-    color: colors.success,
-  },
-  quotaBannerWarningText: {
-    color: colors.warning,
-  },
-  addMoneyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  addMoneyText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold,
-    color: colors.warning,
-  },
 });
-

@@ -857,44 +857,6 @@ const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Experience
-  experienceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  experienceBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  experienceYears: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  experienceLabel: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  currentRole: {
-    flex: 1,
-  },
-  currentRoleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  currentRoleCompany: {
-    fontSize: 14,
-    color: colors.gray600,
-  },
-
   // Work Experience
   workExperienceList: {
     gap: 12,
