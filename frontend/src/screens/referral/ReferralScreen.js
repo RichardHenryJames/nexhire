@@ -45,7 +45,7 @@ export default function ReferralScreen({ navigation }) {
   // They can still see the Closed tab to view past referrals they received
   const isNotVerifiedReferrer = !authLoading && !isVerifiedReferrer;
 
-  // Refresh data when screen is focused
+  // Refresh data when screen is focused (always reloads from any page)
   useFocusEffect(
     useCallback(() => {
       // Load data for all users - verified referrers get open requests, all users can see closed

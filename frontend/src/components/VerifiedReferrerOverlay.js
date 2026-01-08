@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -147,6 +148,7 @@ export default function VerifiedReferrerOverlay({
   companyName = '',
 }) {
   const { colors, isDarkMode } = useTheme();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
   
   // Animations
@@ -440,7 +442,14 @@ export default function VerifiedReferrerOverlay({
             </View>
 
             {/* CTA Button */}
-            <TouchableOpacity style={styles.ctaButton} onPress={onClose}>
+            <TouchableOpacity 
+              style={styles.ctaButton} 
+              onPress={() => {
+                onClose();
+                // Navigate to Referral screen (useFocusEffect will auto-reload)
+                navigation.navigate('Referral');
+              }}
+            >
               <LinearGradient
                 colors={['#00c853', '#00e676']}
                 style={styles.ctaGradient}

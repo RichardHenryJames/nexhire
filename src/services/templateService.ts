@@ -130,7 +130,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     },
 
     'referral_claimed': {
-        subject: '✅ Great news! Your referral request was claimed',
+        subject: '🎉 Your referral has been submitted!',
         html: `
 <!DOCTYPE html>
 <html>
@@ -148,7 +148,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                     <tr>
                         <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
                             <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">RefOpen</h1>
-                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your referral is on the way!</p>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Great news about your referral!</p>
                         </td>
                     </tr>
                     
@@ -158,27 +158,28 @@ const templates: Record<string, { subject: string; html: string }> = {
                             <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{seekerName}},</h2>
                             
                             <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                🎉 <strong style="color: #10b981;">{{referrerName}}</strong> has claimed your referral request 
+                                🎉 <strong style="color: #10b981;">{{referrerName}}</strong> has submitted your referral 
                                 for <strong>{{jobTitle}}</strong> at <strong>{{companyName}}</strong>!
                             </p>
                             
                             <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                They're now working on submitting your referral. You'll receive another notification 
-                                once they've completed the referral with proof.
+                                You should receive a confirmation email from {{companyName}} soon. Once you see 
+                                the referral in your application, come back to RefOpen to confirm it and 
+                                complete your referral journey!
                             </p>
                             
-                            <!-- Status Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
+                            <!-- Why Verify Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #eff6ff; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">
-                                            📋 Next Steps:
+                                        <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+                                            💡 Why confirm your referral?
                                         </p>
-                                        <ol style="margin: 10px 0 0 0; padding-left: 20px; color: #166534; font-size: 14px;">
-                                            <li>Referrer submits your application internally</li>
-                                            <li>They upload proof of referral</li>
-                                            <li>You verify and confirm the referral</li>
-                                        </ol>
+                                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+                                            <li>Track all your referrals in one place</li>
+                                            <li>Build your RefOpen profile with verified referrals</li>
+                                            <li>Help the community by rating your referral experience</li>
+                                        </ul>
                                     </td>
                                 </tr>
                             </table>
@@ -188,11 +189,15 @@ const templates: Record<string, { subject: string; html: string }> = {
                                 <tr>
                                     <td align="center" style="padding: 10px 0 30px 0;">
                                         <a href="{{actionUrl}}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Track Your Referral →
+                                            View Details & Confirm →
                                         </a>
                                     </td>
                                 </tr>
                             </table>
+                            
+                            <p style="color: #888; font-size: 13px; line-height: 1.5; margin: 0; text-align: center;">
+                                Good luck with your application! 🍀
+                            </p>
                         </td>
                     </tr>
                     

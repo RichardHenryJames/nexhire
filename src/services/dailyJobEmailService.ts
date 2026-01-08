@@ -71,18 +71,55 @@ export class DailyJobEmailService {
 
     /**
      * Get top 5 recommended jobs for a user (FREE - no wallet deduction)
+     * IMPROVED: Prioritize exact job role matching over broad keyword search
      */
     static async getTop5JobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Generate AI filters based on user profile (same logic as AI recommendations)
+            // First, get user's current job title for better matching
+            const profileQuery = `
+                SELECT 
+                    a.CurrentJobTitle,
+                    a.PreferredRoles,
+                    a.PreferredLocations,
+                    (SELECT TOP 1 we.JobTitle FROM WorkExperiences we 
+                     WHERE we.ApplicantID = a.ApplicantID AND we.IsCurrent = 1) as CurrentWorkExpTitle
+                FROM Applicants a
+                INNER JOIN Users u ON a.UserID = u.UserID
+                WHERE u.UserID = @param0
+            `;
+            const profileResult = await dbService.executeQuery(profileQuery, [userId]);
+            const profile = profileResult.recordset?.[0];
+            
+            // Determine the best job title to search for
+            const jobTitle = profile?.CurrentWorkExpTitle || profile?.CurrentJobTitle || profile?.PreferredRoles?.split(',')[0]?.trim();
+            
+            if (jobTitle) {
+                // Use exact job title search (more relevant results)
+                const params = {
+                    page: 1,
+                    pageSize: 7, // Get a few more to have options
+                    excludeUserApplications: userId,
+                    search: jobTitle, // Search by exact job title
+                    postedWithinDays: 14 // Recent jobs only
+                };
+                
+                const result = await JobService.getJobs(params);
+                if (result.jobs && result.jobs.length >= 3) {
+                    return result.jobs.slice(0, 5) as unknown as JobForEmail[];
+                }
+            }
+            
+            // Fallback: Use AI filters if exact match doesn't yield enough results
             const filters = await AIJobRecommendationService.generateJobFilters(userId);
             
-            // Fetch jobs using filters (no wallet deduction)
+            // Remove broad search, use only structured filters
+            const { search, ...structuredFilters } = filters;
+            
             const params = {
                 page: 1,
                 pageSize: 5,
                 excludeUserApplications: userId,
-                ...filters
+                ...structuredFilters
             };
             
             const result = await JobService.getJobs(params);

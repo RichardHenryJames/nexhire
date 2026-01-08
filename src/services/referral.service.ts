@@ -654,6 +654,52 @@ export class ReferralService {
                     'REFERRAL_BONUS',
                     `Referral verification reward for request ${dto.requestID}`
                 );
+
+                // ✅ Send email notification to referrer about earnings
+                try {
+                    // Get referrer details
+                    const referrerQuery = `
+                        SELECT u.UserID, u.Email, u.FirstName, u.LastName
+                        FROM Users u
+                        WHERE u.UserID = @param0
+                    `;
+                    const referrerResult = await dbService.executeQuery(referrerQuery, [referrerId]);
+                    const referrer = referrerResult.recordset?.[0];
+
+                    // Get job/company details
+                    const jobQuery = `
+                        SELECT 
+                            COALESCE(j.Title, rr.JobTitle, 'Job Position') as JobTitle,
+                            COALESCE(jo.Name, eo.Name, 'Company') as CompanyName
+                        FROM ReferralRequests rr
+                        LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                        LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                        LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                        WHERE rr.RequestID = @param0
+                    `;
+                    const jobResult = await dbService.executeQuery(jobQuery, [dto.requestID]);
+                    const jobInfo = jobResult.recordset?.[0];
+
+                    // Get new wallet balance
+                    const balanceResult = await WalletService.getBalance(referrerId);
+                    const newBalance = balanceResult?.balance || verificationAmount;
+
+                    if (referrer) {
+                        await NotificationService.notifyReferralVerified({
+                            requestId: dto.requestID,
+                            referrerId: referrerId,
+                            referrerName: referrer.FirstName,
+                            referrerEmail: referrer.Email,
+                            seekerName: applicantName,
+                            jobTitle: jobInfo?.JobTitle || 'Job Position',
+                            companyName: jobInfo?.CompanyName || 'Company',
+                            amount: verificationAmount,
+                            newBalance: newBalance
+                        });
+                    }
+                } catch (err) {
+                    console.warn('Non-critical: Failed to send referral verified email:', err);
+                }
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -1393,6 +1439,49 @@ export class ReferralService {
                 );
             } catch (err) {
                 console.warn('Non-critical: Failed to log Completed status:', err);
+            }
+
+            // ✅ Send email notification to seeker that referral was claimed/completed
+            try {
+                // Get seeker details
+                const seekerQuery = `
+                    SELECT u.UserID, u.Email, u.FirstName, u.LastName
+                    FROM Applicants a
+                    INNER JOIN Users u ON a.UserID = u.UserID
+                    WHERE a.ApplicantID = @param0
+                `;
+                const seekerResult = await dbService.executeQuery(seekerQuery, [seekerId]);
+                const seeker = seekerResult.recordset?.[0];
+
+                // Get job/company details
+                let jobTitle = 'Job Position';
+                let companyName = 'Company';
+                
+                if (isExternal) {
+                    const extQuery = `SELECT o.Name as CompanyName, rr.JobTitle FROM ReferralRequests rr LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID WHERE rr.RequestID = @param0`;
+                    const extResult = await dbService.executeQuery(extQuery, [dto.requestID]);
+                    jobTitle = extResult.recordset?.[0]?.JobTitle || 'External Job';
+                    companyName = extResult.recordset?.[0]?.CompanyName || 'Company';
+                } else {
+                    const intQuery = `SELECT j.Title, o.Name as CompanyName FROM Jobs j INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID WHERE j.JobID = @param0`;
+                    const intResult = await dbService.executeQuery(intQuery, [jobId]);
+                    jobTitle = intResult.recordset?.[0]?.Title || 'Job Position';
+                    companyName = intResult.recordset?.[0]?.CompanyName || 'Company';
+                }
+
+                if (seeker) {
+                    await NotificationService.notifyReferralClaimed({
+                        requestId: dto.requestID,
+                        seekerId: seeker.UserID,
+                        seekerName: seeker.FirstName,
+                        seekerEmail: seeker.Email,
+                        referrerName: `${companyName} Employee`,  // Keep referrer anonymous
+                        jobTitle: jobTitle,
+                        companyName: companyName
+                    });
+                }
+            } catch (err) {
+                console.warn('Non-critical: Failed to send referral claimed email:', err);
             }
             
             // Award points for proof submission with quick response bonus
