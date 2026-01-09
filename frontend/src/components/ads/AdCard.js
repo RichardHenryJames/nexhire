@@ -550,10 +550,6 @@ const createStyles = (colors, responsive = {}) => {
     fontWeight: '700',
     color: colors.primary,
   },
-  appMeta: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
 });
 };
 

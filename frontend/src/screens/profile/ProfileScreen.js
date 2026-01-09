@@ -1544,6 +1544,21 @@ export default function ProfileScreen({ navigation, route }) {
 
             <TouchableOpacity 
               style={styles.activityCard}
+              onPress={() => navigation.navigate('MyReferralRequests')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>My Referral Requests</Text>
+                <Text style={styles.activitySummary}>See referrals you have asked for</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.activityCard}
               onPress={() => navigation.navigate('Applications')}
               activeOpacity={0.7}
             >
@@ -1566,23 +1581,8 @@ export default function ProfileScreen({ navigation, route }) {
                 <Ionicons name="bookmark-outline" size={22} color={colors.primary} />
               </View>
               <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Saved Jobs</Text>
+                <Text style={styles.activityTitle}>My Saved Jobs</Text>
                 <Text style={styles.activitySummary}>View and manage saved jobs</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.activityCard}
-              onPress={() => navigation.navigate('MyReferralRequests')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.activityIcon}>
-                <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>My Referral Requests</Text>
-                <Text style={styles.activitySummary}>See referrals you have asked for</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
             </TouchableOpacity>

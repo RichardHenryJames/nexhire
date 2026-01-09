@@ -731,10 +731,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray600,
     marginBottom: 2,
   },
-  viewerCompany: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-  },
   viewerMeta: {
     alignItems: 'flex-end',
   },

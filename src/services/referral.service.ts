@@ -885,7 +885,7 @@ export class ReferralService {
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    rr.OrganizationID, rr.JobURL,
+                    rr.JobURL,
                     -- For INTERNAL referrals (JobID not null)
                     j.Title as InternalJobTitle,
                     jo.Name as InternalCompanyName,
@@ -897,6 +897,8 @@ export class ReferralService {
                     COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
                     COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    -- ✅ FIX: Return OrganizationID from either internal job or external request
+                    COALESCE(jo.OrganizationID, rr.OrganizationID) as OrganizationID,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
