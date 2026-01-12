@@ -19,7 +19,7 @@ import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 
-const PAYMENT_METHODS = ['Bank Transfer', 'NEFT', 'IMPS', 'RTGS'];
+const PAYMENT_METHODS = ['QR / UPI', 'Bank Transfer'];
 
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -28,10 +28,11 @@ const ManualRechargeScreen = ({ navigation }) => {
   const [settings, setSettings] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showInfoTip, setShowInfoTip] = useState(false);
 
   // Form state
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
+  const [paymentMethod, setPaymentMethod] = useState('QR / UPI');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [userRemarks, setUserRemarks] = useState('');
@@ -501,6 +502,23 @@ const ManualRechargeScreen = ({ navigation }) => {
       color: colors.gray500,
       fontStyle: 'italic',
     },
+    infoIconButton: {
+      alignSelf: 'center',
+      padding: 8,
+      marginTop: 4,
+    },
+    infoTip: {
+      backgroundColor: colors.primary + '15',
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 8,
+    },
+    infoTipText: {
+      fontSize: typography.sizes?.xs || 12,
+      color: colors.primary,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
     emptyText: {
       textAlign: 'center',
       color: colors.gray400,
@@ -533,32 +551,14 @@ const ManualRechargeScreen = ({ navigation }) => {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Account Name</Text>
               <Text style={styles.infoValue}>{settings.bankAccountName}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankAccountName, 'Account Name')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Account No</Text>
               <Text style={styles.infoValue}>{settings.bankAccountNumber}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankAccountNumber, 'Account Number')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
             <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.infoLabel}>IFSC Code</Text>
               <Text style={styles.infoValue}>{settings.bankIfsc}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankIfsc, 'IFSC Code')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
 
             {/* QR Code Section */}
@@ -574,13 +574,20 @@ const ManualRechargeScreen = ({ navigation }) => {
               <Text style={styles.poweredByText}>Refopen is powered by Rocana</Text>
             </View>
 
-            <View style={styles.noteContainer}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
-              <Text style={styles.noteText}>
-                After making the payment, click "Already Paid" below to submit your payment details.
-                Money will be added to your wallet within {settings.processingTime}.
-              </Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.infoIconButton}
+              onPress={() => setShowInfoTip(!showInfoTip)}
+            >
+              <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+            </TouchableOpacity>
+            
+            {showInfoTip && (
+              <View style={styles.infoTip}>
+                <Text style={styles.infoTipText}>
+                  After payment, click "Already Paid" to submit. Credited within {settings.processingTime}.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 

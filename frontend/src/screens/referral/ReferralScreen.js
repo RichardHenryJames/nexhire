@@ -391,15 +391,14 @@ export default function ReferralScreen({ navigation }) {
                       style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
                       onPress={() => handleViewRequest(request)}
                     >
-                      <Text style={styles.viewRequestText}>Continue</Text>
-                      <Ionicons name="arrow-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+                      <Text style={[styles.viewRequestText, { marginLeft: 0 }]}>Next</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity 
                       style={styles.viewRequestBtn}
                       onPress={() => handleViewRequest(request)}
                     >
-                      <Text style={styles.viewRequestText}>View</Text>
+                      <Text style={[styles.viewRequestText, { marginLeft: 0 }]}>View</Text>
                     </TouchableOpacity>
                   )}
                 </>
