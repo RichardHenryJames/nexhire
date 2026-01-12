@@ -1282,15 +1282,6 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
               numberOfLines={3} 
             />
 
-            <Text style={styles.label}>Reason for Leaving</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.reasonForLeaving} 
-              onChangeText={(t) => setForm({ ...form, reasonForLeaving: t })} 
-              placeholder="Optional" 
-              placeholderTextColor={colors.gray400}
-            />
-
             <Text style={styles.label}>Salary</Text>
             <TextInput 
               style={styles.input} 
@@ -1315,29 +1306,6 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
             </ScrollView>
 
             {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
-
-            <Text style={styles.label}>Manager Name</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.managerName} 
-              onChangeText={(t) => setForm({ ...form, managerName: t })} 
-              placeholder="Optional" 
-              placeholderTextColor={colors.gray400}
-            />
-            
-            <Text style={styles.label}>Manager Contact</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.managerContact} 
-              onChangeText={(t) => setForm({ ...form, managerContact: t })} 
-              placeholder="Email/Phone" 
-              placeholderTextColor={colors.gray400}
-            />
-
-            <View style={styles.rowBetween}>
-              <Text style={styles.label}>Recruiter can contact manager</Text>
-              <Switch value={!!form.canContact} onValueChange={(v) => setForm({ ...form, canContact: v })} />
-            </View>
 
             {/* Add footer actions at the end of ScrollView content */}
             <View style={styles.modalFooterActions}>
