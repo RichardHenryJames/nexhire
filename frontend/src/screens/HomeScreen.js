@@ -14,7 +14,10 @@ import {
   TextInput,
   FlatList,
   Animated,
+  Modal,
 } from 'react-native';
+import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
+import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +63,15 @@ const [profileViewsCount, setProfileViewsCount] = useState(0);
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
+
+// 🎯 Verification flow states
+const [showConfirmCompanyModal, setShowConfirmCompanyModal] = useState(false);
+const [showAddWorkModal, setShowAddWorkModal] = useState(false);
+const [showEmailVerifyModal, setShowEmailVerifyModal] = useState(false);
+const [currentWorkExperience, setCurrentWorkExperience] = useState(null);
+const [workExperiences, setWorkExperiences] = useState([]);
+const [showVerifiedOverlay, setShowVerifiedOverlay] = useState(false);
+const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 
 // 🎯 NEW: Referrer requests (referrals that came to me)
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
@@ -311,6 +323,37 @@ const [dashboardData, setDashboardData] = useState({
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
+
+  // 🎯 Handler for "Become a Verified Referrer" button
+  const handleBecomeVerifiedReferrer = useCallback(async () => {
+    setNavigatingToVerify(true);
+    try {
+      // Fetch user's work experiences
+      const res = await refopenAPI.getMyWorkExperiences();
+      if (res.success && res.data) {
+        setWorkExperiences(res.data);
+        // Find current work experience
+        const current = res.data.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
+        if (current) {
+          setCurrentWorkExperience(current);
+          setShowConfirmCompanyModal(true);
+        } else {
+          // No current company, show add work experience modal directly
+          setCurrentWorkExperience(null);
+          setShowAddWorkModal(true);
+        }
+      } else {
+        // No work experiences, show add work experience modal
+        setCurrentWorkExperience(null);
+        setShowAddWorkModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching work experiences:', error);
+      Alert.alert('Error', 'Failed to load your work experiences. Please try again.');
+    } finally {
+      setNavigatingToVerify(false);
+    }
+  }, []);
 
   // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
   useEffect(() => {
@@ -860,12 +903,7 @@ const [dashboardData, setDashboardData] = useState({
                 {!stats.isVerifiedReferrer && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
-                    onPress={() => {
-                      setNavigatingToVerify(true);
-                      navigation.navigate('Settings', { openModal: 'professional' });
-                      // Reset after navigation completes
-                      setTimeout(() => setNavigatingToVerify(false), 1000);
-                    }}
+                    onPress={handleBecomeVerifiedReferrer}
                     activeOpacity={0.8}
                     disabled={navigatingToVerify}
                   >
@@ -1004,6 +1042,71 @@ const [dashboardData, setDashboardData] = useState({
         )}
         </ResponsiveContainer>
       </ScrollView>
+
+      {/* Confirm Current Company Modal */}
+      <Modal
+        visible={showConfirmCompanyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmCompanyModal(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <Ionicons name="briefcase" size={40} color={colors.primary} />
+            <Text style={styles.confirmModalTitle}>Verify Your Employment</Text>
+            <Text style={styles.confirmModalMessage}>
+              Is <Text style={{ fontWeight: '700' }}>{currentWorkExperience?.CompanyName}</Text> your current company?
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonSecondary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonSecondaryText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonPrimaryText}>Yes, Verify</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Work Experience Modal */}
+      <AddWorkExperienceModal
+        visible={showAddWorkModal}
+        onClose={() => setShowAddWorkModal(false)}
+        onSave={async () => {
+          // Refresh dashboard data after saving
+          fetchDashboardData();
+        }}
+        editingItem={currentWorkExperience}
+        existingExperiences={workExperiences}
+        showVerification={true}
+        onVerificationComplete={(companyName) => {
+          setVerifiedCompanyName(companyName);
+          setShowAddWorkModal(false);
+          setShowVerifiedOverlay(true);
+          // Refresh to update verified status
+          fetchDashboardData();
+        }}
+      />
+
+      {/* Verified Referrer Celebration Overlay */}
+      <VerifiedReferrerOverlay
+        visible={showVerifiedOverlay}
+        onClose={() => setShowVerifiedOverlay(false)}
+        companyName={verifiedCompanyName}
+      />
     </>
   );
 }
@@ -1870,6 +1973,64 @@ headerCompact: {
   },
   bottomSpacing: {
     height: 100,
+  },
+  // Confirm Company Modal styles
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmModalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  confirmModalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmModalMessage: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmModalButtonSecondary: {
+    backgroundColor: colors.gray200 || colors.gray100,
+  },
+  confirmModalButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  confirmModalButtonSecondaryText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.gray700 || colors.text,
+  },
+  confirmModalButtonPrimaryText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.white,
   },
 });
 };

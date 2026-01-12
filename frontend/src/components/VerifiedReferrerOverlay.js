@@ -446,8 +446,8 @@ export default function VerifiedReferrerOverlay({
               style={styles.ctaButton} 
               onPress={() => {
                 onClose();
-                // Navigate to Referral screen (useFocusEffect will auto-reload)
-                navigation.navigate('Referral');
+                // Navigate to Referrals tab (bottom tab navigation)
+                navigation.navigate('Referrals');
               }}
             >
               <LinearGradient
