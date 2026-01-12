@@ -43,6 +43,11 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  
+  // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
+  // For referrer-posted jobs, hide Apply button and show Ask Referral only
+  const isReferrerPosted = job?.PostedByType === 2;
+  
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
@@ -1268,7 +1273,8 @@ const { jobId, fromReferralRequest } = route.params || {};
             </TouchableOpacity>
           )}
           
-          {isJobSeeker && (
+          {/* Apply button - hide for referrer-posted jobs (they should use Ask Referral instead) */}
+          {isJobSeeker && !isReferrerPosted && (
             <TouchableOpacity 
               style={[
 

@@ -299,6 +299,8 @@ export interface JobCreateRequest {
     language?: string;
     tags?: string;
     internalNotes?: string;
+    postedByType?: string;
+    externalJobID?: string;
 }
 
 export interface JobApplicationRequest {

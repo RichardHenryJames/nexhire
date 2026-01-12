@@ -15,14 +15,14 @@ import useResponsive from '../../hooks/useResponsive';
 /*
 EmployerJobsScreen
 - Tabs: Draft, Published
-- Filters: search text + radio (My Jobs vs All Org Jobs)
-- Only for employers; if job seeker opens redirect to Jobs screen.
+- Filters: search text
+- Shows jobs posted by the current user (employers and verified referrers)
 */
 
 const TABS = [ 'draft', 'published' ];
 
 export default function EmployerJobsScreen({ navigation, route }) {
-  const { user, isJobSeeker } = useAuth();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
@@ -34,7 +34,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [onlyMine, setOnlyMine] = useState(true);
   const [pagination, setPagination] = useState({ page:1, pageSize:50, total:0, totalPages:1 });
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
@@ -45,8 +44,8 @@ export default function EmployerJobsScreen({ navigation, route }) {
   
   const abortRef = useRef(null);
 
-  // Redirect job seekers
-  useEffect(()=>{ if (isJobSeeker) { navigation.replace('Jobs'); } }, [isJobSeeker]);
+  // No redirect needed - allow all users to view their own jobs (employers and verified referrers who posted jobs)
+  // The screen will show only jobs posted by the current user
 
   // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
   useEffect(() => {
@@ -76,7 +75,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
   }, [route.params]);
 
   const load = useCallback(async (page=1)=>{
-    if (!user || isJobSeeker) return;
+    if (!user) return;
     if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
     const controller = new AbortController();
     abortRef.current = controller;
@@ -88,7 +87,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
         pageSize: pagination.pageSize,
         status: activeTab === 'draft' ? 'Draft' : 'Published',
         search: search.trim() || undefined,
-        postedByUserId: onlyMine ? (user.userId || user.id || user.sub || user.UserID) : undefined
+        postedByUserId: user.userId || user.id || user.sub || user.UserID
       };
       
       
@@ -103,9 +102,9 @@ export default function EmployerJobsScreen({ navigation, route }) {
       }
     } catch(e){ if (e.name !== 'AbortError') console.error('Employer jobs load error', e); }
     finally { if (!controller.signal.aborted) { setLoading(false); setRefreshing(false);} }
-  }, [user, isJobSeeker, activeTab, search, onlyMine, pagination.pageSize]);
+  }, [user, activeTab, search, pagination.pageSize]);
 
-  useEffect(()=>{ load(1); }, [activeTab, onlyMine]);
+  useEffect(()=>{ load(1); }, [activeTab]);
 
   const onRefresh = useCallback(()=>{ setRefreshing(true); load(1); }, [load]);
 
@@ -221,13 +220,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
         </View>
-        {/* Toggle mine/all org */}
-        <TouchableOpacity style={localStyles.toggleScope} onPress={()=> setOnlyMine(m => !m)}>
-          <Ionicons name={onlyMine? 'person' : 'people-outline'} size={20} color={onlyMine? '#0066cc':'#666'} />
-          <Text style={[localStyles.toggleText, onlyMine && { color:'#0066cc', fontWeight:'600' }]}>
-            {onlyMine? 'My Jobs' : 'All Org'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -259,12 +251,8 @@ export default function EmployerJobsScreen({ navigation, route }) {
             </Text>
             <Text style={jobStyles.emptyMessage}>
               {activeTab === 'draft' 
-                ? onlyMine 
-                  ? "You haven't created any draft jobs yet. Start by creating a new job posting!"
-                  : "Your organization has no draft jobs at the moment."
-                : onlyMine
-                  ? "You haven't published any jobs yet. Publish your draft jobs to start receiving applications!"
-                  : "Your organization has no published jobs at the moment."
+                ? "You haven't created any draft jobs yet. Start by creating a new job posting!"
+                : "You haven't published any jobs yet. Publish your draft jobs to start receiving applications!"
               }
             </Text>
             {activeTab === 'draft' && (
@@ -338,20 +326,6 @@ const createLocalStyles = (colors, responsive = {}) => {
     flex: 1,
     width: '100%',
     maxWidth: isDesktop ? MAX_CONTENT_WIDTH : '100%',
-  },
-  toggleScope:{
-    marginLeft:8,
-    backgroundColor:colors.surface,
-    flexDirection:'row',
-    alignItems:'center',
-    paddingHorizontal:12,
-    borderRadius:8,
-    borderWidth:1,
-    borderColor:colors.border
-  },
-  toggleText:{
-    marginLeft:6,
-    color:colors.textSecondary
   },
   actionBtn:{
     flexDirection:'row',

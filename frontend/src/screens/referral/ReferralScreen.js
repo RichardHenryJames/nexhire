@@ -41,6 +41,12 @@ export default function ReferralScreen({ navigation }) {
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
+  // Current verified company (for Post Job button)
+  const [currentVerifiedCompany, setCurrentVerifiedCompany] = useState(null);
+  
+  // Draft jobs count (for Publish Jobs button)
+  const [draftJobsCount, setDraftJobsCount] = useState(0);
+
   // ✅ Handle non-verified referrers - show verification prompt only in Open tab
   // They can still see the Closed tab to view past referrals they received
   const isNotVerifiedReferrer = !authLoading && !isVerifiedReferrer;
@@ -57,16 +63,62 @@ export default function ReferralScreen({ navigation }) {
   const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
   const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified', 'Unverified'];
 
+  // Load user's current verified company from work experiences
+  const loadCurrentCompany = async () => {
+    try {
+      const result = await refopenAPI.getMyWorkExperiences();
+      if (result.success && result.data) {
+        // Find current work experience that is verified
+        const currentVerified = result.data.find(
+          exp => exp.IsCurrent && exp.CompanyEmailVerified
+        );
+        if (currentVerified) {
+          setCurrentVerifiedCompany({
+            workExperienceId: currentVerified.WorkExperienceID,
+            organizationId: currentVerified.OrganizationID,
+            companyName: currentVerified.CompanyName || currentVerified.OrganizationName,
+            department: currentVerified.Department,
+            jobTitle: currentVerified.JobTitle,
+          });
+        } else {
+          setCurrentVerifiedCompany(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading current company:', error);
+    }
+  };
+
+  // Load draft jobs count using dashboard-stats API
+  const loadDraftJobsCount = async () => {
+    try {
+      console.log('📊 Loading draft jobs count from dashboard-stats...');
+      const result = await refopenAPI.apiCall('/users/dashboard-stats');
+      console.log('📊 Dashboard stats result:', result);
+      if (result.success && result.data) {
+        const count = result.data.draftJobs || 0;
+        console.log('✅ Draft jobs count:', count);
+        setDraftJobsCount(count);
+      } else {
+        console.log('❌ Dashboard stats failed:', result?.error);
+      }
+    } catch (error) {
+      console.error('Error loading draft jobs count:', error);
+    }
+  };
+
   const loadData = async () => {
     if (!user) return;
     
     setLoading(true);
     setLoadingRequests(true);
     try {
-      // Load stats and requests in parallel
+      // Load stats, requests, current company, and draft jobs in parallel
       await Promise.all([
         loadStats(),
-        loadAllRequests()
+        loadAllRequests(),
+        loadCurrentCompany(),
+        loadDraftJobsCount()
       ]);
     } catch (error) {
       console.error('Error loading referral data:', error);
@@ -526,6 +578,28 @@ export default function ReferralScreen({ navigation }) {
               Help others get referred and earn rewards
             </Text>
           </View>
+          <View style={styles.headerButtons}>
+            {isVerifiedReferrer && currentVerifiedCompany && draftJobsCount > 0 && (
+              <TouchableOpacity 
+                style={styles.publishJobButton}
+                onPress={() => navigation.navigate('EmployerJobs')}
+              >
+                <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
+                <Text style={styles.postJobButtonText}>Publish Jobs ({draftJobsCount})</Text>
+              </TouchableOpacity>
+            )}
+            {isVerifiedReferrer && currentVerifiedCompany && (
+              <TouchableOpacity 
+                style={styles.postJobButton}
+                onPress={() => navigation.navigate('PostReferralJob', {
+                  organizationId: currentVerifiedCompany.organizationId
+                })}
+              >
+                <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.postJobButtonText}>Post Job</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Open/Closed Tabs */}
@@ -613,6 +687,34 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   headerSubtitle: {
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  postJobButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  publishJobButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  postJobButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   // Open/Closed Tabs
   tabsContainer: {

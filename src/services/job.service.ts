@@ -435,14 +435,15 @@ export class JobService {
         add('JobID', jobId);
         add('OrganizationID', organizationID);
         add('PostedByUserID', postedByUserID);
-        add('PostedByType', 1); // 1 = User posted
+        // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
+        add('PostedByType', validated.postedByType === 'Referrer' ? 2 : 1);
         add('Title', validated.title);
         add('JobTypeID', validated.jobTypeID || 1);
         add('WorkplaceTypeID', workplaceTypeId);
         add('Department', department);
         add('Description', validated.description);
         add('Location', location);
-        add('ExternalJobID', externalJobId);
+        add('ExternalJobID', validated.externalJobID || externalJobId);
 
         // Optional (present in DB schema)
         const opt = (col: string, val: any) => { if (val !== undefined && val !== null && val !== '') add(col, val); };
@@ -499,6 +500,10 @@ export class JobService {
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
             WHERE j.JobID = @param0;
         `;
+
+        // Debug logging
+        console.log('📝 Job INSERT - Fields:', fields);
+        console.log('📝 Job INSERT - Values count:', values.length);
 
         try {
             const result = await dbService.executeQuery<Job>(insertQuery, values);
@@ -585,7 +590,7 @@ export class JobService {
         let dataQuery = `${personalizationCtes}
             SELECT
                 j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                j.OrganizationID,
+                j.OrganizationID, j.PostedByType,
                 j.Location, j.City, j.State, j.Country, j.IsRemote, 
                 j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                 j.PublishedAt, j.CreatedAt,
@@ -649,6 +654,7 @@ export class JobService {
                 o.Description as OrganizationDescription,
                 c.Symbol as CurrencySymbol,
                 CASE
+                    WHEN j.PostedByUserID IS NOT NULL AND j.PostedByType = 2 THEN 'Verified Referrer'
                     WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
                     WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                     ELSE 'External Recruiter'

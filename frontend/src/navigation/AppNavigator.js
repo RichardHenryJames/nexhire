@@ -42,6 +42,7 @@ import AskReferralScreen from "../screens/referral/AskReferralScreen";
 import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
 import ReferralTrackingScreen from "../screens/referral/ReferralTrackingScreen";
 import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
+import PostReferralJobScreen from "../screens/referral/PostReferralJobScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 // ?? NEW: Messaging screens
 import ConversationsScreen from "../screens/messaging/ConversationsScreen";
@@ -163,6 +164,9 @@ const linking = {
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
+          
+          // Post referral job with organizationId
+          PostReferralJob: "PostReferralJob/:organizationId",
 
           // Wallet screens
           Wallet: "wallet",
@@ -707,6 +711,22 @@ function MainStack() {
           headerShown: true,
           title: "Subscription Plans",
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="PostReferralJob"
+        component={PostReferralJobScreen}
+        options={{
+          headerShown: true,
+          title: "Post a Job to Refer",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
         }}
       />
       <Stack.Screen

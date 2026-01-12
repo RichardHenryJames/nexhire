@@ -1298,6 +1298,7 @@ BEGIN
         UpdatedBy UNIQUEIDENTIFIER NULL,
         IsActive BIT NULL DEFAULT ((1)),
         IsFortune500 BIT NOT NULL DEFAULT ((0)),
+        VerifiedReferrersCount INT NOT NULL DEFAULT ((0)),
         CONSTRAINT PK__Organiza__CADB0B7268D137E7 PRIMARY KEY (OrganizationID)
     );
     PRINT 'Created table Organizations';

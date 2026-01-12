@@ -532,7 +532,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   modalItemSelected: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   modalItemText: {
     fontSize: typography.sizes.md,

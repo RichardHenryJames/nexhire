@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform, Modal, FlatList, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,6 +8,16 @@ import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
+
+// Debounce hook for organization search
+const useDebounce = (value, delay = 300) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
 
 export default function CreateJobScreen({ navigation }) {
   const { colors } = useTheme();
@@ -32,12 +42,23 @@ export default function CreateJobScreen({ navigation }) {
   const [departmentSearch, setDepartmentSearch] = useState('');
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+
+  // Company/Organization search (for employers to select their company)
+  const [orgQuery, setOrgQuery] = useState('');
+  const debouncedOrgQuery = useDebounce(orgQuery, 300);
+  const [orgResults, setOrgResults] = useState([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const [employerCompany, setEmployerCompany] = useState(null); // Pre-loaded employer company
 
   const [jobData, setJobData] = useState({
     title: '',
     jobTypeID: null,
     department: '',
     description: '',
+    organizationId: null,
+    companyName: '',
     responsibilities: '',
     benefitsOffered: '',
     location: '',
@@ -50,6 +71,7 @@ export default function CreateJobScreen({ navigation }) {
     salaryRangeMin: '',
     salaryRangeMax: '',
     currencyID: null,
+    currencyCode: 'INR',
     salaryPeriod: 'Annual',
     compensationType: 'Salary',
     bonusDetails: '',
@@ -69,7 +91,59 @@ export default function CreateJobScreen({ navigation }) {
     internalNotes: ''
   });
 
-  useEffect(() => { loadReferenceData(); }, []);
+  useEffect(() => { loadReferenceData(); loadEmployerCompany(); }, []);
+
+  // Organization search effect
+  useEffect(() => {
+    if (debouncedOrgQuery && debouncedOrgQuery.length >= 2) {
+      searchOrganizations(debouncedOrgQuery);
+    } else {
+      setOrgResults([]);
+    }
+  }, [debouncedOrgQuery]);
+
+  const searchOrganizations = async (query) => {
+    setOrgLoading(true);
+    try {
+      const res = await refopenAPI.getOrganizations(query, 15);
+      if (res.success && Array.isArray(res.data)) {
+        setOrgResults(res.data);
+      } else {
+        setOrgResults([]);
+      }
+    } catch (e) {
+      console.error('Org search error:', e);
+      setOrgResults([]);
+    } finally {
+      setOrgLoading(false);
+    }
+  };
+
+  // Load employer's company info
+  const loadEmployerCompany = async () => {
+    try {
+      // Get employer's organization from their profile
+      const profileRes = await refopenAPI.getMyProfile();
+      if (profileRes?.success && profileRes.data?.employer) {
+        const emp = profileRes.data.employer;
+        const companyInfo = {
+          id: emp.OrganizationID || emp.organizationId,
+          name: emp.OrganizationName || emp.companyName || ''
+        };
+        setEmployerCompany(companyInfo);
+        // Pre-select the employer's company
+        if (companyInfo.id && companyInfo.name) {
+          setJobData(prev => ({
+            ...prev,
+            organizationId: companyInfo.id,
+            companyName: companyInfo.name
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load employer company:', e);
+    }
+  };
 
   const loadReferenceData = async () => {
     try {
@@ -149,6 +223,7 @@ export default function CreateJobScreen({ navigation }) {
 
   const validateForm = () => {
     const v = {};
+    if (!jobData.companyName?.trim()) v.companyName = 'Company is required';
     if (!jobData.title.trim()) v.title = 'Title required';
     else if (jobData.title.length < 5) v.title = 'Min 5 chars';
     if (!jobData.jobTypeID) v.jobTypeID = 'Job type required';
@@ -347,6 +422,28 @@ export default function CreateJobScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
+            
+            {/* Company Picker - Uses Modal for better UX */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Company <Text style={styles.required}>*</Text></Text>
+              <TouchableOpacity 
+                style={[styles.selectInput, errors.companyName && styles.inputError]} 
+                onPress={() => setShowOrgPicker(true)}
+              >
+                <Ionicons name="business" size={18} color={colors.gray500} />
+                <Text style={[styles.selectInputText, !jobData.companyName && styles.selectPlaceholder]}>
+                  {jobData.companyName || 'Select or search company'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={colors.gray500} />
+              </TouchableOpacity>
+              {employerCompany && jobData.organizationId === employerCompany.id && (
+                <Text style={styles.fieldHint}>
+                  <Ionicons name="checkmark-circle" size={12} color="#10B981" /> Your registered company
+                </Text>
+              )}
+              {errors.companyName && <Text style={styles.errorText}>{errors.companyName}</Text>}
+            </View>
+
             {renderInput('title','Job Title','e.g. Senior React Native Developer',{required:true,maxLength:200})}
             <View style={styles.fieldContainer}>
               <Text style={styles.fieldLabel}>Job Type *</Text>
@@ -396,23 +493,35 @@ export default function CreateJobScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Compensation</Text>
-            <View style={styles.salaryContainer}>
-              {renderInput('salaryRangeMin','Min Salary','800000',{keyboardType:'numeric'})}
-              {renderInput('salaryRangeMax','Max Salary','1200000',{keyboardType:'numeric'})}
-            </View>
-            {errors.salaryRange && <Text style={styles.errorText}>{errors.salaryRange}</Text>}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Currency (Default INR)</Text>
-              <View style={styles.pickerContainer}>
-                {currencies.map(c => {
-                  const selected = jobData.currencyID === c.CurrencyID;
-                  return (
-                    <TouchableOpacity key={c.CurrencyID} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, currencyID: c.CurrencyID }))}>
-                      <Text style={[styles.pickerButtonText, selected && styles.pickerButtonTextActive]}>{c.Code}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+              <Text style={styles.fieldLabel}>Salary Range (optional)</Text>
+              <View style={styles.salaryRowInputs}>
+                <TouchableOpacity
+                  style={styles.currencyButton}
+                  onPress={() => setShowCurrencyModal(true)}
+                >
+                  <Text style={styles.currencyText}>{jobData.currencyCode}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.gray500} />
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.input, styles.salaryInput]}
+                  value={jobData.salaryRangeMin}
+                  placeholder="Min"
+                  placeholderTextColor={colors.gray400}
+                  keyboardType="numeric"
+                  onChangeText={t => setJobData(prev => ({ ...prev, salaryRangeMin: t }))}
+                />
+                <Text style={styles.toText}>-</Text>
+                <TextInput
+                  style={[styles.input, styles.salaryInput]}
+                  value={jobData.salaryRangeMax}
+                  placeholder="Max"
+                  placeholderTextColor={colors.gray400}
+                  keyboardType="numeric"
+                  onChangeText={t => setJobData(prev => ({ ...prev, salaryRangeMax: t }))}
+                />
               </View>
+              {errors.salaryRange && <Text style={styles.errorText}>{errors.salaryRange}</Text>}
             </View>
             {renderSimpleChips('salaryPeriod','Salary Period',['Annual','Monthly','Hourly'])}
             {renderSimpleChips('compensationType','Compensation Type',['Salary','Contract','Commission'])}
@@ -599,6 +708,137 @@ export default function CreateJobScreen({ navigation }) {
           />
         </View>
       </Modal>
+
+      {/* Company/Organization Modal */}
+      <Modal visible={showOrgPicker} animationType="slide" onRequestClose={() => setShowOrgPicker(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => { setShowOrgPicker(false); setOrgQuery(''); }}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Company</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.modalSearchRow}>
+            <Ionicons name="search" size={18} color={colors.gray600} />
+            <TextInput
+              style={[styles.input, styles.modalSearchInput]}
+              placeholder="Search companies..."
+              placeholderTextColor={colors.gray400}
+              value={orgQuery}
+              onChangeText={setOrgQuery}
+              autoFocus
+            />
+          </View>
+
+          {orgLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.emptyText}>Searching...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={orgResults}
+              keyExtractor={(item) => String(item.id)}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item: org }) => {
+                const selected = org.id === jobData.organizationId;
+                return (
+                  <TouchableOpacity
+                    style={[styles.modalItem, selected && styles.modalItemSelected]}
+                    onPress={() => {
+                      setJobData(prev => ({ ...prev, organizationId: org.id, companyName: org.name }));
+                      setOrgQuery('');
+                      setShowOrgPicker(false);
+                    }}
+                  >
+                    <View style={styles.orgItemRow}>
+                      {org.logoURL ? (
+                        <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
+                      ) : (
+                        <View style={styles.orgLogoPlaceholderSmall}>
+                          <Ionicons name="business" size={16} color={colors.gray400} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.modalItemText, selected && styles.modalItemTextSelected]}>{org.name}</Text>
+                        {org.industry && org.industry !== 'Other' && (
+                          <Text style={styles.orgMetaSmall}>{org.industry}</Text>
+                        )}
+                      </View>
+                      {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="business" size={48} color={colors.gray400} />
+                  <Text style={styles.emptyText}>
+                    {orgQuery.length >= 2 ? 'No companies found' : 'Type at least 2 characters to search'}
+                  </Text>
+                  {orgQuery.length > 0 && (
+                    <TouchableOpacity 
+                      style={styles.useCustomButton}
+                      onPress={() => {
+                        setJobData(prev => ({ ...prev, organizationId: null, companyName: orgQuery }));
+                        setOrgQuery('');
+                        setShowOrgPicker(false);
+                      }}
+                    >
+                      <Text style={styles.useCustomButtonText}>Use "{orgQuery}" as company name</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* Currency Modal */}
+      <Modal visible={showCurrencyModal} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.currencyModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCurrencyModal(false)}
+        >
+          <View style={styles.currencyModalContent}>
+            <Text style={styles.currencyModalTitle}>Select Currency</Text>
+            <FlatList
+              data={currencies}
+              keyExtractor={item => String(item.CurrencyID)}
+              style={styles.currencyModalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.currencyModalItem,
+                    jobData.currencyID === item.CurrencyID && styles.currencyModalItemSelected,
+                  ]}
+                  onPress={() => {
+                    setJobData(prev => ({
+                      ...prev,
+                      currencyID: item.CurrencyID,
+                      currencyCode: item.Code,
+                    }));
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.currencyModalItemText,
+                      jobData.currencyID === item.CurrencyID && styles.currencyModalItemTextSelected,
+                    ]}
+                  >
+                    {item.Code} - {item.Name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -641,7 +881,77 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   toggleContainer:{backgroundColor:colors.background,borderWidth:1,borderColor:colors.border,borderRadius:8,padding:16,marginBottom:12},
   toggleLeft:{flexDirection:'row',alignItems:'center'},
   toggleText:{fontSize:typography.sizes.md,color:colors.text,marginLeft:12},
-  salaryContainer:{flexDirection:'row',gap:12},
+  salaryRowInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  salaryInput: {
+    flex: 1,
+  },
+  toText: {
+    color: colors.gray500,
+    fontSize: typography.sizes.sm,
+  },
+  currencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    gap: 4,
+  },
+  currencyText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.semibold,
+  },
+  currencyModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  currencyModalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+  },
+  currencyModalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  currencyModalList: {
+    maxHeight: 300,
+  },
+  currencyModalItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  currencyModalItemSelected: {
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  currencyModalItemText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  currencyModalItemTextSelected: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
   experienceContainer:{flexDirection:'row',gap:12},
   actionContainer:{flexDirection:'row',gap:12,marginTop:20},
   draftButton:{flex:1,padding:16,borderRadius:8,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,alignItems:'center'},
@@ -655,9 +965,103 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalSearchRow:{padding:16,flexDirection:'row',alignItems:'center',gap:10},
   modalSearchInput:{flex:1,paddingVertical:12},
   modalItem:{paddingHorizontal:20,paddingVertical:16,borderBottomWidth:1,borderBottomColor:colors.border,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  modalItemSelected:{backgroundColor:colors.primaryLight},
+  modalItemSelected:{backgroundColor:colors.surface,borderLeftWidth:3,borderLeftColor:colors.primary},
   modalItemText:{fontSize:typography.sizes.md,color:colors.text},
   modalItemTextSelected:{color:colors.primary,fontWeight:typography.weights.bold},
   emptyContainer:{flex:1,justifyContent:'center',alignItems:'center',padding:40,marginTop:40},
   emptyText:{fontSize:typography.sizes.md,color:colors.gray600,textAlign:'center',marginTop:16},
+  // Company dropdown styles
+  companyInput: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    padding: 0,
+  },
+  companyDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 250,
+    zIndex: 1000,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+      android: { elevation: 8 },
+      web: { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+    }),
+  },
+  dropdownScroll: {
+    maxHeight: 240,
+  },
+  dropdownLoading: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  dropdownEmpty: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    color: colors.gray500,
+    fontSize: typography.sizes.sm,
+  },
+  dropdownItemText: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  orgDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 10,
+  },
+  orgLogoSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.gray200,
+  },
+  orgLogoPlaceholderSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgMetaSmall: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    marginTop: 2,
+  },
+  fieldHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    marginTop: 4,
+  },
+  orgItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  useCustomButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  useCustomButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+  },
 });

@@ -23,6 +23,48 @@ import { PaginationParams } from '../types';
 export const createJob = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
         const jobData = await extractRequestBody(req);
+        
+        // Check if this is a referrer posting a job or an employer
+        const isReferrerPosting = jobData.postedByReferrer === true;
+        
+        if (isReferrerPosting) {
+            // Parse organizationID early to ensure it's valid
+            const orgIdForReferrer = parseInt(jobData.organizationID, 10);
+            if (isNaN(orgIdForReferrer)) {
+                return { status: 400, jsonBody: { success: false, error: 'Invalid organization ID' } };
+            }
+            
+            // Referrer posting a job - verify they are a verified referrer
+            const verifiedReferrerQuery = `
+                SELECT TOP 1 we.OrganizationID, o.Name as OrganizationName
+                FROM WorkExperiences we
+                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+                INNER JOIN Users u ON a.UserID = u.UserID
+                INNER JOIN Organizations o ON we.OrganizationID = o.OrganizationID
+                WHERE u.UserID = @param0 
+                  AND we.IsCurrent = 1 
+                  AND we.CompanyEmailVerified = 1
+                  AND we.OrganizationID = @param1
+            `;
+            const verifiedResult = await dbService.executeQuery(verifiedReferrerQuery, [user.userId, orgIdForReferrer]);
+            if (!verifiedResult.recordset || verifiedResult.recordset.length === 0) {
+                return { status: 403, jsonBody: { success: false, error: 'You must be a verified referrer at this company to post jobs' } };
+            }
+            
+            if (!jobData.title || !jobData.description) {
+                return { status: 400, jsonBody: { success: false, error: 'Title and description are required' } };
+            }
+            
+            // Create job with referrer context - always in Draft status
+            const job = await JobService.createJob({
+                ...jobData,
+                status: 'Draft', // Force draft status for referrer-posted jobs
+                postedByType: 'Referrer'
+            }, user.userId, String(orgIdForReferrer));
+            return { status: 201, jsonBody: successResponse(job, 'Job created successfully. It will be reviewed before publishing.') };
+        }
+        
+        // Regular employer posting
         if (user.userType !== 'Employer') {
             return { status: 403, jsonBody: { success: false, error: 'Only employers can post jobs' } };
         }
@@ -59,7 +101,7 @@ export const createJob = withAuth(async (req: HttpRequest, context: InvocationCo
         }
         return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error occurred' } };
     }
-}, ['write:jobs']);
+}); // No permission check - controller handles authorization based on user type and referrer status
 
 /**
  * Get all active jobs with pagination

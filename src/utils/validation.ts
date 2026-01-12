@@ -156,7 +156,9 @@ export const jobCreateSchema = Joi.object({
     timeZone: Joi.string().max(50).optional(),
     language: Joi.string().max(50).default('English'),
     tags: Joi.string().max(100).optional(),
-    internalNotes: Joi.string().max(100).optional()
+    internalNotes: Joi.string().max(100).optional(),
+    postedByType: Joi.string().valid('Employer', 'Referrer').optional(),
+    externalJobID: Joi.string().max(100).optional()
 });
 
 export const organizationCreateSchema = Joi.object({

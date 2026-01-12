@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
@@ -144,6 +144,7 @@ export default function AddWorkExperienceModal({
     achievements: '',
     salary: '',
     currencyId: null,
+    currencyCode: 'INR',
     salaryFrequency: '',
   });
 
@@ -171,6 +172,7 @@ export default function AddWorkExperienceModal({
 
   // Currencies
   const [currencies, setCurrencies] = useState([]);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   // Email verification state
   const [companyEmail, setCompanyEmail] = useState('');
@@ -212,6 +214,7 @@ export default function AddWorkExperienceModal({
           achievements: editingItem.Achievements || '',
           salary: editingItem.Salary?.toString() || '',
           currencyId: editingItem.CurrencyID || null,
+          currencyCode: editingItem.CurrencyCode || 'INR',
           salaryFrequency: editingItem.SalaryFrequency || '',
         });
         setUserLevelVerified(editingItem.CompanyEmailVerified === 1 || editingItem.CompanyEmailVerified === true);
@@ -234,6 +237,7 @@ export default function AddWorkExperienceModal({
           achievements: '',
           salary: '',
           currencyId: null,
+          currencyCode: 'INR',
           salaryFrequency: '',
         });
         setUserLevelVerified(false);
@@ -928,27 +932,23 @@ export default function AddWorkExperienceModal({
               />
 
               <Text style={styles.label}>Salary</Text>
-              <TextInput 
-                style={styles.input} 
-                value={form.salary} 
-                onChangeText={(t) => setForm({ ...form, salary: t })} 
-                placeholder="e.g., 120000" 
-                placeholderTextColor={colors.gray400}
-                keyboardType="numeric" 
-              />
-
-              <Text style={styles.label}>Currency</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                <View style={styles.inlineChoices}>
-                  {(currencies || []).map((c) => (
-                    <TouchableOpacity key={c.CurrencyID} style={[styles.choicePill, form.currencyId === c.CurrencyID && styles.choicePillActive]} onPress={() => setForm({ ...form, currencyId: c.CurrencyID })}>
-                      <Text style={[styles.choicePillText, form.currencyId === c.CurrencyID && styles.choicePillTextActive]}>
-                        {c.Code}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              <View style={styles.salaryRowInputs}>
+                <TouchableOpacity
+                  style={styles.currencyButton}
+                  onPress={() => setShowCurrencyModal(true)}
+                >
+                  <Text style={styles.currencyText}>{form.currencyCode}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.gray500} />
+                </TouchableOpacity>
+                <TextInput 
+                  style={[styles.input, styles.salaryInput]} 
+                  value={form.salary} 
+                  onChangeText={(t) => setForm({ ...form, salary: t })} 
+                  placeholder="e.g., 120000" 
+                  placeholderTextColor={colors.gray400}
+                  keyboardType="numeric" 
+                />
+              </View>
 
               {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
 
@@ -966,6 +966,49 @@ export default function AddWorkExperienceModal({
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* Currency Modal */}
+      <Modal visible={showCurrencyModal} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.currencyModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCurrencyModal(false)}
+        >
+          <View style={styles.currencyModalContent}>
+            <Text style={styles.currencyModalTitle}>Select Currency</Text>
+            <FlatList
+              data={currencies}
+              keyExtractor={item => String(item.CurrencyID)}
+              style={styles.currencyModalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.currencyModalItem,
+                    form.currencyId === item.CurrencyID && styles.currencyModalItemSelected,
+                  ]}
+                  onPress={() => {
+                    setForm(prev => ({
+                      ...prev,
+                      currencyId: item.CurrencyID,
+                      currencyCode: item.Code,
+                    }));
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.currencyModalItemText,
+                      form.currencyId === item.CurrencyID && styles.currencyModalItemTextSelected,
+                    ]}
+                  >
+                    {item.Code} - {item.Name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       <VerifiedReferrerOverlay
@@ -1133,6 +1176,74 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   choicePillTextActive: {
     color: colors.white,
+  },
+  // Salary with currency dropdown styles
+  salaryRowInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  salaryInput: {
+    flex: 1,
+  },
+  currencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    gap: 4,
+  },
+  currencyText: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  currencyModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  currencyModalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+  },
+  currencyModalTitle: {
+    fontSize: typography.sizes?.lg || 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  currencyModalList: {
+    maxHeight: 300,
+  },
+  currencyModalItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  currencyModalItemSelected: {
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  currencyModalItemText: {
+    fontSize: typography.sizes?.md || 16,
+    color: colors.text,
+  },
+  currencyModalItemTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
   },
   rowBetween: {
     flexDirection: 'row',

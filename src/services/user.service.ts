@@ -689,6 +689,16 @@ export class UserService {
             // Get skills and preferences info
             const profileInsights = await this.getProfileInsights(applicantId);
 
+            // Get draft jobs count for verified referrers
+            let draftJobs = 0;
+            if (isVerifiedReferrer) {
+                const draftJobsResult = await dbService.executeQuery(
+                    `SELECT COUNT(*) as DraftCount FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Draft'`,
+                    [userId]
+                );
+                draftJobs = draftJobsResult.recordset?.[0]?.DraftCount || 0;
+            }
+
             return {
                 // Core application metrics
                 totalApplications: baseStats.TotalApplications || 0,
@@ -741,7 +751,10 @@ export class UserService {
                 },
                 
                 // Verified referrer status
-                isVerifiedReferrer: isVerifiedReferrer
+                isVerifiedReferrer: isVerifiedReferrer,
+                
+                // Draft jobs count (for verified referrers who post jobs)
+                draftJobs: draftJobs
             };
 
         } catch (error) {

@@ -854,7 +854,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   modalItemSelected: {
-    backgroundColor: colors.primary + '08',
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   modalItemText: {
     fontSize: typography.sizes.md,
