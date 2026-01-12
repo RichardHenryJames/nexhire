@@ -1369,7 +1369,7 @@ export default function ProfileScreen({ navigation, route }) {
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Invite</Text>
-                    <Text style={styles.actionButtonSubtext}>Get ₹50</Text>
+                    <Text style={styles.actionButtonSubtext}>Get ₹25</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -1707,9 +1707,9 @@ export default function ProfileScreen({ navigation, route }) {
                   <Text style={styles.stepNumberText}>3</Text>
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Both Get ₹50!</Text>
+                  <Text style={styles.stepTitle}>Both Get ₹25!</Text>
                   <Text style={styles.stepDescription}>
-                    Your friend gets ₹50 on signup, you get ₹50 when they join
+                    Your friend gets ₹25 on signup, you get ₹25 when they join
                   </Text>
                 </View>
               </View>

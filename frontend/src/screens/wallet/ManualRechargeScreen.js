@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Clipboard,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -472,6 +473,34 @@ const ManualRechargeScreen = ({ navigation }) => {
       flex: 1,
       lineHeight: 20,
     },
+    qrSection: {
+      alignItems: 'center',
+      paddingVertical: 16,
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border + '50',
+    },
+    qrTitle: {
+      fontSize: typography.sizes?.md || 16,
+      fontWeight: typography.weights?.semibold || '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    qrContainer: {
+      backgroundColor: '#FFF',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    qrImage: {
+      width: 180,
+      height: 180,
+    },
+    poweredByText: {
+      fontSize: typography.sizes?.xs || 12,
+      color: colors.gray500,
+      fontStyle: 'italic',
+    },
     emptyText: {
       textAlign: 'center',
       color: colors.gray400,
@@ -530,6 +559,19 @@ const ManualRechargeScreen = ({ navigation }) => {
               >
                 <Ionicons name="copy-outline" size={16} color={colors.gray400} />
               </TouchableOpacity>
+            </View>
+
+            {/* QR Code Section */}
+            <View style={styles.qrSection}>
+              <Text style={styles.qrTitle}>Or Scan QR to Pay</Text>
+              <View style={styles.qrContainer}>
+                <Image 
+                  source={require('../../../assets/payment-qr.png')} 
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.poweredByText}>Refopen is powered by Rocana</Text>
             </View>
 
             <View style={styles.noteContainer}>

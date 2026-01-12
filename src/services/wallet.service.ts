@@ -682,6 +682,11 @@ export class WalletService {
     try {
       const WELCOME_BONUS_AMOUNT = await PricingService.getSetting('WELCOME_BONUS');
 
+      // Skip if welcome bonus is disabled (set to 0)
+      if (!WELCOME_BONUS_AMOUNT || WELCOME_BONUS_AMOUNT <= 0) {
+        return { success: false, amount: 0 };
+      }
+
       // Check if bonus already given
       const checkQuery = `
         SELECT WalletBonusGiven 
@@ -726,7 +731,12 @@ export class WalletService {
     referrerId: string
   ): Promise<{ success: boolean; amount: number }> {
     try {
-      const REFERRAL_BONUS_AMOUNT = 50;
+      const REFERRAL_BONUS_AMOUNT = await PricingService.getSetting('REFERRAL_SIGNUP_BONUS');
+
+      // Skip if referral bonus is disabled (set to 0)
+      if (!REFERRAL_BONUS_AMOUNT || REFERRAL_BONUS_AMOUNT <= 0) {
+        return { success: false, amount: 0 };
+      }
 
       // Credit bonus to new user
       await this.creditBonus(

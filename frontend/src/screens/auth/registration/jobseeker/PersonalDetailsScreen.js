@@ -693,22 +693,6 @@ styles.selectionButton,
             </Text>
           </View>
 
-          {/* 🎉 NEW: Welcome Bonus Banner */}
-          <View style={styles.welcomeBonusBanner}>
-            <View style={styles.welcomeBonusIconContainer}>
-              <Ionicons name="gift" size={28} color="#FFD700" />
-            </View>
-            <View style={styles.welcomeBonusContent}>
-              <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
-              <Text style={styles.welcomeBonusText}>
-                RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
-              </Text>
-              <Text style={styles.welcomeBonusSubtext}>
-                Use it to get referrals, AI job search and more
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.form}>
             <View style={styles.row}>
               <View style={styles.halfInput}>
@@ -752,7 +736,7 @@ styles.selectionButton,
               <View style={styles.referralCodeHint}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.success} />
                 <Text style={styles.referralCodeHintText}>
-                  Have an invite code? Get ₹50 bonus when you sign up!
+                  Have an invite code? Get ₹25 bonus when you sign up!
                 </Text>
               </View>
             </View>

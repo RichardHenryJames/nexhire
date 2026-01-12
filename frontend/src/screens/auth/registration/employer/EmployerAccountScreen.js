@@ -341,22 +341,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
           }
         </Text>
 
-        {/* 🎉 Welcome Bonus Banner */}
-        <View style={styles.welcomeBonusBanner}>
-          <View style={styles.welcomeBonusIconContainer}>
-            <Ionicons name="gift" size={28} color="#FFD700" />
-          </View>
-          <View style={styles.welcomeBonusContent}>
-            <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
-            <Text style={styles.welcomeBonusText}>
-              Get <Text style={styles.welcomeBonusAmount}>₹50</Text> wallet bonus on signup!
-            </Text>
-            <Text style={styles.welcomeBonusSubtext}>
-              Use it to post jobs, AI candidate search & more
-            </Text>
-          </View>
-        </View>
-
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
@@ -427,7 +411,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={styles.referralCodeHint}>
             <Ionicons name="information-circle-outline" size={14} color={colors.success} />
             <Text style={styles.referralCodeHintText}>
-              Have a referral code? Get ₹50 bonus when you sign up!
+              Have a referral code? Get ₹25 bonus when you sign up!
             </Text>
           </View>
         </View>
