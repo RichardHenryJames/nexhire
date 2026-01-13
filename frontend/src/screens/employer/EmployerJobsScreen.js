@@ -44,6 +44,38 @@ export default function EmployerJobsScreen({ navigation, route }) {
   
   const abortRef = useRef(null);
 
+  // ✅ Smart back navigation - handle hard refresh scenario
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ paddingLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            
+            // If we have more than 1 route in the stack, go back normally
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              // Hard refresh scenario - navigate to Referrals tab
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Referrals'
+                }
+              });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   // No redirect needed - allow all users to view their own jobs (employers and verified referrers who posted jobs)
   // The screen will show only jobs posted by the current user
 
@@ -87,11 +119,10 @@ export default function EmployerJobsScreen({ navigation, route }) {
         pageSize: pagination.pageSize,
         status: activeTab === 'draft' ? 'Draft' : 'Published',
         search: search.trim() || undefined,
-        postedByUserId: user.userId || user.id || user.sub || user.UserID
       };
       
-      
-      const res = await refopenAPI.getOrganizationJobs(params, { signal: controller.signal });
+      // Use getMyPostedJobs - works for both employers and referrers
+      const res = await refopenAPI.getMyPostedJobs(params);
       
       
       if (res?.success) {

@@ -31,6 +31,7 @@ import {
   closeJob,
   searchJobs,
   getJobsByOrganization,
+  getMyPostedJobs,
   getCurrencies,
   getAIRecommendedJobs,
   getAIJobFilters,
@@ -613,6 +614,14 @@ app.http("jobs", {
   },
 });
 
+// My posted jobs endpoint (for referrers and employers) - MUST be before jobs/{id}
+app.http("my-posted-jobs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/my-posted",
+  handler: withErrorHandling(getMyPostedJobs),
+});
+
 app.http("jobs-by-id", {
   methods: ["GET", "PUT", "DELETE", "OPTIONS"],
   authLevel: "anonymous",
@@ -642,7 +651,7 @@ app.http("jobs-close", {
   handler: withErrorHandling(closeJob),
 });
 
-// NEW: Organization jobs endpoint for employers
+// Organization jobs endpoint for employers
 app.http("organization-jobs", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",

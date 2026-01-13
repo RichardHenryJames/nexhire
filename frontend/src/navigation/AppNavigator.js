@@ -167,6 +167,9 @@ const linking = {
           
           // Post referral job with organizationId
           PostReferralJob: "PostReferralJob/:organizationId",
+          
+          // Employer Jobs screen for verified referrers to view their draft/published jobs
+          EmployerJobs: "my-jobs",
 
           // Wallet screens
           Wallet: "wallet",
@@ -719,6 +722,23 @@ function MainStack() {
         options={{
           headerShown: true,
           title: "Post a Job to Refer",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+        }}
+      />
+      {/* EmployerJobs - Separate stack screen for verified referrers to view their draft/published jobs */}
+      <Stack.Screen
+        name="EmployerJobs"
+        component={EmployerJobsScreen}
+        options={{
+          headerShown: true,
+          title: "My Posted Jobs",
           headerBackTitleVisible: false,
           headerStyle: {
             backgroundColor: colors.surface,

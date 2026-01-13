@@ -956,6 +956,66 @@ export class JobService {
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
+    // Get jobs posted by a specific user (for referrers and employers)
+    static async getJobsByPostedUser(userId: string, params: PaginationParams & { status?: string; search?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
+        const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search } = params as any;
+
+        const allowedSort: Record<string, string> = {
+            CreatedAt: 'j.CreatedAt',
+            UpdatedAt: 'j.UpdatedAt',
+            PublishedAt: 'j.PublishedAt',
+            Title: 'j.Title'
+        };
+        const normalizedSort = allowedSort[sortBy] || 'j.CreatedAt';
+        const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+        let whereClause = 'WHERE j.PostedByUserID = @param0';
+        const queryParams: any[] = [userId];
+        let paramIndex = 1;
+
+        if (status) {
+            const normalizedStatus = String(status).trim();
+            if (['Draft', 'Published', 'Closed'].includes(normalizedStatus)) {
+                whereClause += ` AND UPPER(RTRIM(LTRIM(j.Status))) = UPPER(@param${paramIndex})`;
+                queryParams.push(normalizedStatus);
+                paramIndex++;
+            }
+        }
+
+        if (search) {
+            const tokens = String(search).trim().split(/\s+/).filter(Boolean);
+            if (tokens.length) {
+                const tokenClauses: string[] = [];
+                tokens.forEach(tok => {
+                    tokenClauses.push(`(j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex})`);
+                    queryParams.push(`%${tok}%`);
+                    paramIndex += 1;
+                });
+                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+            }
+        }
+
+        const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
+        const countResult = await dbService.executeQuery(countQuery, queryParams);
+        const total = countResult.recordset[0]?.total || 0;
+        const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+        const offset = (page - 1) * pageSize;
+        const dataQuery = `
+            SELECT
+                j.*, jt.Value as JobTypeName, o.Name as OrganizationName
+            FROM Jobs j
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+            LEFT JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            ${whereClause}
+            ORDER BY ${normalizedSort} ${normalizedOrder}
+            OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+        queryParams.push(offset, pageSize);
+
+        const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
+        return { jobs: dataResult.recordset || [], total, totalPages };
+    }
+
     // Get currencies (reference data) - unchanged
     static async getCurrencies(): Promise<any[]> {
         const query = 'SELECT * FROM Currencies WHERE IsActive = 1 ORDER BY Code';

@@ -327,6 +327,42 @@ export const getJobsByOrganization = withAuth(async (req: HttpRequest, context: 
     }
 }, ['read:jobs']);
 
+// Get jobs posted by the current user (for referrers and employers)
+export const getMyPostedJobs = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
+    try {
+        const url = new URL(req.url);
+        const page = parseInt(url.searchParams.get('page') || '1');
+        const pageSize = parseInt(url.searchParams.get('pageSize') || '50');
+        const status = url.searchParams.get('status') || undefined;
+        const sortBy = url.searchParams.get('sortBy') || 'CreatedAt';
+        const sortOrderParam = url.searchParams.get('sortOrder') || 'desc';
+        const sortOrder = (sortOrderParam === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+        const search = url.searchParams.get('search') || undefined;
+
+        const result = await JobService.getJobsByPostedUser(user.userId, {
+            page,
+            pageSize,
+            status,
+            sortBy,
+            sortOrder,
+            search
+        });
+
+        return {
+            status: 200,
+            jsonBody: successResponse(result.jobs, 'Posted jobs retrieved successfully', {
+                page,
+                pageSize,
+                total: result.total,
+                totalPages: result.totalPages
+            })
+        };
+    } catch (error) {
+        console.error('Error in getMyPostedJobs:', error);
+        return { status: 500, jsonBody: { success: false, error: 'Internal server error', message: 'Failed to retrieve posted jobs' } };
+    }
+});
+
 // References
 
 export const getCurrencies = withErrorHandling(async (): Promise<HttpResponseInit> => {

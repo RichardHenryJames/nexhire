@@ -2405,6 +2405,48 @@ if (!resumeId) {
     }
   }
 
+  // ✅ NEW: Get jobs posted by the current user (for referrers - doesn't require employer profile)
+  async getMyPostedJobs(params = {}) {
+    if (!this.token) {
+      console.error('❌ getMyPostedJobs: No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+
+    try {
+      const userId = this.getUserIdFromToken();
+      if (!userId) {
+        return { success: false, error: 'Unable to identify user' };
+      }
+
+      // Build query parameters
+      const queryParams = {
+        page: params.page || 1,
+        pageSize: params.pageSize || 50,
+        sortBy: params.sortBy || 'CreatedAt',
+        sortOrder: params.sortOrder || 'desc',
+        status: params.status || undefined,
+        postedByUserId: userId,
+        ...params
+      };
+
+      // Clean undefined/null values
+      const cleaned = {};
+      for (const [k, v] of Object.entries(queryParams)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleaned[k] = v;
+        }
+      }
+
+      const queryString = new URLSearchParams(cleaned).toString();
+      const endpoint = `/jobs/my-posted${queryString ? `?${queryString}` : ''}`;
+      
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('❌ getMyPostedJobs error:', error);
+      return { success: false, error: error.message || 'Failed to fetch posted jobs' };
+    }
+  }
+
   // ✅ NEW: Publish a draft job
   async publishJob(jobId) {
     

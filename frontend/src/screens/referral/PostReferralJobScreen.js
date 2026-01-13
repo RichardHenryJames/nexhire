@@ -94,6 +94,38 @@ export default function PostReferralJobScreen({ navigation, route }) {
     loadReferenceData();
   }, []);
 
+  // ✅ Smart back navigation - handle hard refresh scenario
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity 
+          style={{ paddingLeft: 16 }} 
+          onPress={() => {
+            const navState = navigation.getState();
+            const routes = navState?.routes || [];
+            const currentIndex = navState?.index || 0;
+            
+            // If we have more than 1 route in the stack, go back normally
+            if (routes.length > 1 && currentIndex > 0) {
+              navigation.goBack();
+            } else {
+              // Hard refresh scenario - navigate to Referrals tab
+              navigation.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Referrals'
+                }
+              });
+            }
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   // Fetch organization details when organizationId is available
   useEffect(() => {
     if (organizationId) {
@@ -190,12 +222,13 @@ export default function PostReferralJobScreen({ navigation, route }) {
     const v = {};
     // Company is required (should come from verified work experience)
     if (!jobData.companyName?.trim()) v.company = 'Company is required';
-    if (!jobData.externalJobId?.trim()) v.externalJobId = 'Job ID is required';
-    if (!jobData.title.trim()) v.title = 'Job title is required';
-    else if (jobData.title.length < 3) v.title = 'Min 3 characters';
+    if (!jobData.externalJobId?.trim()) v.externalJobId = 'Job ID is required (min 2 characters)';
+    else if (jobData.externalJobId.trim().length < 2) v.externalJobId = 'Job ID must be at least 2 characters';
+    if (!jobData.title.trim()) v.title = 'Job title is required (min 3 characters)';
+    else if (jobData.title.length < 3) v.title = 'Job title must be at least 3 characters';
     if (!jobData.department?.trim()) v.department = 'Department is required';
-    if (!jobData.description.trim()) v.description = 'Description is required';
-    else if (jobData.description.length < 20) v.description = 'Min 20 characters';
+    if (!jobData.description.trim()) v.description = 'Description is required (min 20 characters)';
+    else if (jobData.description.length < 20) v.description = `Description must be at least 20 characters (${jobData.description.length}/20)`;
     
     if (jobData.salaryRangeMin && jobData.salaryRangeMax) {
       const min = parseFloat(jobData.salaryRangeMin);
@@ -812,6 +845,7 @@ const createStyles = (colors, responsive = {}) =>
     },
     halfInput: {
       flex: 1,
+      minWidth: 0,
     },
     salaryInput: {
       flex: 1,
@@ -868,6 +902,21 @@ const createStyles = (colors, responsive = {}) =>
       gap: 8,
     },
     publishButtonText: {
+      color: '#FFFFFF',
+      fontSize: typography.sizes?.md || 16,
+      fontWeight: '600',
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 24,
+    },
+    submitButtonText: {
       color: '#FFFFFF',
       fontSize: typography.sizes?.md || 16,
       fontWeight: '600',
