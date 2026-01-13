@@ -31,8 +31,10 @@ export default function PublishJobConfirmModal({
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   
-  const balanceAfter = currentBalance - requiredAmount;
-  const hasInsufficientBalance = currentBalance < requiredAmount;
+  // Referrer-posted jobs are FREE - no cost
+  const effectiveAmount = isPostedByReferrer ? 0 : requiredAmount;
+  const balanceAfter = currentBalance - effectiveAmount;
+  const hasInsufficientBalance = !isPostedByReferrer && (currentBalance < requiredAmount);
 
   if (hasInsufficientBalance) {
     return (
@@ -91,7 +93,9 @@ export default function PublishJobConfirmModal({
             <View style={styles.costCard}>
               <View style={styles.costRow}>
                 <Text style={styles.costLabel}>Cost</Text>
-                <Text style={styles.costAmount}>₹{requiredAmount.toFixed(2)}</Text>
+                <Text style={[styles.costAmount, isPostedByReferrer && { color: '#10b981' }]}>
+                  {isPostedByReferrer ? 'FREE' : `₹${requiredAmount.toFixed(2)}`}
+                </Text>
               </View>
               
               <View style={styles.costRow}>

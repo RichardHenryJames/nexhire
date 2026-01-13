@@ -291,6 +291,7 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         salaryMin: parseNumber(query.get('salaryMin'), 0) || undefined,
         salaryMax: parseNumber(query.get('salaryMax'), 0) || undefined,
         statusFilter: parseNumber(query.get('statusFilter'), 0) || undefined,
+        postedByType: (() => { const v = query.get('postedByType'); if (v === null || v === '') return undefined; const n = parseInt(v, 10); return isNaN(n) ? undefined : n; })(),
         category: query.get('category') || undefined,
         company: query.get('company') || undefined,
         datePosted: query.get('datePosted') || undefined,

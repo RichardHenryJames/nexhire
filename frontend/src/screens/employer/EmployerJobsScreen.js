@@ -172,10 +172,11 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const handlePublishConfirmProceed = async () => {
     setShowPublishConfirmModal(false);
-    const { jobId, currentBalance, requiredAmount } = publishConfirmData;
+    const { jobId, currentBalance, requiredAmount, postedByReferrer } = publishConfirmData;
 
-    // Double check balance (though modal handles UI, logic safety)
-    if (currentBalance < requiredAmount) {
+    // Referrer-posted jobs are FREE - skip wallet check
+    // Only check balance for employer-posted jobs
+    if (!postedByReferrer && currentBalance < requiredAmount) {
       setWalletModalData({ currentBalance, requiredAmount });
       setShowWalletModal(true);
       return;

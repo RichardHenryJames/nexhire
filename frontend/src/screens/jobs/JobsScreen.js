@@ -72,7 +72,8 @@ const EMPTY_FILTERS = {
   experienceMin: '',
   experienceMax: '',
   postedWithinDays: null,
-  department: ''
+  department: '',
+  postedByType: null
 };
 
 // Helper: detect if any filters are active (compared to EMPTY_FILTERS)
@@ -758,6 +759,7 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
+        if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
     
         // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
         if (filterF500) apiFilters.isFortune500 = true;
@@ -882,6 +884,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (filters.experienceMax) apiFilters.experienceMax = filters.experienceMax;
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
+      if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
       
       // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
       if (filterF500) apiFilters.isFortune500 = true;
@@ -1663,6 +1666,23 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                       {quickCompanyLabel}
                     </Text>
                     <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, filters.postedByType === 2 && styles.quickFilterActive]}
+                    onPress={() => {
+                      const newValue = filters.postedByType === 2 ? null : 2;
+                      setFilters(prev => ({ ...prev, postedByType: newValue }));
+                      setPagination(p => ({ ...p, page: 1 }));
+                      triggerReload();
+                    }}
+                  >
+                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? '#0066cc' : '#666'} style={{ marginRight: 4 }} />
+                    <Text style={[styles.quickFilterText, filters.postedByType === 2 && styles.quickFilterActiveText]}>
+                      Referrer Jobs
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>

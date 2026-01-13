@@ -391,6 +391,16 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🧑‍💼 PostedByType filter - filter by who posted the job (0=Scraped, 1=Employer, 2=Referrer)
+        if (f.postedByType !== undefined && f.postedByType !== null && f.postedByType !== '') {
+            const postedByTypeValue = parseInt(String(f.postedByType), 10);
+            if (!isNaN(postedByTypeValue) && [0, 1, 2].includes(postedByTypeValue)) {
+                whereClause += ` AND j.PostedByType = @param${paramIndex}`;
+                queryParams.push(postedByTypeValue);
+                paramIndex++;
+            }
+        }
+
         return { whereClause, queryParams, paramIndex };
     }
 
@@ -783,11 +793,17 @@ export class JobService {
         }
         // If job.PostedByUserID === userId, user is the original poster (employer OR referrer), allow publish
 
-        // Charge ₹50 to publish a draft job
+        // Check if this is a referrer-posted job (FREE to publish) or employer-posted job (₹50 fee)
+        // PostedByType: 0 = Scraped, 1 = Employer, 2 = Referrer
+        const isReferrerPostedJob = job.PostedByType === 2;
         const PUBLISH_JOB_FEE = 50;
-        const wallet = await WalletService.getOrCreateWallet(userId);
-        if (wallet.Balance < PUBLISH_JOB_FEE) {
-            throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
+
+        // Only charge for employer-posted jobs, referrer jobs are FREE
+        if (!isReferrerPostedJob) {
+            const wallet = await WalletService.getOrCreateWallet(userId);
+            if (wallet.Balance < PUBLISH_JOB_FEE) {
+                throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
+            }
         }
 
         // Update job status to Published
@@ -805,29 +821,32 @@ export class JobService {
 
         await dbService.executeQuery(query, [jobId]);
 
-        // Deduct fee after successful publish; if debit fails, revert publish.
-        try {
-            await WalletService.debitWallet(
-                userId,
-                PUBLISH_JOB_FEE,
-                'JOB_PUBLISH',
-                `Publish job - ${job.Title || jobId}`
-            );
-        } catch (error) {
+        // Deduct fee after successful publish (only for employer-posted jobs)
+        // Referrer-posted jobs are FREE
+        if (!isReferrerPostedJob) {
             try {
-                await dbService.executeQuery(
-                    `UPDATE Jobs
-                     SET Status = 'Draft',
-                         PublishedAt = NULL,
-                         ExpiresAt = NULL,
-                         UpdatedAt = GETUTCDATE()
-                     WHERE JobID = @param0`,
-                    [jobId]
+                await WalletService.debitWallet(
+                    userId,
+                    PUBLISH_JOB_FEE,
+                    'JOB_PUBLISH',
+                    `Publish job - ${job.Title || jobId}`
                 );
-            } catch (revertError) {
-                console.error('Failed to revert job after wallet debit failure:', revertError);
+            } catch (error) {
+                try {
+                    await dbService.executeQuery(
+                        `UPDATE Jobs
+                         SET Status = 'Draft',
+                             PublishedAt = NULL,
+                             ExpiresAt = NULL,
+                             UpdatedAt = GETUTCDATE()
+                         WHERE JobID = @param0`,
+                        [jobId]
+                    );
+                } catch (revertError) {
+                    console.error('Failed to revert job after wallet debit failure:', revertError);
+                }
+                throw error;
             }
-            throw error;
         }
 
         const publishedJob = await this.getJobById(jobId);
@@ -1005,7 +1024,13 @@ export class JobService {
         const offset = (page - 1) * pageSize;
         const dataQuery = `
             SELECT
-                j.*, jt.Value as JobTypeName, o.Name as OrganizationName
+                j.JobID, j.Title, j.Status, j.JobTypeID, j.WorkplaceTypeID,
+                j.OrganizationID, j.PostedByType, j.PostedByUserID,
+                j.Location, j.City, j.State, j.Country, j.IsRemote,
+                j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+                j.PublishedAt, j.CreatedAt, j.UpdatedAt,
+                jt.Value as JobTypeName, o.Name as OrganizationName,
+                ISNULL(o.LogoURL, '') as OrganizationLogo
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             LEFT JOIN Organizations o ON j.OrganizationID = o.OrganizationID

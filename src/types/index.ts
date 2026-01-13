@@ -75,6 +75,7 @@ export interface Job {
     JobID: string;
     OrganizationID: string;
     PostedByUserID: string;
+    PostedByType?: number; // 0 = Scraped, 1 = Employer, 2 = Referrer
     Title: string;
     JobTypeID: number;
     Level?: string;
