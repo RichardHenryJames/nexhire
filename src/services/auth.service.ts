@@ -138,7 +138,7 @@ export class AuthService {
             case appConstants.userTypes.JOB_SEEKER:
                 return [
                     'read:profile', 'write:profile',
-                    'read:jobs', 'apply:jobs',
+                    'read:jobs', 'apply:jobs', 'write:jobs', // write:jobs for verified referrers
                     'read:applications'
                 ];
             default:

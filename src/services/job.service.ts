@@ -768,8 +768,9 @@ export class JobService {
             throw new ValidationError('Only draft jobs can be published');
         }
 
-        // Check permissions
+        // Check permissions - user must be the one who posted the job OR an employer at that org
         if (job.PostedByUserID !== userId) {
+            // Check if user is an employer at the same organization
             const permissionQuery = `
                 SELECT 1 FROM Employers e
                 WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
@@ -780,6 +781,7 @@ export class JobService {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
         }
+        // If job.PostedByUserID === userId, user is the original poster (employer OR referrer), allow publish
 
         // Charge ₹50 to publish a draft job
         const PUBLISH_JOB_FEE = 50;
@@ -1064,7 +1066,7 @@ export class JobService {
             let dataQuery = `${personalizationCtes}
                 SELECT
                     j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                    j.OrganizationID,
+                    j.OrganizationID, j.PostedByType,
                     j.Location, j.City, j.Country, j.IsRemote, 
                     j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                     j.PublishedAt, j.CreatedAt,

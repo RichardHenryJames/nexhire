@@ -141,7 +141,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const onSearchSubmit = () => load(1);
 
-  const initiatePublishJob = async (jobId, jobTitle) => {
+  const initiatePublishJob = async (jobId, jobTitle, postedByReferrer = false) => {
     const PUBLISH_JOB_FEE = 50;
 
     try {
@@ -156,7 +156,8 @@ export default function EmployerJobsScreen({ navigation, route }) {
           currentBalance: balance, 
           requiredAmount: PUBLISH_JOB_FEE,
           jobId: jobId,
-          jobTitle: jobTitle || 'this job'
+          jobTitle: jobTitle || 'this job',
+          postedByReferrer: postedByReferrer
         });
         setShowPublishConfirmModal(true);
       } else {
@@ -224,7 +225,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
           hideSave
           // ? NEW: Pass publish props to JobCard
           showPublish={isDraft}
-          onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title) : null}
+          onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title, job.PostedByType === 2) : null}
         />
       </View>
     );
@@ -328,6 +329,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
         currentBalance={publishConfirmData.currentBalance}
         requiredAmount={publishConfirmData.requiredAmount}
         jobTitle={publishConfirmData.jobTitle}
+        isPostedByReferrer={publishConfirmData.postedByReferrer}
         onProceed={handlePublishConfirmProceed}
         onCancel={() => setShowPublishConfirmModal(false)}
         onAddMoney={() => {

@@ -614,11 +614,11 @@ app.http("jobs", {
   },
 });
 
-// My posted jobs endpoint (for referrers and employers) - MUST be before jobs/{id}
+// My posted jobs endpoint (for referrers and employers)
 app.http("my-posted-jobs", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
-  route: "jobs/my-posted",
+  route: "user/my-posted-jobs",
   handler: withErrorHandling(getMyPostedJobs),
 });
 

@@ -2438,7 +2438,7 @@ if (!resumeId) {
       }
 
       const queryString = new URLSearchParams(cleaned).toString();
-      const endpoint = `/jobs/my-posted${queryString ? `?${queryString}` : ''}`;
+      const endpoint = `/user/my-posted-jobs${queryString ? `?${queryString}` : ''}`;
       
       return await this.apiCall(endpoint);
     } catch (error) {

@@ -224,8 +224,8 @@ export default function PostReferralJobScreen({ navigation, route }) {
     if (!jobData.companyName?.trim()) v.company = 'Company is required';
     if (!jobData.externalJobId?.trim()) v.externalJobId = 'Job ID is required (min 2 characters)';
     else if (jobData.externalJobId.trim().length < 2) v.externalJobId = 'Job ID must be at least 2 characters';
-    if (!jobData.title.trim()) v.title = 'Job title is required (min 3 characters)';
-    else if (jobData.title.length < 3) v.title = 'Job title must be at least 3 characters';
+    if (!jobData.title.trim()) v.title = 'Job title is required (min 5 characters)';
+    else if (jobData.title.length < 5) v.title = `Job title must be at least 5 characters (${jobData.title.length}/5)`;
     if (!jobData.department?.trim()) v.department = 'Department is required';
     if (!jobData.description.trim()) v.description = 'Description is required (min 20 characters)';
     else if (jobData.description.length < 20) v.description = `Description must be at least 20 characters (${jobData.description.length}/20)`;
