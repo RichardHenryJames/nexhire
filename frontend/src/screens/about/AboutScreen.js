@@ -1025,7 +1025,7 @@ export default function AboutScreen() {
               tag="For Job Seekers"
               tagColor={COLORS.primary}
               title="Apply Directly. Or Get Referred. Your Choice."
-              subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every employee at that company on RefOpen."
+              subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every verified employee at that company on RefOpen."
               COLORS={COLORS}
               isLargeScreen={isLargeScreen}
               isMediumScreen={isMediumScreen}
@@ -1045,7 +1045,7 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How It Works</Text>
               
               {/* Step 1 */}
-              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} COLORS={COLORS} />
+              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from top companies and startups worldwide. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={JobSearchImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
@@ -1071,7 +1071,7 @@ export default function AboutScreen() {
               >
                 <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
                 <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
-                <BenefitItem icon="people" text="One referral request reaches verified employees" color={COLORS.primary} COLORS={COLORS} />
+                <BenefitItem icon="people" text="One referral request reaches ALL verified employees at that company" color={COLORS.primary} COLORS={COLORS} />
                 <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
                 <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
                 <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
@@ -1109,9 +1109,9 @@ export default function AboutScreen() {
                     </View>
                     {[
                       'Browse jobs directly on RefOpen',
-                      'Click "Apply" to apply directly',
+                      'Jobs posted by employers & referrers',
                       'Click "Ask Referral" for boost',
-                      'Request sent to ALL company employees',
+                      'Request sent to ALL verified employees',
                       'Track status in real-time',
                     ].map((item, index) => (
                       <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -1195,7 +1195,7 @@ export default function AboutScreen() {
                   {[
                     'One platform for all job applications ✨',
                     'Apply directly OR get referred - your choice',
-                    'One referral request = verified employees notified',
+                    'One referral request = ALL verified employees notified',
                     'External referral for jobs found anywhere',
                     'Real-time tracking for everything',
                   ].map((item, index) => (
@@ -1275,6 +1275,7 @@ export default function AboutScreen() {
                 <LinearGradient colors={[`${COLORS.success}20`, `${COLORS.success}08`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginBottom: 16 }}>✅ RefOpen Referrals</Text>
                   <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 24, marginBottom: 12 }}>
+                    • Post jobs as a referrer & earn rewards{'\n'}
                     • AI filters low-quality candidates{'\n'}
                     • You only see qualified profiles{'\n'}
                     • Submit referral with one click{'\n'}
@@ -1290,7 +1291,7 @@ export default function AboutScreen() {
               <View style={{ flex: 1, marginRight: isLargeScreen ? 32 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How You Earn</Text>
                 <ProcessStep number="1" title="Get Verified" description="Connect your work email to verify your employment. Takes 2 minutes." icon="shield-checkmark" gradient={COLORS.gradientSuccess} COLORS={COLORS} />
-                <ProcessStep number="2" title="Review AI-Filtered Requests" description="Our AI scores candidates and filters spam. You only see quality profiles worth your time." icon="filter" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
+                <ProcessStep number="2" title="Post Jobs & Refer Candidates" description="Post open positions at your company as a referrer. When candidates apply, refer them and earn rewards instantly!" icon="create" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
                 <ProcessStep number="3" title="Refer & Earn Instantly" description="Submit the referral to your company's system. Get RefOpen rewards right away - no waiting for hires!" icon="gift" gradient={COLORS.gradientWarning} COLORS={COLORS} />
               </View>
 
