@@ -917,12 +917,62 @@ export class UserService {
                     isActiveHiring: (baseStats.JobsPostedLast30Days || 0) > 0,
                     hiringVelocity: this.calculateHiringVelocity(baseStats),
                     needsAttention: this.getEmployerAttentionItems(baseStats)
-                }
+                },
+                
+                // Profile completeness for employers
+                profileCompleteness: await this.calculateEmployerProfileCompleteness(userId)
             };
 
         } catch (error) {
             console.error('Error getting enhanced employer stats:', error);
             return this.getBasicEmployerStats(userId);
+        }
+    }
+    
+    // Calculate employer profile completeness
+    static async calculateEmployerProfileCompleteness(userId: string): Promise<number> {
+        try {
+            const query = `
+                SELECT 
+                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
+                    e.JobTitle, e.Department, e.OrganizationID,
+                    o.Name as OrganizationName, o.Industry, o.CompanySize
+                FROM Users u
+                LEFT JOIN Employers e ON u.UserID = e.UserID
+                LEFT JOIN Organizations o ON e.OrganizationID = o.OrganizationID
+                WHERE u.UserID = @param0
+            `;
+            const result = await dbService.executeQuery(query, [userId]);
+            if (!result.recordset || result.recordset.length === 0) {
+                return 0;
+            }
+            
+            const row = result.recordset[0];
+            const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
+            
+            // Employer fields (10 total)
+            // Basic Info - 5 fields
+            const firstName = hasValue(row.FirstName) ? 1 : 0;
+            const lastName = hasValue(row.LastName) ? 1 : 0;
+            const email = hasValue(row.Email) ? 1 : 0;
+            const phone = hasValue(row.Phone) ? 1 : 0;
+            const profilePic = hasValue(row.ProfilePictureURL) ? 1 : 0;
+            
+            // Organization Info - 5 fields
+            const jobTitle = hasValue(row.JobTitle) ? 1 : 0;
+            const department = hasValue(row.Department) ? 1 : 0;
+            const organizationName = hasValue(row.OrganizationName) ? 1 : 0;
+            const industry = hasValue(row.Industry) ? 1 : 0;
+            const companySize = hasValue(row.CompanySize) ? 1 : 0;
+            
+            const totalFields = 10;
+            const achieved = firstName + lastName + email + phone + profilePic +
+                           jobTitle + department + organizationName + industry + companySize;
+            
+            return Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
+        } catch (error) {
+            console.error('Error calculating employer profile completeness:', error);
+            return 0;
         }
     }
 

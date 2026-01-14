@@ -124,6 +124,7 @@ export default function ProfileScreen({ navigation, route }) {
     gender: user?.Gender || '',
     profilePictureURL: user?.ProfilePictureURL || '',
     profileVisibility: user?.ProfileVisibility || 'Public',
+    profileCompleteness: 0,
   });
 
   const [jobSeekerProfile, setJobSeekerProfile] = useState({
@@ -246,6 +247,7 @@ export default function ProfileScreen({ navigation, route }) {
           phone: data.Phone || data.phone || prev.phone,
           profilePictureURL: data.ProfilePictureURL || data.profilePictureURL || prev.profilePictureURL,
           profileVisibility: data.ProfileVisibility || data.profileVisibility || prev.profileVisibility,
+          profileCompleteness: data.ProfileCompleteness || data.profileCompleteness || 0,
         }));
 
         // Update job seeker profile
@@ -1351,6 +1353,9 @@ export default function ProfileScreen({ navigation, route }) {
           const currentWorkExp = jobSeekerProfile.workExperiences?.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
           const isCurrentJobVerified = currentWorkExp ? (currentWorkExp.CompanyEmailVerified === 1 || currentWorkExp.CompanyEmailVerified === true) : false;
           
+          // Use backend-driven profileCompleteness for both JobSeekers and Employers
+          const completenessValue = jobSeekerProfile.profileCompleteness || profile.profileCompleteness || 0;
+          
           return (
             <UserProfileHeader
               user={user}
@@ -1366,7 +1371,7 @@ export default function ProfileScreen({ navigation, route }) {
               isVerifiedReferrer={isCurrentJobVerified}
               onBecomeVerifiedReferrer={handleBecomeVerifiedReferrer}
               isLoadingVerify={navigatingToVerify}
-              profileCompletenessFromBackend={jobSeekerProfile.profileCompleteness}
+              profileCompletenessFromBackend={completenessValue}
             />
           );
         })()}

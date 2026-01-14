@@ -139,9 +139,18 @@ export const getProfile = withAuth(async (req: HttpRequest, context: InvocationC
     // Remove password from response
     const { Password, ...profileWithoutPassword } = userProfile;
     
+    // Add profileCompleteness for Employers
+    let profileCompleteness = 0;
+    if (userProfile.UserType === 'Employer') {
+        profileCompleteness = await UserService.calculateEmployerProfileCompleteness(user.userId);
+    }
+    
     return {
         status: 200,
-        jsonBody: successResponse(profileWithoutPassword, 'Profile retrieved successfully')
+        jsonBody: successResponse({
+            ...profileWithoutPassword,
+            profileCompleteness
+        }, 'Profile retrieved successfully')
     };
 }, ['read:profile']);
 

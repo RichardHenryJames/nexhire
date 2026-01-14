@@ -196,7 +196,8 @@ export const getAdminDashboardReferrals = withAuth(async (
           u.FirstName + ' ' + u.LastName AS RequesterName, u.Email AS RequesterEmail,
           ref.FirstName + ' ' + ref.LastName AS ReferrerName
         FROM ReferralRequests rr
-        JOIN Users u ON rr.ApplicantID = u.UserID
+        JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
+        JOIN Users u ON a.UserID = u.UserID
         LEFT JOIN Users ref ON rr.AssignedReferrerID = ref.UserID
         LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
         ORDER BY rr.RequestedAt DESC
