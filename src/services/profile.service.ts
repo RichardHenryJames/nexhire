@@ -215,6 +215,15 @@ export class ApplicantService {
                 profile.workExperiences = [];
             }
             
+            // Recalculate and update profile completeness to ensure it's fresh
+            try {
+                const { UserService } = await import('./user.service');
+                const freshCompleteness = await UserService.recomputeProfileCompletenessByApplicantId(profile.ApplicantID);
+                profile.ProfileCompleteness = freshCompleteness;
+            } catch (error) {
+                console.warn('Could not recalculate profile completeness:', error);
+            }
+            
             return profile;
         } catch (error) {
             console.error('Error getting applicant profile:', error);

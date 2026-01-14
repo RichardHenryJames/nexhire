@@ -37,7 +37,7 @@ export const getAdminDashboardOverview = withAuth(async (
     const monthAgoStr = monthAgo.toISOString().split('T')[0];
 
     // Optimized queries - run in parallel but with lightweight counts
-    const [userStats, referralStats, jobStats, walletStats] = await Promise.all([
+    const [userStats, referralStats, jobStats, walletStats, verifiedReferrers] = await Promise.all([
       // Users query - optimized
       dbService.executeQuery(`
         SELECT 
@@ -48,7 +48,7 @@ export const getAdminDashboardOverview = withAuth(async (
           SUM(CASE WHEN UserType = 'JobSeeker' THEN 1 ELSE 0 END) AS TotalJobSeekers,
           SUM(CASE WHEN UserType = 'Employer' THEN 1 ELSE 0 END) AS TotalEmployers,
           SUM(CASE WHEN IsActive = 1 THEN 1 ELSE 0 END) AS ActiveUsers,
-          SUM(CASE WHEN EmailVerified = 1 THEN 1 ELSE 0 END) AS VerifiedUsers
+          SUM(CASE WHEN IsVerifiedReferrer = 1 THEN 1 ELSE 0 END) AS VerifiedReferrers
         FROM Users WHERE UserType != 'Admin'
       `, [todayStr, weekAgoStr, monthAgoStr]),
       
@@ -62,11 +62,10 @@ export const getAdminDashboardOverview = withAuth(async (
         FROM ReferralRequests
       `, [todayStr]),
       
-      // Jobs - use approximate count for total (fast), exact for recent
+      // Jobs - optimized counts
       dbService.executeQuery(`
         SELECT 
-          (SELECT SUM(p.rows) FROM sys.partitions p JOIN sys.tables t ON p.object_id = t.object_id 
-           WHERE t.name = 'Jobs' AND p.index_id IN (0,1)) AS TotalJobs,
+          (SELECT COUNT(*) FROM Jobs) AS TotalJobs,
           (SELECT COUNT(*) FROM Jobs WHERE CAST(CreatedAt AS DATE) = @param0) AS JobsToday,
           (SELECT COUNT(*) FROM Jobs WHERE Status = 'Active') AS ActiveJobs,
           (SELECT COUNT(*) FROM Jobs WHERE ExternalJobID IS NOT NULL AND CAST(CreatedAt AS DATE) >= @param1) AS RecentExternalJobs
@@ -76,6 +75,16 @@ export const getAdminDashboardOverview = withAuth(async (
       dbService.executeQuery(`
         SELECT ISNULL(SUM(Balance), 0) AS TotalWalletBalance, COUNT(*) AS TotalWallets
         FROM Wallets WHERE Status = 'Active'
+      `, []),
+      
+      // Top 10 verified referrers
+      dbService.executeQuery(`
+        SELECT TOP 10 UserID, FirstName, LastName, Email, ProfilePictureURL, 
+          ReferralsCompleted, CreatedAt,
+          (SELECT o.Name FROM Organizations o WHERE o.OrganizationID = u.CurrentOrganizationID) AS CompanyName
+        FROM Users u
+        WHERE IsVerifiedReferrer = 1 AND UserType != 'Admin'
+        ORDER BY ReferralsCompleted DESC, CreatedAt ASC
       `, [])
     ]);
 
@@ -86,6 +95,7 @@ export const getAdminDashboardOverview = withAuth(async (
         referralStats: referralStats.recordset[0] || {},
         jobStats: jobStats.recordset[0] || {},
         walletStats: walletStats.recordset[0] || {},
+        verifiedReferrers: verifiedReferrers.recordset || [],
         applicationStats: { TotalApplications: 0, ApplicationsToday: 0 },
         messageStats: { TotalConversations: 0, TotalMessages: 0 }
       }, 'Overview stats loaded')

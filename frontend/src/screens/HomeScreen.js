@@ -729,41 +729,73 @@ const [dashboardData, setDashboardData] = useState({
           
           {isEmployer ? (
             <>
-              <QuickAction
-                title="Post a New Job"
-                description="Create and publish a job posting"
-                icon="add-circle"
-                color={colors.primary}
-                onPress={() => navigation.navigate('CreateJob')}
-              />
-              <QuickAction
-                title="Review Applications"
-                description="Manage candidate applications"
-                icon="people"
-                color={colors.success}
-                badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-                urgent={stats.pendingApplications > 10}
-                onPress={() => navigation.navigate('Applications')}
-              />
-              <QuickAction
-                title="Hiring Pipeline"
-                description="Track your recruitment progress"
-                icon="analytics"
-                color={colors.info}
-                badge={stats.interviewsInProgress > 0 ? `${stats.interviewsInProgress} active` : null}
-                onPress={() => navigation.navigate('Analytics')}
-              />
-              <QuickAction
-                title="Referral Network"
-                description="Leverage employee referrals"
-                icon="link"
-                color={colors.warning}
-                badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
-                onPress={() => navigation.navigate('Referrals')}
-              />
-              
-              {/* Google AdSense Ad - Employer Home */}
-              <AdCard variant="home" />
+              {/* Employer cards - 3 column grid on desktop, stacked on mobile */}
+              <View style={styles.secondaryCardsContainer}>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('CreateJob')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="add-circle" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Post a New Job</Text>
+                    <Text style={styles.quickActionDescription}>Create and publish a job posting</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Applications')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                    <Ionicons name="people" size={24} color={colors.success} />
+                    {stats.pendingApplications > 0 && (
+                      <View style={[styles.quickActionBadge, { backgroundColor: stats.pendingApplications > 10 ? colors.danger : colors.success }]}>
+                        <Text style={styles.quickActionBadgeText}>{stats.pendingApplications}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Review Applications</Text>
+                    <Text style={styles.quickActionDescription}>Manage candidate applications</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Settings')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { 
+                    backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                  }]}>
+                    <Ionicons 
+                      name="person" 
+                      size={24} 
+                      color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                    />
+                    <View style={[
+                      styles.quickActionBadge, 
+                      { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                    ]}>
+                      <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Complete Profile</Text>
+                    <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                {/* Google AdSense Ad - Employer Home */}
+                <AdCard variant="home" />
+              </View>
             </>
           ) : (
             <>

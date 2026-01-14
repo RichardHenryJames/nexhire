@@ -82,7 +82,8 @@ export default function UserProfileHeader({
   showProgress = true, // NEW: hide circular progress ring when viewing others' profiles
   isVerifiedUser = false, // NEW: Show verified badge if user is a permanently verified user
   isVerifiedReferrer = false, // Show if user is a verified referrer
-  onBecomeVerifiedReferrer = null // Callback when "Become Verified Referrer" is clicked
+  onBecomeVerifiedReferrer = null, // Callback when "Become Verified Referrer" is clicked
+  profileCompletenessFromBackend = null // Backend-driven profile completeness
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -91,10 +92,14 @@ export default function UserProfileHeader({
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
   const [verifyingReferrer, setVerifyingReferrer] = useState(false);
 
-  // CALCULATE PROFILE COMPLETENESS BASED ON ACTUAL PROFILE FIELDS
+  // USE BACKEND VALUE IF PROVIDED, OTHERWISE CALCULATE LOCALLY
   useEffect(() => {
-    calculateProfileCompleteness();
-  }, [profile, jobSeekerProfile, employerProfile, userType]);
+    if (profileCompletenessFromBackend !== null && profileCompletenessFromBackend !== undefined) {
+      setProfileCompleteness(profileCompletenessFromBackend);
+    } else {
+      calculateProfileCompleteness();
+    }
+  }, [profile, jobSeekerProfile, employerProfile, userType, profileCompletenessFromBackend]);
 
   const calculateProfileCompleteness = () => {
     const requiredFields = userType === 'JobSeeker' ? [

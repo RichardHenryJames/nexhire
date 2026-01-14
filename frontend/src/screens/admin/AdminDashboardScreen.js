@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -225,7 +226,8 @@ export default function AdminDashboardScreen() {
     recentReferrals = [],
     topOrganizations = [],
     applicationStats = {},
-    messageStats = {}
+    messageStats = {},
+    verifiedReferrers = []
   } = dashboardData || {};
 
   const renderStatCard = (title, value, icon, color, subtitle) => (
@@ -317,7 +319,7 @@ export default function AdminDashboardScreen() {
         {renderStatCard('Job Seekers', userStats.TotalJobSeekers, 'briefcase', '#3B82F6')}
         {renderStatCard('Employers', userStats.TotalEmployers, 'business', '#10B981')}
         {renderStatCard('Active Users', userStats.ActiveUsers, 'checkmark-circle', '#8B5CF6')}
-        {renderStatCard('Verified', userStats.VerifiedUsers, 'shield-checkmark', '#F59E0B')}
+        {renderStatCard('Verified Referrers', userStats.VerifiedReferrers, 'shield-checkmark', '#F59E0B')}
       </View>
 
       {/* Referral Stats */}
@@ -372,6 +374,52 @@ export default function AdminDashboardScreen() {
           <Text style={styles.walletCount}>{walletStats.TotalWallets || 0}</Text>
         </View>
       </View>
+
+      {/* Verified Referrers Section */}
+      {verifiedReferrers.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Top Verified Referrers</Text>
+            <Text style={styles.sectionSubtitle}>Click to view profile</Text>
+          </View>
+          {verifiedReferrers.map((referrer, index) => (
+            <TouchableOpacity 
+              key={referrer.UserID || index} 
+              style={styles.userCard}
+              onPress={() => navigation.navigate('ViewProfile', { userId: referrer.UserID })}
+            >
+              {referrer.ProfilePictureURL ? (
+                <Image 
+                  source={{ uri: referrer.ProfilePictureURL }} 
+                  style={styles.userAvatarImage}
+                />
+              ) : (
+                <View style={[styles.userAvatar, { backgroundColor: '#10B98130' }]}>
+                  <Text style={[styles.userAvatarText, { color: '#10B981' }]}>
+                    {referrer.FirstName?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{referrer.FirstName} {referrer.LastName}</Text>
+                <Text style={styles.userEmail}>{referrer.CompanyName || referrer.Email}</Text>
+                <View style={styles.userMeta}>
+                  <View style={[styles.badge, { backgroundColor: '#10B98120' }]}>
+                    <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                    <Text style={[styles.badgeText, { color: '#10B981', marginLeft: 4 }]}>Verified</Text>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: '#8B5CF620' }]}>
+                    <Text style={[styles.badgeText, { color: '#8B5CF6' }]}>
+                      {referrer.ReferralsCompleted || 0} referrals
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
     </>
   );
   };
@@ -384,25 +432,36 @@ export default function AdminDashboardScreen() {
     <>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Users</Text>
-        <Text style={styles.sectionSubtitle}>Last 20 signups</Text>
+        <Text style={styles.sectionSubtitle}>Last 20 signups - Click to view profile</Text>
       </View>
-      {recentUsers.map((user, index) => (
-        <View key={user.UserID || index} style={styles.userCard}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>
-              {user.FirstName?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
-          </View>
+      {recentUsers.map((userData, index) => (
+        <TouchableOpacity 
+          key={userData.UserID || index} 
+          style={styles.userCard}
+          onPress={() => navigation.navigate('ViewProfile', { userId: userData.UserID })}
+        >
+          {userData.ProfilePictureURL ? (
+            <Image 
+              source={{ uri: userData.ProfilePictureURL }} 
+              style={styles.userAvatarImage}
+            />
+          ) : (
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>
+                {userData.FirstName?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user.FirstName} {user.LastName}</Text>
-            <Text style={styles.userEmail}>{user.Email}</Text>
+            <Text style={styles.userName}>{userData.FirstName} {userData.LastName}</Text>
+            <Text style={styles.userEmail}>{userData.Email}</Text>
             <View style={styles.userMeta}>
-              <View style={[styles.badge, { backgroundColor: user.UserType === 'JobSeeker' ? '#3B82F620' : '#10B98120' }]}>
-                <Text style={[styles.badgeText, { color: user.UserType === 'JobSeeker' ? '#3B82F6' : '#10B981' }]}>
-                  {user.UserType}
+              <View style={[styles.badge, { backgroundColor: userData.UserType === 'JobSeeker' ? '#3B82F620' : '#10B98120' }]}>
+                <Text style={[styles.badgeText, { color: userData.UserType === 'JobSeeker' ? '#3B82F6' : '#10B981' }]}>
+                  {userData.UserType}
                 </Text>
               </View>
-              {user.IsActive ? (
+              {userData.IsActive ? (
                 <View style={[styles.badge, { backgroundColor: '#10B98120' }]}>
                   <Text style={[styles.badgeText, { color: '#10B981' }]}>Active</Text>
                 </View>
@@ -413,10 +472,13 @@ export default function AdminDashboardScreen() {
               )}
             </View>
           </View>
-          <Text style={styles.userDate}>
-            {new Date(user.CreatedAt).toLocaleDateString()}
-          </Text>
-        </View>
+          <View style={styles.userRightSection}>
+            <Text style={styles.userDate}>
+              {new Date(userData.CreatedAt).toLocaleDateString()}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
       ))}
     </>
   );
@@ -444,7 +506,7 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionSubtitle}>Last 20 requests</Text>
       </View>
       {recentReferrals.map((ref, index) => (
-        <View key={ref.ReferralRequestID || index} style={styles.referralCard}>
+        <View key={ref.RequestID || index} style={styles.referralCard}>
           <View style={styles.referralHeader}>
             <Text style={styles.referralTitle} numberOfLines={1}>{ref.JobTitle}</Text>
             <View style={[
@@ -464,7 +526,7 @@ export default function AdminDashboardScreen() {
             )}
           </View>
           <Text style={styles.referralDate}>
-            {new Date(ref.CreatedAt).toLocaleDateString()}
+            {new Date(ref.RequestedAt).toLocaleDateString()}
           </Text>
         </View>
       ))}
@@ -804,10 +866,20 @@ const createStyles = (colors, responsive = {}) => {
       alignItems: 'center',
       marginRight: isDesktop ? 16 : 12,
     },
+    userAvatarImage: {
+      width: isDesktop ? 56 : 48,
+      height: isDesktop ? 56 : 48,
+      borderRadius: isDesktop ? 28 : 24,
+      marginRight: isDesktop ? 16 : 12,
+    },
     userAvatarText: {
       fontSize: isDesktop ? 20 : 18,
       fontWeight: 'bold',
       color: colors.primary,
+    },
+    userRightSection: {
+      alignItems: 'flex-end',
+      justifyContent: 'center',
     },
     userInfo: {
       flex: 1,

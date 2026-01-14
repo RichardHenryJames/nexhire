@@ -1334,13 +1334,17 @@ export class UserService {
         try {
             const query = `
                 SELECT 
+                    -- User table fields
+                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
+                    -- Applicant table fields
+                    a.Headline, a.CurrentJobTitle, a.CurrentCompanyName, a.YearsOfExperience,
+                    a.CurrentLocation, a.Summary,
                     a.Institution, a.HighestEducation, a.FieldOfStudy,
-                    a.PrimarySkills, a.SecondarySkills, a.Summary,
+                    a.PrimarySkills, a.SecondarySkills,
                     a.PreferredJobTypes, a.PreferredWorkTypes, a.PreferredLocations,
-                    a.CurrentJobTitle, a.LinkedInProfile,
+                    a.LinkedInProfile,
                     (SELECT COUNT(*) FROM ApplicantResumes r WHERE r.ApplicantID = a.ApplicantID) AS ResumeCount,
-                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount,
-                    u.ProfilePictureURL
+                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID
                 WHERE a.ApplicantID = @param0
@@ -1352,20 +1356,45 @@ export class UserService {
             const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
-            // Components (10)
-            const educationComplete = hasValue(row.Institution) && hasValue(row.HighestEducation) && hasValue(row.FieldOfStudy) ? 1 : 0; // 1
-            const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0; //2
-            const secondarySkills = hasValue(row.SecondarySkills) ? 1 : 0; //3
-            const summaryPresent = hasValue(row.Summary) ? 1 : 0; //4
-            const jobPrefsPresent = (hasValue(row.PreferredJobTypes) || hasValue(row.PreferredWorkTypes) || hasValue(row.PreferredLocations)) ? 1 : 0; //5
-            const resumePresent = (row.ResumeCount || 0) > 0 ? 1 : 0; //6
-            const workExpPresent = (row.WorkExpCount || 0) > 0 ? 1 : 0; //7
-            const profilePicPresent = hasValue(row.ProfilePictureURL) ? 1 : 0; //8
-            const linkedInPresent = hasValue(row.LinkedInProfile) ? 1 : 0; //9
-            const currentJobTitlePresent = hasValue(row.CurrentJobTitle) ? 1 : 0; //10
+            // Match frontend calculation - 20 total fields
+            // Basic Info (Users table) - 5 fields
+            const firstName = hasValue(row.FirstName) ? 1 : 0;
+            const lastName = hasValue(row.LastName) ? 1 : 0;
+            const email = hasValue(row.Email) ? 1 : 0;
+            const phone = hasValue(row.Phone) ? 1 : 0;
+            const profilePic = hasValue(row.ProfilePictureURL) ? 1 : 0;
+            
+            // Professional Info (Applicants table) - 6 fields
+            const headline = hasValue(row.Headline) ? 1 : 0;
+            const currentJobTitle = hasValue(row.CurrentJobTitle) ? 1 : 0;
+            const currentCompany = hasValue(row.CurrentCompanyName) ? 1 : 0;
+            const yearsExp = row.YearsOfExperience > 0 ? 1 : 0;
+            const currentLocation = hasValue(row.CurrentLocation) ? 1 : 0;
+            const summary = hasValue(row.Summary) ? 1 : 0;
+            
+            // Education - 3 fields
+            const education = hasValue(row.HighestEducation) ? 1 : 0;
+            const fieldOfStudy = hasValue(row.FieldOfStudy) ? 1 : 0;
+            const institution = hasValue(row.Institution) ? 1 : 0;
+            
+            // Skills & Preferences - 4 fields
+            const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0;
+            const jobTypes = hasValue(row.PreferredJobTypes) ? 1 : 0;
+            const workTypes = hasValue(row.PreferredWorkTypes) ? 1 : 0;
+            const workExp = (row.WorkExpCount || 0) > 0 ? 1 : 0;
+            
+            // Bonus fields - 2 fields
+            const resume = (row.ResumeCount || 0) > 0 ? 1 : 0;
+            const linkedIn = hasValue(row.LinkedInProfile) ? 1 : 0;
 
-            const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
-            const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
+            const totalFields = 20;
+            const achieved = firstName + lastName + email + phone + profilePic +
+                           headline + currentJobTitle + currentCompany + yearsExp + currentLocation + summary +
+                           education + fieldOfStudy + institution +
+                           primarySkills + jobTypes + workTypes + workExp +
+                           resume + linkedIn;
+            
+            const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
 
             await dbService.executeQuery(
                 `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,

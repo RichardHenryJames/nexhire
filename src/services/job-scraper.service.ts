@@ -888,38 +888,72 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'p&g': 'Procter & Gamble',
     'pg': 'Procter & Gamble',
     
+    // TCS - ALL VARIATIONS
     'tcs': 'Tata Consultancy Services',
     'tata consultancy': 'Tata Consultancy Services',
+    'tata consultancy service': 'Tata Consultancy Services',
+    'tcs limited': 'Tata Consultancy Services',
+    'tata consulting': 'Tata Consultancy Services',
     
+    // Infosys - ALL VARIATIONS
     'infosys technologies': 'Infosys',
     'infosys limited': 'Infosys',
+    'infosys ltd': 'Infosys',
+    'infosys bpm': 'Infosys',
+    'infosys consulting': 'Infosys',
     
+    // Wipro - ALL VARIATIONS
     'wipro technologies': 'Wipro',
     'wipro limited': 'Wipro',
+    'wipro ltd': 'Wipro',
+    'wipro hr': 'Wipro',
+    'wipro infotech': 'Wipro',
     
+    // HCL - ALL VARIATIONS
     'hcl': 'HCL Technologies',
     'hcl tech': 'HCL Technologies',
+    'hcltech': 'HCL Technologies',
+    'hcl technologies limited': 'HCL Technologies',
+    'hcl technologies ltd': 'HCL Technologies',
+    'hclsoftware': 'HCL Technologies',
     
     'tech mahindra limited': 'Tech Mahindra',
     
+    // Microsoft - ALL VARIATIONS
     'microsoft corporation': 'Microsoft',
+    'microsoft corp': 'Microsoft',
+    'microsoft azure': 'Microsoft',
     
+    // Google/Alphabet - ALL VARIATIONS
     'google llc': 'Google',
+    'google inc': 'Google',
     'alphabet': 'Google',
+    'alphabet inc': 'Google',
     
+    // Meta/Facebook - ALL VARIATIONS
     'meta platforms': 'Meta',
+    'meta platforms inc': 'Meta',
     'facebook': 'Meta',
+    'facebook inc': 'Meta',
     
+    // Amazon - ALL VARIATIONS
     'amazon.com': 'Amazon',
+    'amazoncom': 'Amazon',
     'amazon web services': 'Amazon',
     'aws': 'Amazon',
+    'amazon.com services': 'Amazon',
+    'amazon development': 'Amazon',
+    'amazon dev center': 'Amazon',
     
     'apple inc': 'Apple',
     
     'netflix inc': 'Netflix',
     
+    // Salesforce - ALL VARIATIONS
     'salesforce.com': 'Salesforce',
+    'salesforcecom': 'Salesforce',
     'salesforce inc': 'Salesforce',
+    'salesforce.com inc': 'Salesforce',
     
     'oracle corporation': 'Oracle',
     
@@ -944,23 +978,31 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'hewlett packard': 'HP',
     'hewlett-packard': 'HP',
     
+    // Accenture - ALL VARIATIONS
     'accenture plc': 'Accenture',
     'accenture llp': 'Accenture',
+    'accenture federal services': 'Accenture',
     
+    // Deloitte - ALL VARIATIONS
     'deloitte touche': 'Deloitte',
     'deloitte llp': 'Deloitte',
     'deloitte consulting': 'Deloitte',
+    'hashedin by deloitte': 'Deloitte',
     
     'ernst young': 'EY',
     'ernst & young': 'EY',
     
     'kpmg llp': 'KPMG',
     
+    // McKinsey - ALL VARIATIONS
     'mckinsey': 'McKinsey & Company',
     'mckinsey and company': 'McKinsey & Company',
+    'mckinsey & co': 'McKinsey & Company',
     
+    // BCG - ALL VARIATIONS
     'boston consulting': 'Boston Consulting Group',
-    'bcg': 'Boston Consulting Group',
+    'boston consulting group': 'BCG',
+    'bcg': 'BCG',
     
     'bain company': 'Bain & Company',
     'bain and company': 'Bain & Company',
@@ -976,8 +1018,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'wells fargo & company': 'Wells Fargo',
     'wells fargo bank': 'Wells Fargo',
     
-    'citibank': 'Citigroup',
-    'citi': 'Citigroup',
+    // Citi - ALL VARIATIONS
+    'citibank': 'Citi',
+    'citigroup': 'Citi',
+    'citicorp': 'Citi',
     
     'capital one financial': 'Capital One',
     
@@ -998,8 +1042,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     'doordash inc': 'DoorDash',
     
-    'twitter': 'X',
-    'twitter inc': 'X',
+    // X/Twitter - ALL VARIATIONS
+    'twitter': 'X Corp',
+    'twitter inc': 'X Corp',
+    'x': 'X Corp',
     
     'snap inc': 'Snap',
     'snapchat': 'Snap',
@@ -1040,8 +1086,14 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     'stripe inc': 'Stripe',
     
+    // Square/Block - ALL VARIATIONS
     'square inc': 'Square',
-    'block inc': 'Block',
+    'block inc': 'Block Inc',
+    'block': 'Block Inc',
+    
+    // ZS Associates
+    'zs': 'ZS Associates',
+    'zs associates': 'ZS Associates',
   };
 
   /**
@@ -1271,11 +1323,15 @@ Apply now to join a dynamic team that's building the future! 🌟`;
             REPLACE(
               REPLACE(
                 REPLACE(
-                  REPLACE(REPLACE(Name, ' ', ''), ',', ''),
-                '.', ''),
-              'inc', ''),
-            'llc', ''),
-          'ltd', '')
+                  REPLACE(
+                    REPLACE(
+                      REPLACE(REPLACE(Name, ' ', ''), ',', ''),
+                    '.', ''),
+                  'inc', ''),
+                'llc', ''),
+              'ltd', ''),
+            'limited', ''),
+          'technologies', '')
         ) = @param0
           AND IsActive = 1
       `;
@@ -1288,6 +1344,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         .replace(/inc$/i, '')
         .replace(/llc$/i, '')
         .replace(/ltd$/i, '')
+        .replace(/limited$/i, '')
+        .replace(/technologies$/i, '')
         .toLowerCase();
       
       const exactMatch = await dbService.executeQuery(exactQuery, [strippedNormalized]);
@@ -1296,22 +1354,61 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         return exactMatch.recordset[0];
       }
       
-      // Second, fetch potential matches and calculate similarity
+      // THIRD: Check for HR/recruiter suffix patterns (e.g., "Wipro HR Soniya" -> "Wipro")
+      // These are fake company entries added by recruiters
+      const hrPatterns = /\s+(hr|recruiter|hiring|jobs|careers|talent)\s+\w*$/i;
+      if (hrPatterns.test(normalizedName)) {
+        const baseCompanyName = normalizedName.replace(hrPatterns, '').trim();
+        console.log(`🔍 Checking HR pattern: "${normalizedName}" -> "${baseCompanyName}"`);
+        
+        const hrQuery = `
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        const hrMatch = await dbService.executeQuery(hrQuery, [baseCompanyName]);
+        if (hrMatch.recordset.length > 0) {
+          console.log(`✅ HR pattern match found: "${normalizedName}" -> "${hrMatch.recordset[0].Name}"`);
+          return hrMatch.recordset[0];
+        }
+      }
+      
+      // FOURTH: Check for core name match (e.g., "HCL Technologies" should match "HCL Technologies Limited")
+      const coreNameQuery = `
+        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE (Name LIKE @param0 + '%' OR @param0 LIKE Name + '%')
+          AND LEN(Name) >= 3
+          AND IsActive = 1
+        ORDER BY LEN(Name) DESC
+      `;
+      const coreMatch = await dbService.executeQuery(coreNameQuery, [normalizedName]);
+      if (coreMatch.recordset.length > 0) {
+        // Verify it's a meaningful match (not just coincidental prefix)
+        const matchName = coreMatch.recordset[0].Name.toLowerCase();
+        const searchName = normalizedName.toLowerCase();
+        if (matchName.startsWith(searchName) || searchName.startsWith(matchName)) {
+          console.log(`✅ Core name match found for "${normalizedName}": ${coreMatch.recordset[0].Name}`);
+          return coreMatch.recordset[0];
+        }
+      }
+      
+      // FIFTH: Fetch potential matches and calculate similarity
       const candidatesQuery = `
-        SELECT TOP 20 OrganizationID, Name, LogoURL, Website, Industry 
+        SELECT TOP 30 OrganizationID, Name, LogoURL, Website, Industry 
         FROM Organizations 
         WHERE LEN(Name) BETWEEN @param0 AND @param1
           AND IsActive = 1
         ORDER BY Name
       `;
       
-      const minLen = Math.max(3, normalizedName.length - 5);
-      const maxLen = normalizedName.length + 10;
+      const minLen = Math.max(3, normalizedName.length - 8);
+      const maxLen = normalizedName.length + 15;
       
       const candidates = await dbService.executeQuery(candidatesQuery, [minLen, maxLen]);
       
       // Calculate similarity for each candidate
-      const SIMILARITY_THRESHOLD = 0.85;
+      const SIMILARITY_THRESHOLD = 0.80; // Lowered from 0.85 to catch more variations
       let bestMatch: any = null;
       let bestScore = 0;
       

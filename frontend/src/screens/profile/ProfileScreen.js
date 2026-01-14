@@ -155,6 +155,8 @@ export default function ProfileScreen({ navigation, route }) {
     allowRecruitersToContact: true,
     hideCurrentCompany: false,
     hideSalaryDetails: false,
+    // Profile completeness from backend
+    profileCompleteness: 0,
   });
 
   // Handle scroll animation
@@ -283,6 +285,8 @@ export default function ProfileScreen({ navigation, route }) {
             allowRecruitersToContact: data.AllowRecruitersToContact !== false,
             hideCurrentCompany: data.HideCurrentCompany === true,
             hideSalaryDetails: data.HideSalaryDetails === true,
+            // Profile completeness from backend
+            profileCompleteness: data.ProfileCompleteness || data.profileCompleteness || 0,
           }));
           
           // Fetch user-level verification status
@@ -1362,6 +1366,7 @@ export default function ProfileScreen({ navigation, route }) {
               isVerifiedReferrer={isCurrentJobVerified}
               onBecomeVerifiedReferrer={handleBecomeVerifiedReferrer}
               isLoadingVerify={navigatingToVerify}
+              profileCompletenessFromBackend={jobSeekerProfile.profileCompleteness}
             />
           );
         })()}
