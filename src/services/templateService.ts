@@ -642,11 +642,12 @@ const templates: Record<string, { subject: string; html: string }> = {
                                     <td style="padding: 25px;">
                                         <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 16px; text-align: center;">💰 Already Employed? Become a Referrer!</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">✨ Become a verified referrer to unlock all benefits</td></tr>
                                             <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💵 Earn up to ₹100 for every successful referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">📝 Post jobs & earn rewards for referring candidates</td></tr>
                                             <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">🏆 Get verified badges & build your reputation</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">📩 No more LinkedIn DMs - candidates come to you</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">⚡ One-click referrals - we handle all paperwork</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💳 Instant withdrawals to UPI or bank account</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">📩 No more inbox flood - refer candidates through RefOpen & earn rewards</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💳 Withdraw rewards easily via UPI or bank account</td></tr>
                                         </table>
                                         <p style="margin: 15px 0 0 0; color: #a16207; font-size: 13px; text-align: center;">
                                             Verify your work email to start earning today!

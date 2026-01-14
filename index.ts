@@ -2830,11 +2830,11 @@ app.http("manual-trigger-referrer-email", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - DAILY REFERRER NOTIFICATION EMAILS (7 PM IST = 13:30 UTC)
+// TIMER TRIGGER - REFERRER NOTIFICATION EMAILS (7 PM IST = 13:30 UTC, Every 2 Days)
 // ========================================================================
 
 app.timer("dailyReferrerNotificationEmail", {
-  schedule: "0 30 13 * * *", // 7 PM IST (13:30 UTC) every day
+  schedule: "0 30 13 */2 * *", // 7 PM IST (13:30 UTC) every 2 days (alternate days)
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `referrer_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -2909,11 +2909,11 @@ app.timer("dailyReferrerNotificationEmail", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours)
+// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 8 hours)
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 */2 * * *", // Every 2 hours
+  schedule: "0 0 */8 * * *", // Every 8 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `timer_${Date.now()}_${Math.random()
@@ -3283,11 +3283,11 @@ app.timer("notificationProcessorTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - DAILY JOB RECOMMENDATION EMAILS (9 PM IST = 3:30 PM UTC)
+// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (9 PM IST = 3:30 PM UTC, Every 3 Days)
 // ========================================================================
 
 app.timer("dailyJobRecommendationEmail", {
-  schedule: "0 30 15 * * *", // 3:30 PM UTC = 9:00 PM IST
+  schedule: "0 30 15 */3 * *", // 3:30 PM UTC = 9:00 PM IST every 3 days (gap of 2 days)
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
