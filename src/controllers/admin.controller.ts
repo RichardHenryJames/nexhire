@@ -79,12 +79,16 @@ export const getAdminDashboardOverview = withAuth(async (
       
       // Top 10 verified referrers
       dbService.executeQuery(`
-        SELECT TOP 10 UserID, FirstName, LastName, Email, ProfilePictureURL, 
-          ReferralsCompleted, CreatedAt,
-          (SELECT o.Name FROM Organizations o WHERE o.OrganizationID = u.CurrentOrganizationID) AS CompanyName
+        SELECT TOP 10 u.UserID, u.FirstName, u.LastName, u.Email, u.ProfilePictureURL, 
+          u.CreatedAt, a.CurrentCompanyName AS CompanyName,
+          (SELECT COUNT(*) FROM ReferralRequests rr 
+           WHERE rr.AssignedReferrerID = u.UserID AND rr.Status = 'Completed') AS ReferralsCompleted
         FROM Users u
-        WHERE IsVerifiedReferrer = 1 AND UserType != 'Admin'
-        ORDER BY ReferralsCompleted DESC, CreatedAt ASC
+        LEFT JOIN Applicants a ON u.UserID = a.UserID
+        WHERE u.IsVerifiedReferrer = 1 AND u.UserType != 'Admin'
+        ORDER BY (SELECT COUNT(*) FROM ReferralRequests rr 
+                  WHERE rr.AssignedReferrerID = u.UserID AND rr.Status = 'Completed') DESC, 
+                 u.CreatedAt ASC
       `, [])
     ]);
 
