@@ -598,73 +598,96 @@ export default function AddWorkExperienceModal({
               </View>
               {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
 
-              {/* Company picker */}
-              <Text style={styles.label}>Company</Text>
-              <View style={{ position: 'relative', zIndex: 999 }}>
-                <TouchableOpacity style={styles.input} onPress={() => setShowOrgPicker(true)} activeOpacity={0.8}>
-                  <TextInput
-                    style={styles.companyInput}
-                    value={orgQuery || form.companyName}
-                    onChangeText={(t) => { 
-                      setOrgQuery(t);
-                      setForm({ ...form, companyName: t, organizationId: null }); 
-                    }}
-                    onFocus={() => {
-                      if (form.companyName) setOrgQuery('');
-                      setShowOrgPicker(true);
-                    }}
-                    placeholder="e.g., Google, Microsoft"
-                    placeholderTextColor={colors.gray400}
-                    autoCapitalize="words"
-                  />
-                  <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray500} />
-                </TouchableOpacity>
-                {showOrgPicker && (
-                  <View style={styles.jobTitleDropdown}>
-                    {orgLoading ? (
-                      <View style={styles.dropdownLoading}>
-                        <ActivityIndicator size="small" color={colors.primary} />
+              {/* Company section - Show verified badge or picker based on verification status */}
+              {userLevelVerified && editingItem && form.isCurrent ? (
+                <View style={styles.verifiedCompanySection}>
+                  <Text style={styles.label}>Company</Text>
+                  <View style={styles.verifiedCompanyBadge}>
+                    <View style={styles.verifiedIconContainer}>
+                      <Ionicons name="shield-checkmark" size={22} color={colors.white} />
+                    </View>
+                    <View style={styles.verifiedCompanyInfo}>
+                      <Text style={styles.verifiedCompanyTitle}>Verified {form.companyName} Employee</Text>
+                      <View style={styles.verifiedDisclaimerRow}>
+                        <Text style={styles.verifiedCompanyDisclaimer}>
+                          Your company email is securely verified and encrypted
+                        </Text>
+                        <Ionicons name="lock-closed" size={12} color={colors.success} style={{ marginLeft: 4 }} />
                       </View>
-                    ) : (
-                      <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                        {orgResults.slice(0, 15).map((org) => (
-                          <TouchableOpacity
-                            key={org.id}
-                            style={styles.orgDropdownItem}
-                            onPress={() => {
-                              setForm({ ...form, organizationId: org.id, companyName: org.name });
-                              setOrgQuery('');
-                              setShowOrgPicker(false);
-                            }}
-                          >
-                            {org.logoURL ? (
-                              <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
-                            ) : (
-                              <View style={styles.orgLogoPlaceholderSmall}>
-                                <Ionicons name="business" size={14} color={colors.gray400} />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {/* Company picker */}
+                  <Text style={styles.label}>Company</Text>
+                  <View style={{ position: 'relative', zIndex: 999 }}>
+                    <TouchableOpacity style={styles.input} onPress={() => setShowOrgPicker(true)} activeOpacity={0.8}>
+                      <TextInput
+                        style={styles.companyInput}
+                        value={orgQuery || form.companyName}
+                        onChangeText={(t) => { 
+                          setOrgQuery(t);
+                          setForm({ ...form, companyName: t, organizationId: null }); 
+                        }}
+                        onFocus={() => {
+                          if (form.companyName) setOrgQuery('');
+                          setShowOrgPicker(true);
+                        }}
+                        placeholder="e.g., Google, Microsoft"
+                        placeholderTextColor={colors.gray400}
+                        autoCapitalize="words"
+                      />
+                      <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray500} />
+                    </TouchableOpacity>
+                    {showOrgPicker && (
+                      <View style={styles.jobTitleDropdown}>
+                        {orgLoading ? (
+                          <View style={styles.dropdownLoading}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          </View>
+                        ) : (
+                          <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                            {orgResults.slice(0, 15).map((org) => (
+                              <TouchableOpacity
+                                key={org.id}
+                                style={styles.orgDropdownItem}
+                                onPress={() => {
+                                  setForm({ ...form, organizationId: org.id, companyName: org.name });
+                                  setOrgQuery('');
+                                  setShowOrgPicker(false);
+                                }}
+                              >
+                                {org.logoURL ? (
+                                  <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
+                                ) : (
+                                  <View style={styles.orgLogoPlaceholderSmall}>
+                                    <Ionicons name="business" size={14} color={colors.gray400} />
+                                  </View>
+                                )}
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.dropdownItemText}>{org.name}</Text>
+                                  {org.industry && org.industry !== 'Other' && (
+                                    <Text style={styles.orgMetaSmall}>{org.industry}</Text>
+                                  )}
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                            {orgResults.length === 0 && orgQuery.length > 0 && (
+                              <View style={styles.dropdownEmpty}>
+                                <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
                               </View>
                             )}
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.dropdownItemText}>{org.name}</Text>
-                              {org.industry && org.industry !== 'Other' && (
-                                <Text style={styles.orgMetaSmall}>{org.industry}</Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                        {orgResults.length === 0 && orgQuery.length > 0 && (
-                          <View style={styles.dropdownEmpty}>
-                            <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
-                          </View>
+                          </ScrollView>
                         )}
-                      </ScrollView>
+                      </View>
                     )}
                   </View>
-                )}
-              </View>
+                </>
+              )}
 
-              {/* Email Verification Section - Only show for current jobs when editing and showVerification is true */}
-              {showVerification && editingItem && form.companyName && form.isCurrent && (
+              {/* Email Verification Section - Only show for current jobs when editing, not verified, and showVerification is true */}
+              {showVerification && editingItem && form.companyName && form.isCurrent && !userLevelVerified && (
                 <View style={styles.verificationSection}>
                   {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) || 
                    (form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()) ? (
@@ -673,14 +696,6 @@ export default function AddWorkExperienceModal({
                       <Text style={[styles.verificationSubtitle, { color: colors.warning, marginLeft: 8 }]}>
                         Please save your changes first before verifying your company email.
                       </Text>
-                    </View>
-                  ) : userLevelVerified ? (
-                    <View style={styles.verifiedContainer}>
-                      <Ionicons name="shield-checkmark" size={22} color="#10B981" />
-                      <View style={styles.verifiedTextContainer}>
-                        <Text style={styles.verifiedText}>Verified Employee</Text>
-                        <Text style={styles.verifiedEmail}>{companyEmail || editingItem?.CompanyEmail}</Text>
-                      </View>
                     </View>
                   ) : (
                     <>
@@ -1313,6 +1328,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  verifiedSectionSimple: {
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 8,
+  },
   verificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1339,28 +1359,50 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.warning,
   },
-  verifiedContainer: {
+  verifiedCompanySection: {
+    marginBottom: 20,
+    marginTop: 0,
+  },
+  verifiedCompanyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.success + '15', // 15% opacity of success color
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.success,
     gap: 12,
-    backgroundColor: '#ECFDF5',
-    padding: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#10B981',
+    marginTop: 8,
   },
-  verifiedTextContainer: {
+  verifiedIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verifiedCompanyInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
-  verifiedText: {
+  verifiedCompanyTitle: {
     fontSize: typography.sizes?.md || 16,
-    fontWeight: typography.weights?.semibold || '600',
-    color: '#065F46',
+    fontWeight: typography.weights?.bold || '700',
+    color: colors.text,
+    marginBottom: 2,
+    letterSpacing: 0.2,
   },
-  verifiedEmail: {
-    fontSize: typography.sizes?.sm || 14,
-    color: '#047857',
-    marginTop: 2,
+  verifiedCompanyDisclaimer: {
+    fontSize: typography.sizes?.xs || 12,
+    color: colors.success,
+    lineHeight: 16,
+    fontWeight: '500',
+  },
+  verifiedDisclaimerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   emailInputRow: {
     flexDirection: 'row',

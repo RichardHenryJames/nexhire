@@ -1,5 +1,6 @@
 import { dbService } from './database.service';
 import { EmailService } from './emailService';
+import { encrypt, decrypt, maskEmail } from '../utils/encryption';
 
 /**
  * Company Email Verification Service
@@ -134,14 +135,15 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
       (@param0, @param1, @param2, @param3, @param4, 'COMPANY_EMAIL_VERIFICATION')
     `, [userId, workExperienceId, companyEmail, otp, expiresAt]);
 
-    // 7. Update company email in work experience (not verified yet)
+    // 7. Update company email in work experience (not verified yet) - ENCRYPTED
+    const encryptedEmail = encrypt(companyEmail);
     await dbService.executeQuery(`
       UPDATE WorkExperiences
       SET CompanyEmail = @param1,
           CompanyEmailVerified = 0,
           UpdatedAt = GETUTCDATE()
       WHERE WorkExperienceID = @param0
-    `, [workExperienceId, companyEmail]);
+    `, [workExperienceId, encryptedEmail]);
 
     // 8. Send OTP email
     const emailResult = await EmailService.send({
@@ -182,7 +184,7 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
       message: `Verification code sent to ${companyEmail}. Please check your inbox.`,
       data: {
         expiresInMinutes: OTP_EXPIRY_MINUTES,
-        email: companyEmail.replace(/(.{3}).*(@.*)/, '$1***$2') // Mask email
+        email: maskEmail(companyEmail) // Use our mask function
       }
     };
 
@@ -302,7 +304,8 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
       userAlreadyVerifiedForOrg = existingVerifiedResult.recordset[0]?.VerifiedCount > 0;
     }
 
-    // 7. Update WorkExperience as verified
+    // 7. Update WorkExperience as verified - ENCRYPTED
+    const encryptedVerifiedEmail = encrypt(otpRecord.Email);
     await dbService.executeQuery(`
       UPDATE WorkExperiences
       SET CompanyEmail = @param1,
@@ -310,7 +313,7 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
           CompanyEmailVerifiedAt = GETUTCDATE(),
           UpdatedAt = GETUTCDATE()
       WHERE WorkExperienceID = @param0
-    `, [workExperienceId, otpRecord.Email]);
+    `, [workExperienceId, encryptedVerifiedEmail]);
 
     // 8. Update User as verified referrer
     await dbService.executeQuery(`
@@ -398,7 +401,8 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
         currentWorkExperience: user.WorkExperienceID ? {
           workExperienceId: user.WorkExperienceID,
           companyName: user.CompanyName || user.OrganizationName,
-          companyEmail: user.CompanyEmail,
+          companyEmail: decrypt(user.CompanyEmail), // Decrypt for display
+          companyEmailMasked: maskEmail(decrypt(user.CompanyEmail) || ''), // Masked version for UI
           isEmailVerified: user.CompanyEmailVerified || false,
           verifiedAt: user.CompanyEmailVerifiedAt
         } : null

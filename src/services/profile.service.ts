@@ -1,6 +1,7 @@
 import { dbService } from '../services/database.service';
 import { AuthService } from '../services/auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
+import { decrypt, maskEmail } from '../utils/encryption';
 
 // Define interfaces for type safety
 interface ApplicantFieldMapping {
@@ -203,7 +204,12 @@ export class ApplicantService {
                     ORDER BY we.IsCurrent DESC, we.EndDate DESC, we.StartDate DESC
                 `;
                 const workExpResult = await dbService.executeQuery(workExpQuery, [profile.ApplicantID]);
-                profile.workExperiences = workExpResult.recordset || [];
+                // Decrypt CompanyEmail for each work experience
+                profile.workExperiences = (workExpResult.recordset || []).map((we: any) => ({
+                    ...we,
+                    CompanyEmail: decrypt(we.CompanyEmail),
+                    CompanyEmailMasked: maskEmail(decrypt(we.CompanyEmail) || '')
+                }));
             } catch (error) {
                 console.warn('Could not load work experiences:', error);
                 profile.workExperiences = [];

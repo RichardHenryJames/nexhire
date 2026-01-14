@@ -493,16 +493,9 @@ export default function UserProfileHeader({
     let badgeColor = colors.gray600;
     let badgeIcon = 'person';
 
+    // Don't show badge for JobSeekers - removed "Open to Refer" badge
     if (userType === 'JobSeeker') {
-      if (jobSeekerProfile?.openToRefer) {
-        badgeText = 'Open to Refer';
-        badgeColor = '#10B981'; // Green
-        badgeIcon = 'people';
-      } else {
-        badgeText = 'Not Open to Refer';
-        badgeColor = colors.gray600;
-        badgeIcon = 'pause';
-      }
+      return null;
     } else if (userType === 'Employer') {
       badgeText = 'Recruiter';
       badgeColor = '#3B82F6'; // Blue
