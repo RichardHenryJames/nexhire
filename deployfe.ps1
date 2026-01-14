@@ -197,6 +197,8 @@ if (Test-Path $indexPath) {
     <link rel="apple-touch-icon" sizes="180x180" href="/refopen-small-logo.jpg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <meta name="theme-color" content="#6366F1" />
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7167287641762329" crossorigin="anonymous"></script>
     <link rel="canonical" href="https://refopen.com/" />
     <meta name="application-name" content="RefOpen" />
     <meta name="apple-mobile-web-app-title" content="RefOpen" />
