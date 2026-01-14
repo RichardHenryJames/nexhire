@@ -21,30 +21,10 @@ import refopenAPI from '../../services/api';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import ResumeSection from '../../components/profile/ResumeSection';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
+import EducationSection from '../../components/profile/EducationSection';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
 import ModalToast from '../../components/ModalToast';
-
-// Education level options
-const EDUCATION_LEVELS = [
-  'High School',
-  'Diploma',
-  'B.Tech / B.E',
-  'B.Sc',
-  'B.A',
-  'B.Com',
-  'BBA',
-  'B.Arch',
-  'MBBS',
-  'M.Tech / M.E',
-  'M.Sc',
-  'M.A',
-  'M.Com',
-  'MBA',
-  'M.Arch',
-  'PhD/Doctorate',
-  'Other'
-];
 
 export default function SettingsScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
@@ -125,6 +105,7 @@ export default function SettingsScreen({ navigation, route }) {
     fieldOfStudy: '',
     institution: '',
     graduationYear: '',
+    gpa: '',
     primarySkills: [],
     secondarySkills: [],
     isOpenToWork: false,
@@ -216,6 +197,7 @@ export default function SettingsScreen({ navigation, route }) {
             fieldOfStudy: data.FieldOfStudy || '',
             institution: data.Institution || '',
             graduationYear: data.GraduationYear || '',
+            gpa: data.GPA || '',
             primarySkills,
             secondarySkills,
             isOpenToWork: data.IsOpenToWork || false,
@@ -341,21 +323,6 @@ export default function SettingsScreen({ navigation, route }) {
       setActiveModal(null);
     } catch (error) {
       showToast('Failed to update professional details', 'error');
-    }
-  };
-
-  const saveEducation = async () => {
-    try {
-      await updateProfileSmart({
-        HighestEducation: jobSeekerProfile.highestEducation,
-        FieldOfStudy: jobSeekerProfile.fieldOfStudy,
-        Institution: jobSeekerProfile.institution,
-        GraduationYear: jobSeekerProfile.graduationYear,
-      });
-      showToast('Education updated successfully', 'success');
-      setActiveModal(null);
-    } catch (error) {
-      showToast('Failed to update education', 'error');
     }
   };
 
@@ -650,7 +617,7 @@ export default function SettingsScreen({ navigation, route }) {
     </Modal>
   );
 
-  // Education Modal
+  // Education Modal - uses same EducationSection component as Profile screen
   const renderEducationModal = () => (
     <Modal
       visible={activeModal === 'education'}
@@ -665,63 +632,33 @@ export default function SettingsScreen({ navigation, route }) {
               <Ionicons name="close" size={28} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Education</Text>
-            <TouchableOpacity onPress={saveEducation} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
+            <View style={{ width: 60 }} />
           </View>
 
-          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Highest Education</Text>
-            <View style={styles.chipContainer}>
-              {EDUCATION_LEVELS.map((level) => (
-                <TouchableOpacity
-                  key={level}
-                  style={[styles.chip, jobSeekerProfile.highestEducation === level && styles.chipSelected]}
-                  onPress={() => setJobSeekerProfile(prev => ({ ...prev, highestEducation: level }))}
-                >
-                  <Text style={[styles.chipText, jobSeekerProfile.highestEducation === level && styles.chipTextSelected]}>
-                    {level}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Field of Study</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.fieldOfStudy}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, fieldOfStudy: text }))}
-              placeholder="E.g., Computer Science"
-              placeholderTextColor={colors.gray400}
+          <ScrollView style={styles.modalContent}>
+            <EducationSection 
+              profile={{
+                institution: jobSeekerProfile.institution || '',
+                highestEducation: jobSeekerProfile.highestEducation || '',
+                fieldOfStudy: jobSeekerProfile.fieldOfStudy || '',
+                graduationYear: jobSeekerProfile.graduationYear || '',
+                gpa: jobSeekerProfile.gpa || ''
+              }}
+              setProfile={(updatedEducation) => {
+                setJobSeekerProfile(prev => ({
+                  ...prev,
+                  institution: updatedEducation.institution || '',
+                  highestEducation: updatedEducation.highestEducation || '',
+                  fieldOfStudy: updatedEducation.fieldOfStudy || '',
+                  graduationYear: updatedEducation.graduationYear || '',
+                  gpa: updatedEducation.gpa || ''
+                }));
+              }}
+              onUpdate={async (updatedEducation) => {
+                await loadExtendedProfile();
+              }}
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Institution</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.institution}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, institution: text }))}
-              placeholder="E.g., Stanford University"
-              placeholderTextColor={colors.gray400}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Graduation Year</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.graduationYear}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, graduationYear: text }))}
-              placeholder="E.g., 2020"
-              placeholderTextColor={colors.gray400}
-              keyboardType="numeric"
-            />
-          </View>
-        </ScrollView>
+          </ScrollView>
         </View>
       </View>
     </Modal>
