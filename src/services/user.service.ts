@@ -935,8 +935,8 @@ export class UserService {
             const query = `
                 SELECT 
                     u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
-                    e.JobTitle, e.Department, e.OrganizationID,
-                    o.Name as OrganizationName, o.Industry, o.CompanySize
+                    e.Role, e.OrganizationID,
+                    o.Name as OrganizationName, o.Industry, o.Size, o.Website, o.Description
                 FROM Users u
                 LEFT JOIN Employers e ON u.UserID = e.UserID
                 LEFT JOIN Organizations o ON e.OrganizationID = o.OrganizationID
@@ -959,15 +959,15 @@ export class UserService {
             const profilePic = hasValue(row.ProfilePictureURL) ? 1 : 0;
             
             // Organization Info - 5 fields
-            const jobTitle = hasValue(row.JobTitle) ? 1 : 0;
-            const department = hasValue(row.Department) ? 1 : 0;
+            const role = hasValue(row.Role) ? 1 : 0;
             const organizationName = hasValue(row.OrganizationName) ? 1 : 0;
             const industry = hasValue(row.Industry) ? 1 : 0;
-            const companySize = hasValue(row.CompanySize) ? 1 : 0;
+            const companySize = hasValue(row.Size) ? 1 : 0;
+            const website = hasValue(row.Website) ? 1 : 0;
             
             const totalFields = 10;
             const achieved = firstName + lastName + email + phone + profilePic +
-                           jobTitle + department + organizationName + industry + companySize;
+                           role + organizationName + industry + companySize + website;
             
             return Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
         } catch (error) {
