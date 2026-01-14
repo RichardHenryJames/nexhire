@@ -1337,7 +1337,7 @@ export class UserService {
                     -- User table fields
                     u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
                     -- Applicant table fields
-                    a.Headline, a.CurrentJobTitle, a.CurrentCompanyName, a.YearsOfExperience,
+                    a.Headline, a.CurrentJobTitle, a.CurrentCompanyName, a.TotalExperienceMonths,
                     a.CurrentLocation, a.Summary,
                     a.Institution, a.HighestEducation, a.FieldOfStudy,
                     a.PrimarySkills, a.SecondarySkills,
@@ -1368,7 +1368,7 @@ export class UserService {
             const headline = hasValue(row.Headline) ? 1 : 0;
             const currentJobTitle = hasValue(row.CurrentJobTitle) ? 1 : 0;
             const currentCompany = hasValue(row.CurrentCompanyName) ? 1 : 0;
-            const yearsExp = row.YearsOfExperience > 0 ? 1 : 0;
+            const yearsExp = (row.TotalExperienceMonths || 0) > 0 ? 1 : 0;
             const currentLocation = hasValue(row.CurrentLocation) ? 1 : 0;
             const summary = hasValue(row.Summary) ? 1 : 0;
             
