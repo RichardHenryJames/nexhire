@@ -899,8 +899,8 @@ const [dashboardData, setDashboardData] = useState({
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
 
-                {/* 🌟 Become Verified Referrer Card - Only show if not verified */}
-                {!stats.isVerifiedReferrer && (
+                {/* 🌟 Become Verified Referrer Card - Only show if current job is NOT verified */}
+                {!stats.isCurrentJobVerified && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
                     onPress={handleBecomeVerifiedReferrer}

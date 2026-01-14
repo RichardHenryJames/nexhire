@@ -325,9 +325,8 @@ export class WorkExperienceService {
       }
     }
 
-    const query = `
-            UPDATE WorkExperiences SET IsActive = 0, UpdatedAt = GETUTCDATE() WHERE WorkExperienceID = @param0
-        `;
+    // Hard delete - permanently remove from database
+    const query = `DELETE FROM WorkExperiences WHERE WorkExperienceID = @param0`;
     await dbService.executeQuery(query, [workExperienceId]);
     await this.updateApplicantDerivedFields(existing.ApplicantID);
     // Recalculate profile completeness (centralized)

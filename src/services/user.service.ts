@@ -587,6 +587,18 @@ export class UserService {
             `, [userId]);
             const isVerifiedReferrer = userFlagsResult.recordset?.[0]?.IsVerifiedReferrer || false;
 
+            // Check if current work experience is verified (for showing "Become Verified Referrer" button)
+            const currentWorkExpResult = await dbService.executeQuery(`
+                SELECT TOP 1 CompanyEmailVerified 
+                FROM WorkExperiences 
+                WHERE ApplicantID = @param0 
+                  AND IsActive = 1 
+                  AND (IsCurrent = 1 OR EndDate IS NULL)
+                ORDER BY StartDate DESC
+            `, [applicantId]);
+            const isCurrentJobVerified = currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === true || 
+                                         currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === 1;
+
             // FIRST: Recalculate profile completeness to ensure it's up to date
             let profileCompleteness = 0;
             try {
@@ -750,8 +762,11 @@ export class UserService {
                     needsAttention: this.getJobSeekerAttentionItems(baseStats, referralStats, resumeStats)
                 },
                 
-                // Verified referrer status
+                // Verified referrer status (user-level, from any verified work experience)
                 isVerifiedReferrer: isVerifiedReferrer,
+                
+                // Current job verification status (for showing "Become Verified Referrer" button)
+                isCurrentJobVerified: isCurrentJobVerified,
                 
                 // Draft jobs count (for verified referrers who post jobs)
                 draftJobs: draftJobs

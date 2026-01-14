@@ -127,9 +127,9 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
   const isCurrent = item.IsCurrent || !end;
   const workExpVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
   
-  // For current job: use user-level IsVerifiedReferrer
-  // For historical jobs: use work experience level CompanyEmailVerified
-  const isVerified = isCurrent ? userIsVerifiedReferrer : workExpVerified;
+  // Always use work experience level CompanyEmailVerified for showing verification badge
+  // The user's overall IsVerifiedReferrer status is separate from individual work experience verification
+  const isVerified = workExpVerified;
   
   const formatDate = (date) => {
     if (!date) return '';

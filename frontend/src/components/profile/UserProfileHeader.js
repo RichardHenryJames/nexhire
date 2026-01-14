@@ -80,13 +80,16 @@ export default function UserProfileHeader({
   onProfileUpdate,
   showStats = false, // NEW: hide right-side Education/Skills/% Complete by default
   showProgress = true, // NEW: hide circular progress ring when viewing others' profiles
-  isVerifiedUser = false // NEW: Show verified badge if user is a permanently verified user
+  isVerifiedUser = false, // NEW: Show verified badge if user is a permanently verified user
+  isVerifiedReferrer = false, // Show if user is a verified referrer
+  onBecomeVerifiedReferrer = null // Callback when "Become Verified Referrer" is clicked
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [verifyingReferrer, setVerifyingReferrer] = useState(false);
 
   // CALCULATE PROFILE COMPLETENESS BASED ON ACTUAL PROFILE FIELDS
   useEffect(() => {
@@ -493,8 +496,47 @@ export default function UserProfileHeader({
     let badgeColor = colors.gray600;
     let badgeIcon = 'person';
 
-    // Don't show badge for JobSeekers - removed "Open to Refer" badge
+    // For JobSeekers - show "Become Verified Referrer" button if not verified, or "Verified Referrer" badge if verified
     if (userType === 'JobSeeker') {
+      if (isVerifiedReferrer) {
+        // Show Verified Referrer badge
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: colors.success + '15' }]}>
+            <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+            <Text style={[styles.statusBadgeText, { color: colors.success }]}>
+              Verified Referrer
+            </Text>
+          </View>
+        );
+      } else if (onBecomeVerifiedReferrer) {
+        // Show "Become Verified Referrer" button
+        return (
+          <TouchableOpacity 
+            style={[styles.becomeReferrerButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
+            onPress={async () => {
+              setVerifyingReferrer(true);
+              try {
+                await onBecomeVerifiedReferrer();
+              } finally {
+                setVerifyingReferrer(false);
+              }
+            }}
+            disabled={verifyingReferrer}
+            activeOpacity={0.7}
+          >
+            {verifyingReferrer ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                <Text style={[styles.becomeReferrerText, { color: colors.primary }]}>
+                  Become Verified Referrer
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        );
+      }
       return null;
     } else if (userType === 'Employer') {
       badgeText = 'Recruiter';
@@ -895,6 +937,23 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  
+  // Become Verified Referrer Button
+  becomeReferrerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    borderWidth: 1,
+    gap: 6,
+  },
+  becomeReferrerText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // Stats Column
