@@ -32,7 +32,7 @@ import { showToast } from '../components/Toast';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-const { user, isEmployer, isJobSeeker, refreshVerificationStatus } = useAuth();
+const { user, isEmployer, isJobSeeker, isAdmin, refreshVerificationStatus } = useAuth();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -155,9 +155,10 @@ const [dashboardData, setDashboardData] = useState({
       .finally(() => setLoadingStats(false));
 
     // 2. Recommended Jobs (Job Seekers only)
+    let jobsPromise = Promise.resolve();
     if (isJobSeeker) {
       setLoadingJobs(true);
-      const jobsPromise = (async () => {
+      jobsPromise = (async () => {
         try {
           const recentJobsRes = await refopenAPI.getJobs(1, 5);
           
@@ -177,23 +178,26 @@ const [dashboardData, setDashboardData] = useState({
     }
 
     // 3. Jobs from Top MNCs (Fortune 500)
-    setLoadingF500Jobs(true);
-    const f500JobsPromise = (async () => {
-      try {
-        if (!isEmployer) {
+    let f500JobsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      setLoadingF500Jobs(true);
+      f500JobsPromise = (async () => {
+        try {
           const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
           let f500Jobs = [];
           if (f500JobsRes.success) {
             f500Jobs = (f500JobsRes.data || []).slice(0, 5);
           }
           setDashboardData(prev => ({ ...prev, f500Jobs }));
+        } catch (err) {
+          console.warn('F500 jobs fetch failed:', err);
+        } finally {
+          setLoadingF500Jobs(false);
         }
-      } catch (err) {
-        console.warn('F500 jobs fetch failed:', err);
-      } finally {
-        setLoadingF500Jobs(false);
-      }
-    })();
+      })();
+    } else {
+      setLoadingF500Jobs(false);
+    }
 
     // 3. Applications (Job Seeker only)
     let applicationsPromise = Promise.resolve();
@@ -721,7 +725,72 @@ const [dashboardData, setDashboardData] = useState({
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
           
-          {isEmployer ? (
+          {isAdmin ? (
+            <>
+              {/* Admin cards - Quick access to admin functions */}
+              <View style={styles.secondaryCardsContainer}>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Admin')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="stats-chart" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Admin Dashboard</Text>
+                    <Text style={styles.quickActionDescription}>View platform analytics and stats</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('AdminPayments')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                    <Ionicons name="card" size={24} color={colors.success} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Manage Payments</Text>
+                    <Text style={styles.quickActionDescription}>Review and approve payments</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('AdminSupport')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.warning + '20' }]}>
+                    <Ionicons name="chatbubbles" size={24} color={colors.warning} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Support Tickets</Text>
+                    <Text style={styles.quickActionDescription}>Handle user support requests</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Settings')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="settings" size={24} color={colors.info} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Settings</Text>
+                    <Text style={styles.quickActionDescription}>Manage your account settings</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : isEmployer ? (
             <>
               {/* Employer cards - 3 column grid on desktop, stacked on mobile */}
               <View style={styles.secondaryCardsContainer}>
