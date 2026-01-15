@@ -2914,7 +2914,7 @@ app.http("triggerBecomeVerifiedEmail", {
 // ========================================================================
 
 app.timer("becomeVerifiedReferrerEmail", {
-  schedule: "0 30 12 */2 * *", // 6 PM IST (12:30 UTC) every 2 days (alternate days)
+  schedule: "0 30 12 * * 2", // 6 PM IST (12:30 UTC) every Tuesday
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `become_verified_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -2924,7 +2924,7 @@ app.timer("becomeVerifiedReferrerEmail", {
     context.log("========================================================================");
     context.log(`Execution ID: ${executionId}`);
     context.log(`Triggered at: ${new Date().toISOString()}`);
-    context.log(`Schedule: 6 PM IST (12:30 UTC) - Alternate Days`);
+    context.log(`Schedule: 6 PM IST (12:30 UTC) - Every Tuesday`);
     context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
 
     if (myTimer.isPastDue) {
@@ -2993,7 +2993,7 @@ app.timer("becomeVerifiedReferrerEmail", {
 // ========================================================================
 
 app.timer("dailyReferrerNotificationEmail", {
-  schedule: "0 30 13 */2 * *", // 7 PM IST (13:30 UTC) every 2 days (alternate days)
+  schedule: "0 0 6 */3 * *", // 11:30 AM IST (6:00 AM UTC) every 3 days
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `referrer_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -3003,7 +3003,7 @@ app.timer("dailyReferrerNotificationEmail", {
     context.log("========================================================================");
     context.log(`Execution ID: ${executionId}`);
     context.log(`Triggered at: ${new Date().toISOString()}`);
-    context.log(`Schedule: 7 PM IST (13:30 UTC)`);
+    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Every 3 days`);
     context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
 
     if (myTimer.isPastDue) {
@@ -3446,7 +3446,7 @@ app.timer("notificationProcessorTimer", {
 // ========================================================================
 
 app.timer("dailyJobRecommendationEmail", {
-  schedule: "0 30 15 */3 * *", // 3:30 PM UTC = 9:00 PM IST every 3 days (gap of 2 days)
+  schedule: "0 50 3 */3 * *", // 3:50 AM UTC = 9:20 AM IST every 3 days
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
