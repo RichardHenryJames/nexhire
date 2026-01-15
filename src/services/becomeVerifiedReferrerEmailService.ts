@@ -126,43 +126,43 @@ export class BecomeVerifiedReferrerEmailService {
                     <!-- Benefits Section -->
                     <tr>
                         <td style="padding: 0 30px 20px 30px;">
-                            <div style="background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%); border-radius: 12px; padding: 25px; border-left: 4px solid #0EA5E9;">
-                                <h2 style="color: #0369A1; margin: 0 0 15px 0; font-size: 18px;">
+                            <div style="background-color: #ffffff; border-radius: 12px; padding: 25px; border: 2px solid #0EA5E9;">
+                                <h2 style="color: #1a1a1a; margin: 0 0 15px 0; font-size: 18px;">
                                     ✨ Benefits of Being a Verified Referrer
                                 </h2>
                                 <table width="100%" cellpadding="0" cellspacing="0">
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             📝 <strong>Post Referral Jobs for FREE</strong> - Share job openings at your company and refer interested candidates
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             💰 <strong>Earn Rewards</strong> - Get upto ₹100 per successful referral
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             🏆 <strong>Build Reputation</strong> - Verified badge shows on your profile
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             🤝 <strong>Help Others</strong> - Connect talented people with great opportunities
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             📊 <strong>Priority Access</strong> - Get notified first about referral requests
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             💳 <strong>Easy Withdrawal</strong> - Cash out via UPI or bank account
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
                                             📩 <strong>No Inbox Flood</strong> - Refer candidates through RefOpen & earn rewards
                                         </td>
                                     </tr>
@@ -217,14 +217,14 @@ export class BecomeVerifiedReferrerEmailService {
                     <!-- Privacy Assurance Section -->
                     <tr>
                         <td style="padding: 0 30px 25px 30px;">
-                            <div style="background-color: #EFF6FF; border-radius: 12px; padding: 20px; border-left: 4px solid #3B82F6;">
-                                <h3 style="color: #1E40AF; margin: 0 0 10px 0; font-size: 16px;">
+                            <div style="background-color: #ffffff; border-radius: 12px; padding: 20px; border: 2px solid #3B82F6;">
+                                <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 16px;">
                                     🔒 Your Privacy is Our Priority
                                 </h3>
-                                <p style="color: #1E3A8A; font-size: 13px; margin: 0; line-height: 1.6;">
+                                <p style="color: #1a1a1a; font-size: 13px; margin: 0; line-height: 1.6;">
                                     <strong>We take your privacy seriously:</strong>
                                 </p>
-                                <ul style="color: #1E3A8A; font-size: 13px; margin: 10px 0 0 0; padding-left: 20px; line-height: 1.8;">
+                                <ul style="color: #1a1a1a; font-size: 13px; margin: 10px 0 0 0; padding-left: 20px; line-height: 1.8;">
                                     <li><strong>Encrypted Storage</strong> - Your company email is AES-256 encrypted</li>
                                     <li><strong>Never Shared</strong> - We never share your email with anyone</li>
                                     <li><strong>Verification Only</strong> - Used only to verify you work at ${user.CompanyName}</li>

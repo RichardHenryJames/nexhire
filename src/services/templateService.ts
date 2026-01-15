@@ -169,13 +169,13 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </p>
                             
                             <!-- Why Verify Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #eff6ff; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; margin: 25px 0; border: 2px solid #3b82f6;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+                                        <p style="margin: 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">
                                             💡 Why confirm your referral?
                                         </p>
-                                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+                                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1a1a1a; font-size: 14px;">
                                             <li>Track all your referrals in one place</li>
                                             <li>Build your RefOpen profile with verified referrals</li>
                                             <li>Help the community by rating your referral experience</li>
@@ -740,20 +740,20 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </table>
                             
                             <!-- Referrer Benefits Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%); border-radius: 12px; margin: 0 0 20px 0;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; margin: 0 0 20px 0; border: 2px solid #0EA5E9;">
                                 <tr>
                                     <td style="padding: 25px;">
-                                        <h3 style="margin: 0 0 15px 0; color: #0369A1; font-size: 16px; text-align: center;">� Already Employed? Become a Verified Referrer!</h3>
+                                        <h3 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 16px; text-align: center;">✨ Already Employed? Become a Verified Referrer!</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">📝 <strong>Post Referral Jobs for FREE</strong> - Share openings at your company & refer candidates</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">💰 <strong>Earn Rewards</strong> - Get upto ₹100 per successful referral</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">🏆 <strong>Build Reputation</strong> - Verified badge shows on your profile</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">🤝 <strong>Help Others</strong> - Connect talented people with great opportunities</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">📊 <strong>Priority Access</strong> - Get notified first about referral requests</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">💳 <strong>Easy Withdrawal</strong> - Cash out via UPI or bank account</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #0C4A6E; font-size: 14px;">📩 <strong>No Inbox Flood</strong> - Refer candidates through RefOpen & earn rewards</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📝 <strong>Post Referral Jobs for FREE</strong> - Share openings at your company & refer candidates</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">💰 <strong>Earn Rewards</strong> - Get upto ₹100 per successful referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">🏆 <strong>Build Reputation</strong> - Verified badge shows on your profile</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">🤝 <strong>Help Others</strong> - Connect talented people with great opportunities</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📊 <strong>Priority Access</strong> - Get notified first about referral requests</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">💳 <strong>Easy Withdrawal</strong> - Cash out via UPI or bank account</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📩 <strong>No Inbox Flood</strong> - Refer candidates through RefOpen & earn rewards</td></tr>
                                         </table>
-                                        <p style="margin: 15px 0 0 0; color: #0369A1; font-size: 13px; text-align: center;">
+                                        <p style="margin: 15px 0 0 0; color: #1a1a1a; font-size: 13px; text-align: center;">
                                             Verify your work email to start earning today!
                                         </p>
                                     </td>
@@ -841,22 +841,22 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </table>
                             
                             <!-- Benefits Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #E0F2FE; border-radius: 10px; margin: 10px 0; border: 1px solid #0EA5E9;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; margin: 10px 0; border: 2px solid #0EA5E9;">
                                 <tr>
                                     <td style="padding: 18px;">
-                                        <p style="margin: 0 0 12px 0; color: #0369A1; font-size: 14px; font-weight: 600;">🎁 Your Referrer Benefits</p>
+                                        <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">🎁 Your Referrer Benefits</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
-                                                <td style="padding: 4px 0; color: #0C4A6E; font-size: 13px;">💰 Earn up to ₹100 per successful referral</td>
+                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">💰 Earn up to ₹100 per successful referral</td>
                                             </tr>
                                             <tr>
-                                                <td style="padding: 4px 0; color: #0C4A6E; font-size: 13px;">⚡ Respond quickly to earn bonus rewards</td>
+                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">⚡ Respond quickly to earn bonus rewards</td>
                                             </tr>
                                             <tr>
-                                                <td style="padding: 4px 0; color: #0C4A6E; font-size: 13px;">🏆 Unlock exclusive badges as you refer more</td>
+                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">🏆 Unlock exclusive badges as you refer more</td>
                                             </tr>
                                             <tr>
-                                                <td style="padding: 4px 0; color: #0C4A6E; font-size: 13px;">🤝 Help candidates get 15x higher interview chances</td>
+                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">🤝 Help candidates get 15x higher interview chances</td>
                                             </tr>
                                         </table>
                                     </td>
