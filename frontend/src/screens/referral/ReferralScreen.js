@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   Linking,
@@ -215,7 +214,7 @@ export default function ReferralScreen({ navigation }) {
       }
     } catch (error) {
       console.error('❌ Proof submission failed:', error);
-      Alert.alert('Error', error.message || 'Failed to submit referral');
+      showToast('Failed to submit referral. Please try again.', 'error');
     }
   };
 
@@ -418,7 +417,7 @@ export default function ReferralScreen({ navigation }) {
                       window.open(resumeUrl, '_blank');
                     } else {
                       Linking.openURL(resumeUrl).catch(() => {
-                        Alert.alert('Error', 'Could not open resume');
+                        showToast('Could not open resume', 'error');
                       });
                     }
                   } else {

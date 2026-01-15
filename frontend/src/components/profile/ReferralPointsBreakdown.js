@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -273,20 +273,13 @@ const ReferralPointsBreakdown = ({
         }
         
         // Show success message after refresh
-        Alert.alert(
-          'Conversion Successful! 🎉',
-          `${pointsConverted} points converted to ₹${walletAmount.toFixed(2)}\n\nNew Wallet Balance: ₹${newWalletBalance.toFixed(2)}`,
-          [{ text: 'OK' }]
-        );
+        showToast(`${pointsConverted} points converted to ₹${walletAmount.toFixed(2)}. New Balance: ₹${newWalletBalance.toFixed(2)}`, 'success');
       } else {
         throw new Error(response.error || 'Conversion failed');
       }
     } catch (error) {
       console.error('Error converting points:', error);
-      Alert.alert(
-        'Conversion Failed', 
-        error.message || 'Failed to convert points. Please try again.'
-      );
+      showToast('Failed to convert points. Please try again.', 'error');
     } finally {
       setConverting(false);
     }
@@ -352,41 +345,41 @@ const ReferralPointsBreakdown = ({
     // Validate payment method details
     if (paymentMethod === 'upi') {
       if (!upiId.trim()) {
-        Alert.alert('Error', 'Please enter your UPI ID');
+        showToast('Please enter your UPI ID', 'error');
         return;
       }
       // Basic UPI ID validation
       if (!upiId.includes('@')) {
-        Alert.alert('Error', 'Please enter a valid UPI ID (e.g., name@upi)');
+        showToast('Please enter a valid UPI ID (e.g., name@upi)', 'error');
         return;
       }
     } else {
       if (!bankAccount.trim()) {
-        Alert.alert('Error', 'Please enter your bank account number');
+        showToast('Please enter your bank account number', 'error');
         return;
       }
       if (!ifscCode.trim()) {
-        Alert.alert('Error', 'Please enter IFSC code');
+        showToast('Please enter IFSC code', 'error');
         return;
       }
       if (!accountHolderName.trim()) {
-        Alert.alert('Error', 'Please enter account holder name');
+        showToast('Please enter account holder name', 'error');
         return;
       }
       // Basic IFSC validation (11 characters)
       if (ifscCode.length !== 11) {
-        Alert.alert('Error', 'IFSC code must be 11 characters');
+        showToast('IFSC code must be 11 characters', 'error');
         return;
       }
     }
     
     if (amount < withdrawableData.minimumWithdrawal) {
-      Alert.alert('Invalid Amount', `Minimum withdrawal amount is ₹${withdrawableData.minimumWithdrawal}`);
+      showToast(`Minimum withdrawal amount is ₹${withdrawableData.minimumWithdrawal}`, 'error');
       return;
     }
     
     if (amount > withdrawableData.withdrawableAmount) {
-      Alert.alert('Invalid Amount', `You can withdraw maximum ₹${withdrawableData.withdrawableAmount}`);
+      showToast(`You can withdraw maximum ₹${withdrawableData.withdrawableAmount}`, 'error');
       return;
     }
     
@@ -440,7 +433,7 @@ const ReferralPointsBreakdown = ({
       }
     } catch (error) {
       console.error('Error requesting withdrawal:', error);
-      showToast(error.message || 'Failed to request withdrawal. Please try again.', 'error');
+      showToast('Failed to request withdrawal. Please try again.', 'error');
     } finally {
       setWithdrawing(false);
     }

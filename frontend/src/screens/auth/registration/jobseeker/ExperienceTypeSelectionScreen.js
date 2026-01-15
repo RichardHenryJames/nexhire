@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Image,
@@ -16,6 +15,7 @@ import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
+import { showToast } from '../../../../components/Toast';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -78,7 +78,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
 
   const handleContinue = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select your experience level');
+      showToast('Please select your experience level', 'error');
       return;
     }
 
@@ -104,7 +104,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   // Handle Skip to final screen
   const handleSkipToFinal = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select your experience level first');
+      showToast('Please select your experience level first', 'error');
       return;
     }
 

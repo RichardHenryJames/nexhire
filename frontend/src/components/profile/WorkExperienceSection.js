@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showToast } from '../Toast';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -375,7 +376,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       
       if (response.success) {
         setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
-        Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
+        showToast(`OTP sent to ${response.data?.email || emailToSend}`, 'success');
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
         setShowOtpInput(false); // Hide boxes on failure
@@ -651,7 +652,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const id = getId(pendingDelete);
-    if (!id) { setShowDeleteModal(false); setPendingDelete(null); Alert.alert('Error', 'Invalid experience id'); return; }
+    if (!id) { setShowDeleteModal(false); setPendingDelete(null); showToast('Invalid experience id', 'error'); return; }
     try {
       setDeleting(true);
       const res = await refopenAPI.deleteWorkExperience(id);
@@ -660,7 +661,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       await loadData();
     } catch (e) {
       setShowDeleteModal(false); setPendingDelete(null);
-      Alert.alert('Error', e?.message || 'Failed to delete');
+      showToast(e?.message || 'Failed to delete', 'error');
     } finally { setDeleting(false); }
   };
 
@@ -700,7 +701,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       // Web Alert fallback (RN Web Alert sometimes silent)
       const firstMsg = errors.jobTitle || errors.startDate || errors.endDate;
       if (firstMsg) {
-        try { Alert.alert('Validation', firstMsg); } catch(_) { /* noop */ }
+        showToast(firstMsg, 'error');
       }
       return;
     }
@@ -739,11 +740,11 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }
       await loadData();
-      Alert.alert('Success', `Work experience ${editingItem ? 'updated' : 'added'} successfully`);
+      showToast(`Work experience ${editingItem ? 'updated' : 'added'} successfully`, 'success');
       setShowModal(false);
     } catch (e) {
       console.error('[WorkExp] Save error:', e);
-      Alert.alert('Error', e?.message || 'Failed to save work experience');
+      showToast(e?.message || 'Failed to save work experience', 'error');
     } finally { setSaving(false); }
   };
 

@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Alert,
   Animated,
   Image,
   Switch,
@@ -58,7 +57,7 @@ const EDUCATION_LEVELS = [
 ];
 
 export default function ProfileScreen({ navigation, route }) {
-  const { user, userType, logout, updateProfileSmart } = useAuth();
+  const { user, userType, logout, updateProfileSmart, refreshVerificationStatus } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
@@ -89,6 +88,7 @@ export default function ProfileScreen({ navigation, route }) {
   
   // User-level verification status
   const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false);
+  const [loadingVerificationStatus, setLoadingVerificationStatus] = useState(true);
   
   // Become Verified Referrer modals state
   const [showConfirmCompanyModal, setShowConfirmCompanyModal] = useState(false);
@@ -219,7 +219,7 @@ export default function ProfileScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Error fetching work experiences:', error);
-      Alert.alert('Error', 'Failed to load your work experiences. Please try again.');
+      showToast('Failed to load your work experiences. Please try again.', 'error');
     } finally {
       setNavigatingToVerify(false);
     }
@@ -300,6 +300,8 @@ export default function ProfileScreen({ navigation, route }) {
             }
           } catch (verifyError) {
             console.warn('Could not load verification status:', verifyError);
+          } finally {
+            setLoadingVerificationStatus(false);
           }
         }
       }
@@ -354,7 +356,7 @@ export default function ProfileScreen({ navigation, route }) {
   }, []);
 
   const scrollToTop = () => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   // Section Cards
@@ -404,12 +406,13 @@ export default function ProfileScreen({ navigation, route }) {
         githubProfile: jobSeekerProfile.githubProfile,
       });
       if (response.success) {
-        Alert.alert('Success', 'Personal details updated successfully');
+        showToast('Personal details updated successfully', 'success');
         setActiveModal(null);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update personal details');
+      showToast('Failed to update personal details', 'error');
     }
   };
 
@@ -431,13 +434,13 @@ export default function ProfileScreen({ navigation, route }) {
             secondary: skillsData.secondarySkills.split(',').map(s => s.trim()).filter(Boolean),
           },
         }));
-        Alert.alert('Success', 'Skills updated successfully');
+        showToast('Skills updated successfully', 'success');
       } else {
-        Alert.alert('Error', response.message || 'Failed to update skills');
+        showToast('Failed to update skills. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving skills:', error);
-      Alert.alert('Error', 'Failed to update skills. Please try again.');
+      showToast('Failed to update skills. Please try again.', 'error');
     }
   };
 
@@ -450,12 +453,13 @@ export default function ProfileScreen({ navigation, route }) {
         yearsOfExperience: jobSeekerProfile.yearsOfExperience,
       });
       if (response.success) {
-        Alert.alert('Success', 'Professional details updated successfully');
+        showToast('Professional details updated successfully', 'success');
         setEditingModal(false);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update professional details');
+      showToast('Failed to update professional details', 'error');
     }
   };
 
@@ -469,12 +473,15 @@ export default function ProfileScreen({ navigation, route }) {
         gpa: jobSeekerProfile.gpa,
       });
       if (response.success) {
-        Alert.alert('Success', 'Education details updated successfully');
+        showToast('Education details updated', 'success');
+        setActiveModal(null);
         setEditingModal(false);
         await loadExtendedProfile();
+        // Scroll to top after saving
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update education details');
+      showToast('Failed to update education details', 'error');
     }
   };
 
@@ -493,12 +500,13 @@ export default function ProfileScreen({ navigation, route }) {
         hideSalaryDetails: jobSeekerProfile.hideSalaryDetails,
       });
       if (response.success) {
-        Alert.alert('Success', 'Preferences updated successfully');
+        showToast('Preferences updated successfully', 'success');
         setEditingModal(false);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update preferences');
+      showToast('Failed to update preferences', 'error');
     }
   };
 
@@ -856,7 +864,9 @@ export default function ProfileScreen({ navigation, route }) {
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Education Details</Text>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={saveEducationDetails}>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Save</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
@@ -877,9 +887,6 @@ export default function ProfileScreen({ navigation, route }) {
                 graduationYear: updatedEducation.graduationYear || '',
                 gpa: updatedEducation.gpa || ''
               }));
-            }}
-            onUpdate={async (updatedEducation) => {
-              await loadExtendedProfile();
             }}
           />
         </ScrollView>
@@ -1371,6 +1378,7 @@ export default function ProfileScreen({ navigation, route }) {
               isVerifiedReferrer={isCurrentJobVerified}
               onBecomeVerifiedReferrer={handleBecomeVerifiedReferrer}
               isLoadingVerify={navigatingToVerify}
+              loadingVerificationStatus={loadingVerificationStatus}
               profileCompletenessFromBackend={completenessValue}
             />
           );
@@ -1516,14 +1524,9 @@ export default function ProfileScreen({ navigation, route }) {
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
-                        {isExpVerified ? (
+                        {isExpVerified && (
                           <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
                             <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                          </View>
-                        ) : (
-                          <View style={{ backgroundColor: colors.gray100 || '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                            <Ionicons name="shield-outline" size={10} color={colors.gray500 || '#6B7280'} />
-                            <Text style={{ fontSize: 10, color: colors.gray500 || '#6B7280' }}>Unverified</Text>
                           </View>
                         )}
                       </View>
@@ -1879,6 +1882,8 @@ export default function ProfileScreen({ navigation, route }) {
           setShowAddWorkModal(false);
           setShowVerifiedOverlay(true);
           setIsVerifiedReferrer(true);
+          // Refresh verification status in AuthContext so other screens see the update
+          refreshVerificationStatus();
           // Refresh profile
           loadExtendedProfile();
         }}

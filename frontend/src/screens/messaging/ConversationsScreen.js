@@ -10,7 +10,6 @@ import {
   TextInput,
   Image,
   Modal,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +20,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
 import MessagingLayoutDesktop from './MessagingLayoutDesktop';
+import { showToast } from '../../components/Toast';
 
 // Wrapper component to handle desktop vs mobile layout
 export default function ConversationsScreen() {
@@ -248,7 +248,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
       });
     } catch (error) {
       console.error('Error navigating to profile:', error);
-      Alert.alert('Error', 'Failed to open profile');
+      showToast('Failed to open profile', 'error');
   }
   };
 

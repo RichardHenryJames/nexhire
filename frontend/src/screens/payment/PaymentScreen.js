@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Linking,
@@ -43,7 +42,7 @@ export default function PaymentScreen({ route, navigation }) {
 
   useEffect(() => {
     if (!plan) {
-      Alert.alert('Error', 'No plan selected');
+      showToast('No plan selected', 'error');
       navigation.goBack();
       return;
     }
@@ -73,7 +72,7 @@ export default function PaymentScreen({ route, navigation }) {
       }
     } catch (error) {
       console.error('Payment initiation error:', error);
-      Alert.alert('Payment Error', error.message || 'Failed to initiate payment');
+      showToast('Failed to initiate payment. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -84,7 +83,7 @@ export default function PaymentScreen({ route, navigation }) {
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => openRazorpayCheckout(orderData, customerData);
-      script.onerror = () => Alert.alert('Error', 'Failed to load payment gateway script. Please retry.');
+      script.onerror = () => showToast('Failed to load payment gateway script. Please retry.', 'error');
       document.head.appendChild(script);
     } else {
       openRazorpayCheckout(orderData, customerData);
@@ -94,7 +93,7 @@ export default function PaymentScreen({ route, navigation }) {
   const openRazorpayCheckout = (orderData, customerData) => {
     const key = frontendConfig?.razorpay?.keyId;
     if (!key) {
-      Alert.alert('Configuration Error', 'Payment gateway key is not configured.');
+      showToast('Payment gateway key is not configured.', 'error');
       return;
     }
 
@@ -121,7 +120,7 @@ export default function PaymentScreen({ route, navigation }) {
 
     if (!options.order_id || !/^order_/.test(options.order_id)) {
       console.warn('Razorpay order id missing or invalid format:', options.order_id);
-      Alert.alert('Payment Error', 'Invalid order id received. Please retry.');
+      showToast('Invalid order id received. Please retry.', 'error');
       return;
     }
 
@@ -132,7 +131,7 @@ export default function PaymentScreen({ route, navigation }) {
       });
       rzp.open();
     } catch (e) {
-      Alert.alert('Payment Error', 'Unable to open payment gateway. Please try again.');
+      showToast('Unable to open payment gateway. Please try again.', 'error');
     }
   };
 
@@ -157,7 +156,7 @@ export default function PaymentScreen({ route, navigation }) {
       }
     } catch (error) {
       console.error('Payment verification error:', error);
-      Alert.alert('Verification Error', error.message || 'Payment verification failed. Please contact support.');
+      showToast('Payment verification failed. Please contact support.', 'error');
     } finally {
       setLoading(false);
     }

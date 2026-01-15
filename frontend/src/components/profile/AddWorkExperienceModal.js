@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ActivityIndicator, Switch, ScrollView, Image, Platform, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
+import { showToast } from '../Toast';
 
 // Helper hook for debouncing
 const useDebounce = (value, delay = 300) => {
@@ -379,7 +380,7 @@ export default function AddWorkExperienceModal({
     try {
       const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       if (response.success) {
-        Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
+        showToast(`OTP sent to ${response.data?.email || emailToSend}`, 'success');
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
         setShowOtpInput(false);
@@ -464,7 +465,7 @@ export default function AddWorkExperienceModal({
       setValidationErrors(errors);
       const firstMsg = errors.jobTitle || errors.startDate || errors.endDate;
       if (firstMsg) {
-        Alert.alert('Validation', firstMsg);
+        showToast(firstMsg, 'error');
       }
       return;
     }
@@ -501,7 +502,7 @@ export default function AddWorkExperienceModal({
       
       if (!result?.success) throw new Error(result?.error || 'Save failed');
       
-      Alert.alert('Success', `Work experience ${editingItem ? 'updated' : 'added'} successfully`);
+      showToast(`Work experience ${editingItem ? 'updated' : 'added'} successfully`, 'success');
       
       if (onSave) {
         onSave(result.data || payload);
@@ -509,7 +510,7 @@ export default function AddWorkExperienceModal({
       onClose();
     } catch (e) {
       console.error('[WorkExp] Save error:', e);
-      Alert.alert('Error', e?.message || 'Failed to save work experience');
+      showToast(e?.message || 'Failed to save work experience', 'error');
     } finally {
       setSaving(false);
     }
@@ -538,7 +539,9 @@ export default function AddWorkExperienceModal({
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
-              <View style={{ width: 24 }} />
+              <TouchableOpacity onPress={saving ? undefined : saveForm} disabled={saving}>
+                <Text style={{ color: saving ? colors.gray400 : colors.primary, fontSize: 16, fontWeight: '600' }}>{saving ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
@@ -967,17 +970,8 @@ export default function AddWorkExperienceModal({
 
               {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
 
-              {/* Footer actions */}
-              <View style={styles.modalFooterActions}>
-                <TouchableOpacity style={styles.modalCancelButton} onPress={onClose} disabled={saving}>
-                  <Ionicons name="close" size={16} color={colors.gray600} />
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalSaveButton} onPress={saving ? undefined : saveForm} disabled={saving}>
-                  <Ionicons name={saving ? 'hourglass' : 'save-outline'} size={16} color={colors.white} />
-                  <Text style={styles.modalSaveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Bottom spacing */}
+              <View style={{ height: 40 }} />
             </ScrollView>
           </View>
         </View>

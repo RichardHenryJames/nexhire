@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   StyleSheet,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -62,17 +62,17 @@ export default function WalletRechargeScreen({ navigation }) {
     const rechargeAmount = parseInt(amount);
 
     if (!rechargeAmount || isNaN(rechargeAmount)) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
+      showToast('Please enter a valid amount', 'error');
       return false;
     }
 
     if (rechargeAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Amount must be greater than zero');
+      showToast('Amount must be greater than zero', 'error');
       return false;
     }
 
     if (rechargeAmount > 100000) {
-      Alert.alert('Maximum Amount', 'Maximum recharge amount is ₹1,00,000');
+      showToast('Maximum recharge amount is ₹1,00,000', 'error');
       return false;
     }
 
@@ -99,16 +99,12 @@ export default function WalletRechargeScreen({ navigation }) {
         loadRazorpayScript(orderResult.data, rechargeAmount);
       } else {
         // For mobile, you'll need to integrate react-native-razorpay
-        Alert.alert(
-          'Mobile Payment',
-          'Razorpay mobile integration pending. Please use web version for now.',
-          [{ text: 'OK' }]
-        );
+        showToast('Razorpay mobile integration pending. Please use web version for now.', 'info');
         setLoading(false);
       }
     } catch (error) {
       console.error('Recharge error:', error);
-      Alert.alert('Error', error.message || 'Failed to process recharge');
+      showToast('Failed to process recharge. Please try again.', 'error');
       setLoading(false);
     }
   };
@@ -124,7 +120,7 @@ export default function WalletRechargeScreen({ navigation }) {
         };
         script.onerror = () => {
           console.error('Failed to load Razorpay script');
-          Alert.alert('Error', 'Failed to load payment gateway script. Please refresh the page and try again.');
+          showToast('Failed to load payment gateway script. Please refresh the page and try again.', 'error');
           setLoading(false);
         };
         document.head.appendChild(script);
@@ -132,20 +128,20 @@ export default function WalletRechargeScreen({ navigation }) {
         openRazorpayWeb(orderData, rechargeAmount);
       }
     } else {
-      Alert.alert('Error', 'Payment gateway is only available on web platform');
+      showToast('Payment gateway is only available on web platform', 'error');
       setLoading(false);
     }
   };
 
   const openRazorpayWeb = (orderData, rechargeAmount) => {
     if (!orderData.razorpayKeyId) {
-      Alert.alert('Error', 'Payment gateway configuration is missing. Please contact support.');
+      showToast('Payment gateway configuration is missing. Please contact support.', 'error');
       setLoading(false);
       return;
     }
 
     if (!orderData.orderId) {
-      Alert.alert('Error', 'Order ID is missing. Please try again.');
+      showToast('Order ID is missing. Please try again.', 'error');
       setLoading(false);
       return;
     }
@@ -181,11 +177,11 @@ export default function WalletRechargeScreen({ navigation }) {
         razorpay.open();
       } catch (error) {
         console.error('Error opening Razorpay:', error);
-        Alert.alert('Error', 'Failed to open payment gateway. Please try again.');
+        showToast('Failed to open payment gateway. Please try again.', 'error');
         setLoading(false);
       }
     } else {
-      Alert.alert('Error', 'Razorpay is not loaded. Please refresh the page.');
+      showToast('Razorpay is not loaded. Please refresh the page.', 'error');
       setLoading(false);
     }
   };
@@ -214,7 +210,7 @@ export default function WalletRechargeScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Verification error:', error);
-      Alert.alert('Verification Failed', error.message || 'Please contact support');
+      showToast('Verification failed. Please contact support.', 'error');
     } finally {
       setLoading(false);
     }

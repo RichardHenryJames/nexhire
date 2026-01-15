@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
@@ -317,7 +316,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
     } catch (error) {
       console.error('Error loading resumes:', error);
       setResumes([]);
-      Alert.alert('Error', 'Failed to load resumes. Please try again.');
+      showToast('Failed to load resumes. Please try again.', 'error');
     } finally {
       setLoadingResumes(false);
     }
@@ -522,13 +521,13 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
         } else {
           const errorMessage = result?.error || result?.message || 'Failed to submit referral request';
           console.error('❌ API returned error:', errorMessage);
-          Alert.alert('Request Failed', errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error);
       const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
-      Alert.alert('Error', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }

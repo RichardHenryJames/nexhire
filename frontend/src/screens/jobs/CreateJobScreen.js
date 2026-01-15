@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Platform, Modal, FlatList, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Platform, Modal, FlatList, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -239,7 +239,7 @@ export default function CreateJobScreen({ navigation }) {
   };
 
   const handleCreateJob = async () => {
-    if (!validateForm()) { Alert.alert('Validation', 'Fix errors before submitting'); return; }
+    if (!validateForm()) { showToast('Fix errors before submitting', 'error'); return; }
     setLoading(true);
     try {
       const isRemote = jobData.workplaceType?.toLowerCase() === 'remote';
@@ -293,7 +293,7 @@ export default function CreateJobScreen({ navigation }) {
         }
         return;
       } else {
-        Alert.alert('Error', result.error || result.message || 'Creation failed');
+        showToast('Failed to create job. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Create job error:', e);
@@ -309,9 +309,9 @@ export default function CreateJobScreen({ navigation }) {
         if (Object.keys(mapped).length) {
           setErrors(prev => ({ ...prev, ...mapped }));
         }
-        Alert.alert('Validation', 'Please fix highlighted fields and try again.');
+        showToast('Please fix highlighted fields and try again.', 'error');
       } else {
-        Alert.alert('Error', e?.message || 'Failed to create job');
+        showToast(e?.message || 'Failed to create job', 'error');
       }
     } finally { setLoading(false); }
   };

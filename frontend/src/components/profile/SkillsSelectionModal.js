@@ -8,8 +8,8 @@ import {
   TextInput,
   ActivityIndicator,
   StyleSheet,
-  Alert,
 } from 'react-native';
+import { showToast } from '../Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -75,11 +75,11 @@ export default function SkillsSelectionModal({
         setAllSkills(sortedSkills);
       } else {
         console.error('Invalid skills response:', response);
-        Alert.alert('Error', 'No skills data available');
+        showToast('No skills data available', 'error');
       }
     } catch (error) {
       console.error('Error loading skills:', error);
-      Alert.alert('Error', 'Failed to load skills. Please try again.');
+      showToast('Failed to load skills. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function SkillsSelectionModal({
         } else {
           // Limit to 10 primary skills
           if (prev.length >= 10) {
-            Alert.alert('Limit Reached', 'You can select up to 10 primary skills');
+            showToast('You can select up to 10 primary skills', 'error');
             return prev;
           }
           return [...prev, skillValue];
@@ -128,7 +128,7 @@ export default function SkillsSelectionModal({
         } else {
           // Limit to 15 secondary skills
           if (prev.length >= 15) {
-            Alert.alert('Limit Reached', 'You can select up to 15 secondary skills');
+            showToast('You can select up to 15 secondary skills', 'error');
             return prev;
           }
           return [...prev, skillValue];
@@ -155,7 +155,7 @@ export default function SkillsSelectionModal({
       onClose();
     } catch (error) {
       console.error('Error saving skills:', error);
-      Alert.alert('Error', 'Failed to save skills. Please try again.');
+      showToast('Failed to save skills. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

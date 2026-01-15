@@ -9,7 +9,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
-  Alert,
   Modal,
 } from 'react-native';
 import useResponsive from '../hooks/useResponsive';
@@ -20,6 +19,7 @@ import { typography } from '../styles/theme';
 import messagingApi from '../services/messagingApi';
 import refopenAPI from '../services/api';
 import WalletRechargeModal from '../components/WalletRechargeModal';
+import { showToast } from '../components/Toast';
 
 // Confirmation modal styles (same as AI jobs modal)
 const createConfirmModalStyles = (colors) => StyleSheet.create({
@@ -270,22 +270,19 @@ export default function ProfileViewsScreen({ navigation }) {
       if (result.success) {
         setHasAccess(true);
         await loadWalletBalance(); // Refresh wallet balance
-        Alert.alert(
-          'Unlocked!',
-          `You can now see who viewed your profile for ${pricing.profileViewAccessDurationDays} days.`
-        );
+        showToast(`You can now see who viewed your profile for ${pricing.profileViewAccessDurationDays} days.`, 'success');
         // Refresh the list to show real names
         fetchProfileViews(1, true);
       } else {
         if (result.error === 'Insufficient balance') {
           setShowWalletModal(true);
         } else {
-          Alert.alert('Error', result.error || 'Failed to unlock profile views');
+          showToast('Failed to unlock profile views. Please try again.', 'error');
         }
       }
     } catch (error) {
       console.error('Error purchasing profile view access:', error);
-      Alert.alert('Error', 'Failed to unlock profile views. Please try again.');
+      showToast('Failed to unlock profile views. Please try again.', 'error');
     } finally {
       setPurchasing(false);
     }

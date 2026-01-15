@@ -302,7 +302,7 @@ export default function SettingsScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Save error:', error);
-      showToast(error.message || 'Failed to update personal details', 'error');
+      showToast('Failed to update personal details. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -345,6 +345,22 @@ export default function SettingsScreen({ navigation, route }) {
       setActiveModal(null);
     } catch (error) {
       showToast('Failed to update preferences', 'error');
+    }
+  };
+
+  const saveEducationDetails = async () => {
+    try {
+      await refopenAPI.updateEducation({
+        institution: jobSeekerProfile.institution,
+        highestEducation: jobSeekerProfile.highestEducation,
+        fieldOfStudy: jobSeekerProfile.fieldOfStudy,
+        graduationYear: jobSeekerProfile.graduationYear,
+        gpa: jobSeekerProfile.gpa,
+      });
+      showToast('Education details updated', 'success');
+      setActiveModal(null);
+    } catch (error) {
+      showToast('Failed to update education details', 'error');
     }
   };
 
@@ -632,7 +648,9 @@ export default function SettingsScreen({ navigation, route }) {
               <Ionicons name="close" size={28} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Education</Text>
-            <View style={{ width: 60 }} />
+            <TouchableOpacity onPress={saveEducationDetails} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.modalContent}>
@@ -653,9 +671,6 @@ export default function SettingsScreen({ navigation, route }) {
                   graduationYear: updatedEducation.graduationYear || '',
                   gpa: updatedEducation.gpa || ''
                 }));
-              }}
-              onUpdate={async (updatedEducation) => {
-                await loadExtendedProfile();
               }}
             />
           </ScrollView>
@@ -1419,6 +1434,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+    padding: 16,
   },
   inputGroup: {
     marginBottom: 20,

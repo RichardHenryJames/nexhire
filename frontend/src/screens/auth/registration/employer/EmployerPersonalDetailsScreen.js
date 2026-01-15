@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
-  Alert, 
   Image,
   Modal,
   FlatList,
@@ -21,6 +20,7 @@ import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
+import { showToast } from '../../../../components/Toast';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -121,7 +121,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
 
   const onContinue = () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fill in all required fields');
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 

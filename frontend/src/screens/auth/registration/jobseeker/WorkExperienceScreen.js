@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +20,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
+import { showToast } from '../../../../components/Toast';
 
 // Debounce like college picker
 const useDebounce = (value, delay = 300) => {
@@ -323,24 +323,24 @@ export default function WorkExperienceScreen({ navigation, route }) {
     const hasPreviousWork = previousWorkData.currentJobTitle?.trim();
 
     if (!hasCurrentWork && !hasPreviousWork) {
-      Alert.alert('Required Field', 'Please enter at least one work experience (current or previous)');
+      showToast('Please enter at least one work experience (current or previous)', 'error');
       return;
     }
 
     // Validate current work if filled
     if (hasCurrentWork && !currentWorkData.startDate?.trim()) {
-      Alert.alert('Required Field', 'Please enter start date for your current position');
+      showToast('Please enter start date for your current position', 'error');
       return;
     }
 
     // Validate previous work if filled
     if (hasPreviousWork) {
       if (!previousWorkData.startDate?.trim()) {
-        Alert.alert('Required Field', 'Please enter start date for your previous position');
+        showToast('Please enter start date for your previous position', 'error');
         return;
       }
       if (!previousWorkData.endDate?.trim()) {
-        Alert.alert('Required Field', 'Please enter end date for your previous position');
+        showToast('Please enter end date for your previous position', 'error');
         return;
       }
     }
@@ -577,7 +577,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
               <TouchableOpacity
                 onPress={() => {
                   const name = (orgQuery || '').trim();
-                  if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                  if (!name) { showToast('Type your company name above', 'error'); return; }
                   updateField('organizationId', null);
                   updateField('currentCompany', name);
                   setShowOrgModal(false);

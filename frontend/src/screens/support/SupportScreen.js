@@ -165,7 +165,7 @@ export default function SupportScreen() {
           setSelectedTicket(updatedTicket.data);
         }
       } else {
-        showToast(result.error || 'Failed to send message', 'error');
+        showToast('Failed to send message. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error sending reply:', error);
@@ -186,7 +186,7 @@ export default function SupportScreen() {
         setSelectedTicket({ ...selectedTicket, Status: 'Closed' });
         loadTickets(); // Refresh list
       } else {
-        showToast(result.error || 'Failed to close ticket', 'error');
+        showToast('Failed to close ticket. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error closing ticket:', error);
@@ -230,7 +230,7 @@ export default function SupportScreen() {
         setMessage('');
         setActiveTab('history');
       } else {
-        showToast(result.error || 'Failed to submit ticket', 'error');
+        showToast('Failed to submit ticket. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Submit ticket error:', error);

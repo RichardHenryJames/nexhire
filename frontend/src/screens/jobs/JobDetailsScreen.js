@@ -169,12 +169,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           checkApplicationStatus();
         }
       } else {
-        Alert.alert('Error', 'Job not found');
+        showToast('Job not found', 'error');
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching job details:', error);
-      Alert.alert('Error', 'Failed to load job details');
+      showToast('Failed to load job details', 'error');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -234,12 +234,12 @@ const { jobId, fromReferralRequest } = route.params || {};
     }
 
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      showToast('Only job seekers can apply for positions', 'error');
       return;
     }
 
     if (hasApplied) {
-      Alert.alert('Already Applied', 'You have already applied for this position');
+      showToast('You have already applied for this position', 'error');
       return;
     }
 
@@ -268,7 +268,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      showToast('Only job seekers can ask for referrals', 'error');
       return;
     }
     
@@ -300,12 +300,12 @@ const { jobId, fromReferralRequest } = route.params || {};
         
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
-        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        showToast('Unable to check wallet balance. Please try again.', 'error');
         return;
       }
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
-      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
   };
@@ -399,12 +399,12 @@ const { jobId, fromReferralRequest } = route.params || {};
             setWalletModalData({ currentBalance, requiredAmount });
             setShowWalletModal(true);
           } else {
-            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+            showToast('Failed to send referral request. Please try again.', 'error');
           }
         }
       } catch (e) {
         console.error('Referral request error:', e);
-        Alert.alert('Error', e.message || 'Failed to send referral request');
+        showToast('Failed to send referral request. Please try again.', 'error');
       } finally {
         setReferralMode(false);
         setShowResumeModal(false);
@@ -459,7 +459,7 @@ const { jobId, fromReferralRequest } = route.params || {};
             ]
           );
         } else {
-          Alert.alert('Application Failed', result.error || result.message || 'Failed to submit application');
+          showToast('Failed to submit application. Please try again.', 'error');
         }
       }
     } catch (error) {
@@ -475,7 +475,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           ]
         );
       } else {
-        Alert.alert('Error', error.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } finally {
       setApplying(false);
@@ -506,10 +506,10 @@ const { jobId, fromReferralRequest } = route.params || {};
         }, 1500);
         
       } else {
-        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to submit application');
+      showToast('Failed to submit application. Please try again.', 'error');
     }
   };
 
@@ -551,12 +551,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           setWalletModalData({ currentBalance, requiredAmount });
           setShowWalletModal(true);
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       }
     } catch (e) {
       console.error('Quick referral error:', e);
-      Alert.alert('Error', e.message || 'Failed to send referral request');
+      showToast('Failed to send referral request. Please try again.', 'error');
     } finally {
       setReferralRequesting(false);
     }
@@ -580,7 +580,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           setIsSaved(false);
           showToast('Job removed from saved', 'success');
         } else {
-          Alert.alert('Error', 'Failed to remove job from saved');
+          showToast('Failed to remove job from saved', 'error');
         }
       } else {
         // Save the job
@@ -589,12 +589,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           setIsSaved(true);
           showToast('Job saved successfully', 'success');
         } else {
-          Alert.alert('Error', 'Failed to save job');
+          showToast('Failed to save job', 'error');
         }
       }
     } catch (error) {
       console.error('Save/Unsave error:', error);
-      Alert.alert('Error', error.message || 'Failed to update saved status');
+      showToast('Failed to update saved status. Please try again.', 'error');
     }
   };
 

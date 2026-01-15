@@ -341,7 +341,7 @@ export default function JobsScreen({ navigation, route }) {
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can use AI job recommendations');
+      showToast('Only job seekers can use AI job recommendations', 'error');
       return;
     }
 
@@ -1261,7 +1261,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      showToast('Only job seekers can apply for positions', 'error');
       return;
     }
     if (!primaryResumeLoadedRef.current) await loadPrimaryResume();
@@ -1291,7 +1291,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      showToast('Only job seekers can ask for referrals', 'error');
       return;
     }
 
@@ -1331,12 +1331,12 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
       } else {
         console.error('❌ Failed to check wallet balance:', walletBalance.error);
-        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        showToast('Unable to check wallet balance. Please try again.', 'error');
         return;
       }
     } catch (e) {
       console.error('❌ Exception in wallet balance check:', e);
-      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
   }, [user, isJobSeeker, navigation, referredJobIds, primaryResume, loadPrimaryResume]);
@@ -1370,7 +1370,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           primaryResumeLoadedRef.current = false;
           await loadPrimaryResume();
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       } else {
         const applicationData = {
@@ -1397,12 +1397,12 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
           } catch {}
         } else {
-          Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+          showToast('Failed to submit application. Please try again.', 'error');
         }
       }
     } catch (e) {
       console.error(referralMode ? 'Referral error' : 'Apply error', e);
-      Alert.alert('Error', e.message || 'Operation failed');
+      showToast('Operation failed. Please try again.', 'error');
     } finally {
       setPendingJobForApplication(null);
       setReferralMode(false);
@@ -1426,10 +1426,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
         } catch {}
       } else {
-        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to submit application');
+      showToast('Failed to submit application. Please try again.', 'error');
     }
   }, [removeSavedJobLocally]);
   const quickReferral = useCallback(async (job, resumeId) => {
@@ -1472,12 +1472,12 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           setWalletModalData({ currentBalance, requiredAmount });
           setShowWalletModal(true);
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       }
     } catch (e) {
       console.error('Quick referral error:', e);
-      Alert.alert('Error', e.message || 'Failed to send referral request');
+      showToast('Failed to send referral request. Please try again.', 'error');
     } finally {
       setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
     }
@@ -1499,11 +1499,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
         showToast('Job saved successfully', 'success');
       } else {
-        Alert.alert('Save Failed', res.error || 'Failed to save job');
+        showToast('Failed to save job. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Save error', e);
-      Alert.alert('Error', e.message || 'Failed to save job');
+      showToast('Failed to save job. Please try again.', 'error');
     } finally {
       refreshCounts();
     }
@@ -1519,11 +1519,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         removeSavedJobLocally(id);
         showToast('Job removed from saved', 'success');
       } else {
-        Alert.alert('Unsave Failed', res.error || 'Failed to remove job from saved');
+        showToast('Failed to remove job from saved. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Unsave error', e);
-      Alert.alert('Error', e.message || 'Failed to remove job from saved');
+      showToast('Failed to remove job from saved. Please try again.', 'error');
     }
   }, [removeSavedJobLocally, showToast]);
 
@@ -1868,7 +1868,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           // Find the job from referralConfirmData
           const job = jobs.find(j => (j.Title || '') === referralConfirmData.jobTitle);
           if (!job) {
-            Alert.alert('Error', 'Job not found. Please try again.');
+            showToast('Job not found. Please try again.', 'error');
             return;
           }
 
@@ -1880,7 +1880,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             if (existing.success && existing.data?.requests) {
               const already = existing.data.requests.some(r => r.JobID === jobId);
               if (already) {
-                Alert.alert('Already Requested', 'You have already requested a referral for this job');
+                showToast('You have already requested a referral for this job', 'info');
                 return;
               }
             }

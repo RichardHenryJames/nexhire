@@ -19,6 +19,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
+import { showToast } from '../../../../components/Toast';
 
 export default function EmployerAccountScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -80,7 +81,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const onSubmit = async () => {
     const err = validate();
     if (err) {
-      Alert.alert('Validation', err);
+      showToast(err, 'error');
       return;
     }
 
@@ -298,7 +299,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ]
         );
       } else {
-        Alert.alert('Error', errorMessage);
+        showToast(errorMessage, 'error');
       }
     } finally { setSubmitting(false); }
   };

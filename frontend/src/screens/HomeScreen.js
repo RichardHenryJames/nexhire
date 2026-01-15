@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   Dimensions,
   Image,
@@ -28,11 +27,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 import useResponsive from '../hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
+import { showToast } from '../components/Toast';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-const { user, isEmployer, isJobSeeker } = useAuth();
+const { user, isEmployer, isJobSeeker, refreshVerificationStatus } = useAuth();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -349,7 +349,7 @@ const [dashboardData, setDashboardData] = useState({
       }
     } catch (error) {
       console.error('Error fetching work experiences:', error);
-      Alert.alert('Error', 'Failed to load your work experiences. Please try again.');
+      showToast('Failed to load your work experiences. Please try again.', 'error');
     } finally {
       setNavigatingToVerify(false);
     }
@@ -931,8 +931,8 @@ const [dashboardData, setDashboardData] = useState({
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
 
-                {/* 🌟 Become Verified Referrer Card - Only show if current job is NOT verified */}
-                {!stats.isCurrentJobVerified && (
+                {/* 🌟 Become Verified Referrer Card - Only show if current job is NOT verified and stats loaded */}
+                {!loadingStats && !stats.isCurrentJobVerified && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
                     onPress={handleBecomeVerifiedReferrer}
@@ -1128,6 +1128,8 @@ const [dashboardData, setDashboardData] = useState({
           setVerifiedCompanyName(companyName);
           setShowAddWorkModal(false);
           setShowVerifiedOverlay(true);
+          // Refresh verification status in AuthContext so other screens see the update
+          refreshVerificationStatus();
           // Refresh to update verified status
           fetchDashboardData();
         }}

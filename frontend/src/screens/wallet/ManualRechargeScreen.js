@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   Clipboard,
@@ -18,6 +17,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
+import { showToast } from '../../components/Toast';
 
 const PAYMENT_METHODS = ['QR / UPI', 'Bank Transfer'];
 
@@ -95,25 +95,25 @@ const ManualRechargeScreen = ({ navigation }) => {
     } else {
       Clipboard.setString(text);
     }
-    Alert.alert('Copied!', `${label} copied to clipboard`);
+    showToast(`${label} copied to clipboard`, 'success');
   };
 
   const handleSubmit = async () => {
     // Validation
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      showToast('Please enter a valid amount', 'error');
       return;
     }
     if (!referenceNumber.trim()) {
-      Alert.alert('Error', 'Please enter the transaction reference number');
+      showToast('Please enter the transaction reference number', 'error');
       return;
     }
     if (settings && parseFloat(amount) < settings.minAmount) {
-      Alert.alert('Error', `Minimum amount is ₹${settings.minAmount}`);
+      showToast(`Minimum amount is ₹${settings.minAmount}`, 'error');
       return;
     }
     if (settings && parseFloat(amount) > settings.maxAmount) {
-      Alert.alert('Error', `Maximum amount is ₹${settings.maxAmount}`);
+      showToast(`Maximum amount is ₹${settings.maxAmount}`, 'error');
       return;
     }
 
@@ -132,7 +132,7 @@ const ManualRechargeScreen = ({ navigation }) => {
       console.log('📥 Manual Payment Submit Result:', result);
 
       if (result?.success) {
-        Alert.alert('Success', result.message || 'Payment proof submitted successfully');
+        showToast('Payment proof submitted successfully', 'success');
         // Reset form
         setAmount('');
         setReferenceNumber('');
@@ -142,11 +142,11 @@ const ManualRechargeScreen = ({ navigation }) => {
         // Reload submissions
         loadData();
       } else {
-        Alert.alert('Error', result?.message || 'Failed to submit payment proof');
+        showToast('Failed to submit payment proof. Please try again.', 'error');
       }
     } catch (error) {
       console.error('❌ Manual Payment Submit Error:', error);
-      Alert.alert('Error', 'Failed to submit payment proof');
+      showToast('Failed to submit payment proof', 'error');
     } finally {
       setSubmitting(false);
     }

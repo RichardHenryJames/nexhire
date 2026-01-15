@@ -9,13 +9,13 @@ import {
   Image,
   Platform,
   Linking,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../../components/Toast';
 
 export default function OrganizationDetailsScreen({ route, navigation }) {
   const { colors } = useTheme();
@@ -150,7 +150,7 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
         Linking.openURL(url);
       }
     } catch (error) {
-      Alert.alert('Error', 'Unable to open link');
+      showToast('Unable to open link', 'error');
     }
   };
 

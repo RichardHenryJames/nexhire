@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
@@ -194,9 +193,9 @@ export default function LoginScreen({ navigation }) {
       const errorMessage = result.error || 'Please check your credentials and try again.';
       setLoginError(errorMessage); // Set error to display on UI
       
-      // Also show alert for mobile
+      // Also show toast for mobile
       if (Platform.OS !== 'web') {
-        Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
+        showToast(errorMessage, 'error');
       }
     }
     // If successful, navigation will happen automatically via auth context
@@ -235,11 +234,7 @@ export default function LoginScreen({ navigation }) {
         
         // Do nothing - user dismissed
       } else if (result.needsConfig) {
-        Alert.alert(
-          'Google Sign-In Not Available',
-          'Google Sign-In is not configured yet. Please use email and password to sign in.',
-          [{ text: 'OK' }]
-        );
+        showToast('Google Sign-In is not configured yet. Please use email and password to sign in.', 'error');
       } else if (result.needsRegistration) {
         
         
@@ -253,19 +248,11 @@ export default function LoginScreen({ navigation }) {
         
       } else {
         console.error('? Google Sign-In failed:', result.error);
-        Alert.alert(
-          'Sign-In Failed',
-          result.error || 'Google Sign-In failed. Please try again.',
-          [{ text: 'OK' }]
-        );
+        showToast('Google Sign-In failed. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      Alert.alert(
-        'Sign-In Error',
-        error.message || 'An unexpected error occurred. Please try again.',
-        [{ text: 'OK' }]
-      );
+      showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setGoogleLoading(false);
     }

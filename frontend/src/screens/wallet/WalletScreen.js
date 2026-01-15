@@ -6,12 +6,12 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
@@ -77,7 +77,7 @@ export default function WalletScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Error loading wallet data:', error);
-      Alert.alert('Error', 'Failed to load wallet data');
+      showToast('Failed to load wallet data', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);

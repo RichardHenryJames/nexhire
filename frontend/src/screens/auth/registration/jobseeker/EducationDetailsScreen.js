@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,6 +18,7 @@ import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
+import { showToast } from '../../../../components/Toast';
 
 // Add debounce hook for smooth search
 const useDebounce = (value, delay) => {
@@ -350,27 +350,27 @@ export default function EducationDetailsScreen({ navigation, route }) {
     const customCollege = String(formData.customCollege || '').trim();
 
     if (!formData.college && !customCollege) {
-      Alert.alert('Required Field', 'Please select your college/school');
+      showToast('Please select your college/school', 'error');
       return;
     }
     if (formData.college?.name === 'Other' && !customCollege) {
-      Alert.alert('Required Field', 'Please enter your college/school name');
+      showToast('Please enter your college/school name', 'error');
       return;
     }
     if (!formData.degreeType) {
-      Alert.alert('Required Field', 'Please select your degree type');
+      showToast('Please select your degree type', 'error');
       return;
     }
     if (!formData.fieldOfStudy) {
-      Alert.alert('Required Field', 'Please select your field of study');
+      showToast('Please select your field of study', 'error');
       return;
     }
     if (experienceType === 'Student' && !formData.yearInCollege) {
-      Alert.alert('Required Field', 'Please select your current year');
+      showToast('Please select your current year', 'error');
       return;
     }
     if (experienceType === 'Student' && !/^\d{4}$/.test(String(formData.graduationYear || '').trim())) {
-      Alert.alert('Required Field', 'Please enter a valid graduation year (YYYY)');
+      showToast('Please enter a valid graduation year (YYYY)', 'error');
       return;
     }
 

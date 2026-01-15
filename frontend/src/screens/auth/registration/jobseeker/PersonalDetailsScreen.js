@@ -23,6 +23,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
+import { showToast } from '../../../../components/Toast';
 
 // Debounce hook for search
 const useDebounce = (value, delay = 300) => {
@@ -366,7 +367,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      showToast('Please fix the errors before continuing', 'error');
       return;
     }
 
@@ -506,7 +507,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
             ]
           );
         } else {
-          Alert.alert('Registration Failed', errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     } catch (error) {
@@ -549,7 +550,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
           ]
         );
       } else {
-        Alert.alert('Error', errorMessage);
+        showToast(errorMessage, 'error');
       }
     } finally {
       setLoading(false);
@@ -1077,7 +1078,7 @@ styles.selectionButton,
               <TouchableOpacity
                 onPress={() => {
                   const name = (orgQuery || '').trim();
-                  if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                  if (!name) { showToast('Type your company name above', 'error'); return; }
                   setFormData(prev => ({
                     ...prev,
                     organizationId: null,

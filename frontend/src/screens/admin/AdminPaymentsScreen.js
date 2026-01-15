@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   Modal,
   TextInput,
@@ -20,6 +19,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 
 export default function AdminPaymentsScreen() {
   const navigation = useNavigation();
@@ -100,14 +100,14 @@ export default function AdminPaymentsScreen() {
         body: JSON.stringify({ adminRemarks: 'Payment verified and approved' })
       });
       if (response.success) {
-        Alert.alert('Success', 'Payment approved! Amount credited to user wallet.');
+        showToast('Payment approved! Amount credited to user wallet.', 'success');
         loadData();
       } else {
-        Alert.alert('Error', response.message || 'Failed to approve payment');
+        showToast('Failed to approve payment. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error approving payment:', error);
-      Alert.alert('Error', 'Failed to approve payment');
+      showToast('Failed to approve payment', 'error');
     } finally {
       setProcessingPayment(null);
     }
@@ -121,7 +121,7 @@ export default function AdminPaymentsScreen() {
 
   const confirmReject = () => {
     if (!rejectionReason.trim()) {
-      Alert.alert('Required', 'Please enter a reason for rejection');
+      showToast('Please enter a reason for rejection', 'error');
       return;
     }
     setRejectModalVisible(false);
@@ -142,14 +142,14 @@ export default function AdminPaymentsScreen() {
         body: JSON.stringify({ adminRemarks: reason })
       });
       if (response.success) {
-        Alert.alert('Success', 'Payment rejected.');
+        showToast('Payment rejected.', 'success');
         loadData();
       } else {
-        Alert.alert('Error', response.message || 'Failed to reject payment');
+        showToast('Failed to reject payment. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error rejecting payment:', error);
-      Alert.alert('Error', 'Failed to reject payment');
+      showToast('Failed to reject payment', 'error');
     } finally {
       setProcessingPayment(null);
     }

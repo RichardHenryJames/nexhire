@@ -209,7 +209,7 @@ export default function AdminSupportScreen() {
           adminResponse.trim()
         );
         if (!messageResult.success) {
-          showToast(messageResult.error || 'Failed to send message', 'error');
+          showToast('Failed to send message. Please try again.', 'error');
           return;
         }
       }
@@ -226,7 +226,7 @@ export default function AdminSupportScreen() {
       if (Object.keys(updateData).length > 0) {
         const response = await refopenAPI.updateSupportTicket(selectedTicket.TicketID, updateData);
         if (!response.success) {
-          showToast(response.error || 'Failed to update ticket', 'error');
+          showToast('Failed to update ticket. Please try again.', 'error');
           return;
         }
       }

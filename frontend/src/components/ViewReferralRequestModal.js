@@ -5,7 +5,6 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   TextInput,
   Image,
@@ -138,7 +137,7 @@ export default function ViewReferralRequestModal({
         window.open(resumeUrl, '_blank');
       } else {
         Linking.openURL(resumeUrl).catch(() => {
-          Alert.alert('Error', 'Could not open resume');
+          showToast('Could not open resume', 'error');
         });
       }
     } else {
@@ -203,7 +202,7 @@ export default function ViewReferralRequestModal({
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to access image picker: ' + error.message);
+      showToast('Failed to access image picker. Please try again.', 'error');
     }
   }, []);
 
@@ -256,7 +255,7 @@ export default function ViewReferralRequestModal({
       
     } catch (error) {
       console.error('Submit proof error:', error);
-      Alert.alert('Error', error.message || 'Failed to submit referral');
+      showToast('Failed to submit referral. Please try again.', 'error');
     } finally {
       setUploading(false);
     }

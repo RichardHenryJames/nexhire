@@ -10,6 +10,7 @@ import {
   Image,
   Modal
 } from 'react-native';
+import { showToast } from '../Toast';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -83,6 +84,7 @@ export default function UserProfileHeader({
   isVerifiedUser = false, // NEW: Show verified badge if user is a permanently verified user
   isVerifiedReferrer = false, // Show if user is a verified referrer
   onBecomeVerifiedReferrer = null, // Callback when "Become Verified Referrer" is clicked
+  loadingVerificationStatus = false, // Hide button while loading verification status
   profileCompletenessFromBackend = null // Backend-driven profile completeness
 }) {
   const { colors } = useTheme();
@@ -244,10 +246,7 @@ export default function UserProfileHeader({
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library to update your profile picture.'
-        );
+        showToast('Please allow access to your photo library to update your profile picture.', 'error');
         return false;
       }
     }
@@ -300,10 +299,7 @@ export default function UserProfileHeader({
       const permissionResult = await CrossPlatformFileHandler.requestPermissions();
       
       if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please grant camera and photo library permissions to upload profile pictures.'
-        );
+        showToast('Please grant camera and photo library permissions to upload profile pictures.', 'error');
         return;
       }
 
@@ -320,7 +316,7 @@ export default function UserProfileHeader({
       if (type === 'camera') {
         if (Platform.OS === 'web') {
           // Web doesn't support camera, fallback to library
-          Alert.alert('Camera Not Available', 'Camera is not available on web. Using photo library instead.');
+          showToast('Camera is not available on web. Using photo library instead.', 'info');
           result = await ImagePicker.launchImageLibraryAsync(commonOptions);
         } else {
           result = await ImagePicker.launchCameraAsync(commonOptions);
@@ -336,7 +332,7 @@ export default function UserProfileHeader({
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      showToast('Failed to select image. Please try again.', 'error');
     }
   };
 
@@ -442,7 +438,7 @@ export default function UserProfileHeader({
         // Notify parent component
         onProfileUpdate?.(updatedProfile);
         
-        Alert.alert('Success! ??', 'Your profile picture has been updated successfully!');
+        showToast('Your profile picture has been updated successfully!', 'success');
       } else {
         throw new Error(uploadResult?.error || 'Upload failed - no response from server');
       }
@@ -461,7 +457,7 @@ export default function UserProfileHeader({
         userMessage = error.message;
       }
       
-      Alert.alert('Upload Failed', userMessage);
+      showToast(userMessage, 'error');
     } finally {
       setUploading(false);
     }
@@ -503,6 +499,10 @@ export default function UserProfileHeader({
 
     // For JobSeekers - show "Become Verified Referrer" button if not verified, or "Verified Referrer" badge if verified
     if (userType === 'JobSeeker') {
+      // Don't show anything while loading verification status
+      if (loadingVerificationStatus) {
+        return null;
+      }
       if (isVerifiedReferrer) {
         // Show Verified Referrer badge
         return (

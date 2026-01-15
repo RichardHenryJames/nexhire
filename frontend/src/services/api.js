@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
 import { resetToLogin } from '../navigation/navigationRef';
@@ -1766,22 +1766,7 @@ if (!resumeId) {
  referralCount: result.referralCount ??0
  };
 
- // Optional inline user feedback (can be removed if handled in UI components)
- try {
- if (normalized.success) {
- if (normalized.softDelete) {
- Alert && Alert.alert(
- 'Resume Archived',
- `${normalized.message}\nReferenced by ${normalized.applicationCount} application(s) and ${normalized.referralCount} referral(s).`
- );
- } else {
- Alert && Alert.alert('Resume Deleted', normalized.message);
- }
- }
- } catch (alertErr) {
- console.warn('Alert failed (web env?)', alertErr);
- }
-
+ // User feedback should be handled in UI components using showToast
  return normalized;
     } catch (error) {
       console.error('❌ Delete resume failed:', error.message);

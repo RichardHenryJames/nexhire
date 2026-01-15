@@ -20,6 +20,7 @@ import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { typography } from '../../styles/theme';
+import { showToast } from '../../components/Toast';
 
 export default function AIRecommendedJobsScreen({ navigation }) {
   const { user, isJobSeeker } = useAuth();
@@ -140,12 +141,12 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       if (res?.success) {
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAiJobs(prev => prev.filter(j => (j.JobID || j.id) !== id)); // Remove from list
-        Alert.alert('Success', 'Application submitted successfully!');
+        showToast('Application submitted successfully!', 'success');
       } else {
-        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to submit application');
+      showToast('Failed to submit application. Please try again.', 'error');
     }
   }, []);
 
@@ -160,7 +161,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      showToast('Only job seekers can apply for positions', 'error');
       return;
     }
     // Check for primary resume and quick apply
@@ -193,7 +194,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
           message = `Referral sent to verified employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
         }
 
-        Alert.alert('Success', message);
+        showToast(message, 'success');
       } else {
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
@@ -206,12 +207,12 @@ export default function AIRecommendedJobsScreen({ navigation }) {
             ]
           );
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       }
     } catch (e) {
       console.error('Quick referral error:', e);
-      Alert.alert('Error', e.message || 'Failed to send referral request');
+      showToast('Failed to send referral request. Please try again.', 'error');
     } finally {
       setReferralRequestingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); // Remove requesting state
     }
@@ -235,7 +236,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      showToast('Only job seekers can ask for referrals', 'error');
       return;
     }
 
@@ -274,12 +275,12 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         }
 
       } else {
-        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        showToast('Unable to check wallet balance. Please try again.', 'error');
         return;
       }
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
-      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
 

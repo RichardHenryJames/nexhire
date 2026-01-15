@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   StyleSheet,
   Platform,
@@ -252,14 +251,14 @@ export default function PostReferralJobScreen({ navigation, route }) {
 
   const handleSubmit = async (publishImmediately = false) => {
     if (!validateForm()) {
-      Alert.alert('Validation', 'Please fix the errors before submitting');
+      showToast('Please fix the errors before submitting', 'error');
       return;
     }
 
     // Use organizationId from URL params directly (more reliable than state)
     const orgId = organizationId || jobData.organizationId;
     if (!orgId) {
-      Alert.alert('Error', 'Organization ID is missing. Please try again.');
+      showToast('Organization ID is missing. Please try again.', 'error');
       return;
     }
 
@@ -320,11 +319,11 @@ export default function PostReferralJobScreen({ navigation, route }) {
         }
         
         // Also show alert with the error message
-        Alert.alert('Error', errorMessage);
+        showToast(errorMessage, 'error');
       }
     } catch (e) {
       console.error('Post job error:', e);
-      Alert.alert('Error', e?.message || 'Failed to post job');
+      showToast(e?.message || 'Failed to post job', 'error');
     } finally {
       setLoading(false);
     }

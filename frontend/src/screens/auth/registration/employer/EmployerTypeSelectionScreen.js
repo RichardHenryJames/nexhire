@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,6 +19,7 @@ import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
+import { showToast } from '../../../../components/Toast';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
 const useDebounce = (value, delay = 300) => {
@@ -114,7 +114,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   const submitManualOrganization = () => {
     const name = (orgQuery || '').trim();
-    if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+    if (!name) { showToast('Type your company name above', 'error'); return; }
     if (orgPickerContext === 'established') {
       setSelectedCompany({ id: null, name, logoURL: null });
     } else if (orgPickerContext === 'startup') {
@@ -125,11 +125,11 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   const handleContinue = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select your organization type');
+      showToast('Please select your organization type', 'error');
       return;
     }
     if (selectedType === 'company' && !selectedCompany) {
-      Alert.alert('Selection Required', 'Please select or enter your company');
+      showToast('Please select or enter your company', 'error');
       return;
     }
 

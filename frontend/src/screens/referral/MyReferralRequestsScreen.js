@@ -200,7 +200,7 @@ export default function MyReferralRequestsScreen() {
 
   const handleViewProof = (request) => {
     if (!request.ProofFileURL) {
-      Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
+      showToast('Referrer has not uploaded proof yet', 'info');
       return;
     }
     setViewingProof(request);
@@ -227,11 +227,11 @@ export default function MyReferralRequestsScreen() {
         );
         loadMyRequests();
       } else {
-        Alert.alert('Error', result.error || 'Failed to verify referral');
+        showToast('Failed to verify referral. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Verify error:', e);
-      Alert.alert('Error', e.message || 'Failed to verify referral');
+      showToast('Failed to verify referral. Please try again.', 'error');
     }
   };
 
@@ -270,11 +270,11 @@ export default function MyReferralRequestsScreen() {
         showToast('Referral request cancelled', 'success');
       } else {
         console.error('Cancel request failed:', res.error);
-        Alert.alert('Error', res.error || 'Failed to cancel');
+        showToast('Failed to cancel. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Cancel request error:', e);
-      Alert.alert('Error', e.message || 'Failed to cancel');
+      showToast('Failed to cancel. Please try again.', 'error');
     }
   };
 
