@@ -506,6 +506,109 @@ const templates: Record<string, { subject: string; html: string }> = {
         `
     },
 
+    'payment_approved': {
+        subject: '✅ Payment Approved - ₹{{amount}} Added to Your RefOpen Wallet!',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">✅ Payment Approved!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your wallet has been credited</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                Great news! Your payment has been verified and approved. The amount has been credited to your RefOpen wallet.
+                            </p>
+                            
+                            <!-- Amount Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; margin: 0 0 25px 0;">
+                                <tr>
+                                    <td style="padding: 30px; text-align: center;">
+                                        <p style="margin: 0 0 5px 0; color: #065f46; font-size: 14px;">Amount Credited</p>
+                                        <p style="margin: 0; color: #047857; font-size: 42px; font-weight: 700;">₹{{amount}}</p>
+                                        <p style="margin: 15px 0 0 0; color: #065f46; font-size: 14px;">New Wallet Balance: <strong>₹{{newBalance}}</strong></p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Payment Details -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 8px; margin: 0 0 25px 0; border-left: 4px solid #10b981;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Payment Details</h3>
+                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                                            <strong>Reference Number:</strong> {{referenceNumber}}
+                                        </p>
+                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                                            <strong>Payment Method:</strong> {{paymentMethod}}
+                                        </p>
+                                        <p style="margin: 0; color: #666; font-size: 14px;">
+                                            <strong>Approved On:</strong> {{approvedAt}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 10px 0 30px 0;">
+                                        <a href="{{walletUrl}}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+                                            View Wallet →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #888; font-size: 14px; line-height: 1.6;">
+                                You can now use your wallet balance to request referrals and boost your job search!
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
+                                Thank you for using RefOpen!
+                            </p>
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
+    },
+
     // ========================================
     // USER REGISTRATION
     // ========================================

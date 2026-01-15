@@ -154,30 +154,27 @@ const [dashboardData, setDashboardData] = useState({
       })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recommended Jobs
-    setLoadingJobs(true);
-    const jobsPromise = (async () => {
-      try {
-        const recentJobsRes = isEmployer 
-          ? await refopenAPI.getOrganizationJobs({ 
-              page: 1, 
-              pageSize: 5, 
-              status: 'Published', 
-              postedByUserId: user?.UserID || user?.userId || user?.id 
-            })
-          : await refopenAPI.getJobs(1, 5);
-        
-        let recentJobs = [];
-        if (recentJobsRes.success) {
-          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+    // 2. Recommended Jobs (Job Seekers only)
+    if (isJobSeeker) {
+      setLoadingJobs(true);
+      const jobsPromise = (async () => {
+        try {
+          const recentJobsRes = await refopenAPI.getJobs(1, 5);
+          
+          let recentJobs = [];
+          if (recentJobsRes.success) {
+            recentJobs = (recentJobsRes.data || []).slice(0, 5);
+          }
+          setDashboardData(prev => ({ ...prev, recentJobs }));
+        } catch (err) {
+          console.warn('Recommended jobs fetch failed:', err);
+        } finally {
+          setLoadingJobs(false);
         }
-        setDashboardData(prev => ({ ...prev, recentJobs }));
-      } catch (err) {
-        console.warn('Recommended jobs fetch failed:', err);
-      } finally {
-        setLoadingJobs(false);
-      }
-    })();
+      })();
+    } else {
+      setLoadingJobs(false);
+    }
 
     // 3. Jobs from Top MNCs (Fortune 500)
     setLoadingF500Jobs(true);
@@ -236,23 +233,20 @@ const [dashboardData, setDashboardData] = useState({
       })();
     }
 
-    // 🎯 NEW: Fetch profile views count (job seekers only)
-    let profileViewsPromise = Promise.resolve();
-    if (isJobSeeker) {
-      profileViewsPromise = (async () => {
-        try {
-          const result = await messagingApi.getMyProfileViews(1, 1);
-          if (result.success) {
-            // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
-            const count = result.meta?.total || result.total || result.data?.length || 0;
-            setProfileViewsCount(count);
-          }
-        } catch (err) {
-          console.warn('Profile views fetch failed:', err);
-          setProfileViewsCount(0);
+    // 🎯 NEW: Fetch profile views count (all users)
+    const profileViewsPromise = (async () => {
+      try {
+        const result = await messagingApi.getMyProfileViews(1, 1);
+        if (result.success) {
+          // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
+          const count = result.meta?.total || result.total || result.data?.length || 0;
+          setProfileViewsCount(count);
         }
-      })();
-    }
+      } catch (err) {
+        console.warn('Profile views fetch failed:', err);
+        setProfileViewsCount(0);
+      }
+    })();
 
     // 🎯 NEW: Fetch unread message count
     const unreadCountPromise = (async () => {
@@ -766,6 +760,25 @@ const [dashboardData, setDashboardData] = useState({
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
 
+                {/* 🎯 Profile Views Card */}
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('ProfileViews')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="eye" size={24} color={colors.info} />
+                    <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
+                      <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Profile Views</Text>
+                    <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
                 <TouchableOpacity 
                   style={styles.quickActionCard}
                   onPress={() => navigation.navigate('Settings')}
@@ -997,8 +1010,8 @@ const [dashboardData, setDashboardData] = useState({
           ) : null
         )}
 
-        {/* Recommended Jobs Section */}
-        {loadingJobs ? (
+        {/* Recommended Jobs Section - Job Seekers only */}
+        {isJobSeeker && (loadingJobs ? (
           <View style={styles.recentContainer}>
             <Text style={styles.sectionTitle}>Recommended Jobs</Text>
             <SectionLoader />
@@ -1007,7 +1020,7 @@ const [dashboardData, setDashboardData] = useState({
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -1021,7 +1034,7 @@ const [dashboardData, setDashboardData] = useState({
               ))}
             </ScrollView>
           </View>
-        ) : null}
+        ) : null)}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (

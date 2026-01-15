@@ -191,9 +191,57 @@ export default function ProfileViewsScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    checkAccess();
-    loadWalletBalance();
-  }, [checkAccess, loadWalletBalance]);
+    // Load all data in parallel for faster initial load
+    const loadAllData = async () => {
+      setLoading(true);
+      setCheckingAccess(true);
+      
+      try {
+        const [accessResult, walletResult, viewsResult] = await Promise.all([
+          messagingApi.checkProfileViewAccess().catch(err => {
+            console.error('Error checking access:', err);
+            return { success: false };
+          }),
+          refopenAPI.getWalletBalance().catch(err => {
+            console.error('Error loading wallet:', err);
+            return { success: false };
+          }),
+          messagingApi.getMyProfileViews(1, 20).catch(err => {
+            console.error('Error fetching views:', err);
+            return { success: false };
+          })
+        ]);
+
+        // Set access status
+        if (accessResult.success && accessResult.data) {
+          setHasAccess(accessResult.data.hasActiveAccess);
+        }
+
+        // Set wallet balance
+        if (walletResult?.success) {
+          setWalletBalance(walletResult.data?.balance || 0);
+        }
+
+        // Set profile views
+        if (viewsResult.success && viewsResult.data) {
+          setProfileViews(viewsResult.data);
+          if (viewsResult.pagination?.total || viewsResult.meta?.total) {
+            setTotalViews(viewsResult.pagination?.total || viewsResult.meta?.total);
+          } else {
+            setTotalViews(viewsResult.data.length);
+          }
+          const totalPages = viewsResult.pagination?.totalPages || 1;
+          setHasMore(1 < totalPages);
+          setPage(1);
+        }
+      } finally {
+        setLoading(false);
+        setCheckingAccess(false);
+      }
+    };
+
+    loadAllData();
+  }, []);
 
   const fetchProfileViews = useCallback(async (pageNum = 1, isRefresh = false) => {
     try {

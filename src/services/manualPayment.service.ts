@@ -358,11 +358,20 @@ export const approveManualPayment = async (
   adminRemarks?: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    // Get submission details
+    // Get submission details with user info
     const submission = await dbService.executeQuery(`
-      SELECT UserID, WalletID, Amount, Status 
-      FROM ManualPaymentSubmissions 
-      WHERE SubmissionID = @param0
+      SELECT 
+        mps.UserID, 
+        mps.WalletID, 
+        mps.Amount, 
+        mps.Status,
+        mps.PaymentMethod,
+        mps.ReferenceNumber,
+        u.Email,
+        u.FirstName
+      FROM ManualPaymentSubmissions mps
+      JOIN Users u ON mps.UserID = u.UserID
+      WHERE mps.SubmissionID = @param0
     `, [submissionId]);
 
     if (!submission.recordset || submission.recordset.length === 0) {
@@ -433,6 +442,39 @@ export const approveManualPayment = async (
           UpdatedAt = GETUTCDATE()
       WHERE SubmissionID = @param0
     `, [submissionId, adminRemarks || 'Payment verified', adminUserId]);
+
+    // Send approval email to user
+    try {
+      const appUrl = process.env.APP_URL || 'https://www.refopen.com';
+      const { subject, html, text } = TemplateService.render('payment_approved', {
+        firstName: sub.FirstName || 'there',
+        amount: sub.Amount.toLocaleString('en-IN'),
+        newBalance: balanceAfter.toLocaleString('en-IN'),
+        referenceNumber: sub.ReferenceNumber || submissionId,
+        paymentMethod: sub.PaymentMethod || 'Bank Transfer',
+        approvedAt: new Date().toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'Asia/Kolkata'
+        }),
+        walletUrl: `${appUrl}/wallet`
+      });
+
+      await EmailService.send({
+        to: sub.Email,
+        subject: subject,
+        html: html,
+        text: text,
+        emailType: 'payment_approved',
+        referenceType: 'ManualPayment',
+        referenceId: submissionId
+      });
+
+      console.log(`✅ Payment approval email sent to ${sub.Email} for submission ${submissionId}`);
+    } catch (emailError) {
+      // Log but don't fail the approval if email fails
+      console.error('Error sending payment approval email:', emailError);
+    }
 
     return { success: true, message: 'Payment approved and wallet credited' };
 
