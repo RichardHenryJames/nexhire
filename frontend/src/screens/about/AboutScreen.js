@@ -409,9 +409,6 @@ const FloatingLogo = ({ company, index, COLORS }) => {
         }}>
           {company.name}
         </Text>
-        <Text style={{ fontSize: 9, color: COLORS.accent, marginTop: 2, fontWeight: '500' }}>
-          {company.employees} on RefOpen
-        </Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -735,6 +732,11 @@ export default function AboutScreen() {
         onContentSizeChange={() => scrollToTop(false)}
       >
         {/* ============================================ */}
+        {/* GOOGLE ADSENSE - TOP BANNER */}
+        {/* ============================================ */}
+        <AdCard variant="about" />
+
+        {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
         <LinearGradient
@@ -864,20 +866,6 @@ export default function AboutScreen() {
         </LinearGradient>
 
         {/* ============================================ */}
-        {/* GOOGLE ADSENSE - TOP BANNER */}
-        {/* ============================================ */}
-        <View style={{ backgroundColor: COLORS.bgPrimary, paddingTop: 16 }}>
-          <AdCard 
-            variant="about" 
-            style={{ 
-              marginHorizontal: isLargeScreen ? 40 : 16,
-              backgroundColor: COLORS.bgSecondary,
-              borderColor: COLORS.border,
-            }} 
-          />
-        </View>
-
-        {/* ============================================ */}
         {/* STATS SECTION */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 48, backgroundColor: COLORS.bgPrimary }}>
@@ -886,7 +874,7 @@ export default function AboutScreen() {
               <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="briefcase" value="125K+" label="Active Jobs" gradient={COLORS.gradientSecondary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="business" value="2,500+" label="Companies" gradient={COLORS.gradientSuccess} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
-              <StatCard icon="gift" value="$2.5M+" label="Rewards Paid" gradient={COLORS.gradientWarning} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <StatCard icon="checkmark-circle" value="1,000+" label="Verified Referrers" gradient={COLORS.gradientWarning} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
             </View>
           </View>
         </View>

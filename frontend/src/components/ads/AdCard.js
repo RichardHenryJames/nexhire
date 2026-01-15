@@ -256,7 +256,7 @@ const AdCard = ({
   // ========================================
   if (variant === 'about') {
     return (
-      <View style={[styles.aboutCard, style]}>
+      <View style={[styles.referralStrip, style]}>
         {Platform.OS === 'web' && (
           <ins
             id={adId}
@@ -264,12 +264,12 @@ const AdCard = ({
             style={{
               display: 'block',
               width: '100%',
-              height: '90px',
+              height: '50px',
             }}
             data-ad-client={adClient}
             data-ad-slot={adSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
+            data-ad-format="fluid"
+            data-ad-layout-key="-fb+5w+4e-db+86"
           />
         )}
       </View>
