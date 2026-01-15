@@ -1275,12 +1275,14 @@ export default function AboutScreen() {
                 <LinearGradient colors={[`${COLORS.success}20`, `${COLORS.success}08`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginBottom: 16 }}>✅ RefOpen Referrals</Text>
                   <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 24, marginBottom: 12 }}>
-                    • Post jobs as a referrer & earn rewards{'\n'}
-                    • AI filters low-quality candidates{'\n'}
-                    • You only see qualified profiles{'\n'}
-                    • Submit referral with one click{'\n'}
-                    • <Text style={{ color: COLORS.success, fontWeight: '600' }}>Get paid IMMEDIATELY</Text>{'\n'}
-                    • BONUS: Company bonus if hired!
+                    • 📝 Post referral jobs for FREE{'\n'}
+                    • 💰 Earn upto ₹100 per referral{'\n'}
+                    • 🏆 Verified badge on your profile{'\n'}
+                    • 🤝 Help others land great jobs{'\n'}
+                    • 📊 Priority access to referral requests{'\n'}
+                    • 💳 Easy withdrawal via UPI/bank{'\n'}
+                    • 📩 No inbox flood - refer through RefOpen{'\n'}
+                    • <Text style={{ color: COLORS.success, fontWeight: '600' }}>BONUS: Company bonus if hired!</Text>
                   </Text>
                 </LinearGradient>
               </View>

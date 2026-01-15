@@ -22,12 +22,15 @@ EmployerJobsScreen
 const TABS = [ 'draft', 'published' ];
 
 export default function EmployerJobsScreen({ navigation, route }) {
-  const { user } = useAuth();
+  const { user, isVerifiedReferrer } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
   const jobStyles = useMemo(() => createJobStyles(colors, responsive), [colors, responsive]);
   const localStyles = useMemo(() => createLocalStyles(colors, responsive), [colors, responsive]);
+  
+  // Get user type
+  const userType = user?.type;
   
   const [activeTab, setActiveTab] = useState('draft');
   const [jobs, setJobs] = useState([]);
@@ -76,8 +79,21 @@ export default function EmployerJobsScreen({ navigation, route }) {
     });
   }, [navigation, colors]);
 
-  // No redirect needed - allow all users to view their own jobs (employers and verified referrers who posted jobs)
-  // The screen will show only jobs posted by the current user
+  // Access control: Only employers and verified referrers can access this screen
+  // Job seekers who are not verified should be redirected away
+  useEffect(() => {
+    const isEmployer = userType === 'Employer';
+    const canAccess = isEmployer || isVerifiedReferrer;
+    
+    if (!canAccess) {
+      // Redirect non-verified job seekers to Home
+      showToast('You need to be a verified referrer to access this page', 'error');
+      navigation.replace('Main', {
+        screen: 'MainTabs',
+        params: { screen: 'Home' }
+      });
+    }
+  }, [userType, isVerifiedReferrer, navigation]);
 
   // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
   useEffect(() => {

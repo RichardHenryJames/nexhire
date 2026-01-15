@@ -594,7 +594,7 @@ export default function ReferralScreen({ navigation }) {
                 onPress={() => navigation.navigate('EmployerJobs')}
               >
                 <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
-                <Text style={styles.postJobButtonText}>Publish Jobs{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
+                <Text style={styles.postJobButtonText}>Publish{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
               </TouchableOpacity>
             )}
           </View>

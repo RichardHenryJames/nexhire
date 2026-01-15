@@ -126,34 +126,44 @@ export class BecomeVerifiedReferrerEmailService {
                     <!-- Benefits Section -->
                     <tr>
                         <td style="padding: 0 30px 20px 30px;">
-                            <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-radius: 12px; padding: 25px; border-left: 4px solid #F59E0B;">
-                                <h2 style="color: #92400E; margin: 0 0 15px 0; font-size: 18px;">
+                            <div style="background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%); border-radius: 12px; padding: 25px; border-left: 4px solid #0EA5E9;">
+                                <h2 style="color: #0369A1; margin: 0 0 15px 0; font-size: 18px;">
                                     ✨ Benefits of Being a Verified Referrer
                                 </h2>
                                 <table width="100%" cellpadding="0" cellspacing="0">
                                     <tr>
-                                        <td style="padding: 8px 0; color: #78350F; font-size: 14px;">
-                                            💰 <strong>Earn Rewards</strong> - Get guaranteed ₹100 per successful referral
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                            📝 <strong>Post Referral Jobs for FREE</strong> - Share job openings at your company and refer interested candidates
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #78350F; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                            💰 <strong>Earn Rewards</strong> - Get upto ₹100 per successful referral
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
                                             🏆 <strong>Build Reputation</strong> - Verified badge shows on your profile
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #78350F; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
                                             🤝 <strong>Help Others</strong> - Connect talented people with great opportunities
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #78350F; font-size: 14px;">
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
                                             📊 <strong>Priority Access</strong> - Get notified first about referral requests
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; color: #78350F; font-size: 14px;">
-                                            🎁 <strong>Exclusive Perks</strong> - Access to referrer-only benefits and bonuses
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                            💳 <strong>Easy Withdrawal</strong> - Cash out via UPI or bank account
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #0C4A6E; font-size: 14px;">
+                                            📩 <strong>No Inbox Flood</strong> - Refer candidates through RefOpen & earn rewards
                                         </td>
                                     </tr>
                                 </table>
@@ -172,25 +182,25 @@ export class BecomeVerifiedReferrerEmailService {
                                     <tr>
                                         <td style="padding: 10px 0; color: #15803D; font-size: 14px;">
                                             <div style="display: inline-block; background: #22C55E; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-weight: bold;">1</div>
-                                            <strong>Open RefOpen App</strong> → Go to Profile → Work Experience
+                                            <strong>Open refopen.com</strong> → Go to <strong>Profile</strong>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 10px 0; color: #15803D; font-size: 14px;">
                                             <div style="display: inline-block; background: #22C55E; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-weight: bold;">2</div>
-                                            <strong>Click "Become Verified Referrer"</strong> button
+                                            <strong>Click "Become a Verified Referrer"</strong> button
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 10px 0; color: #15803D; font-size: 14px;">
                                             <div style="display: inline-block; background: #22C55E; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-weight: bold;">3</div>
-                                            <strong>Enter your company email</strong> (e.g., yourname@${user.CompanyName?.toLowerCase().replace(/\s+/g, '')}.com)
+                                            <strong>Add your current work experience</strong> (if not already added)
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 10px 0; color: #15803D; font-size: 14px;">
                                             <div style="display: inline-block; background: #22C55E; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-weight: bold;">4</div>
-                                            <strong>Enter the OTP</strong> sent to your company email
+                                            <strong>Enter your company email</strong> & verify with OTP
                                         </td>
                                     </tr>
                                     <tr>
@@ -247,7 +257,9 @@ export class BecomeVerifiedReferrerEmailService {
                             <p style="color: #9CA3AF; font-size: 12px; margin: 0;">
                                 <a href="https://refopen.com/settings/notifications" style="color: #6366F1; text-decoration: none;">Manage preferences</a>
                                 &nbsp;|&nbsp;
-                                <a href="https://refopen.com/unsubscribe" style="color: #6366F1; text-decoration: none;">Unsubscribe</a>
+                                <a href="https://refopen.com/support" style="color: #6366F1; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://refopen.com" style="color: #6366F1; text-decoration: none;">Open RefOpen</a>
                             </p>
                             <p style="color: #D1D5DB; font-size: 11px; margin: 15px 0 0 0;">
                                 © 2026 RefOpen. All rights reserved.
