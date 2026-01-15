@@ -22,7 +22,7 @@ import ViewReferralRequestModal from '../../components/ViewReferralRequestModal'
 import { showToast } from '../../components/Toast';
 
 export default function ReferralScreen({ navigation }) {
-  const { user, userId, isVerifiedReferrer, loading: authLoading } = useAuth();
+  const { user, userId, isVerifiedReferrer, loading: authLoading, refreshVerificationStatus } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -53,6 +53,8 @@ export default function ReferralScreen({ navigation }) {
   // Refresh data when screen is focused (always reloads from any page)
   useFocusEffect(
     useCallback(() => {
+      // Refresh verification status to get fresh data
+      refreshVerificationStatus();
       // Load data for all users - verified referrers get open requests, all users can see closed
       loadData();
     }, [])
@@ -610,7 +612,7 @@ export default function ReferralScreen({ navigation }) {
               color={activeTab === 'open' ? colors.primary : colors.gray500} 
             />
             <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
-              Open ({openRequests.length})
+              Open
             </Text>
           </TouchableOpacity>
           
@@ -826,6 +828,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  claimButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  claimButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
   requestCard: {
     backgroundColor: colors.surface,

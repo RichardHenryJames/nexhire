@@ -445,9 +445,12 @@ export default function VerifiedReferrerOverlay({
             <TouchableOpacity 
               style={styles.ctaButton} 
               onPress={() => {
-                onClose();
-                // Navigate to Referrals tab (bottom tab navigation)
+                // Navigate first, then close modal to avoid timing issues
                 navigation.navigate('Referrals');
+                // Close modal after a brief delay to ensure navigation completes
+                setTimeout(() => {
+                  onClose();
+                }, 100);
               }}
             >
               <LinearGradient
