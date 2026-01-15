@@ -483,7 +483,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
              isDegree ? item.name :
              isString ? item : item.name}
           </Text>
-          {isDegree && item.category && !debouncedSearchTerm && (
+          {isDegree && item.category && (
             <Text style={styles.modalItemType}>{item.category}</Text>
           )}
           {isCollege && item.type && (

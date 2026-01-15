@@ -1,5 +1,5 @@
 import { app } from "@azure/functions";
-import type { HttpRequest, InvocationContext, Timer } from "@azure/functions";
+import type { HttpRequest, HttpResponseInit, InvocationContext, Timer } from "@azure/functions";
 
 import { withErrorHandling, corsHeaders } from "./src/middleware";
 
@@ -2825,6 +2825,165 @@ app.http("manual-trigger-referrer-email", {
           executionId
         }
       };
+    }
+  }
+});
+
+// ========================================================================
+// MANUAL TRIGGER - BECOME VERIFIED REFERRER EMAILS (For Testing)
+// ========================================================================
+
+app.http("triggerBecomeVerifiedEmail", {
+  methods: ["POST", "GET"],
+  authLevel: "anonymous",
+  route: "trigger-become-verified-email",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const startTime = Date.now();
+    const executionId = `become_verified_manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const runStartTime = new Date();
+
+    // Parse query params for test mode (default: true for manual trigger)
+    const url = new URL(req.url);
+    const testMode = url.searchParams.get('testMode') !== 'false'; // default true
+    const testEmail = url.searchParams.get('testEmail') || 'parimalkumar261@gmail.com';
+
+    context.log("========================================================================");
+    context.log("    MANUAL BECOME VERIFIED REFERRER EMAIL TRIGGER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Test Mode: ${testMode} | Test Email: ${testMode ? testEmail : 'N/A'}`);
+
+    try {
+      const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+      
+      context.log("\n🚀 Starting 'Become Verified Referrer' email process...\n");
+      
+      const result = await BecomeVerifiedReferrerEmailService.sendBecomeVerifiedEmails(testMode, testEmail);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await BecomeVerifiedReferrerEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Manual'
+      );
+
+      context.log("\n========================================================================");
+      context.log("    MANUAL BECOME VERIFIED EMAIL TRIGGER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Test Mode: ${testMode}`);
+      context.log(`Total Eligible: ${result.totalEligible}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          executionId,
+          testMode,
+          testEmail: testMode ? testEmail : null,
+          result,
+          duration: `${Math.round(duration / 1000)}s`
+        }
+      };
+
+    } catch (error: any) {
+      context.error(`❌ Manual become-verified trigger error: ${error.message}`);
+      
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: error.message,
+          executionId
+        }
+      };
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - BECOME VERIFIED REFERRER EMAILS (6 PM IST = 12:30 UTC, Every 2 Days)
+// ========================================================================
+
+app.timer("becomeVerifiedReferrerEmail", {
+  schedule: "0 30 12 */2 * *", // 6 PM IST (12:30 UTC) every 2 days (alternate days)
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `become_verified_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("     BECOME VERIFIED REFERRER EMAIL TIMER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Schedule: 6 PM IST (12:30 UTC) - Alternate Days`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("⚠️ This execution is past its scheduled time - running catch-up");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+      
+      context.log("\n🚀 Starting 'Become Verified Referrer' email process...\n");
+      
+      const result = await BecomeVerifiedReferrerEmailService.sendBecomeVerifiedEmails();
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await BecomeVerifiedReferrerEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Timer'
+      );
+
+      context.log("\n========================================================================");
+      context.log("    BECOME VERIFIED REFERRER EMAIL TIMER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Eligible Users: ${result.totalEligible}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`Errors: ${result.errors.slice(0, 5).join(', ')}`);
+      }
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      context.error("❌ BECOME VERIFIED REFERRER EMAIL TIMER FAILED");
+      context.error(`   Error: ${error.message}`);
+
+      // Log failure
+      try {
+        const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+        await BecomeVerifiedReferrerEmailService.logEmailRun(
+          executionId,
+          runStartTime,
+          runEndTime,
+          { totalEligible: 0, emailsSent: 0, emailsFailed: 0, errors: [error.message] },
+          'Timer'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
     }
   }
 });

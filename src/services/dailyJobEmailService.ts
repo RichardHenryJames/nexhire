@@ -57,8 +57,7 @@ export class DailyJobEmailService {
             FROM Users u
             INNER JOIN Applicants a ON u.UserID = a.UserID
             LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
-            WHERE u.CreatedAt >= '2025-12-15 19:47:35.3700000'
-              AND u.LastLoginAt >= DATEADD(MONTH, -1, GETUTCDATE())
+            WHERE u.LastLoginAt IS NOT NULL
               AND u.IsActive = 1
               AND u.Email IS NOT NULL
               AND u.Email != ''

@@ -1398,11 +1398,6 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
               <View style={styles.actionButtonContent}>
                 <Text style={styles.actionButtonLabel}>Wallet</Text>
-                {loadingWallet ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={styles.actionButtonAmount}>₹{walletBalance?.balance?.toFixed(0) || '0'}</Text>
-                )}
               </View>
             </TouchableOpacity>
 
@@ -1419,13 +1414,6 @@ export default function ProfileScreen({ navigation, route }) {
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Rewards</Text>
-                    {loadingReferralPoints ? (
-                      <ActivityIndicator size="small" color="#00A3EE" />
-                    ) : (
-                      <Text style={[styles.actionButtonAmount, { color: '#00A3EE' }]}>
-                        {referralPointsData.totalPoints || 0}
-                      </Text>
-                    )}
                   </View>
                 </TouchableOpacity>
 
@@ -1440,7 +1428,6 @@ export default function ProfileScreen({ navigation, route }) {
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Invite</Text>
-                    <Text style={styles.actionButtonSubtext}>Get ₹25</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -1791,14 +1778,14 @@ export default function ProfileScreen({ navigation, route }) {
               <View style={styles.benefitCard}>
                 <Ionicons name="person-add" size={24} color={colors.primary} />
                 <Text style={styles.benefitTitle}>Your Friend</Text>
-                <Text style={styles.benefitAmount}>₹50</Text>
+                <Text style={styles.benefitAmount}>₹25</Text>
                 <Text style={styles.benefitDescription}>On successful signup</Text>
               </View>
 
               <View style={styles.benefitCard}>
                 <Ionicons name="wallet" size={24} color="#FF9500" />
                 <Text style={styles.benefitTitle}>You</Text>
-                <Text style={styles.benefitAmount}>₹50</Text>
+                <Text style={styles.benefitAmount}>₹25</Text>
                 <Text style={styles.benefitDescription}>When they join</Text>
               </View>
             </View>
