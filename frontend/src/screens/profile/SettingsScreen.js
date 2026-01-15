@@ -55,6 +55,7 @@ export default function SettingsScreen({ navigation, route }) {
     WeeklyDigestEmail: true,
     DailyJobRecommendationEmail: true,
     ReferrerNotificationEmail: true,
+    MarketingEmail: true,
   });
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
@@ -959,11 +960,33 @@ export default function SettingsScreen({ navigation, route }) {
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
                   <Ionicons name="mail-outline" size={20} color={colors.text} />
-                  <Text style={styles.notifToggleLabel}>Email Notifications</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Email Notifications</Text>
+                    <Text style={styles.notifToggleDesc}>Master toggle for all email notifications</Text>
+                  </View>
                 </View>
                 <Switch
                   value={notificationPrefs.EmailEnabled}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, EmailEnabled: value }))}
+                  onValueChange={(value) => {
+                    if (value) {
+                      // Just enable global toggle
+                      setNotificationPrefs(prev => ({ ...prev, EmailEnabled: true }));
+                    } else {
+                      // Disable global toggle AND all individual email toggles
+                      setNotificationPrefs(prev => ({
+                        ...prev,
+                        EmailEnabled: false,
+                        ReferralRequestEmail: false,
+                        ReferralClaimedEmail: false,
+                        ReferralVerifiedEmail: false,
+                        MessageReceivedEmail: false,
+                        WeeklyDigestEmail: false,
+                        DailyJobRecommendationEmail: false,
+                        ReferrerNotificationEmail: false,
+                        MarketingEmail: false,
+                      }));
+                    }
+                  }}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.EmailEnabled ? colors.primary : colors.gray100}
                 />
@@ -982,22 +1005,26 @@ export default function SettingsScreen({ navigation, route }) {
                 />
               </View>
 
-              {/* Referral Notifications */}
-              <Text style={styles.notifSectionHeader}>Referral Notifications</Text>
+              {/* For Job Seekers */}
+              <Text style={styles.notifSectionHeader}>For Job Seekers</Text>
               
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
-                  <Ionicons name="hand-right-outline" size={20} color={colors.text} />
+                  <Ionicons name="briefcase-outline" size={20} color={colors.text} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.notifToggleLabel}>New Referral Requests</Text>
-                    <Text style={styles.notifToggleDesc}>When someone needs a referral at your company</Text>
+                    <Text style={styles.notifToggleLabel}>Job Recommendations</Text>
+                    <Text style={styles.notifToggleDesc}>Personalized job picks based on your preferences</Text>
                   </View>
                 </View>
                 <Switch
-                  value={notificationPrefs.ReferralRequestEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralRequestEmail: value }))}
+                  value={notificationPrefs.DailyJobRecommendationEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    DailyJobRecommendationEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                  thumbColor={notificationPrefs.ReferralRequestEmail ? colors.primary : colors.gray100}
+                  thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
@@ -1011,9 +1038,36 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.ReferralClaimedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralClaimedEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralClaimedEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.ReferralClaimedEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              {/* For Referrers */}
+              <Text style={styles.notifSectionHeader}>For Referrers</Text>
+              
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="hand-right-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>New Referral Requests</Text>
+                    <Text style={styles.notifToggleDesc}>When someone needs a referral at your company</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferralRequestEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralRequestEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferralRequestEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
@@ -1027,25 +1081,56 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.ReferralVerifiedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralVerifiedEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralVerifiedEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.ReferralVerifiedEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="people-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Referrer Notifications</Text>
+                    <Text style={styles.notifToggleDesc}>Get notified about open referral requests</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferrerNotificationEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferrerNotificationEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferrerNotificationEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
               {/* Other Notifications */}
-              <Text style={styles.notifSectionHeader}>Other Notifications</Text>
+              <Text style={styles.notifSectionHeader}>Other</Text>
 
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
-                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
-                  <Text style={styles.notifToggleLabel}>Messages</Text>
+                  <Ionicons name="megaphone-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Marketing & Promotional</Text>
+                    <Text style={styles.notifToggleDesc}>Tips, updates, and special offers</Text>
+                  </View>
                 </View>
                 <Switch
-                  value={notificationPrefs.MessageReceivedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, MessageReceivedEmail: value }))}
+                  value={notificationPrefs.MarketingEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    MarketingEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                  thumbColor={notificationPrefs.MessageReceivedEmail ? colors.primary : colors.gray100}
+                  thumbColor={notificationPrefs.MarketingEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
@@ -1059,46 +1144,15 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.WeeklyDigestEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, WeeklyDigestEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    WeeklyDigestEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.WeeklyDigestEmail ? colors.primary : colors.gray100}
                 />
               </View>
-
-              <View style={styles.notifToggleRow}>
-                <View style={styles.notifToggleLeft}>
-                  <Ionicons name="briefcase-outline" size={20} color={colors.text} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.notifToggleLabel}>Daily Job Recommendations</Text>
-                    <Text style={styles.notifToggleDesc}>Personalized job picks every day</Text>
-                  </View>
-                </View>
-                <Switch
-                  value={notificationPrefs.DailyJobRecommendationEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, DailyJobRecommendationEmail: value }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                  thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
-                />
-              </View>
-
-              {/* Referrer Notification Email - Only show for verified referrers */}
-              {user?.IsVerifiedReferrer && (
-                <View style={styles.notifToggleRow}>
-                  <View style={styles.notifToggleLeft}>
-                    <Ionicons name="people-outline" size={20} color={colors.text} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.notifToggleLabel}>Referrer Notifications</Text>
-                      <Text style={styles.notifToggleDesc}>Daily email about open referral requests</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={notificationPrefs.ReferrerNotificationEmail}
-                    onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferrerNotificationEmail: value }))}
-                    trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                    thumbColor={notificationPrefs.ReferrerNotificationEmail ? colors.primary : colors.gray100}
-                  />
-                </View>
-              )}
 
               <View style={{ height: 40 }} />
             </>

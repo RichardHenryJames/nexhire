@@ -30,23 +30,26 @@ export default function AdminDashboardScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions
+  const [activeTab, setActiveTab] = useState('overview'); // overview, users, referrals, transactions, emailLogs
   
   // Separate state for each tab's data
   const [overviewData, setOverviewData] = useState(null);
   const [usersData, setUsersData] = useState(null);
   const [referralsData, setReferralsData] = useState(null);
   const [transactionsData, setTransactionsData] = useState(null);
+  const [emailLogsData, setEmailLogsData] = useState(null);
+  const [emailLogsPagination, setEmailLogsPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   
   // Track which tabs have been loaded
-  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false });
+  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false, emailLogs: false });
   
   // Tab-specific loading states
   const [tabLoading, setTabLoading] = useState({
     overview: false,
     users: false,
     referrals: false,
-    transactions: false
+    transactions: false,
+    emailLogs: false
   });
 
   useEffect(() => {
@@ -128,6 +131,23 @@ export default function AdminDashboardScreen() {
     }
   }, []);
 
+  // Load email logs data on demand (paginated)
+  const loadEmailLogs = useCallback(async (page = 1) => {
+    try {
+      setTabLoading(prev => ({ ...prev, emailLogs: true }));
+      const response = await refopenAPI.apiCall(`/management/dashboard/email-logs?page=${page}&pageSize=20`);
+      if (response.success) {
+        setEmailLogsData(response.data.emailLogs);
+        setEmailLogsPagination(response.data.pagination);
+        loadedTabs.current.emailLogs = true;
+      }
+    } catch (error) {
+      console.error('Error loading email logs:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, emailLogs: false }));
+    }
+  }, []);
+
   // Load data when tab changes
   useEffect(() => {
     if (!isAdmin) return;
@@ -145,8 +165,11 @@ export default function AdminDashboardScreen() {
       case 'transactions':
         loadTransactions();
         break;
+      case 'emailLogs':
+        loadEmailLogs();
+        break;
     }
-  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions]);
+  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs]);
 
   // Initial load - just overview
   useEffect(() => {
@@ -158,7 +181,7 @@ export default function AdminDashboardScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     // Reset loaded tabs to force reload
-    loadedTabs.current = { overview: false, users: false, referrals: false, transactions: false };
+    loadedTabs.current = { overview: false, users: false, referrals: false, transactions: false, emailLogs: false };
     
     // Reload current tab
     switch (activeTab) {
@@ -174,8 +197,11 @@ export default function AdminDashboardScreen() {
       case 'transactions':
         loadTransactions(true);
         break;
+      case 'emailLogs':
+        loadEmailLogs(1);
+        break;
     }
-  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions]);
+  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs]);
 
   if (!isAdmin) {
     return (
@@ -255,6 +281,7 @@ export default function AdminDashboardScreen() {
           { key: 'users', label: 'Users', icon: 'people-outline' },
           { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
           { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
+          { key: 'emailLogs', label: 'Email Logs', icon: 'mail-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -575,6 +602,87 @@ export default function AdminDashboardScreen() {
   );
   };
 
+  const getEmailStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'sent': return '#3B82F6';
+      case 'delivered': return '#10B981';
+      case 'opened': return '#8B5CF6';
+      case 'clicked': return '#F59E0B';
+      case 'bounced': return '#EF4444';
+      case 'failed': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
+  const renderEmailLogsTab = () => {
+    if (tabLoading.emailLogs && !emailLogsData) {
+      return <TabLoadingSpinner />;
+    }
+    return (
+    <>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Email Logs</Text>
+        <Text style={styles.sectionSubtitle}>
+          Page {emailLogsPagination.page} of {emailLogsPagination.totalPages} ({emailLogsPagination.total} total)
+        </Text>
+      </View>
+      
+      {(emailLogsData || []).map((email, index) => (
+        <View key={email.LogID || index} style={styles.emailLogCard}>
+          <View style={styles.emailLogHeader}>
+            <View style={[styles.emailStatusBadge, { backgroundColor: getEmailStatusColor(email.Status) + '20' }]}>
+              <Ionicons 
+                name={email.Status === 'bounced' || email.Status === 'failed' ? 'close-circle' : 'checkmark-circle'} 
+                size={14} 
+                color={getEmailStatusColor(email.Status)} 
+              />
+              <Text style={[styles.emailStatusText, { color: getEmailStatusColor(email.Status) }]}>
+                {email.Status || 'sent'}
+              </Text>
+            </View>
+            <Text style={styles.emailType}>{email.EmailType}</Text>
+          </View>
+          <Text style={styles.emailSubject} numberOfLines={2}>{email.Subject}</Text>
+          <View style={styles.emailRecipient}>
+            <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.emailRecipientText}>
+              {email.UserName ? `${email.UserName} - ` : ''}{email.ToEmail}
+            </Text>
+          </View>
+          <Text style={styles.emailDate}>
+            {new Date(email.SentAt).toLocaleString()}
+          </Text>
+        </View>
+      ))}
+
+      {/* Pagination Controls */}
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity 
+          style={[styles.paginationButton, !emailLogsPagination.hasPrev && styles.paginationButtonDisabled]}
+          onPress={() => emailLogsPagination.hasPrev && loadEmailLogs(emailLogsPagination.page - 1)}
+          disabled={!emailLogsPagination.hasPrev}
+        >
+          <Ionicons name="chevron-back" size={20} color={emailLogsPagination.hasPrev ? colors.primary : colors.textSecondary} />
+          <Text style={[styles.paginationButtonText, !emailLogsPagination.hasPrev && styles.paginationButtonTextDisabled]}>Previous</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.paginationInfo}>
+          Page {emailLogsPagination.page} / {emailLogsPagination.totalPages}
+        </Text>
+        
+        <TouchableOpacity 
+          style={[styles.paginationButton, !emailLogsPagination.hasNext && styles.paginationButtonDisabled]}
+          onPress={() => emailLogsPagination.hasNext && loadEmailLogs(emailLogsPagination.page + 1)}
+          disabled={!emailLogsPagination.hasNext}
+        >
+          <Text style={[styles.paginationButtonText, !emailLogsPagination.hasNext && styles.paginationButtonTextDisabled]}>Next</Text>
+          <Ionicons name="chevron-forward" size={20} color={emailLogsPagination.hasNext ? colors.primary : colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+  };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending': return '#F59E0B';
@@ -601,6 +709,7 @@ export default function AdminDashboardScreen() {
           {activeTab === 'users' && renderUsersTab()}
           {activeTab === 'referrals' && renderReferralsTab()}
           {activeTab === 'transactions' && renderTransactionsTab()}
+          {activeTab === 'emailLogs' && renderEmailLogsTab()}
         </ScrollView>
       </View>
     </View>
@@ -681,6 +790,12 @@ const createStyles = (colors, responsive = {}) => {
       borderBottomColor: colors.border,
       maxHeight: 56,
       ...(isDesktop && { justifyContent: 'center' }),
+      // Fixed position for web
+      ...(Platform.OS === 'web' && {
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }),
     },
     tabsContent: {
       paddingHorizontal: contentPadding,
@@ -1077,6 +1192,96 @@ const createStyles = (colors, responsive = {}) => {
     },
     emptyText: {
       marginTop: 12,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    // Email Log styles
+    emailLogCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: isDesktop ? 20 : 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emailLogHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    emailStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      gap: 4,
+    },
+    emailStatusText: {
+      fontSize: 12,
+      fontWeight: '600',
+      textTransform: 'capitalize',
+    },
+    emailType: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      backgroundColor: colors.background,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    emailSubject: {
+      fontSize: isDesktop ? 15 : 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    emailRecipient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+    },
+    emailRecipientText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    emailDate: {
+      fontSize: 12,
+      color: colors.gray500,
+    },
+    paginationContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 20,
+      paddingHorizontal: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginTop: 10,
+    },
+    paginationButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      gap: 4,
+    },
+    paginationButtonDisabled: {
+      opacity: 0.5,
+    },
+    paginationButtonText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    paginationButtonTextDisabled: {
+      color: colors.textSecondary,
+    },
+    paginationInfo: {
       fontSize: 14,
       color: colors.textSecondary,
     },

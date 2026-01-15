@@ -281,3 +281,61 @@ export const getAdminDashboardTransactions = withAuth(async (
     return { status: 500, jsonBody: { success: false, error: 'Failed to load transactions data' } };
   }
 });
+/**
+ * Get Admin Dashboard - Email Logs Tab Data (Paginated)
+ */
+export const getAdminDashboardEmailLogs = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+
+    // Parse pagination params
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    const [emailLogs, totalCount] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          el.LogID, el.ToEmail, el.EmailType, el.Subject, el.Status,
+          el.SentAt, el.DeliveredAt, el.OpenedAt, el.BouncedAt, el.ErrorMessage,
+          u.FirstName + ' ' + u.LastName AS UserName, u.UserID
+        FROM EmailLogs el
+        LEFT JOIN Users u ON el.UserID = u.UserID
+        ORDER BY el.SentAt DESC
+        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
+      `, [offset, pageSize]),
+      dbService.executeQuery(`
+        SELECT COUNT(*) AS TotalCount FROM EmailLogs
+      `, [])
+    ]);
+
+    const total = totalCount.recordset[0]?.TotalCount || 0;
+    const totalPages = Math.ceil(total / pageSize);
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        emailLogs: emailLogs.recordset || [],
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      }, 'Email logs loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardEmailLogs:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load email logs' } };
+  }
+});

@@ -167,7 +167,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -359,6 +359,9 @@ app.http("notification-preferences", {
         MessageReceivedEmail?: boolean;
         MessageReceivedPush?: boolean;
         WeeklyDigestEmail?: boolean;
+        DailyJobRecommendationEmail?: boolean;
+        ReferrerNotificationEmail?: boolean;
+        MarketingEmail?: boolean;
       }>;
       const success = await NotificationService.updatePreferences(decoded.userId, body);
       return {
@@ -1579,6 +1582,13 @@ app.http("admin-dashboard-transactions", {
   authLevel: "anonymous",
   route: "management/dashboard/transactions",
   handler: withErrorHandling(getAdminDashboardTransactions),
+});
+
+app.http("admin-dashboard-email-logs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/email-logs",
+  handler: withErrorHandling(getAdminDashboardEmailLogs),
 });
 
 // ========================================================================

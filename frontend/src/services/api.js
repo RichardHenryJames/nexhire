@@ -2678,7 +2678,10 @@ if (!resumeId) {
           JobApplicationEmail: true,
           MessageReceivedEmail: true,
           MessageReceivedPush: true,
-          WeeklyDigestEmail: true
+          WeeklyDigestEmail: true,
+          DailyJobRecommendationEmail: true,
+          ReferrerNotificationEmail: true,
+          MarketingEmail: true
         }
       };
     }
