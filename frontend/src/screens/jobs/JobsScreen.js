@@ -282,7 +282,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
-  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobTitle: '', companyName: '' });
+  const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobId: null, jobTitle: '', companyName: '', job: null });
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
@@ -1323,8 +1323,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         setReferralConfirmData({
           currentBalance: balance,
           requiredAmount: pricing.referralRequestCost,
+          jobId: job.JobID || job.id, // Store JobID to correctly identify the job later
           jobTitle: job.Title || 'this job',
-          companyName: job.OrganizationName || ''
+          companyName: job.OrganizationName || '',
+          job: job // Store the full job object for reliable reference
         });
         setShowReferralConfirmModal(true);
         return;
@@ -1865,14 +1867,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         onProceed={async () => {
           setShowReferralConfirmModal(false);
           
-          // Find the job from referralConfirmData
-          const job = jobs.find(j => (j.Title || '') === referralConfirmData.jobTitle);
+          // Use the stored job object directly instead of searching by title
+          // This fixes the bug where duplicate jobs with same title would be confused
+          const job = referralConfirmData.job;
           if (!job) {
             showToast('Job not found. Please try again.', 'error');
             return;
           }
 
-          const jobId = job.JobID || job.id;
+          const jobId = referralConfirmData.jobId || job.JobID || job.id;
 
           // Double-check no existing request (in case of race conditions)
           try {
