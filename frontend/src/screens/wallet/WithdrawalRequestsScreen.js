@@ -233,7 +233,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   innerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 600 : '100%',
+    maxWidth: responsive.isDesktop ? 900 : '100%',
   },
   centerContainer: {
     flex: 1,

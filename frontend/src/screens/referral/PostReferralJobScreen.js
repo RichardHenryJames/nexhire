@@ -715,7 +715,7 @@ const createStyles = (colors, responsive = {}) =>
     scrollView: {
       flex: 1,
       width: '100%',
-      maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+      maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     },
     scrollContent: {
       padding: 16,

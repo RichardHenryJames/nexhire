@@ -623,7 +623,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 600 : '100%',
+    maxWidth: responsive.isDesktop ? 900 : '100%',
   },
   header: {
     flexDirection: 'row',

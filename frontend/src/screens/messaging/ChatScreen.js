@@ -983,7 +983,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   loadingContainer: {

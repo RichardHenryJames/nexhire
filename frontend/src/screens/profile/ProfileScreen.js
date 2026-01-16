@@ -2075,7 +2075,7 @@ const createStyles = (colors, responsive = {}) => {
   modalInnerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 800 : '100%',
+    maxWidth: responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',

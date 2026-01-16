@@ -1030,10 +1030,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
   },
   modalInner: {
     flex: 1,
     backgroundColor: colors.surface,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',

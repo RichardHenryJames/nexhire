@@ -1020,7 +1020,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalInner: {
     flex: 1,
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
