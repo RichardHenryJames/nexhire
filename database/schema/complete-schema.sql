@@ -1,6 +1,6 @@
 -- ============================================================
 -- RefOpen Database Schema Export
--- Generated: 2026-01-07T15:48:27.348Z
+-- Generated: 2026-01-16T18:07:01.782Z
 -- This script creates all tables with correct columns and indexes
 -- ============================================================
 
@@ -124,6 +124,49 @@ END
 GO
 
 -- ============================================================
+-- Table: ApplicantSalaries
+-- ============================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
+BEGIN
+    CREATE TABLE ApplicantSalaries (
+        ApplicantSalaryID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
+        ApplicantID UNIQUEIDENTIFIER NOT NULL,
+        ComponentID INT NOT NULL,
+        Amount DECIMAL(18, 2) NOT NULL,
+        CurrencyID INT NOT NULL,
+        Frequency NVARCHAR(50) NULL,
+        SalaryContext NVARCHAR(50) NOT NULL,
+        Notes NVARCHAR(500) NULL,
+        CreatedAt DATETIME2(7) NULL DEFAULT (sysutcdatetime()),
+        UpdatedAt DATETIME2(7) NULL DEFAULT (sysutcdatetime()),
+        CONSTRAINT PK__Applican__047BE12EEE8118F4 PRIMARY KEY (ApplicantSalaryID)
+    );
+    PRINT 'Created table ApplicantSalaries';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Applicant__Appli__7DCDAAA2')
+BEGIN
+    ALTER TABLE ApplicantSalaries ADD CONSTRAINT FK__Applicant__Appli__7DCDAAA2
+        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID)
+;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Applicant__Curre__7EC1CEDB')
+BEGIN
+    ALTER TABLE ApplicantSalaries ADD CONSTRAINT FK__Applicant__Curre__7EC1CEDB
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ApplicantSalaries_ApplicantID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_ApplicantSalaries_ApplicantID ON ApplicantSalaries(ApplicantID);
+END
+GO
+
+-- ============================================================
 -- Table: Applicants
 -- ============================================================
 
@@ -208,49 +251,6 @@ END
 GO
 
 -- ============================================================
--- Table: ApplicantSalaries
--- ============================================================
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicantSalaries')
-BEGIN
-    CREATE TABLE ApplicantSalaries (
-        ApplicantSalaryID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
-        ApplicantID UNIQUEIDENTIFIER NOT NULL,
-        ComponentID INT NOT NULL,
-        Amount DECIMAL(18, 2) NOT NULL,
-        CurrencyID INT NOT NULL,
-        Frequency NVARCHAR(50) NULL,
-        SalaryContext NVARCHAR(50) NOT NULL,
-        Notes NVARCHAR(500) NULL,
-        CreatedAt DATETIME2(7) NULL DEFAULT (sysutcdatetime()),
-        UpdatedAt DATETIME2(7) NULL DEFAULT (sysutcdatetime()),
-        CONSTRAINT PK__Applican__047BE12EEE8118F4 PRIMARY KEY (ApplicantSalaryID)
-    );
-    PRINT 'Created table ApplicantSalaries';
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Applicant__Appli__7DCDAAA2')
-BEGIN
-    ALTER TABLE ApplicantSalaries ADD CONSTRAINT FK__Applicant__Appli__7DCDAAA2
-        FOREIGN KEY (ApplicantID) REFERENCES Applicants(ApplicantID)
-;
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Applicant__Curre__7EC1CEDB')
-BEGIN
-    ALTER TABLE ApplicantSalaries ADD CONSTRAINT FK__Applicant__Curre__7EC1CEDB
-        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
-;
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ApplicantSalaries_ApplicantID')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_ApplicantSalaries_ApplicantID ON ApplicantSalaries(ApplicantID);
-END
-GO
-
--- ============================================================
 -- Table: ApplicationAttachments
 -- ============================================================
 
@@ -289,7 +289,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ApplicationStatuses')
 BEGIN
     CREATE TABLE ApplicationStatuses (
-        StatusID INT IDENTITY(1, 1) NOT NULL,
+        StatusID INT NOT NULL IDENTITY(1,1),
         Status NVARCHAR(100) NOT NULL,
         Description NVARCHAR(500) NULL,
         IsActive BIT NULL DEFAULT ((1)),
@@ -452,12 +452,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Conversations_User1_Updated')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Conversations_User1_Updated ON Conversations(User1ID, UpdatedAt);
+    CREATE NONCLUSTERED INDEX IX_Conversations_User1_Updated ON Conversations(User1ID, UpdatedAt) WHERE ([IsArchived1]=(0));
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Conversations_User2_Updated')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Conversations_User2_Updated ON Conversations(User2ID, UpdatedAt);
+    CREATE NONCLUSTERED INDEX IX_Conversations_User2_Updated ON Conversations(User2ID, UpdatedAt) WHERE ([IsArchived2]=(0));
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_Conversation')
@@ -473,7 +473,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Currencies')
 BEGIN
     CREATE TABLE Currencies (
-        CurrencyID INT IDENTITY(1, 1) NOT NULL,
+        CurrencyID INT NOT NULL IDENTITY(1,1),
         Code NVARCHAR(3) NOT NULL,
         Name NVARCHAR(100) NOT NULL,
         Symbol NVARCHAR(10) NULL,
@@ -493,7 +493,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DailyJobEmailLogs')
 BEGIN
     CREATE TABLE DailyJobEmailLogs (
-        LogID INT IDENTITY(1, 1) NOT NULL,
+        LogID INT NOT NULL IDENTITY(1,1),
         ExecutionID NVARCHAR(100) NOT NULL,
         StartTime DATETIME2(7) NOT NULL,
         EndTime DATETIME2(7) NOT NULL,
@@ -549,7 +549,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_EmailLogs_Users')
 BEGIN
     ALTER TABLE EmailLogs ADD CONSTRAINT FK_EmailLogs_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE SET NULL
 ;
 END
 GO
@@ -580,7 +579,7 @@ BEGIN
         UserID UNIQUEIDENTIFIER NOT NULL,
         WorkExperienceID UNIQUEIDENTIFIER NOT NULL,
         Email NVARCHAR(255) NOT NULL,
-        OTPCode CHAR(4) NOT NULL,
+        OTPCode CHAR NOT NULL,
         Purpose NVARCHAR(50) NOT NULL DEFAULT ('COMPANY_EMAIL_VERIFICATION'),
         IsUsed BIT NOT NULL DEFAULT ((0)),
         ExpiresAt DATETIME2(7) NOT NULL,
@@ -598,7 +597,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_EmailVerification
 BEGIN
     ALTER TABLE EmailVerificationOTPs ADD CONSTRAINT FK_EmailVerificationOTPs_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -606,7 +604,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_EmailVerification
 BEGIN
     ALTER TABLE EmailVerificationOTPs ADD CONSTRAINT FK_EmailVerificationOTPs_WorkExperiences
         FOREIGN KEY (WorkExperienceID) REFERENCES WorkExperiences(WorkExperienceID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -691,7 +688,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_InAppNotification
 BEGIN
     ALTER TABLE InAppNotifications ADD CONSTRAINT FK_InAppNotifications_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -804,7 +800,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobArchiveLogs')
 BEGIN
     CREATE TABLE JobArchiveLogs (
-        LogID INT IDENTITY(1, 1) NOT NULL,
+        LogID INT NOT NULL IDENTITY(1,1),
         RunID NVARCHAR(50) NOT NULL,
         StartTime DATETIME2(7) NOT NULL,
         EndTime DATETIME2(7) NOT NULL,
@@ -838,6 +834,30 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_JobArchiveLogs_TriggerType_StartTime')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_JobArchiveLogs_TriggerType_StartTime ON JobArchiveLogs(Success, TotalJobsArchived, TotalJobsDeleted, TriggerType, StartTime);
+END
+GO
+
+-- ============================================================
+-- Table: JobTypes
+-- ============================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobTypes')
+BEGIN
+    CREATE TABLE JobTypes (
+        JobTypeID INT NOT NULL IDENTITY(1,1),
+        Type NVARCHAR(100) NOT NULL,
+        Description NVARCHAR(500) NULL,
+        IsActive BIT NULL DEFAULT ((1)),
+        CreatedAt DATETIMEOFFSET NULL DEFAULT (sysdatetimeoffset()),
+        CONSTRAINT PK__JobTypes__E1F4624DE0A6DEB9 PRIMARY KEY (JobTypeID)
+    );
+    PRINT 'Created table JobTypes';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_JobTypes_Type')
+BEGIN
+    CREATE NONCLUSTERED INDEX IDX_JobTypes_Type ON JobTypes(Type);
 END
 GO
 
@@ -966,7 +986,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_Organization_Active')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Jobs_Organization_Active ON Jobs(Status, PublishedAt, CreatedAt, OrganizationID);
+    CREATE NONCLUSTERED INDEX IX_Jobs_Organization_Active ON Jobs(Status, PublishedAt, CreatedAt, OrganizationID) WHERE ([Status]='Published');
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_OrganizationID')
@@ -977,6 +997,21 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_OrganizationID_Status_PublishedAt')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Jobs_OrganizationID_Status_PublishedAt ON Jobs(Title, JobTypeID, WorkplaceTypeID, Location, SalaryRangeMin, SalaryRangeMax, OrganizationID, Status, PublishedAt);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_PostedByUserID_Status')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Jobs_PostedByUserID_Status ON Jobs(Title, OrganizationID, CreatedAt, PostedByType, PostedByUserID, Status);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_PostedByUserID_Status_OrgID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Jobs_PostedByUserID_Status_OrgID ON Jobs(Title, CreatedAt, PostedByType, UpdatedAt, PublishedAt, PostedByUserID, Status, OrganizationID);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_Scraping_Stats')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Jobs_Scraping_Stats ON Jobs(PostedByType, ExternalJobID, CreatedAt, Country) WHERE ([PostedByType]=(0) AND [ExternalJobID] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_Status_PublishedAt_Covering')
@@ -991,36 +1026,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_WorkplaceTypeID_Status_Published')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Jobs_WorkplaceTypeID_Status_Published ON Jobs(JobID, Title, JobTypeID, Location, CreatedAt, PublishedAt, SalaryRangeMin, SalaryRangeMax, CurrencyID, PostedByUserID, PostedByType, WorkplaceTypeID, Status, OrganizationID);
+    CREATE NONCLUSTERED INDEX IX_Jobs_WorkplaceTypeID_Status_Published ON Jobs(JobID, Title, JobTypeID, Location, CreatedAt, PublishedAt, SalaryRangeMin, SalaryRangeMax, CurrencyID, PostedByUserID, PostedByType, WorkplaceTypeID, Status, OrganizationID) WHERE ([Status]='Published');
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_WorkplaceTypeID_Status_PublishedAt')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Jobs_WorkplaceTypeID_Status_PublishedAt ON Jobs(OrganizationID, Title, JobTypeID, WorkplaceTypeID, Status, PublishedAt);
-END
-GO
-
--- ============================================================
--- Table: JobTypes
--- ============================================================
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JobTypes')
-BEGIN
-    CREATE TABLE JobTypes (
-        JobTypeID INT IDENTITY(1, 1) NOT NULL,
-        Type NVARCHAR(100) NOT NULL,
-        Description NVARCHAR(500) NULL,
-        IsActive BIT NULL DEFAULT ((1)),
-        CreatedAt DATETIMEOFFSET NULL DEFAULT (sysdatetimeoffset()),
-        CONSTRAINT PK__JobTypes__E1F4624DE0A6DEB9 PRIMARY KEY (JobTypeID)
-    );
-    PRINT 'Created table JobTypes';
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IDX_JobTypes_Type')
-BEGIN
-    CREATE NONCLUSTERED INDEX IDX_JobTypes_Type ON JobTypes(Type);
 END
 GO
 
@@ -1084,7 +1095,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ManualPayment_Reference')
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_ManualPayment_Reference ON ManualPaymentSubmissions(ReferenceNumber);
+    CREATE UNIQUE NONCLUSTERED INDEX IX_ManualPayment_Reference ON ManualPaymentSubmissions(ReferenceNumber) WHERE ([Status]<>'Rejected');
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ManualPayment_Status')
@@ -1136,7 +1147,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Messages__Conver
 BEGIN
     ALTER TABLE Messages ADD CONSTRAINT FK__Messages__Conver__151102AD
         FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -1166,7 +1176,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Messages_Unread')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Messages_Unread ON Messages(ConversationID, IsRead, CreatedAt);
+    CREATE NONCLUSTERED INDEX IX_Messages_Unread ON Messages(ConversationID, IsRead, CreatedAt) WHERE ([IsRead]=(0) AND [IsDeleted]=(0));
 END
 GO
 
@@ -1194,8 +1204,8 @@ BEGIN
         DailyDigestEmail BIT NULL DEFAULT ((0)),
         WeeklyDigestEmail BIT NULL DEFAULT ((1)),
         QuietHoursEnabled BIT NULL DEFAULT ((0)),
-        QuietHoursStart TIME NULL,
-        QuietHoursEnd TIME NULL,
+        QuietHoursStart TIME(7) NULL,
+        QuietHoursEnd TIME(7) NULL,
         Timezone NVARCHAR(50) NULL DEFAULT ('Asia/Kolkata'),
         CreatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
         UpdatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
@@ -1203,6 +1213,7 @@ BEGIN
         WeeklyDigestEnabled BIT NOT NULL DEFAULT ((1)),
         DailyJobRecommendationEmail BIT NOT NULL DEFAULT ((1)),
         ReferrerNotificationEmail BIT NOT NULL DEFAULT ((1)),
+        MarketingEmail BIT NOT NULL DEFAULT ((1)),
         CONSTRAINT PK__Notifica__1788CCACE92166D2 PRIMARY KEY (UserID)
     );
     PRINT 'Created table NotificationPreferences';
@@ -1213,7 +1224,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_NotificationPrefe
 BEGIN
     ALTER TABLE NotificationPreferences ADD CONSTRAINT FK_NotificationPreferences_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -1248,13 +1258,12 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_NotificationQueue
 BEGIN
     ALTER TABLE NotificationQueue ADD CONSTRAINT FK_NotificationQueue_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE SET NULL
 ;
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_NotificationQueue_Status_Scheduled')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_NotificationQueue_Status_Scheduled ON NotificationQueue(Status, ScheduledAt);
+    CREATE NONCLUSTERED INDEX IX_NotificationQueue_Status_Scheduled ON NotificationQueue(Status, ScheduledAt) WHERE ([Status]='pending');
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_NotificationQueue_Type')
@@ -1275,7 +1284,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Organizations')
 BEGIN
     CREATE TABLE Organizations (
-        OrganizationID INT IDENTITY(1, 1) NOT NULL,
+        OrganizationID INT NOT NULL IDENTITY(1,1),
         Name NVARCHAR(200) NOT NULL,
         Type NVARCHAR(50) NULL,
         Industry NVARCHAR(100) NULL,
@@ -1299,6 +1308,7 @@ BEGIN
         IsActive BIT NULL DEFAULT ((1)),
         IsFortune500 BIT NOT NULL DEFAULT ((0)),
         VerifiedReferrersCount INT NOT NULL DEFAULT ((0)),
+        NormalizedName AS (lower(replace(replace([Name],' ',''),'.',''))) PERSISTED,
         CONSTRAINT PK__Organiza__CADB0B7268D137E7 PRIMARY KEY (OrganizationID)
     );
     PRINT 'Created table Organizations';
@@ -1307,12 +1317,17 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Active_Lookup')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Organizations_Active_Lookup ON Organizations(Name, LogoURL, LinkedInProfile, Website, OrganizationID, IsActive);
+    CREATE NONCLUSTERED INDEX IX_Organizations_Active_Lookup ON Organizations(Name, LogoURL, LinkedInProfile, Website, OrganizationID, IsActive) WHERE ([IsActive]=(1));
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_F500_Covering')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Organizations_F500_Covering ON Organizations(OrganizationID, Name, LogoURL, Industry, Website, LinkedInProfile, Description, Type, IsFortune500, IsActive);
+    CREATE NONCLUSTERED INDEX IX_Organizations_F500_Covering ON Organizations(OrganizationID, Name, LogoURL, Industry, Website, LinkedInProfile, Description, Type, IsFortune500, IsActive) WHERE ([IsFortune500]=(1) AND [IsActive]=(1));
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_GetOrgs_Covering')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Organizations_GetOrgs_Covering ON Organizations(OrganizationID, LogoURL, Industry, IsActive, IsFortune500, Name);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_IsActive_Optimized')
@@ -1335,9 +1350,24 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_Lookup_Optimized ON Organizations(OrganizationID, LogoURL, Type, IsActive, IsFortune500, Name);
 END
 GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_NameSearch')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Organizations_NameSearch ON Organizations(OrganizationID, LogoURL, Industry, IsFortune500, IsActive, Name);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_NormalizedName')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Organizations_NormalizedName ON Organizations(OrganizationID, Name, LogoURL, Website, Industry, NormalizedName, IsActive);
+END
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Search_Covering')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_Search_Covering ON Organizations(OrganizationID, LogoURL, Industry, IsActive, IsFortune500, Name);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_VerifiedReferrersCount')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Organizations_VerifiedReferrersCount ON Organizations(Name, LogoURL, VerifiedReferrersCount, OrganizationID);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ__Organiza__737584F65D101D06')
@@ -1391,7 +1421,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PaymentSettings')
 BEGIN
     CREATE TABLE PaymentSettings (
-        SettingID INT IDENTITY(1, 1) NOT NULL,
+        SettingID INT NOT NULL IDENTITY(1,1),
         SettingKey NVARCHAR(100) NOT NULL,
         SettingValue NVARCHAR(500) NULL,
         Description NVARCHAR(500) NULL,
@@ -1437,7 +1467,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__PaymentTr__UserI
 BEGIN
     ALTER TABLE PaymentTransactions ADD CONSTRAINT FK__PaymentTr__UserI__336AA144
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -1449,7 +1478,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PricingSettings')
 BEGIN
     CREATE TABLE PricingSettings (
-        SettingID INT IDENTITY(1, 1) NOT NULL,
+        SettingID INT NOT NULL IDENTITY(1,1),
         SettingKey NVARCHAR(50) NOT NULL,
         SettingValue DECIMAL(10, 2) NOT NULL,
         Description NVARCHAR(255) NULL,
@@ -1496,7 +1525,6 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_PushTokens_Users'
 BEGIN
     ALTER TABLE PushTokens ADD CONSTRAINT FK_PushTokens_Users
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
 ;
 END
 GO
@@ -1507,7 +1535,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_PushTokens_UserID_Active')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_PushTokens_UserID_Active ON PushTokens(UserID, IsActive);
+    CREATE NONCLUSTERED INDEX IX_PushTokens_UserID_Active ON PushTokens(UserID, IsActive) WHERE ([IsActive]=(1));
 END
 GO
 
@@ -1518,7 +1546,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReferenceMetadata')
 BEGIN
     CREATE TABLE ReferenceMetadata (
-        ReferenceID INT IDENTITY(1, 1) NOT NULL,
+        ReferenceID INT NOT NULL IDENTITY(1,1),
         RefType NVARCHAR(50) NOT NULL,
         Value NVARCHAR(200) NOT NULL,
         Category NVARCHAR(100) NULL,
@@ -1544,12 +1572,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferenceMetadata_RefType_Category_Value_NotNull')
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_ReferenceMetadata_RefType_Category_Value_NotNull ON ReferenceMetadata(RefType, Category, Value);
+    CREATE UNIQUE NONCLUSTERED INDEX IX_ReferenceMetadata_RefType_Category_Value_NotNull ON ReferenceMetadata(RefType, Category, Value) WHERE ([Category] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferenceMetadata_RefType_Value_NullCategory')
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_ReferenceMetadata_RefType_Value_NullCategory ON ReferenceMetadata(RefType, Value);
+    CREATE UNIQUE NONCLUSTERED INDEX IX_ReferenceMetadata_RefType_Value_NullCategory ON ReferenceMetadata(RefType, Value) WHERE ([Category] IS NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferenceMetadata_Value')
@@ -1565,7 +1593,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReferralPlans')
 BEGIN
     CREATE TABLE ReferralPlans (
-        PlanID INT IDENTITY(1, 1) NOT NULL,
+        PlanID INT NOT NULL IDENTITY(1,1),
         Name NVARCHAR(100) NOT NULL,
         ReferralsPerDay INT NOT NULL,
         DurationDays INT NOT NULL,
@@ -1620,6 +1648,45 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralProofs_Request')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_ReferralProofs_Request ON ReferralProofs(ReferrerID, SubmittedAt, RequestID);
+END
+GO
+
+-- ============================================================
+-- Table: ReferralRequestStatusHistory
+-- ============================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReferralRequestStatusHistory')
+BEGIN
+    CREATE TABLE ReferralRequestStatusHistory (
+        HistoryID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
+        RequestID UNIQUEIDENTIFIER NOT NULL,
+        Status NVARCHAR(50) NOT NULL,
+        StatusMessage NVARCHAR(500) NULL,
+        ActorID UNIQUEIDENTIFIER NULL,
+        ActorType NVARCHAR(20) NULL,
+        ActorName NVARCHAR(200) NULL,
+        CreatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
+        CONSTRAINT PK__Referral__4D7B4ADD07A04591 PRIMARY KEY (HistoryID)
+    );
+    PRINT 'Created table ReferralRequestStatusHistory';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__ReferralR__Reque__1C3EEBA1')
+BEGIN
+    ALTER TABLE ReferralRequestStatusHistory ADD CONSTRAINT FK__ReferralR__Reque__1C3EEBA1
+        FOREIGN KEY (RequestID) REFERENCES ReferralRequests(RequestID)
+;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralStatusHistory_ActorID_CreatedAt')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_ReferralStatusHistory_ActorID_CreatedAt ON ReferralRequestStatusHistory(RequestID, Status, ActorID, CreatedAt);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralStatusHistory_RequestID_CreatedAt')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_ReferralStatusHistory_RequestID_CreatedAt ON ReferralRequestStatusHistory(Status, StatusMessage, ActorName, ActorType, RequestID, CreatedAt);
 END
 GO
 
@@ -1695,7 +1762,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralRequests_JobTitle')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_ReferralRequests_JobTitle ON ReferralRequests(JobTitle);
+    CREATE NONCLUSTERED INDEX IX_ReferralRequests_JobTitle ON ReferralRequests(JobTitle) WHERE ([JobTitle] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralRequests_OrganizationID_Status')
@@ -1711,46 +1778,6 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_Referral')
 BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX UQ_Referral ON ReferralRequests(JobID, ExtJobID, ApplicantID);
-END
-GO
-
--- ============================================================
--- Table: ReferralRequestStatusHistory
--- ============================================================
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReferralRequestStatusHistory')
-BEGIN
-    CREATE TABLE ReferralRequestStatusHistory (
-        HistoryID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
-        RequestID UNIQUEIDENTIFIER NOT NULL,
-        Status NVARCHAR(50) NOT NULL,
-        StatusMessage NVARCHAR(500) NULL,
-        ActorID UNIQUEIDENTIFIER NULL,
-        ActorType NVARCHAR(20) NULL,
-        ActorName NVARCHAR(200) NULL,
-        CreatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
-        CONSTRAINT PK__Referral__4D7B4ADD07A04591 PRIMARY KEY (HistoryID)
-    );
-    PRINT 'Created table ReferralRequestStatusHistory';
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__ReferralR__Reque__1C3EEBA1')
-BEGIN
-    ALTER TABLE ReferralRequestStatusHistory ADD CONSTRAINT FK__ReferralR__Reque__1C3EEBA1
-        FOREIGN KEY (RequestID) REFERENCES ReferralRequests(RequestID)
-        ON DELETE CASCADE
-;
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralStatusHistory_ActorID_CreatedAt')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_ReferralStatusHistory_ActorID_CreatedAt ON ReferralRequestStatusHistory(RequestID, Status, ActorID, CreatedAt);
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ReferralStatusHistory_RequestID_CreatedAt')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_ReferralStatusHistory_RequestID_CreatedAt ON ReferralRequestStatusHistory(Status, StatusMessage, ActorName, ActorType, RequestID, CreatedAt);
 END
 GO
 
@@ -1839,7 +1866,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SalaryComponents')
 BEGIN
     CREATE TABLE SalaryComponents (
-        ComponentID INT IDENTITY(1, 1) NOT NULL,
+        ComponentID INT NOT NULL IDENTITY(1,1),
         ComponentName NVARCHAR(100) NOT NULL,
         ComponentType NVARCHAR(50) NOT NULL,
         IsActive BIT NULL,
@@ -1904,7 +1931,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ScrapingLogs')
 BEGIN
     CREATE TABLE ScrapingLogs (
-        LogID INT IDENTITY(1, 1) NOT NULL,
+        LogID INT NOT NULL IDENTITY(1,1),
         RunId NVARCHAR(50) NOT NULL,
         StartTime DATETIME2(7) NOT NULL,
         EndTime DATETIME2(7) NOT NULL,
@@ -2015,7 +2042,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_SupportTickets_CreatedAt')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_SupportTickets_CreatedAt ON SupportTickets(CreatedAt);
+    CREATE NONCLUSTERED INDEX IX_SupportTickets_CreatedAt ON SupportTickets(CreatedAt) WHERE ([IsDeleted]=(0));
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_SupportTickets_Status')
@@ -2128,7 +2155,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_GoogleId')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Users_GoogleId ON Users(GoogleId);
+    CREATE NONCLUSTERED INDEX IX_Users_GoogleId ON Users(GoogleId) WHERE ([GoogleId] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_IsVerifiedReferrer')
@@ -2143,7 +2170,7 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Users_ReferredBy')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Users_ReferredBy ON Users(ReferredBy);
+    CREATE NONCLUSTERED INDEX IX_Users_ReferredBy ON Users(ReferredBy) WHERE ([ReferredBy] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ__Users__A9D105340A8BEECC')
@@ -2198,13 +2225,12 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__WalletRec__Walle
 BEGIN
     ALTER TABLE WalletRechargeOrders ADD CONSTRAINT FK__WalletRec__Walle__6501FCD8
         FOREIGN KEY (WalletID) REFERENCES Wallets(WalletID)
-        ON DELETE CASCADE
 ;
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletRechargeOrders_RazorpayOrderID')
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_WalletRechargeOrders_RazorpayOrderID ON WalletRechargeOrders(RazorpayOrderID);
+    CREATE UNIQUE NONCLUSTERED INDEX IX_WalletRechargeOrders_RazorpayOrderID ON WalletRechargeOrders(RazorpayOrderID) WHERE ([RazorpayOrderID] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletRechargeOrders_UserID_CreatedAt')
@@ -2215,58 +2241,6 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletRechargeOrders_WalletID_Status')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_WalletRechargeOrders_WalletID_Status ON WalletRechargeOrders(Amount, CreatedAt, PaidAt, WalletID, Status);
-END
-GO
-
--- ============================================================
--- Table: Wallets
--- ============================================================
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Wallets')
-BEGIN
-    CREATE TABLE Wallets (
-        WalletID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
-        UserID UNIQUEIDENTIFIER NOT NULL,
-        Balance DECIMAL(15, 2) NOT NULL DEFAULT ((0.00)),
-        CurrencyID INT NOT NULL DEFAULT ((4)),
-        Status NVARCHAR(20) NOT NULL DEFAULT ('Active'),
-        CreatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
-        UpdatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
-        LastTransactionAt DATETIME2(7) NULL,
-        CONSTRAINT PK__Wallets__84D4F92E9E13D32B PRIMARY KEY (WalletID)
-    );
-    PRINT 'Created table Wallets';
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Wallets__Currenc__55BFB948')
-BEGIN
-    ALTER TABLE Wallets ADD CONSTRAINT FK__Wallets__Currenc__55BFB948
-        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
-;
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Wallets__UserID__54CB950F')
-BEGIN
-    ALTER TABLE Wallets ADD CONSTRAINT FK__Wallets__UserID__54CB950F
-        FOREIGN KEY (UserID) REFERENCES Users(UserID)
-        ON DELETE CASCADE
-;
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Wallets_Status')
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_Wallets_Status ON Wallets(WalletID, UserID, Balance, Status);
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Wallets_UserID')
-BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX IX_Wallets_UserID ON Wallets(WalletID, Balance, Status, UserID);
-END
-GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ__Wallets__1788CCAD9A6B89EE')
-BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX UQ__Wallets__1788CCAD9A6B89EE ON Wallets(UserID);
 END
 GO
 
@@ -2307,13 +2281,12 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__WalletTra__Walle
 BEGIN
     ALTER TABLE WalletTransactions ADD CONSTRAINT FK__WalletTra__Walle__5C6CB6D7
         FOREIGN KEY (WalletID) REFERENCES Wallets(WalletID)
-        ON DELETE CASCADE
 ;
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletTransactions_PaymentReference')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_WalletTransactions_PaymentReference ON WalletTransactions(PaymentReference);
+    CREATE NONCLUSTERED INDEX IX_WalletTransactions_PaymentReference ON WalletTransactions(PaymentReference) WHERE ([PaymentReference] IS NOT NULL);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletTransactions_Source_Status')
@@ -2393,6 +2366,57 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_WalletWithdrawals_WalletID_Status')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_WalletWithdrawals_WalletID_Status ON WalletWithdrawals(Amount, RequestedAt, WalletID, Status);
+END
+GO
+
+-- ============================================================
+-- Table: Wallets
+-- ============================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Wallets')
+BEGIN
+    CREATE TABLE Wallets (
+        WalletID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        Balance DECIMAL(15, 2) NOT NULL DEFAULT ((0.00)),
+        CurrencyID INT NOT NULL DEFAULT ((4)),
+        Status NVARCHAR(20) NOT NULL DEFAULT ('Active'),
+        CreatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
+        UpdatedAt DATETIME2(7) NULL DEFAULT (getutcdate()),
+        LastTransactionAt DATETIME2(7) NULL,
+        CONSTRAINT PK__Wallets__84D4F92E9E13D32B PRIMARY KEY (WalletID)
+    );
+    PRINT 'Created table Wallets';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Wallets__Currenc__55BFB948')
+BEGIN
+    ALTER TABLE Wallets ADD CONSTRAINT FK__Wallets__Currenc__55BFB948
+        FOREIGN KEY (CurrencyID) REFERENCES Currencies(CurrencyID)
+;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__Wallets__UserID__54CB950F')
+BEGIN
+    ALTER TABLE Wallets ADD CONSTRAINT FK__Wallets__UserID__54CB950F
+        FOREIGN KEY (UserID) REFERENCES Users(UserID)
+;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Wallets_Status')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Wallets_Status ON Wallets(WalletID, UserID, Balance, Status);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Wallets_UserID')
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX IX_Wallets_UserID ON Wallets(WalletID, Balance, Status, UserID);
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ__Wallets__1788CCAD9A6B89EE')
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ__Wallets__1788CCAD9A6B89EE ON Wallets(UserID);
 END
 GO
 
@@ -2479,7 +2503,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'WorkplaceTypes')
 BEGIN
     CREATE TABLE WorkplaceTypes (
-        WorkplaceTypeID INT IDENTITY(1, 1) NOT NULL,
+        WorkplaceTypeID INT NOT NULL IDENTITY(1,1),
         Type NVARCHAR(50) NOT NULL,
         Description NVARCHAR(200) NULL,
         IsActive BIT NULL DEFAULT ((1)),
@@ -2495,3 +2519,4 @@ BEGIN
     CREATE NONCLUSTERED INDEX IDX_WorkplaceTypes_Type ON WorkplaceTypes(Type);
 END
 GO
+
