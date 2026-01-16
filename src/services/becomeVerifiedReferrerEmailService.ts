@@ -225,7 +225,7 @@ export class BecomeVerifiedReferrerEmailService {
                                     <strong>We take your privacy seriously:</strong>
                                 </p>
                                 <ul style="color: #1a1a1a; font-size: 13px; margin: 10px 0 0 0; padding-left: 20px; line-height: 1.8;">
-                                    <li><strong>Encrypted Storage</strong> - Your company email is AES-256 encrypted</li>
+                                    <li><strong>Not Stored</strong> - We don't save your company email</li>
                                     <li><strong>Never Shared</strong> - We never share your email with anyone</li>
                                     <li><strong>Verification Only</strong> - Used only to verify you work at ${user.CompanyName}</li>
                                 </ul>

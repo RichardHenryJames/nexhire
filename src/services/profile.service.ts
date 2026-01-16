@@ -204,12 +204,11 @@ export class ApplicantService {
                     ORDER BY we.IsCurrent DESC, we.EndDate DESC, we.StartDate DESC
                 `;
                 const workExpResult = await dbService.executeQuery(workExpQuery, [profile.ApplicantID]);
-                // Decrypt CompanyEmail for each work experience
-                profile.workExperiences = (workExpResult.recordset || []).map((we: any) => ({
-                    ...we,
-                    CompanyEmail: decrypt(we.CompanyEmail),
-                    CompanyEmailMasked: maskEmail(decrypt(we.CompanyEmail) || '')
-                }));
+                // Remove CompanyEmail from response - not needed in frontend
+                profile.workExperiences = (workExpResult.recordset || []).map((we: any) => {
+                    const { CompanyEmail, ...rest } = we;
+                    return rest;
+                });
             } catch (error) {
                 console.warn('Could not load work experiences:', error);
                 profile.workExperiences = [];

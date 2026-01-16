@@ -401,8 +401,6 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
         currentWorkExperience: user.WorkExperienceID ? {
           workExperienceId: user.WorkExperienceID,
           companyName: user.CompanyName || user.OrganizationName,
-          companyEmail: decrypt(user.CompanyEmail), // Decrypt for display
-          companyEmailMasked: maskEmail(decrypt(user.CompanyEmail) || ''), // Masked version for UI
           isEmailVerified: user.CompanyEmailVerified || false,
           verifiedAt: user.CompanyEmailVerifiedAt
         } : null

@@ -611,12 +611,9 @@ export default function AddWorkExperienceModal({
                     </View>
                     <View style={styles.verifiedCompanyInfo}>
                       <Text style={styles.verifiedCompanyTitle}>Verified {form.companyName} Employee</Text>
-                      <View style={styles.verifiedDisclaimerRow}>
-                        <Text style={styles.verifiedCompanyDisclaimer}>
-                          Your company email is securely verified and encrypted
-                        </Text>
-                        <Ionicons name="lock-closed" size={12} color={colors.success} style={{ marginLeft: 4 }} />
-                      </View>
+                      <Text style={styles.verifiedCompanyDisclaimer}>
+                        Your company email is not stored, used only for verification
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -1354,7 +1351,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: colors.warning,
   },
   verifiedCompanySection: {
-    marginBottom: 20,
+    marginBottom: 0,
     marginTop: 0,
   },
   verifiedCompanyBadge: {
