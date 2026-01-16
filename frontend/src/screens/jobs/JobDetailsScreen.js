@@ -991,7 +991,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         <InfoRow
           icon="time"
           label="Posted"
-          value={formatDate(job.CreatedAt || job.PublishedAt)}
+          value={formatDate(job.PublishedAt || job.CreatedAt)}
         />
         <InfoRow
           icon="calendar"

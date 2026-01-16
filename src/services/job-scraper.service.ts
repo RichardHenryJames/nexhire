@@ -1494,7 +1494,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         this.extractMaxExperience(job.title, job.description),
         'Published', this.calculateJobPriority(job, jobAge), 'Public',
         actualPostedDate, this.calculateExpiryDate(actualPostedDate, jobAge),
-        actualPostedDate, now, job.externalJobId,
+        now, now, job.externalJobId,  // CreatedAt = now (when inserted), UpdatedAt = now
         `${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 200) : ''}`,  // Note: Source NOT included in tags - only skills
         0, job.applicationUrl
       ];

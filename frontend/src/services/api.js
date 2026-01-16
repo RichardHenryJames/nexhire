@@ -2367,7 +2367,7 @@ if (!resumeId) {
       const queryParams = {
         page: params.page || 1,
         pageSize: params.pageSize || 50,
-        sortBy: params.sortBy || 'CreatedAt',
+        sortBy: params.sortBy || 'PublishedAt',
         sortOrder: params.sortOrder || 'desc',
         ...params
       };

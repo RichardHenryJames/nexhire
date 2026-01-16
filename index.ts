@@ -3078,11 +3078,11 @@ app.timer("dailyReferrerNotificationEmail", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 1 hour)
+// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 8 hours)
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 * * * *", // Every 1 hour
+  schedule: "0 0 */8 * * *", // Every 8 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `timer_${Date.now()}_${Math.random()
