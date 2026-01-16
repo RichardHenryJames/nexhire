@@ -1313,30 +1313,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         }
       }
       
-      // SECOND: Try normalized match - strip common suffixes from BOTH sides
-      // This catches "Databricks" vs "Databricks Inc." duplicates
-      const exactQuery = `
-        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
-        FROM Organizations 
-        WHERE LOWER(
-          REPLACE(
-            REPLACE(
-              REPLACE(
-                REPLACE(
-                  REPLACE(
-                    REPLACE(
-                      REPLACE(REPLACE(Name, ' ', ''), ',', ''),
-                    '.', ''),
-                  'inc', ''),
-                'llc', ''),
-              'ltd', ''),
-            'limited', ''),
-          'technologies', '')
-        ) = @param0
-          AND IsActive = 1
-      `;
-      
-      // Strip same suffixes from search term
+      // SECOND: Try normalized match - search by exact normalized name first, then variations
+      // Strip suffixes from search term for matching
       const strippedNormalized = normalizedName
         .replace(/\s/g, '')
         .replace(/,/g, '')
@@ -1348,10 +1326,36 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         .replace(/technologies$/i, '')
         .toLowerCase();
       
-      const exactMatch = await dbService.executeQuery(exactQuery, [strippedNormalized]);
-      if (exactMatch.recordset.length > 0) {
-        console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
-        return exactMatch.recordset[0];
+      // Use indexed NormalizedName column for fast lookups (index: IX_Organizations_NormalizedName)
+      const exactQuery = `
+        SELECT TOP 5 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE NormalizedName LIKE @param0 + '%'
+          AND IsActive = 1
+        ORDER BY LEN(Name)
+      `;
+      
+      const exactMatches = await dbService.executeQuery(exactQuery, [strippedNormalized]);
+      if (exactMatches.recordset.length > 0) {
+        // Validate match in JavaScript - strip same suffixes from DB name and check equality
+        for (const match of exactMatches.recordset) {
+          const dbNameStripped = match.Name
+            .replace(/\s/g, '')
+            .replace(/,/g, '')
+            .replace(/\./g, '')
+            .replace(/inc$/i, '')
+            .replace(/llc$/i, '')
+            .replace(/ltd$/i, '')
+            .replace(/limited$/i, '')
+            .replace(/technologies$/i, '')
+            .toLowerCase();
+          
+          // Exact match after stripping suffixes from both sides (same as old logic)
+          if (dbNameStripped === strippedNormalized) {
+            console.log(`✅ Normalized match found for "${normalizedName}": ${match.Name}`);
+            return match;
+          }
+        }
       }
       
       // THIRD: Check for HR/recruiter suffix patterns (e.g., "Wipro HR Soniya" -> "Wipro")
