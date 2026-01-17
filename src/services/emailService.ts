@@ -319,8 +319,8 @@ export class EmailService {
                             </p>
                             
                             <!-- Alternative Link -->
-                            <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
-                                <p style="margin: 0 0 10px; color: #666666; font-size: 13px;">
+                            <div style="margin-top: 30px; padding: 20px; background-color: #e2e8f0; border-radius: 8px;">
+                                <p style="margin: 0 0 10px; color: #334155; font-size: 13px;">
                                     If the button doesn't work, copy and paste this link into your browser:
                                 </p>
                                 <p style="margin: 0; word-break: break-all;">
@@ -421,11 +421,11 @@ ${EMAIL_CONFIG.appUrl}
                             </p>
                             
                             <!-- Info Box -->
-                            <div style="margin: 25px 0; padding: 20px; background-color: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 4px;">
-                                <p style="margin: 0; color: #1E40AF; font-size: 15px; font-weight: 600;">
+                            <div style="margin: 25px 0; padding: 20px; background-color: #1E40AF; border-left: 4px solid #3B82F6; border-radius: 4px;">
+                                <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 600;">
                                     📱 How to sign in:
                                 </p>
-                                <p style="margin: 10px 0 0; color: #333333; font-size: 14px; line-height: 1.6;">
+                                <p style="margin: 10px 0 0; color: #ffffff; font-size: 14px; line-height: 1.6;">
                                     Simply click "Continue with Google" on the login page using the same Google account you signed up with.
                                 </p>
                             </div>
@@ -442,14 +442,14 @@ ${EMAIL_CONFIG.appUrl}
                             </table>
                             
                             <!-- Secondary Info -->
-                            <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
-                                <p style="margin: 0 0 10px; color: #333333; font-size: 14px; font-weight: 600;">
+                            <div style="margin-top: 30px; padding: 20px; background-color: #e2e8f0; border-radius: 8px;">
+                                <p style="margin: 0 0 10px; color: #1e293b; font-size: 14px; font-weight: 600;">
                                     🔐 Want to set a password anyway?
                                 </p>
-                                <p style="margin: 0 0 15px; color: #666666; font-size: 14px; line-height: 1.6;">
+                                <p style="margin: 0 0 15px; color: #334155; font-size: 14px; line-height: 1.6;">
                                     If you'd like to log in with both Google and email/password, you can set a password in your account settings:
                                 </p>
-                                <ol style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                                <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
                                     <li>Sign in with Google</li>
                                     <li>Go to <a href="${settingsUrl}" style="color: #1E40AF;">Settings</a></li>
                                     <li>Click "Set Password" in the Security section</li>
