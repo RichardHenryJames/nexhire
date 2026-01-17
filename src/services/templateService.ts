@@ -22,6 +22,25 @@ const APP_CONFIG = {
     logoUrl: 'https://www.refopen.com/logo.png'
 };
 
+// Common email footer - dark themed for better readability in both light/dark mode
+const EMAIL_FOOTER = `
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #1e293b; padding: 25px 30px; border-top: 1px solid #334155;">
+                            <p style="margin: 0 0 12px 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                                This email was sent by RefOpen - India's Leading Job & Referral Platform
+                            </p>
+                            <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                                <a href="{{appUrl}}" style="color: #93c5fd; text-decoration: none;">Visit RefOpen</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #93c5fd; text-decoration: none;">Contact Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{unsubscribeUrl}}" style="color: #93c5fd; text-decoration: none;">Manage Notifications</a>
+                            </p>
+                        </td>
+                    </tr>
+`;
+
 // Email templates
 const templates: Record<string, { subject: string; html: string }> = {
 
@@ -104,21 +123,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
-                                You're receiving this because you're registered as an employee at {{companyName}} on RefOpen.
-                            </p>
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notifications</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -201,18 +206,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #10b981; text-decoration: none;">Manage notifications</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #10b981; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #10b981; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -297,18 +291,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #f59e0b; text-decoration: none;">Manage notifications</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #f59e0b; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #f59e0b; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -392,14 +375,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                This is an automated notification from RefOpen Support System.
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -488,14 +464,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                Please verify and process this payment in the Admin Panel.
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -584,21 +553,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
-                                Thank you for using RefOpen!
-                            </p>
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notifications</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -762,21 +717,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
-                                You're receiving this because you signed up for RefOpen.
-                            </p>
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage preferences</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -959,18 +900,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
-                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
-                                <a href="{{appUrl}}/settings/notifications" style="color: #667eea; text-decoration: none;">Manage notifications</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
-                            </p>
-                        </td>
-                    </tr>
+${EMAIL_FOOTER}
                     
                 </table>
             </td>

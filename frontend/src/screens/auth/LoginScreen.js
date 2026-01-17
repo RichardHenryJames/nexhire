@@ -373,7 +373,7 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* Password Input */}
-            <View style={screenStyles.inputGroup}>
+            <View style={[screenStyles.inputGroup, { marginBottom: 0 }]}>
               <Text style={screenStyles.label}>Password</Text>
               <View style={[
                 screenStyles.inputContainer,
@@ -729,9 +729,9 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   },
   forgotPasswordLink: {
     alignSelf: 'flex-end',
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    paddingVertical: spacing.xs,
+    marginTop: 6,
+    marginBottom: spacing.md,
+    paddingVertical: 2,
   },
   forgotPasswordText: {
     fontSize: typography.sizes.sm,

@@ -53,28 +53,18 @@ export default function ForgotPasswordScreen({ navigation }) {
       return;
     }
 
-    setLoading(true);
+    // Optimistic: Show success immediately
+    setSubmitted(true);
+    showToast('Password reset instructions sent!', 'success');
 
-    try {
-      const response = await API.apiCall('/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      if (response.success) {
-        setSubmitted(true);
-        showToast('Password reset instructions sent!', 'success');
-      } else {
-        // Still show success to prevent email enumeration
-        setSubmitted(true);
-      }
-    } catch (err) {
+    // Send email in background (fire and forget)
+    API.apiCall('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    }).catch(err => {
       console.error('Forgot password error:', err);
-      // Still show success to prevent email enumeration
-      setSubmitted(true);
-    } finally {
-      setLoading(false);
-    }
+      // Silently fail - already showed success for security
+    });
   };
 
   const handleBackToLogin = () => {
@@ -90,33 +80,35 @@ export default function ForgotPasswordScreen({ navigation }) {
         style={styles.container}
       >
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.card, isDesktop && styles.cardDesktop]}>
-            <View style={styles.successContainer}>
-              <View style={styles.successIconContainer}>
-                <Ionicons name="mail-outline" size={48} color={colors.primary} />
+          <View style={styles.successWrapper}>
+            <View style={[styles.card, isDesktop && styles.cardDesktop]}>
+              <View style={styles.successContainer}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="mail-outline" size={48} color={colors.primary} />
+                </View>
+                <Text style={styles.successTitle}>Check Your Email</Text>
+                <Text style={styles.successMessage}>
+                  If an account exists with {email}, you will receive a password reset link shortly.
+                </Text>
+                <Text style={styles.successNote}>
+                  Don't forget to check your spam folder!
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={handleBackToLogin}
+                >
+                  <Ionicons name="arrow-back" size={20} color={colors.white} />
+                  <Text style={styles.backButtonText}>Back to Login</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.resendLink}
+                  onPress={() => setSubmitted(false)}
+                >
+                  <Text style={styles.resendLinkText}>Try a different email</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.successTitle}>Check Your Email</Text>
-              <Text style={styles.successMessage}>
-                If an account exists with {email}, you will receive a password reset link shortly.
-              </Text>
-              <Text style={styles.successNote}>
-                Don't forget to check your spam folder!
-              </Text>
-
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleBackToLogin}
-              >
-                <Ionicons name="arrow-back" size={20} color={colors.white} />
-                <Text style={styles.backButtonText}>Back to Login</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.resendLink}
-                onPress={() => setSubmitted(false)}
-              >
-                <Text style={styles.resendLinkText}>Try a different email</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </SafeAreaView>
@@ -239,6 +231,12 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  successWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 40,
   },
   keyboardContainer: {
     flex: 1,

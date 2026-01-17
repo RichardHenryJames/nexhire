@@ -275,14 +275,14 @@ export class EmailService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Your Password</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8fafc;">
         <tr>
-            <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+                        <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 40px; border-radius: 12px 12px 0 0;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
                                 🔐 Password Reset Request
                             </h1>
@@ -291,11 +291,11 @@ export class EmailService {
                     
                     <!-- Content -->
                     <tr>
-                        <td style="padding: 40px;">
-                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                        <td style="padding: 40px; background-color: #ffffff;">
+                            <p style="margin: 0 0 20px; color: #1e293b; font-size: 16px; line-height: 1.6;">
                                 Hi ${firstName || 'there'},
                             </p>
-                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                            <p style="margin: 0 0 20px; color: #475569; font-size: 16px; line-height: 1.6;">
                                 We received a request to reset your password for your RefOpen account. Click the button below to create a new password:
                             </p>
                             
@@ -303,28 +303,28 @@ export class EmailService {
                             <table role="presentation" style="margin: 30px 0;">
                                 <tr>
                                     <td>
-                                        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                                             Reset My Password
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <p style="margin: 0 0 20px; color: #666666; font-size: 14px; line-height: 1.6;">
-                                This link will expire in <strong>1 hour</strong> for security reasons.
+                            <p style="margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.6;">
+                                This link will expire in <strong style="color: #1e293b;">1 hour</strong> for security reasons.
                             </p>
                             
-                            <p style="margin: 0 0 20px; color: #666666; font-size: 14px; line-height: 1.6;">
+                            <p style="margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.6;">
                                 If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
                             </p>
                             
                             <!-- Alternative Link -->
-                            <div style="margin-top: 30px; padding: 20px; background-color: #e2e8f0; border-radius: 8px;">
-                                <p style="margin: 0 0 10px; color: #334155; font-size: 13px;">
+                            <div style="margin-top: 30px; padding: 20px; background-color: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <p style="margin: 0 0 10px; color: #475569; font-size: 13px;">
                                     If the button doesn't work, copy and paste this link into your browser:
                                 </p>
                                 <p style="margin: 0; word-break: break-all;">
-                                    <a href="${resetUrl}" style="color: #1E40AF; font-size: 12px;">${resetUrl}</a>
+                                    <a href="${resetUrl}" style="color: #2563eb; font-size: 12px; text-decoration: none;">${resetUrl}</a>
                                 </p>
                             </div>
                         </td>
@@ -332,13 +332,13 @@ export class EmailService {
                     
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0; color: #64748b; font-size: 12px; text-align: center;">
+                        <td style="padding: 25px 40px; background-color: #1e293b; border-radius: 0 0 12px 12px;">
+                            <p style="margin: 0 0 10px; color: #94a3b8; font-size: 12px; text-align: center;">
                                 This email was sent by RefOpen - India's Leading Job & Referral Platform
                             </p>
-                            <p style="margin: 10px 0 0; color: #64748b; font-size: 12px; text-align: center;">
-                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #1E40AF;">Visit RefOpen</a> | 
-                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #1E40AF;">Contact Support</a>
+                            <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #60a5fa; text-decoration: none;">Visit RefOpen</a> | 
+                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #60a5fa; text-decoration: none;">Contact Support</a>
                             </p>
                         </td>
                     </tr>
@@ -396,14 +396,14 @@ ${EMAIL_CONFIG.appUrl}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In with Google</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
-    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8fafc;">
         <tr>
-            <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+                        <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 30px 40px; border-radius: 12px 12px 0 0;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
                                 🔑 Your RefOpen Account
                             </h1>
@@ -412,20 +412,20 @@ ${EMAIL_CONFIG.appUrl}
                     
                     <!-- Content -->
                     <tr>
-                        <td style="padding: 40px;">
-                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                        <td style="padding: 40px; background-color: #ffffff;">
+                            <p style="margin: 0 0 20px; color: #1e293b; font-size: 16px; line-height: 1.6;">
                                 Hi ${firstName || 'there'},
                             </p>
-                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                                We received a password reset request for your RefOpen account. However, your account was created using <strong>Google Sign-In</strong>, so there's no password to reset.
+                            <p style="margin: 0 0 20px; color: #475569; font-size: 16px; line-height: 1.6;">
+                                We received a password reset request for your RefOpen account. However, your account was created using <strong style="color: #1e293b;">Google Sign-In</strong>, so there's no password to reset.
                             </p>
                             
                             <!-- Info Box -->
-                            <div style="margin: 25px 0; padding: 20px; background-color: #1E40AF; border-left: 4px solid #3B82F6; border-radius: 4px;">
+                            <div style="margin: 25px 0; padding: 20px; background-color: #2563eb; border-left: 4px solid #1e40af; border-radius: 4px;">
                                 <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 600;">
                                     📱 How to sign in:
                                 </p>
-                                <p style="margin: 10px 0 0; color: #ffffff; font-size: 14px; line-height: 1.6;">
+                                <p style="margin: 10px 0 0; color: #e0f2fe; font-size: 14px; line-height: 1.6;">
                                     Simply click "Continue with Google" on the login page using the same Google account you signed up with.
                                 </p>
                             </div>
@@ -434,7 +434,7 @@ ${EMAIL_CONFIG.appUrl}
                             <table role="presentation" style="margin: 30px 0;">
                                 <tr>
                                     <td>
-                                        <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                        <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                                             Go to Login Page
                                         </a>
                                     </td>
@@ -442,21 +442,21 @@ ${EMAIL_CONFIG.appUrl}
                             </table>
                             
                             <!-- Secondary Info -->
-                            <div style="margin-top: 30px; padding: 20px; background-color: #e2e8f0; border-radius: 8px;">
+                            <div style="margin-top: 30px; padding: 20px; background-color: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 <p style="margin: 0 0 10px; color: #1e293b; font-size: 14px; font-weight: 600;">
                                     🔐 Want to set a password anyway?
                                 </p>
-                                <p style="margin: 0 0 15px; color: #334155; font-size: 14px; line-height: 1.6;">
+                                <p style="margin: 0 0 15px; color: #475569; font-size: 14px; line-height: 1.6;">
                                     If you'd like to log in with both Google and email/password, you can set a password in your account settings:
                                 </p>
-                                <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
+                                <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
                                     <li>Sign in with Google</li>
-                                    <li>Go to <a href="${settingsUrl}" style="color: #1E40AF;">Settings</a></li>
+                                    <li>Go to <a href="${settingsUrl}" style="color: #2563eb; text-decoration: none;">Settings</a></li>
                                     <li>Click "Set Password" in the Security section</li>
                                 </ol>
                             </div>
                             
-                            <p style="margin: 25px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                            <p style="margin: 25px 0 0; color: #64748b; font-size: 14px; line-height: 1.6;">
                                 If you didn't request this, you can safely ignore this email.
                             </p>
                         </td>
@@ -464,13 +464,13 @@ ${EMAIL_CONFIG.appUrl}
                     
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0; color: #64748b; font-size: 12px; text-align: center;">
+                        <td style="padding: 25px 40px; background-color: #1e293b; border-radius: 0 0 12px 12px;">
+                            <p style="margin: 0 0 10px; color: #94a3b8; font-size: 12px; text-align: center;">
                                 This email was sent by RefOpen - India's Leading Job & Referral Platform
                             </p>
-                            <p style="margin: 10px 0 0; color: #64748b; font-size: 12px; text-align: center;">
-                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #1E40AF;">Visit RefOpen</a> | 
-                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #1E40AF;">Contact Support</a>
+                            <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #60a5fa; text-decoration: none;">Visit RefOpen</a> | 
+                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #60a5fa; text-decoration: none;">Contact Support</a>
                             </p>
                         </td>
                     </tr>
