@@ -5,6 +5,20 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 
+// ============================================================
+// 🚨 ADS MASTER SWITCH 🚨
+// ============================================================
+// Set to TRUE when Google AdSense approves your site
+// Set to FALSE to temporarily disable all ads
+// 
+// Current Status: DISABLED (waiting for Google approval)
+// Last Updated: January 17, 2026
+// 
+// To enable ads: Change false to true below
+// ============================================================
+const ADS_ENABLED = false;
+// ============================================================
+
 // Generate unique ID for each ad instance
 let adInstanceCounter = 0;
 
@@ -93,6 +107,11 @@ const AdCard = ({
   variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home' | 'applications'
   style = {},
 }) => {
+  // 🚨 If ads are disabled, render nothing
+  if (!ADS_ENABLED) {
+    return null;
+  }
+
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
