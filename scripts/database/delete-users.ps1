@@ -92,9 +92,9 @@ $emailList = "'" + ($Emails -join "','") + "'"
 $checkQuery = "SELECT UserID, Email, FirstName, LastName FROM Users WHERE Email IN ($emailList)"
 
 Write-Host "🔍 Checking for users in database..." -ForegroundColor Cyan
-$usersToDelete = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $checkQuery -TrustServerCertificate
+$usersToDelete = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $checkQuery
 
-if ($usersToDelete.Count -eq 0) {
+if ($null -eq $usersToDelete -or $usersToDelete.Count -eq 0) {
     Write-Host "❌ No users found with the specified emails." -ForegroundColor Red
     exit 0
 }
@@ -117,7 +117,7 @@ Write-Host "🔓 Disabling foreign key constraints..." -ForegroundColor Cyan
 foreach ($table in $tablesWithFK) {
     try {
         $disableQuery = "ALTER TABLE [$table] NOCHECK CONSTRAINT ALL"
-        Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $disableQuery -TrustServerCertificate -ErrorAction SilentlyContinue
+        Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $disableQuery -ErrorAction SilentlyContinue
         Write-Host "  ✓ Disabled constraints on $table" -ForegroundColor DarkGray
     } catch {
         # Table might not exist, skip silently
@@ -132,7 +132,7 @@ Write-Host "🗑️  Deleting users..." -ForegroundColor Cyan
 $deleteQuery = "DELETE FROM Users WHERE Email IN ($emailList)"
 
 try {
-    $result = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $deleteQuery -TrustServerCertificate
+    $result = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $deleteQuery
     Write-Host "✅ Deleted users successfully" -ForegroundColor Green
 } catch {
     Write-Host "❌ Error deleting users: $_" -ForegroundColor Red
@@ -146,7 +146,7 @@ Write-Host "🔒 Re-enabling foreign key constraints..." -ForegroundColor Cyan
 foreach ($table in $tablesWithFK) {
     try {
         $enableQuery = "ALTER TABLE [$table] CHECK CONSTRAINT ALL"
-        Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $enableQuery -TrustServerCertificate -ErrorAction SilentlyContinue
+        Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $enableQuery -ErrorAction SilentlyContinue
         Write-Host "  ✓ Enabled constraints on $table" -ForegroundColor DarkGray
     } catch {
         # Table might not exist, skip silently
@@ -158,7 +158,7 @@ Write-Host ""
 # Verify Deletion
 # ================================================================
 Write-Host "🔍 Verifying deletion..." -ForegroundColor Cyan
-$verifyResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $checkQuery -TrustServerCertificate
+$verifyResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $checkQuery
 
 if ($verifyResult.Count -eq 0) {
     Write-Host "✅ All specified users have been deleted." -ForegroundColor Green

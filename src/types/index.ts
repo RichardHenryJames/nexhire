@@ -52,6 +52,10 @@ export interface User {
     GoogleId?: string;
     LoginMethod?: string;
     GoogleAccessToken?: string;
+
+    /** Password reset fields */
+    PasswordResetToken?: string;
+    PasswordResetExpires?: Date;
 }
 
 export interface Organization {

@@ -541,6 +541,16 @@ export class UserService {
             throw new ValidationError('Invalid reset token');
         }
 
+        // Check database expiry (double security - belt and suspenders)
+        if (!user.PasswordResetExpires || new Date(user.PasswordResetExpires) < new Date()) {
+            throw new ValidationError('Reset link has expired. Please request a new password reset.');
+        }
+
+        // Verify token hash matches (prevents token reuse after password is already reset)
+        if (!user.PasswordResetToken) {
+            throw new ValidationError('Reset link has already been used. Please request a new password reset.');
+        }
+
         // Check if user has Google-only account
         if (!user.Password || user.Password === '') {
             throw new ValidationError('This account uses Google Sign-In. Please sign in with Google instead.');

@@ -36,10 +36,15 @@ export class AuthService {
     static generateToken(payload: Omit<TokenPayload, 'type' | 'iat' | 'exp' | 'iss' | 'aud'>, type: string = appConstants.tokenTypes.ACCESS): string {
         const tokenPayload: Omit<TokenPayload, 'iat' | 'exp' | 'iss' | 'aud'> = { ...payload, type };
         
-        // Convert time strings to proper format for JWT
-        const expiresIn = type === appConstants.tokenTypes.REFRESH 
-            ? jwtConfig.refreshExpiresIn 
-            : jwtConfig.expiresIn;
+        // Set expiry based on token type
+        let expiresIn: string;
+        if (type === appConstants.tokenTypes.REFRESH) {
+            expiresIn = jwtConfig.refreshExpiresIn;
+        } else if (type === appConstants.tokenTypes.PASSWORD_RESET) {
+            expiresIn = jwtConfig.passwordResetExpiresIn; // 1 hour for password reset
+        } else {
+            expiresIn = jwtConfig.expiresIn;
+        }
 
         const options: SignOptions = {
             expiresIn: expiresIn as any, // Type assertion to handle StringValue type issue

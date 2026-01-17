@@ -22,20 +22,20 @@ const APP_CONFIG = {
     logoUrl: 'https://www.refopen.com/logo.png'
 };
 
-// Common email footer - dark themed for better readability in both light/dark mode
+// Common email footer - RefOpen branded gradient (matching refopen-logo colors: blue to green)
 const EMAIL_FOOTER = `
                     <!-- Footer -->
                     <tr>
-                        <td style="background: #1e293b; padding: 25px 30px; border-top: 1px solid #334155;">
-                            <p style="margin: 0 0 12px 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                        <td style="background: linear-gradient(90deg, #0066FF 0%, #00FF85 100%); padding: 25px 30px;">
+                            <p style="margin: 0 0 12px 0; color: rgba(255,255,255,0.95); font-size: 12px; text-align: center;">
                                 This email was sent by RefOpen - India's Leading Job & Referral Platform
                             </p>
-                            <p style="margin: 0; color: #94a3b8; font-size: 12px; text-align: center;">
-                                <a href="{{appUrl}}" style="color: #93c5fd; text-decoration: none;">Visit RefOpen</a>
+                            <p style="margin: 0; color: rgba(255,255,255,0.95); font-size: 12px; text-align: center;">
+                                <a href="{{appUrl}}" style="color: #ffffff; text-decoration: none;">Visit RefOpen</a>
                                 &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #93c5fd; text-decoration: none;">Contact Support</a>
+                                <a href="{{appUrl}}/support" style="color: #ffffff; text-decoration: none;">Contact Support</a>
                                 &nbsp;|&nbsp;
-                                <a href="{{unsubscribeUrl}}" style="color: #93c5fd; text-decoration: none;">Manage Notifications</a>
+                                <a href="{{unsubscribeUrl}}" style="color: #ffffff; text-decoration: none;">Manage Notifications</a>
                             </p>
                         </td>
                     </tr>
@@ -596,9 +596,12 @@ ${EMAIL_FOOTER}
                         <td style="padding: 40px 30px;">
                             <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
                             
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
+                                Welcome aboard! You now have access to <strong>125,000+ active jobs</strong> from top companies and a network of verified employees ready to refer you.
+                            </p>
+                            
                             <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                                Welcome aboard! You've just joined <strong>125,000+</strong> job seekers who are landing jobs 
-                                at top companies using RefOpen.
+                                <strong>The best part?</strong> One referral request is broadcast to all verified employees at a company – so you don't need to know anyone. Just apply, and let the right person find you.
                             </p>
                             
                             <!-- Stats Banner -->
@@ -649,7 +652,7 @@ ${EMAIL_FOOTER}
                                     </td>
                                     <td style="padding-left: 10px;">
                                         <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Apply Directly or Ask Referral</p>
-                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request goes to verified employees at that company!</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request is broadcast to all verified employees at that company!</p>
                                     </td>
                                 </tr>
                             </table>
@@ -673,7 +676,7 @@ ${EMAIL_FOOTER}
                                     <td style="padding: 25px;">
                                         <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">✨ Why Job Seekers Love RefOpen</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request reaches verified employees at a company</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request is <strong>broadcast to all verified employees</strong> at a company</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Skip the resume black hole - get noticed by real people</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ External referrals: Found a job elsewhere? We'll find referrers!</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Track applications & referrals in real-time</td></tr>
