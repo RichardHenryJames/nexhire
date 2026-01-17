@@ -244,6 +244,10 @@ export default function FAQScreen() {
         {
           question: 'How do I update my email or phone number?',
           answer: 'To update your contact information, create a support ticket with:\n• Your current registered email\n• The new email/phone number you want to use\n• Brief reason for change\n\nOur team will verify and update your account within 24-48 hours.'
+        },
+        {
+          question: 'Is my work email safe with Refopen?',
+          answer: 'Absolutely! Your privacy is our top priority. We do NOT store your work email in our database. Your work email is only used once for verification purposes to confirm your employment. It is neither stored nor shared with anyone, and it will never be used for any other purpose. You can use Refopen with complete peace of mind knowing your work email remains completely private and secure.'
         }
       ]
     },
