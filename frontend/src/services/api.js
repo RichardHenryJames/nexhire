@@ -442,6 +442,37 @@ class RefOpenAPI {
     }
   }
 
+  // Password Management APIs
+  
+  /**
+   * Check if user has a password set (for Google users to know if they can set one)
+   */
+  async hasPassword() {
+    return this.apiCall('/auth/has-password');
+  }
+
+  /**
+   * Set password for Google-only users (no current password required)
+   * This allows Google users to also login with email/password
+   */
+  async setPassword(newPassword) {
+    return this.apiCall('/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  /**
+   * Change password for users who already have one
+   * Requires current password for verification
+   */
+  async changePassword(currentPassword, newPassword) {
+    return this.apiCall('/users/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   // User Profile APIs
   async getProfile() {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking

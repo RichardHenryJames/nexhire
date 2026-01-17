@@ -44,6 +44,18 @@ export default function SettingsScreen({ navigation, route }) {
   }, [route?.params?.openModal]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Password management state
+  const [hasPassword, setHasPassword] = useState(null); // null = loading, true/false = has/doesn't have
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordToastMessage, setPasswordToastMessage] = useState(null);
+
   // Notification preferences state
   const [notificationPrefs, setNotificationPrefs] = useState({
     EmailEnabled: true,
@@ -371,6 +383,67 @@ export default function SettingsScreen({ navigation, route }) {
       await logout();
     } catch (error) {
       showToast('Failed to logout', 'error');
+    }
+  };
+
+  // Check if user has password on mount
+  useEffect(() => {
+    const checkPassword = async () => {
+      try {
+        const response = await refopenAPI.hasPassword();
+        if (response.success) {
+          setHasPassword(response.data?.hasPassword || false);
+        }
+      } catch (error) {
+        console.error('Error checking password status:', error);
+        setHasPassword(false);
+      }
+    };
+    checkPassword();
+  }, []);
+
+  // Handle password set/change
+  const handlePasswordSubmit = async () => {
+    // Validation
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordToastMessage({ text: 'Password must be at least 8 characters', type: 'error' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordToastMessage({ text: 'Passwords do not match', type: 'error' });
+      return;
+    }
+    if (hasPassword && !currentPassword) {
+      setPasswordToastMessage({ text: 'Current password is required', type: 'error' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      let response;
+      if (hasPassword) {
+        // Change password (requires current password)
+        response = await refopenAPI.changePassword(currentPassword, newPassword);
+      } else {
+        // Set password for Google users (no current password needed)
+        response = await refopenAPI.setPassword(newPassword);
+      }
+
+      if (response.success) {
+        setPasswordModal(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setCurrentPassword('');
+        setHasPassword(true); // Now user has a password
+        // Show toast outside modal
+        showToast(hasPassword ? 'Password changed successfully!' : 'Password set successfully! You can now login with email/password.', 'success');
+      } else {
+        setPasswordToastMessage({ text: response.error || 'Failed to update password', type: 'error' });
+      }
+    } catch (error) {
+      setPasswordToastMessage({ text: error.message || 'Failed to update password', type: 'error' });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -1195,6 +1268,140 @@ export default function SettingsScreen({ navigation, route }) {
     </Modal>
   );
 
+  // Password Modal
+  const renderPasswordModal = () => (
+    <Modal
+      visible={passwordModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setPasswordModal(false)}
+    >
+      <View style={styles.logoutModalOverlay}>
+        <View style={[styles.logoutModalContent, { padding: 24 }]}>
+          <Ionicons 
+            name={hasPassword ? "key-outline" : "lock-open-outline"} 
+            size={48} 
+            color={colors.primary} 
+          />
+          <Text style={styles.logoutModalTitle}>
+            {hasPassword ? 'Change Password' : 'Set Password'}
+          </Text>
+          <Text style={[styles.logoutModalSubtitle, { marginBottom: 20 }]}>
+            {hasPassword 
+              ? 'Enter your current password and choose a new one'
+              : 'Set a password to login with email/password in addition to Google'}
+          </Text>
+
+          {/* Current Password (only for users who have one) */}
+          {hasPassword && (
+            <View style={styles.passwordInputGroup}>
+              <Text style={styles.passwordInputLabel}>Current Password</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  placeholderTextColor={colors.gray400}
+                  secureTextEntry={!showCurrentPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                  <Ionicons 
+                    name={showCurrentPassword ? "eye-outline" : "eye-off-outline"} 
+                    size={20} 
+                    color={colors.gray400} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* New Password */}
+          <View style={styles.passwordInputGroup}>
+            <Text style={styles.passwordInputLabel}>New Password</Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="At least 8 characters"
+                placeholderTextColor={colors.gray400}
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                <Ionicons 
+                  name={showNewPassword ? "eye-outline" : "eye-off-outline"} 
+                  size={20} 
+                  color={colors.gray400} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Confirm Password */}
+          <View style={styles.passwordInputGroup}>
+            <Text style={styles.passwordInputLabel}>Confirm Password</Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm your password"
+                placeholderTextColor={colors.gray400}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Ionicons 
+                  name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
+                  size={20} 
+                  color={colors.gray400} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.logoutModalButtons}>
+            <TouchableOpacity
+              style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
+              onPress={() => {
+                setPasswordModal(false);
+                setNewPassword('');
+                setConfirmPassword('');
+                setCurrentPassword('');
+              }}
+            >
+              <Text style={styles.logoutModalButtonCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.logoutModalButton, styles.logoutModalButtonConfirm, { backgroundColor: colors.primary }]}
+              onPress={handlePasswordSubmit}
+              disabled={passwordLoading}
+            >
+              {passwordLoading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.logoutModalButtonConfirmText}>
+                  {hasPassword ? 'Change' : 'Set'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Modal Toast for password feedback */}
+          <ModalToast
+            visible={!!passwordToastMessage}
+            message={passwordToastMessage?.text || ''}
+            type={passwordToastMessage?.type || 'success'}
+            onHide={() => setPasswordToastMessage(null)}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (loading && !profile.firstName) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -1308,6 +1515,23 @@ export default function SettingsScreen({ navigation, route }) {
           )}
         </View>
 
+        {/* Security Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIndicator} />
+            <Text style={styles.sectionHeading}>Security</Text>
+          </View>
+
+          {renderSectionCard(
+            hasPassword ? 'Change Password' : 'Set Password',
+            hasPassword ? 'key-outline' : 'lock-open-outline',
+            () => setPasswordModal(true),
+            hasPassword 
+              ? 'Update your account password'
+              : 'Add password to login with email too'
+          )}
+        </View>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
           <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
@@ -1327,6 +1551,7 @@ export default function SettingsScreen({ navigation, route }) {
       {renderResumesModal()}
       {renderNotificationsModal()}
       {renderLogoutModal()}
+      {renderPasswordModal()}
     </View>
   );
 }
@@ -1595,15 +1820,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   logoutModalButtons: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     marginTop: 8,
   },
   logoutModalButton: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
   logoutModalButtonCancel: {
     backgroundColor: colors.gray100,
@@ -1620,6 +1847,33 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Password modal styles
+  passwordInputGroup: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  passwordInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface || colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
   },
   // Notification styles
   notifSectionHeader: {

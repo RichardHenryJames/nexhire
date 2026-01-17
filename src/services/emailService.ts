@@ -261,6 +261,265 @@ export class EmailService {
     }
 
     /**
+     * Send password reset email
+     */
+    static async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<EmailResult> {
+        try {
+            const resetUrl = `${EMAIL_CONFIG.appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+            
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                                🔐 Password Reset Request
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                                Hi ${firstName || 'there'},
+                            </p>
+                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                                We received a request to reset your password for your RefOpen account. Click the button below to create a new password:
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" style="margin: 30px 0;">
+                                <tr>
+                                    <td>
+                                        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Reset My Password
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 0 0 20px; color: #666666; font-size: 14px; line-height: 1.6;">
+                                This link will expire in <strong>1 hour</strong> for security reasons.
+                            </p>
+                            
+                            <p style="margin: 0 0 20px; color: #666666; font-size: 14px; line-height: 1.6;">
+                                If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+                            </p>
+                            
+                            <!-- Alternative Link -->
+                            <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
+                                <p style="margin: 0 0 10px; color: #666666; font-size: 13px;">
+                                    If the button doesn't work, copy and paste this link into your browser:
+                                </p>
+                                <p style="margin: 0; word-break: break-all;">
+                                    <a href="${resetUrl}" style="color: #1E40AF; font-size: 12px;">${resetUrl}</a>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; color: #64748b; font-size: 12px; text-align: center;">
+                                This email was sent by RefOpen - India's Leading Job & Referral Platform
+                            </p>
+                            <p style="margin: 10px 0 0; color: #64748b; font-size: 12px; text-align: center;">
+                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #1E40AF;">Visit RefOpen</a> | 
+                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #1E40AF;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+            const text = `
+Hi ${firstName || 'there'},
+
+We received a request to reset your password for your RefOpen account.
+
+Click the link below to create a new password:
+${resetUrl}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+
+---
+RefOpen - India's Leading Job & Referral Platform
+${EMAIL_CONFIG.appUrl}
+`;
+
+            return await this.send({
+                to: email,
+                subject: '🔐 Reset Your RefOpen Password',
+                html,
+                text,
+                emailType: 'password_reset'
+            });
+        } catch (error: any) {
+            console.error('❌ Error sending password reset email:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Send email to Google users who try to reset password
+     * Informs them they signed up with Google and how to set a password
+     */
+    static async sendGoogleUserPasswordInfo(email: string, firstName: string): Promise<EmailResult> {
+        try {
+            const loginUrl = `${EMAIL_CONFIG.appUrl}/login`;
+            const settingsUrl = `${EMAIL_CONFIG.appUrl}/settings`;
+            
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In with Google</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%); padding: 30px 40px; border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                                🔑 Your RefOpen Account
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                                Hi ${firstName || 'there'},
+                            </p>
+                            <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                                We received a password reset request for your RefOpen account. However, your account was created using <strong>Google Sign-In</strong>, so there's no password to reset.
+                            </p>
+                            
+                            <!-- Info Box -->
+                            <div style="margin: 25px 0; padding: 20px; background-color: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 4px;">
+                                <p style="margin: 0; color: #1E40AF; font-size: 15px; font-weight: 600;">
+                                    📱 How to sign in:
+                                </p>
+                                <p style="margin: 10px 0 0; color: #333333; font-size: 14px; line-height: 1.6;">
+                                    Simply click "Continue with Google" on the login page using the same Google account you signed up with.
+                                </p>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" style="margin: 30px 0;">
+                                <tr>
+                                    <td>
+                                        <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Go to Login Page
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Secondary Info -->
+                            <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
+                                <p style="margin: 0 0 10px; color: #333333; font-size: 14px; font-weight: 600;">
+                                    🔐 Want to set a password anyway?
+                                </p>
+                                <p style="margin: 0 0 15px; color: #666666; font-size: 14px; line-height: 1.6;">
+                                    If you'd like to log in with both Google and email/password, you can set a password in your account settings:
+                                </p>
+                                <ol style="margin: 0; padding-left: 20px; color: #666666; font-size: 14px; line-height: 1.8;">
+                                    <li>Sign in with Google</li>
+                                    <li>Go to <a href="${settingsUrl}" style="color: #1E40AF;">Settings</a></li>
+                                    <li>Click "Set Password" in the Security section</li>
+                                </ol>
+                            </div>
+                            
+                            <p style="margin: 25px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                                If you didn't request this, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+                            <p style="margin: 0; color: #64748b; font-size: 12px; text-align: center;">
+                                This email was sent by RefOpen - India's Leading Job & Referral Platform
+                            </p>
+                            <p style="margin: 10px 0 0; color: #64748b; font-size: 12px; text-align: center;">
+                                <a href="${EMAIL_CONFIG.appUrl}" style="color: #1E40AF;">Visit RefOpen</a> | 
+                                <a href="${EMAIL_CONFIG.appUrl}/support" style="color: #1E40AF;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+            const text = `
+Hi ${firstName || 'there'},
+
+We received a password reset request for your RefOpen account.
+
+However, your account was created using Google Sign-In, so there's no password to reset.
+
+HOW TO SIGN IN:
+Simply click "Continue with Google" on the login page using the same Google account you signed up with.
+
+Login here: ${loginUrl}
+
+WANT TO SET A PASSWORD?
+If you'd like to log in with both Google and email/password:
+1. Sign in with Google
+2. Go to Settings
+3. Click "Set Password" in the Security section
+
+If you didn't request this, you can safely ignore this email.
+
+---
+RefOpen - India's Leading Job & Referral Platform
+${EMAIL_CONFIG.appUrl}
+`;
+
+            return await this.send({
+                to: email,
+                subject: '🔑 Your RefOpen Account Uses Google Sign-In',
+                html,
+                text,
+                emailType: 'google_user_password_info'
+            });
+        } catch (error: any) {
+            console.error('❌ Error sending Google user info email:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Get email configuration for external use
      */
     static getConfig() {

@@ -19,6 +19,10 @@ import {
   googleLogin,
   googleRegister,
   getMyReferralCode,
+  forgotPassword,
+  resetPassword,
+  setPassword,
+  hasPassword,
 } from "./src/controllers/user.controller";
 // Job controllers
 import {
@@ -246,6 +250,37 @@ app.http("auth-refresh", {
   authLevel: "anonymous",
   route: "auth/refresh",
   handler: withErrorHandling(refreshToken),
+});
+
+// Password Reset endpoints
+app.http("auth-forgot-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/forgot-password",
+  handler: withErrorHandling(forgotPassword),
+});
+
+app.http("auth-reset-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/reset-password",
+  handler: withErrorHandling(resetPassword),
+});
+
+// Set Password for Google users (requires auth)
+app.http("auth-set-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/set-password",
+  handler: withErrorHandling(setPassword),
+});
+
+// Check if user has password set (for Google users)
+app.http("auth-has-password", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/has-password",
+  handler: withErrorHandling(hasPassword),
 });
 
 app.http("users-profile", {

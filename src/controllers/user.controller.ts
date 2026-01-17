@@ -367,3 +367,122 @@ export const getMyReferralCode = async (request: HttpRequest, context: Invocatio
         };
     }
 };
+
+/**
+ * Request Password Reset
+ * POST /auth/forgot-password
+ */
+export const forgotPassword = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { email } = await extractRequestBody(req);
+    
+    if (!email) {
+        return {
+            status: 400,
+            jsonBody: errorResponse('VALIDATION_ERROR', 'Email is required')
+        };
+    }
+
+    const result = await UserService.requestPasswordReset(email);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse(result, result.message)
+    };
+});
+
+/**
+ * Reset Password with Token
+ * POST /auth/reset-password
+ */
+export const resetPassword = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { token, newPassword } = await extractRequestBody(req);
+    
+    if (!token || !newPassword) {
+        return {
+            status: 400,
+            jsonBody: errorResponse('VALIDATION_ERROR', 'Token and new password are required')
+        };
+    }
+
+    if (newPassword.length < 8) {
+        return {
+            status: 400,
+            jsonBody: errorResponse('VALIDATION_ERROR', 'Password must be at least 8 characters long')
+        };
+    }
+
+    const result = await UserService.resetPassword(token, newPassword);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse(result, result.message)
+    };
+});
+
+/**
+ * Set Password for Google Users
+ * POST /auth/set-password
+ * For Google-only users to set a password (so they can login with email/password too)
+ */
+export const setPassword = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    // Extract user ID from auth token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return {
+            status: 401,
+            jsonBody: errorResponse('UNAUTHORIZED', 'Authorization required')
+        };
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = AuthService.verifyToken(token);
+    const userId = decoded.userId;
+
+    const { newPassword } = await extractRequestBody(req);
+    
+    if (!newPassword) {
+        return {
+            status: 400,
+            jsonBody: errorResponse('VALIDATION_ERROR', 'New password is required')
+        };
+    }
+
+    if (newPassword.length < 8) {
+        return {
+            status: 400,
+            jsonBody: errorResponse('VALIDATION_ERROR', 'Password must be at least 8 characters long')
+        };
+    }
+
+    const result = await UserService.setPasswordForGoogleUser(userId, newPassword);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse(result, result.message)
+    };
+});
+
+/**
+ * Check if User Has Password
+ * GET /auth/has-password
+ * Check if current user has a password set (for Google users)
+ */
+export const hasPassword = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    // Extract user ID from auth token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return {
+            status: 401,
+            jsonBody: errorResponse('UNAUTHORIZED', 'Authorization required')
+        };
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = AuthService.verifyToken(token);
+    const userId = decoded.userId;
+
+    const hasPasswordSet = await UserService.hasPasswordSet(userId);
+    
+    return {
+        status: 200,
+        jsonBody: successResponse({ hasPassword: hasPasswordSet })
+    };
+});

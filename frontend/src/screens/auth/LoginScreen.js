@@ -414,6 +414,14 @@ export default function LoginScreen({ navigation }) {
               )}
             </View>
 
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={screenStyles.forgotPasswordLink}
+            >
+              <Text style={screenStyles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
             {/* Login Button */}
             <TouchableOpacity
               style={[
@@ -718,6 +726,17 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   buttonDisabled: {
     backgroundColor: '#f1f3f4',
     borderColor: '#e8eaed',
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  forgotPasswordText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
   loadingContainer: {
     flexDirection: 'row',

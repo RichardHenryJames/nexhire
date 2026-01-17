@@ -454,6 +454,171 @@ export class UserService {
         await dbService.executeQuery(query, [userId, hashedNewPassword]);
     }
 
+    /**
+     * Request password reset - sends email with reset token
+     */
+    static async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+        const user = await this.findByEmail(email);
+        
+        // Always return success to prevent email enumeration attacks
+        if (!user) {
+            console.log(`Password reset requested for non-existent email: ${email}`);
+            return { 
+                success: true, 
+                message: 'If an account exists with this email, you will receive a password reset link.' 
+            };
+        }
+
+        // Check if user signed up with Google (empty password)
+        if (!user.Password || user.Password === '') {
+            console.log(`Password reset requested for Google-only user: ${email}`);
+            // Send helpful email to Google users explaining how to login
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendGoogleUserPasswordInfo(user.Email, user.FirstName);
+            } catch (emailError: any) {
+                console.error('Failed to send Google user info email:', emailError.message);
+            }
+            return { 
+                success: true, 
+                message: 'If an account exists with this email, you will receive a password reset link.' 
+            };
+        }
+
+        // Generate password reset token (valid for 1 hour)
+        const resetToken = AuthService.generatePasswordResetToken(user.UserID, user.Email);
+
+        // Store token hash in database for verification (optional security measure)
+        const tokenHash = await AuthService.hashPassword(resetToken.substring(0, 20));
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET PasswordResetToken = @param1, 
+                PasswordResetExpires = DATEADD(HOUR, 1, GETUTCDATE()),
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, tokenHash]);
+
+        // Send password reset email
+        try {
+            const { EmailService } = await import('./emailService');
+            await EmailService.sendPasswordResetEmail(user.Email, user.FirstName, resetToken);
+        } catch (emailError: any) {
+            console.error('Failed to send password reset email:', emailError.message);
+            // Don't expose email sending failures to user
+        }
+
+        return { 
+            success: true, 
+            message: 'If an account exists with this email, you will receive a password reset link.' 
+        };
+    }
+
+    /**
+     * Reset password using token
+     */
+    static async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        // Verify the token
+        let payload;
+        try {
+            payload = AuthService.verifyToken(token);
+        } catch (error: any) {
+            throw new ValidationError('Invalid or expired reset token. Please request a new password reset.');
+        }
+
+        // Check token type
+        if (payload.type !== appConstants.tokenTypes.PASSWORD_RESET) {
+            throw new ValidationError('Invalid token type');
+        }
+
+        // Find user
+        const user = await this.findById(payload.userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        // Verify email matches
+        if (user.Email.toLowerCase() !== payload.email.toLowerCase()) {
+            throw new ValidationError('Invalid reset token');
+        }
+
+        // Check if user has Google-only account
+        if (!user.Password || user.Password === '') {
+            throw new ValidationError('This account uses Google Sign-In. Please sign in with Google instead.');
+        }
+
+        // Validate new password
+        if (!newPassword || newPassword.length < 8) {
+            throw new ValidationError('Password must be at least 8 characters long');
+        }
+
+        // Hash new password
+        const hashedPassword = await AuthService.hashPassword(newPassword);
+
+        // Update password and clear reset token
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET Password = @param1, 
+                PasswordResetToken = NULL, 
+                PasswordResetExpires = NULL,
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, hashedPassword]);
+
+        return { 
+            success: true, 
+            message: 'Password has been reset successfully. You can now login with your new password.' 
+        };
+    }
+
+    /**
+     * Set password for Google-only users (no current password required)
+     * This allows Google users to also login with email/password
+     */
+    static async setPasswordForGoogleUser(userId: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        // Find user
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        // Check if user already has a password set
+        if (user.Password && user.Password !== '') {
+            throw new ValidationError('You already have a password set. Use "Change Password" instead.');
+        }
+
+        // Validate new password
+        if (!newPassword || newPassword.length < 8) {
+            throw new ValidationError('Password must be at least 8 characters long');
+        }
+
+        // Hash new password
+        const hashedPassword = await AuthService.hashPassword(newPassword);
+
+        // Update password
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET Password = @param1, 
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, hashedPassword]);
+
+        return { 
+            success: true, 
+            message: 'Password has been set successfully. You can now login with either Google or email/password.' 
+        };
+    }
+
+    /**
+     * Check if user has password set (for Google users to know if they can set one)
+     */
+    static async hasPasswordSet(userId: string): Promise<boolean> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+        return !!(user.Password && user.Password !== '');
+    }
+
     // Verify email
     static async verifyEmail(userId: string): Promise<void> {
         const query = `

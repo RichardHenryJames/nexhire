@@ -10,6 +10,8 @@ import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 
 // Job Seeker Registration Flow
 import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
@@ -94,12 +96,18 @@ const linking = {
       
       // Public Ask Referral screen - accessible without auth but actions require login
       AskReferralPublic: "ask-referral",
+      
+      // Public password reset - accessible without auth
+      ResetPassword: "reset-password",
+      ForgotPassword: "forgot-password",
 
       // Auth Stack
       Auth: {
         path: "auth",
         screens: {
           Login: "login",
+          ForgotPassword: "forgot-password",
+          ResetPassword: "reset-password",
 
           // Direct skip screens for web navigation
           PersonalDetailsScreenDirect: "register/complete-profile",
@@ -261,6 +269,8 @@ function AuthStack() {
       initialRouteName={getInitialRoute()}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen
         name="JobSeekerFlow"
         component={JobSeekerFlow}
@@ -934,6 +944,24 @@ export default function AppNavigator() {
           headerShown: true,
           title: "Ask for Referral",
           headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Public Password Reset Screens - accessible without auth */}
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{
+          headerShown: false,
+          title: "Reset Password",
+        }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{
+          headerShown: false,
+          title: "Forgot Password",
         }}
       />
     </Stack.Navigator>
