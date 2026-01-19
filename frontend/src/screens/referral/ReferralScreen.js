@@ -290,6 +290,14 @@ export default function ReferralScreen({ navigation }) {
     }
   };
 
+  // Check if a referral request is expired (older than 2 weeks)
+  const isRequestExpired = (requestedAt) => {
+    if (!requestedAt) return false;
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    return new Date(requestedAt) < twoWeeksAgo;
+  };
+
   const renderRequestToMeCard = (request) => {
     // ? NEW: Determine if this is an external or internal referral
     const isExternalJob = !!request.ExtJobID;
@@ -434,10 +442,14 @@ export default function ReferralScreen({ navigation }) {
               {/* Spacer */}
               <View style={{ flex: 1 }} />
 
-              {/* View/Continue Button - Open tab */}
+              {/* View/Continue Button - Open tab (show Expired for old requests) */}
               {activeTab === 'open' && (
                 <>
-                  {(request.AssignedReferrerUserID || request.AssignedReferrerID) && 
+                  {isRequestExpired(request.RequestedAt) ? (
+                    <View style={[styles.viewRequestBtn, { backgroundColor: colors.gray300 }]}>
+                      <Text style={[styles.viewRequestText, { marginLeft: 0, color: colors.gray600 }]}>Expired</Text>
+                    </View>
+                  ) : (request.AssignedReferrerUserID || request.AssignedReferrerID) && 
                    ((request.AssignedReferrerUserID || '').toLowerCase() === (userId || '').toLowerCase() || 
                     (request.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase()) ? (
                     <TouchableOpacity 

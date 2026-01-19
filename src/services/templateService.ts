@@ -22,25 +22,6 @@ const APP_CONFIG = {
     logoUrl: 'https://www.refopen.com/logo.png'
 };
 
-// Common email footer - RefOpen branded gradient (matching refopen-logo colors: blue to green)
-const EMAIL_FOOTER = `
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background: linear-gradient(90deg, #0066FF 0%, #00FF85 100%); padding: 25px 30px;">
-                            <p style="margin: 0 0 12px 0; color: rgba(255,255,255,0.95); font-size: 12px; text-align: center;">
-                                This email was sent by RefOpen - India's Leading Job & Referral Platform
-                            </p>
-                            <p style="margin: 0; color: rgba(255,255,255,0.95); font-size: 12px; text-align: center;">
-                                <a href="{{appUrl}}" style="color: #ffffff; text-decoration: none;">Visit RefOpen</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{appUrl}}/support" style="color: #ffffff; text-decoration: none;">Contact Support</a>
-                                &nbsp;|&nbsp;
-                                <a href="{{unsubscribeUrl}}" style="color: #ffffff; text-decoration: none;">Manage Notifications</a>
-                            </p>
-                        </td>
-                    </tr>
-`;
-
 // Email templates
 const templates: Record<string, { subject: string; html: string }> = {
 
@@ -123,7 +104,21 @@ const templates: Record<string, { subject: string; html: string }> = {
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
+                                You're receiving this because you're registered as an employee at {{companyName}} on RefOpen.
+                            </p>
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>
@@ -174,13 +169,13 @@ ${EMAIL_FOOTER}
                             </p>
                             
                             <!-- Why Verify Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; margin: 25px 0; border: 2px solid #3b82f6;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #eff6ff; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">
+                                        <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
                                             💡 Why confirm your referral?
                                         </p>
-                                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1a1a1a; font-size: 14px;">
+                                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
                                             <li>Track all your referrals in one place</li>
                                             <li>Build your RefOpen profile with verified referrals</li>
                                             <li>Help the community by rating your referral experience</li>
@@ -206,7 +201,18 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #10b981; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #10b981; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #10b981; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>
@@ -250,12 +256,12 @@ ${EMAIL_FOOTER}
                             </p>
                             
                             <!-- Amount Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-radius: 12px; margin: 25px 0;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin: 25px 0;">
                                 <tr>
                                     <td style="padding: 30px; text-align: center;">
-                                        <p style="margin: 0 0 5px 0; color: #065F46; font-size: 14px;">Credited to your wallet</p>
-                                        <p style="margin: 0; color: #047857; font-size: 42px; font-weight: 700;">₹{{amount}}</p>
-                                        <p style="margin: 10px 0 0 0; color: #065F46; font-size: 13px;">
+                                        <p style="margin: 0 0 5px 0; color: #92400e; font-size: 14px;">Credited to your wallet</p>
+                                        <p style="margin: 0; color: #78350f; font-size: 42px; font-weight: 700;">₹{{amount}}</p>
+                                        <p style="margin: 10px 0 0 0; color: #92400e; font-size: 13px;">
                                             New wallet balance: ₹{{newBalance}}
                                         </p>
                                     </td>
@@ -291,7 +297,18 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #f59e0b; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #f59e0b; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #f59e0b; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>
@@ -375,7 +392,14 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                This is an automated notification from RefOpen Support System.
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>
@@ -464,96 +488,14 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
-                    
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-        `
-    },
-
-    'payment_approved': {
-        subject: '✅ Payment Approved - ₹{{amount}} Added to Your RefOpen Wallet!',
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    
-                    <!-- Header -->
+                    <!-- Footer -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">✅ Payment Approved!</h1>
-                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your wallet has been credited</p>
-                        </td>
-                    </tr>
-                    
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 40px 30px;">
-                            <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
-                            
-                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                                Great news! Your payment has been verified and approved. The amount has been credited to your RefOpen wallet.
-                            </p>
-                            
-                            <!-- Amount Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; margin: 0 0 25px 0;">
-                                <tr>
-                                    <td style="padding: 30px; text-align: center;">
-                                        <p style="margin: 0 0 5px 0; color: #065f46; font-size: 14px;">Amount Credited</p>
-                                        <p style="margin: 0; color: #047857; font-size: 42px; font-weight: 700;">₹{{amount}}</p>
-                                        <p style="margin: 15px 0 0 0; color: #065f46; font-size: 14px;">New Wallet Balance: <strong>₹{{newBalance}}</strong></p>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <!-- Payment Details -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 8px; margin: 0 0 25px 0; border-left: 4px solid #10b981;">
-                                <tr>
-                                    <td style="padding: 20px;">
-                                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Payment Details</h3>
-                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
-                                            <strong>Reference Number:</strong> {{referenceNumber}}
-                                        </p>
-                                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
-                                            <strong>Payment Method:</strong> {{paymentMethod}}
-                                        </p>
-                                        <p style="margin: 0; color: #666; font-size: 14px;">
-                                            <strong>Approved On:</strong> {{approvedAt}}
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <!-- CTA Button -->
-                            <table width="100%" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td align="center" style="padding: 10px 0 30px 0;">
-                                        <a href="{{walletUrl}}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
-                                            View Wallet →
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <p style="color: #888; font-size: 14px; line-height: 1.6;">
-                                You can now use your wallet balance to request referrals and boost your job search!
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                Please verify and process this payment in the Admin Panel.
                             </p>
                         </td>
                     </tr>
-                    
-${EMAIL_FOOTER}
                     
                 </table>
             </td>
@@ -596,12 +538,9 @@ ${EMAIL_FOOTER}
                         <td style="padding: 40px 30px;">
                             <h2 style="color: #333; margin: 0 0 20px 0; font-size: 22px;">Hi {{firstName}},</h2>
                             
-                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                                Welcome aboard! You now have access to <strong>125,000+ active jobs</strong> from top companies and a network of verified employees ready to refer you.
-                            </p>
-                            
                             <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                                <strong>The best part?</strong> One referral request is broadcast to all verified employees at a company – so you don't need to know anyone. Just apply, and let the right person find you.
+                                Welcome aboard! You've just joined <strong>125,000+</strong> job seekers who are landing jobs 
+                                at top companies using RefOpen.
                             </p>
                             
                             <!-- Stats Banner -->
@@ -652,7 +591,7 @@ ${EMAIL_FOOTER}
                                     </td>
                                     <td style="padding-left: 10px;">
                                         <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">Apply Directly or Ask Referral</p>
-                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request is broadcast to all verified employees at that company!</p>
+                                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Apply with one click OR ask for a referral - your request goes to verified employees at that company!</p>
                                     </td>
                                 </tr>
                             </table>
@@ -676,7 +615,7 @@ ${EMAIL_FOOTER}
                                     <td style="padding: 25px;">
                                         <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">✨ Why Job Seekers Love RefOpen</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request is <strong>broadcast to all verified employees</strong> at a company</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ One referral request reaches verified employees at a company</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Skip the resume black hole - get noticed by real people</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ External referrals: Found a job elsewhere? We'll find referrers!</td></tr>
                                             <tr><td style="padding: 5px 0; color: #555; font-size: 14px;">✅ Track applications & referrals in real-time</td></tr>
@@ -698,20 +637,18 @@ ${EMAIL_FOOTER}
                             </table>
                             
                             <!-- Referrer Benefits Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; margin: 0 0 20px 0; border: 2px solid #0EA5E9;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin: 0 0 20px 0;">
                                 <tr>
                                     <td style="padding: 25px;">
-                                        <h3 style="margin: 0 0 15px 0; color: #1a1a1a; font-size: 16px; text-align: center;">✨ Already Employed? Become a Verified Referrer!</h3>
+                                        <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 16px; text-align: center;">💰 Already Employed? Become a Referrer!</h3>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📝 <strong>Post Referral Jobs for FREE</strong> - Share openings at your company & refer candidates</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">💰 <strong>Earn Rewards</strong> - Get upto ₹100 per successful referral</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">🏆 <strong>Build Reputation</strong> - Verified badge shows on your profile</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">🤝 <strong>Help Others</strong> - Connect talented people with great opportunities</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📊 <strong>Priority Access</strong> - Get notified first about referral requests</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">💳 <strong>Easy Withdrawal</strong> - Cash out via UPI or bank account</td></tr>
-                                            <tr><td style="padding: 5px 0; color: #1a1a1a; font-size: 14px;">📩 <strong>No Inbox Flood</strong> - Refer candidates through RefOpen & earn rewards</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💵 Earn up to ₹100 for every successful referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">🏆 Get verified badges & build your reputation</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">📩 No more LinkedIn DMs - candidates come to you</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">⚡ One-click referrals - we handle all paperwork</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #78350f; font-size: 14px;">💳 Instant withdrawals to UPI or bank account</td></tr>
                                         </table>
-                                        <p style="margin: 15px 0 0 0; color: #1a1a1a; font-size: 13px; text-align: center;">
+                                        <p style="margin: 15px 0 0 0; color: #a16207; font-size: 13px; text-align: center;">
                                             Verify your work email to start earning today!
                                         </p>
                                     </td>
@@ -720,7 +657,21 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; color: #888; font-size: 12px; text-align: center;">
+                                You're receiving this because you signed up for RefOpen.
+                            </p>
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Manage preferences</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>
@@ -785,22 +736,19 @@ ${EMAIL_FOOTER}
                             </table>
                             
                             <!-- Benefits Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; margin: 10px 0; border: 2px solid #0EA5E9;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-radius: 10px; margin: 10px 0; border: 1px solid #fcd34d;">
                                 <tr>
                                     <td style="padding: 18px;">
-                                        <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">🎁 Your Referrer Benefits</p>
+                                        <p style="margin: 0 0 12px 0; color: #92400e; font-size: 14px; font-weight: 600;">🎁 Your Referrer Benefits</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
-                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">💰 Earn up to ₹100 per successful referral</td>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">💰 Earn up to ₹100 per successful referral</td>
                                             </tr>
                                             <tr>
-                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">⚡ Respond quickly to earn bonus rewards</td>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">⚡ Respond quickly to earn bonus rewards</td>
                                             </tr>
                                             <tr>
-                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">🏆 Unlock exclusive badges as you refer more</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 4px 0; color: #1a1a1a; font-size: 13px;">🤝 Help candidates get 15x higher interview chances</td>
+                                                <td style="padding: 4px 0; color: #78350f; font-size: 13px;">🏆 Unlock exclusive badges as you refer more</td>
                                             </tr>
                                         </table>
                                     </td>
@@ -903,7 +851,18 @@ ${EMAIL_FOOTER}
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER}
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #eee;">
+                            <p style="margin: 0; color: #888; font-size: 12px; text-align: center;">
+                                <a href="{{appUrl}}/settings/notifications" style="color: #667eea; text-decoration: none;">Manage notifications</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}/support" style="color: #667eea; text-decoration: none;">Help & Support</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{appUrl}}" style="color: #667eea; text-decoration: none;">Open RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>
                     
                 </table>
             </td>

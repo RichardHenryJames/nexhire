@@ -97,9 +97,13 @@ export class ReferrerNotificationEmailService {
         // Use ReferralService for consistency with frontend
         const result = await ReferralService.getAvailableRequests(applicantId, 1, 100);
         
-        // Filter for OPEN_STATUSES only (same as frontend) and take top 10
+        // Calculate 2-week cutoff date
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        // Filter for OPEN_STATUSES only (same as frontend), exclude requests older than 2 weeks, and take top 10
         const openRequests = result.requests
-            .filter(r => this.OPEN_STATUSES.includes(r.Status))
+            .filter(r => this.OPEN_STATUSES.includes(r.Status) && new Date(r.RequestedAt) >= twoWeeksAgo)
             .slice(0, 10)
             .map(r => {
                 const req = r as any; // SQL query returns more fields than type definition
@@ -135,8 +139,12 @@ export class ReferrerNotificationEmailService {
         // Use ReferralService for consistency with frontend
         const result = await ReferralService.getAvailableRequests(applicantId, 1, 100);
         
-        // Count only OPEN_STATUSES (same as frontend)
-        return result.requests.filter(r => this.OPEN_STATUSES.includes(r.Status)).length;
+        // Calculate 2-week cutoff date
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        // Count only OPEN_STATUSES (same as frontend), exclude requests older than 2 weeks
+        return result.requests.filter(r => this.OPEN_STATUSES.includes(r.Status) && new Date(r.RequestedAt) >= twoWeeksAgo).length;
     }
 
     /**
