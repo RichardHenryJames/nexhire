@@ -474,6 +474,92 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This is an admin notification from Ref
     },
 
     // ========================================
+    // PAYMENT APPROVED (User notification)
+    // ========================================
+
+    'payment_approved': {
+        subject: 'Payment Approved: ₹{{amount}} Added to Your Wallet',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: #10B981; padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Payment Approved</h1>
+                            <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 15px;">Your wallet has been credited</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hi {{firstName}},
+                            </p>
+                            
+                            <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+                                Great news! Your payment has been verified and your RefOpen wallet has been credited.
+                            </p>
+                            
+                            <!-- Amount Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px; text-align: center;">
+                                        <p style="margin: 0 0 4px 0; color: #047857; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Amount Credited</p>
+                                        <p style="margin: 0; color: #059669; font-size: 36px; font-weight: 700;">₹{{amount}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Details -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr><td style="padding: 6px 0; color: #64748B; font-size: 14px;"><strong style="color: #1a1a1a;">New Balance:</strong> ₹{{newBalance}}</td></tr>
+                                            <tr><td style="padding: 6px 0; color: #64748B; font-size: 14px;"><strong style="color: #1a1a1a;">Payment Method:</strong> {{paymentMethod}}</td></tr>
+                                            <tr><td style="padding: 6px 0; color: #64748B; font-size: 14px;"><strong style="color: #1a1a1a;">Reference:</strong> {{referenceNumber}}</td></tr>
+                                            <tr><td style="padding: 6px 0; color: #64748B; font-size: 14px;"><strong style="color: #1a1a1a;">Approved:</strong> {{approvedAt}}</td></tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 8px 0;">
+                                        <a href="{{walletUrl}}" style="display: inline-block; background: #10B981; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
+                                            View My Wallet
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+${EMAIL_FOOTER.replace('{{footerText}}', 'This is a transaction notification from RefOpen.')}
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
+    },
+
+    // ========================================
     // USER REGISTRATION
     // ========================================
 

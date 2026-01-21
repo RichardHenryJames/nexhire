@@ -25,6 +25,23 @@ const generateOTP = (): string => {
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 3;
 
+// Shared email footer for OTP emails (simple version, no logo)
+const OTP_EMAIL_FOOTER = `
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #F8FAFC; padding: 32px 40px; border-top: 1px solid #E2E8F0; text-align: center;">
+                            <img src="https://www.refopen.com/refopen-logo.png" alt="RefOpen" width="100" style="margin-bottom: 16px;">
+                            <p style="margin: 0 0 8px 0; color: #64748B; font-size: 12px;">
+                                This is a security email from RefOpen.
+                            </p>
+                            <p style="margin: 0; color: #64748B; font-size: 12px;">
+                                <a href="https://www.refopen.com/support" style="color: #4F46E5; text-decoration: none;">Help Center</a>
+                                <span style="color: #CBD5E1; margin: 0 8px;">|</span>
+                                <a href="https://www.refopen.com" style="color: #4F46E5; text-decoration: none;">RefOpen</a>
+                            </p>
+                        </td>
+                    </tr>`;
+
 export interface SendOTPRequest {
   userId: string;
   workExperienceId: string;
@@ -150,22 +167,63 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
       to: companyEmail,
       subject: 'RefOpen - Verify Your Company Email',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #6366F1;">Verify Your Company Email</h2>
-          <p>Hello,</p>
-          <p>You requested to verify your company email for <strong>${workExp.CompanyName}</strong> on RefOpen.</p>
-          <p>Your verification code is:</p>
-          <div style="background: #F3F4F6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #6366F1;">${otp}</span>
-          </div>
-          <p>This code will expire in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
-          <p>If you didn't request this verification, please ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;">
-          <p style="color: #6B7280; font-size: 12px;">
-            This email was sent by RefOpen. 
-            <br>© ${new Date().getFullYear()} RefOpen. All rights reserved.
-          </p>
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: #4F46E5; padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Verify Your Company Email</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hello,
+                            </p>
+                            <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+                                You requested to verify your company email for <strong>${workExp.CompanyName}</strong> on RefOpen.
+                            </p>
+                            
+                            <p style="color: #64748B; font-size: 14px; margin: 0 0 12px 0;">Your verification code is:</p>
+                            
+                            <!-- OTP Code -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px; text-align: center;">
+                                        <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #4F46E5;">${otp}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+                                This code will expire in <strong style="color: #1a1a1a;">${OTP_EXPIRY_MINUTES} minutes</strong>.
+                            </p>
+                            
+                            <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0;">
+                                If you didn't request this verification, please ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    
+${OTP_EMAIL_FOOTER}
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
       `,
       text: `Your RefOpen verification code is: ${otp}. This code expires in ${OTP_EXPIRY_MINUTES} minutes.`
     });
