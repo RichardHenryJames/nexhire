@@ -19,6 +19,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import DatePicker from '../../../../components/DatePicker';
+import { showToast } from '../../../../components/Toast';
 
 export default function EmployerAccountScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -80,7 +81,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const onSubmit = async () => {
     const err = validate();
     if (err) {
-      Alert.alert('Validation', err);
+      showToast(err, 'error');
       return;
     }
 
@@ -298,7 +299,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ]
         );
       } else {
-        Alert.alert('Error', errorMessage);
+        showToast(errorMessage, 'error');
       }
     } finally { setSubmitting(false); }
   };
@@ -411,7 +412,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={styles.referralCodeHint}>
             <Ionicons name="information-circle-outline" size={14} color={colors.success} />
             <Text style={styles.referralCodeHintText}>
-              Have a referral code? Get ₹50 bonus when you sign up!
+              Have a referral code? Get ₹25 bonus when you sign up!
             </Text>
           </View>
         </View>
@@ -614,15 +615,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   // 🎁 NEW: Referral code styles
   referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     position: 'relative',
   },
   referralCodeIcon: {
     position: 'absolute',
     left: 12,
-    top: 12,
     zIndex: 1,
   },
   referralCodeInput: {
+    flex: 1,
     paddingLeft: 40, // Make room for the icon
     fontWeight: typography.weights.bold,
     letterSpacing: 1,
@@ -704,5 +707,49 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   placeholderText: {
     color: colors.gray500,
     fontSize: typography.sizes.md,
+  },
+  // Welcome Bonus Banner styles
+  welcomeBonusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  welcomeBonusIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  welcomeBonusContent: {
+    flex: 1,
+  },
+  welcomeBonusTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#22C55E',
+    marginBottom: 4,
+  },
+  welcomeBonusText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  welcomeBonusAmount: {
+    fontWeight: typography.weights.bold,
+    color: '#FFD700',
+    fontSize: typography.sizes.md,
+  },
+  welcomeBonusSubtext: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray400,
+    marginTop: 2,
   },
 });

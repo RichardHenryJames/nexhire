@@ -1,5 +1,6 @@
 import { dbService } from './database.service';
 import { EmailService } from './emailService';
+import { encrypt, decrypt, maskEmail } from '../utils/encryption';
 
 /**
  * Company Email Verification Service
@@ -134,14 +135,15 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
       (@param0, @param1, @param2, @param3, @param4, 'COMPANY_EMAIL_VERIFICATION')
     `, [userId, workExperienceId, companyEmail, otp, expiresAt]);
 
-    // 7. Update company email in work experience (not verified yet)
+    // 7. Update company email in work experience (not verified yet) - ENCRYPTED
+    const encryptedEmail = encrypt(companyEmail);
     await dbService.executeQuery(`
       UPDATE WorkExperiences
       SET CompanyEmail = @param1,
           CompanyEmailVerified = 0,
           UpdatedAt = GETUTCDATE()
       WHERE WorkExperienceID = @param0
-    `, [workExperienceId, companyEmail]);
+    `, [workExperienceId, encryptedEmail]);
 
     // 8. Send OTP email
     const emailResult = await EmailService.send({
@@ -182,7 +184,7 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
       message: `Verification code sent to ${companyEmail}. Please check your inbox.`,
       data: {
         expiresInMinutes: OTP_EXPIRY_MINUTES,
-        email: companyEmail.replace(/(.{3}).*(@.*)/, '$1***$2') // Mask email
+        email: maskEmail(companyEmail) // Use our mask function
       }
     };
 
@@ -274,7 +276,36 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
       WHERE OTPID = @param0
     `, [otpRecord.OTPID]);
 
-    // 6. Update WorkExperience as verified
+    // 6. Get the OrganizationID and check if user already has a verified entry for this org
+    const workExpResult = await dbService.executeQuery(`
+      SELECT we.OrganizationID, a.UserID, a.ApplicantID
+      FROM WorkExperiences we
+      INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+      WHERE we.WorkExperienceID = @param0
+    `, [workExperienceId]);
+
+    const organizationId = workExpResult.recordset[0]?.OrganizationID;
+    const applicantId = workExpResult.recordset[0]?.ApplicantID;
+
+    // Check if user already has a verified entry for this organization (to avoid double counting)
+    let userAlreadyVerifiedForOrg = false;
+    if (organizationId) {
+      const existingVerifiedResult = await dbService.executeQuery(`
+        SELECT COUNT(*) as VerifiedCount
+        FROM WorkExperiences we
+        INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+        WHERE a.UserID = @param0
+          AND we.OrganizationID = @param1
+          AND we.CompanyEmailVerified = 1
+          AND we.IsActive = 1
+          AND we.WorkExperienceID != @param2
+      `, [userId, organizationId, workExperienceId]);
+      
+      userAlreadyVerifiedForOrg = existingVerifiedResult.recordset[0]?.VerifiedCount > 0;
+    }
+
+    // 7. Update WorkExperience as verified - ENCRYPTED
+    const encryptedVerifiedEmail = encrypt(otpRecord.Email);
     await dbService.executeQuery(`
       UPDATE WorkExperiences
       SET CompanyEmail = @param1,
@@ -282,21 +313,35 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
           CompanyEmailVerifiedAt = GETUTCDATE(),
           UpdatedAt = GETUTCDATE()
       WHERE WorkExperienceID = @param0
-    `, [workExperienceId, otpRecord.Email]);
+    `, [workExperienceId, encryptedVerifiedEmail]);
 
-    // 7. Update User as verified referrer
+    // 8. Update User as verified referrer
     await dbService.executeQuery(`
       UPDATE Users
       SET IsVerifiedReferrer = 1,
+          IsVerifiedUser = 1,
           UpdatedAt = GETUTCDATE()
       WHERE UserID = @param0
     `, [userId]);
+
+    // 9. Increment VerifiedReferrersCount in Organizations table
+    // Only increment if user doesn't already have another verified entry for this same organization
+    if (organizationId && !userAlreadyVerifiedForOrg) {
+      await dbService.executeQuery(`
+        UPDATE Organizations
+        SET VerifiedReferrersCount = ISNULL(VerifiedReferrersCount, 0) + 1,
+            UpdatedAt = GETUTCDATE()
+        WHERE OrganizationID = @param0
+      `, [organizationId]);
+      console.log(`Incremented VerifiedReferrersCount for OrganizationID ${organizationId}`);
+    }
 
     return {
       success: true,
       message: 'Company email verified successfully! You are now a verified referrer.',
       data: {
         isVerifiedReferrer: true,
+        isVerifiedUser: true,
         verifiedEmail: otpRecord.Email
       }
     };
@@ -320,6 +365,7 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
       SELECT 
         u.UserID,
         u.IsVerifiedReferrer,
+        u.IsVerifiedUser,
         we.WorkExperienceID,
         we.CompanyName,
         we.CompanyEmail,
@@ -351,10 +397,10 @@ export const getVerificationStatus = async (userId: string): Promise<Verificatio
       message: 'Verification status retrieved',
       data: {
         isVerifiedReferrer: user.IsVerifiedReferrer || false,
+        isVerifiedUser: user.IsVerifiedUser || false,
         currentWorkExperience: user.WorkExperienceID ? {
           workExperienceId: user.WorkExperienceID,
           companyName: user.CompanyName || user.OrganizationName,
-          companyEmail: user.CompanyEmail,
           isEmailVerified: user.CompanyEmailVerified || false,
           verifiedAt: user.CompanyEmailVerifiedAt
         } : null

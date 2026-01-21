@@ -5,6 +5,14 @@
 
 import { dbService } from './database.service';
 import { v4 as uuidv4 } from 'uuid';
+import { EmailService } from './emailService';
+import { TemplateService } from './templateService';
+
+// Admin notification emails - supports comma-separated list from env
+const getAdminEmails = (): string[] => {
+  const emails = process.env.ADMIN_NOTIFICATION_EMAILS || '';
+  return emails.split(',').map(e => e.trim()).filter(e => e.length > 0);
+};
 
 export interface ManualPaymentSubmission {
   submissionId?: string;
@@ -143,6 +151,11 @@ export const submitManualPayment = async (
       data.userRemarks || null
     ]);
 
+    // Send email notification to admin (async, non-blocking)
+    sendManualPaymentNotification(submissionId, userId, data).catch(err => {
+      console.error('Failed to send manual payment notification email:', err);
+    });
+
     return {
       success: true,
       message: `Payment proof submitted successfully. Your wallet will be credited within ${settings.processingTime}.`,
@@ -155,6 +168,79 @@ export const submitManualPayment = async (
       return { success: false, message: 'This reference number has already been submitted.' };
     }
     return { success: false, message: error.message || 'Failed to submit payment proof' };
+  }
+};
+
+/**
+ * Send email notification for new manual payment submission
+ */
+const sendManualPaymentNotification = async (
+  submissionId: string, 
+  userId: string, 
+  data: ManualPaymentSubmission
+): Promise<void> => {
+  try {
+    // Get user details
+    const userResult = await dbService.executeQuery(
+      `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`,
+      [userId]
+    );
+    const user = userResult.recordset[0];
+    
+    const userName = user ? `${user.FirstName} ${user.LastName}` : 'Unknown User';
+    const userEmail = user?.Email || 'Not provided';
+    
+    // Build user remarks section conditionally
+    const userRemarksSection = data.userRemarks ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; margin: 0 0 25px 0;">
+        <tr>
+          <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #92400e; font-size: 12px; text-transform: uppercase;">User Remarks</p>
+            <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.5;">${data.userRemarks}</p>
+          </td>
+        </tr>
+      </table>
+    ` : '';
+    
+    // Use the template service
+    const { subject, html, text } = TemplateService.render('new_manual_payment', {
+      submissionId: submissionId,
+      amount: data.amount.toLocaleString('en-IN'),
+      paymentMethod: data.paymentMethod,
+      referenceNumber: data.referenceNumber,
+      paymentDate: new Date(data.paymentDate).toLocaleDateString('en-IN', {
+        dateStyle: 'medium'
+      }),
+      userName: userName,
+      userEmail: userEmail,
+      userId: userId,
+      userRemarksSection: userRemarksSection,
+      submittedAt: new Date().toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Kolkata'
+      })
+    });
+    
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) {
+      console.warn('⚠️ No admin emails configured, skipping payment notification');
+      return;
+    }
+    
+    await EmailService.send({
+      to: adminEmails,
+      subject: subject,
+      html: html,
+      text: text,
+      emailType: 'manual_payment_notification',
+      referenceType: 'ManualPayment',
+      referenceId: submissionId
+    });
+    
+    console.log(`✅ Manual payment notification sent to ${adminEmails.join(', ')} for submission ${submissionId}`);
+  } catch (error) {
+    console.error('Error sending manual payment notification:', error);
   }
 };
 
@@ -272,11 +358,20 @@ export const approveManualPayment = async (
   adminRemarks?: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    // Get submission details
+    // Get submission details with user info
     const submission = await dbService.executeQuery(`
-      SELECT UserID, WalletID, Amount, Status 
-      FROM ManualPaymentSubmissions 
-      WHERE SubmissionID = @param0
+      SELECT 
+        mps.UserID, 
+        mps.WalletID, 
+        mps.Amount, 
+        mps.Status,
+        mps.PaymentMethod,
+        mps.ReferenceNumber,
+        u.Email,
+        u.FirstName
+      FROM ManualPaymentSubmissions mps
+      JOIN Users u ON mps.UserID = u.UserID
+      WHERE mps.SubmissionID = @param0
     `, [submissionId]);
 
     if (!submission.recordset || submission.recordset.length === 0) {
@@ -347,6 +442,39 @@ export const approveManualPayment = async (
           UpdatedAt = GETUTCDATE()
       WHERE SubmissionID = @param0
     `, [submissionId, adminRemarks || 'Payment verified', adminUserId]);
+
+    // Send approval email to user
+    try {
+      const appUrl = process.env.APP_URL || 'https://www.refopen.com';
+      const { subject, html, text } = TemplateService.render('payment_approved', {
+        firstName: sub.FirstName || 'there',
+        amount: sub.Amount.toLocaleString('en-IN'),
+        newBalance: balanceAfter.toLocaleString('en-IN'),
+        referenceNumber: sub.ReferenceNumber || submissionId,
+        paymentMethod: sub.PaymentMethod || 'Bank Transfer',
+        approvedAt: new Date().toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'Asia/Kolkata'
+        }),
+        walletUrl: `${appUrl}/wallet`
+      });
+
+      await EmailService.send({
+        to: sub.Email,
+        subject: subject,
+        html: html,
+        text: text,
+        emailType: 'payment_approved',
+        referenceType: 'ManualPayment',
+        referenceId: submissionId
+      });
+
+      console.log(`✅ Payment approval email sent to ${sub.Email} for submission ${submissionId}`);
+    } catch (emailError) {
+      // Log but don't fail the approval if email fails
+      console.error('Error sending payment approval email:', emailError);
+    }
 
     return { success: true, message: 'Payment approved and wallet credited' };
 

@@ -200,7 +200,7 @@ export class NotificationQueueService {
         icon: string;
         actionUrl: string;
     } {
-        const appUrl = process.env.APP_URL || 'https://refopen.com';
+        const appUrl = process.env.APP_URL || 'https://www.refopen.com';
 
         switch (type) {
             case 'new_referral_request':

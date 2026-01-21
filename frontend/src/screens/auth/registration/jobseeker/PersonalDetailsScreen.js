@@ -23,6 +23,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
+import { showToast } from '../../../../components/Toast';
 
 // Debounce hook for search
 const useDebounce = (value, delay = 300) => {
@@ -366,7 +367,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      showToast('Please fix the errors before continuing', 'error');
       return;
     }
 
@@ -506,7 +507,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
             ]
           );
         } else {
-          Alert.alert('Registration Failed', errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     } catch (error) {
@@ -549,7 +550,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
           ]
         );
       } else {
-        Alert.alert('Error', errorMessage);
+        showToast(errorMessage, 'error');
       }
     } finally {
       setLoading(false);
@@ -693,22 +694,6 @@ styles.selectionButton,
             </Text>
           </View>
 
-          {/* 🎉 NEW: Welcome Bonus Banner */}
-          <View style={styles.welcomeBonusBanner}>
-            <View style={styles.welcomeBonusIconContainer}>
-              <Ionicons name="gift" size={28} color="#FFD700" />
-            </View>
-            <View style={styles.welcomeBonusContent}>
-              <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
-              <Text style={styles.welcomeBonusText}>
-                RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
-              </Text>
-              <Text style={styles.welcomeBonusSubtext}>
-                Use it to get referrals, AI job search and more
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.form}>
             <View style={styles.row}>
               <View style={styles.halfInput}>
@@ -752,7 +737,7 @@ styles.selectionButton,
               <View style={styles.referralCodeHint}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.success} />
                 <Text style={styles.referralCodeHintText}>
-                  Have an invite code? Get ₹50 bonus when you sign up!
+                  Have an invite code? Get ₹25 bonus when you sign up!
                 </Text>
               </View>
             </View>
@@ -1093,7 +1078,7 @@ styles.selectionButton,
               <TouchableOpacity
                 onPress={() => {
                   const name = (orgQuery || '').trim();
-                  if (!name) { Alert.alert('Enter company name', 'Type your company name above'); return; }
+                  if (!name) { showToast('Type your company name above', 'error'); return; }
                   setFormData(prev => ({
                     ...prev,
                     organizationId: null,

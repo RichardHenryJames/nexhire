@@ -52,6 +52,10 @@ export interface User {
     GoogleId?: string;
     LoginMethod?: string;
     GoogleAccessToken?: string;
+
+    /** Password reset fields */
+    PasswordResetToken?: string;
+    PasswordResetExpires?: Date;
 }
 
 export interface Organization {
@@ -75,6 +79,7 @@ export interface Job {
     JobID: string;
     OrganizationID: string;
     PostedByUserID: string;
+    PostedByType?: number; // 0 = Scraped, 1 = Employer, 2 = Referrer
     Title: string;
     JobTypeID: number;
     Level?: string;
@@ -299,6 +304,8 @@ export interface JobCreateRequest {
     language?: string;
     tags?: string;
     internalNotes?: string;
+    postedByType?: string;
+    externalJobID?: string;
 }
 
 export interface JobApplicationRequest {

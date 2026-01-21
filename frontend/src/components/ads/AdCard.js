@@ -5,6 +5,20 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 
+// ============================================================
+// 🚨 ADS MASTER SWITCH 🚨
+// ============================================================
+// Set to TRUE when Google AdSense approves your site
+// Set to FALSE to temporarily disable all ads
+// 
+// Current Status: DISABLED (waiting for Google approval)
+// Last Updated: January 17, 2026
+// 
+// To enable ads: Change false to true below
+// ============================================================
+const ADS_ENABLED = false;
+// ============================================================
+
 // Generate unique ID for each ad instance
 let adInstanceCounter = 0;
 
@@ -93,6 +107,11 @@ const AdCard = ({
   variant = 'jobs', // 'jobs' | 'referral' | 'about' | 'home' | 'applications'
   style = {},
 }) => {
+  // 🚨 If ads are disabled, render nothing
+  if (!ADS_ENABLED) {
+    return null;
+  }
+
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -256,7 +275,7 @@ const AdCard = ({
   // ========================================
   if (variant === 'about') {
     return (
-      <View style={[styles.aboutCard, style]}>
+      <View style={[styles.referralStrip, style]}>
         {Platform.OS === 'web' && (
           <ins
             id={adId}
@@ -264,12 +283,12 @@ const AdCard = ({
             style={{
               display: 'block',
               width: '100%',
-              height: '90px',
+              height: '50px',
             }}
             data-ad-client={adClient}
             data-ad-slot={adSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
+            data-ad-format="fluid"
+            data-ad-layout-key="-fb+5w+4e-db+86"
           />
         )}
       </View>
@@ -549,10 +568,6 @@ const createStyles = (colors, responsive = {}) => {
     fontSize: 11,
     fontWeight: '700',
     color: colors.primary,
-  },
-  appMeta: {
-    fontSize: 12,
-    color: colors.textSecondary,
   },
 });
 };

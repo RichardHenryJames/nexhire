@@ -464,6 +464,8 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         ProfilePictureURL: profile.ProfilePictureURL,
         Headline: profile.Headline,
         Summary: profile.Summary,
+        IsVerifiedReferrer: profile.IsVerifiedReferrer,
+        IsVerifiedUser: profile.IsVerifiedUser,
         CurrentLocation: profile.CurrentLocation,
         YearsOfExperience: profile.YearsOfExperience,
         LinkedInProfile: profile.LinkedInProfile,

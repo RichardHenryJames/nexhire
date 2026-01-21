@@ -31,6 +31,10 @@ out/
 *.log
 *.db
 
+# Scripts with sensitive data
+scripts/database/users-to-delete.txt
+temp-*.js
+
 # OS generated files
 .DS_Store
 Thumbs.db

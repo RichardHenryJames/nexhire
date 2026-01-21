@@ -1,5 +1,5 @@
 import { app } from "@azure/functions";
-import type { InvocationContext, Timer } from "@azure/functions";
+import type { HttpRequest, HttpResponseInit, InvocationContext, Timer } from "@azure/functions";
 
 import { withErrorHandling, corsHeaders } from "./src/middleware";
 
@@ -19,6 +19,10 @@ import {
   googleLogin,
   googleRegister,
   getMyReferralCode,
+  forgotPassword,
+  resetPassword,
+  setPassword,
+  hasPassword,
 } from "./src/controllers/user.controller";
 // Job controllers
 import {
@@ -31,6 +35,7 @@ import {
   closeJob,
   searchJobs,
   getJobsByOrganization,
+  getMyPostedJobs,
   getCurrencies,
   getAIRecommendedJobs,
   getAIJobFilters,
@@ -166,7 +171,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -245,6 +250,37 @@ app.http("auth-refresh", {
   authLevel: "anonymous",
   route: "auth/refresh",
   handler: withErrorHandling(refreshToken),
+});
+
+// Password Reset endpoints
+app.http("auth-forgot-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/forgot-password",
+  handler: withErrorHandling(forgotPassword),
+});
+
+app.http("auth-reset-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/reset-password",
+  handler: withErrorHandling(resetPassword),
+});
+
+// Set Password for Google users (requires auth)
+app.http("auth-set-password", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/set-password",
+  handler: withErrorHandling(setPassword),
+});
+
+// Check if user has password set (for Google users)
+app.http("auth-has-password", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/has-password",
+  handler: withErrorHandling(hasPassword),
 });
 
 app.http("users-profile", {
@@ -358,6 +394,9 @@ app.http("notification-preferences", {
         MessageReceivedEmail?: boolean;
         MessageReceivedPush?: boolean;
         WeeklyDigestEmail?: boolean;
+        DailyJobRecommendationEmail?: boolean;
+        ReferrerNotificationEmail?: boolean;
+        MarketingEmail?: boolean;
       }>;
       const success = await NotificationService.updatePreferences(decoded.userId, body);
       return {
@@ -613,6 +652,14 @@ app.http("jobs", {
   },
 });
 
+// My posted jobs endpoint (for referrers and employers)
+app.http("my-posted-jobs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "user/my-posted-jobs",
+  handler: withErrorHandling(getMyPostedJobs),
+});
+
 app.http("jobs-by-id", {
   methods: ["GET", "PUT", "DELETE", "OPTIONS"],
   authLevel: "anonymous",
@@ -642,7 +689,7 @@ app.http("jobs-close", {
   handler: withErrorHandling(closeJob),
 });
 
-// NEW: Organization jobs endpoint for employers
+// Organization jobs endpoint for employers
 app.http("organization-jobs", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
@@ -1570,6 +1617,13 @@ app.http("admin-dashboard-transactions", {
   authLevel: "anonymous",
   route: "management/dashboard/transactions",
   handler: withErrorHandling(getAdminDashboardTransactions),
+});
+
+app.http("admin-dashboard-email-logs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/email-logs",
+  handler: withErrorHandling(getAdminDashboardEmailLogs),
 });
 
 // ========================================================================
@@ -2653,11 +2707,417 @@ app.timer("jobArchivalTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 2 hours)
+// MANUAL TRIGGER - DAILY JOB RECOMMENDATION EMAILS (For Testing)
+// ========================================================================
+
+app.http("manual-trigger-daily-email", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "management/trigger-daily-email",
+  handler: async (request: HttpRequest, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `manual_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         MANUAL DAILY JOB EMAIL TRIGGER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+
+    const runStartTime = new Date();
+
+    try {
+      const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+      const { dbService } = await import("./src/services/database.service");
+
+      // TESTING: Get UserID for parimalkumar261@gmail.com and use existing method
+      const userQuery = await dbService.executeQuery(
+        "SELECT UserID FROM Users WHERE Email = @param0",
+        ["parimalkumar261@gmail.com"]
+      );
+      
+      if (!userQuery.recordset || userQuery.recordset.length === 0) {
+        return { status: 404, jsonBody: { error: "User not found" } };
+      }
+
+      const userId = userQuery.recordset[0].UserID;
+      context.log(`\n📧 Testing: Sending daily job email to parimalkumar261@gmail.com (UserID: ${userId})\n`);
+      
+      const result = await DailyJobEmailService.sendDailyJobEmailsForUser(userId);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await DailyJobEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Manual'
+      );
+
+      context.log("\n========================================================================");
+      context.log("        MANUAL EMAIL TRIGGER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Users: ${result.totalUsers}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          executionId,
+          result,
+          duration: `${Math.round(duration / 1000)}s`
+        }
+      };
+
+    } catch (error: any) {
+      context.error(`❌ Manual trigger error: ${error.message}`);
+      
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: error.message,
+          executionId
+        }
+      };
+    }
+  }
+});
+
+// ========================================================================
+// MANUAL TRIGGER - REFERRER NOTIFICATION EMAILS (For Testing)
+// ========================================================================
+
+app.http("manual-trigger-referrer-email", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "management/trigger-referrer-email",
+  handler: async (request: HttpRequest, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `manual_referrer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         MANUAL REFERRER NOTIFICATION EMAIL TRIGGER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+
+    const runStartTime = new Date();
+
+    try {
+      const { ReferrerNotificationEmailService } = await import("./src/services/referrerNotificationEmailService");
+      const { dbService } = await import("./src/services/database.service");
+
+      // TESTING: Get UserID for parimalkumar261@gmail.com (as referrer)
+      const userQuery = await dbService.executeQuery(
+        "SELECT UserID FROM Users WHERE Email = @param0",
+        ["parimalkumar261@gmail.com"]
+      );
+      
+      if (!userQuery.recordset || userQuery.recordset.length === 0) {
+        return { status: 404, jsonBody: { error: "User not found" } };
+      }
+
+      const userId = userQuery.recordset[0].UserID;
+      context.log(`\n📧 Testing: Sending referrer notification to parimalkumar261@gmail.com (UserID: ${userId})\n`);
+      
+      const result = await ReferrerNotificationEmailService.sendReferrerNotificationEmailForUser(userId);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await ReferrerNotificationEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Manual'
+      );
+
+      context.log("\n========================================================================");
+      context.log("        MANUAL REFERRER EMAIL TRIGGER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Referrers: ${result.totalReferrers}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          executionId,
+          result,
+          duration: `${Math.round(duration / 1000)}s`
+        }
+      };
+
+    } catch (error: any) {
+      context.error(`❌ Manual referrer trigger error: ${error.message}`);
+      
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: error.message,
+          executionId
+        }
+      };
+    }
+  }
+});
+
+// ========================================================================
+// MANUAL TRIGGER - BECOME VERIFIED REFERRER EMAILS (For Testing)
+// ========================================================================
+
+app.http("triggerBecomeVerifiedEmail", {
+  methods: ["POST", "GET"],
+  authLevel: "anonymous",
+  route: "trigger-become-verified-email",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const startTime = Date.now();
+    const executionId = `become_verified_manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const runStartTime = new Date();
+
+    // Parse query params for test mode (default: true for manual trigger)
+    const url = new URL(req.url);
+    const testMode = url.searchParams.get('testMode') !== 'false'; // default true
+    const testEmail = url.searchParams.get('testEmail') || 'parimalkumar261@gmail.com';
+
+    context.log("========================================================================");
+    context.log("    MANUAL BECOME VERIFIED REFERRER EMAIL TRIGGER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Test Mode: ${testMode} | Test Email: ${testMode ? testEmail : 'N/A'}`);
+
+    try {
+      const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+      
+      context.log("\n🚀 Starting 'Become Verified Referrer' email process...\n");
+      
+      const result = await BecomeVerifiedReferrerEmailService.sendBecomeVerifiedEmails(testMode, testEmail);
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await BecomeVerifiedReferrerEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Manual'
+      );
+
+      context.log("\n========================================================================");
+      context.log("    MANUAL BECOME VERIFIED EMAIL TRIGGER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Test Mode: ${testMode}`);
+      context.log(`Total Eligible: ${result.totalEligible}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      return {
+        status: 200,
+        jsonBody: {
+          success: true,
+          executionId,
+          testMode,
+          testEmail: testMode ? testEmail : null,
+          result,
+          duration: `${Math.round(duration / 1000)}s`
+        }
+      };
+
+    } catch (error: any) {
+      context.error(`❌ Manual become-verified trigger error: ${error.message}`);
+      
+      return {
+        status: 500,
+        jsonBody: {
+          success: false,
+          error: error.message,
+          executionId
+        }
+      };
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - BECOME VERIFIED REFERRER EMAILS (6 PM IST = 12:30 UTC, Every 2 Days)
+// ========================================================================
+
+app.timer("becomeVerifiedReferrerEmail", {
+  schedule: "0 30 12 * * 2", // 6 PM IST (12:30 UTC) every Tuesday
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `become_verified_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("     BECOME VERIFIED REFERRER EMAIL TIMER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Schedule: 6 PM IST (12:30 UTC) - Every Tuesday`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("⚠️ This execution is past its scheduled time - running catch-up");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+      
+      context.log("\n🚀 Starting 'Become Verified Referrer' email process...\n");
+      
+      const result = await BecomeVerifiedReferrerEmailService.sendBecomeVerifiedEmails();
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await BecomeVerifiedReferrerEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Timer'
+      );
+
+      context.log("\n========================================================================");
+      context.log("    BECOME VERIFIED REFERRER EMAIL TIMER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Eligible Users: ${result.totalEligible}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`Errors: ${result.errors.slice(0, 5).join(', ')}`);
+      }
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      context.error("❌ BECOME VERIFIED REFERRER EMAIL TIMER FAILED");
+      context.error(`   Error: ${error.message}`);
+
+      // Log failure
+      try {
+        const { BecomeVerifiedReferrerEmailService } = await import("./src/services/becomeVerifiedReferrerEmailService");
+        await BecomeVerifiedReferrerEmailService.logEmailRun(
+          executionId,
+          runStartTime,
+          runEndTime,
+          { totalEligible: 0, emailsSent: 0, emailsFailed: 0, errors: [error.message] },
+          'Timer'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - REFERRER NOTIFICATION EMAILS (7 PM IST = 13:30 UTC, Every 2 Days)
+// ========================================================================
+
+app.timer("dailyReferrerNotificationEmail", {
+  schedule: "0 0 6 */3 * *", // 11:30 AM IST (6:00 AM UTC) every 3 days
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `referrer_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         DAILY REFERRER NOTIFICATION EMAIL TIMER");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()}`);
+    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Every 3 days`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("⚠️ This execution is past its scheduled time - running catch-up");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      const { ReferrerNotificationEmailService } = await import("./src/services/referrerNotificationEmailService");
+      
+      context.log("\n🚀 Starting referrer notification email process...\n");
+      
+      const result = await ReferrerNotificationEmailService.sendReferrerNotificationEmails();
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+
+      // Log the run
+      await ReferrerNotificationEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'Timer'
+      );
+
+      context.log("\n========================================================================");
+      context.log("        REFERRER EMAIL TIMER COMPLETED");
+      context.log("========================================================================");
+      context.log(`Total Referrers: ${result.totalReferrers}`);
+      context.log(`Emails Sent: ${result.emailsSent}`);
+      context.log(`Emails Failed: ${result.emailsFailed}`);
+      context.log(`Duration: ${Math.round(duration / 1000)}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`Errors: ${result.errors.slice(0, 5).join(', ')}`);
+      }
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      context.error("❌ REFERRER EMAIL TIMER FAILED");
+      context.error(`   Error: ${error.message}`);
+
+      // Log failure
+      try {
+        const { ReferrerNotificationEmailService } = await import("./src/services/referrerNotificationEmailService");
+        await ReferrerNotificationEmailService.logEmailRun(
+          executionId,
+          runStartTime,
+          runEndTime,
+          { totalReferrers: 0, emailsSent: 0, emailsFailed: 0, errors: [error.message] },
+          'Timer'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - AUTOMATED JOB SCRAPING (Every 8 hours)
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 */2 * * *", // Every 2 hours
+  schedule: "0 0 */8 * * *", // Every 8 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `timer_${Date.now()}_${Math.random()
@@ -3022,6 +3482,99 @@ app.timer("notificationProcessorTimer", {
 
     } catch (error: any) {
       context.error(`❌ Notification queue error: ${error.message}`);
+    }
+  }
+});
+
+// ========================================================================
+// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (9 PM IST = 3:30 PM UTC, Every 3 Days)
+// ========================================================================
+
+app.timer("dailyJobRecommendationEmail", {
+  schedule: "0 50 3 */3 * *", // 3:50 AM UTC = 9:20 AM IST every 3 days
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const startTime = Date.now();
+    const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    context.log("========================================================================");
+    context.log("         DAILY JOB RECOMMENDATION EMAIL TRIGGER STARTED");
+    context.log("========================================================================");
+    context.log(`Execution ID: ${executionId}`);
+    context.log(`Triggered at: ${new Date().toISOString()} (9 PM IST)`);
+    context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
+
+    if (myTimer.isPastDue) {
+      context.warn("WARNING: This execution is past its scheduled time!");
+    }
+
+    const runStartTime = new Date();
+
+    try {
+      context.log("\n📧 Starting daily job recommendation email service...\n");
+
+      // Import daily job email service
+      const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+
+      // Send emails to all eligible users
+      const result = await DailyJobEmailService.sendDailyJobEmails();
+
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      const durationSeconds = Math.round(duration / 1000);
+      const durationMinutes = Math.floor(durationSeconds / 60);
+      const remainingSeconds = durationSeconds % 60;
+
+      context.log("\n========================================================================");
+      context.log("        DAILY JOB EMAIL COMPLETED");
+      context.log("========================================================================");
+      context.log(`\nEXECUTION SUMMARY:`);
+      context.log(`   Total Users: ${result.totalUsers}`);
+      context.log(`   Emails Sent: ${result.emailsSent}`);
+      context.log(`   Emails Failed: ${result.emailsFailed}`);
+      context.log(`   Time: ${durationMinutes}m ${remainingSeconds}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`\nERRORS (first 5):`);
+        result.errors.slice(0, 5).forEach((error, i) => context.warn(`   ${i + 1}. ${error}`));
+      }
+
+      // Log to database
+      await DailyJobEmailService.logEmailRun(
+        executionId,
+        runStartTime,
+        runEndTime,
+        result,
+        'TimerTrigger'
+      );
+      context.log("\n✅ Logged to database successfully");
+
+    } catch (error: any) {
+      const runEndTime = new Date();
+      const duration = Date.now() - startTime;
+      context.error("\n❌ DAILY JOB EMAIL TRIGGER FAILED");
+      context.error(`   Error: ${error.message}`);
+      context.error(`   Duration: ${Math.round(duration / 1000)}s`);
+
+      // Log failure
+      try {
+        const { DailyJobEmailService } = await import("./src/services/dailyJobEmailService");
+        await DailyJobEmailService.logEmailRun(
+          executionId,
+          runStartTime,
+          runEndTime,
+          {
+            totalUsers: 0,
+            emailsSent: 0,
+            emailsFailed: 0,
+            errors: [error.message]
+          },
+          'TimerTrigger'
+        );
+      } catch (logError: any) {
+        context.warn(`Failed to log error: ${logError.message}`);
+      }
+
+      throw error;
     }
   }
 });

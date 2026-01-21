@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Alert,
   Animated,
   Image,
   Switch,
@@ -29,6 +28,8 @@ import EducationSection from '../../components/profile/EducationSection';
 import ResumeSection from '../../components/profile/ResumeSection';
 import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBreakdown';
 import SkillsSelectionModal from '../../components/profile/SkillsSelectionModal';
+import AddWorkExperienceModal from '../../components/profile/AddWorkExperienceModal';
+import VerifiedReferrerOverlay from '../../components/VerifiedReferrerOverlay';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 import { showToast } from '../../components/Toast';
@@ -56,7 +57,7 @@ const EDUCATION_LEVELS = [
 ];
 
 export default function ProfileScreen({ navigation, route }) {
-  const { user, userType, logout, updateProfileSmart } = useAuth();
+  const { user, userType, logout, updateProfileSmart, refreshVerificationStatus } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
@@ -87,6 +88,16 @@ export default function ProfileScreen({ navigation, route }) {
   
   // User-level verification status
   const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false);
+  const [loadingVerificationStatus, setLoadingVerificationStatus] = useState(true);
+  
+  // Become Verified Referrer modals state
+  const [showConfirmCompanyModal, setShowConfirmCompanyModal] = useState(false);
+  const [showAddWorkModal, setShowAddWorkModal] = useState(false);
+  const [showVerifiedOverlay, setShowVerifiedOverlay] = useState(false);
+  const [currentWorkExperience, setCurrentWorkExperience] = useState(null);
+  const [workExperiencesForVerify, setWorkExperiencesForVerify] = useState([]);
+  const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
+  const [navigatingToVerify, setNavigatingToVerify] = useState(false);
   
   // Referral code (first part of UserID before dash)
   const referralCode = user?.UserID?.split('-')[0] || '';
@@ -98,8 +109,8 @@ export default function ProfileScreen({ navigation, route }) {
   const headerProfileOpacity = useRef(new Animated.Value(0)).current;
   const headerProfileScale = useRef(new Animated.Value(0.8)).current;
   
-  // Modal toast ref for Invite & Earn
-  const inviteToastRef = useRef(null);
+  // Modal toast state for Invite & Earn
+  const [inviteToast, setInviteToast] = useState(null);
   
   // Profile state matching old structure
   const [profile, setProfile] = useState({
@@ -113,6 +124,7 @@ export default function ProfileScreen({ navigation, route }) {
     gender: user?.Gender || '',
     profilePictureURL: user?.ProfilePictureURL || '',
     profileVisibility: user?.ProfileVisibility || 'Public',
+    profileCompleteness: 0,
   });
 
   const [jobSeekerProfile, setJobSeekerProfile] = useState({
@@ -144,6 +156,8 @@ export default function ProfileScreen({ navigation, route }) {
     allowRecruitersToContact: true,
     hideCurrentCompany: false,
     hideSalaryDetails: false,
+    // Profile completeness from backend
+    profileCompleteness: 0,
   });
 
   // Handle scroll animation
@@ -179,6 +193,37 @@ export default function ProfileScreen({ navigation, route }) {
       }
     }, [])
   );
+
+  // 🎯 Handler for "Become a Verified Referrer" button
+  const handleBecomeVerifiedReferrer = useCallback(async () => {
+    setNavigatingToVerify(true);
+    try {
+      // Fetch user's work experiences
+      const res = await refopenAPI.getMyWorkExperiences();
+      if (res.success && res.data) {
+        setWorkExperiencesForVerify(res.data);
+        // Find current work experience
+        const current = res.data.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
+        if (current) {
+          setCurrentWorkExperience(current);
+          setShowConfirmCompanyModal(true);
+        } else {
+          // No current company, show add work experience modal directly
+          setCurrentWorkExperience(null);
+          setShowAddWorkModal(true);
+        }
+      } else {
+        // No work experiences, show add work experience modal
+        setCurrentWorkExperience(null);
+        setShowAddWorkModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching work experiences:', error);
+      showToast('Failed to load your work experiences. Please try again.', 'error');
+    } finally {
+      setNavigatingToVerify(false);
+    }
+  }, []);
   
   const loadExtendedProfile = async () => {
     try {
@@ -202,6 +247,7 @@ export default function ProfileScreen({ navigation, route }) {
           phone: data.Phone || data.phone || prev.phone,
           profilePictureURL: data.ProfilePictureURL || data.profilePictureURL || prev.profilePictureURL,
           profileVisibility: data.ProfileVisibility || data.profileVisibility || prev.profileVisibility,
+          profileCompleteness: data.ProfileCompleteness || data.profileCompleteness || 0,
         }));
 
         // Update job seeker profile
@@ -241,16 +287,21 @@ export default function ProfileScreen({ navigation, route }) {
             allowRecruitersToContact: data.AllowRecruitersToContact !== false,
             hideCurrentCompany: data.HideCurrentCompany === true,
             hideSalaryDetails: data.HideSalaryDetails === true,
+            // Profile completeness from backend
+            profileCompleteness: data.ProfileCompleteness || data.profileCompleteness || 0,
           }));
           
           // Fetch user-level verification status
           try {
             const verifyRes = await refopenAPI.getVerificationStatus();
             if (verifyRes.success) {
-              setIsVerifiedReferrer(verifyRes.data?.isVerifiedReferrer || false);
+              // Prefer isVerifiedUser (permanent) over isVerifiedReferrer
+              setIsVerifiedReferrer(verifyRes.data?.isVerifiedUser || verifyRes.data?.isVerifiedReferrer || false);
             }
           } catch (verifyError) {
             console.warn('Could not load verification status:', verifyError);
+          } finally {
+            setLoadingVerificationStatus(false);
           }
         }
       }
@@ -305,7 +356,7 @@ export default function ProfileScreen({ navigation, route }) {
   }, []);
 
   const scrollToTop = () => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   // Section Cards
@@ -355,12 +406,13 @@ export default function ProfileScreen({ navigation, route }) {
         githubProfile: jobSeekerProfile.githubProfile,
       });
       if (response.success) {
-        Alert.alert('Success', 'Personal details updated successfully');
+        showToast('Personal details updated successfully', 'success');
         setActiveModal(null);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update personal details');
+      showToast('Failed to update personal details', 'error');
     }
   };
 
@@ -382,13 +434,13 @@ export default function ProfileScreen({ navigation, route }) {
             secondary: skillsData.secondarySkills.split(',').map(s => s.trim()).filter(Boolean),
           },
         }));
-        Alert.alert('Success', 'Skills updated successfully');
+        showToast('Skills updated successfully', 'success');
       } else {
-        Alert.alert('Error', response.message || 'Failed to update skills');
+        showToast('Failed to update skills. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving skills:', error);
-      Alert.alert('Error', 'Failed to update skills. Please try again.');
+      showToast('Failed to update skills. Please try again.', 'error');
     }
   };
 
@@ -401,12 +453,13 @@ export default function ProfileScreen({ navigation, route }) {
         yearsOfExperience: jobSeekerProfile.yearsOfExperience,
       });
       if (response.success) {
-        Alert.alert('Success', 'Professional details updated successfully');
+        showToast('Professional details updated successfully', 'success');
         setEditingModal(false);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update professional details');
+      showToast('Failed to update professional details', 'error');
     }
   };
 
@@ -420,12 +473,15 @@ export default function ProfileScreen({ navigation, route }) {
         gpa: jobSeekerProfile.gpa,
       });
       if (response.success) {
-        Alert.alert('Success', 'Education details updated successfully');
+        showToast('Education details updated', 'success');
+        setActiveModal(null);
         setEditingModal(false);
         await loadExtendedProfile();
+        // Scroll to top after saving
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update education details');
+      showToast('Failed to update education details', 'error');
     }
   };
 
@@ -444,12 +500,13 @@ export default function ProfileScreen({ navigation, route }) {
         hideSalaryDetails: jobSeekerProfile.hideSalaryDetails,
       });
       if (response.success) {
-        Alert.alert('Success', 'Preferences updated successfully');
+        showToast('Preferences updated successfully', 'success');
         setEditingModal(false);
         await loadExtendedProfile();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update preferences');
+      showToast('Failed to update preferences', 'error');
     }
   };
 
@@ -807,7 +864,9 @@ export default function ProfileScreen({ navigation, route }) {
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Education Details</Text>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={saveEducationDetails}>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Save</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
@@ -828,9 +887,6 @@ export default function ProfileScreen({ navigation, route }) {
                 graduationYear: updatedEducation.graduationYear || '',
                 gpa: updatedEducation.gpa || ''
               }));
-            }}
-            onUpdate={async (updatedEducation) => {
-              await loadExtendedProfile();
             }}
           />
         </ScrollView>
@@ -1299,17 +1355,34 @@ export default function ProfileScreen({ navigation, route }) {
       >
         <ResponsiveContainer style={styles.profileContent}>
         {/* User Profile Header */}
-        <UserProfileHeader
-          user={user}
-          profile={profile}
-          jobSeekerProfile={jobSeekerProfile}
-          userType={userType}
-          onProfileUpdate={(updatedProfile) => {
-            setProfile(prev => ({ ...prev, ...updatedProfile }));
-            loadExtendedProfile();
-          }}
-          showStats={false}
-        />
+        {/* Check if current work experience is verified (not just user-level verification) */}
+        {(() => {
+          const currentWorkExp = jobSeekerProfile.workExperiences?.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
+          const isCurrentJobVerified = currentWorkExp ? (currentWorkExp.CompanyEmailVerified === 1 || currentWorkExp.CompanyEmailVerified === true) : false;
+          
+          // Use backend-driven profileCompleteness for both JobSeekers and Employers
+          const completenessValue = jobSeekerProfile.profileCompleteness || profile.profileCompleteness || 0;
+          
+          return (
+            <UserProfileHeader
+              user={user}
+              profile={profile}
+              jobSeekerProfile={jobSeekerProfile}
+              userType={userType}
+              onProfileUpdate={(updatedProfile) => {
+                setProfile(prev => ({ ...prev, ...updatedProfile }));
+                loadExtendedProfile();
+              }}
+              showStats={false}
+              isVerifiedUser={isVerifiedReferrer}
+              isVerifiedReferrer={isCurrentJobVerified}
+              onBecomeVerifiedReferrer={handleBecomeVerifiedReferrer}
+              isLoadingVerify={navigatingToVerify}
+              loadingVerificationStatus={loadingVerificationStatus}
+              profileCompletenessFromBackend={completenessValue}
+            />
+          );
+        })()}
 
         {/* Wallet, Referral Points, and Invite & Earn Buttons */}
         {(userType === 'JobSeeker' || userType === 'Employer') && (
@@ -1325,11 +1398,6 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
               <View style={styles.actionButtonContent}>
                 <Text style={styles.actionButtonLabel}>Wallet</Text>
-                {loadingWallet ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={styles.actionButtonAmount}>₹{walletBalance?.balance?.toFixed(0) || '0'}</Text>
-                )}
               </View>
             </TouchableOpacity>
 
@@ -1346,13 +1414,6 @@ export default function ProfileScreen({ navigation, route }) {
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Rewards</Text>
-                    {loadingReferralPoints ? (
-                      <ActivityIndicator size="small" color="#00A3EE" />
-                    ) : (
-                      <Text style={[styles.actionButtonAmount, { color: '#00A3EE' }]}>
-                        {referralPointsData.totalPoints || 0}
-                      </Text>
-                    )}
                   </View>
                 </TouchableOpacity>
 
@@ -1367,7 +1428,6 @@ export default function ProfileScreen({ navigation, route }) {
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Invite</Text>
-                    <Text style={styles.actionButtonSubtext}>Get ₹50</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -1423,9 +1483,9 @@ export default function ProfileScreen({ navigation, route }) {
             </View>
             <View style={styles.workExperienceList}>
               {jobSeekerProfile.workExperiences.map((exp, index) => {
-                // For current job: use user-level IsVerifiedReferrer
-                // For historical jobs: use work experience level CompanyEmailVerified
-                const isExpVerified = exp.IsCurrent ? isVerifiedReferrer : exp.CompanyEmailVerified;
+                // Always use work experience level CompanyEmailVerified for showing verification badge
+                // The user's overall IsVerifiedReferrer status is separate from individual work experience verification
+                const isExpVerified = exp.CompanyEmailVerified === 1 || exp.CompanyEmailVerified === true;
                 
                 return (
                   <View key={exp.WorkExperienceID || index} style={styles.workExpCard}>
@@ -1451,14 +1511,9 @@ export default function ProfileScreen({ navigation, route }) {
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
-                        {isExpVerified ? (
+                        {isExpVerified && (
                           <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
                             <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                          </View>
-                        ) : (
-                          <View style={{ backgroundColor: colors.gray100 || '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                            <Ionicons name="shield-outline" size={10} color={colors.gray500 || '#6B7280'} />
-                            <Text style={{ fontSize: 10, color: colors.gray500 || '#6B7280' }}>Unverified</Text>
                           </View>
                         )}
                       </View>
@@ -1542,6 +1597,21 @@ export default function ProfileScreen({ navigation, route }) {
 
             <TouchableOpacity 
               style={styles.activityCard}
+              onPress={() => navigation.navigate('MyReferralRequests')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>My Referral Requests</Text>
+                <Text style={styles.activitySummary}>See referrals you have asked for</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.activityCard}
               onPress={() => navigation.navigate('Applications')}
               activeOpacity={0.7}
             >
@@ -1564,23 +1634,8 @@ export default function ProfileScreen({ navigation, route }) {
                 <Ionicons name="bookmark-outline" size={22} color={colors.primary} />
               </View>
               <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Saved Jobs</Text>
+                <Text style={styles.activityTitle}>My Saved Jobs</Text>
                 <Text style={styles.activitySummary}>View and manage saved jobs</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.activityCard}
-              onPress={() => navigation.navigate('MyReferralRequests')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.activityIcon}>
-                <Ionicons name="people-circle-outline" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>My Referral Requests</Text>
-                <Text style={styles.activitySummary}>See referrals you have asked for</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
             </TouchableOpacity>
@@ -1626,7 +1681,12 @@ export default function ProfileScreen({ navigation, route }) {
         <View style={styles.modalContainer}>
           <View style={styles.modalInnerContainer}>
             {/* Modal Toast - shows inside modal */}
-            <ModalToast ref={inviteToastRef} />
+            <ModalToast
+              visible={!!inviteToast}
+              message={inviteToast?.text || ''}
+              type={inviteToast?.type || 'success'}
+              onHide={() => setInviteToast(null)}
+            />
             
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeButton}>
@@ -1661,9 +1721,9 @@ export default function ProfileScreen({ navigation, route }) {
                 onPress={async () => {
                   try {
                     await navigator.clipboard.writeText(referralCode);
-                    inviteToastRef.current?.show('Copied!', 'success');
+                    setInviteToast({ text: 'Copied!', type: 'success' });
                   } catch (e) {
-                    inviteToastRef.current?.show('Failed to copy code', 'error');
+                    setInviteToast({ text: 'Failed to copy code', type: 'error' });
                   }
                 }}
               >
@@ -1705,9 +1765,9 @@ export default function ProfileScreen({ navigation, route }) {
                   <Text style={styles.stepNumberText}>3</Text>
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Both Get ₹50!</Text>
+                  <Text style={styles.stepTitle}>Both Get ₹25!</Text>
                   <Text style={styles.stepDescription}>
-                    Your friend gets ₹50 on signup, you get ₹50 when they join
+                    Your friend gets ₹25 on signup, you get ₹25 when they join
                   </Text>
                 </View>
               </View>
@@ -1718,14 +1778,14 @@ export default function ProfileScreen({ navigation, route }) {
               <View style={styles.benefitCard}>
                 <Ionicons name="person-add" size={24} color={colors.primary} />
                 <Text style={styles.benefitTitle}>Your Friend</Text>
-                <Text style={styles.benefitAmount}>₹50</Text>
+                <Text style={styles.benefitAmount}>₹25</Text>
                 <Text style={styles.benefitDescription}>On successful signup</Text>
               </View>
 
               <View style={styles.benefitCard}>
                 <Ionicons name="wallet" size={24} color="#FF9500" />
                 <Text style={styles.benefitTitle}>You</Text>
-                <Text style={styles.benefitAmount}>₹50</Text>
+                <Text style={styles.benefitAmount}>₹25</Text>
                 <Text style={styles.benefitDescription}>When they join</Text>
               </View>
             </View>
@@ -1752,6 +1812,75 @@ export default function ProfileScreen({ navigation, route }) {
         initialPrimarySkills={jobSeekerProfile.skills.primary}
         initialSecondarySkills={jobSeekerProfile.skills.secondary}
         title="Manage Your Skills"
+      />
+
+      {/* Confirm Current Company Modal */}
+      <Modal
+        visible={showConfirmCompanyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmCompanyModal(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <Ionicons name="briefcase" size={40} color={colors.primary} />
+            <Text style={styles.confirmModalTitle}>Verify Your Employment</Text>
+            <Text style={styles.confirmModalMessage}>
+              Is <Text style={{ fontWeight: '700' }}>{currentWorkExperience?.CompanyName}</Text> your current company?
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonSecondary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setCurrentWorkExperience(null);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonSecondaryText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonPrimaryText}>Yes, Verify</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Work Experience Modal for Verification */}
+      <AddWorkExperienceModal
+        visible={showAddWorkModal}
+        onClose={() => setShowAddWorkModal(false)}
+        onSave={async () => {
+          // Refresh profile data after saving
+          loadExtendedProfile();
+        }}
+        editingItem={currentWorkExperience}
+        existingExperiences={workExperiencesForVerify}
+        showVerification={true}
+        onVerificationComplete={(companyName) => {
+          setVerifiedCompanyName(companyName);
+          setShowAddWorkModal(false);
+          setShowVerifiedOverlay(true);
+          setIsVerifiedReferrer(true);
+          // Refresh verification status in AuthContext so other screens see the update
+          refreshVerificationStatus();
+          // Refresh profile
+          loadExtendedProfile();
+        }}
+      />
+
+      {/* Verified Referrer Celebration Overlay */}
+      <VerifiedReferrerOverlay
+        visible={showVerifiedOverlay}
+        onClose={() => setShowVerifiedOverlay(false)}
+        companyName={verifiedCompanyName}
       />
     </View>
   );
@@ -1946,7 +2075,7 @@ const createStyles = (colors, responsive = {}) => {
   modalInnerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 800 : '100%',
+    maxWidth: responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2135,83 +2264,6 @@ const createStyles = (colors, responsive = {}) => {
   educationOptionTextActive: {
     color: colors.primary,
     fontWeight: '600',
-  },
-  // Logout Modal
-  logoutModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  logoutModalContent: {
-    backgroundColor: colors.surface || '#FFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 340,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  logoutModalIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: (colors.danger || '#FF3B30') + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  logoutModalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text || '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  logoutModalMessage: {
-    fontSize: 16,
-    color: colors.gray600 || '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  logoutModalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  logoutModalCancelButton: {
-    flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
-    borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  logoutModalCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text || '#000',
-  },
-  logoutModalConfirmButton: {
-    flex: 1,
-    backgroundColor: colors.danger || '#FF3B30',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  logoutModalConfirmText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFF',
   },
   // Action Buttons (Wallet & Invite)
   actionButtonsContainer: {
@@ -2711,6 +2763,72 @@ const createStyles = (colors, responsive = {}) => {
   skeletonText: {
     height: 14,
     borderRadius: 4,
+  },
+  // Confirm Company Modal styles
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmModalCard: {
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text || '#1C1C1E',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmModalMessage: {
+    fontSize: 15,
+    color: colors.textSecondary || '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmModalButtonSecondary: {
+    backgroundColor: colors.background || '#F5F5F7',
+    borderWidth: 1,
+    borderColor: colors.border || '#E5E5EA',
+  },
+  confirmModalButtonSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text || '#1C1C1E',
+  },
+  confirmModalButtonPrimary: {
+    backgroundColor: colors.primary || '#6366F1',
+  },
+  confirmModalButtonPrimaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 };

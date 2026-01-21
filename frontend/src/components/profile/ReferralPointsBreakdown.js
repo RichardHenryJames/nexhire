@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Animated, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../Toast';
 
 const ReferralPointsBreakdown = ({ 
   totalPoints = 0, 
@@ -31,12 +32,20 @@ const ReferralPointsBreakdown = ({
     totalEarned: 0,
     totalWithdrawn: 0,
     canWithdraw: false,
-    minimumWithdrawal: 500
+    minimumWithdrawal: 500,
+    withdrawalFee: 0
   });
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
-  const [upiId, setUpiId] = useState('');
   const [loadingWithdrawable, setLoadingWithdrawable] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  
+  // Payment method states
+  const [paymentMethod, setPaymentMethod] = useState('upi'); // 'upi' or 'bank'
+  const [upiId, setUpiId] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState('');
 
   // Load withdrawable balance when modal opens
   useEffect(() => {
@@ -264,50 +273,153 @@ const ReferralPointsBreakdown = ({
         }
         
         // Show success message after refresh
-        Alert.alert(
-          'Conversion Successful! 🎉',
-          `${pointsConverted} points converted to ₹${walletAmount.toFixed(2)}\n\nNew Wallet Balance: ₹${newWalletBalance.toFixed(2)}`,
-          [{ text: 'OK' }]
-        );
+        showToast(`${pointsConverted} points converted to ₹${walletAmount.toFixed(2)}. New Balance: ₹${newWalletBalance.toFixed(2)}`, 'success');
       } else {
         throw new Error(response.error || 'Conversion failed');
       }
     } catch (error) {
       console.error('Error converting points:', error);
-      Alert.alert(
-        'Conversion Failed', 
-        error.message || 'Failed to convert points. Please try again.'
-      );
+      showToast('Failed to convert points. Please try again.', 'error');
     } finally {
       setConverting(false);
     }
   };
 
+  // Calculate final amount after fee
+  const getWithdrawCalculation = () => {
+    const amount = parseFloat(withdrawAmount) || 0;
+    const fee = withdrawableData.withdrawalFee;
+    const finalAmount = Math.max(0, amount - fee);
+    return { amount, fee, finalAmount };
+  };
+
+  // Validate withdrawal amount
+  const isValidWithdrawAmount = () => {
+    const amount = parseFloat(withdrawAmount) || 0;
+    return amount >= withdrawableData.minimumWithdrawal && amount <= withdrawableData.withdrawableAmount;
+  };
+
+  // Individual field validation helpers
+  const getUpiValidationError = () => {
+    if (!upiId.trim()) return null; // Don't show error if empty (not touched)
+    if (!upiId.includes('@')) return 'UPI ID must contain @ (e.g., name@upi)';
+    return null;
+  };
+
+  const getBankAccountValidationError = () => {
+    if (!bankAccount.trim()) return null;
+    if (!/^\d+$/.test(bankAccount)) return 'Account number must contain only digits';
+    if (bankAccount.length < 9 || bankAccount.length > 18) return 'Account number should be 9-18 digits';
+    return null;
+  };
+
+  const getIfscValidationError = () => {
+    if (!ifscCode.trim()) return null;
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase())) return 'Invalid IFSC format (e.g., HDFC0001234)';
+    return null;
+  };
+
+  const getAccountHolderValidationError = () => {
+    if (!accountHolderName.trim()) return null;
+    if (!/^[a-zA-Z\s]+$/.test(accountHolderName)) return 'Name should contain only letters';
+    if (accountHolderName.trim().length < 3) return 'Name should be at least 3 characters';
+    return null;
+  };
+
+  // Validate payment details based on method
+  const isValidPaymentDetails = () => {
+    if (paymentMethod === 'upi') {
+      return upiId.trim().length > 0 && upiId.includes('@');
+    } else {
+      return bankAccount.trim().length >= 9 && 
+             /^\d+$/.test(bankAccount) &&
+             /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase()) && 
+             accountHolderName.trim().length >= 3 &&
+             /^[a-zA-Z\s]+$/.test(accountHolderName);
+    }
+  };
+
   const handleWithdraw = async () => {
-    if (!upiId.trim()) {
-      Alert.alert('Error', 'Please enter your UPI ID');
+    const amount = parseFloat(withdrawAmount) || 0;
+    
+    // Validate payment method details
+    if (paymentMethod === 'upi') {
+      if (!upiId.trim()) {
+        showToast('Please enter your UPI ID', 'error');
+        return;
+      }
+      // Basic UPI ID validation
+      if (!upiId.includes('@')) {
+        showToast('Please enter a valid UPI ID (e.g., name@upi)', 'error');
+        return;
+      }
+    } else {
+      if (!bankAccount.trim()) {
+        showToast('Please enter your bank account number', 'error');
+        return;
+      }
+      if (!ifscCode.trim()) {
+        showToast('Please enter IFSC code', 'error');
+        return;
+      }
+      if (!accountHolderName.trim()) {
+        showToast('Please enter account holder name', 'error');
+        return;
+      }
+      // Basic IFSC validation (11 characters)
+      if (ifscCode.length !== 11) {
+        showToast('IFSC code must be 11 characters', 'error');
+        return;
+      }
+    }
+    
+    if (amount < withdrawableData.minimumWithdrawal) {
+      showToast(`Minimum withdrawal amount is ₹${withdrawableData.minimumWithdrawal}`, 'error');
       return;
     }
     
-    if (!withdrawableData.canWithdraw) {
-      Alert.alert('Not Eligible', `You need at least ₹${withdrawableData.minimumWithdrawal} to withdraw`);
+    if (amount > withdrawableData.withdrawableAmount) {
+      showToast(`You can withdraw maximum ₹${withdrawableData.withdrawableAmount}`, 'error');
       return;
     }
     
     try {
       setWithdrawing(true);
       
-      const response = await refopenAPI.requestWithdrawal(withdrawableData.withdrawableAmount, upiId.trim());
+      const { finalAmount, fee } = getWithdrawCalculation();
+      
+      // Build payment details based on method
+      const paymentDetails = paymentMethod === 'upi' 
+        ? { upiId: upiId.trim() }
+        : { 
+            bankAccount: bankAccount.trim(),
+            ifscCode: ifscCode.trim().toUpperCase(),
+            accountHolderName: accountHolderName.trim()
+          };
+      
+      const response = await refopenAPI.requestWithdrawal(amount, paymentDetails);
       
       if (response.success) {
-        setShowWithdrawModal(false);
+        // Reset all fields first
         setUpiId('');
+        setBankAccount('');
+        setIfscCode('');
+        setAccountHolderName('');
+        setWithdrawAmount('');
+        setPaymentMethod('upi');
         
-        Alert.alert(
-          'Withdrawal Requested! 🎉',
-          `Your withdrawal request for ₹${withdrawableData.withdrawableAmount} has been submitted.\n\nAmount will be credited to your UPI within 24-48 hours.`,
-          [{ text: 'OK' }]
-        );
+        // Close modal immediately
+        setShowWithdrawModal(false);
+        onClose();
+        
+        // Show success toast
+        const paymentDestination = paymentMethod === 'upi' ? 'UPI' : 'bank account';
+        showToast(`₹${finalAmount} withdrawal requested! Will be credited to ${paymentDestination} in 24-48 hrs`, 'success');
+        
+        // Navigate to withdrawal requests screen
+        setTimeout(() => {
+          navigation.navigate('WithdrawalRequests');
+        }, 500);
         
         // Refresh withdrawable balance
         loadWithdrawableBalance();
@@ -321,10 +433,7 @@ const ReferralPointsBreakdown = ({
       }
     } catch (error) {
       console.error('Error requesting withdrawal:', error);
-      Alert.alert(
-        'Withdrawal Failed',
-        error.message || 'Failed to request withdrawal. Please try again.'
-      );
+      showToast('Failed to request withdrawal. Please try again.', 'error');
     } finally {
       setWithdrawing(false);
     }
@@ -350,7 +459,7 @@ const ReferralPointsBreakdown = ({
             <View style={[styles.withdrawSection, !isMobile && styles.topCardHalf]}>
               <View style={styles.withdrawHeader}>
                 <View style={styles.withdrawTitleRow}>
-                  <Ionicons name="wallet" size={20} color="#10b981" />
+                  <Ionicons name="wallet" size={20} color={colors.success} />
                   <Text style={styles.withdrawTitle}>Referral Earnings</Text>
                 </View>
                 <Text style={styles.withdrawSubtitle}>
@@ -371,7 +480,7 @@ const ReferralPointsBreakdown = ({
                       styles.withdrawButtonFill,
                       { 
                         height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
-                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                        backgroundColor: colors.success
                       }
                     ]} 
                   />
@@ -379,17 +488,17 @@ const ReferralPointsBreakdown = ({
                     <Ionicons 
                       name={withdrawableData.canWithdraw ? "cash" : "water"} 
                       size={24} 
-                      color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+                      color={withdrawableData.withdrawableAmount > 0 ? '#fff' : colors.textSecondary} 
                     />
                     <Text style={[
                       styles.withdrawButtonAmount,
-                      { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
+                      { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : colors.textSecondary }
                     ]}>
                       ₹{withdrawableData.withdrawableAmount}
                     </Text>
                     <Text style={[
                       styles.withdrawButtonLabel,
-                      { color: withdrawableData.withdrawableAmount > 0 ? 'rgba(255,255,255,0.8)' : '#9ca3af' }
+                      { color: withdrawableData.withdrawableAmount > 0 ? 'rgba(255,255,255,0.8)' : colors.textSecondary }
                     ]}>
                       {withdrawableData.canWithdraw ? 'Withdraw Now' : `₹${withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to withdraw`}
                     </Text>
@@ -401,7 +510,7 @@ const ReferralPointsBreakdown = ({
                       styles.withdrawProgressFill,
                       { 
                         width: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
-                        backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                        backgroundColor: colors.success
                       }
                     ]} 
                   />
@@ -534,65 +643,241 @@ const ReferralPointsBreakdown = ({
         onRequestClose={() => !withdrawing && setShowWithdrawModal(false)}
       >
         <View style={styles.conversionModalOverlay}>
+          <ScrollView 
+            style={styles.withdrawModalScrollView}
+            contentContainerStyle={styles.withdrawModalScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.conversionModalContent}>
-            <View style={styles.conversionModalHeader}>
-              <Ionicons name="wallet" size={48} color="#10b981" />
+            <View style={styles.withdrawModalHeaderCompact}>
+              <Ionicons name="wallet" size={36} color={colors.success} />
             </View>
-            <Text style={styles.conversionModalTitle}>Withdraw Earnings</Text>
+            <Text style={styles.withdrawModalTitleCompact}>Withdraw Earnings</Text>
             <Text style={styles.conversionModalDescription}>
               Withdraw your referral earnings to your bank/UPI
             </Text>
             
-            {/* Liquid Fill Display */}
-            <View style={styles.withdrawLiquidContainer}>
-              <View style={styles.withdrawLiquidOuter}>
+            {/* Compact Liquid Fill Display */}
+            <View style={styles.withdrawLiquidContainerCompact}>
+              <View style={styles.withdrawLiquidOuterCompact}>
                 <View 
                   style={[
                     styles.withdrawLiquidFill,
                     { 
                       height: `${Math.min(100, (withdrawableData.withdrawableAmount / withdrawableData.minimumWithdrawal) * 100)}%`,
-                      backgroundColor: withdrawableData.canWithdraw ? '#10b981' : '#22c55e'
+                      backgroundColor: colors.success
                     }
                   ]} 
                 />
                 <View style={styles.withdrawLiquidContent}>
                   <Ionicons 
                     name={withdrawableData.canWithdraw ? "checkmark-circle" : "water"} 
-                    size={32} 
-                    color={withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280'} 
+                    size={24} 
+                    color={withdrawableData.withdrawableAmount > 0 ? '#fff' : colors.textSecondary} 
                   />
                   <Text style={[
-                    styles.withdrawLiquidAmount,
-                    { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : '#6b7280' }
+                    styles.withdrawLiquidAmountCompact,
+                    { color: withdrawableData.withdrawableAmount > 0 ? '#fff' : colors.textSecondary }
                   ]}>
                     ₹{withdrawableData.withdrawableAmount}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.withdrawMinimumText}>
-                Minimum withdrawal: ₹{withdrawableData.minimumWithdrawal}
+              <Text style={styles.withdrawMinimumTextCompact}>
+                Min: ₹{withdrawableData.minimumWithdrawal}
               </Text>
             </View>
 
             {withdrawableData.canWithdraw ? (
               <>
+                {/* Withdrawal Amount Input */}
                 <View style={styles.upiInputContainer}>
-                  <Text style={styles.upiLabel}>Enter UPI ID</Text>
+                  <Text style={styles.upiLabel}>Enter Withdrawal Amount</Text>
                   <TextInput
                     style={styles.upiInput}
-                    placeholder="yourname@upi"
-                    placeholderTextColor="#9ca3af"
-                    value={upiId}
-                    onChangeText={setUpiId}
-                    autoCapitalize="none"
-                    autoCorrect={false}
+                    placeholder={`Min ₹${withdrawableData.minimumWithdrawal}`}
+                    placeholderTextColor={colors.textSecondary}
+                    value={withdrawAmount}
+                    onChangeText={(text) => setWithdrawAmount(text.replace(/[^0-9]/g, ''))}
+                    keyboardType="numeric"
+                    maxLength={10}
                   />
+                  <Text style={styles.withdrawAvailableText}>
+                    Available: ₹{withdrawableData.withdrawableAmount}
+                  </Text>
                 </View>
+
+                {/* Fee Breakdown - Only show when valid amount entered */}
+                {parseFloat(withdrawAmount) >= withdrawableData.minimumWithdrawal && (
+                  <View style={styles.feeBreakdownContainer}>
+                    <View style={styles.feeBreakdownRow}>
+                      <Text style={styles.feeBreakdownLabel}>Withdrawal Amount:</Text>
+                      <Text style={styles.feeBreakdownValue}>₹{withdrawAmount}</Text>
+                    </View>
+                    <View style={styles.feeBreakdownRow}>
+                      <Text style={styles.feeBreakdownLabel}>Processing Fee:</Text>
+                      <Text style={[styles.feeBreakdownValue, { color: colors.error }]}>- ₹{withdrawableData.withdrawalFee}</Text>
+                    </View>
+                    <View style={[styles.feeBreakdownRow, styles.feeBreakdownTotal]}>
+                      <Text style={styles.feeBreakdownTotalLabel}>You'll Receive:</Text>
+                      <Text style={styles.feeBreakdownTotalValue}>₹{getWithdrawCalculation().finalAmount}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Amount validation warning */}
+                {withdrawAmount && parseFloat(withdrawAmount) < withdrawableData.minimumWithdrawal && (
+                  <View style={styles.withdrawWarningBox}>
+                    <Ionicons name="warning" size={16} color={colors.warning} />
+                    <Text style={styles.withdrawWarningText}>
+                      Minimum withdrawal is ₹{withdrawableData.minimumWithdrawal}
+                    </Text>
+                  </View>
+                )}
+
+                {withdrawAmount && parseFloat(withdrawAmount) > withdrawableData.withdrawableAmount && (
+                  <View style={styles.withdrawWarningBox}>
+                    <Ionicons name="warning" size={16} color={colors.error} />
+                    <Text style={[styles.withdrawWarningText, { color: colors.error }]}>
+                      Maximum withdrawal is ₹{withdrawableData.withdrawableAmount}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Payment Method Selector */}
+                <View style={styles.paymentMethodContainer}>
+                  <Text style={styles.upiLabel}>Select Payment Method</Text>
+                  <View style={styles.paymentMethodTabs}>
+                    <TouchableOpacity 
+                      style={[
+                        styles.paymentMethodTab,
+                        paymentMethod === 'upi' && styles.paymentMethodTabActive
+                      ]}
+                      onPress={() => setPaymentMethod('upi')}
+                    >
+                      <Ionicons 
+                        name="phone-portrait" 
+                        size={18} 
+                        color={paymentMethod === 'upi' ? '#fff' : colors.text} 
+                      />
+                      <Text style={[
+                        styles.paymentMethodTabText,
+                        paymentMethod === 'upi' && styles.paymentMethodTabTextActive
+                      ]}>UPI</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[
+                        styles.paymentMethodTab,
+                        paymentMethod === 'bank' && styles.paymentMethodTabActive
+                      ]}
+                      onPress={() => setPaymentMethod('bank')}
+                    >
+                      <Ionicons 
+                        name="business" 
+                        size={18} 
+                        color={paymentMethod === 'bank' ? '#fff' : colors.text} 
+                      />
+                      <Text style={[
+                        styles.paymentMethodTabText,
+                        paymentMethod === 'bank' && styles.paymentMethodTabTextActive
+                      ]}>Bank</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* UPI Input */}
+                {paymentMethod === 'upi' && (
+                  <View style={styles.upiInputContainer}>
+                    <Text style={styles.upiLabel}>Enter UPI ID</Text>
+                    <TextInput
+                      style={[styles.upiInput, getUpiValidationError() && styles.inputError]}
+                      placeholder="yourname@upi"
+                      placeholderTextColor={colors.textSecondary}
+                      value={upiId}
+                      onChangeText={setUpiId}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {getUpiValidationError() && (
+                      <View style={styles.validationErrorRow}>
+                        <Ionicons name="alert-circle" size={14} color={colors.error} />
+                        <Text style={styles.validationErrorText}>{getUpiValidationError()}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Bank Account Inputs */}
+                {paymentMethod === 'bank' && (
+                  <>
+                    <View style={styles.upiInputContainer}>
+                      <Text style={styles.upiLabel}>Account Holder Name</Text>
+                      <TextInput
+                        style={[styles.upiInput, getAccountHolderValidationError() && styles.inputError]}
+                        placeholder="Enter name as per bank account"
+                        placeholderTextColor={colors.textSecondary}
+                        value={accountHolderName}
+                        onChangeText={setAccountHolderName}
+                        autoCapitalize="words"
+                      />
+                      {getAccountHolderValidationError() && (
+                        <View style={styles.validationErrorRow}>
+                          <Ionicons name="alert-circle" size={14} color={colors.error} />
+                          <Text style={styles.validationErrorText}>{getAccountHolderValidationError()}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.upiInputContainer}>
+                      <Text style={styles.upiLabel}>Bank Account Number</Text>
+                      <TextInput
+                        style={[styles.upiInput, getBankAccountValidationError() && styles.inputError]}
+                        placeholder="Enter account number"
+                        placeholderTextColor={colors.textSecondary}
+                        value={bankAccount}
+                        onChangeText={(text) => setBankAccount(text.replace(/[^0-9]/g, ''))}
+                        keyboardType="numeric"
+                      />
+                      {getBankAccountValidationError() && (
+                        <View style={styles.validationErrorRow}>
+                          <Ionicons name="alert-circle" size={14} color={colors.error} />
+                          <Text style={styles.validationErrorText}>{getBankAccountValidationError()}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.upiInputContainer}>
+                      <Text style={styles.upiLabel}>IFSC Code</Text>
+                      <TextInput
+                        style={[styles.upiInput, getIfscValidationError() && styles.inputError]}
+                        placeholder="e.g., HDFC0001234"
+                        placeholderTextColor={colors.textSecondary}
+                        value={ifscCode}
+                        onChangeText={(text) => setIfscCode(text.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        autoCapitalize="characters"
+                        maxLength={11}
+                      />
+                      {getIfscValidationError() && (
+                        <View style={styles.validationErrorRow}>
+                          <Ionicons name="alert-circle" size={14} color={colors.error} />
+                          <Text style={styles.validationErrorText}>{getIfscValidationError()}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </>
+                )}
                 
                 <View style={styles.conversionModalButtons}>
                   <TouchableOpacity
                     style={styles.conversionCancelButton}
-                    onPress={() => setShowWithdrawModal(false)}
+                    onPress={() => {
+                      setShowWithdrawModal(false);
+                      setWithdrawAmount('');
+                      setUpiId('');
+                      setBankAccount('');
+                      setIfscCode('');
+                      setAccountHolderName('');
+                      setPaymentMethod('upi');
+                    }}
                     disabled={withdrawing}
                   >
                     <Text style={styles.conversionCancelText}>Cancel</Text>
@@ -600,11 +885,11 @@ const ReferralPointsBreakdown = ({
                   <TouchableOpacity
                     style={[
                       styles.conversionConfirmButton, 
-                      { backgroundColor: '#10b981' },
-                      (withdrawing || !upiId.trim()) && styles.conversionConfirmButtonDisabled
+                      { backgroundColor: colors.success },
+                      (withdrawing || !isValidPaymentDetails() || !isValidWithdrawAmount()) && styles.conversionConfirmButtonDisabled
                     ]}
                     onPress={handleWithdraw}
-                    disabled={withdrawing || !upiId.trim()}
+                    disabled={withdrawing || !isValidPaymentDetails() || !isValidWithdrawAmount()}
                   >
                     {withdrawing ? (
                       <ActivityIndicator size="small" color="#fff" />
@@ -617,7 +902,7 @@ const ReferralPointsBreakdown = ({
             ) : (
               <>
                 <View style={styles.withdrawInfoBox}>
-                  <Ionicons name="information-circle" size={20} color="#f59e0b" />
+                  <Ionicons name="information-circle" size={18} color={colors.warning} />
                   <Text style={styles.withdrawInfoText}>
                     You need ₹{withdrawableData.minimumWithdrawal - withdrawableData.withdrawableAmount} more to be eligible for withdrawal.
                     Keep referring and verifying to earn more!
@@ -625,7 +910,7 @@ const ReferralPointsBreakdown = ({
                 </View>
                 
                 <TouchableOpacity
-                  style={[styles.conversionCancelButton, { marginTop: 20, alignSelf: 'center', width: '50%' }]}
+                  style={[styles.conversionCancelButton, { marginTop: 16, alignSelf: 'center', width: '50%' }]}
                   onPress={() => setShowWithdrawModal(false)}
                 >
                   <Text style={styles.conversionCancelText}>Close</Text>
@@ -633,6 +918,7 @@ const ReferralPointsBreakdown = ({
               </>
             )}
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -705,7 +991,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   innerContainer: {
     flex: 1,
     width: '100%',
-    maxWidth: responsive.isDesktop ? 800 : '100%',
+    maxWidth: responsive.isDesktop ? 900 : '100%',
   },
   header: {
     flexDirection: 'row',
@@ -997,14 +1283,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   conversionModalContent: {
     backgroundColor: colors.surface || colors.background,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 360,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1013,27 +1299,27 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     elevation: 8,
   },
   conversionModalHeader: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   conversionModalTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
   },
   conversionModalDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+    lineHeight: 16,
+    marginBottom: 12,
   },
   conversionRate: {
     backgroundColor: colors.primary + '10',
@@ -1076,37 +1362,38 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   conversionModalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     width: '100%',
+    marginTop: 4,
   },
   conversionCancelButton: {
     flex: 1,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   conversionCancelText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.text,
   },
   conversionConfirmButton: {
     flex: 1,
     backgroundColor: '#7EB900',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   conversionConfirmButtonDisabled: {
     opacity: 0.6,
   },
   conversionConfirmText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#FFF',
   },
@@ -1118,7 +1405,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 20,
     marginBottom: responsive.isMobile ? 24 : 0,
     borderWidth: 1,
-    borderColor: '#10b98133',
+    borderColor: colors.success + '33',
   },
   withdrawHeader: {
     marginBottom: 16,
@@ -1148,7 +1435,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 60,
     backgroundColor: colors.background,
     borderWidth: 3,
-    borderColor: '#10b98155',
+    borderColor: colors.success + '55',
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
@@ -1196,7 +1483,62 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     textAlign: 'center',
   },
   
-  // Withdraw Modal Styles
+  // Withdraw Modal Styles - ScrollView
+  withdrawModalScrollView: {
+    flex: 1,
+    maxHeight: '90%',
+  },
+  withdrawModalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  // Compact Header for Modal
+  withdrawModalHeaderCompact: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.success + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  withdrawModalTitleCompact: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  // Compact Liquid Display
+  withdrawLiquidContainerCompact: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  withdrawLiquidOuterCompact: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.success + '55',
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  withdrawLiquidAmountCompact: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  withdrawMinimumTextCompact: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 6,
+  },
+  // Original styles (kept for backwards compatibility)
   withdrawLiquidContainer: {
     alignItems: 'center',
     marginVertical: 20,
@@ -1207,7 +1549,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 50,
     backgroundColor: colors.background,
     borderWidth: 3,
-    borderColor: '#10b98155',
+    borderColor: colors.success + '55',
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
@@ -1236,38 +1578,149 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   upiInputContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   upiLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   upiInput: {
     width: '100%',
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
     color: colors.text,
+  },
+  inputError: {
+    borderColor: colors.error,
+    borderWidth: 1.5,
+  },
+  validationErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  validationErrorText: {
+    fontSize: 11,
+    color: colors.error,
+    flex: 1,
+  },
+  withdrawAvailableText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  feeBreakdownContainer: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  feeBreakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  feeBreakdownLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  feeBreakdownValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  feeBreakdownTotal: {
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginBottom: 0,
+  },
+  feeBreakdownTotalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  feeBreakdownTotalValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
+  withdrawWarningBox: {
+    flexDirection: 'row',
+    backgroundColor: colors.warning + '22',
+    borderRadius: 8,
+    padding: 8,
+    gap: 6,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  withdrawWarningText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.warning,
   },
   withdrawInfoBox: {
     flexDirection: 'row',
-    backgroundColor: '#f59e0b22',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
+    backgroundColor: colors.warning + '22',
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
     alignItems: 'flex-start',
   },
   withdrawInfoText: {
     flex: 1,
-    fontSize: 14,
-    color: '#f59e0b',
-    lineHeight: 20,
+    fontSize: 13,
+    color: colors.warning,
+    lineHeight: 18,
+  },
+  // Payment Method Styles
+  paymentMethodContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  paymentMethodTabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 4,
+  },
+  paymentMethodTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  paymentMethodTabActive: {
+    backgroundColor: colors.success,
+  },
+  paymentMethodTabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  paymentMethodTabTextActive: {
+    color: '#fff',
   },
 });
 

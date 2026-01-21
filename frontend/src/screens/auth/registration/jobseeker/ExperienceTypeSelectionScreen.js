@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Image,
@@ -16,6 +15,7 @@ import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
+import { showToast } from '../../../../components/Toast';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -78,7 +78,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
 
   const handleContinue = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select your experience level');
+      showToast('Please select your experience level', 'error');
       return;
     }
 
@@ -104,7 +104,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   // Handle Skip to final screen
   const handleSkipToFinal = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select your experience level first');
+      showToast('Please select your experience level first', 'error');
       return;
     }
 
@@ -232,7 +232,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             title="I have work experience"
             icon="briefcase"
             description="Already working or have previous work experience"
-            examples="Seeking new opportunities, career advancement, or career change"
+            examples="Looking to refer, seeking new opportunities, or career change"
           />
         </View>
 
@@ -383,8 +383,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray600,
   },
   cardsContainer: {
-    flex: 1,
     gap: 16,
+    marginBottom: 24,
   },
   card: {
     backgroundColor: colors.surface,

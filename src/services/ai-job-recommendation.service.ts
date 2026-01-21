@@ -605,8 +605,13 @@ export class AIJobRecommendationService {
       const education = profile.Education || [];
       const yearsOfExperience = this.calculateExperience(workExperience);
 
+      // Get the most relevant job title for search (current work exp > profile title > preferred roles)
+      const currentWorkExpTitle = workExperience.find((we: any) => we.IsCurrent)?.JobTitle;
+      const exactJobTitle = currentWorkExpTitle || profile.CurrentJobTitle || profile.PreferredRoles?.split(',')[0]?.trim();
+
     const filters: any = {
       // Experience range - flexible for students and freshers
+      // For freshers (0 YOE): show jobs with ExperienceMin <= 2
       experienceMin: Math.max(0, yearsOfExperience - 2),
       experienceMax: yearsOfExperience === 0 ? 2 : yearsOfExperience + 2,
       
@@ -622,11 +627,15 @@ export class AIJobRecommendationService {
       // Location preference
       location: profile.PreferredLocations?.split(',')[0]?.trim() || profile.City,
       
-      // Skills and role-based search (ENHANCED: includes education analysis)
-      search: this.extractSkillsAndKeywords(profile, workExperience, education).join(' '),
+      // IMPROVED: Use exact job title instead of broad keywords for better matching
+      // Example: "Senior Software Engineer" instead of "Senior Software Engineer Engineer Software Java..."
+      search: exactJobTitle || this.extractSkillsAndKeywords(profile, workExperience, education).slice(0, 3).join(' '),
       
       // Recent jobs (last 30 days)
-      postedWithinDays: 30
+      postedWithinDays: 30,
+      
+      // 🎓 Skip fresher filter in AI recommendations - we handle experience filtering explicitly above
+      skipFresherFilter: true
     };
 
     // Remove null/undefined values

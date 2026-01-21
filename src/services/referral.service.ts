@@ -179,6 +179,10 @@ export class ReferralService {
             const isExternal = !!dto.extJobID && !dto.jobID; // External if ExtJobID provided and JobID is null
             const isInternal = !!dto.jobID && !dto.extJobID; // Internal if JobID provided and ExtJobID is null
             
+            // Variables to store job details for internal referrals
+            let jobOrganizationId: number | null = null;
+            let internalJobTitle: string | null = null;
+            
             if (!isExternal && !isInternal) {
                 throw new ValidationError('Either jobID (internal) or extJobID (external) must be provided, but not both');
             }
@@ -202,8 +206,8 @@ export class ReferralService {
                 if (existingResult.recordset?.length) {
                     throw new ConflictError('You have already requested a referral for this job');
                 }
-                // Verify job exists first (any status)
-                const jobExistsQuery = `SELECT JobID, Status FROM Jobs WHERE JobID = @param0`;
+                // Verify job exists first (any status) and get OrganizationID
+                const jobExistsQuery = `SELECT JobID, Status, OrganizationID, Title FROM Jobs WHERE JobID = @param0`;
                 const jobExistsResult = await dbService.executeQuery(jobExistsQuery, [dto.jobID]);
                 if (!jobExistsResult.recordset?.length) {
                     throw new NotFoundError('Job not found');
@@ -212,6 +216,9 @@ export class ReferralService {
                 if (jobExistsResult.recordset[0].Status !== 'Published') {
                     throw new ValidationError('Job not open for referrals');
                 }
+                // Store job details for internal referral
+                jobOrganizationId = jobExistsResult.recordset[0].OrganizationID;
+                internalJobTitle = jobExistsResult.recordset[0].Title;
             }
 
             // Verify resume ownership
@@ -260,16 +267,16 @@ export class ReferralService {
                     await this.updateReferrerStatsForExternalRequest(dto.companyName);
                 }
             } else {
-                // ✅ CREATE INTERNAL REFERRAL REQUEST
+                // ✅ CREATE INTERNAL REFERRAL REQUEST (includes OrganizationID and JobTitle from Job)
                 const insertQuery = `
                     INSERT INTO ReferralRequests (
-                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralMessage
+                        RequestID, JobID, ApplicantID, ResumeID, Status, RequestedAt, ReferralMessage, OrganizationID, JobTitle
                     ) VALUES (
-                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), @param4
+                        @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(), @param4, @param5, @param6
                     )`;
                 
                 await dbService.executeQuery(insertQuery, [
-                    requestId, dto.jobID, applicantId, dto.resumeID, dto.referralMessage || null
+                    requestId, dto.jobID, applicantId, dto.resumeID, dto.referralMessage || null, jobOrganizationId, internalJobTitle
                 ]);
                 
                 // Update referrer stats for internal referrals
@@ -289,7 +296,8 @@ export class ReferralService {
             try {
                 // Cast to any to access query-derived fields not in the interface
                 const requestData = createdRequest as any;
-                const companyName = requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
+                // Use CompanyName (processed field) or fallback to raw fields
+                const companyName = requestData.CompanyName || requestData.ExternalCompanyName || requestData.InternalCompanyName || dto.companyName || 'Unknown Company';
                 const jobTitle = requestData.JobTitle || requestData.InternalJobTitle || dto.jobTitle || 'Unknown Position';
                 const organizationIdRaw = isExternal 
                     ? (dto.organizationId ? parseInt(dto.organizationId, 10) : null)
@@ -353,8 +361,8 @@ export class ReferralService {
                 -- ✅ LEFT JOIN for internal jobs (only when JobID is not null)
                 LEFT JOIN Jobs j ON rr.JobID = j.JobID AND rr.JobID IS NOT NULL
                 LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
-                -- ✅ LEFT JOIN for external organizations (only when ExtJobID is not null)
-                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                -- ✅ LEFT JOIN for organization directly from ReferralRequests.OrganizationID
+                LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID
                 -- Applicant data (always present)
                 INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                 INNER JOIN Users u ON a.UserID = u.UserID
@@ -383,9 +391,9 @@ export class ReferralService {
                 jobTitle = rawData.JobTitle || 'External Job'; // ✅ Use stored JobTitle column
                 actualJobId = rawData.ExtJobID; // Use ExtJobID for external
             } else {
-                // For internal referrals, use job data
-                jobTitle = rawData.InternalJobTitle || 'Internal Job';
-                companyName = rawData.InternalCompanyName || 'Company';
+                // For internal referrals, use job data - prefer direct org lookup via rr.OrganizationID
+                jobTitle = rawData.InternalJobTitle || rawData.JobTitle || 'Internal Job';
+                companyName = rawData.ExternalCompanyName || rawData.InternalCompanyName || 'Company';
                 actualJobId = rawData.JobID; // Use JobID for internal
             }
             
@@ -646,6 +654,52 @@ export class ReferralService {
                     'REFERRAL_BONUS',
                     `Referral verification reward for request ${dto.requestID}`
                 );
+
+                // ✅ Send email notification to referrer about earnings
+                try {
+                    // Get referrer details
+                    const referrerQuery = `
+                        SELECT u.UserID, u.Email, u.FirstName, u.LastName
+                        FROM Users u
+                        WHERE u.UserID = @param0
+                    `;
+                    const referrerResult = await dbService.executeQuery(referrerQuery, [referrerId]);
+                    const referrer = referrerResult.recordset?.[0];
+
+                    // Get job/company details
+                    const jobQuery = `
+                        SELECT 
+                            COALESCE(j.Title, rr.JobTitle, 'Job Position') as JobTitle,
+                            COALESCE(jo.Name, eo.Name, 'Company') as CompanyName
+                        FROM ReferralRequests rr
+                        LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                        LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                        LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                        WHERE rr.RequestID = @param0
+                    `;
+                    const jobResult = await dbService.executeQuery(jobQuery, [dto.requestID]);
+                    const jobInfo = jobResult.recordset?.[0];
+
+                    // Get new wallet balance
+                    const balanceResult = await WalletService.getBalance(referrerId);
+                    const newBalance = balanceResult?.balance || verificationAmount;
+
+                    if (referrer) {
+                        await NotificationService.notifyReferralVerified({
+                            requestId: dto.requestID,
+                            referrerId: referrerId,
+                            referrerName: referrer.FirstName,
+                            referrerEmail: referrer.Email,
+                            seekerName: applicantName,
+                            jobTitle: jobInfo?.JobTitle || 'Job Position',
+                            companyName: jobInfo?.CompanyName || 'Company',
+                            amount: verificationAmount,
+                            newBalance: newBalance
+                        });
+                    }
+                } catch (err) {
+                    console.warn('Non-critical: Failed to send referral verified email:', err);
+                }
             }
 
             return await this.getReferralRequestById(dto.requestID);
@@ -831,7 +885,7 @@ export class ReferralService {
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
-                    rr.OrganizationID, rr.JobURL,
+                    rr.JobURL,
                     -- For INTERNAL referrals (JobID not null)
                     j.Title as InternalJobTitle,
                     jo.Name as InternalCompanyName,
@@ -843,6 +897,8 @@ export class ReferralService {
                     COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
                     COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    -- ✅ FIX: Return OrganizationID from either internal job or external request
+                    COALESCE(jo.OrganizationID, rr.OrganizationID) as OrganizationID,
                     ur.FirstName + ' ' + ur.LastName as ReferrerName,
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
@@ -1385,6 +1441,49 @@ export class ReferralService {
                 );
             } catch (err) {
                 console.warn('Non-critical: Failed to log Completed status:', err);
+            }
+
+            // ✅ Send email notification to seeker that referral was claimed/completed
+            try {
+                // Get seeker details
+                const seekerQuery = `
+                    SELECT u.UserID, u.Email, u.FirstName, u.LastName
+                    FROM Applicants a
+                    INNER JOIN Users u ON a.UserID = u.UserID
+                    WHERE a.ApplicantID = @param0
+                `;
+                const seekerResult = await dbService.executeQuery(seekerQuery, [seekerId]);
+                const seeker = seekerResult.recordset?.[0];
+
+                // Get job/company details
+                let jobTitle = 'Job Position';
+                let companyName = 'Company';
+                
+                if (isExternal) {
+                    const extQuery = `SELECT o.Name as CompanyName, rr.JobTitle FROM ReferralRequests rr LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID WHERE rr.RequestID = @param0`;
+                    const extResult = await dbService.executeQuery(extQuery, [dto.requestID]);
+                    jobTitle = extResult.recordset?.[0]?.JobTitle || 'External Job';
+                    companyName = extResult.recordset?.[0]?.CompanyName || 'Company';
+                } else {
+                    const intQuery = `SELECT j.Title, o.Name as CompanyName FROM Jobs j INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID WHERE j.JobID = @param0`;
+                    const intResult = await dbService.executeQuery(intQuery, [jobId]);
+                    jobTitle = intResult.recordset?.[0]?.Title || 'Job Position';
+                    companyName = intResult.recordset?.[0]?.CompanyName || 'Company';
+                }
+
+                if (seeker) {
+                    await NotificationService.notifyReferralClaimed({
+                        requestId: dto.requestID,
+                        seekerId: seeker.UserID,
+                        seekerName: seeker.FirstName,
+                        seekerEmail: seeker.Email,
+                        referrerName: `${companyName} Employee`,  // Keep referrer anonymous
+                        jobTitle: jobTitle,
+                        companyName: companyName
+                    });
+                }
+            } catch (err) {
+                console.warn('Non-critical: Failed to send referral claimed email:', err);
             }
             
             // Award points for proof submission with quick response bonus

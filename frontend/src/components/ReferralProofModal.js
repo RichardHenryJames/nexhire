@@ -5,7 +5,6 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   TextInput,
   Image,
@@ -51,7 +50,7 @@ export default function ReferralProofModal({
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to access image picker: ' + error.message);
+      showToast('Failed to access image picker. Please try again.', 'error');
     }
   }, []);
 
@@ -61,7 +60,7 @@ export default function ReferralProofModal({
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permissions are required to take a photo.');
+        showToast('Camera permissions are required to take a photo.', 'error');
         return;
       }
 
@@ -79,19 +78,19 @@ export default function ReferralProofModal({
       }
     } catch (error) {
       console.error('Camera error:', error);
-      Alert.alert('Error', 'Failed to open camera: ' + error.message);
+      showToast('Failed to open camera. Please try again.', 'error');
     }
   }, []);
 
   const handleSubmit = useCallback(async () => {
     
     if (!proofImage) {
-      Alert.alert('Proof Required', 'Please upload a screenshot showing your referral');
+      showToast('Please upload a screenshot showing your referral', 'error');
       return;
     }
 
     if (description.trim().length < 10) {
-      Alert.alert('Description Required', 'Please provide a brief description of your referral (at least 10 characters)');
+      showToast('Please provide a brief description of your referral (at least 10 characters)', 'error');
       return;
     }
 
@@ -125,7 +124,7 @@ export default function ReferralProofModal({
       
     } catch (error) {
       console.error('Submit proof error:', error);
-      Alert.alert('Error', error.message || 'Failed to submit proof');
+      showToast('Failed to submit proof. Please try again.', 'error');
     } finally {
       
       setUploading(false);

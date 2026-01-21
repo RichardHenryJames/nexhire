@@ -10,6 +10,7 @@ import {
   Image,
   Modal
 } from 'react-native';
+import { showToast } from '../Toast';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -79,18 +80,28 @@ export default function UserProfileHeader({
   userType,
   onProfileUpdate,
   showStats = false, // NEW: hide right-side Education/Skills/% Complete by default
-  showProgress = true // NEW: hide circular progress ring when viewing others' profiles
+  showProgress = true, // NEW: hide circular progress ring when viewing others' profiles
+  isVerifiedUser = false, // NEW: Show verified badge if user is a permanently verified user
+  isVerifiedReferrer = false, // Show if user is a verified referrer
+  onBecomeVerifiedReferrer = null, // Callback when "Become Verified Referrer" is clicked
+  loadingVerificationStatus = false, // Hide button while loading verification status
+  profileCompletenessFromBackend = null // Backend-driven profile completeness
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [verifyingReferrer, setVerifyingReferrer] = useState(false);
 
-  // CALCULATE PROFILE COMPLETENESS BASED ON ACTUAL PROFILE FIELDS
+  // USE BACKEND VALUE IF PROVIDED, OTHERWISE CALCULATE LOCALLY
   useEffect(() => {
-    calculateProfileCompleteness();
-  }, [profile, jobSeekerProfile, employerProfile, userType]);
+    if (profileCompletenessFromBackend !== null && profileCompletenessFromBackend !== undefined) {
+      setProfileCompleteness(profileCompletenessFromBackend);
+    } else {
+      calculateProfileCompleteness();
+    }
+  }, [profile, jobSeekerProfile, employerProfile, userType, profileCompletenessFromBackend]);
 
   const calculateProfileCompleteness = () => {
     const requiredFields = userType === 'JobSeeker' ? [
@@ -235,10 +246,7 @@ export default function UserProfileHeader({
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library to update your profile picture.'
-        );
+        showToast('Please allow access to your photo library to update your profile picture.', 'error');
         return false;
       }
     }
@@ -291,10 +299,7 @@ export default function UserProfileHeader({
       const permissionResult = await CrossPlatformFileHandler.requestPermissions();
       
       if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please grant camera and photo library permissions to upload profile pictures.'
-        );
+        showToast('Please grant camera and photo library permissions to upload profile pictures.', 'error');
         return;
       }
 
@@ -311,7 +316,7 @@ export default function UserProfileHeader({
       if (type === 'camera') {
         if (Platform.OS === 'web') {
           // Web doesn't support camera, fallback to library
-          Alert.alert('Camera Not Available', 'Camera is not available on web. Using photo library instead.');
+          showToast('Camera is not available on web. Using photo library instead.', 'info');
           result = await ImagePicker.launchImageLibraryAsync(commonOptions);
         } else {
           result = await ImagePicker.launchCameraAsync(commonOptions);
@@ -327,7 +332,7 @@ export default function UserProfileHeader({
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      showToast('Failed to select image. Please try again.', 'error');
     }
   };
 
@@ -433,7 +438,7 @@ export default function UserProfileHeader({
         // Notify parent component
         onProfileUpdate?.(updatedProfile);
         
-        Alert.alert('Success! ??', 'Your profile picture has been updated successfully!');
+        showToast('Your profile picture has been updated successfully!', 'success');
       } else {
         throw new Error(uploadResult?.error || 'Upload failed - no response from server');
       }
@@ -452,7 +457,7 @@ export default function UserProfileHeader({
         userMessage = error.message;
       }
       
-      Alert.alert('Upload Failed', userMessage);
+      showToast(userMessage, 'error');
     } finally {
       setUploading(false);
     }
@@ -492,16 +497,52 @@ export default function UserProfileHeader({
     let badgeColor = colors.gray600;
     let badgeIcon = 'person';
 
+    // For JobSeekers - show "Become Verified Referrer" button if not verified, or "Verified Referrer" badge if verified
     if (userType === 'JobSeeker') {
-      if (jobSeekerProfile?.openToRefer) {
-        badgeText = 'Open to Refer';
-        badgeColor = '#10B981'; // Green
-        badgeIcon = 'people';
-      } else {
-        badgeText = 'Not Open to Refer';
-        badgeColor = colors.gray600;
-        badgeIcon = 'pause';
+      // Don't show anything while loading verification status
+      if (loadingVerificationStatus) {
+        return null;
       }
+      if (isVerifiedReferrer) {
+        // Show Verified Referrer badge
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: colors.success + '15' }]}>
+            <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+            <Text style={[styles.statusBadgeText, { color: colors.success }]}>
+              Verified Referrer
+            </Text>
+          </View>
+        );
+      } else if (onBecomeVerifiedReferrer) {
+        // Show "Become Verified Referrer" button
+        return (
+          <TouchableOpacity 
+            style={[styles.becomeReferrerButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
+            onPress={async () => {
+              setVerifyingReferrer(true);
+              try {
+                await onBecomeVerifiedReferrer();
+              } finally {
+                setVerifyingReferrer(false);
+              }
+            }}
+            disabled={verifyingReferrer}
+            activeOpacity={0.7}
+          >
+            {verifyingReferrer ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                <Text style={[styles.becomeReferrerText, { color: colors.primary }]}>
+                  Become Verified Referrer
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        );
+      }
+      return null;
     } else if (userType === 'Employer') {
       badgeText = 'Recruiter';
       badgeColor = '#3B82F6'; // Blue
@@ -604,9 +645,19 @@ export default function UserProfileHeader({
 
         {/* User Info */}
         <View style={styles.infoSection}>
-          <Text style={styles.userName}>
-            {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={[styles.userName, { marginBottom: 0 }]}>
+              {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
+            </Text>
+            {isVerifiedUser && (
+              <MaterialIcons 
+                name="verified" 
+                size={20} 
+                color={colors.primary} 
+                style={{ marginLeft: 6 }} 
+              />
+            )}
+          </View>
           
           {/* Current Job Title or Education for students */}
           {userType === 'JobSeeker' && (
@@ -891,6 +942,23 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  
+  // Become Verified Referrer Button
+  becomeReferrerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    borderWidth: 1,
+    gap: 6,
+  },
+  becomeReferrerText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // Stats Column

@@ -10,7 +10,6 @@ import {
   TextInput,
   Image,
   Modal,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +20,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
 import MessagingLayoutDesktop from './MessagingLayoutDesktop';
+import { showToast } from '../../components/Toast';
 
 // Wrapper component to handle desktop vs mobile layout
 export default function ConversationsScreen() {
@@ -74,8 +74,13 @@ function ConversationsScreenMobile() {
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
-      const result = await messagingApi.getMyConversations();
- if (result.success) {
+      // Fetch both in parallel for faster loading
+      const [result, unreadResult] = await Promise.all([
+        messagingApi.getMyConversations(),
+        messagingApi.getUnreadCount()
+      ]);
+      
+      if (result.success) {
         // Filter out conversations with no messages
         const validConversations = (result.data || []).filter(
           conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
@@ -83,8 +88,6 @@ function ConversationsScreenMobile() {
         setConversations(validConversations);
       }
 
-      // Load unread count
-      const unreadResult = await messagingApi.getUnreadCount();
       if (unreadResult.success) {
         setUnreadCount(unreadResult.data.TotalUnread || 0);
       }
@@ -96,12 +99,7 @@ function ConversationsScreenMobile() {
     }
   }, []);
 
-  // Initial load on mount
-  useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
-
-  // Refresh whenever the screen comes into focus (navigating back to Messages)
+  // Refresh whenever the screen comes into focus (also handles initial load)
   useFocusEffect(
     useCallback(() => {
       loadConversations();
@@ -250,7 +248,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
       });
     } catch (error) {
       console.error('Error navigating to profile:', error);
-      Alert.alert('Error', 'Failed to open profile');
+      showToast('Failed to open profile', 'error');
   }
   };
 
@@ -290,9 +288,11 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
  <View style={styles.emptyContainer}>
   <Ionicons name="chatbubbles-outline" size={64} color={colors.gray300} />
             <Text style={styles.emptyText}>No conversations yet</Text>
-    <Text style={styles.emptySubtext}>
+    {isAdmin && (
+      <Text style={styles.emptySubtext}>
               Tap the + button to start a new conversation
          </Text>
+    )}
      </View>
         }
       />
@@ -405,7 +405,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   loadingContainer: {

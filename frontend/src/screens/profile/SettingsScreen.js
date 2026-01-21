@@ -21,30 +21,10 @@ import refopenAPI from '../../services/api';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import ResumeSection from '../../components/profile/ResumeSection';
 import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
+import EducationSection from '../../components/profile/EducationSection';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
 import ModalToast from '../../components/ModalToast';
-
-// Education level options
-const EDUCATION_LEVELS = [
-  'High School',
-  'Diploma',
-  'B.Tech / B.E',
-  'B.Sc',
-  'B.A',
-  'B.Com',
-  'BBA',
-  'B.Arch',
-  'MBBS',
-  'M.Tech / M.E',
-  'M.Sc',
-  'M.A',
-  'M.Com',
-  'MBA',
-  'M.Arch',
-  'PhD/Doctorate',
-  'Other'
-];
 
 export default function SettingsScreen({ navigation, route }) {
   const { user, userType, logout, updateProfileSmart } = useAuth();
@@ -64,15 +44,30 @@ export default function SettingsScreen({ navigation, route }) {
   }, [route?.params?.openModal]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Password management state
+  const [hasPassword, setHasPassword] = useState(null); // null = loading, true/false = has/doesn't have
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordToastMessage, setPasswordToastMessage] = useState(null);
+
   // Notification preferences state
   const [notificationPrefs, setNotificationPrefs] = useState({
-    EmailEnabled: false,
-    PushEnabled: false,
-    ReferralRequestEmail: false,
-    ReferralClaimedEmail: false,
-    ReferralVerifiedEmail: false,
-    MessageReceivedEmail: false,
-    WeeklyDigestEmail: false,
+    EmailEnabled: true,
+    PushEnabled: true,
+    ReferralRequestEmail: true,
+    ReferralClaimedEmail: true,
+    ReferralVerifiedEmail: true,
+    MessageReceivedEmail: true,
+    WeeklyDigestEmail: true,
+    DailyJobRecommendationEmail: true,
+    ReferrerNotificationEmail: true,
+    MarketingEmail: true,
   });
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
@@ -123,6 +118,7 @@ export default function SettingsScreen({ navigation, route }) {
     fieldOfStudy: '',
     institution: '',
     graduationYear: '',
+    gpa: '',
     primarySkills: [],
     secondarySkills: [],
     isOpenToWork: false,
@@ -214,6 +210,7 @@ export default function SettingsScreen({ navigation, route }) {
             fieldOfStudy: data.FieldOfStudy || '',
             institution: data.Institution || '',
             graduationYear: data.GraduationYear || '',
+            gpa: data.GPA || '',
             primarySkills,
             secondarySkills,
             isOpenToWork: data.IsOpenToWork || false,
@@ -318,7 +315,7 @@ export default function SettingsScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Save error:', error);
-      showToast(error.message || 'Failed to update personal details', 'error');
+      showToast('Failed to update personal details. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -339,21 +336,6 @@ export default function SettingsScreen({ navigation, route }) {
       setActiveModal(null);
     } catch (error) {
       showToast('Failed to update professional details', 'error');
-    }
-  };
-
-  const saveEducation = async () => {
-    try {
-      await updateProfileSmart({
-        HighestEducation: jobSeekerProfile.highestEducation,
-        FieldOfStudy: jobSeekerProfile.fieldOfStudy,
-        Institution: jobSeekerProfile.institution,
-        GraduationYear: jobSeekerProfile.graduationYear,
-      });
-      showToast('Education updated successfully', 'success');
-      setActiveModal(null);
-    } catch (error) {
-      showToast('Failed to update education', 'error');
     }
   };
 
@@ -379,12 +361,89 @@ export default function SettingsScreen({ navigation, route }) {
     }
   };
 
+  const saveEducationDetails = async () => {
+    try {
+      await refopenAPI.updateEducation({
+        institution: jobSeekerProfile.institution,
+        highestEducation: jobSeekerProfile.highestEducation,
+        fieldOfStudy: jobSeekerProfile.fieldOfStudy,
+        graduationYear: jobSeekerProfile.graduationYear,
+        gpa: jobSeekerProfile.gpa,
+      });
+      showToast('Education details updated', 'success');
+      setActiveModal(null);
+    } catch (error) {
+      showToast('Failed to update education details', 'error');
+    }
+  };
+
   const handleLogout = async () => {
     setShowLogoutModal(false);
     try {
       await logout();
     } catch (error) {
       showToast('Failed to logout', 'error');
+    }
+  };
+
+  // Check if user has password on mount
+  useEffect(() => {
+    const checkPassword = async () => {
+      try {
+        const response = await refopenAPI.hasPassword();
+        if (response.success) {
+          setHasPassword(response.data?.hasPassword || false);
+        }
+      } catch (error) {
+        console.error('Error checking password status:', error);
+        setHasPassword(false);
+      }
+    };
+    checkPassword();
+  }, []);
+
+  // Handle password set/change
+  const handlePasswordSubmit = async () => {
+    // Validation
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordToastMessage({ text: 'Password must be at least 8 characters', type: 'error' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordToastMessage({ text: 'Passwords do not match', type: 'error' });
+      return;
+    }
+    if (hasPassword && !currentPassword) {
+      setPasswordToastMessage({ text: 'Current password is required', type: 'error' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      let response;
+      if (hasPassword) {
+        // Change password (requires current password)
+        response = await refopenAPI.changePassword(currentPassword, newPassword);
+      } else {
+        // Set password for Google users (no current password needed)
+        response = await refopenAPI.setPassword(newPassword);
+      }
+
+      if (response.success) {
+        setPasswordModal(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setCurrentPassword('');
+        setHasPassword(true); // Now user has a password
+        // Show toast outside modal
+        showToast(hasPassword ? 'Password changed successfully!' : 'Password set successfully! You can now login with email/password.', 'success');
+      } else {
+        setPasswordToastMessage({ text: response.error || 'Failed to update password', type: 'error' });
+      }
+    } catch (error) {
+      setPasswordToastMessage({ text: error.message || 'Failed to update password', type: 'error' });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -648,7 +707,7 @@ export default function SettingsScreen({ navigation, route }) {
     </Modal>
   );
 
-  // Education Modal
+  // Education Modal - uses same EducationSection component as Profile screen
   const renderEducationModal = () => (
     <Modal
       visible={activeModal === 'education'}
@@ -663,63 +722,32 @@ export default function SettingsScreen({ navigation, route }) {
               <Ionicons name="close" size={28} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Education</Text>
-            <TouchableOpacity onPress={saveEducation} style={styles.saveButton}>
+            <TouchableOpacity onPress={saveEducationDetails} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} contentContainerStyle={{ padding: 16 }}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Highest Education</Text>
-            <View style={styles.chipContainer}>
-              {EDUCATION_LEVELS.map((level) => (
-                <TouchableOpacity
-                  key={level}
-                  style={[styles.chip, jobSeekerProfile.highestEducation === level && styles.chipSelected]}
-                  onPress={() => setJobSeekerProfile(prev => ({ ...prev, highestEducation: level }))}
-                >
-                  <Text style={[styles.chipText, jobSeekerProfile.highestEducation === level && styles.chipTextSelected]}>
-                    {level}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Field of Study</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.fieldOfStudy}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, fieldOfStudy: text }))}
-              placeholder="E.g., Computer Science"
-              placeholderTextColor={colors.gray400}
+          <ScrollView style={styles.modalContent}>
+            <EducationSection 
+              profile={{
+                institution: jobSeekerProfile.institution || '',
+                highestEducation: jobSeekerProfile.highestEducation || '',
+                fieldOfStudy: jobSeekerProfile.fieldOfStudy || '',
+                graduationYear: jobSeekerProfile.graduationYear || '',
+                gpa: jobSeekerProfile.gpa || ''
+              }}
+              setProfile={(updatedEducation) => {
+                setJobSeekerProfile(prev => ({
+                  ...prev,
+                  institution: updatedEducation.institution || '',
+                  highestEducation: updatedEducation.highestEducation || '',
+                  fieldOfStudy: updatedEducation.fieldOfStudy || '',
+                  graduationYear: updatedEducation.graduationYear || '',
+                  gpa: updatedEducation.gpa || ''
+                }));
+              }}
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Institution</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.institution}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, institution: text }))}
-              placeholder="E.g., Stanford University"
-              placeholderTextColor={colors.gray400}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Graduation Year</Text>
-            <TextInput
-              style={styles.textInput}
-              value={jobSeekerProfile.graduationYear}
-              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, graduationYear: text }))}
-              placeholder="E.g., 2020"
-              placeholderTextColor={colors.gray400}
-              keyboardType="numeric"
-            />
-          </View>
-        </ScrollView>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -1005,11 +1033,33 @@ export default function SettingsScreen({ navigation, route }) {
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
                   <Ionicons name="mail-outline" size={20} color={colors.text} />
-                  <Text style={styles.notifToggleLabel}>Email Notifications</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Email Notifications</Text>
+                    <Text style={styles.notifToggleDesc}>Master toggle for all email notifications</Text>
+                  </View>
                 </View>
                 <Switch
                   value={notificationPrefs.EmailEnabled}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, EmailEnabled: value }))}
+                  onValueChange={(value) => {
+                    if (value) {
+                      // Just enable global toggle
+                      setNotificationPrefs(prev => ({ ...prev, EmailEnabled: true }));
+                    } else {
+                      // Disable global toggle AND all individual email toggles
+                      setNotificationPrefs(prev => ({
+                        ...prev,
+                        EmailEnabled: false,
+                        ReferralRequestEmail: false,
+                        ReferralClaimedEmail: false,
+                        ReferralVerifiedEmail: false,
+                        MessageReceivedEmail: false,
+                        WeeklyDigestEmail: false,
+                        DailyJobRecommendationEmail: false,
+                        ReferrerNotificationEmail: false,
+                        MarketingEmail: false,
+                      }));
+                    }
+                  }}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.EmailEnabled ? colors.primary : colors.gray100}
                 />
@@ -1028,8 +1078,51 @@ export default function SettingsScreen({ navigation, route }) {
                 />
               </View>
 
-              {/* Referral Notifications */}
-              <Text style={styles.notifSectionHeader}>Referral Notifications</Text>
+              {/* For Job Seekers */}
+              <Text style={styles.notifSectionHeader}>For Job Seekers</Text>
+              
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="briefcase-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Job Recommendations</Text>
+                    <Text style={styles.notifToggleDesc}>Personalized job picks based on your preferences</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.DailyJobRecommendationEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    DailyJobRecommendationEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Referral Submitted</Text>
+                    <Text style={styles.notifToggleDesc}>When someone submits a referral for you</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferralClaimedEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralClaimedEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferralClaimedEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
+              {/* For Referrers */}
+              <Text style={styles.notifSectionHeader}>For Referrers</Text>
               
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
@@ -1041,25 +1134,13 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.ReferralRequestEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralRequestEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralRequestEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.ReferralRequestEmail ? colors.primary : colors.gray100}
-                />
-              </View>
-
-              <View style={styles.notifToggleRow}>
-                <View style={styles.notifToggleLeft}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.notifToggleLabel}>Referral Claimed</Text>
-                    <Text style={styles.notifToggleDesc}>When your referral request is claimed</Text>
-                  </View>
-                </View>
-                <Switch
-                  value={notificationPrefs.ReferralClaimedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralClaimedEmail: value }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                  thumbColor={notificationPrefs.ReferralClaimedEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
@@ -1073,25 +1154,56 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.ReferralVerifiedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, ReferralVerifiedEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferralVerifiedEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.ReferralVerifiedEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
+              <View style={styles.notifToggleRow}>
+                <View style={styles.notifToggleLeft}>
+                  <Ionicons name="people-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Referrer Notifications</Text>
+                    <Text style={styles.notifToggleDesc}>Get notified about open referral requests</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationPrefs.ReferrerNotificationEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    ReferrerNotificationEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  thumbColor={notificationPrefs.ReferrerNotificationEmail ? colors.primary : colors.gray100}
+                />
+              </View>
+
               {/* Other Notifications */}
-              <Text style={styles.notifSectionHeader}>Other Notifications</Text>
+              <Text style={styles.notifSectionHeader}>Other</Text>
 
               <View style={styles.notifToggleRow}>
                 <View style={styles.notifToggleLeft}>
-                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
-                  <Text style={styles.notifToggleLabel}>Messages</Text>
+                  <Ionicons name="megaphone-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.notifToggleLabel}>Marketing & Promotional</Text>
+                    <Text style={styles.notifToggleDesc}>Tips, updates, and special offers</Text>
+                  </View>
                 </View>
                 <Switch
-                  value={notificationPrefs.MessageReceivedEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, MessageReceivedEmail: value }))}
+                  value={notificationPrefs.MarketingEmail}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    MarketingEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
-                  thumbColor={notificationPrefs.MessageReceivedEmail ? colors.primary : colors.gray100}
+                  thumbColor={notificationPrefs.MarketingEmail ? colors.primary : colors.gray100}
                 />
               </View>
 
@@ -1105,7 +1217,11 @@ export default function SettingsScreen({ navigation, route }) {
                 </View>
                 <Switch
                   value={notificationPrefs.WeeklyDigestEmail}
-                  onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, WeeklyDigestEmail: value }))}
+                  onValueChange={(value) => setNotificationPrefs(prev => ({ 
+                    ...prev, 
+                    WeeklyDigestEmail: value,
+                    ...(value ? { EmailEnabled: true } : {})
+                  }))}
                   trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
                   thumbColor={notificationPrefs.WeeklyDigestEmail ? colors.primary : colors.gray100}
                 />
@@ -1147,6 +1263,140 @@ export default function SettingsScreen({ navigation, route }) {
               <Text style={styles.logoutModalButtonConfirmText}>Logout</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Password Modal
+  const renderPasswordModal = () => (
+    <Modal
+      visible={passwordModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setPasswordModal(false)}
+    >
+      <View style={styles.logoutModalOverlay}>
+        <View style={[styles.logoutModalContent, { padding: 24 }]}>
+          <Ionicons 
+            name={hasPassword ? "key-outline" : "lock-open-outline"} 
+            size={48} 
+            color={colors.primary} 
+          />
+          <Text style={styles.logoutModalTitle}>
+            {hasPassword ? 'Change Password' : 'Set Password'}
+          </Text>
+          <Text style={[styles.logoutModalSubtitle, { marginBottom: 20 }]}>
+            {hasPassword 
+              ? 'Enter your current password and choose a new one'
+              : 'Set a password to login with email/password in addition to Google'}
+          </Text>
+
+          {/* Current Password (only for users who have one) */}
+          {hasPassword && (
+            <View style={styles.passwordInputGroup}>
+              <Text style={styles.passwordInputLabel}>Current Password</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  placeholderTextColor={colors.gray400}
+                  secureTextEntry={!showCurrentPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                  <Ionicons 
+                    name={showCurrentPassword ? "eye-outline" : "eye-off-outline"} 
+                    size={20} 
+                    color={colors.gray400} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* New Password */}
+          <View style={styles.passwordInputGroup}>
+            <Text style={styles.passwordInputLabel}>New Password</Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="At least 8 characters"
+                placeholderTextColor={colors.gray400}
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                <Ionicons 
+                  name={showNewPassword ? "eye-outline" : "eye-off-outline"} 
+                  size={20} 
+                  color={colors.gray400} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Confirm Password */}
+          <View style={styles.passwordInputGroup}>
+            <Text style={styles.passwordInputLabel}>Confirm Password</Text>
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm your password"
+                placeholderTextColor={colors.gray400}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Ionicons 
+                  name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
+                  size={20} 
+                  color={colors.gray400} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.logoutModalButtons}>
+            <TouchableOpacity
+              style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
+              onPress={() => {
+                setPasswordModal(false);
+                setNewPassword('');
+                setConfirmPassword('');
+                setCurrentPassword('');
+              }}
+            >
+              <Text style={styles.logoutModalButtonCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.logoutModalButton, styles.logoutModalButtonConfirm, { backgroundColor: colors.primary }]}
+              onPress={handlePasswordSubmit}
+              disabled={passwordLoading}
+            >
+              {passwordLoading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.logoutModalButtonConfirmText}>
+                  {hasPassword ? 'Change' : 'Set'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Modal Toast for password feedback */}
+          <ModalToast
+            visible={!!passwordToastMessage}
+            message={passwordToastMessage?.text || ''}
+            type={passwordToastMessage?.type || 'success'}
+            onHide={() => setPasswordToastMessage(null)}
+          />
         </View>
       </View>
     </Modal>
@@ -1265,6 +1515,23 @@ export default function SettingsScreen({ navigation, route }) {
           )}
         </View>
 
+        {/* Security Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIndicator} />
+            <Text style={styles.sectionHeading}>Security</Text>
+          </View>
+
+          {renderSectionCard(
+            hasPassword ? 'Change Password' : 'Set Password',
+            hasPassword ? 'key-outline' : 'lock-open-outline',
+            () => setPasswordModal(true),
+            hasPassword 
+              ? 'Update your account password'
+              : 'Add password to login with email too'
+          )}
+        </View>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
           <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
@@ -1284,6 +1551,7 @@ export default function SettingsScreen({ navigation, route }) {
       {renderResumesModal()}
       {renderNotificationsModal()}
       {renderLogoutModal()}
+      {renderPasswordModal()}
     </View>
   );
 }
@@ -1298,7 +1566,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   header: {
@@ -1412,7 +1680,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalInner: {
     flex: 1,
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1445,6 +1713,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+    padding: 16,
   },
   inputGroup: {
     marginBottom: 20,
@@ -1551,15 +1820,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   logoutModalButtons: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     marginTop: 8,
   },
   logoutModalButton: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
   logoutModalButtonCancel: {
     backgroundColor: colors.gray100,
@@ -1576,6 +1847,33 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Password modal styles
+  passwordInputGroup: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  passwordInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface || colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
   },
   // Notification styles
   notifSectionHeader: {

@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
@@ -12,6 +12,14 @@ export default function TermsScreen() {
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const scrollRef = useRef(null);
+
+  // Scroll to top when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // ✅ Navigation header with smart back button (hard-refresh safe)
   useEffect(() => {
@@ -41,7 +49,7 @@ export default function TermsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView ref={scrollRef} style={styles.scrollView}>
         <View style={styles.innerContainer}>
           <View style={styles.content}>
         <Text style={styles.title}>Terms and Conditions</Text>
@@ -181,8 +189,7 @@ Refopen is a career networking platform that provides:
         <Text style={styles.text}>
           For questions about these Terms, please contact us at:
           {'\n\n'}Refopen Solutions
-          {'\n'}Email: legal@refopen.com
-     {'\n'}Support: support@refopen.com
+          {'\n'}Support: Create a ticket via Help & Support
           {'\n'}Website: www.refopen.com
         </Text>
 
@@ -222,7 +229,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     alignSelf: 'center',
   },
   content: {

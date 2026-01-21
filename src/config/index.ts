@@ -21,7 +21,8 @@ export const dbConfig = {
 export const jwtConfig = {
     secret: process.env.JWT_SECRET || 'refopen-super-secret-key-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    passwordResetExpiresIn: '1h' // Password reset tokens expire in 1 hour
 };
 
 // Azure Blob Storage Configuration

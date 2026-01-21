@@ -1,6 +1,7 @@
 import { dbService } from '../services/database.service';
 import { AuthService } from '../services/auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
+import { decrypt, maskEmail } from '../utils/encryption';
 
 // Define interfaces for type safety
 interface ApplicantFieldMapping {
@@ -56,6 +57,8 @@ export class ApplicantService {
                     u.Email,
                     u.Phone,
                     u.ProfilePictureURL,
+                    u.IsVerifiedReferrer,
+                    u.IsVerifiedUser,
                     ISNULL(a.ReferralPoints, 0) as ReferralPoints
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID
@@ -201,10 +204,23 @@ export class ApplicantService {
                     ORDER BY we.IsCurrent DESC, we.EndDate DESC, we.StartDate DESC
                 `;
                 const workExpResult = await dbService.executeQuery(workExpQuery, [profile.ApplicantID]);
-                profile.workExperiences = workExpResult.recordset || [];
+                // Remove CompanyEmail from response - not needed in frontend
+                profile.workExperiences = (workExpResult.recordset || []).map((we: any) => {
+                    const { CompanyEmail, ...rest } = we;
+                    return rest;
+                });
             } catch (error) {
                 console.warn('Could not load work experiences:', error);
                 profile.workExperiences = [];
+            }
+            
+            // Recalculate and update profile completeness to ensure it's fresh
+            try {
+                const { UserService } = await import('./user.service');
+                const freshCompleteness = await UserService.recomputeProfileCompletenessByApplicantId(profile.ApplicantID);
+                profile.ProfileCompleteness = freshCompleteness;
+            } catch (error) {
+                console.warn('Could not recalculate profile completeness:', error);
             }
             
             return profile;

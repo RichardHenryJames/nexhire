@@ -43,14 +43,19 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  
+  // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
+  // For referrer-posted jobs, hide Apply button and show Ask Referral only
+  const isReferrerPosted = job?.PostedByType === 2;
+  
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
   const [primaryResume, setPrimaryResume] = useState(null);
   const [referralMessage, setReferralMessage] = useState('');
-  const [showReferralMessageInput, setShowReferralMessageInput] = useState(false);
+  const [showReferralMessageInput, setShowReferralMessageInput] = useState(true);
   const [coverLetter, setCoverLetter] = useState('');
-  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(false);
+  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(true);
   const [referralRequesting, setReferralRequesting] = useState(false);
   
   // 💎 NEW: Beautiful wallet modal state
@@ -71,11 +76,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost });
 
   // Initialize default cover letter when job loads (only once)
-  useEffect(() => {
-    if (job?.Title && !coverLetter) {
-      setCoverLetter(`I am very interested in the ${job.Title} position and believe my skills and experience make me a great candidate for this role.`);
-    }
-  }, [job?.Title]);
+  // Removed default text - user should write their own cover letter
 
   // Helper builder for cover letter
   const buildCoverLetter = useCallback(() => {
@@ -168,12 +169,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           checkApplicationStatus();
         }
       } else {
-        Alert.alert('Error', 'Job not found');
+        showToast('Job not found', 'error');
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error fetching job details:', error);
-      Alert.alert('Error', 'Failed to load job details');
+      showToast('Failed to load job details', 'error');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -233,12 +234,12 @@ const { jobId, fromReferralRequest } = route.params || {};
     }
 
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can apply for positions');
+      showToast('Only job seekers can apply for positions', 'error');
       return;
     }
 
     if (hasApplied) {
-      Alert.alert('Already Applied', 'You have already applied for this position');
+      showToast('You have already applied for this position', 'error');
       return;
     }
 
@@ -267,7 +268,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      showToast('Only job seekers can ask for referrals', 'error');
       return;
     }
     
@@ -299,12 +300,12 @@ const { jobId, fromReferralRequest } = route.params || {};
         
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
-        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        showToast('Unable to check wallet balance. Please try again.', 'error');
         return;
       }
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
-      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
   };
@@ -398,12 +399,12 @@ const { jobId, fromReferralRequest } = route.params || {};
             setWalletModalData({ currentBalance, requiredAmount });
             setShowWalletModal(true);
           } else {
-            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+            showToast('Failed to send referral request. Please try again.', 'error');
           }
         }
       } catch (e) {
         console.error('Referral request error:', e);
-        Alert.alert('Error', e.message || 'Failed to send referral request');
+        showToast('Failed to send referral request. Please try again.', 'error');
       } finally {
         setReferralMode(false);
         setShowResumeModal(false);
@@ -458,7 +459,7 @@ const { jobId, fromReferralRequest } = route.params || {};
             ]
           );
         } else {
-          Alert.alert('Application Failed', result.error || result.message || 'Failed to submit application');
+          showToast('Failed to submit application. Please try again.', 'error');
         }
       }
     } catch (error) {
@@ -474,7 +475,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           ]
         );
       } else {
-        Alert.alert('Error', error.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } finally {
       setApplying(false);
@@ -505,10 +506,10 @@ const { jobId, fromReferralRequest } = route.params || {};
         }, 1500);
         
       } else {
-        Alert.alert('Application Failed', res.error || res.message || 'Failed to submit application');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to submit application');
+      showToast('Failed to submit application. Please try again.', 'error');
     }
   };
 
@@ -532,7 +533,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
-        let message = 'Referral sent to ALL employees who can refer!';
+        let message = 'Referral sent to verified employees who can refer!';
         if (balanceAfter !== undefined) {
           message += `\n\n₹${amountDeducted} deducted from wallet.\nNew balance: ₹${balanceAfter.toFixed(2)}`;
         }
@@ -550,12 +551,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           setWalletModalData({ currentBalance, requiredAmount });
           setShowWalletModal(true);
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       }
     } catch (e) {
       console.error('Quick referral error:', e);
-      Alert.alert('Error', e.message || 'Failed to send referral request');
+      showToast('Failed to send referral request. Please try again.', 'error');
     } finally {
       setReferralRequesting(false);
     }
@@ -579,7 +580,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           setIsSaved(false);
           showToast('Job removed from saved', 'success');
         } else {
-          Alert.alert('Error', 'Failed to remove job from saved');
+          showToast('Failed to remove job from saved', 'error');
         }
       } else {
         // Save the job
@@ -588,12 +589,12 @@ const { jobId, fromReferralRequest } = route.params || {};
           setIsSaved(true);
           showToast('Job saved successfully', 'success');
         } else {
-          Alert.alert('Error', 'Failed to save job');
+          showToast('Failed to save job', 'error');
         }
       }
     } catch (error) {
       console.error('Save/Unsave error:', error);
-      Alert.alert('Error', error.message || 'Failed to update saved status');
+      showToast('Failed to update saved status. Please try again.', 'error');
     }
   };
 
@@ -990,7 +991,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         <InfoRow
           icon="time"
           label="Posted"
-          value={formatDate(job.CreatedAt || job.PublishedAt)}
+          value={formatDate(job.PublishedAt || job.CreatedAt)}
         />
         <InfoRow
           icon="calendar"
@@ -1174,9 +1175,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               </View>
               <TextInput
                 style={styles.referralMessageInput}
-                placeholder="Tell them why you're interested in this role and your background...
-
-Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. I'm really excited about this role because it aligns perfectly with my career goals. I'd be grateful for any referral help!'"
+                placeholder="Tell referrer what makes you the ideal fit..."
                 value={referralMessage}
                 onChangeText={setReferralMessage}
                 multiline
@@ -1186,7 +1185,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
               />
               <View style={styles.messageFooter}>
                 <Text style={styles.referralMessageHint}>
-                  Help referrers understand your interest and background
+                  (max 1000 characters)
                 </Text>
                 <Text style={styles.characterCount}>
                   {referralMessage.length}/1000
@@ -1226,9 +1225,7 @@ Example: 'Hi! I'm a software engineer with 3 years experience in React/Node.js. 
               </View>
               <TextInput
                 style={styles.coverLetterInput}
-                placeholder="Write a personalized cover letter to stand out...
-
-Highlight your relevant experience, skills, and why you're excited about this specific role and company."
+                placeholder="Tell job poster what makes you the ideal fit..."
                 value={coverLetter}
                 onChangeText={setCoverLetter}
                 multiline
@@ -1276,7 +1273,8 @@ Highlight your relevant experience, skills, and why you're excited about this sp
             </TouchableOpacity>
           )}
           
-          {isJobSeeker && (
+          {/* Apply button - hide for referrer-posted jobs (they should use Ask Referral instead) */}
+          {isJobSeeker && !isReferrerPosted && (
             <TouchableOpacity 
               style={[
 
@@ -1653,7 +1651,7 @@ const createStyles = (colors, responsive = {}) => {
     gap: 12,
   },
   applyButton: {
-    flex: 2,
+    flex: 1,
     flexDirection: 'row',
     backgroundColor: colors.primary,
     padding: 16,
@@ -1778,44 +1776,6 @@ const createStyles = (colors, responsive = {}) => {
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
     fontWeight: typography.weights.medium,
-  },
-  externalApplicationSection: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
-    marginTop: 8,
-  },
-  externalApplicationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  externalApplicationTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginLeft: 8,
-  },
-  externalApplicationDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  externalApplicationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-  },
-  externalApplicationButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    marginLeft: 8,
   },
   jobTagsSection: {
     padding: 20,

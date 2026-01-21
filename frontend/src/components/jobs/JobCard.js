@@ -35,6 +35,11 @@ const JobCard = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   if (!job) return null;
+  
+  // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
+  // For referrer-posted jobs, hide Apply and show Ask Referral only
+  const isReferrerPosted = job.PostedByType === 2;
+  
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
   const logo = job.OrganizationLogo || job.organizationLogo || '';
@@ -170,8 +175,8 @@ const JobCard = ({
             </TouchableOpacity>
           )}
 
-          {/* Apply button - only show if not hidden */}
-          {!hideApply && onApply && (
+          {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
+          {!hideApply && !isReferrerPosted && onApply && (
             <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
               <Ionicons name="paper-plane-outline" size={18} color="#fff" />
               <Text style={styles.applyText}>Apply</Text>

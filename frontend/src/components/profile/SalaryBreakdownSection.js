@@ -7,12 +7,12 @@ import {
   Modal,
   ScrollView,
   TextInput,
-  Alert,
   ActivityIndicator,
   FlatList,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showToast } from '../Toast';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
@@ -219,7 +219,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 
   const saveSalaryBreakdown = async (silent = false) => {
     if (!profile?.UserID) {
-      Alert.alert('Error', 'User ID not found');
+      showToast('User ID not found', 'error');
       return false;
     }
 
@@ -248,14 +248,14 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
         onUpdate && onUpdate({ salaryBreakdown: payload });
         if (!silent) setShowSalaryModal(false);
         await calculateTotals();
-        if (!silent) Alert.alert('Success', 'Salary breakdown updated');
+        if (!silent) showToast('Salary breakdown updated', 'success');
         return true;
       } else {
-        if (!silent) Alert.alert('Error', result?.error || 'Failed to update salary breakdown');
+        if (!silent) showToast(result?.error || 'Failed to update salary breakdown', 'error');
         return false;
       }
     } catch (error) {
-      if (!silent) Alert.alert('Error', `Failed to update: ${error?.message || 'Unknown error'}`);
+      if (!silent) showToast(`Failed to update: ${error?.message || 'Unknown error'}`, 'error');
       return false;
     } finally {
       setLoading(false);
@@ -463,7 +463,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
                   onPress={() => {
                     if (pickerState.type === 'component') {
                       if (categorize(item.Name) === 'fixed' && anotherFixedExists(pickerState.context, pickerState.index)) {
-                        Alert.alert('Not allowed', 'Only one Fixed component is allowed.');
+                        showToast('Only one Fixed component is allowed.', 'error');
                         return;
                       }
                       setComponentField(pickerState.context, pickerState.index, 'ComponentID', item.ComponentID);

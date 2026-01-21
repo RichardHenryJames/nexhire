@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -77,7 +77,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How is Refopen different from other job portals?',
-          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, ALL employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 15x more likely to get hired.'
+          answer: 'Unlike traditional job portals where you simply apply and wait, Refopen focuses on referrals. When you request a referral for a company, verified employees from that organization on our platform receive your request. This significantly increases your visibility and chances of getting noticed by hiring managers. Studies show that referred candidates are 15x more likely to get hired.'
         },
         {
           question: 'Is Refopen available as a mobile app?',
@@ -98,7 +98,7 @@ export default function FAQScreen() {
         },
         {
           question: 'Is Refopen free to use?',
-          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests cost ₹39 per request (paid from wallet credits). New users get ₹50 welcome bonus on signup!\n\nAdd money to wallet via bank transfer or UPI.'
+          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests cost ₹49 per request (paid from wallet credits).\n\nAdd money to wallet via bank transfer or UPI.'
         },
         {
           question: 'How do I complete my profile?',
@@ -115,7 +115,7 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'How do I request a referral?',
-          answer: 'Requesting a referral is easy:\n1. Find a job you are interested in\n2. Click "Ask for Referral"\n3. Your request is sent to ALL employees of that company on Refopen\n4. Employees review your profile and can choose to refer you\n5. You get notified when someone accepts your request\n6. The employee submits your referral through their company\'s system'
+          answer: 'Requesting a referral is easy:\n1. Find a job you are interested in\n2. Click "Ask for Referral"\n3. Your request is sent to verified employees of that company on Refopen\n4. Employees review your profile and can choose to refer you\n5. You get notified when someone accepts your request\n6. The employee submits your referral through their company\'s system'
         },
         {
           question: 'Does getting a referral guarantee me a job?',
@@ -193,11 +193,11 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I get a refund?',
-          answer: 'Refunds are processed as per our Refund Policy:\n• Email support@refopen.com with transaction details\n• Refunds for technical failures are processed automatically\n• Processing time: 5-7 business days\n\nNote: Referral request fees and AI Jobs access fees are non-refundable once service is used. Wallet recharge amounts can be refunded if unused.'
+          answer: 'Refunds are processed as per our Refund Policy:\n• Create a support ticket with transaction details\n• Refunds for technical failures are processed automatically\n• Processing time: 5-7 business days\n\nNote: Referral request fees and AI Jobs access fees are non-refundable once service is used. Wallet recharge amounts can be refunded if unused.'
         },
         {
           question: 'What if my payment verification is rejected?',
-          answer: 'If your payment proof is rejected:\n• Check the rejection reason in your submissions history\n• Common reasons: incorrect reference number, amount mismatch, unclear details\n• Resubmit with correct information\n• For issues, contact support@refopen.com with your transaction details\n\nNote: If the transfer was successful but rejected due to wrong details, your money is safe and we will help resolve it.'
+          answer: 'If your payment proof is rejected:\n• Check the rejection reason in your submissions history\n• Common reasons: incorrect reference number, amount mismatch, unclear details\n• Resubmit with correct information\n• For issues, create a support ticket with your transaction details\n\nNote: If the transfer was successful but rejected due to wrong details, your money is safe and we will help resolve it.'
         }
       ]
     },
@@ -231,7 +231,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I delete my account?',
-          answer: 'To delete your account, please email support@refopen.com with your registered email and request for account deletion.\n\nNote: This action is permanent. All data will be deleted within 30 days as per our data retention policy. Unused wallet credits are forfeited.'
+          answer: 'To delete your account, create a support ticket with your registered email and request for account deletion.\n\nNote: This action is permanent. All data will be deleted within 30 days as per our data retention policy. Unused wallet credits are forfeited.'
         },
         {
           question: 'Is my data safe with Refopen?',
@@ -243,7 +243,11 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I update my email or phone number?',
-          answer: 'To update your contact information, please email support@refopen.com with:\n• Your current registered email\n• The new email/phone number you want to use\n• Brief reason for change\n\nOur team will verify and update your account within 24-48 hours.'
+          answer: 'To update your contact information, create a support ticket with:\n• Your current registered email\n• The new email/phone number you want to use\n• Brief reason for change\n\nOur team will verify and update your account within 24-48 hours.'
+        },
+        {
+          question: 'Is my work email safe with Refopen?',
+          answer: 'Absolutely! Your privacy is our top priority. We do NOT store your work email in our database. Your work email is only used once for verification purposes to confirm your employment. It is neither stored nor shared with anyone, and it will never be used for any other purpose. You can use Refopen with complete peace of mind knowing your work email remains completely private and secure.'
         }
       ]
     },
@@ -252,15 +256,15 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'I am not receiving notifications. What should I do?',
-          answer: 'Check these settings:\n1. In-app: Profile → Settings → Notifications (enable all)\n2. Phone settings: Allow notifications for Refopen\n3. Email: Check spam folder, add @refopen.com to contacts\n4. Browser: Allow notifications when prompted\n\nIf issues persist, contact support@refopen.com.'
+          answer: 'Check these settings:\n1. In-app: Profile → Settings → Notifications (enable all)\n2. Phone settings: Allow notifications for Refopen\n3. Email: Check spam folder, add @refopen.com to contacts\n4. Browser: Allow notifications when prompted\n\nIf issues persist, create a support ticket.'
         },
         {
           question: 'I transferred money but my wallet is not credited. What now?',
-          answer: 'Don\'t worry! Your money is safe. Here\'s what to check:\n1. Ensure you submitted the payment proof with correct transaction reference number\n2. Check your submission status in Wallet → My Submissions\n3. Verification typically takes 2-4 hours during business hours\n4. If rejected, check the reason and resubmit with correct details\n5. If still not resolved, email support@refopen.com with:\n   - Transaction reference number\n   - Amount transferred\n   - Date of transfer\n   - Screenshot of bank transaction'
+          answer: 'Don\'t worry! Your money is safe. Here\'s what to check:\n1. Ensure you submitted the payment proof with correct transaction reference number\n2. Check your submission status in Wallet → My Submissions\n3. Verification typically takes 2-4 hours during business hours\n4. If rejected, check the reason and resubmit with correct details\n5. If still not resolved, create a support ticket with:\n   - Transaction reference number\n   - Amount transferred\n   - Date of transfer\n   - Screenshot of bank transaction'
         },
         {
           question: 'I cannot login to my account. Help!',
-          answer: 'Try these steps:\n1. Reset password using "Forgot Password"\n2. Clear browser cache and cookies\n3. Try a different browser or device\n4. Check if your account was deactivated\n5. If using Google login, ensure you are using the correct Google account\n\nStill stuck? Email support@refopen.com with your registered email.'
+          answer: 'Try these steps:\n1. Reset password using "Forgot Password"\n2. Clear browser cache and cookies\n3. Try a different browser or device\n4. Check if your account was deactivated\n5. If using Google login, ensure you are using the correct Google account\n\nStill stuck? Create a support ticket with your registered email.'
         },
         {
           question: 'The app is not loading properly.',
@@ -286,9 +290,18 @@ export default function FAQScreen() {
     })).filter(section => section.questions.length > 0);
   }, [searchQuery, faqData]);
 
+  const scrollRef = useRef(null);
+
+  // Scroll to top when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
-    <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
     <View style={styles.innerContainer}>
       <View style={styles.content}>
         <Text style={styles.title}>Frequently Asked Questions</Text>
@@ -314,7 +327,7 @@ export default function FAQScreen() {
           <View style={styles.noResults}>
             <Ionicons name="search-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.noResultsText}>No FAQs found for "{searchQuery}"</Text>
-            <Text style={styles.noResultsSubtext}>Try different keywords or contact support@refopen.com</Text>
+            <Text style={styles.noResultsSubtext}>Try different keywords or contact support below</Text>
           </View>
         ) : null}
 
@@ -351,10 +364,6 @@ export default function FAQScreen() {
           
           <View style={styles.contactOptions}>
             <View style={styles.contactRow}>
-              <Ionicons name="mail-outline" size={18} color={colors.primary} />
-              <Text style={styles.contactItem}>support@refopen.com</Text>
-            </View>
-            <View style={styles.contactRow}>
               <Ionicons name="time-outline" size={18} color={colors.primary} />
               <Text style={styles.contactItem}>Response: 24-48 hours</Text>
             </View>
@@ -387,7 +396,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     alignSelf: 'center',
   },
   content: {

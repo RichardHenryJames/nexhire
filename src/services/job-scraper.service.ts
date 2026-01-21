@@ -888,38 +888,72 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'p&g': 'Procter & Gamble',
     'pg': 'Procter & Gamble',
     
+    // TCS - ALL VARIATIONS
     'tcs': 'Tata Consultancy Services',
     'tata consultancy': 'Tata Consultancy Services',
+    'tata consultancy service': 'Tata Consultancy Services',
+    'tcs limited': 'Tata Consultancy Services',
+    'tata consulting': 'Tata Consultancy Services',
     
+    // Infosys - ALL VARIATIONS
     'infosys technologies': 'Infosys',
     'infosys limited': 'Infosys',
+    'infosys ltd': 'Infosys',
+    'infosys bpm': 'Infosys',
+    'infosys consulting': 'Infosys',
     
+    // Wipro - ALL VARIATIONS
     'wipro technologies': 'Wipro',
     'wipro limited': 'Wipro',
+    'wipro ltd': 'Wipro',
+    'wipro hr': 'Wipro',
+    'wipro infotech': 'Wipro',
     
+    // HCL - ALL VARIATIONS
     'hcl': 'HCL Technologies',
     'hcl tech': 'HCL Technologies',
+    'hcltech': 'HCL Technologies',
+    'hcl technologies limited': 'HCL Technologies',
+    'hcl technologies ltd': 'HCL Technologies',
+    'hclsoftware': 'HCL Technologies',
     
     'tech mahindra limited': 'Tech Mahindra',
     
+    // Microsoft - ALL VARIATIONS
     'microsoft corporation': 'Microsoft',
+    'microsoft corp': 'Microsoft',
+    'microsoft azure': 'Microsoft',
     
+    // Google/Alphabet - ALL VARIATIONS
     'google llc': 'Google',
+    'google inc': 'Google',
     'alphabet': 'Google',
+    'alphabet inc': 'Google',
     
+    // Meta/Facebook - ALL VARIATIONS
     'meta platforms': 'Meta',
+    'meta platforms inc': 'Meta',
     'facebook': 'Meta',
+    'facebook inc': 'Meta',
     
+    // Amazon - ALL VARIATIONS
     'amazon.com': 'Amazon',
+    'amazoncom': 'Amazon',
     'amazon web services': 'Amazon',
     'aws': 'Amazon',
+    'amazon.com services': 'Amazon',
+    'amazon development': 'Amazon',
+    'amazon dev center': 'Amazon',
     
     'apple inc': 'Apple',
     
     'netflix inc': 'Netflix',
     
+    // Salesforce - ALL VARIATIONS
     'salesforce.com': 'Salesforce',
+    'salesforcecom': 'Salesforce',
     'salesforce inc': 'Salesforce',
+    'salesforce.com inc': 'Salesforce',
     
     'oracle corporation': 'Oracle',
     
@@ -944,23 +978,31 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'hewlett packard': 'HP',
     'hewlett-packard': 'HP',
     
+    // Accenture - ALL VARIATIONS
     'accenture plc': 'Accenture',
     'accenture llp': 'Accenture',
+    'accenture federal services': 'Accenture',
     
+    // Deloitte - ALL VARIATIONS
     'deloitte touche': 'Deloitte',
     'deloitte llp': 'Deloitte',
     'deloitte consulting': 'Deloitte',
+    'hashedin by deloitte': 'Deloitte',
     
     'ernst young': 'EY',
     'ernst & young': 'EY',
     
     'kpmg llp': 'KPMG',
     
+    // McKinsey - ALL VARIATIONS
     'mckinsey': 'McKinsey & Company',
     'mckinsey and company': 'McKinsey & Company',
+    'mckinsey & co': 'McKinsey & Company',
     
+    // BCG - ALL VARIATIONS
     'boston consulting': 'Boston Consulting Group',
-    'bcg': 'Boston Consulting Group',
+    'boston consulting group': 'BCG',
+    'bcg': 'BCG',
     
     'bain company': 'Bain & Company',
     'bain and company': 'Bain & Company',
@@ -976,8 +1018,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'wells fargo & company': 'Wells Fargo',
     'wells fargo bank': 'Wells Fargo',
     
-    'citibank': 'Citigroup',
-    'citi': 'Citigroup',
+    // Citi - ALL VARIATIONS
+    'citibank': 'Citi',
+    'citigroup': 'Citi',
+    'citicorp': 'Citi',
     
     'capital one financial': 'Capital One',
     
@@ -998,8 +1042,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     'doordash inc': 'DoorDash',
     
-    'twitter': 'X',
-    'twitter inc': 'X',
+    // X/Twitter - ALL VARIATIONS
+    'twitter': 'X Corp',
+    'twitter inc': 'X Corp',
+    'x': 'X Corp',
     
     'snap inc': 'Snap',
     'snapchat': 'Snap',
@@ -1029,6 +1075,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'palo alto networks inc': 'Palo Alto Networks',
     
     'okta inc': 'Okta',
+    'okta identity india': 'Okta',
+    'okta india': 'Okta',
     
     'snowflake inc': 'Snowflake',
     
@@ -1040,8 +1088,14 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     'stripe inc': 'Stripe',
     
+    // Square/Block - ALL VARIATIONS
     'square inc': 'Square',
-    'block inc': 'Block',
+    'block inc': 'Block Inc',
+    'block': 'Block Inc',
+    
+    // ZS Associates
+    'zs': 'ZS Associates',
+    'zs associates': 'ZS Associates',
   };
 
   /**
@@ -1261,26 +1315,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         }
       }
       
-      // SECOND: Try normalized match - strip common suffixes from BOTH sides
-      // This catches "Databricks" vs "Databricks Inc." duplicates
-      const exactQuery = `
-        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
-        FROM Organizations 
-        WHERE LOWER(
-          REPLACE(
-            REPLACE(
-              REPLACE(
-                REPLACE(
-                  REPLACE(REPLACE(Name, ' ', ''), ',', ''),
-                '.', ''),
-              'inc', ''),
-            'llc', ''),
-          'ltd', '')
-        ) = @param0
-          AND IsActive = 1
-      `;
-      
-      // Strip same suffixes from search term
+      // SECOND: Try normalized match - search by exact normalized name first, then variations
+      // Strip suffixes from search term for matching
       const strippedNormalized = normalizedName
         .replace(/\s/g, '')
         .replace(/,/g, '')
@@ -1288,30 +1324,97 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         .replace(/inc$/i, '')
         .replace(/llc$/i, '')
         .replace(/ltd$/i, '')
+        .replace(/limited$/i, '')
+        .replace(/technologies$/i, '')
         .toLowerCase();
       
-      const exactMatch = await dbService.executeQuery(exactQuery, [strippedNormalized]);
-      if (exactMatch.recordset.length > 0) {
-        console.log(`✅ Normalized match found for "${normalizedName}": ${exactMatch.recordset[0].Name}`);
-        return exactMatch.recordset[0];
+      // Use indexed NormalizedName column for fast lookups (index: IX_Organizations_NormalizedName)
+      const exactQuery = `
+        SELECT TOP 5 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE NormalizedName LIKE @param0 + '%'
+          AND IsActive = 1
+        ORDER BY LEN(Name)
+      `;
+      
+      const exactMatches = await dbService.executeQuery(exactQuery, [strippedNormalized]);
+      if (exactMatches.recordset.length > 0) {
+        // Validate match in JavaScript - strip same suffixes from DB name and check equality
+        for (const match of exactMatches.recordset) {
+          const dbNameStripped = match.Name
+            .replace(/\s/g, '')
+            .replace(/,/g, '')
+            .replace(/\./g, '')
+            .replace(/inc$/i, '')
+            .replace(/llc$/i, '')
+            .replace(/ltd$/i, '')
+            .replace(/limited$/i, '')
+            .replace(/technologies$/i, '')
+            .toLowerCase();
+          
+          // Exact match after stripping suffixes from both sides (same as old logic)
+          if (dbNameStripped === strippedNormalized) {
+            console.log(`✅ Normalized match found for "${normalizedName}": ${match.Name}`);
+            return match;
+          }
+        }
       }
       
-      // Second, fetch potential matches and calculate similarity
+      // THIRD: Check for HR/recruiter suffix patterns (e.g., "Wipro HR Soniya" -> "Wipro")
+      // These are fake company entries added by recruiters
+      const hrPatterns = /\s+(hr|recruiter|hiring|jobs|careers|talent)\s+\w*$/i;
+      if (hrPatterns.test(normalizedName)) {
+        const baseCompanyName = normalizedName.replace(hrPatterns, '').trim();
+        console.log(`🔍 Checking HR pattern: "${normalizedName}" -> "${baseCompanyName}"`);
+        
+        const hrQuery = `
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          FROM Organizations 
+          WHERE Name = @param0 AND IsActive = 1
+        `;
+        const hrMatch = await dbService.executeQuery(hrQuery, [baseCompanyName]);
+        if (hrMatch.recordset.length > 0) {
+          console.log(`✅ HR pattern match found: "${normalizedName}" -> "${hrMatch.recordset[0].Name}"`);
+          return hrMatch.recordset[0];
+        }
+      }
+      
+      // FOURTH: Check for core name match (e.g., "HCL Technologies" should match "HCL Technologies Limited")
+      const coreNameQuery = `
+        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+        FROM Organizations 
+        WHERE (Name LIKE @param0 + '%' OR @param0 LIKE Name + '%')
+          AND LEN(Name) >= 3
+          AND IsActive = 1
+        ORDER BY LEN(Name) DESC
+      `;
+      const coreMatch = await dbService.executeQuery(coreNameQuery, [normalizedName]);
+      if (coreMatch.recordset.length > 0) {
+        // Verify it's a meaningful match (not just coincidental prefix)
+        const matchName = coreMatch.recordset[0].Name.toLowerCase();
+        const searchName = normalizedName.toLowerCase();
+        if (matchName.startsWith(searchName) || searchName.startsWith(matchName)) {
+          console.log(`✅ Core name match found for "${normalizedName}": ${coreMatch.recordset[0].Name}`);
+          return coreMatch.recordset[0];
+        }
+      }
+      
+      // FIFTH: Fetch potential matches and calculate similarity
       const candidatesQuery = `
-        SELECT TOP 20 OrganizationID, Name, LogoURL, Website, Industry 
+        SELECT TOP 30 OrganizationID, Name, LogoURL, Website, Industry 
         FROM Organizations 
         WHERE LEN(Name) BETWEEN @param0 AND @param1
           AND IsActive = 1
         ORDER BY Name
       `;
       
-      const minLen = Math.max(3, normalizedName.length - 5);
-      const maxLen = normalizedName.length + 10;
+      const minLen = Math.max(3, normalizedName.length - 8);
+      const maxLen = normalizedName.length + 15;
       
       const candidates = await dbService.executeQuery(candidatesQuery, [minLen, maxLen]);
       
       // Calculate similarity for each candidate
-      const SIMILARITY_THRESHOLD = 0.85;
+      const SIMILARITY_THRESHOLD = 0.80; // Lowered from 0.85 to catch more variations
       let bestMatch: any = null;
       let bestScore = 0;
       
@@ -1384,16 +1487,25 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         )
       `;
       
+      // Extract experience values and ensure they comply with CHK_Experience constraint
+      // Constraint: ExperienceMin >= 0 AND ExperienceMin <= ExperienceMax
+      let experienceMin = this.extractMinExperience(job.title, job.description);
+      let experienceMax = this.extractMaxExperience(job.title, job.description);
+      
+      // Safety check: ensure values comply with database constraint
+      experienceMin = Math.max(0, experienceMin);  // Min must be >= 0
+      experienceMax = Math.max(experienceMin, experienceMax);  // Max must be >= Min
+      
       const values = [
         jobId, organizationId, job.title, jobTypeId, workplaceTypeId,
         this.extractDepartment(job.title), job.description, job.location,
         this.extractCountry(job.location), job.workplaceType === 'Remote' ? 1 : 0,
         job.salaryMin, job.salaryMax, currencyId, 'Annual', 'Salary',
-        this.extractMinExperience(job.title, job.description), 
-        this.extractMaxExperience(job.title, job.description),
+        experienceMin, 
+        experienceMax,
         'Published', this.calculateJobPriority(job, jobAge), 'Public',
         actualPostedDate, this.calculateExpiryDate(actualPostedDate, jobAge),
-        actualPostedDate, now, job.externalJobId,
+        now, now, job.externalJobId,  // CreatedAt = now (when inserted), UpdatedAt = now
         `${job.jobType}, ${job.workplaceType}${job.requirements ? ', ' + job.requirements.substring(0, 200) : ''}`,  // Note: Source NOT included in tags - only skills
         0, job.applicationUrl
       ];
@@ -1424,6 +1536,17 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // Reject: Test/placeholder data
     if (/(test|sample|demo|placeholder|example|abc|xyz).*company/i.test(trimmed)) {
       return { valid: false, reason: 'Test data' };
+    }
+
+    // Reject: Confidential/Anonymous/Undisclosed employers
+    if (/^(confidential|anonymous|undisclosed|not disclosed|private employer)$/i.test(trimmed) ||
+        /^(confidential|anonymous)\s+(employer|company|jobs?)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Confidential employer' };
+    }
+
+    // Reject: "Client of X" placeholder patterns from staffing agencies
+    if (/^(a\s+)?client\s+of\s+/i.test(trimmed)) {
+      return { valid: false, reason: 'Staffing agency placeholder' };
     }
 
     // Reject: Malformed (starts with *, ., or weird patterns)
@@ -1488,9 +1611,13 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // 🎯 STEP 3: Try to find similar organization using smart matching (pass original name for exact match)
     const similarOrg = await this.findSimilarOrganization(normalizedName, canonicalName);
     if (similarOrg) {
-      // If it's a Fortune 500 company, update the name to canonical
-      if (isFortune500 && similarOrg.Name !== canonicalName) {
-        await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+      // If it's a Fortune 500 company, update the name to canonical and fix industry if generic
+      if (isFortune500) {
+        const needsNameUpdate = similarOrg.Name !== canonicalName;
+        const hasGenericIndustry = !similarOrg.Industry || similarOrg.Industry === 'IT Jobs' || similarOrg.Industry === 'Unknown';
+        if (needsNameUpdate || hasGenericIndustry) {
+          await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+        }
       }
       
       // 🔄 UPDATE existing organization with new data from APIs
@@ -1501,8 +1628,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // STEP 4: No similar organization found, create new one with enhanced data
     const enhancedOrgData = await this.getEnhancedOrganizationData(canonicalName, source, job);
     
-    // Override industry if Fortune 500 match provides better data
-    const finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
+    // Override industry if Fortune 500 match provides better data, then try company name
+    let finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
+    finalIndustry = this.enhanceIndustryFromCompanyName(canonicalName, finalIndustry);
     
     const insertQuery = `
       INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, IsFortune500, LogoURL, Website, LinkedInProfile)
@@ -1622,8 +1750,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Industry if existing is generic and we have better info
-      if (enhancedData.industry !== 'Technology' && 
-          (existingData.Industry === 'Technology' || !existingData.Industry)) {
+      const genericIndustries = ['Technology', 'IT Jobs', 'Unknown', '', null];
+      if (enhancedData.industry && !genericIndustries.includes(enhancedData.industry) && 
+          genericIndustries.includes(existingData.Industry)) {
         updates.push(`Industry = @param${paramIndex}`);
         params.push(enhancedData.industry);
         paramIndex++;
@@ -2050,6 +2179,84 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return defaultIndustry;
   }
 
+  // 🏭 Enhance industry based on company name keywords
+  private static enhanceIndustryFromCompanyName(companyName: string, currentIndustry: string): string {
+    // Skip if already has a specific industry (not generic)
+    const genericIndustries = ['Technology', 'IT Jobs', 'Unknown', ''];
+    if (!genericIndustries.includes(currentIndustry)) {
+      return currentIndustry;
+    }
+    
+    const nameLower = companyName.toLowerCase();
+    
+    // Financial/Banking
+    if (/bank|finance|capital|invest|credit|insurance/i.test(nameLower) && !/food bank|blood bank/i.test(nameLower)) {
+      return nameLower.includes('insurance') ? 'Insurance' : 'Financial Services';
+    }
+    
+    // Healthcare
+    if (/hospital|medical|health|pharma|clinic|dental|therapy/i.test(nameLower)) {
+      return nameLower.includes('pharma') ? 'Pharmaceuticals' : 'Healthcare';
+    }
+    
+    // Education
+    if (/university|college|school|academy|institute|education/i.test(nameLower)) {
+      return 'Education';
+    }
+    
+    // Legal
+    if (/law firm|legal|attorney|lawyer/i.test(nameLower)) {
+      return 'Legal';
+    }
+    
+    // Hospitality
+    if (/hotel|resort|hospitality|restaurant|cafe/i.test(nameLower)) {
+      return 'Hospitality';
+    }
+    
+    // Automotive
+    if (/automotive|motors|car dealer|auto/i.test(nameLower)) {
+      return 'Automotive';
+    }
+    
+    // Aviation
+    if (/airline|aviation|aerospace/i.test(nameLower)) {
+      return 'Aviation';
+    }
+    
+    // Real Estate
+    if (/real estate|realty|property|housing/i.test(nameLower)) {
+      return 'Real Estate';
+    }
+    
+    // Logistics
+    if (/logistics|shipping|freight|transport|delivery/i.test(nameLower)) {
+      return 'Logistics';
+    }
+    
+    // Energy
+    if (/energy|oil|gas|solar|renewable|power/i.test(nameLower)) {
+      return nameLower.includes('solar') || nameLower.includes('renewable') ? 'Renewable Energy' : 'Energy';
+    }
+    
+    // Cybersecurity
+    if (/security|cyber|infosec/i.test(nameLower)) {
+      return 'Cybersecurity';
+    }
+    
+    // Semiconductors
+    if (/semiconductor|chip|foundry/i.test(nameLower)) {
+      return 'Semiconductors';
+    }
+    
+    // Construction
+    if (/construction|builder|contractor/i.test(nameLower)) {
+      return 'Construction';
+    }
+    
+    return currentIndustry;
+  }
+
   private static detectCurrencyFromLocation(location: string): number {
     if (!location) return 1; // USD default
     const locationLower = location.toLowerCase();
@@ -2145,7 +2352,11 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
     for (const pattern of expPatterns) {
       const match = content.match(pattern);
-      if (match) return parseInt(match[1]);
+      if (match) {
+        const exp = parseInt(match[1]);
+        // Ensure experience is non-negative and reasonable (0-50 years)
+        return Math.max(0, Math.min(exp, 50));
+      }
     }
 
     if (content.includes('senior') || content.includes('lead')) return 5;
@@ -2160,11 +2371,16 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     const content = `${title} ${description}`.toLowerCase();
     
     const rangeMatch = content.match(/(\d+)-(\d+)\s*years/);
-    if (rangeMatch) return parseInt(rangeMatch[2]);
+    if (rangeMatch) {
+      const maxExp = parseInt(rangeMatch[2]);
+      // Ensure max >= min and is reasonable (capped at 50 years)
+      return Math.max(minExp, Math.min(maxExp, 50));
+    }
 
     if (content.includes('senior') || content.includes('lead')) return Math.max(minExp + 5, 10);
     if (content.includes('mid')) return Math.max(minExp + 3, 7);
     
+    // Always ensure max >= min
     return Math.max(minExp + 3, 5);
   }
 

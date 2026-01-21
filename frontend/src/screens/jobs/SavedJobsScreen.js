@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, Alert, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import JobCard from '../../components/jobs/JobCard';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../../components/Toast';
 
 const SavedJobsScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -32,7 +33,7 @@ const SavedJobsScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading saved jobs:', error);
-      Alert.alert('Error', 'Failed to load saved jobs');
+      showToast('Failed to load saved jobs', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -114,13 +115,13 @@ const SavedJobsScreen = ({ navigation }) => {
       if (response?.success) {
         removeSavedJobLocally(id);
         // Show success message
-        Alert.alert('Success', 'Job removed from saved');
+        showToast('Job removed from saved', 'success');
       } else {
-        Alert.alert('Error', response.error || 'Failed to remove job from saved');
+        showToast('Failed to remove job from saved. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Unsave error:', error);
-      Alert.alert('Error', error.message || 'Failed to remove job from saved');
+      showToast('Failed to remove job from saved. Please try again.', 'error');
     }
   }, [removeSavedJobLocally]);
 

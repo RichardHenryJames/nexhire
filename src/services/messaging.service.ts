@@ -693,26 +693,28 @@ SELECT COUNT(*) as Total
   }
 
   /**
-   * Get profile views
+   * Get profile views - optimized with single query
    */
   static async getProfileViews(userId: string, page = 1, pageSize = 20) {
     const offset = (page - 1) * pageSize;
 
+    // Single optimized query with COUNT OVER() to avoid separate count query
     const query = `
-            SELECT 
-    pv.ViewID,
-      pv.ViewerUserID,
-                pv.ViewedAt,
-  pv.DeviceType,
-                u.FirstName + ' ' + u.LastName as ViewerName,
-   u.ProfilePictureURL as ViewerProfilePic,
-  u.UserType as ViewerUserType
-       FROM UserProfileViews pv
-            INNER JOIN Users u ON u.UserID = pv.ViewerUserID
-WHERE pv.ViewedUserID = @param0
-    ORDER BY pv.ViewedAt DESC
-            OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY
-        `;
+      SELECT 
+        pv.ViewID,
+        pv.ViewerUserID,
+        pv.ViewedAt,
+        pv.DeviceType,
+        u.FirstName + ' ' + u.LastName as ViewerName,
+        u.ProfilePictureURL as ViewerProfilePic,
+        u.UserType as ViewerUserType,
+        COUNT(*) OVER() as TotalCount
+      FROM UserProfileViews pv WITH (NOLOCK)
+      INNER JOIN Users u WITH (NOLOCK) ON u.UserID = pv.ViewerUserID
+      WHERE pv.ViewedUserID = @param0
+      ORDER BY pv.ViewedAt DESC
+      OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY
+    `;
 
     const result = await dbService.executeQuery(query, [
       userId,
@@ -720,18 +722,14 @@ WHERE pv.ViewedUserID = @param0
       pageSize,
     ]);
 
-    // Get total count
-    const countQuery = `
-            SELECT COUNT(*) as Total
-            FROM UserProfileViews
-      WHERE ViewedUserID = @param0
-        `;
+    const views = result.recordset || [];
+    const total = views.length > 0 ? views[0].TotalCount : 0;
 
-    const countResult = await dbService.executeQuery(countQuery, [userId]);
-    const total = countResult.recordset[0].Total;
+    // Remove TotalCount from each row to keep response clean
+    const cleanViews = views.map(({ TotalCount, ...view }) => view);
 
     return {
-      views: result.recordset || [],
+      views: cleanViews,
       total,
       page,
       pageSize,

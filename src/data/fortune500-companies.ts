@@ -976,7 +976,7 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   },
   {
     canonicalName: 'Okta',
-    alternateNames: ['Okta Inc'],
+    alternateNames: ['Okta Inc', 'Okta Identity India', 'Okta India'],
     industry: 'Technology'
   },
   {
@@ -1841,7 +1841,7 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   },
   {
     canonicalName: 'Estee Lauder',
-    alternateNames: ['The Estee Lauder Companies', 'Estée Lauder'],
+    alternateNames: ['The Estee Lauder Companies', 'Estee Lauder Inc'],
     industry: 'Consumer Goods',
     rank: 252
   },

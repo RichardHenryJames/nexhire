@@ -682,6 +682,11 @@ export class WalletService {
     try {
       const WELCOME_BONUS_AMOUNT = await PricingService.getSetting('WELCOME_BONUS');
 
+      // Skip if welcome bonus is disabled (set to 0)
+      if (!WELCOME_BONUS_AMOUNT || WELCOME_BONUS_AMOUNT <= 0) {
+        return { success: false, amount: 0 };
+      }
+
       // Check if bonus already given
       const checkQuery = `
         SELECT WalletBonusGiven 
@@ -726,7 +731,12 @@ export class WalletService {
     referrerId: string
   ): Promise<{ success: boolean; amount: number }> {
     try {
-      const REFERRAL_BONUS_AMOUNT = 50;
+      const REFERRAL_BONUS_AMOUNT = await PricingService.getSetting('REFERRAL_SIGNUP_BONUS');
+
+      // Skip if referral bonus is disabled (set to 0)
+      if (!REFERRAL_BONUS_AMOUNT || REFERRAL_BONUS_AMOUNT <= 0) {
+        return { success: false, amount: 0 };
+      }
 
       // Credit bonus to new user
       await this.creditBonus(
@@ -761,9 +771,11 @@ export class WalletService {
     totalWithdrawn: number;
     canWithdraw: boolean;
     minimumWithdrawal: number;
+    withdrawalFee: number;
   }> {
     try {
       const wallet = await this.getOrCreateWallet(userId);
+      const withdrawalFee = 90; // Flat ₹90 withdrawal processing fee
       
       // Get total earned from referral bonuses (verification rewards)
       const earnedQuery = `
@@ -796,7 +808,8 @@ export class WalletService {
         totalEarned,
         totalWithdrawn,
         canWithdraw,
-        minimumWithdrawal
+        minimumWithdrawal,
+        withdrawalFee
       };
     } catch (error) {
       console.error('Error getting withdrawable balance:', error);
@@ -812,7 +825,7 @@ export class WalletService {
     bankAccount?: string;
     ifscCode?: string;
     accountHolderName?: string;
-  }): Promise<{ success: boolean; withdrawalId: string; message: string }> {
+  }): Promise<{ success: boolean; withdrawalId: string; amount: number; processingFee: number; netAmount: number; message: string }> {
     try {
       const wallet = await this.getOrCreateWallet(userId);
       const withdrawable = await this.getWithdrawableBalance(userId);
@@ -825,16 +838,20 @@ export class WalletService {
         throw new ValidationError(`Minimum withdrawal amount is ₹${withdrawable.minimumWithdrawal}`);
       }
 
+      // Calculate fee and net amount
+      const processingFee = withdrawable.withdrawalFee;
+      const netAmount = amount - processingFee;
+
       // Create withdrawal request
       const withdrawalId = AuthService.generateUniqueId();
       const insertQuery = `
         INSERT INTO WalletWithdrawals (
-          WithdrawalID, WalletID, UserID, Amount, CurrencyID, 
+          WithdrawalID, WalletID, UserID, Amount, ProcessingFee, NetAmount, CurrencyID, 
           UPI_ID, BankAccountNumber, BankIFSC, BankAccountName,
           Status, RequestedAt
         ) VALUES (
-          @param0, @param1, @param2, @param3, 4,
-          @param4, @param5, @param6, @param7,
+          @param0, @param1, @param2, @param3, @param4, @param5, 4,
+          @param6, @param7, @param8, @param9,
           'Pending', GETUTCDATE()
         )
       `;
@@ -844,6 +861,8 @@ export class WalletService {
         wallet.WalletID,
         userId,
         amount,
+        processingFee,
+        netAmount,
         paymentDetails.upiId || null,
         paymentDetails.bankAccount || null,
         paymentDetails.ifscCode || null,
@@ -853,7 +872,10 @@ export class WalletService {
       return {
         success: true,
         withdrawalId,
-        message: `Withdrawal request for ₹${amount} has been submitted. It will be processed within 24-48 hours.`
+        amount,
+        processingFee,
+        netAmount,
+        message: `Withdrawal request for ₹${amount} has been submitted. You will receive ₹${netAmount} after ₹${processingFee} processing fee.`
       };
     } catch (error) {
       console.error('Error requesting withdrawal:', error);
@@ -891,6 +913,8 @@ export class WalletService {
         SELECT 
           WithdrawalID,
           Amount,
+          ProcessingFee,
+          NetAmount,
           UPI_ID as UpiId,
           BankAccountNumber,
           Status,

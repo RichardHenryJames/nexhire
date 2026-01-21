@@ -13,6 +13,7 @@ import {
   Platform,
   Animated,
 } from 'react-native';
+import { showToast } from '../Toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { typography } from '../../styles/theme';
@@ -161,7 +162,7 @@ const ResumeSection = ({
         
         // Validate file size (10MB limit)
         if (file.size > 10 * 1024 * 1024) {
-          Alert.alert('File Too Large', 'Please select a file smaller than 10MB');
+          showToast('Please select a file smaller than 10MB', 'error');
           return;
         }
 
@@ -170,7 +171,7 @@ const ResumeSection = ({
         setShowLabelModal(true);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to select file');
+      showToast('Failed to select file', 'error');
     }
   };
 
@@ -182,7 +183,7 @@ const ResumeSection = ({
 
   const uploadResume = async () => {
     if (!selectedFile || !resumeLabel.trim()) {
-      Alert.alert('Missing Information', 'Please provide a label for your resume');
+      showToast('Please provide a label for your resume', 'error');
       return;
     }
 
@@ -205,7 +206,7 @@ const ResumeSection = ({
       }
     } catch (error) {
       console.error('Error uploading resume:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload resume');
+      showToast('Failed to upload resume. Please try again.', 'error');
       setUploading(false);
     }
   };
@@ -219,7 +220,7 @@ const ResumeSection = ({
       );
 
       if (response.success) {
-        Alert.alert('Success!', 'Resume uploaded successfully');
+        showToast('Resume uploaded successfully', 'success');
         await loadResumes(); // Reload to get updated list
         if (onUpdate) {
           onUpdate({ resumeUploaded: true });
@@ -227,7 +228,7 @@ const ResumeSection = ({
       }
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload resume');
+      showToast('Failed to upload resume. Please try again.', 'error');
     } finally {
       setUploading(false);
       setSelectedFile(null);
@@ -240,17 +241,17 @@ const ResumeSection = ({
       setLoading(true);
       const response = await refopenAPI.setPrimaryResume(resumeId);
       if (response.success) {
-        Alert.alert('Success!', 'Primary resume updated successfully');
+        showToast('Primary resume updated successfully', 'success');
         await loadResumes();
         if (onUpdate) {
           onUpdate({ primaryResumeChanged: true });
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to update primary resume');
+        showToast('Failed to update primary resume. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error setting primary resume:', error);
-      Alert.alert('Error', error.message || 'Failed to update primary resume');
+      showToast('Failed to update primary resume. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -259,7 +260,7 @@ const ResumeSection = ({
   // ? NEW: Beautiful custom delete confirmation
   const deleteResume = async (resumeId, resumeLabel) => {
     if (resumes.length <= 1) {
-      Alert.alert('Cannot Delete', 'You must have at least one resume');
+      showToast('You must have at least one resume', 'error');
       return;
     }
 
@@ -287,7 +288,7 @@ const ResumeSection = ({
       
       // ✅ FIXED: Ensure we have proper authentication
       if (!refopenAPI.token) {
-        Alert.alert('Authentication Error', 'Please login again to delete resumes');
+        showToast('Please login again to delete resumes', 'error');
         return;
       }
       
@@ -315,7 +316,7 @@ const ResumeSection = ({
         }
         
         // ✅ NEW: Show beautiful success message
-        Alert.alert('✅ Success', 'Resume deleted successfully');
+        showToast('Resume deleted successfully', 'success');
         
         // ✅ OPTIONAL: Reload from server as backup verification
         setTimeout(() => {
@@ -326,7 +327,7 @@ const ResumeSection = ({
           onUpdate({ resumeDeleted: true });
         }
       } else {
-        Alert.alert('Error', response?.error || 'Failed to delete resume');
+        showToast(response?.error || 'Failed to delete resume', 'error');
       }
     } catch (error) {
       console.error('Error deleting resume:', error);
@@ -341,7 +342,7 @@ const ResumeSection = ({
         errorMessage = error.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setDeleting(false);
     }
@@ -356,7 +357,7 @@ const ResumeSection = ({
         // On mobile, use Linking to open the URL
         const Linking = require('react-native').Linking;
         Linking.openURL(resumeURL).catch(() => {
-          Alert.alert('Error', 'Could not open resume. URL might be invalid.');
+          showToast('Could not open resume. URL might be invalid.', 'error');
         });
       }
     } catch (error) {
@@ -365,7 +366,7 @@ const ResumeSection = ({
       Alert.alert('Resume URL', resumeURL, [
         { text: 'Close', style: 'cancel' },
         { text: 'Copy URL', onPress: () => {
-          Alert.alert('Copied', 'Resume URL copied to clipboard');
+          showToast('Resume URL copied to clipboard', 'success');
         }}
       ]);
     }

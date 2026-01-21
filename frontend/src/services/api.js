@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
 import { resetToLogin } from '../navigation/navigationRef';
@@ -440,6 +440,37 @@ class RefOpenAPI {
       await this.clearTokens();
       return { success: true, message: 'Logged out locally' };
     }
+  }
+
+  // Password Management APIs
+  
+  /**
+   * Check if user has a password set (for Google users to know if they can set one)
+   */
+  async hasPassword() {
+    return this.apiCall('/auth/has-password');
+  }
+
+  /**
+   * Set password for Google-only users (no current password required)
+   * This allows Google users to also login with email/password
+   */
+  async setPassword(newPassword) {
+    return this.apiCall('/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  /**
+   * Change password for users who already have one
+   * Requires current password for verification
+   */
+  async changePassword(currentPassword, newPassword) {
+    return this.apiCall('/users/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   }
 
   // User Profile APIs
@@ -1766,22 +1797,7 @@ if (!resumeId) {
  referralCount: result.referralCount ??0
  };
 
- // Optional inline user feedback (can be removed if handled in UI components)
- try {
- if (normalized.success) {
- if (normalized.softDelete) {
- Alert && Alert.alert(
- 'Resume Archived',
- `${normalized.message}\nReferenced by ${normalized.applicationCount} application(s) and ${normalized.referralCount} referral(s).`
- );
- } else {
- Alert && Alert.alert('Resume Deleted', normalized.message);
- }
- }
- } catch (alertErr) {
- console.warn('Alert failed (web env?)', alertErr);
- }
-
+ // User feedback should be handled in UI components using showToast
  return normalized;
     } catch (error) {
       console.error('❌ Delete resume failed:', error.message);
@@ -1902,12 +1918,12 @@ if (!resumeId) {
   }
 
   // 💰 NEW: Request withdrawal of referral earnings
-  async requestWithdrawal(amount, upiId) {
+  async requestWithdrawal(amount, paymentDetails) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     return this.apiCall('/wallet/withdraw', {
       method: 'POST',
-      body: JSON.stringify({ amount, upiId }),
+      body: JSON.stringify({ amount, ...paymentDetails }),
     });
   }
 
@@ -2382,7 +2398,7 @@ if (!resumeId) {
       const queryParams = {
         page: params.page || 1,
         pageSize: params.pageSize || 50,
-        sortBy: params.sortBy || 'CreatedAt',
+        sortBy: params.sortBy || 'PublishedAt',
         sortOrder: params.sortOrder || 'desc',
         ...params
       };
@@ -2402,6 +2418,48 @@ if (!resumeId) {
     } catch (error) {
       console.error('❌ getOrganizationJobs error:', error);
       return { success: false, error: error.message || 'Failed to fetch organization jobs' };
+    }
+  }
+
+  // ✅ NEW: Get jobs posted by the current user (for referrers - doesn't require employer profile)
+  async getMyPostedJobs(params = {}) {
+    if (!this.token) {
+      console.error('❌ getMyPostedJobs: No authentication token');
+      return { success: false, error: 'Authentication required' };
+    }
+
+    try {
+      const userId = this.getUserIdFromToken();
+      if (!userId) {
+        return { success: false, error: 'Unable to identify user' };
+      }
+
+      // Build query parameters
+      const queryParams = {
+        page: params.page || 1,
+        pageSize: params.pageSize || 50,
+        sortBy: params.sortBy || 'CreatedAt',
+        sortOrder: params.sortOrder || 'desc',
+        status: params.status || undefined,
+        postedByUserId: userId,
+        ...params
+      };
+
+      // Clean undefined/null values
+      const cleaned = {};
+      for (const [k, v] of Object.entries(queryParams)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleaned[k] = v;
+        }
+      }
+
+      const queryString = new URLSearchParams(cleaned).toString();
+      const endpoint = `/user/my-posted-jobs${queryString ? `?${queryString}` : ''}`;
+      
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('❌ getMyPostedJobs error:', error);
+      return { success: false, error: error.message || 'Failed to fetch posted jobs' };
     }
   }
 
@@ -2651,7 +2709,10 @@ if (!resumeId) {
           JobApplicationEmail: true,
           MessageReceivedEmail: true,
           MessageReceivedPush: true,
-          WeeklyDigestEmail: true
+          WeeklyDigestEmail: true,
+          DailyJobRecommendationEmail: true,
+          ReferrerNotificationEmail: true,
+          MarketingEmail: true
         }
       };
     }
@@ -2695,8 +2756,8 @@ if (!resumeId) {
           minAmount: 100,
           maxAmount: 50000,
           processingTime: '1 business day',
-          supportEmail: 'support@refopen.com',
-          supportPhone: '+91-9876543210'
+          supportContact: 'Contact Support via Help & Support',
+          supportPhone: ''
         }
       };
     }

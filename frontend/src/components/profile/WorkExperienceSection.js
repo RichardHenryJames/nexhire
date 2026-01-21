@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, Alert, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showToast } from '../Toast';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,6 +9,7 @@ import { useEditing } from './ProfileSection';
 import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
+import AddWorkExperienceModal from './AddWorkExperienceModal';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
@@ -126,9 +128,9 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
   const isCurrent = item.IsCurrent || !end;
   const workExpVerified = item.CompanyEmailVerified === 1 || item.CompanyEmailVerified === true;
   
-  // For current job: use user-level IsVerifiedReferrer
-  // For historical jobs: use work experience level CompanyEmailVerified
-  const isVerified = isCurrent ? userIsVerifiedReferrer : workExpVerified;
+  // Always use work experience level CompanyEmailVerified for showing verification badge
+  // The user's overall IsVerifiedReferrer status is separate from individual work experience verification
+  const isVerified = workExpVerified;
   
   const formatDate = (date) => {
     if (!date) return '';
@@ -362,22 +364,26 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       return;
     }
 
+    // Show OTP input immediately for better UX
+    setShowOtpInput(true);
+    setOtp(['', '', '', '']);
+    setSendingOtp(true);
+    setVerificationError('');
+    
     try {
-      setSendingOtp(true);
-      setVerificationError('');
       console.log('Sending OTP to:', emailToSend); // Debug log
       const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       
       if (response.success) {
-        setShowOtpInput(true);
-        setOtp(['', '', '', '']);
         setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
-        Alert.alert('Success', `OTP sent to ${response.data?.email || emailToSend}`);
+        showToast(`OTP sent to ${response.data?.email || emailToSend}`, 'success');
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
+        setShowOtpInput(false); // Hide boxes on failure
       }
     } catch (error) {
       setVerificationError(error.message || 'Failed to send OTP');
+      setShowOtpInput(false); // Hide boxes on failure
     } finally {
       setSendingOtp(false);
     }
@@ -646,7 +652,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const id = getId(pendingDelete);
-    if (!id) { setShowDeleteModal(false); setPendingDelete(null); Alert.alert('Error', 'Invalid experience id'); return; }
+    if (!id) { setShowDeleteModal(false); setPendingDelete(null); showToast('Invalid experience id', 'error'); return; }
     try {
       setDeleting(true);
       const res = await refopenAPI.deleteWorkExperience(id);
@@ -655,7 +661,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       await loadData();
     } catch (e) {
       setShowDeleteModal(false); setPendingDelete(null);
-      Alert.alert('Error', e?.message || 'Failed to delete');
+      showToast(e?.message || 'Failed to delete', 'error');
     } finally { setDeleting(false); }
   };
 
@@ -695,7 +701,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       // Web Alert fallback (RN Web Alert sometimes silent)
       const firstMsg = errors.jobTitle || errors.startDate || errors.endDate;
       if (firstMsg) {
-        try { Alert.alert('Validation', firstMsg); } catch(_) { /* noop */ }
+        showToast(firstMsg, 'error');
       }
       return;
     }
@@ -734,11 +740,11 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
         if (!res?.success) throw new Error(res?.error || 'Create failed');
       }
       await loadData();
-      Alert.alert('Success', `Work experience ${editingItem ? 'updated' : 'added'} successfully`);
+      showToast(`Work experience ${editingItem ? 'updated' : 'added'} successfully`, 'success');
       setShowModal(false);
     } catch (e) {
       console.error('[WorkExp] Save error:', e);
-      Alert.alert('Error', e?.message || 'Failed to save work experience');
+      showToast(e?.message || 'Failed to save work experience', 'error');
     } finally { setSaving(false); }
   };
 
@@ -807,559 +813,22 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
         contentContainerStyle={!hasExperiences ? { flexGrow: 1 } : null}
       />
 
-      {/* Add/Edit Modal */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalInner}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>{editingItem ? 'Edit Work Experience' : 'Add Work Experience'}</Text>
-              {/* Removed Save button from header */}
-              <View style={{ width: 24 }} />
-            </View>
-
-            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
-            <Text style={styles.label}>Job Title *</Text>
-            <View style={{ position: 'relative', zIndex: 1000 }}>
-              <TextInput
-                style={[styles.input, validationErrors.jobTitle && styles.errorInput]}
-                value={jobTitleSearch || form.jobTitle}
-                onChangeText={(t) => { 
-                  setJobTitleSearch(t);
-                  setShowJobTitleDropdown(t.length > 0);
-                  setForm({ ...form, jobTitle: t }); 
-                  if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined })); 
-                }}
-                onFocus={() => {
-                  if (form.jobTitle) {
-                    setJobTitleSearch('');
-                  }
-                }}
-                placeholder="e.g., Software Engineer"
-                placeholderTextColor={colors.gray400}
-                autoCapitalize="words"
-              />
-              {showJobTitleDropdown && jobTitleSearch.length > 0 && (
-                <View style={styles.jobTitleDropdown}>
-                  {loadingJobRoles ? (
-                    <View style={styles.dropdownLoading}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    </View>
-                  ) : (
-                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                      {jobRoles
-                        .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
-                        .slice(0, 15)
-                        .map((role) => (
-                          <TouchableOpacity
-                            key={role.ReferenceID}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              setForm({ ...form, jobTitle: role.Value });
-                              setJobTitleSearch('');
-                              setShowJobTitleDropdown(false);
-                              if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined }));
-                            }}
-                          >
-                            <Text style={styles.dropdownItemText}>{role.Value}</Text>
-                          </TouchableOpacity>
-                        ))
-                      }
-                      {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
-                        <View style={styles.dropdownEmpty}>
-                          <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
-                        </View>
-                      )}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-            </View>
-            {validationErrors.jobTitle ? <Text style={styles.validationText}>{validationErrors.jobTitle}</Text> : null}
-
-            {/* Company picker - shows dropdown on focus, filter as you type */}
-            <Text style={styles.label}>Company</Text>
-            <View style={{ position: 'relative', zIndex: 999 }}>
-              <TouchableOpacity 
-                style={styles.input}
-                onPress={() => setShowOrgPicker(true)}
-                activeOpacity={0.8}
-              >
-                <TextInput
-                  style={styles.companyInput}
-                  value={orgQuery || form.companyName}
-                  onChangeText={(t) => { 
-                    setOrgQuery(t);
-                    setForm({ ...form, companyName: t, organizationId: null }); 
-                  }}
-                  onFocus={() => {
-                    if (form.companyName) {
-                      setOrgQuery('');
-                    }
-                    setShowOrgPicker(true);
-                  }}
-                  placeholder="e.g., Google, Microsoft"
-                  placeholderTextColor={colors.gray400}
-                  autoCapitalize="words"
-                />
-                <Ionicons name={showOrgPicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.gray500} />
-              </TouchableOpacity>
-              {showOrgPicker && (
-                <View style={styles.jobTitleDropdown}>
-                  {orgLoading ? (
-                    <View style={styles.dropdownLoading}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    </View>
-                  ) : (
-                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                      {orgResults.slice(0, 15).map((org) => (
-                        <TouchableOpacity
-                          key={org.id}
-                          style={styles.orgDropdownItem}
-                          onPress={() => {
-                            setForm({ ...form, organizationId: org.id, companyName: org.name });
-                            setOrgQuery('');
-                            setShowOrgPicker(false);
-                          }}
-                        >
-                          {org.logoURL ? (
-                            <Image source={{ uri: org.logoURL }} style={styles.orgLogoSmall} />
-                          ) : (
-                            <View style={styles.orgLogoPlaceholderSmall}>
-                              <Ionicons name="business" size={14} color={colors.gray400} />
-                            </View>
-                          )}
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.dropdownItemText}>{org.name}</Text>
-                            {org.industry && org.industry !== 'Other' && (
-                              <Text style={styles.orgMetaSmall}>{org.industry}</Text>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                      {orgResults.length === 0 && orgQuery.length > 0 && (
-                        <View style={styles.dropdownEmpty}>
-                          <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
-                        </View>
-                      )}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* Company Email Verification Section - Only for current jobs */}
-            {editingItem && form.companyName && form.isCurrent && (
-              <View style={styles.verificationSection}>
-                {/* Check if database also has IsCurrent = true AND company hasn't changed, otherwise user needs to save first */}
-                {!(editingItem.IsCurrent === 1 || editingItem.IsCurrent === true) || 
-                 (form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()) ? (
-                  <View style={styles.saveFirstContainer}>
-                    <Ionicons name="information-circle" size={20} color={colors.warning} />
-                    <Text style={[styles.verificationSubtitle, { color: colors.warning, marginLeft: 8 }]}>
-                      {form.companyName?.toLowerCase().trim() !== (editingItem.CompanyName || '').toLowerCase().trim()
-                        ? 'You changed the company. Please save first before verifying your email.'
-                        : 'Please save your changes first before verifying your company email.'}
-                    </Text>
-                  </View>
-                ) : userLevelVerified ? (
-                  <View style={styles.verifiedContainer}>
-                    <Ionicons name="shield-checkmark" size={22} color="#10B981" />
-                    <View style={styles.verifiedTextContainer}>
-                      <Text style={styles.verifiedText}>Verified Employee</Text>
-                      <Text style={styles.verifiedEmail}>{companyEmail || editingItem?.CompanyEmail}</Text>
-                    </View>
-                  </View>
-                ) : (
-                  <>
-                    <View style={styles.verificationHeader}>
-                      <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-                      <Text style={styles.verificationTitle}>Verify as Company Employee</Text>
-                    </View>
-                    <Text style={styles.verificationSubtitle}>
-                      Verify your company email to become a verified referrer and earn rewards.
-                    </Text>
-                    {/* Email Input - Either prefix with domain OR full email */}
-                    <View style={styles.emailInputRow}>
-                      {useCustomDomain ? (
-                        <TextInput
-                          style={[
-                            styles.emailInput,
-                            emailDomainValid && styles.emailInputValid,
-                            companyEmail && !emailDomainValid && styles.emailInputInvalid
-                          ]}
-                          value={companyEmail}
-                          onChangeText={handleCompanyEmailChange}
-                          placeholder={`your.name@${suggestedDomain}`}
-                          placeholderTextColor={colors.gray400}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                          editable={!showOtpInput}
-                        />
-                      ) : (
-                        <View style={[
-                          styles.emailInputContainer,
-                          emailDomainValid && styles.emailInputValid,
-                          emailPrefix && !emailDomainValid && styles.emailInputInvalid
-                        ]}>
-                          <TextInput
-                            style={styles.emailPrefixInput}
-                            value={emailPrefix}
-                            onChangeText={handleEmailPrefixChange}
-                            placeholder="your.name"
-                            placeholderTextColor={colors.gray400}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            editable={!showOtpInput}
-                          />
-                          <Text style={styles.emailDomainSuffix}>@{suggestedDomain}</Text>
-                        </View>
-                      )}
-                      {!showOtpInput && (
-                        <TouchableOpacity
-                          style={[
-                            styles.verifyButton,
-                            (!emailDomainValid || sendingOtp) && styles.verifyButtonDisabled
-                          ]}
-                          onPress={handleSendOtp}
-                          disabled={!emailDomainValid || sendingOtp}
-                        >
-                          {sendingOtp ? (
-                            <ActivityIndicator size="small" color={colors.white} />
-                          ) : (
-                            <Text style={styles.verifyButtonText}>Verify</Text>
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    {/* Option to use different domain / switch back */}
-                    {!showOtpInput && (
-                      <TouchableOpacity 
-                        onPress={() => {
-                          setUseCustomDomain(!useCustomDomain);
-                          // Reset email state when switching
-                          setCompanyEmail('');
-                          setEmailPrefix('');
-                          setEmailDomainValid(false);
-                        }}
-                      >
-                        <Text style={styles.differentDomainLink}>
-                          {useCustomDomain ? `Use @${suggestedDomain}` : 'Use different email domain?'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Domain validation hint for custom domain */}
-                    {useCustomDomain && companyEmail && !emailDomainValid && (
-                      <Text style={styles.domainHint}>
-                        Email domain should match your company ({form.companyName || 'company'})
-                      </Text>
-                    )}
-
-                    {/* OTP Input Section */}
-                    {showOtpInput && (
-                      <View style={styles.otpSection}>
-                        <Text style={styles.otpLabel}>Enter 4-digit verification code</Text>
-                        <View style={styles.otpInputContainer}>
-                          {[0, 1, 2, 3].map((index) => (
-                            <TextInput
-                              key={index}
-                              ref={(ref) => otpInputRefs.current[index] = ref}
-                              style={styles.otpInput}
-                              value={otp[index]}
-                              onChangeText={(value) => handleOtpChange(value, index)}
-                              onKeyPress={(e) => handleOtpKeyPress(e, index)}
-                              keyboardType="number-pad"
-                              maxLength={1}
-                              selectTextOnFocus
-                            />
-                          ))}
-                        </View>
-                        
-                        <View style={styles.otpActions}>
-                          <TouchableOpacity
-                            style={styles.resendButton}
-                            onPress={handleSendOtp}
-                            disabled={sendingOtp}
-                          >
-                            <Text style={styles.resendButtonText}>
-                              {sendingOtp ? 'Sending...' : 'Resend Code'}
-                            </Text>
-                          </TouchableOpacity>
-                          
-                          <TouchableOpacity
-                            style={[
-                              styles.submitOtpButton,
-                              (otp.join('').length !== 4 || verifyingOtp) && styles.submitOtpButtonDisabled
-                            ]}
-                            onPress={handleVerifyOtp}
-                            disabled={otp.join('').length !== 4 || verifyingOtp}
-                          >
-                            {verifyingOtp ? (
-                              <ActivityIndicator size="small" color={colors.white} />
-                            ) : (
-                              <Text style={styles.submitOtpButtonText}>Submit</Text>
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Error message */}
-                    {verificationError ? (
-                      <Text style={styles.verificationError}>{verificationError}</Text>
-                    ) : null}
-                  </>
-                )}
-              </View>
-            )}
-
-            {/* Extended fields follow... */}
-            <Text style={styles.label}>Department</Text>
-            <View style={{ position: 'relative', zIndex: 998 }}>
-              <TextInput
-                style={styles.input}
-                value={departmentSearch || form.department}
-                onChangeText={(t) => { 
-                  setDepartmentSearch(t);
-                  setShowDepartmentDropdown(t.length > 0);
-                  setForm({ ...form, department: t }); 
-                }}
-                onFocus={() => {
-                  if (form.department) {
-                    setDepartmentSearch('');
-                  }
-                  setShowDepartmentDropdown(true);
-                }}
-                placeholder="e.g., Engineering"
-                placeholderTextColor={colors.gray400}
-              />
-              {showDepartmentDropdown && (departmentSearch.length > 0 || departments.length > 0) && (
-                <View style={styles.jobTitleDropdown}>
-                  {loadingDepartments ? (
-                    <View style={styles.dropdownLoading}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    </View>
-                  ) : (
-                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                      {departments
-                        .filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase()))
-                        .slice(0, 15)
-                        .map((dept) => (
-                          <TouchableOpacity
-                            key={dept.ReferenceID}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              setForm({ ...form, department: dept.Value });
-                              setDepartmentSearch('');
-                              setShowDepartmentDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.dropdownItemText}>{dept.Value}</Text>
-                          </TouchableOpacity>
-                        ))
-                      }
-                      {departments.filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
-                        <View style={styles.dropdownEmpty}>
-                          <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
-                        </View>
-                      )}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {renderPickerRow('Employment Type', form.employmentType, EMPLOYMENT_TYPES, (val) => setForm({ ...form, employmentType: val }))}
-
-            {/* ? REPLACED: DatePicker for Start Date */}
-            <DatePicker
-              label="Start Date"
-              value={form.startDate}
-              onChange={(date) => {
-                handleStartDateChange(date);
-                if (validationErrors.startDate) setValidationErrors(v => ({ ...v, startDate: undefined }));
-              }}
-              placeholder="Select start date"
-              required
-              maximumDate={new Date()} // Can't start in the future
-              error={validationErrors.startDate}
-            />
-
-            {/* ? SMART CURRENTLY WORKING TOGGLE - Hide when start date is older */}
-            {!hideCurrentToggle && (
-              <View style={styles.rowBetween}>
-                <Text style={styles.label}>Currently Working</Text>
-                <Switch value={!!form.isCurrent} onValueChange={(v) => setForm({ ...form, isCurrent: v, endDate: v ? '' : form.endDate })} />
-              </View>
-            )}
-
-            {/* ? SHOW INFO MESSAGE WHEN TOGGLE IS HIDDEN */}
-            {hideCurrentToggle && (
-              <View style={styles.infoContainer}>
-                <Ionicons name="information-circle" size={16} color={colors.warning || '#F59E0B'} />
-                <Text style={styles.infoText}>
-                  Cannot mark as current - you have a newer current position
-                </Text>
-              </View>
-            )}
-
-            {/* FIXED: Only show End Date field when NOT currently working */}
-            {!form.isCurrent && (
-              <>
-                {/* ? REPLACED: DatePicker for End Date */}
-                <DatePicker
-                  label="End Date"
-                  value={form.endDate}
-                  onChange={(date) => {
-                    setForm({ ...form, endDate: date }); 
-                    if (validationErrors.endDate) setValidationErrors(v => ({ ...v, endDate: undefined })); 
-                  }}
-                  placeholder="Select end date"
-                  required={endDateRequired}
-                  minimumDate={form.startDate ? new Date(form.startDate) : undefined} // End must be after start
-                  maximumDate={new Date()} // Can't end in the future
-                  error={validationErrors.endDate}
-                />
-              </>
-            )}
-
-            <Text style={styles.label}>Location</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.location} 
-              onChangeText={(t) => setForm({ ...form, location: t })} 
-              placeholder="City, State" 
-              placeholderTextColor={colors.gray400}
-            />
-            
-            <Text style={styles.label}>Country</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.country} 
-              onChangeText={(t) => setForm({ ...form, country: t })} 
-              placeholder="Country" 
-              placeholderTextColor={colors.gray400}
-            />
-
-            <Text style={styles.label}>Description</Text>
-            <TextInput 
-              style={[styles.input, styles.multiline]} 
-              value={form.description} 
-              onChangeText={(t) => setForm({ ...form, description: t })} 
-              placeholder="Role responsibilities, tech stack, etc." 
-              placeholderTextColor={colors.gray400}
-              multiline 
-              numberOfLines={4} 
-            />
-
-            <Text style={styles.label}>Skills</Text>
-            <TextInput 
-              style={[styles.input, styles.multiline]} 
-              value={form.skills} 
-              onChangeText={(t) => setForm({ ...form, skills: t })} 
-              placeholder="Comma separated e.g., React, Node.js, SQL" 
-              placeholderTextColor={colors.gray400}
-              multiline 
-              numberOfLines={3} 
-            />
-
-            <Text style={styles.label}>Achievements</Text>
-            <TextInput 
-              style={[styles.input, styles.multiline]} 
-              value={form.achievements} 
-              onChangeText={(t) => setForm({ ...form, achievements: t })} 
-              placeholder="Key accomplishments" 
-              placeholderTextColor={colors.gray400}
-              multiline 
-              numberOfLines={3} 
-            />
-
-            <Text style={styles.label}>Reason for Leaving</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.reasonForLeaving} 
-              onChangeText={(t) => setForm({ ...form, reasonForLeaving: t })} 
-              placeholder="Optional" 
-              placeholderTextColor={colors.gray400}
-            />
-
-            <Text style={styles.label}>Salary</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.salary} 
-              onChangeText={(t) => setForm({ ...form, salary: t })} 
-              placeholder="e.g., 120000" 
-              placeholderTextColor={colors.gray400}
-              keyboardType="numeric" 
-            />
-
-            <Text style={styles.label}>Currency</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-              <View style={styles.inlineChoices}>
-                {(currencies || []).map((c) => (
-                  <TouchableOpacity key={c.CurrencyID} style={[styles.choicePill, form.currencyId === c.CurrencyID && styles.choicePillActive]} onPress={() => setForm({ ...form, currencyId: c.CurrencyID })}>
-                    <Text style={[styles.choicePillText, form.currencyId === c.CurrencyID && styles.choicePillTextActive]}>
-                      {c.Code}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            {renderPickerRow('Salary Frequency', form.salaryFrequency, SALARY_FREQUENCIES, (val) => setForm({ ...form, salaryFrequency: val }))}
-
-            <Text style={styles.label}>Manager Name</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.managerName} 
-              onChangeText={(t) => setForm({ ...form, managerName: t })} 
-              placeholder="Optional" 
-              placeholderTextColor={colors.gray400}
-            />
-            
-            <Text style={styles.label}>Manager Contact</Text>
-            <TextInput 
-              style={styles.input} 
-              value={form.managerContact} 
-              onChangeText={(t) => setForm({ ...form, managerContact: t })} 
-              placeholder="Email/Phone" 
-              placeholderTextColor={colors.gray400}
-            />
-
-            <View style={styles.rowBetween}>
-              <Text style={styles.label}>Recruiter can contact manager</Text>
-              <Switch value={!!form.canContact} onValueChange={(v) => setForm({ ...form, canContact: v })} />
-            </View>
-
-            {/* Add footer actions at the end of ScrollView content */}
-            <View style={styles.modalFooterActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelButton}
-                onPress={() => setShowModal(false)}
-                disabled={saving}
-              >
-                <Ionicons name="close" size={16} color={colors.gray600} />
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.modalSaveButton}
-                onPress={saving ? undefined : saveForm} 
-                disabled={saving}
-              >
-                <Ionicons name={saving ? 'hourglass' : 'save-outline'} size={16} color={colors.white} />
-                <Text style={styles.modalSaveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Add/Edit Modal - Using reusable component */}
+      <AddWorkExperienceModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        onSave={async () => {
+          await loadData();
+        }}
+        editingItem={editingItem}
+        existingExperiences={experiences}
+        showVerification={true}
+        onVerificationComplete={(companyName) => {
+          setVerifiedCompanyName(companyName);
+          setShowVerifiedReferrerOverlay(true);
+          setUserLevelVerified(true);
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal visible={showDeleteModal} transparent onRequestClose={() => setShowDeleteModal(false)}>
@@ -1551,7 +1020,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalInner: {
     flex: 1,
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 700 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
@@ -1584,18 +1053,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
     flex: 1,
   },
-  orgPicker: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  orgPickerText: { color: colors.text, fontSize: typography.sizes?.md || 16 },
-  orgPickerModal: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginBottom: 12, overflow: 'hidden' },
-  orgSearchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.background, gap: 8 },
-  orgSearchInput: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 8, fontSize: typography.sizes?.sm || 14 },
-  orgList: { maxHeight: 220 },
-  orgItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
-  orgLogo: { width: 32, height: 32, borderRadius: 6, marginRight: 10 },
-  orgLogoPlaceholder: { width: 32, height: 32, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  orgName: { color: colors.text, fontSize: typography.sizes?.md || 16 },
-  orgMeta: { color: colors.gray600, fontSize: typography.sizes?.sm || 14 },
-  manualEntry: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
   manualEntryText: { color: colors.primary, fontSize: typography.sizes?.sm || 14 },
   // Simple pill choices
   inlineChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

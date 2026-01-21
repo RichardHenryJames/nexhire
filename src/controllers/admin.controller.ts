@@ -37,7 +37,7 @@ export const getAdminDashboardOverview = withAuth(async (
     const monthAgoStr = monthAgo.toISOString().split('T')[0];
 
     // Optimized queries - run in parallel but with lightweight counts
-    const [userStats, referralStats, jobStats, walletStats] = await Promise.all([
+    const [userStats, referralStats, jobStats, walletStats, verifiedReferrers] = await Promise.all([
       // Users query - optimized
       dbService.executeQuery(`
         SELECT 
@@ -48,7 +48,7 @@ export const getAdminDashboardOverview = withAuth(async (
           SUM(CASE WHEN UserType = 'JobSeeker' THEN 1 ELSE 0 END) AS TotalJobSeekers,
           SUM(CASE WHEN UserType = 'Employer' THEN 1 ELSE 0 END) AS TotalEmployers,
           SUM(CASE WHEN IsActive = 1 THEN 1 ELSE 0 END) AS ActiveUsers,
-          SUM(CASE WHEN EmailVerified = 1 THEN 1 ELSE 0 END) AS VerifiedUsers
+          SUM(CASE WHEN IsVerifiedReferrer = 1 THEN 1 ELSE 0 END) AS VerifiedReferrers
         FROM Users WHERE UserType != 'Admin'
       `, [todayStr, weekAgoStr, monthAgoStr]),
       
@@ -62,11 +62,10 @@ export const getAdminDashboardOverview = withAuth(async (
         FROM ReferralRequests
       `, [todayStr]),
       
-      // Jobs - use approximate count for total (fast), exact for recent
+      // Jobs - optimized counts
       dbService.executeQuery(`
         SELECT 
-          (SELECT SUM(p.rows) FROM sys.partitions p JOIN sys.tables t ON p.object_id = t.object_id 
-           WHERE t.name = 'Jobs' AND p.index_id IN (0,1)) AS TotalJobs,
+          (SELECT COUNT(*) FROM Jobs) AS TotalJobs,
           (SELECT COUNT(*) FROM Jobs WHERE CAST(CreatedAt AS DATE) = @param0) AS JobsToday,
           (SELECT COUNT(*) FROM Jobs WHERE Status = 'Active') AS ActiveJobs,
           (SELECT COUNT(*) FROM Jobs WHERE ExternalJobID IS NOT NULL AND CAST(CreatedAt AS DATE) >= @param1) AS RecentExternalJobs
@@ -76,6 +75,20 @@ export const getAdminDashboardOverview = withAuth(async (
       dbService.executeQuery(`
         SELECT ISNULL(SUM(Balance), 0) AS TotalWalletBalance, COUNT(*) AS TotalWallets
         FROM Wallets WHERE Status = 'Active'
+      `, []),
+      
+      // Top 10 verified referrers
+      dbService.executeQuery(`
+        SELECT TOP 10 u.UserID, u.FirstName, u.LastName, u.Email, u.ProfilePictureURL, 
+          u.CreatedAt, a.CurrentCompanyName AS CompanyName,
+          (SELECT COUNT(*) FROM ReferralRequests rr 
+           WHERE rr.AssignedReferrerID = u.UserID AND rr.Status = 'Completed') AS ReferralsCompleted
+        FROM Users u
+        LEFT JOIN Applicants a ON u.UserID = a.UserID
+        WHERE u.IsVerifiedReferrer = 1 AND u.UserType != 'Admin'
+        ORDER BY (SELECT COUNT(*) FROM ReferralRequests rr 
+                  WHERE rr.AssignedReferrerID = u.UserID AND rr.Status = 'Completed') DESC, 
+                 u.CreatedAt ASC
       `, [])
     ]);
 
@@ -86,6 +99,7 @@ export const getAdminDashboardOverview = withAuth(async (
         referralStats: referralStats.recordset[0] || {},
         jobStats: jobStats.recordset[0] || {},
         walletStats: walletStats.recordset[0] || {},
+        verifiedReferrers: verifiedReferrers.recordset || [],
         applicationStats: { TotalApplications: 0, ApplicationsToday: 0 },
         messageStats: { TotalConversations: 0, TotalMessages: 0 }
       }, 'Overview stats loaded')
@@ -182,7 +196,8 @@ export const getAdminDashboardReferrals = withAuth(async (
           u.FirstName + ' ' + u.LastName AS RequesterName, u.Email AS RequesterEmail,
           ref.FirstName + ' ' + ref.LastName AS ReferrerName
         FROM ReferralRequests rr
-        JOIN Users u ON rr.ApplicantID = u.UserID
+        JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
+        JOIN Users u ON a.UserID = u.UserID
         LEFT JOIN Users ref ON rr.AssignedReferrerID = ref.UserID
         LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
         ORDER BY rr.RequestedAt DESC
@@ -264,5 +279,63 @@ export const getAdminDashboardTransactions = withAuth(async (
   } catch (error) {
     console.error('Error in getAdminDashboardTransactions:', error);
     return { status: 500, jsonBody: { success: false, error: 'Failed to load transactions data' } };
+  }
+});
+/**
+ * Get Admin Dashboard - Email Logs Tab Data (Paginated)
+ */
+export const getAdminDashboardEmailLogs = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+
+    // Parse pagination params
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    const [emailLogs, totalCount] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          el.LogID, el.ToEmail, el.EmailType, el.Subject, el.Status,
+          el.SentAt, el.DeliveredAt, el.OpenedAt, el.BouncedAt, el.ErrorMessage,
+          u.FirstName + ' ' + u.LastName AS UserName, u.UserID
+        FROM EmailLogs el
+        LEFT JOIN Users u ON el.UserID = u.UserID
+        ORDER BY el.SentAt DESC
+        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
+      `, [offset, pageSize]),
+      dbService.executeQuery(`
+        SELECT COUNT(*) AS TotalCount FROM EmailLogs
+      `, [])
+    ]);
+
+    const total = totalCount.recordset[0]?.TotalCount || 0;
+    const totalPages = Math.ceil(total / pageSize);
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        emailLogs: emailLogs.recordset || [],
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      }, 'Email logs loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardEmailLogs:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load email logs' } };
   }
 });

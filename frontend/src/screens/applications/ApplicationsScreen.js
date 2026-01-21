@@ -308,7 +308,7 @@ export default function ApplicationsScreen({ navigation }) {
       return;
     }
     if (!isJobSeeker) {
-      Alert.alert('Access Denied', 'Only job seekers can ask for referrals');
+      showToast('Only job seekers can ask for referrals', 'error');
       return;
     }
 
@@ -349,12 +349,12 @@ export default function ApplicationsScreen({ navigation }) {
 
       } else {
         console.error('Failed to check wallet balance:', walletBalance.error);
-        Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+        showToast('Unable to check wallet balance. Please try again.', 'error');
         return;
       }
     } catch (e) {
       console.error('Failed to check wallet balance:', e);
-      Alert.alert('Error', 'Unable to check wallet balance. Please try again.');
+      showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
 
@@ -406,13 +406,13 @@ export default function ApplicationsScreen({ navigation }) {
             setWalletModalData({ currentBalance, requiredAmount });
             setShowWalletModal(true);
           } else {
-            Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+            showToast('Failed to send referral request. Please try again.', 'error');
           }
         }
       }
     } catch (e) {
       console.error('Referral error', e);
-      Alert.alert('Error', e.message || 'Operation failed');
+      showToast('Operation failed. Please try again.', 'error');
     } finally {
       setPendingJobForApplication(null);
       setReferralMode(false);
@@ -439,9 +439,9 @@ export default function ApplicationsScreen({ navigation }) {
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
         
-        let message = 'Referral request sent to ALL employees who can refer!';
+        let message = 'Referral request sent to verified employees who can refer!';
         if (balanceAfter !== undefined) {
-          message = `Referral sent to ALL employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
+          message = `Referral sent to verified employees! ₹${amountDeducted} deducted. Balance: ₹${balanceAfter.toFixed(2)}`;
         }
         
         showToast(message, 'success');
@@ -455,11 +455,11 @@ export default function ApplicationsScreen({ navigation }) {
           setWalletModalData({ currentBalance, requiredAmount });
           setShowWalletModal(true);
         } else {
-          Alert.alert('Request Failed', res.error || res.message || 'Failed to send referral request');
+          showToast('Failed to send referral request. Please try again.', 'error');
         }
       }
     } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to send referral request');
+      showToast('Failed to send referral request. Please try again.', 'error');
     }
   };
 
@@ -571,7 +571,7 @@ export default function ApplicationsScreen({ navigation }) {
         fetchApplications(true);
       }
 
-      Alert.alert('Error', error.message || 'Failed to withdraw application');
+      showToast('Failed to withdraw application. Please try again.', 'error');
     }
   };
 
@@ -874,7 +874,7 @@ export default function ApplicationsScreen({ navigation }) {
 
           const job = referralConfirmData.job;
           if (!job) {
-            Alert.alert('Error', 'Job not found. Please try again.');
+            showToast('Job not found. Please try again.', 'error');
             return;
           }
 

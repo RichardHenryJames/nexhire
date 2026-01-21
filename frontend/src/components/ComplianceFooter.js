@@ -14,6 +14,7 @@ export default function ComplianceFooter({ currentPage }) {
     { id: 'disclaimer', label: 'Disclaimer', screen: 'Disclaimer' },
     { id: 'about', label: 'About Us', screen: 'AboutUs' },
     { id: 'faq', label: 'FAQ', screen: 'FAQ' },
+    { id: 'blog', label: 'Career Blog', screen: 'Blog' },
     { id: 'support', label: 'Help & Support', screen: 'Support' },
   ];
 
@@ -22,7 +23,7 @@ export default function ComplianceFooter({ currentPage }) {
   };
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:support@refopen.com');
+    navigation.navigate('Support');
   };
 
   const handleWebsitePress = () => {
@@ -56,7 +57,7 @@ export default function ComplianceFooter({ currentPage }) {
 
         <View style={styles.contactRow}>
           <TouchableOpacity onPress={handleEmailPress}>
-            <Text style={styles.contactLink}>support@refopen.com</Text>
+            <Text style={styles.contactLink}>Contact Support</Text>
           </TouchableOpacity>
           <Text style={styles.separator}>•</Text>
           <TouchableOpacity onPress={handleWebsitePress}>

@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
+import { showToast } from '../../../../components/Toast';
 
 export default function CreateOrganizationScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -18,7 +19,7 @@ export default function CreateOrganizationScreen({ navigation, route }) {
 
   const onContinue = () => {
     if (!organizationName.trim()) {
-      Alert.alert('Organization Name Required', 'Please enter your organization name');
+      showToast('Please enter your organization name', 'error');
       return;
     }
     navigation.navigate('EmployerPersonalDetailsScreen', {

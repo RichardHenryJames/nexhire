@@ -282,9 +282,51 @@ export class WorkExperienceService {
   static async deleteWorkExperience(workExperienceId: string): Promise<void> {
     const existing = await this.getWorkExperienceById(workExperienceId);
     if (!existing) throw new NotFoundError('Work experience not found');
-    const query = `
-            UPDATE WorkExperiences SET IsActive = 0, UpdatedAt = GETUTCDATE() WHERE WorkExperienceID = @param0
-        `;
+
+    // Check if this work experience was verified and if we need to decrement org count
+    if (existing.CompanyEmailVerified && existing.OrganizationID) {
+      // Get user info to check if they have other verified work experiences for same org
+      const userResult = await dbService.executeQuery(`
+        SELECT a.UserID, a.ApplicantID
+        FROM Applicants a
+        WHERE a.ApplicantID = @param0
+      `, [existing.ApplicantID]);
+
+      if (userResult.recordset && userResult.recordset.length > 0) {
+        const userId = userResult.recordset[0].UserID;
+        
+        // Check if user has other verified work experiences for same organization
+        const otherVerifiedResult = await dbService.executeQuery(`
+          SELECT COUNT(*) as OtherVerifiedCount
+          FROM WorkExperiences we
+          INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+          WHERE a.UserID = @param0
+            AND we.OrganizationID = @param1
+            AND we.CompanyEmailVerified = 1
+            AND we.IsActive = 1
+            AND we.WorkExperienceID != @param2
+        `, [userId, existing.OrganizationID, workExperienceId]);
+
+        const hasOtherVerified = otherVerifiedResult.recordset[0]?.OtherVerifiedCount > 0;
+
+        // Only decrement if user has no other verified entries for this organization
+        if (!hasOtherVerified) {
+          await dbService.executeQuery(`
+            UPDATE Organizations
+            SET VerifiedReferrersCount = CASE 
+                WHEN ISNULL(VerifiedReferrersCount, 0) > 0 THEN VerifiedReferrersCount - 1 
+                ELSE 0 
+            END,
+            UpdatedAt = GETUTCDATE()
+            WHERE OrganizationID = @param0
+          `, [existing.OrganizationID]);
+          console.log(`Decremented VerifiedReferrersCount for OrganizationID ${existing.OrganizationID}`);
+        }
+      }
+    }
+
+    // Hard delete - permanently remove from database
+    const query = `DELETE FROM WorkExperiences WHERE WorkExperienceID = @param0`;
     await dbService.executeQuery(query, [workExperienceId]);
     await this.updateApplicantDerivedFields(existing.ApplicantID);
     // Recalculate profile completeness (centralized)

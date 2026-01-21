@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Linking,
   Modal,
   Pressable,
@@ -21,6 +20,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
+import { showToast } from '../../components/Toast';
 
 export default function ViewProfileScreen() {
   const navigation = useNavigation();
@@ -92,16 +92,12 @@ export default function ViewProfileScreen() {
   const handleSendMessage = async () => {
     // Check if user allows recruiter contact (only relevant for employer viewing job seeker)
     if (profile?.AllowRecruitersToContact === false && user?.UserType === 'Employer') {
-      Alert.alert(
-        'Contact Restricted',
-        'This user has chosen not to receive messages from recruiters.',
-        [{ text: 'OK' }]
-      );
+      showToast('This user has chosen not to receive messages from recruiters.', 'info');
       return;
     }
 
     if (isBlocked) {
-      Alert.alert('Cannot Message', 'You have blocked this user');
+      showToast('You have blocked this user', 'error');
       return;
     }
 
@@ -119,7 +115,7 @@ export default function ViewProfileScreen() {
       }
     } catch (error) {
       console.error('Error creating conversation:', error);
-      Alert.alert('Error', 'Failed to start conversation');
+      showToast('Failed to start conversation', 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -149,7 +145,7 @@ export default function ViewProfileScreen() {
   const openLink = (url) => {
     if (url) {
       Linking.openURL(url).catch(() => {
-        Alert.alert('Error', 'Failed to open link');
+        showToast('Failed to open link', 'error');
       });
     }
   };
@@ -335,6 +331,8 @@ export default function ViewProfileScreen() {
           onProfileUpdate={null}
           showStats={false}
           showProgress={false}
+          isVerifiedUser={profile?.IsVerifiedUser || profile?.IsVerifiedReferrer}
+          loadingVerificationStatus={loading}
         />
 
         {/* Action Buttons Row */}
@@ -604,7 +602,7 @@ export default function ViewProfileScreen() {
               style={styles.menuOption}
               onPress={() => {
                 setShowMenuPopup(false);
-                Alert.alert('Reported', 'Thank you for reporting. We will review this profile.');
+                showToast('Thank you for reporting. We will review this profile.', 'success');
               }}
             >
               <Ionicons name="flag-outline" size={22} color={colors.warning} />
@@ -652,7 +650,7 @@ const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
 
@@ -854,44 +852,6 @@ const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
     fontSize: 15,
     color: colors.gray700 || colors.text,
     lineHeight: 24,
-  },
-
-  // Experience
-  experienceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  experienceBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  experienceYears: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  experienceLabel: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  currentRole: {
-    flex: 1,
-  },
-  currentRoleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  currentRoleCompany: {
-    fontSize: 14,
-    color: colors.gray600,
   },
 
   // Work Experience
