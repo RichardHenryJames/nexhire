@@ -42,6 +42,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
+import ComplianceFooter from '../../components/ComplianceFooter';
 
 // RefOpen Logo
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
@@ -177,7 +178,7 @@ const ALL_TESTIMONIALS = [
   { quote: "Got referred to my dream company within a week. The resume went straight to the hiring manager apparently.", name: "Karthik R.", role: "ML Engineer", company: "Now at OpenAI", gradient: 'gradientPrimary' },
   { quote: "Was skeptical about paying for referrals but honestly? Best career investment I've made. ROI is insane.", name: "Michelle T.", role: "Backend Engineer", company: "Now at Netflix", gradient: 'gradientAccent' },
   { quote: "3 months of job hunting vs 2 weeks on RefOpen. Wish I found this earlier.", name: "David C.", role: "DevOps Engineer", company: "Now at Datadog", gradient: 'gradientBlue' },
-  { quote: "The fact that my request goes to ALL employees at a company? Game changer. Way better odds.", name: "Sneha G.", role: "iOS Developer", company: "Now at Apple", gradient: 'gradientSuccess' },
+  { quote: "The fact that my request goes to verified employees at a company? Game changer. Way better odds.", name: "Sneha G.", role: "iOS Developer", company: "Now at Apple", gradient: 'gradientSuccess' },
   { quote: "Used the external referral for a job at Coinbase I found on their careers page. Got referred same day!", name: "Alex W.", role: "Blockchain Dev", company: "Now at Coinbase", gradient: 'gradientWarning' },
   { quote: "Interview rate went from 2% to like 40% after I started using referrals. Numbers don't lie.", name: "Neha S.", role: "Full Stack Dev", company: "Now at Shopify", gradient: 'gradientPrimary' },
   { quote: "No more 'Thanks for applying, we'll keep your resume on file' emails. Actually getting calls now.", name: "James H.", role: "Cloud Architect", company: "Now at AWS", gradient: 'gradientSecondary' },
@@ -407,9 +408,6 @@ const FloatingLogo = ({ company, index, COLORS }) => {
           textAlign: 'center',
         }}>
           {company.name}
-        </Text>
-        <Text style={{ fontSize: 9, color: COLORS.accent, marginTop: 2, fontWeight: '500' }}>
-          {company.employees} on RefOpen
         </Text>
       </Animated.View>
     </TouchableOpacity>
@@ -734,6 +732,11 @@ export default function AboutScreen() {
         onContentSizeChange={() => scrollToTop(false)}
       >
         {/* ============================================ */}
+        {/* GOOGLE ADSENSE - TOP BANNER */}
+        {/* ============================================ */}
+        <AdCard variant="about" />
+
+        {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
         <LinearGradient
@@ -759,7 +762,7 @@ export default function AboutScreen() {
                 }}
               >
                 Find Jobs. Get Referred.{'\n'}
-                <Text style={{ color: COLORS.primary }}>Get Hired.</Text>{'\n'}
+                Hire Talent. <Text style={{ color: COLORS.primary }}>Earn Rewards.</Text>{'\n'}
               </Text>
 
               <Text
@@ -863,20 +866,6 @@ export default function AboutScreen() {
         </LinearGradient>
 
         {/* ============================================ */}
-        {/* GOOGLE ADSENSE - TOP BANNER */}
-        {/* ============================================ */}
-        <View style={{ backgroundColor: COLORS.bgPrimary, paddingTop: 16 }}>
-          <AdCard 
-            variant="about" 
-            style={{ 
-              marginHorizontal: isLargeScreen ? 40 : 16,
-              backgroundColor: COLORS.bgSecondary,
-              borderColor: COLORS.border,
-            }} 
-          />
-        </View>
-
-        {/* ============================================ */}
         {/* STATS SECTION */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 48, backgroundColor: COLORS.bgPrimary }}>
@@ -885,7 +874,7 @@ export default function AboutScreen() {
               <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="briefcase" value="125K+" label="Active Jobs" gradient={COLORS.gradientSecondary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="business" value="2,500+" label="Companies" gradient={COLORS.gradientSuccess} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
-              <StatCard icon="gift" value="$2.5M+" label="Rewards Paid" gradient={COLORS.gradientWarning} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <StatCard icon="checkmark-circle" value="1,000+" label="Verified Referrers" gradient={COLORS.gradientWarning} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
             </View>
           </View>
         </View>
@@ -1024,7 +1013,7 @@ export default function AboutScreen() {
               tag="For Job Seekers"
               tagColor={COLORS.primary}
               title="Apply Directly. Or Get Referred. Your Choice."
-              subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every employee at that company on RefOpen."
+              subtitle="Browse 125,000+ jobs and apply with one click. Want better chances? Request a referral and it reaches every verified employee at that company on RefOpen."
               COLORS={COLORS}
               isLargeScreen={isLargeScreen}
               isMediumScreen={isMediumScreen}
@@ -1044,13 +1033,13 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How It Works</Text>
               
               {/* Step 1 */}
-              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from Fortune 500 companies and top startups. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} COLORS={COLORS} />
+              <ProcessStep number="1" title="Browse & Search Jobs" description="Explore 125,000+ jobs from top companies and startups worldwide. Filter by role, location, salary, work type & more. AI-powered recommendations find perfect matches." icon="search" gradient={COLORS.gradientPrimary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={JobSearchImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
               
               {/* Step 2 */}
-              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to ALL employees at that company!" icon="send" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
+              <ProcessStep number="2" title="Apply Directly or Ask Referral" description="Apply directly with your resume and cover letter. OR click 'Ask Referral' to boost your chances - your request is sent to verified employees at that company!" icon="send" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
               <View style={{ alignItems: 'center', marginBottom: 32, marginTop: 8 }}>
                 <Image source={AskRefSentImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
@@ -1070,7 +1059,7 @@ export default function AboutScreen() {
               >
                 <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
                 <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
-                <BenefitItem icon="people" text="One referral request reaches ALL employees" color={COLORS.primary} COLORS={COLORS} />
+                <BenefitItem icon="people" text="One referral request reaches ALL verified employees at that company" color={COLORS.primary} COLORS={COLORS} />
                 <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
                 <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
                 <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
@@ -1108,9 +1097,9 @@ export default function AboutScreen() {
                     </View>
                     {[
                       'Browse jobs directly on RefOpen',
-                      'Click "Apply" to apply directly',
+                      'Jobs posted by employers & referrers',
                       'Click "Ask Referral" for boost',
-                      'Request sent to ALL company employees',
+                      'Request sent to ALL verified employees',
                       'Track status in real-time',
                     ].map((item, index) => (
                       <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -1194,7 +1183,7 @@ export default function AboutScreen() {
                   {[
                     'One platform for all job applications ✨',
                     'Apply directly OR get referred - your choice',
-                    'One referral request = ALL employees notified',
+                    'One referral request = ALL verified employees notified',
                     'External referral for jobs found anywhere',
                     'Real-time tracking for everything',
                   ].map((item, index) => (
@@ -1274,11 +1263,14 @@ export default function AboutScreen() {
                 <LinearGradient colors={[`${COLORS.success}20`, `${COLORS.success}08`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginBottom: 16 }}>✅ RefOpen Referrals</Text>
                   <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 24, marginBottom: 12 }}>
-                    • AI filters low-quality candidates{'\n'}
-                    • You only see qualified profiles{'\n'}
-                    • Submit referral with one click{'\n'}
-                    • <Text style={{ color: COLORS.success, fontWeight: '600' }}>Get paid IMMEDIATELY</Text>{'\n'}
-                    • BONUS: Company bonus if hired!
+                    • 📝 Post referral jobs for FREE{'\n'}
+                    • 💰 Earn upto ₹100 per referral{'\n'}
+                    • 🏆 Verified badge on your profile{'\n'}
+                    • 🤝 Help others land great jobs{'\n'}
+                    • 📊 Priority access to referral requests{'\n'}
+                    • 💳 Easy withdrawal via UPI/bank{'\n'}
+                    • 📩 No inbox flood - refer through RefOpen{'\n'}
+                    • <Text style={{ color: COLORS.success, fontWeight: '600' }}>BONUS: Company bonus if hired!</Text>
                   </Text>
                 </LinearGradient>
               </View>
@@ -1289,7 +1281,7 @@ export default function AboutScreen() {
               <View style={{ flex: 1, marginRight: isLargeScreen ? 32 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
                 <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>How You Earn</Text>
                 <ProcessStep number="1" title="Get Verified" description="Connect your work email to verify your employment. Takes 2 minutes." icon="shield-checkmark" gradient={COLORS.gradientSuccess} COLORS={COLORS} />
-                <ProcessStep number="2" title="Review AI-Filtered Requests" description="Our AI scores candidates and filters spam. You only see quality profiles worth your time." icon="filter" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
+                <ProcessStep number="2" title="Post Jobs & Refer Candidates" description="Post open positions at your company as a referrer. When candidates apply, refer them and earn rewards instantly!" icon="create" gradient={COLORS.gradientSecondary} COLORS={COLORS} />
                 <ProcessStep number="3" title="Refer & Earn Instantly" description="Submit the referral to your company's system. Get RefOpen rewards right away - no waiting for hires!" icon="gift" gradient={COLORS.gradientWarning} COLORS={COLORS} />
               </View>
 
@@ -1571,6 +1563,9 @@ export default function AboutScreen() {
             </View>
           </View>
         </View>
+
+        {/* Compliance Footer */}
+        <ComplianceFooter currentPage="about" />
       </Animated.ScrollView>
       </View>
     </View>

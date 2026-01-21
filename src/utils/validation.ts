@@ -156,7 +156,9 @@ export const jobCreateSchema = Joi.object({
     timeZone: Joi.string().max(50).optional(),
     language: Joi.string().max(50).default('English'),
     tags: Joi.string().max(100).optional(),
-    internalNotes: Joi.string().max(100).optional()
+    internalNotes: Joi.string().max(100).optional(),
+    postedByType: Joi.string().valid('Employer', 'Referrer').optional(),
+    externalJobID: Joi.string().max(100).optional()
 });
 
 export const organizationCreateSchema = Joi.object({
@@ -289,6 +291,7 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         salaryMin: parseNumber(query.get('salaryMin'), 0) || undefined,
         salaryMax: parseNumber(query.get('salaryMax'), 0) || undefined,
         statusFilter: parseNumber(query.get('statusFilter'), 0) || undefined,
+        postedByType: (() => { const v = query.get('postedByType'); if (v === null || v === '') return undefined; const n = parseInt(v, 10); return isNaN(n) ? undefined : n; })(),
         category: query.get('category') || undefined,
         company: query.get('company') || undefined,
         datePosted: query.get('datePosted') || undefined,

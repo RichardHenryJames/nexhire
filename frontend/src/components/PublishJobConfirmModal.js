@@ -26,12 +26,15 @@ export default function PublishJobConfirmModal({
   onCancel,
   onAddMoney,
   jobTitle = 'this job',
+  isPostedByReferrer = false,
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   
-  const balanceAfter = currentBalance - requiredAmount;
-  const hasInsufficientBalance = currentBalance < requiredAmount;
+  // Referrer-posted jobs are FREE - no cost
+  const effectiveAmount = isPostedByReferrer ? 0 : requiredAmount;
+  const balanceAfter = currentBalance - effectiveAmount;
+  const hasInsufficientBalance = !isPostedByReferrer && (currentBalance < requiredAmount);
 
   if (hasInsufficientBalance) {
     return (
@@ -90,7 +93,9 @@ export default function PublishJobConfirmModal({
             <View style={styles.costCard}>
               <View style={styles.costRow}>
                 <Text style={styles.costLabel}>Cost</Text>
-                <Text style={styles.costAmount}>₹{requiredAmount.toFixed(2)}</Text>
+                <Text style={[styles.costAmount, isPostedByReferrer && { color: '#10b981' }]}>
+                  {isPostedByReferrer ? 'FREE' : `₹${requiredAmount.toFixed(2)}`}
+                </Text>
               </View>
               
               <View style={styles.costRow}>
@@ -119,25 +124,53 @@ export default function PublishJobConfirmModal({
             <View style={styles.benefitsBox}>
               <Text style={styles.benefitsHeading}>What happens next:</Text>
               
-              <Text style={styles.benefitLabel}>
-                <Text style={styles.benefitNumber}>1. </Text>
-                Your job will be visible to thousands of candidates
-              </Text>
+              {isPostedByReferrer ? (
+                // Referrer-specific benefits
+                <>
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>1. </Text>
+                    Your job will be visible on the referral marketplace
+                  </Text>
 
-              <Text style={styles.benefitLabel}>
-                <Text style={styles.benefitNumber}>2. </Text>
-                Candidates can apply immediately
-              </Text>
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>2. </Text>
+                    Job seekers can request referrals from you
+                  </Text>
 
-              <Text style={styles.benefitLabel}>
-                <Text style={styles.benefitNumber}>3. </Text>
-                Shareable link generated for social media
-              </Text>
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>3. </Text>
+                    You'll earn rewards for successful referrals
+                  </Text>
 
-              <Text style={styles.benefitLabel}>
-                <Text style={styles.benefitNumber}>4. </Text>
-                Track applications in real-time
-              </Text>
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>4. </Text>
+                    Track referral requests in real-time
+                  </Text>
+                </>
+              ) : (
+                // Employer-specific benefits
+                <>
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>1. </Text>
+                    Your job will be visible to thousands of candidates
+                  </Text>
+
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>2. </Text>
+                    Candidates can apply directly through the platform
+                  </Text>
+
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>3. </Text>
+                    Shareable link generated for social media
+                  </Text>
+
+                  <Text style={styles.benefitLabel}>
+                    <Text style={styles.benefitNumber}>4. </Text>
+                    Track all applications in real-time
+                  </Text>
+                </>
+              )}
             </View>
           </ScrollView>
 
@@ -324,30 +357,30 @@ const createStyles = (colors) => StyleSheet.create({
   // ✨ Benefits Box - Numbered Steps Only
   benefitsBox: {
     marginHorizontal: 20,
-    backgroundColor: colors.primaryLight || '#eff6ff',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: colors.primaryBorder || '#dbeafe',
+    borderColor: colors.border,
     marginBottom: 20,
   },
   benefitsHeading: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
     marginBottom: 12,
   },
   benefitLabel: {
     fontSize: 13,
-    color: colors.primary,
+    color: colors.textSecondary,
     lineHeight: 20,
     fontWeight: '500',
     marginBottom: 8,
   },
   benefitNumber: {
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
   },
 
   // 🎯 Footer Actions - Clean Buttons

@@ -312,19 +312,34 @@ export const AuthProvider = ({ children }) => {
       // Separate education and work experience data from registration data
       const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
       
-      // Add placeholder password for Google OAuth users if not provided
-      if (isGoogleRegistration && !registrationData.password) {
-        registrationData.password = `google-oauth-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+      let result;
+      
+      if (isGoogleRegistration) {
+        // Use dedicated Google registration endpoint (no password needed)
+        const googleTokenData = {
+          accessToken: userData.googleAuth.accessToken,
+          idToken: userData.googleAuth.idToken,
+          user: {
+            id: userData.googleAuth.googleId,
+            email: userData.email,
+            given_name: userData.firstName,
+            family_name: userData.lastName,
+            verified_email: userData.googleAuth.verified,
+            picture: userData.googleAuth.picture,
+          }
+        };
         
+        result = await refopenAPI.registerWithGoogle(googleTokenData, {
+          userType: registrationData.userType,
+          referralCode: registrationData.referralCode,
+          organizationName: registrationData.organizationName,
+          organizationIndustry: registrationData.organizationIndustry,
+          organizationSize: registrationData.organizationSize,
+        });
+      } else {
+        // Regular email registration with password
+        result = await refopenAPI.register(registrationData);
       }
-      
-      
-      
-      
-      
-      
-      
-      const result = await refopenAPI.register(registrationData);
       
       
       if (result.success) {
@@ -334,28 +349,9 @@ export const AuthProvider = ({ children }) => {
         let loginResult;
         
         if (isGoogleRegistration) {
-          
-          // For Google users, try to login with Google OAuth data
-          try {
-            const googleLoginData = {
-              accessToken: userData.googleAuth.accessToken,
-              idToken: userData.googleAuth.idToken,
-              user: {
-                id: userData.googleAuth.googleId,
-                email: userData.email,
-                name: `${userData.firstName} ${userData.lastName}`,
-                verified_email: userData.googleAuth.verified,
-                picture: userData.googleAuth.picture,
-              }
-            };
-            
-            loginResult = await refopenAPI.loginWithGoogle(googleLoginData);
-            
-          } catch (googleLoginError) {
-            console.warn('Google login failed, falling back to regular login:', googleLoginError);
-            // Fallback to regular login with placeholder password
-            loginResult = await login(userData.email, registrationData.password);
-          }
+          // Google registration already returns tokens and user - no need to login again
+          loginResult = { success: true, user: result.data.user };
+          // Tokens are already set by registerWithGoogle
         } else {
           // Regular user login
           loginResult = await login(userData.email, userData.password);

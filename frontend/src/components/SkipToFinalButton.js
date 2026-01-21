@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../styles/theme';
+import { showToast } from './Toast';
 
 export default function SkipToFinalButton({ 
   onSkip, 
@@ -16,7 +17,7 @@ export default function SkipToFinalButton({
 
   const handleSkip = () => {
     if (disabled || !selectedValue) {
-      Alert.alert('Selection Required', requiredMessage);
+      showToast(requiredMessage, 'error');
       return;
     }
 

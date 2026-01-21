@@ -23,6 +23,8 @@ export class JobService {
         preferredLocations: string | null;
         preferredCompanySize: string | null;
         latestJobTitle: string | null;
+        isFresher: boolean;
+        totalExperienceMonths: number;
     }> {
         if (!userId) {
             return {
@@ -30,7 +32,9 @@ export class JobService {
                 preferredWorkTypes: null,
                 preferredLocations: null,
                 preferredCompanySize: null,
-                latestJobTitle: null
+                latestJobTitle: null,
+                isFresher: false,
+                totalExperienceMonths: 0
             };
         }
 
@@ -40,6 +44,8 @@ export class JobService {
                 a.PreferredWorkTypes AS preferredWorkTypes,
                 a.PreferredLocations AS preferredLocations,
                 a.PreferredCompanySize AS preferredCompanySize,
+                ISNULL(a.TotalExperienceMonths, 0) AS totalExperienceMonths,
+                a.GraduationYear AS graduationYear,
                 (
                     SELECT TOP 1 we.JobTitle
                     FROM WorkExperiences we
@@ -49,19 +55,40 @@ export class JobService {
                       CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
                       we.EndDate DESC,
                       we.StartDate DESC
-                ) AS latestJobTitle
+                ) AS latestJobTitle,
+                (
+                    SELECT COUNT(*) 
+                    FROM WorkExperiences we2 
+                    WHERE we2.ApplicantID = a.ApplicantID
+                ) AS workExperienceCount
             FROM Applicants a
             WHERE a.UserID = @param0;
         `;
 
         const result = await dbService.executeQuery(query, [userId]);
         const row = result.recordset?.[0];
+        
+        // User is fresher if:
+        // 1. No work experience OR total experience < 12 months
+        // 2. OR graduation year is >= current year (still in college or just graduated)
+        const totalExpMonths = row?.totalExperienceMonths ?? 0;
+        const workExpCount = row?.workExperienceCount ?? 0;
+        const graduationYearStr = row?.graduationYear ?? '';
+        const graduationYear = parseInt(graduationYearStr, 10) || 0;
+        const currentYear = new Date().getFullYear();
+        
+        const isFresherByExperience = workExpCount === 0 || totalExpMonths < 12;
+        const isFresherByEducation = graduationYear > 0 && graduationYear >= currentYear; // Still studying or graduating this year
+        const isFresher = isFresherByExperience || isFresherByEducation;
+        
         return {
             preferredJobTypes: row?.preferredJobTypes ?? null,
             preferredWorkTypes: row?.preferredWorkTypes ?? null,
             preferredLocations: row?.preferredLocations ?? null,
             preferredCompanySize: row?.preferredCompanySize ?? null,
-            latestJobTitle: row?.latestJobTitle ?? null
+            latestJobTitle: row?.latestJobTitle ?? null,
+            isFresher,
+            totalExperienceMonths: totalExpMonths
         };
     }
 
@@ -364,6 +391,16 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🧑‍💼 PostedByType filter - filter by who posted the job (0=Scraped, 1=Employer, 2=Referrer)
+        if (f.postedByType !== undefined && f.postedByType !== null && f.postedByType !== '') {
+            const postedByTypeValue = parseInt(String(f.postedByType), 10);
+            if (!isNaN(postedByTypeValue) && [0, 1, 2].includes(postedByTypeValue)) {
+                whereClause += ` AND j.PostedByType = @param${paramIndex}`;
+                queryParams.push(postedByTypeValue);
+                paramIndex++;
+            }
+        }
+
         return { whereClause, queryParams, paramIndex };
     }
 
@@ -408,14 +445,15 @@ export class JobService {
         add('JobID', jobId);
         add('OrganizationID', organizationID);
         add('PostedByUserID', postedByUserID);
-        add('PostedByType', 1); // 1 = User posted
+        // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
+        add('PostedByType', validated.postedByType === 'Referrer' ? 2 : 1);
         add('Title', validated.title);
         add('JobTypeID', validated.jobTypeID || 1);
         add('WorkplaceTypeID', workplaceTypeId);
         add('Department', department);
         add('Description', validated.description);
         add('Location', location);
-        add('ExternalJobID', externalJobId);
+        add('ExternalJobID', validated.externalJobID || externalJobId);
 
         // Optional (present in DB schema)
         const opt = (col: string, val: any) => { if (val !== undefined && val !== null && val !== '') add(col, val); };
@@ -473,6 +511,10 @@ export class JobService {
             WHERE j.JobID = @param0;
         `;
 
+        // Debug logging
+        console.log('📝 Job INSERT - Fields:', fields);
+        console.log('📝 Job INSERT - Values count:', values.length);
+
         try {
             const result = await dbService.executeQuery<Job>(insertQuery, values);
             if (!result.recordset || result.recordset.length === 0) {
@@ -507,7 +549,7 @@ export class JobService {
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         // 🚀 Use shared filter builder to avoid duplication
-        const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
+        let { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
         let paramIndex = currentParamIndex;
 
         // NOTE: We intentionally do not run COUNT(*) for perf.
@@ -521,6 +563,27 @@ export class JobService {
 
         // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
+
+        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), show only entry-level Engineer jobs
+        // BUT: If user has a current job title, prioritize that over fresher status
+        // Example: A user with "Senior Software Engineer" title but only 6 months logged experience
+        //          should still see SSE jobs, not be restricted to entry-level
+        const hasJobTitle = personalization.latestJobTitle && personalization.latestJobTitle.trim().length > 0;
+        
+        if (personalization.isFresher && !f.skipFresherFilter && !hasJobTitle) {
+            // Only apply fresher filter if user has NO job title set
+            whereClause += ` AND j.Title LIKE '%Engineer%'
+                AND j.Title NOT LIKE '%Senior%'
+                AND j.Title NOT LIKE '%Lead%'
+                AND j.Title NOT LIKE '%Principal%'
+                AND j.Title NOT LIKE '%Staff%'
+                AND j.Title NOT LIKE '%Head%'
+                AND j.Title NOT LIKE '%Director%'
+                AND j.Title NOT LIKE '%Manager%'
+                AND j.Title NOT LIKE '%VP%'
+                AND j.Title NOT LIKE '%Chief%'
+                AND j.Title NOT LIKE '%Architect%'`;
+        }
 
         // Add personalization parameters once; used in ORDER BY scoring.
         const dataParams: any[] = [...queryParams];
@@ -537,7 +600,7 @@ export class JobService {
         let dataQuery = `${personalizationCtes}
             SELECT
                 j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                j.OrganizationID,
+                j.OrganizationID, j.PostedByType,
                 j.Location, j.City, j.State, j.Country, j.IsRemote, 
                 j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                 j.PublishedAt, j.CreatedAt,
@@ -601,6 +664,7 @@ export class JobService {
                 o.Description as OrganizationDescription,
                 c.Symbol as CurrencySymbol,
                 CASE
+                    WHEN j.PostedByUserID IS NOT NULL AND j.PostedByType = 2 THEN 'Verified Referrer'
                     WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
                     WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
                     ELSE 'External Recruiter'
@@ -714,8 +778,9 @@ export class JobService {
             throw new ValidationError('Only draft jobs can be published');
         }
 
-        // Check permissions
+        // Check permissions - user must be the one who posted the job OR an employer at that org
         if (job.PostedByUserID !== userId) {
+            // Check if user is an employer at the same organization
             const permissionQuery = `
                 SELECT 1 FROM Employers e
                 WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
@@ -726,12 +791,19 @@ export class JobService {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
         }
+        // If job.PostedByUserID === userId, user is the original poster (employer OR referrer), allow publish
 
-        // Charge ₹50 to publish a draft job
+        // Check if this is a referrer-posted job (FREE to publish) or employer-posted job (₹50 fee)
+        // PostedByType: 0 = Scraped, 1 = Employer, 2 = Referrer
+        const isReferrerPostedJob = job.PostedByType === 2;
         const PUBLISH_JOB_FEE = 50;
-        const wallet = await WalletService.getOrCreateWallet(userId);
-        if (wallet.Balance < PUBLISH_JOB_FEE) {
-            throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
+
+        // Only charge for employer-posted jobs, referrer jobs are FREE
+        if (!isReferrerPostedJob) {
+            const wallet = await WalletService.getOrCreateWallet(userId);
+            if (wallet.Balance < PUBLISH_JOB_FEE) {
+                throw new InsufficientBalanceError('Insufficient wallet balance to publish job');
+            }
         }
 
         // Update job status to Published
@@ -749,29 +821,32 @@ export class JobService {
 
         await dbService.executeQuery(query, [jobId]);
 
-        // Deduct fee after successful publish; if debit fails, revert publish.
-        try {
-            await WalletService.debitWallet(
-                userId,
-                PUBLISH_JOB_FEE,
-                'JOB_PUBLISH',
-                `Publish job - ${job.Title || jobId}`
-            );
-        } catch (error) {
+        // Deduct fee after successful publish (only for employer-posted jobs)
+        // Referrer-posted jobs are FREE
+        if (!isReferrerPostedJob) {
             try {
-                await dbService.executeQuery(
-                    `UPDATE Jobs
-                     SET Status = 'Draft',
-                         PublishedAt = NULL,
-                         ExpiresAt = NULL,
-                         UpdatedAt = GETUTCDATE()
-                     WHERE JobID = @param0`,
-                    [jobId]
+                await WalletService.debitWallet(
+                    userId,
+                    PUBLISH_JOB_FEE,
+                    'JOB_PUBLISH',
+                    `Publish job - ${job.Title || jobId}`
                 );
-            } catch (revertError) {
-                console.error('Failed to revert job after wallet debit failure:', revertError);
+            } catch (error) {
+                try {
+                    await dbService.executeQuery(
+                        `UPDATE Jobs
+                         SET Status = 'Draft',
+                             PublishedAt = NULL,
+                             ExpiresAt = NULL,
+                             UpdatedAt = GETUTCDATE()
+                         WHERE JobID = @param0`,
+                        [jobId]
+                    );
+                } catch (revertError) {
+                    console.error('Failed to revert job after wallet debit failure:', revertError);
+                }
+                throw error;
             }
-            throw error;
         }
 
         const publishedJob = await this.getJobById(jobId);
@@ -902,6 +977,72 @@ export class JobService {
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
+    // Get jobs posted by a specific user (for referrers and employers)
+    static async getJobsByPostedUser(userId: string, params: PaginationParams & { status?: string; search?: string }): Promise<{ jobs: Job[]; total: number; totalPages: number }> {
+        const { page, pageSize, sortBy = 'CreatedAt', sortOrder = 'desc', status, search } = params as any;
+
+        const allowedSort: Record<string, string> = {
+            CreatedAt: 'j.CreatedAt',
+            UpdatedAt: 'j.UpdatedAt',
+            PublishedAt: 'j.PublishedAt',
+            Title: 'j.Title'
+        };
+        const normalizedSort = allowedSort[sortBy] || 'j.CreatedAt';
+        const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+        let whereClause = 'WHERE j.PostedByUserID = @param0';
+        const queryParams: any[] = [userId];
+        let paramIndex = 1;
+
+        if (status) {
+            const normalizedStatus = String(status).trim();
+            if (['Draft', 'Published', 'Closed'].includes(normalizedStatus)) {
+                whereClause += ` AND UPPER(RTRIM(LTRIM(j.Status))) = UPPER(@param${paramIndex})`;
+                queryParams.push(normalizedStatus);
+                paramIndex++;
+            }
+        }
+
+        if (search) {
+            const tokens = String(search).trim().split(/\s+/).filter(Boolean);
+            if (tokens.length) {
+                const tokenClauses: string[] = [];
+                tokens.forEach(tok => {
+                    tokenClauses.push(`(j.Title LIKE @param${paramIndex} OR j.Description LIKE @param${paramIndex})`);
+                    queryParams.push(`%${tok}%`);
+                    paramIndex += 1;
+                });
+                whereClause += ` AND (${tokenClauses.join(' OR ')})`;
+            }
+        }
+
+        const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
+        const countResult = await dbService.executeQuery(countQuery, queryParams);
+        const total = countResult.recordset[0]?.total || 0;
+        const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+        const offset = (page - 1) * pageSize;
+        const dataQuery = `
+            SELECT
+                j.JobID, j.Title, j.Status, j.JobTypeID, j.WorkplaceTypeID,
+                j.OrganizationID, j.PostedByType, j.PostedByUserID,
+                j.Location, j.City, j.State, j.Country, j.IsRemote,
+                j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+                j.PublishedAt, j.CreatedAt, j.UpdatedAt,
+                jt.Value as JobTypeName, o.Name as OrganizationName,
+                ISNULL(o.LogoURL, '') as OrganizationLogo
+            FROM Jobs j
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+            LEFT JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            ${whereClause}
+            ORDER BY ${normalizedSort} ${normalizedOrder}
+            OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
+        queryParams.push(offset, pageSize);
+
+        const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
+        return { jobs: dataResult.recordset || [], total, totalPages };
+    }
+
     // Get currencies (reference data) - unchanged
     static async getCurrencies(): Promise<any[]> {
         const query = 'SELECT * FROM Currencies WHERE IsActive = 1 ORDER BY Code';
@@ -950,7 +1091,7 @@ export class JobService {
             let dataQuery = `${personalizationCtes}
                 SELECT
                     j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                    j.OrganizationID,
+                    j.OrganizationID, j.PostedByType,
                     j.Location, j.City, j.Country, j.IsRemote, 
                     j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
                     j.PublishedAt, j.CreatedAt,

@@ -120,6 +120,34 @@ export class UserService {
                 console.error('Error giving bonuses (registration still successful):', bonusError);
             }
             
+            // Send welcome email to new user
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendWelcomeEmail(user.Email, user.FirstName || 'there');
+            } catch (emailError) {
+                // Log but don't fail registration if email fails
+                console.error('Error sending welcome email (registration still successful):', emailError);
+            }
+            
+            // Create NotificationPreferences with all flags enabled by default
+            try {
+                await dbService.executeQuery(`
+                    INSERT INTO NotificationPreferences (
+                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
+                        ReferralRequestEmail, ReferralRequestPush,
+                        ReferralClaimedEmail, ReferralClaimedPush,
+                        ReferralVerifiedEmail, ReferralVerifiedPush,
+                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
+                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
+                    ) VALUES (
+                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    )
+                `, [userId]);
+            } catch (prefError) {
+                // Log but don't fail registration if notification preferences creation fails
+                console.error('Error creating notification preferences (registration still successful):', prefError);
+            }
+            
             return user;
         } catch (error) {
             try { await tx.rollback(); } catch {}
@@ -426,6 +454,181 @@ export class UserService {
         await dbService.executeQuery(query, [userId, hashedNewPassword]);
     }
 
+    /**
+     * Request password reset - sends email with reset token
+     */
+    static async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+        const user = await this.findByEmail(email);
+        
+        // Always return success to prevent email enumeration attacks
+        if (!user) {
+            console.log(`Password reset requested for non-existent email: ${email}`);
+            return { 
+                success: true, 
+                message: 'If an account exists with this email, you will receive a password reset link.' 
+            };
+        }
+
+        // Check if user signed up with Google (empty password)
+        if (!user.Password || user.Password === '') {
+            console.log(`Password reset requested for Google-only user: ${email}`);
+            // Send helpful email to Google users explaining how to login
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendGoogleUserPasswordInfo(user.Email, user.FirstName);
+            } catch (emailError: any) {
+                console.error('Failed to send Google user info email:', emailError.message);
+            }
+            return { 
+                success: true, 
+                message: 'If an account exists with this email, you will receive a password reset link.' 
+            };
+        }
+
+        // Generate password reset token (valid for 1 hour)
+        const resetToken = AuthService.generatePasswordResetToken(user.UserID, user.Email);
+
+        // Store token hash in database for verification (optional security measure)
+        const tokenHash = await AuthService.hashPassword(resetToken.substring(0, 20));
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET PasswordResetToken = @param1, 
+                PasswordResetExpires = DATEADD(HOUR, 1, GETUTCDATE()),
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, tokenHash]);
+
+        // Send password reset email
+        try {
+            const { EmailService } = await import('./emailService');
+            await EmailService.sendPasswordResetEmail(user.Email, user.FirstName, resetToken);
+        } catch (emailError: any) {
+            console.error('Failed to send password reset email:', emailError.message);
+            // Don't expose email sending failures to user
+        }
+
+        return { 
+            success: true, 
+            message: 'If an account exists with this email, you will receive a password reset link.' 
+        };
+    }
+
+    /**
+     * Reset password using token
+     */
+    static async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        // Verify the token
+        let payload;
+        try {
+            payload = AuthService.verifyToken(token);
+        } catch (error: any) {
+            throw new ValidationError('Invalid or expired reset token. Please request a new password reset.');
+        }
+
+        // Check token type
+        if (payload.type !== appConstants.tokenTypes.PASSWORD_RESET) {
+            throw new ValidationError('Invalid token type');
+        }
+
+        // Find user
+        const user = await this.findById(payload.userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        // Verify email matches
+        if (user.Email.toLowerCase() !== payload.email.toLowerCase()) {
+            throw new ValidationError('Invalid reset token');
+        }
+
+        // Check database expiry (double security - belt and suspenders)
+        if (!user.PasswordResetExpires || new Date(user.PasswordResetExpires) < new Date()) {
+            throw new ValidationError('Reset link has expired. Please request a new password reset.');
+        }
+
+        // Verify token hash matches (prevents token reuse after password is already reset)
+        if (!user.PasswordResetToken) {
+            throw new ValidationError('Reset link has already been used. Please request a new password reset.');
+        }
+
+        // Check if user has Google-only account
+        if (!user.Password || user.Password === '') {
+            throw new ValidationError('This account uses Google Sign-In. Please sign in with Google instead.');
+        }
+
+        // Validate new password
+        if (!newPassword || newPassword.length < 8) {
+            throw new ValidationError('Password must be at least 8 characters long');
+        }
+
+        // Hash new password
+        const hashedPassword = await AuthService.hashPassword(newPassword);
+
+        // Update password and clear reset token
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET Password = @param1, 
+                PasswordResetToken = NULL, 
+                PasswordResetExpires = NULL,
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, hashedPassword]);
+
+        return { 
+            success: true, 
+            message: 'Password has been reset successfully. You can now login with your new password.' 
+        };
+    }
+
+    /**
+     * Set password for Google-only users (no current password required)
+     * This allows Google users to also login with email/password
+     */
+    static async setPasswordForGoogleUser(userId: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        // Find user
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        // Check if user already has a password set
+        if (user.Password && user.Password !== '') {
+            throw new ValidationError('You already have a password set. Use "Change Password" instead.');
+        }
+
+        // Validate new password
+        if (!newPassword || newPassword.length < 8) {
+            throw new ValidationError('Password must be at least 8 characters long');
+        }
+
+        // Hash new password
+        const hashedPassword = await AuthService.hashPassword(newPassword);
+
+        // Update password
+        await dbService.executeQuery(`
+            UPDATE Users 
+            SET Password = @param1, 
+                UpdatedAt = GETUTCDATE()
+            WHERE UserID = @param0
+        `, [user.UserID, hashedPassword]);
+
+        return { 
+            success: true, 
+            message: 'Password has been set successfully. You can now login with either Google or email/password.' 
+        };
+    }
+
+    /**
+     * Check if user has password set (for Google users to know if they can set one)
+     */
+    static async hasPasswordSet(userId: string): Promise<boolean> {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+        return !!(user.Password && user.Password !== '');
+    }
+
     // Verify email
     static async verifyEmail(userId: string): Promise<void> {
         const query = `
@@ -578,6 +781,18 @@ export class UserService {
             `, [userId]);
             const isVerifiedReferrer = userFlagsResult.recordset?.[0]?.IsVerifiedReferrer || false;
 
+            // Check if current work experience is verified (for showing "Become Verified Referrer" button)
+            const currentWorkExpResult = await dbService.executeQuery(`
+                SELECT TOP 1 CompanyEmailVerified 
+                FROM WorkExperiences 
+                WHERE ApplicantID = @param0 
+                  AND IsActive = 1 
+                  AND (IsCurrent = 1 OR EndDate IS NULL)
+                ORDER BY StartDate DESC
+            `, [applicantId]);
+            const isCurrentJobVerified = currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === true || 
+                                         currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === 1;
+
             // FIRST: Recalculate profile completeness to ensure it's up to date
             let profileCompleteness = 0;
             try {
@@ -680,6 +895,16 @@ export class UserService {
             // Get skills and preferences info
             const profileInsights = await this.getProfileInsights(applicantId);
 
+            // Get draft jobs count for verified referrers
+            let draftJobs = 0;
+            if (isVerifiedReferrer) {
+                const draftJobsResult = await dbService.executeQuery(
+                    `SELECT COUNT(*) as DraftCount FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Draft'`,
+                    [userId]
+                );
+                draftJobs = draftJobsResult.recordset?.[0]?.DraftCount || 0;
+            }
+
             return {
                 // Core application metrics
                 totalApplications: baseStats.TotalApplications || 0,
@@ -731,8 +956,14 @@ export class UserService {
                     needsAttention: this.getJobSeekerAttentionItems(baseStats, referralStats, resumeStats)
                 },
                 
-                // Verified referrer status
-                isVerifiedReferrer: isVerifiedReferrer
+                // Verified referrer status (user-level, from any verified work experience)
+                isVerifiedReferrer: isVerifiedReferrer,
+                
+                // Current job verification status (for showing "Become Verified Referrer" button)
+                isCurrentJobVerified: isCurrentJobVerified,
+                
+                // Draft jobs count (for verified referrers who post jobs)
+                draftJobs: draftJobs
             };
 
         } catch (error) {
@@ -880,12 +1111,62 @@ export class UserService {
                     isActiveHiring: (baseStats.JobsPostedLast30Days || 0) > 0,
                     hiringVelocity: this.calculateHiringVelocity(baseStats),
                     needsAttention: this.getEmployerAttentionItems(baseStats)
-                }
+                },
+                
+                // Profile completeness for employers
+                profileCompleteness: await this.calculateEmployerProfileCompleteness(userId)
             };
 
         } catch (error) {
             console.error('Error getting enhanced employer stats:', error);
             return this.getBasicEmployerStats(userId);
+        }
+    }
+    
+    // Calculate employer profile completeness
+    static async calculateEmployerProfileCompleteness(userId: string): Promise<number> {
+        try {
+            const query = `
+                SELECT 
+                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
+                    e.Role, e.OrganizationID,
+                    o.Name as OrganizationName, o.Industry, o.Size, o.Website, o.Description
+                FROM Users u
+                LEFT JOIN Employers e ON u.UserID = e.UserID
+                LEFT JOIN Organizations o ON e.OrganizationID = o.OrganizationID
+                WHERE u.UserID = @param0
+            `;
+            const result = await dbService.executeQuery(query, [userId]);
+            if (!result.recordset || result.recordset.length === 0) {
+                return 0;
+            }
+            
+            const row = result.recordset[0];
+            const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
+            
+            // Employer fields (10 total)
+            // Basic Info - 5 fields
+            const firstName = hasValue(row.FirstName) ? 1 : 0;
+            const lastName = hasValue(row.LastName) ? 1 : 0;
+            const email = hasValue(row.Email) ? 1 : 0;
+            const phone = hasValue(row.Phone) ? 1 : 0;
+            const profilePic = hasValue(row.ProfilePictureURL) ? 1 : 0;
+            
+            // Organization Info - 5 fields
+            const role = hasValue(row.Role) ? 1 : 0;
+            const organizationName = hasValue(row.OrganizationName) ? 1 : 0;
+            const industry = hasValue(row.Industry) ? 1 : 0;
+            const companySize = hasValue(row.Size) ? 1 : 0;
+            const website = hasValue(row.Website) ? 1 : 0;
+            
+            const totalFields = 10;
+            const achieved = firstName + lastName + email + phone + profilePic +
+                           role + organizationName + industry + companySize + website;
+            
+            return Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
+        } catch (error) {
+            console.error('Error calculating employer profile completeness:', error);
+            return 0;
         }
     }
 
@@ -1297,13 +1578,17 @@ export class UserService {
         try {
             const query = `
                 SELECT 
+                    -- User table fields
+                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
+                    -- Applicant table fields
+                    a.Headline, a.CurrentJobTitle, a.CurrentCompanyName, a.TotalExperienceMonths,
+                    a.CurrentLocation, a.Summary,
                     a.Institution, a.HighestEducation, a.FieldOfStudy,
-                    a.PrimarySkills, a.SecondarySkills, a.Summary,
+                    a.PrimarySkills, a.SecondarySkills,
                     a.PreferredJobTypes, a.PreferredWorkTypes, a.PreferredLocations,
-                    a.CurrentJobTitle, a.LinkedInProfile,
+                    a.LinkedInProfile,
                     (SELECT COUNT(*) FROM ApplicantResumes r WHERE r.ApplicantID = a.ApplicantID) AS ResumeCount,
-                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount,
-                    u.ProfilePictureURL
+                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount
                 FROM Applicants a
                 INNER JOIN Users u ON a.UserID = u.UserID
                 WHERE a.ApplicantID = @param0
@@ -1315,20 +1600,45 @@ export class UserService {
             const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
-            // Components (10)
-            const educationComplete = hasValue(row.Institution) && hasValue(row.HighestEducation) && hasValue(row.FieldOfStudy) ? 1 : 0; // 1
-            const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0; //2
-            const secondarySkills = hasValue(row.SecondarySkills) ? 1 : 0; //3
-            const summaryPresent = hasValue(row.Summary) ? 1 : 0; //4
-            const jobPrefsPresent = (hasValue(row.PreferredJobTypes) || hasValue(row.PreferredWorkTypes) || hasValue(row.PreferredLocations)) ? 1 : 0; //5
-            const resumePresent = (row.ResumeCount || 0) > 0 ? 1 : 0; //6
-            const workExpPresent = (row.WorkExpCount || 0) > 0 ? 1 : 0; //7
-            const profilePicPresent = hasValue(row.ProfilePictureURL) ? 1 : 0; //8
-            const linkedInPresent = hasValue(row.LinkedInProfile) ? 1 : 0; //9
-            const currentJobTitlePresent = hasValue(row.CurrentJobTitle) ? 1 : 0; //10
+            // Match frontend calculation - 20 total fields
+            // Basic Info (Users table) - 5 fields
+            const firstName = hasValue(row.FirstName) ? 1 : 0;
+            const lastName = hasValue(row.LastName) ? 1 : 0;
+            const email = hasValue(row.Email) ? 1 : 0;
+            const phone = hasValue(row.Phone) ? 1 : 0;
+            const profilePic = hasValue(row.ProfilePictureURL) ? 1 : 0;
+            
+            // Professional Info (Applicants table) - 6 fields
+            const headline = hasValue(row.Headline) ? 1 : 0;
+            const currentJobTitle = hasValue(row.CurrentJobTitle) ? 1 : 0;
+            const currentCompany = hasValue(row.CurrentCompanyName) ? 1 : 0;
+            const yearsExp = (row.TotalExperienceMonths || 0) > 0 ? 1 : 0;
+            const currentLocation = hasValue(row.CurrentLocation) ? 1 : 0;
+            const summary = hasValue(row.Summary) ? 1 : 0;
+            
+            // Education - 3 fields
+            const education = hasValue(row.HighestEducation) ? 1 : 0;
+            const fieldOfStudy = hasValue(row.FieldOfStudy) ? 1 : 0;
+            const institution = hasValue(row.Institution) ? 1 : 0;
+            
+            // Skills & Preferences - 4 fields
+            const primarySkills = hasValue(row.PrimarySkills) ? 1 : 0;
+            const jobTypes = hasValue(row.PreferredJobTypes) ? 1 : 0;
+            const workTypes = hasValue(row.PreferredWorkTypes) ? 1 : 0;
+            const workExp = (row.WorkExpCount || 0) > 0 ? 1 : 0;
+            
+            // Bonus fields - 2 fields
+            const resume = (row.ResumeCount || 0) > 0 ? 1 : 0;
+            const linkedIn = hasValue(row.LinkedInProfile) ? 1 : 0;
 
-            const achieved = educationComplete + primarySkills + secondarySkills + summaryPresent + jobPrefsPresent + resumePresent + workExpPresent + profilePicPresent + linkedInPresent + currentJobTitlePresent;
-            const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / 10)));
+            const totalFields = 20;
+            const achieved = firstName + lastName + email + phone + profilePic +
+                           headline + currentJobTitle + currentCompany + yearsExp + currentLocation + summary +
+                           education + fieldOfStudy + institution +
+                           primarySkills + jobTypes + workTypes + workExp +
+                           resume + linkedIn;
+            
+            const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
 
             await dbService.executeQuery(
                 `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
@@ -1586,6 +1896,34 @@ export class UserService {
             } catch (bonusError) {
                 // Log but don't fail registration if bonus fails
                 console.error('Error giving bonuses (registration still successful):', bonusError);
+            }
+
+            // Send welcome email to new user
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendWelcomeEmail(user.Email, user.FirstName || 'there');
+            } catch (emailError) {
+                // Log but don't fail registration if email fails
+                console.error('Error sending welcome email (registration still successful):', emailError);
+            }
+
+            // Create NotificationPreferences with all flags enabled by default
+            try {
+                await dbService.executeQuery(`
+                    INSERT INTO NotificationPreferences (
+                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
+                        ReferralRequestEmail, ReferralRequestPush,
+                        ReferralClaimedEmail, ReferralClaimedPush,
+                        ReferralVerifiedEmail, ReferralVerifiedPush,
+                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
+                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
+                    ) VALUES (
+                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    )
+                `, [userId]);
+            } catch (prefError) {
+                // Log but don't fail registration if notification preferences creation fails
+                console.error('Error creating notification preferences (registration still successful):', prefError);
             }
 
             // Generate tokens

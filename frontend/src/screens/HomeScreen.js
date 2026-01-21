@@ -7,14 +7,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   Dimensions,
   Image,
   TextInput,
   FlatList,
   Animated,
+  Modal,
 } from 'react-native';
+import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
+import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,11 +27,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 import useResponsive from '../hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
+import { showToast } from '../components/Toast';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-const { user, isEmployer, isJobSeeker } = useAuth();
+const { user, isEmployer, isJobSeeker, isAdmin, refreshVerificationStatus } = useAuth();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -60,6 +63,15 @@ const [profileViewsCount, setProfileViewsCount] = useState(0);
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
+
+// 🎯 Verification flow states
+const [showConfirmCompanyModal, setShowConfirmCompanyModal] = useState(false);
+const [showAddWorkModal, setShowAddWorkModal] = useState(false);
+const [showEmailVerifyModal, setShowEmailVerifyModal] = useState(false);
+const [currentWorkExperience, setCurrentWorkExperience] = useState(null);
+const [workExperiences, setWorkExperiences] = useState([]);
+const [showVerifiedOverlay, setShowVerifiedOverlay] = useState(false);
+const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 
 // 🎯 NEW: Referrer requests (referrals that came to me)
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
@@ -142,49 +154,50 @@ const [dashboardData, setDashboardData] = useState({
       })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recommended Jobs
-    setLoadingJobs(true);
-    const jobsPromise = (async () => {
-      try {
-        const recentJobsRes = isEmployer 
-          ? await refopenAPI.getOrganizationJobs({ 
-              page: 1, 
-              pageSize: 5, 
-              status: 'Published', 
-              postedByUserId: user?.UserID || user?.userId || user?.id 
-            })
-          : await refopenAPI.getJobs(1, 5);
-        
-        let recentJobs = [];
-        if (recentJobsRes.success) {
-          recentJobs = (recentJobsRes.data || []).slice(0, 5);
+    // 2. Recommended Jobs (Job Seekers only)
+    let jobsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      setLoadingJobs(true);
+      jobsPromise = (async () => {
+        try {
+          const recentJobsRes = await refopenAPI.getJobs(1, 5);
+          
+          let recentJobs = [];
+          if (recentJobsRes.success) {
+            recentJobs = (recentJobsRes.data || []).slice(0, 5);
+          }
+          setDashboardData(prev => ({ ...prev, recentJobs }));
+        } catch (err) {
+          console.warn('Recommended jobs fetch failed:', err);
+        } finally {
+          setLoadingJobs(false);
         }
-        setDashboardData(prev => ({ ...prev, recentJobs }));
-      } catch (err) {
-        console.warn('Recommended jobs fetch failed:', err);
-      } finally {
-        setLoadingJobs(false);
-      }
-    })();
+      })();
+    } else {
+      setLoadingJobs(false);
+    }
 
     // 3. Jobs from Top MNCs (Fortune 500)
-    setLoadingF500Jobs(true);
-    const f500JobsPromise = (async () => {
-      try {
-        if (!isEmployer) {
+    let f500JobsPromise = Promise.resolve();
+    if (isJobSeeker) {
+      setLoadingF500Jobs(true);
+      f500JobsPromise = (async () => {
+        try {
           const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
           let f500Jobs = [];
           if (f500JobsRes.success) {
             f500Jobs = (f500JobsRes.data || []).slice(0, 5);
           }
           setDashboardData(prev => ({ ...prev, f500Jobs }));
+        } catch (err) {
+          console.warn('F500 jobs fetch failed:', err);
+        } finally {
+          setLoadingF500Jobs(false);
         }
-      } catch (err) {
-        console.warn('F500 jobs fetch failed:', err);
-      } finally {
-        setLoadingF500Jobs(false);
-      }
-    })();
+      })();
+    } else {
+      setLoadingF500Jobs(false);
+    }
 
     // 3. Applications (Job Seeker only)
     let applicationsPromise = Promise.resolve();
@@ -224,23 +237,20 @@ const [dashboardData, setDashboardData] = useState({
       })();
     }
 
-    // 🎯 NEW: Fetch profile views count (job seekers only)
-    let profileViewsPromise = Promise.resolve();
-    if (isJobSeeker) {
-      profileViewsPromise = (async () => {
-        try {
-          const result = await messagingApi.getMyProfileViews(1, 1);
-          if (result.success) {
-            // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
-            const count = result.meta?.total || result.total || result.data?.length || 0;
-            setProfileViewsCount(count);
-          }
-        } catch (err) {
-          console.warn('Profile views fetch failed:', err);
-          setProfileViewsCount(0);
+    // 🎯 NEW: Fetch profile views count (all users)
+    const profileViewsPromise = (async () => {
+      try {
+        const result = await messagingApi.getMyProfileViews(1, 1);
+        if (result.success) {
+          // Backend returns { success, data, meta: { total, page, pageSize, totalPages } }
+          const count = result.meta?.total || result.total || result.data?.length || 0;
+          setProfileViewsCount(count);
         }
-      })();
-    }
+      } catch (err) {
+        console.warn('Profile views fetch failed:', err);
+        setProfileViewsCount(0);
+      }
+    })();
 
     // 🎯 NEW: Fetch unread message count
     const unreadCountPromise = (async () => {
@@ -311,6 +321,37 @@ const [dashboardData, setDashboardData] = useState({
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
+
+  // 🎯 Handler for "Become a Verified Referrer" button
+  const handleBecomeVerifiedReferrer = useCallback(async () => {
+    setNavigatingToVerify(true);
+    try {
+      // Fetch user's work experiences
+      const res = await refopenAPI.getMyWorkExperiences();
+      if (res.success && res.data) {
+        setWorkExperiences(res.data);
+        // Find current work experience
+        const current = res.data.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
+        if (current) {
+          setCurrentWorkExperience(current);
+          setShowConfirmCompanyModal(true);
+        } else {
+          // No current company, show add work experience modal directly
+          setCurrentWorkExperience(null);
+          setShowAddWorkModal(true);
+        }
+      } else {
+        // No work experiences, show add work experience modal
+        setCurrentWorkExperience(null);
+        setShowAddWorkModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching work experiences:', error);
+      showToast('Failed to load your work experiences. Please try again.', 'error');
+    } finally {
+      setNavigatingToVerify(false);
+    }
+  }, []);
 
   // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
   useEffect(() => {
@@ -684,43 +725,159 @@ const [dashboardData, setDashboardData] = useState({
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
           
-          {isEmployer ? (
+          {isAdmin ? (
             <>
-              <QuickAction
-                title="Post a New Job"
-                description="Create and publish a job posting"
-                icon="add-circle"
-                color={colors.primary}
-                onPress={() => navigation.navigate('CreateJob')}
-              />
-              <QuickAction
-                title="Review Applications"
-                description="Manage candidate applications"
-                icon="people"
-                color={colors.success}
-                badge={stats.pendingApplications > 0 ? stats.pendingApplications : null}
-                urgent={stats.pendingApplications > 10}
-                onPress={() => navigation.navigate('Applications')}
-              />
-              <QuickAction
-                title="Hiring Pipeline"
-                description="Track your recruitment progress"
-                icon="analytics"
-                color={colors.info}
-                badge={stats.interviewsInProgress > 0 ? `${stats.interviewsInProgress} active` : null}
-                onPress={() => navigation.navigate('Analytics')}
-              />
-              <QuickAction
-                title="Referral Network"
-                description="Leverage employee referrals"
-                icon="link"
-                color={colors.warning}
-                badge={stats.referralNetwork?.referralsForMyJobs > 0 ? stats.referralNetwork.referralsForMyJobs : null}
-                onPress={() => navigation.navigate('Referrals')}
-              />
-              
-              {/* Google AdSense Ad - Employer Home */}
-              <AdCard variant="home" />
+              {/* Admin cards - Quick access to admin functions */}
+              <View style={styles.secondaryCardsContainer}>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Admin')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="stats-chart" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Admin Dashboard</Text>
+                    <Text style={styles.quickActionDescription}>View platform analytics and stats</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('AdminPayments')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                    <Ionicons name="card" size={24} color={colors.success} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Manage Payments</Text>
+                    <Text style={styles.quickActionDescription}>Review and approve payments</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('AdminSupport')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.warning + '20' }]}>
+                    <Ionicons name="chatbubbles" size={24} color={colors.warning} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Support Tickets</Text>
+                    <Text style={styles.quickActionDescription}>Handle user support requests</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Settings')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="settings" size={24} color={colors.info} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Settings</Text>
+                    <Text style={styles.quickActionDescription}>Manage your account settings</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : isEmployer ? (
+            <>
+              {/* Employer cards - 3 column grid on desktop, stacked on mobile */}
+              <View style={styles.secondaryCardsContainer}>
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('CreateJob')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="add-circle" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Post a New Job</Text>
+                    <Text style={styles.quickActionDescription}>Create and publish a job posting</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Applications')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
+                    <Ionicons name="people" size={24} color={colors.success} />
+                    {stats.pendingApplications > 0 && (
+                      <View style={[styles.quickActionBadge, { backgroundColor: stats.pendingApplications > 10 ? colors.danger : colors.success }]}>
+                        <Text style={styles.quickActionBadgeText}>{stats.pendingApplications}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Review Applications</Text>
+                    <Text style={styles.quickActionDescription}>Manage candidate applications</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                {/* 🎯 Profile Views Card */}
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('ProfileViews')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+                    <Ionicons name="eye" size={24} color={colors.info} />
+                    <View style={[styles.quickActionBadge, { backgroundColor: colors.info }]}>
+                      <Text style={styles.quickActionBadgeText}>{profileViewsCount}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Profile Views</Text>
+                    <Text style={styles.quickActionDescription}>See who viewed your profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('Settings')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { 
+                    backgroundColor: stats.profileCompleteness >= 80 ? colors.success + '20' : colors.warning + '20' 
+                  }]}>
+                    <Ionicons 
+                      name="person" 
+                      size={24} 
+                      color={stats.profileCompleteness >= 80 ? colors.success : colors.warning} 
+                    />
+                    <View style={[
+                      styles.quickActionBadge, 
+                      { backgroundColor: stats.profileCompleteness >= 80 ? colors.success : colors.warning }
+                    ]}>
+                      <Text style={styles.quickActionBadgeText}>{stats.profileCompleteness || 0}%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Complete Profile</Text>
+                    <Text style={styles.quickActionDescription}>Improve your profile to stand out</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                {/* Google AdSense Ad - Employer Home */}
+                <AdCard variant="home" />
+              </View>
             </>
           ) : (
             <>
@@ -856,16 +1013,11 @@ const [dashboardData, setDashboardData] = useState({
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
 
-                {/* 🌟 Become Verified Referrer Card - Only show if not verified */}
-                {!stats.isVerifiedReferrer && (
+                {/* 🌟 Become Verified Referrer Card - Only show if current job is NOT verified and stats loaded */}
+                {!loadingStats && !stats.isCurrentJobVerified && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
-                    onPress={() => {
-                      setNavigatingToVerify(true);
-                      navigation.navigate('Settings', { openModal: 'professional' });
-                      // Reset after navigation completes
-                      setTimeout(() => setNavigatingToVerify(false), 1000);
-                    }}
+                    onPress={handleBecomeVerifiedReferrer}
                     activeOpacity={0.8}
                     disabled={navigatingToVerify}
                   >
@@ -927,8 +1079,8 @@ const [dashboardData, setDashboardData] = useState({
           ) : null
         )}
 
-        {/* Recommended Jobs Section */}
-        {loadingJobs ? (
+        {/* Recommended Jobs Section - Job Seekers only */}
+        {isJobSeeker && (loadingJobs ? (
           <View style={styles.recentContainer}>
             <Text style={styles.sectionTitle}>Recommended Jobs</Text>
             <SectionLoader />
@@ -937,7 +1089,7 @@ const [dashboardData, setDashboardData] = useState({
           <View style={styles.recentContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs', isEmployer ? { switchToTab: 'published' } : {})}>
+              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -951,7 +1103,7 @@ const [dashboardData, setDashboardData] = useState({
               ))}
             </ScrollView>
           </View>
-        ) : null}
+        ) : null)}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (
@@ -1004,6 +1156,73 @@ const [dashboardData, setDashboardData] = useState({
         )}
         </ResponsiveContainer>
       </ScrollView>
+
+      {/* Confirm Current Company Modal */}
+      <Modal
+        visible={showConfirmCompanyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmCompanyModal(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <Ionicons name="briefcase" size={40} color={colors.primary} />
+            <Text style={styles.confirmModalTitle}>Verify Your Employment</Text>
+            <Text style={styles.confirmModalMessage}>
+              Is <Text style={{ fontWeight: '700' }}>{currentWorkExperience?.CompanyName}</Text> your current company?
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonSecondary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonSecondaryText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
+                onPress={() => {
+                  setShowConfirmCompanyModal(false);
+                  setShowAddWorkModal(true);
+                }}
+              >
+                <Text style={styles.confirmModalButtonPrimaryText}>Yes, Verify</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Work Experience Modal */}
+      <AddWorkExperienceModal
+        visible={showAddWorkModal}
+        onClose={() => setShowAddWorkModal(false)}
+        onSave={async () => {
+          // Refresh dashboard data after saving
+          fetchDashboardData();
+        }}
+        editingItem={currentWorkExperience}
+        existingExperiences={workExperiences}
+        showVerification={true}
+        onVerificationComplete={(companyName) => {
+          setVerifiedCompanyName(companyName);
+          setShowAddWorkModal(false);
+          setShowVerifiedOverlay(true);
+          // Refresh verification status in AuthContext so other screens see the update
+          refreshVerificationStatus();
+          // Refresh to update verified status
+          fetchDashboardData();
+        }}
+      />
+
+      {/* Verified Referrer Celebration Overlay */}
+      <VerifiedReferrerOverlay
+        visible={showVerifiedOverlay}
+        onClose={() => setShowVerifiedOverlay(false)}
+        companyName={verifiedCompanyName}
+      />
     </>
   );
 }
@@ -1056,12 +1275,13 @@ headerCompact: {
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: 12,
-  paddingTop: Platform.OS === 'ios' ? 44 : 12,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  paddingTop: Platform.OS === 'ios' ? 44 : 8,
   backgroundColor: colors.surface,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
-  gap: 12,
+  gap: 8,
   zIndex: 10000,
   elevation: 10,
   position: Platform.OS === 'web' ? 'sticky' : 'relative',
@@ -1086,11 +1306,11 @@ headerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
-    height: 36,
+    paddingHorizontal: 10,
+    height: 32,
   },
   searchIcon: {
     marginRight: 8,
@@ -1869,6 +2089,64 @@ headerCompact: {
   },
   bottomSpacing: {
     height: 100,
+  },
+  // Confirm Company Modal styles
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmModalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  confirmModalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmModalMessage: {
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmModalButtonSecondary: {
+    backgroundColor: colors.gray200 || colors.gray100,
+  },
+  confirmModalButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  confirmModalButtonSecondaryText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.gray700 || colors.text,
+  },
+  confirmModalButtonPrimaryText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.white,
   },
 });
 };

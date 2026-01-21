@@ -6,12 +6,12 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
@@ -77,7 +77,7 @@ export default function WalletScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Error loading wallet data:', error);
-      Alert.alert('Error', 'Failed to load wallet data');
+      showToast('Failed to load wallet data', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -268,7 +268,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   centerContainer: {
@@ -325,7 +325,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   addMoneyText: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   historyButton: {
@@ -340,7 +340,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   historyText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   withdrawButton: {
@@ -357,7 +357,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   withdrawText: {
     color: '#10B981',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   transactionsContainer: {

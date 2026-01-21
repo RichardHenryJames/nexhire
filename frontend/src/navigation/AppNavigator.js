@@ -10,6 +10,8 @@ import LoadingScreen from "../screens/LoadingScreen";
 
 // Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 
 // Job Seeker Registration Flow
 import ExperienceTypeSelectionScreen from "../screens/auth/registration/jobseeker/ExperienceTypeSelectionScreen";
@@ -42,6 +44,7 @@ import AskReferralScreen from "../screens/referral/AskReferralScreen";
 import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
 import ReferralTrackingScreen from "../screens/referral/ReferralTrackingScreen";
 import ReferralPlansScreen from "../screens/referral/ReferralPlansScreen";
+import PostReferralJobScreen from "../screens/referral/PostReferralJobScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 // ?? NEW: Messaging screens
 import ConversationsScreen from "../screens/messaging/ConversationsScreen";
@@ -61,12 +64,14 @@ import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
 import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
-import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
-import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
 import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
 import SupportScreen from "../screens/support/SupportScreen";
+
+// Blog Screens (public)
+import BlogListScreen from "../screens/blog/BlogListScreen";
+import BlogArticleScreen from "../screens/blog/BlogArticleScreen";
 
 // Admin Screen
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
@@ -84,21 +89,29 @@ const linking = {
       // Public Legal/Compliance screens - accessible without auth
       Terms: "terms",
       PrivacyPolicy: "privacy",
-      RefundPolicy: "refund",
-      ShippingDelivery: "shipping",
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
       Support: "support",
       
+      // Public Blog screens - accessible without auth
+      Blog: "blog",
+      BlogArticle: "blog/:articleId",
+      
       // Public Ask Referral screen - accessible without auth but actions require login
       AskReferralPublic: "ask-referral",
+      
+      // Public password reset - accessible without auth
+      ResetPassword: "reset-password",
+      ForgotPassword: "forgot-password",
 
       // Auth Stack
       Auth: {
         path: "auth",
         screens: {
           Login: "login",
+          ForgotPassword: "forgot-password",
+          ResetPassword: "reset-password",
 
           // Direct skip screens for web navigation
           PersonalDetailsScreenDirect: "register/complete-profile",
@@ -163,6 +176,12 @@ const linking = {
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
+          
+          // Post referral job with organizationId
+          PostReferralJob: "PostReferralJob/:organizationId",
+          
+          // Employer Jobs screen for verified referrers to view their draft/published jobs
+          EmployerJobs: "my-jobs",
 
           // Wallet screens
           Wallet: "wallet",
@@ -254,6 +273,8 @@ function AuthStack() {
       initialRouteName={getInitialRoute()}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen
         name="JobSeekerFlow"
         component={JobSeekerFlow}
@@ -341,33 +362,40 @@ function MainTabNavigator() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 70,
+          // Compact styling similar to LinkedIn
+          height: Platform.OS === 'ios' ? 84 : 58,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 6,
+          paddingTop: 6,
           ...(Platform.OS === 'web'
             ? {
                 position: 'fixed',
                 left: 0,
                 right: 0,
                 bottom: 0,
+                height: 52, // Very compact for web
+                paddingBottom: 4,
+                paddingTop: 4,
               }
             : null),
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
+          fontSize: 10, // Smaller font for compact look
+          fontWeight: "600",
+          marginBottom: Platform.OS === 'android' ? 2 : 0,
+        },
+        tabBarItemStyle: {
+          // Tighten up items
+          paddingVertical: 0,
         },
         headerShown: false,
       })}
     >
-      {/* Hide Home and Jobs tabs for Admin users */}
-      {!isAdmin && (
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ title: "Home" }}
-        />
-      )}
+      {/* Show Home tab for all users including Admin */}
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: "Home" }}
+      />
 
       {/* FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
       {/* Hide Jobs tab for Admin users */}
@@ -395,17 +423,14 @@ function MainTabNavigator() {
         />
       )}
 
-      {/* ✅ FIXED: Always render Referrals tab for job seekers to support deep linking */}
-      {/* Hide tab button for non-verified referrers, but screen is still accessible via deep link */}
-      {/* Access control is handled inside ReferralScreen based on isVerifiedReferrer */}
+      {/* ✅ Referrals tab visible to all job seekers */}
+      {/* Non-verified referrers see verification prompt in Open tab but can still see Closed tab */}
       {isJobSeeker && (
         <Tab.Screen
           name="Referrals"
           component={ReferralScreen}
           options={{ 
             title: "Refer",
-            // Hide tab from tab bar if not verified, but keep screen for deep linking
-            tabBarButton: isVerifiedReferrer ? undefined : () => null,
           }}
         />
       )}
@@ -704,6 +729,39 @@ function MainStack() {
         }}
       />
       <Stack.Screen
+        name="PostReferralJob"
+        component={PostReferralJobScreen}
+        options={{
+          headerShown: true,
+          title: "Post a Job to Refer",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+        }}
+      />
+      {/* EmployerJobs - Separate stack screen for verified referrers to view their draft/published jobs */}
+      <Stack.Screen
+        name="EmployerJobs"
+        component={EmployerJobsScreen}
+        options={{
+          headerShown: true,
+          title: "My Posted Jobs",
+          headerBackTitleVisible: false,
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+        }}
+      />
+      <Stack.Screen
         name="Payment"
         component={PaymentScreen}
         options={{
@@ -828,24 +886,6 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
-        name="RefundPolicy"
-        component={RefundPolicyScreen}
-        options={{
-          headerShown: true,
-          title: "Refund Policy",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="ShippingDelivery"
-        component={ShippingDeliveryScreen}
-        options={{
-          headerShown: true,
-          title: "Shipping & Delivery",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
         name="AboutUs"
         component={AboutUsScreen}
         options={{
@@ -873,6 +913,24 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
+        name="Blog"
+        component={BlogListScreen}
+        options={{
+          headerShown: false,
+          title: "Career Blog - Job Search Tips & Advice",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="BlogArticle"
+        component={BlogArticleScreen}
+        options={{
+          headerShown: false,
+          title: "Blog Article",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
         name="Support"
         component={SupportScreen}
         options={{
@@ -890,6 +948,24 @@ export default function AppNavigator() {
           headerShown: true,
           title: "Ask for Referral",
           headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Public Password Reset Screens - accessible without auth */}
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{
+          headerShown: false,
+          title: "Reset Password",
+        }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{
+          headerShown: false,
+          title: "Forgot Password",
         }}
       />
     </Stack.Navigator>

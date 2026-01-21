@@ -18,6 +18,7 @@ import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../../components/Toast';
 
 export default function ChatScreen({ 
   // Props for embedded mode (desktop WhatsApp-style layout)
@@ -94,7 +95,7 @@ export default function ChatScreen({
         }
       } catch (error) {
         console.error("Error loading messages:", error);
-        Alert.alert("Error", "Failed to load messages");
+        showToast("Failed to load messages", "error");
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -358,11 +359,11 @@ export default function ChatScreen({
         setMessages((prev) =>
           prev.filter((msg) => msg.MessageID !== messageId)
         );
-        Alert.alert("Success", "Message deleted");
+        showToast("Message deleted", "success");
       }
     } catch (error) {
       console.error("Error deleting message:", error);
-      Alert.alert("Error", "Failed to delete message");
+      showToast("Failed to delete message", "error");
     }
   };
 
@@ -982,7 +983,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   loadingContainer: {

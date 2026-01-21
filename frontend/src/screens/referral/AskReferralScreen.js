@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
@@ -169,8 +168,9 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   // 🎯 NEW: Filter and rotate Fortune 500 company logos with random timing
   useEffect(() => {
     // Filter Fortune 500 companies with logos from already loaded companies
+    // Note: isFortune500 can be 1, true, "1", or "true" from backend
     const f500WithLogos = companies
-      .filter(org => org.isFortune500 && org.logoURL);
+      .filter(org => (org.isFortune500 === 1 || org.isFortune500 === true || org.isFortune500 === '1' || org.isFortune500 === 'true') && org.logoURL);
     
     if (f500WithLogos.length === 0) return;
     
@@ -316,7 +316,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
     } catch (error) {
       console.error('Error loading resumes:', error);
       setResumes([]);
-      Alert.alert('Error', 'Failed to load resumes. Please try again.');
+      showToast('Failed to load resumes. Please try again.', 'error');
     } finally {
       setLoadingResumes(false);
     }
@@ -521,13 +521,13 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
         } else {
           const errorMessage = result?.error || result?.message || 'Failed to submit referral request';
           console.error('❌ API returned error:', errorMessage);
-          Alert.alert('Request Failed', errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error);
       const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
-      Alert.alert('Error', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -742,7 +742,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                 <Text style={styles.label}>Referral Message</Text>
                 <TextInput
                   style={[styles.textArea, errors.referralMessage && styles.inputError]}
-                  placeholder="Tell the referrer about yourself and why you're interested in this role..."
+                  placeholder="Tell referrer what makes you the ideal fit..."
                   placeholderTextColor={colors.gray500}
                   value={formData.referralMessage}
                   onChangeText={(value) => updateFormData('referralMessage', value)}
@@ -755,7 +755,7 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
                   <Text style={styles.errorText}>{errors.referralMessage}</Text>
                 )}
                 <Text style={styles.helperText}>
-                  Help referrers understand your background and interest in the role (max 1000 characters)
+                  (max 1000 characters)
                 </Text>
               </View>
 
@@ -1029,17 +1029,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1061,11 +1050,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-  },
-  
-  // ✅ ADDED: Header button style for navigation
-  headerButton: {
-    padding: 8,
   },
   
   // ✅ IMPROVED: Enhanced intro section styles with better spacing and visual appeal
@@ -1377,31 +1361,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
   },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    margin: 16,
-    padding: 16,
-    backgroundColor: colors.primary + '10',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
-  },
-  infoContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
   submitButtonContainer: {
     marginTop: 24,
     marginBottom: 16,
@@ -1596,57 +1555,4 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray500,
     marginTop: 4,
   },
-  // ✅ NEW: Enhanced wallet balance banner styles
-  quotaBanner: {
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  quotaBannerSuccess: {
-    backgroundColor: colors.success + '15',
-    borderColor: colors.success + '30',
-  },
-  quotaBannerWarning: {
-    backgroundColor: colors.warning + '15',
-    borderColor: colors.warning + '30',
-  },
-  quotaBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  quotaBannerIcon: {
-    marginRight: 12,
-  },
-  quotaBannerText: {
-    flex: 1,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    lineHeight: 18,
-  },
-  quotaBannerSuccessText: {
-    color: colors.success,
-  },
-  quotaBannerWarningText: {
-    color: colors.warning,
-  },
-  addMoneyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  addMoneyText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold,
-    color: colors.warning,
-  },
 });
-

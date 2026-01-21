@@ -49,6 +49,8 @@ const isSectionActive = (section) => {
        return !!filters.postedWithinDays;
      case 'jobType':
        return (filters.jobTypeIds || []).length > 0;
+     case 'jobSource':
+       return filters.postedByType !== undefined && filters.postedByType !== null;
 default:
    return false;
    }
@@ -64,6 +66,7 @@ default:
     if (filters.experienceMin || filters.experienceMax) count++;
     if (filters.salaryMin || filters.salaryMax) count++;
     if (filters.postedWithinDays) count++;
+    if (filters.postedByType !== undefined && filters.postedByType !== null) count++;
     return count;
   };
 

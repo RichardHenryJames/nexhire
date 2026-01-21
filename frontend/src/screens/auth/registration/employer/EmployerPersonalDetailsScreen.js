@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
-  Alert, 
   Image,
   Modal,
   FlatList,
@@ -21,6 +20,7 @@ import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
+import { showToast } from '../../../../components/Toast';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -48,24 +48,6 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [jobTitleSearch, setJobTitleSearch] = useState('');
   const [departmentSearch, setDepartmentSearch] = useState('');
-
-  // 🎁 NEW: Welcome bonus amount from pricing API
-  const [welcomeBonus, setWelcomeBonus] = useState(50); // Default fallback
-
-  // Fetch welcome bonus from pricing API
-  useEffect(() => {
-    const fetchPricing = async () => {
-      try {
-        const result = await refopenAPI.getPricing();
-        if (result.success && result.data?.welcomeBonus) {
-          setWelcomeBonus(result.data.welcomeBonus);
-        }
-      } catch (error) {
-        console.warn('Failed to fetch pricing:', error);
-      }
-    };
-    fetchPricing();
-  }, []);
 
   // Pre-populate some data for Google users
   useEffect(() => {
@@ -139,7 +121,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
 
   const onContinue = () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fill in all required fields');
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
@@ -194,22 +176,6 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
             : 'Tell us a little about your role'
           }
         </Text>
-
-        {/* 🎉 NEW: Welcome Bonus Banner */}
-        <View style={styles.welcomeBonusBanner}>
-          <View style={styles.welcomeBonusIconContainer}>
-            <Ionicons name="gift" size={28} color="#FFD700" />
-          </View>
-          <View style={styles.welcomeBonusContent}>
-            <Text style={styles.welcomeBonusTitle}>🎉 Limited Time Offer!</Text>
-            <Text style={styles.welcomeBonusText}>
-              RefOpen is giving <Text style={styles.welcomeBonusAmount}>₹{welcomeBonus}</Text> wallet bonus on signup!
-            </Text>
-            <Text style={styles.welcomeBonusSubtext}>
-              Use it to post jobs, AI candidate search and more
-            </Text>
-          </View>
-        </View>
 
         <View style={styles.field}> 
           <Text style={styles.label}>
@@ -477,50 +443,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 6, 
     marginBottom: 16,
   },
-  // 🎉 Welcome Bonus Banner Styles
-  welcomeBonusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  welcomeBonusIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  welcomeBonusContent: {
-    flex: 1,
-  },
-  welcomeBonusTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: '#22C55E',
-    marginBottom: 4,
-  },
-  welcomeBonusText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  welcomeBonusAmount: {
-    fontWeight: typography.weights.bold,
-    color: '#FFD700',
-    fontSize: typography.sizes.md,
-  },
-  welcomeBonusSubtext: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
-    marginTop: 2,
-  },
   field: { 
     marginTop: 12 
   },
@@ -610,7 +532,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   modalItemSelected: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   modalItemText: {
     fontSize: typography.sizes.md,

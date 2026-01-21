@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
@@ -13,6 +12,7 @@ import {
   Animated,
   Dimensions,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
 import useResponsive from '../../hooks/useResponsive';
+import { showToast } from '../../components/Toast';
 
 const { width, height } = Dimensions.get('window');
 
@@ -86,12 +87,41 @@ export default function LoginScreen({ navigation }) {
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [loginError, setLoginError] = useState(''); // State for login error message
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false); // Detect in-app browser
+  const [showBrowserModal, setShowBrowserModal] = useState(false); // Modal for in-app browser warning
   
   const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
   const colors = authDarkColors; // Always use dark colors for auth screens
   const screenStyles = React.useMemo(() => createScreenStyles(colors, themeStyles, responsive), [colors, responsive]);
+
+  // Detect in-app browser (LinkedIn, Facebook, Instagram, Twitter, etc.)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.navigator) {
+      const ua = window.navigator.userAgent || '';
+      
+      // Only check for known in-app browser patterns - be conservative
+      const inAppBrowserPatterns = [
+        /FBAN|FBAV/i,           // Facebook App
+        /FB_IAB/i,              // Facebook In-App Browser
+        /Instagram/i,           // Instagram App
+        /Twitter/i,             // Twitter App
+        /LinkedInApp/i,         // LinkedIn App explicitly
+        /\[LinkedInApp\]/i,     // LinkedIn App bracket format
+        /Line\//i,              // Line App
+        /Snapchat/i,            // Snapchat App
+        /Pinterest/i,           // Pinterest App
+        /Telegram/i,            // Telegram App
+      ];
+      
+      const isInApp = inAppBrowserPatterns.some(pattern => pattern.test(ua));
+      setIsInAppBrowser(isInApp);
+      
+      // Log for debugging
+      console.log('Browser UA:', ua.substring(0, 100), '| In-app:', isInApp);
+    }
+  }, []);
 
   // Check auth state when screen mounts or comes into focus
   useEffect(() => {
@@ -163,16 +193,31 @@ export default function LoginScreen({ navigation }) {
       const errorMessage = result.error || 'Please check your credentials and try again.';
       setLoginError(errorMessage); // Set error to display on UI
       
-      // Also show alert for mobile
+      // Also show toast for mobile
       if (Platform.OS !== 'web') {
-        Alert.alert('Login Failed', errorMessage, [{ text: 'OK' }]);
+        showToast(errorMessage, 'error');
       }
     }
     // If successful, navigation will happen automatically via auth context
   };
 
+  // Copy link helper function
+  const handleCopyLink = () => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Link copied! Paste in Safari/Chrome', 'success');
+      setShowBrowserModal(false);
+    }
+  };
+
   // FIXED: Handle Google Sign-In with automatic navigation for new users
   const handleGoogleSignIn = async () => {
+    // Check if in-app browser - show modal instead of proceeding
+    if (isInAppBrowser) {
+      setShowBrowserModal(true);
+      return;
+    }
+    
     try {
       setGoogleLoading(true);
       
@@ -189,11 +234,7 @@ export default function LoginScreen({ navigation }) {
         
         // Do nothing - user dismissed
       } else if (result.needsConfig) {
-        Alert.alert(
-          'Google Sign-In Not Available',
-          'Google Sign-In is not configured yet. Please use email and password to sign in.',
-          [{ text: 'OK' }]
-        );
+        showToast('Google Sign-In is not configured yet. Please use email and password to sign in.', 'error');
       } else if (result.needsRegistration) {
         
         
@@ -207,19 +248,11 @@ export default function LoginScreen({ navigation }) {
         
       } else {
         console.error('? Google Sign-In failed:', result.error);
-        Alert.alert(
-          'Sign-In Failed',
-          result.error || 'Google Sign-In failed. Please try again.',
-          [{ text: 'OK' }]
-        );
+        showToast('Google Sign-In failed. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      Alert.alert(
-        'Sign-In Error',
-        error.message || 'An unexpected error occurred. Please try again.',
-        [{ text: 'OK' }]
-      );
+      showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setGoogleLoading(false);
     }
@@ -281,9 +314,9 @@ export default function LoginScreen({ navigation }) {
               resizeMode="contain"
             />
 
-            <Text style={screenStyles.title}>Your next career opportunity awaits</Text>
+            <Text style={screenStyles.title}>India's Leading Job & Referral Platform</Text>
+            <Text style={screenStyles.subtitle}>Apply • Hire • Refer • Earn Rewards</Text>
           </View>
-
 
           {/* NEW: Google Sign-In Section */}
           {googleAuthAvailable && (
@@ -340,7 +373,7 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* Password Input */}
-            <View style={screenStyles.inputGroup}>
+            <View style={[screenStyles.inputGroup, { marginBottom: 0 }]}>
               <Text style={screenStyles.label}>Password</Text>
               <View style={[
                 screenStyles.inputContainer,
@@ -380,6 +413,14 @@ export default function LoginScreen({ navigation }) {
                 <Text style={screenStyles.errorText}>{errors.password}</Text>
               )}
             </View>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={screenStyles.forgotPasswordLink}
+            >
+              <Text style={screenStyles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
             {/* Login Button */}
             <TouchableOpacity
@@ -449,6 +490,41 @@ export default function LoginScreen({ navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* In-App Browser Warning Modal */}
+      <Modal
+        visible={showBrowserModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBrowserModal(false)}
+      >
+        <View style={screenStyles.modalOverlay}>
+          <View style={screenStyles.modalContent}>
+            <View style={screenStyles.modalIconContainer}>
+              <Ionicons name="globe-outline" size={40} color="#f59e0b" />
+            </View>
+            <Text style={screenStyles.modalTitle}>Open in Browser</Text>
+            <Text style={screenStyles.modalMessage}>
+              Google blocks sign-in from LinkedIn and other social app browsers for security reasons.
+            </Text>
+            <Text style={screenStyles.modalInstructions}>
+              Tap <Text style={screenStyles.modalBold}>⋮ menu</Text> → <Text style={screenStyles.modalBold}>"Open in Browser"</Text>{'\n'}or copy the link below
+            </Text>
+            
+            <TouchableOpacity style={screenStyles.modalCopyButton} onPress={handleCopyLink}>
+              <Ionicons name="copy-outline" size={18} color="#000" />
+              <Text style={screenStyles.modalCopyButtonText}>Copy Link</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={screenStyles.modalUseEmailButton} 
+              onPress={() => setShowBrowserModal(false)}
+            >
+              <Text style={screenStyles.modalUseEmailText}>Use Email/Password Instead</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -488,7 +564,6 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
     alignItems: isDesktop ? 'center' : 'stretch',
   },
   floatingParticle: {
@@ -545,9 +620,9 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     marginBottom: spacing.xl,
   },
   logoImage: {
-    width: 240,
-    height: 68,
-    marginBottom: 8,
+    width: 280,
+    height: 80,
+    marginBottom: 12,
     tintColor: colors.white,
   },
   title: {
@@ -555,11 +630,18 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     color: colors.white + 'E6',
     textAlign: 'center',
     lineHeight: 26,
-    fontWeight: typography.weights.medium,
-    maxWidth: 320,
+    fontWeight: typography.weights.bold,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  subtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.white + 'B3',
+    textAlign: 'center',
+    marginTop: 6,
+    fontWeight: typography.weights.regular,
+    letterSpacing: 1,
   },
   // NEW: Google Sign-In styles
   googleSection: {
@@ -645,6 +727,17 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     backgroundColor: '#f1f3f4',
     borderColor: '#e8eaed',
   },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: 6,
+    marginBottom: spacing.md,
+    paddingVertical: 2,
+  },
+  forgotPasswordText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -721,6 +814,124 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontWeight: typography.weights.medium,
+  },
+  // In-app browser warning styles
+  inAppBrowserWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  inAppBrowserWarningTitle: {
+    fontSize: typography.sizes.base,
+    color: '#fbbf24',
+    fontWeight: typography.weights.bold,
+    marginBottom: 4,
+  },
+  inAppBrowserWarningText: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 18,
+  },
+  openBrowserButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f59e0b',
+    borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
+  },
+  openBrowserButtonText: {
+    fontSize: typography.sizes.sm,
+    color: '#000',
+    fontWeight: typography.weights.bold,
+  },
+  inAppBrowserHint: {
+    fontSize: typography.sizes.xs,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  // Modal styles for in-app browser warning
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.white,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalInstructions: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalBold: {
+    fontWeight: typography.weights.bold,
+    color: '#fbbf24',
+  },
+  modalCopyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    gap: 8,
+    width: '100%',
+    marginBottom: 12,
+  },
+  modalCopyButtonText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#000',
+  },
+  modalUseEmailButton: {
+    paddingVertical: 12,
+  },
+  modalUseEmailText: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textDecorationLine: 'underline',
   },
 });
 };

@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Platform,
   Modal,
   TextInput,
@@ -20,6 +19,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 
 export default function AdminPaymentsScreen() {
   const navigation = useNavigation();
@@ -100,14 +100,14 @@ export default function AdminPaymentsScreen() {
         body: JSON.stringify({ adminRemarks: 'Payment verified and approved' })
       });
       if (response.success) {
-        Alert.alert('Success', 'Payment approved! Amount credited to user wallet.');
+        showToast('Payment approved! Amount credited to user wallet.', 'success');
         loadData();
       } else {
-        Alert.alert('Error', response.message || 'Failed to approve payment');
+        showToast('Failed to approve payment. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error approving payment:', error);
-      Alert.alert('Error', 'Failed to approve payment');
+      showToast('Failed to approve payment', 'error');
     } finally {
       setProcessingPayment(null);
     }
@@ -121,7 +121,7 @@ export default function AdminPaymentsScreen() {
 
   const confirmReject = () => {
     if (!rejectionReason.trim()) {
-      Alert.alert('Required', 'Please enter a reason for rejection');
+      showToast('Please enter a reason for rejection', 'error');
       return;
     }
     setRejectModalVisible(false);
@@ -142,14 +142,14 @@ export default function AdminPaymentsScreen() {
         body: JSON.stringify({ adminRemarks: reason })
       });
       if (response.success) {
-        Alert.alert('Success', 'Payment rejected.');
+        showToast('Payment rejected.', 'success');
         loadData();
       } else {
-        Alert.alert('Error', response.message || 'Failed to reject payment');
+        showToast('Failed to reject payment. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error rejecting payment:', error);
-      Alert.alert('Error', 'Failed to reject payment');
+      showToast('Failed to reject payment', 'error');
     } finally {
       setProcessingPayment(null);
     }
@@ -334,7 +334,9 @@ export default function AdminPaymentsScreen() {
                 <Text style={styles.emptyText}>No pending payment approvals.</Text>
               </View>
             ) : (
-              pendingPayments.map(payment => renderPaymentCard(payment, true))
+              <View style={styles.cardsGrid}>
+                {pendingPayments.map(payment => renderPaymentCard(payment, true))}
+              </View>
             )}
           </>
         )}
@@ -348,7 +350,9 @@ export default function AdminPaymentsScreen() {
                 <Text style={styles.emptyText}>No manual payment submissions found.</Text>
               </View>
             ) : (
-              allPayments.map(payment => renderPaymentCard(payment, false))
+              <View style={styles.cardsGrid}>
+                {allPayments.map(payment => renderPaymentCard(payment, false))}
+              </View>
             )}
           </>
         )}
@@ -485,6 +489,20 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 100,
+    ...(responsive.isDesktop && {
+      maxWidth: 1200,
+      alignSelf: 'center',
+      width: '100%',
+    }),
+  },
+  cardsGrid: {
+    ...(responsive.isDesktop && {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      justifyContent: 'flex-start',
+    }),
   },
   emptyContainer: {
     alignItems: 'center',
@@ -509,6 +527,11 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    ...(responsive.isDesktop && {
+      width: 'calc(50% - 8px)',
+      minWidth: 400,
+      maxWidth: 580,
+    }),
   },
   paymentHeader: {
     flexDirection: 'row',

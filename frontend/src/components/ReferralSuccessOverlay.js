@@ -374,7 +374,7 @@ export default function ReferralSuccessOverlay({
             <View style={styles.iconDivider} />
             <View style={styles.iconItem}>
               <MaterialCommunityIcons name="account-group" size={28} color="#FFFFFF" />
-              <Text style={styles.iconText}>All Employees</Text>
+              <Text style={styles.iconText}>Verified Employees</Text>
             </View>
             <View style={styles.iconDivider} />
             <View style={styles.iconItem}>

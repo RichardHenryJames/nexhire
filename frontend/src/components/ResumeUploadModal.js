@@ -23,6 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import refopenAPI from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../styles/theme';
+import { showToast } from './Toast';
 
 const ResumeUploadModal = ({ 
   visible, 
@@ -92,7 +93,7 @@ const ResumeUploadModal = ({
           }
           
           if (file.size > 10 * 1024 * 1024) {
-            Alert.alert('File Too Large', 'Please select a file smaller than 10MB');
+            showToast('Please select a file smaller than 10MB', 'error');
             document.body.removeChild(input);
             return;
           }
@@ -122,11 +123,11 @@ const ResumeUploadModal = ({
               // onResumeSelected callback will close the modal and handle cleanup
             } else {
               console.error('Upload failed:', uploadResult);
-              Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
+              showToast('Failed to upload resume. Please try again.', 'error');
             }
           } catch (err) {
             console.error('Resume upload error (web fallback):', err);
-            Alert.alert('Upload Failed', err.message || 'Failed to upload resume. Please try again.');
+            showToast(err.message || 'Failed to upload resume. Please try again.', 'error');
           } finally {
             setUploading(false);
             document.body.removeChild(input);
@@ -151,7 +152,7 @@ const ResumeUploadModal = ({
         setUploading(true);
         const file = result.assets[0];
         if (file.size > 10 * 1024 * 1024) {
-          Alert.alert('File Too Large', 'Please select a file smaller than 10MB');
+          showToast('Please select a file smaller than 10MB', 'error');
           setUploading(false);
           return;
         }
@@ -175,12 +176,12 @@ const ResumeUploadModal = ({
           // ✅ FIX: Don't call onClose() here - let the parent handle closing
           // onResumeSelected callback will close the modal and handle cleanup
         } else {
-          Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload resume');
+          showToast('Failed to upload resume. Please try again.', 'error');
         }
       }
     } catch (error) {
       console.error('Resume upload error:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload resume');
+      showToast('Failed to upload resume. Please try again.', 'error');
     } finally {
       setUploading(false);
     }

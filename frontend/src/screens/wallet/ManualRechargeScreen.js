@@ -6,10 +6,10 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   Clipboard,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,8 +17,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
+import { showToast } from '../../components/Toast';
 
-const PAYMENT_METHODS = ['Bank Transfer', 'NEFT', 'IMPS', 'RTGS'];
+const PAYMENT_METHODS = ['QR / UPI', 'Bank Transfer'];
 
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -27,10 +28,11 @@ const ManualRechargeScreen = ({ navigation }) => {
   const [settings, setSettings] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showInfoTip, setShowInfoTip] = useState(false);
 
   // Form state
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
+  const [paymentMethod, setPaymentMethod] = useState('QR / UPI');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [userRemarks, setUserRemarks] = useState('');
@@ -93,25 +95,25 @@ const ManualRechargeScreen = ({ navigation }) => {
     } else {
       Clipboard.setString(text);
     }
-    Alert.alert('Copied!', `${label} copied to clipboard`);
+    showToast(`${label} copied to clipboard`, 'success');
   };
 
   const handleSubmit = async () => {
     // Validation
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      showToast('Please enter a valid amount', 'error');
       return;
     }
     if (!referenceNumber.trim()) {
-      Alert.alert('Error', 'Please enter the transaction reference number');
+      showToast('Please enter the transaction reference number', 'error');
       return;
     }
     if (settings && parseFloat(amount) < settings.minAmount) {
-      Alert.alert('Error', `Minimum amount is ₹${settings.minAmount}`);
+      showToast(`Minimum amount is ₹${settings.minAmount}`, 'error');
       return;
     }
     if (settings && parseFloat(amount) > settings.maxAmount) {
-      Alert.alert('Error', `Maximum amount is ₹${settings.maxAmount}`);
+      showToast(`Maximum amount is ₹${settings.maxAmount}`, 'error');
       return;
     }
 
@@ -130,7 +132,7 @@ const ManualRechargeScreen = ({ navigation }) => {
       console.log('📥 Manual Payment Submit Result:', result);
 
       if (result?.success) {
-        Alert.alert('Success', result.message || 'Payment proof submitted successfully');
+        showToast('Payment proof submitted successfully', 'success');
         // Reset form
         setAmount('');
         setReferenceNumber('');
@@ -140,11 +142,11 @@ const ManualRechargeScreen = ({ navigation }) => {
         // Reload submissions
         loadData();
       } else {
-        Alert.alert('Error', result?.message || 'Failed to submit payment proof');
+        showToast('Failed to submit payment proof. Please try again.', 'error');
       }
     } catch (error) {
       console.error('❌ Manual Payment Submit Error:', error);
-      Alert.alert('Error', 'Failed to submit payment proof');
+      showToast('Failed to submit payment proof', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -472,6 +474,51 @@ const ManualRechargeScreen = ({ navigation }) => {
       flex: 1,
       lineHeight: 20,
     },
+    qrSection: {
+      alignItems: 'center',
+      paddingVertical: 16,
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border + '50',
+    },
+    qrTitle: {
+      fontSize: typography.sizes?.md || 16,
+      fontWeight: typography.weights?.semibold || '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    qrContainer: {
+      backgroundColor: '#FFF',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    qrImage: {
+      width: 180,
+      height: 180,
+    },
+    poweredByText: {
+      fontSize: typography.sizes?.xs || 12,
+      color: colors.gray500,
+      fontStyle: 'italic',
+    },
+    infoIconButton: {
+      alignSelf: 'center',
+      padding: 8,
+      marginTop: 4,
+    },
+    infoTip: {
+      backgroundColor: colors.primary + '15',
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 8,
+    },
+    infoTipText: {
+      fontSize: typography.sizes?.xs || 12,
+      color: colors.primary,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
     emptyText: {
       textAlign: 'center',
       color: colors.gray400,
@@ -504,41 +551,43 @@ const ManualRechargeScreen = ({ navigation }) => {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Account Name</Text>
               <Text style={styles.infoValue}>{settings.bankAccountName}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankAccountName, 'Account Name')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Account No</Text>
               <Text style={styles.infoValue}>{settings.bankAccountNumber}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankAccountNumber, 'Account Number')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
             <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.infoLabel}>IFSC Code</Text>
               <Text style={styles.infoValue}>{settings.bankIfsc}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(settings.bankIfsc, 'IFSC Code')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.gray400} />
-              </TouchableOpacity>
             </View>
 
-            <View style={styles.noteContainer}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
-              <Text style={styles.noteText}>
-                After making the payment, click "Already Paid" below to submit your payment details.
-                Money will be added to your wallet within {settings.processingTime}.
-              </Text>
+            {/* QR Code Section */}
+            <View style={styles.qrSection}>
+              <Text style={styles.qrTitle}>Or Scan QR to Pay</Text>
+              <View style={styles.qrContainer}>
+                <Image 
+                  source={require('../../../assets/payment-qr.png')} 
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.poweredByText}>Refopen is powered by Rocana</Text>
             </View>
+
+            <TouchableOpacity 
+              style={styles.infoIconButton}
+              onPress={() => setShowInfoTip(!showInfoTip)}
+            >
+              <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+            </TouchableOpacity>
+            
+            {showInfoTip && (
+              <View style={styles.infoTip}>
+                <Text style={styles.infoTipText}>
+                  After payment, click "Already Paid" to submit. Credited within {settings.processingTime}.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -697,21 +746,27 @@ const ManualRechargeScreen = ({ navigation }) => {
         {/* Help Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Need Help?</Text>
-          <Text style={{ color: colors.gray500, marginBottom: 8 }}>
-            If you face any issues with your payment, please contact us:
+          <Text style={{ color: colors.gray500, marginBottom: 16 }}>
+            If you face any issues with your payment, our support team is here to help.
           </Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={[styles.infoValue, { color: colors.primary }]}>
-              {settings?.supportEmail || 'support@refopen.com'}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: colors.primary,
+              paddingVertical: 14,
+              paddingHorizontal: 20,
+              borderRadius: 10,
+            }}
+            onPress={() => navigation.navigate('Support')}
+          >
+            <Ionicons name="chatbubbles" size={20} color={colors.white} />
+            <Text style={{ color: colors.white, fontSize: 15, fontWeight: '600' }}>
+              Contact Support
             </Text>
-          </View>
-          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={[styles.infoValue, { color: colors.primary }]}>
-              {settings?.supportPhone || '+91-XXXXXXXXXX'}
-            </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

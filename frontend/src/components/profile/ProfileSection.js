@@ -21,12 +21,13 @@ export default function ProfileSection({
   style = {},
   defaultCollapsed = false,
   hideHeaderActions = false, // NEW: hide Edit/Save/Cancel (for smart-save sections)
-  hideSaveButton = false // NEW: hide only the Save button (e.g., Work Experience section has its own internal save)
+  hideSaveButton = false, // NEW: hide only the Save button (e.g., Work Experience section has its own internal save)
+  startInEditMode = false // NEW: start directly in edit mode (skip read-only view)
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   
-  const [localEditing, setLocalEditing] = useState(false);
+  const [localEditing, setLocalEditing] = useState(startInEditMode);
   const [saving, setSaving] = useState(false);
   // ? FIX: Track if user manually toggled, if not, follow defaultCollapsed prop
   const [collapsed, setCollapsed] = useState(!!defaultCollapsed);

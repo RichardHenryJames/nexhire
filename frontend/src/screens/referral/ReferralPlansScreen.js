@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
+import { showToast } from '../../components/Toast';
 
 export default function ReferralPlansScreen({ navigation }) {
   const { user } = useAuth();
@@ -48,7 +48,7 @@ export default function ReferralPlansScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading plans:', error);
-      Alert.alert('Error', 'Failed to load subscription plans');
+      showToast('Failed to load subscription plans', 'error');
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,7 @@ export default function ReferralPlansScreen({ navigation }) {
   const handlePlanSelect = (plan) => {
     if (plan.Price === 0) {
       // Free plan - no payment needed
-      Alert.alert('Free Plan', 'You are already on the free plan with 5 referrals per day.');
+      showToast('You are already on the free plan with 5 referrals per day.', 'info');
       return;
     }
 

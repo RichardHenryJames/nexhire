@@ -209,7 +209,7 @@ export default function AdminSupportScreen() {
           adminResponse.trim()
         );
         if (!messageResult.success) {
-          showToast(messageResult.error || 'Failed to send message', 'error');
+          showToast('Failed to send message. Please try again.', 'error');
           return;
         }
       }
@@ -226,7 +226,7 @@ export default function AdminSupportScreen() {
       if (Object.keys(updateData).length > 0) {
         const response = await refopenAPI.updateSupportTicket(selectedTicket.TicketID, updateData);
         if (!response.success) {
-          showToast(response.error || 'Failed to update ticket', 'error');
+          showToast('Failed to update ticket. Please try again.', 'error');
           return;
         }
       }
@@ -522,17 +522,28 @@ export default function AdminSupportScreen() {
               </View>
 
               {/* Response Input */}
-              <Text style={styles.modalLabel}>Send Reply</Text>
-              <TextInput
-                style={styles.responseInput}
-                placeholder="Type your reply to the user..."
-                placeholderTextColor={colors.textSecondary}
-                value={adminResponse}
-                onChangeText={setAdminResponse}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+              {selectedTicket.Status !== 'Closed' && (
+                <>
+                  <Text style={styles.modalLabel}>Send Reply</Text>
+                  <TextInput
+                    style={styles.responseInput}
+                    placeholder="Type your reply to the user..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={adminResponse}
+                    onChangeText={setAdminResponse}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </>
+              )}
+
+              {selectedTicket.Status === 'Closed' && (
+                <View style={styles.closedBanner}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  <Text style={styles.closedBannerText}>This ticket is closed</Text>
+                </View>
+              )}
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
@@ -730,7 +741,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   scrollContent: {
     padding: isDesktop ? 24 : 16,
-    paddingBottom: 32,
+    paddingBottom: 100,
     maxWidth: maxWidth,
     width: '100%',
     alignSelf: 'center',
@@ -967,6 +978,7 @@ const createStyles = (colors, responsive = {}) => {
     padding: 20,
     width: '100%',
     maxWidth: 500,
+    maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1030,6 +1042,7 @@ const createStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     gap: 12,
     marginTop: 20,
+    paddingBottom: 10,
   },
   modalButton: {
     flex: 1,
@@ -1157,6 +1170,22 @@ const createStyles = (colors, responsive = {}) => {
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 16,
+  },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.success + '15',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  closedBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.success,
   },
 });
 };

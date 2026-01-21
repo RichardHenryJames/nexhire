@@ -200,7 +200,7 @@ export default function MyReferralRequestsScreen() {
 
   const handleViewProof = (request) => {
     if (!request.ProofFileURL) {
-      Alert.alert('No Proof', 'Referrer has not uploaded proof yet');
+      showToast('Referrer has not uploaded proof yet', 'info');
       return;
     }
     setViewingProof(request);
@@ -227,11 +227,11 @@ export default function MyReferralRequestsScreen() {
         );
         loadMyRequests();
       } else {
-        Alert.alert('Error', result.error || 'Failed to verify referral');
+        showToast('Failed to verify referral. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Verify error:', e);
-      Alert.alert('Error', e.message || 'Failed to verify referral');
+      showToast('Failed to verify referral. Please try again.', 'error');
     }
   };
 
@@ -270,11 +270,11 @@ export default function MyReferralRequestsScreen() {
         showToast('Referral request cancelled', 'success');
       } else {
         console.error('Cancel request failed:', res.error);
-        Alert.alert('Error', res.error || 'Failed to cancel');
+        showToast('Failed to cancel. Please try again.', 'error');
       }
     } catch (e) {
       console.error('Cancel request error:', e);
-      Alert.alert('Error', e.message || 'Failed to cancel');
+      showToast('Failed to cancel. Please try again.', 'error');
     }
   };
 
@@ -289,15 +289,47 @@ export default function MyReferralRequestsScreen() {
     const isExternalJob = !!request.ExtJobID;
     const isInternalJob = !!request.JobID && !request.ExtJobID;
 
+    // Get initials for company placeholder
+    const getCompanyInitials = (name) => {
+      if (!name) return 'CO';
+      const words = name.split(' ');
+      if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    };
+
+    // Generate a color based on company name
+    const getCompanyColor = (name) => {
+      const colorPalette = [
+        '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B',
+        '#10B981', '#14B8A6', '#06B6D4', '#3B82F6', '#6366F1'
+      ];
+      if (!name) return colorPalette[0];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return colorPalette[Math.abs(hash) % colorPalette.length];
+    };
+
+    const companyName = request.CompanyName || 'Company';
+    const companyColor = getCompanyColor(companyName);
+
     return (
-      <TouchableOpacity 
-        key={request.RequestID} 
-        style={styles.requestCard}
-        onPress={() => handleViewTracking(request)}
-        activeOpacity={0.7}
-      >
+      <View key={request.RequestID} style={styles.requestCard}>
         <View style={styles.requestHeader}>
-          <View style={styles.logoContainer}>
+          {/* Company Logo - clickable to org screen */}
+          <TouchableOpacity 
+            style={styles.logoContainer}
+            onPress={() => {
+              if (request.OrganizationID) {
+                navigation.navigate('OrganizationDetails', { 
+                  organizationId: request.OrganizationID 
+                });
+              }
+            }}
+          >
             {request.OrganizationLogo ? (
               <Image
                 source={{ uri: request.OrganizationLogo }}
@@ -305,145 +337,84 @@ export default function MyReferralRequestsScreen() {
                 onError={() => {}}
               />
             ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons
-                  name="business-outline"
-                  size={24}
-                  color={colors.gray500}
-                />
+              <View style={[styles.logoPlaceholder, { backgroundColor: companyColor }]}>
+                <Text style={styles.logoInitials}>{getCompanyInitials(companyName)}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.requestInfo}>
-            <View style={styles.jobTypeBadgeContainer}>
-              <Text style={styles.jobTitle} numberOfLines={1}>
+            {/* Company Name - Primary */}
+            <TouchableOpacity 
+              onPress={() => {
+                if (request.OrganizationID) {
+                  navigation.navigate('OrganizationDetails', { 
+                    organizationId: request.OrganizationID 
+                  });
+                }
+              }}
+            >
+              <Text style={styles.companyNamePrimary} numberOfLines={1}>
+                {companyName}
+              </Text>
+            </TouchableOpacity>
+
+            {/* "for [Job Title]" row */}
+            <View style={styles.forJobRow}>
+              <Text style={styles.forJobText}>for </Text>
+              <Text style={styles.jobTitleBold} numberOfLines={1}>
                 {request.JobTitle || 'Job Title'}
               </Text>
-              {isExternalJob && (
-                <View style={styles.externalBadge}>
-                  <Ionicons name="open-outline" size={10} color="#8B5CF6" />
-                  <Text style={styles.externalBadgeText}>External</Text>
-                </View>
-              )}
-              {isInternalJob && (
-                <View style={styles.internalBadge}>
-                  <Ionicons
-                    name="arrow-forward-circle-outline"
-                    size={10}
-                    color="#3B82F6"
-                  />
-                  <Text style={styles.internalBadgeText}>Internal</Text>
-                </View>
-              )}
             </View>
 
-            <Text style={styles.companyName} numberOfLines={1}>
-              {request.CompanyName || 'Company'}
-            </Text>
-
-            {isExternalJob && request.ExtJobID && (
-              <View style={styles.externalJobIdRow}>
-                <Ionicons name="link-outline" size={14} color="#8B5CF6" />
-                <Text style={styles.externalJobIdText} numberOfLines={1}>
-                  Job ID: {request.ExtJobID}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.timestampRow}>
-              <Ionicons name="time-outline" size={14} color={colors.gray500} />
-              <Text style={styles.requestDate}>
-                Requested on {formatDate(request.RequestedAt)}
+            {/* Meta Row: Internal/External • Date */}
+            <View style={styles.metaRow}>
+              {isInternalJob && (
+                <>
+                  <Text style={[styles.jobTypePill, { color: '#3B82F6' }]}>Internal</Text>
+                  <Text style={styles.metaDot}>•</Text>
+                </>
+              )}
+              {isExternalJob && (
+                <>
+                  <Text style={[styles.jobTypePill, { color: '#8B5CF6' }]}>External</Text>
+                  <Text style={styles.metaDot}>•</Text>
+                </>
+              )}
+              <Text style={styles.timeAgo}>
+                {formatDate(request.RequestedAt)}
               </Text>
             </View>
 
-            {request.ReferrerName && request.CompanyName && (
-              <View style={styles.referrerRow}>
+            {/* Status + Track Button Row */}
+            <View style={styles.bottomRow}>
+              {/* Status Badge */}
+              <View style={[styles.statusPill, { backgroundColor: getStatusColor(request.Status) + '20' }]}>
                 <Ionicons
-                  name="checkmark-circle"
-                  size={14}
-                  color={colors.success}
+                  name={getStatusIcon(request.Status)}
+                  size={12}
+                  color={getStatusColor(request.Status)}
                 />
-                <Text style={styles.referrerName}>
-                  Referred by {request.CompanyName} employee
+                <Text style={[styles.statusPillText, { color: getStatusColor(request.Status) }]}>
+                  {request.Status}
                 </Text>
               </View>
-            )}
-          </View>
 
-          <View style={styles.statusBadge}>
-            <Ionicons
-              name={getStatusIcon(request.Status)}
-              size={16}
-              color={getStatusColor(request.Status)}
-            />
-            <Text
-              style={[styles.statusText, { color: getStatusColor(request.Status) }]}
-              numberOfLines={1}
-            >
-              {request.Status}
-            </Text>
+              {/* Spacer */}
+              <View style={{ flex: 1 }} />
+
+              {/* Track Button */}
+              <TouchableOpacity 
+                style={styles.trackBtn}
+                onPress={() => handleViewTracking(request)}
+              >
+                <Text style={styles.trackBtnText}>Track</Text>
+                <Ionicons name="arrow-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-
-        <View style={styles.requestActions}>
-          {request.Status === 'Completed' && (
-            <>
-              <TouchableOpacity
-                style={styles.viewProofBtn}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleViewProof(request);
-                }}
-              >
-                <Ionicons name="eye-outline" size={16} color={colors.primary} />
-                <Text style={styles.viewProofText}>View Proof</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.verifyBtn}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleVerifyReferral(request.RequestID);
-                }}
-              >
-                <Ionicons name="checkmark-done" size={16} color={colors.white} />
-                <Text style={styles.verifyText}>Verify</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {request.Status === 'Verified' && request.ProofFileURL && (
-            <TouchableOpacity
-              style={styles.viewProofBtn}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleViewProof(request);
-              }}
-            >
-              <Ionicons name="eye-outline" size={16} color={colors.primary} />
-              <Text style={styles.viewProofText}>View Proof</Text>
-            </TouchableOpacity>
-          )}
-
-          {request.Status === 'Pending' && (
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleCancelRequest(request.RequestID);
-              }}
-            >
-              <Ionicons
-                name="close-circle-outline"
-                size={16}
-                color={colors.danger}
-              />
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -465,8 +436,6 @@ export default function MyReferralRequestsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          <Text style={styles.description}>Referral requests you have asked for</Text>
-
         {myRequests.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={64} color={colors.gray400} />
@@ -716,32 +685,102 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
   },
   logoContainer: {
-    marginRight: 10,
-    marginTop: 0,
+    marginRight: 12,
   },
   companyLogo: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  logoInitials: {
+    fontSize: 18,
+    fontWeight: typography.weights.bold,
+    color: '#FFFFFF',
   },
   requestInfo: {
     flex: 1,
-    marginRight: 8,
   },
+  companyNamePrimary: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  forJobRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+    gap: 4,
+  },
+  forJobText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  jobTitleBold: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    flexShrink: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  jobTypePill: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+  metaDot: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  timeAgo: {
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    gap: 4,
+  },
+  statusPillText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+  trackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+  },
+  trackBtnText: {
+    fontSize: typography.sizes.xs,
+    color: colors.white,
+    fontWeight: typography.weights.bold,
+  },
+  // Keep old styles for backward compatibility (unused now)
   jobTypeBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',

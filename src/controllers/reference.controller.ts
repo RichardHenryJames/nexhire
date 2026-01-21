@@ -11,7 +11,7 @@ interface University {
     alpha_two_code?: string;
 }
 
-// Get all organizations for registration dropdown - SIMPLIFIED
+// Get all organizations for registration dropdown - OPTIMIZED
 export const getOrganizations = async (req: any): Promise<any> => {
     try {
         const url = new URL(req.url);
@@ -26,38 +26,65 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const limit = hasLimit ? parseInt(limitParam) : null;
         const offset = offsetParam ? parseInt(offsetParam) : 0;
 
-        // 🚀 SIMPLE QUERY: Just get what we need from database
-        let query = `
-            SELECT 
-                OrganizationID as id,
-                Name as name,
-                LogoURL as logoURL,
-                Industry as industry,
-                IsFortune500 as isFortune500
-            FROM Organizations 
-            WHERE IsActive = 1
-        `;
-        
         const queryParams: any[] = [];
         let paramIndex = 0;
         
-        // Add search filter if provided
-        if (searchParam) {
-            query += ` AND Name LIKE @param${paramIndex}`;
+        // Build optimized query based on filters
+        const isFortune500Only = isFortune500Param === 'true' || isFortune500Param === '1';
+        const hasSearch = searchParam && searchParam.trim().length > 0;
+        
+        // 🚀 OPTIMIZED QUERY: Use covering index and minimize returned columns
+        let query: string;
+        
+        if (isFortune500Only && !hasSearch) {
+            // FAST PATH: F500 only, no search - use IX_Organizations_IsFortune500 index
+            query = `
+                SELECT 
+                    OrganizationID as id,
+                    Name as name,
+                    LogoURL as logoURL,
+                    Industry as industry,
+                    IsFortune500 as isFortune500
+                FROM Organizations WITH (INDEX(IX_Organizations_IsFortune500))
+                WHERE IsActive = 1 AND IsFortune500 = 1
+                ORDER BY Name ASC
+            `;
+        } else if (hasSearch) {
+            // SEARCH PATH: Use name search with covering index
+            query = `
+                SELECT 
+                    OrganizationID as id,
+                    Name as name,
+                    LogoURL as logoURL,
+                    Industry as industry,
+                    IsFortune500 as isFortune500
+                FROM Organizations
+                WHERE IsActive = 1 AND Name LIKE @param${paramIndex}
+            `;
             queryParams.push(`%${searchParam}%`);
             paramIndex++;
+            
+            if (isFortune500Only) {
+                query += ` AND IsFortune500 = 1`;
+            }
+            query += ` ORDER BY IsFortune500 DESC, Name ASC`;
+        } else {
+            // DEFAULT PATH: All orgs, use IsActive covering index
+            query = `
+                SELECT 
+                    OrganizationID as id,
+                    Name as name,
+                    LogoURL as logoURL,
+                    Industry as industry,
+                    IsFortune500 as isFortune500
+                FROM Organizations
+                WHERE IsActive = 1
+                ORDER BY IsFortune500 DESC, Name ASC
+            `;
         }
-        
-        // Add Fortune 500 filter if provided
-        if (isFortune500Param === 'true' || isFortune500Param === '1') {
-            query += ` AND IsFortune500 = 1`;
-        }
-        
-        // Order Fortune 500 companies first, then alphabetically
-        query += ` ORDER BY IsFortune500 DESC, Name ASC`;
         
         // Add pagination only if limit is specified
-        if (hasLimit) {
+        if (hasLimit && limit) {
             query += `
                 OFFSET @param${paramIndex} ROWS
                 FETCH NEXT @param${paramIndex + 1} ROWS ONLY
@@ -69,30 +96,33 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const result = await dbService.executeQuery(query, queryParams);
         const organizations = result.recordset || [];
         
-        // Get total count for pagination
-        let countQuery = `
-            SELECT COUNT(*) as total
-            FROM Organizations 
-            WHERE IsActive = 1
-        `;
-        const countParams: any[] = [];
-        let countParamIndex = 0;
-        
-        if (searchParam) {
-            countQuery += ` AND Name LIKE @param${countParamIndex}`;
-            countParams.push(`%${searchParam}%`);
-            countParamIndex++;
+        // 🚀 OPTIMIZATION: Skip count query if we're getting all results (no pagination)
+        let totalCount: number;
+        if (!hasLimit) {
+            // No pagination = we already have the total
+            totalCount = organizations.length;
+        } else {
+            // Get total count for pagination using optimized count
+            let countQuery = `SELECT COUNT(*) as total FROM Organizations WHERE IsActive = 1`;
+            const countParams: any[] = [];
+            let countParamIndex = 0;
+            
+            if (hasSearch) {
+                countQuery += ` AND Name LIKE @param${countParamIndex}`;
+                countParams.push(`%${searchParam}%`);
+                countParamIndex++;
+            }
+            
+            if (isFortune500Only) {
+                countQuery += ` AND IsFortune500 = 1`;
+            }
+            
+            const countResult = await dbService.executeQuery(countQuery, countParams);
+            totalCount = countResult.recordset[0]?.total || 0;
         }
-        
-        if (isFortune500Param === 'true' || isFortune500Param === '1') {
-            countQuery += ` AND IsFortune500 = 1`;
-        }
-        
-        const countResult = await dbService.executeQuery(countQuery, countParams);
-        const totalCount = countResult.recordset[0]?.total || 0;
 
         // Add "My company is not listed" option (only if not filtering for F500)
-        if (!(isFortune500Param === 'true' || isFortune500Param === '1')) {
+        if (!isFortune500Only) {
             organizations.push({
                 id: 999999,
                 name: 'My company is not listed',
@@ -109,8 +139,8 @@ export const getOrganizations = async (req: any): Promise<any> => {
                 total: totalCount,
                 offset: offset,
                 limit: limit || totalCount,
-                hasMore: hasLimit && (offset + (limit || 0) < totalCount)
-            }, `${organizations.length - 1} organizations retrieved`)
+                hasMore: hasLimit && limit ? (offset + limit < totalCount) : false
+            }, `${organizations.length - (isFortune500Only ? 0 : 1)} organizations retrieved`)
         };
     } catch (error) {
         console.error('Error getting organizations:', error);

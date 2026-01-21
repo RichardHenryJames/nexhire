@@ -9,7 +9,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
-  Alert,
   Modal,
 } from 'react-native';
 import useResponsive from '../hooks/useResponsive';
@@ -20,6 +19,7 @@ import { typography } from '../styles/theme';
 import messagingApi from '../services/messagingApi';
 import refopenAPI from '../services/api';
 import WalletRechargeModal from '../components/WalletRechargeModal';
+import { showToast } from '../components/Toast';
 
 // Confirmation modal styles (same as AI jobs modal)
 const createConfirmModalStyles = (colors) => StyleSheet.create({
@@ -191,9 +191,57 @@ export default function ProfileViewsScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    checkAccess();
-    loadWalletBalance();
-  }, [checkAccess, loadWalletBalance]);
+    // Load all data in parallel for faster initial load
+    const loadAllData = async () => {
+      setLoading(true);
+      setCheckingAccess(true);
+      
+      try {
+        const [accessResult, walletResult, viewsResult] = await Promise.all([
+          messagingApi.checkProfileViewAccess().catch(err => {
+            console.error('Error checking access:', err);
+            return { success: false };
+          }),
+          refopenAPI.getWalletBalance().catch(err => {
+            console.error('Error loading wallet:', err);
+            return { success: false };
+          }),
+          messagingApi.getMyProfileViews(1, 20).catch(err => {
+            console.error('Error fetching views:', err);
+            return { success: false };
+          })
+        ]);
+
+        // Set access status
+        if (accessResult.success && accessResult.data) {
+          setHasAccess(accessResult.data.hasActiveAccess);
+        }
+
+        // Set wallet balance
+        if (walletResult?.success) {
+          setWalletBalance(walletResult.data?.balance || 0);
+        }
+
+        // Set profile views
+        if (viewsResult.success && viewsResult.data) {
+          setProfileViews(viewsResult.data);
+          if (viewsResult.pagination?.total || viewsResult.meta?.total) {
+            setTotalViews(viewsResult.pagination?.total || viewsResult.meta?.total);
+          } else {
+            setTotalViews(viewsResult.data.length);
+          }
+          const totalPages = viewsResult.pagination?.totalPages || 1;
+          setHasMore(1 < totalPages);
+          setPage(1);
+        }
+      } finally {
+        setLoading(false);
+        setCheckingAccess(false);
+      }
+    };
+
+    loadAllData();
+  }, []);
 
   const fetchProfileViews = useCallback(async (pageNum = 1, isRefresh = false) => {
     try {
@@ -270,22 +318,19 @@ export default function ProfileViewsScreen({ navigation }) {
       if (result.success) {
         setHasAccess(true);
         await loadWalletBalance(); // Refresh wallet balance
-        Alert.alert(
-          'Unlocked!',
-          `You can now see who viewed your profile for ${pricing.profileViewAccessDurationDays} days.`
-        );
+        showToast(`You can now see who viewed your profile for ${pricing.profileViewAccessDurationDays} days.`, 'success');
         // Refresh the list to show real names
         fetchProfileViews(1, true);
       } else {
         if (result.error === 'Insufficient balance') {
           setShowWalletModal(true);
         } else {
-          Alert.alert('Error', result.error || 'Failed to unlock profile views');
+          showToast('Failed to unlock profile views. Please try again.', 'error');
         }
       }
     } catch (error) {
       console.error('Error purchasing profile view access:', error);
-      Alert.alert('Error', 'Failed to unlock profile views. Please try again.');
+      showToast('Failed to unlock profile views. Please try again.', 'error');
     } finally {
       setPurchasing(false);
     }
@@ -593,7 +638,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   innerContainer: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
   },
   loadingContainer: {
@@ -730,10 +775,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     marginBottom: 2,
-  },
-  viewerCompany: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
   },
   viewerMeta: {
     alignItems: 'flex-end',
