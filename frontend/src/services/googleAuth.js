@@ -156,7 +156,7 @@ class GoogleAuthService {
       console.error('Google Sign-In error:', error);
       return { 
         success: false, 
-        error: error.message || 'Google Sign-In failed'
+        error: "Not your fault! We're working on it. Try again soon. ✨"
       };
     }
   }

@@ -234,7 +234,7 @@ export const AuthProvider = ({ children }) => {
       }
 
     } catch (error) {
-      const errorMessage = error.message || 'Google Sign-In failed';
+      const errorMessage = "Not your fault! We're working on it. Try again soon. ✨";
       console.error('Google Sign-In error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };

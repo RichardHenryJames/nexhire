@@ -234,7 +234,7 @@ export default function LoginScreen({ navigation }) {
         
         // Do nothing - user dismissed
       } else if (result.needsConfig) {
-        showToast('Google Sign-In is not configured yet. Please use email and password to sign in.', 'error');
+        showToast('Google Sign-In is not configured yet. Please use email and password.', 'error');
       } else if (result.needsRegistration) {
         
         
@@ -248,11 +248,11 @@ export default function LoginScreen({ navigation }) {
         
       } else {
         console.error('? Google Sign-In failed:', result.error);
-        showToast('Google Sign-In failed. Please try again.', 'error');
+        showToast("Not your fault! We're working on it. Try again soon. ✨", 'error');
       }
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      showToast('An unexpected error occurred. Please try again.', 'error');
+      showToast("Not your fault! We're working on it. Try again soon. ✨", 'error');
     } finally {
       setGoogleLoading(false);
     }
