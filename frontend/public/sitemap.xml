@@ -3,203 +3,179 @@
   <!-- Homepage -->
   <url>
     <loc>https://refopen.com/</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   
-  <!-- Core Job Pages -->
-  <url>
-    <loc>https://refopen.com/jobs</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/ai-jobs</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/saved-jobs</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/create-job</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/my-jobs</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  
-  <!-- Referral Pages -->
-  <url>
-    <loc>https://refopen.com/referrals</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/ask-referral</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/ask-for-referral</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/referrals/my-requests</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/plans</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  
-  <!-- User Pages -->
-  <url>
-    <loc>https://refopen.com/profile</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/settings</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/applications</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/messages</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  
-  <!-- Wallet Pages -->
-  <url>
-    <loc>https://refopen.com/wallet</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/wallet/transactions</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/wallet/recharge</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <!-- Auth Pages -->
+  <!-- Auth Pages (Public - for users to login/register) -->
   <url>
     <loc>https://refopen.com/auth/login</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://refopen.com/register/jobseeker/experience</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
     <loc>https://refopen.com/register/employer/type</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
   
-  <!-- Legal/Compliance Pages -->
+  <!-- Legal/Compliance Pages (Public) -->
   <url>
     <loc>https://refopen.com/about</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://refopen.com/terms</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://refopen.com/privacy</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://refopen.com/refund</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://refopen.com/shipping</loc>
-    <lastmod>2026-01-16</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
     <loc>https://refopen.com/disclaimer</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://refopen.com/faq</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://refopen.com/support</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
-  <!-- Payment -->
+  <!-- Ask Referral (Public) -->
   <url>
-    <loc>https://refopen.com/payment</loc>
-    <lastmod>2026-01-16</lastmod>
+    <loc>https://refopen.com/ask-referral</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Blog / Career Articles (Public) -->
+  <url>
+    <loc>https://refopen.com/blog</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/how-to-get-referral</loc>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/referral-vs-direct-apply</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/resume-tips-2026</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/linkedin-networking</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/interview-preparation-guide</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/salary-negotiation</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/tech-jobs-india-2026</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/work-from-home-tips</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/cover-letter-guide</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/career-change-guide</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/freshers-guide</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/job-search-mistakes</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/upskilling-2026</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/company-culture-fit</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://refopen.com/blog/networking-events</loc>
+    <lastmod>2026-01-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   
   <!-- AdSense -->
   <url>
     <loc>https://refopen.com/ads.txt</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.1</priority>
   </url>

@@ -64,12 +64,14 @@ import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
 import PrivacyPolicyScreen from "../screens/legal/PrivacyPolicyScreen";
-import RefundPolicyScreen from "../screens/legal/RefundPolicyScreen";
-import ShippingDeliveryScreen from "../screens/legal/ShippingDeliveryScreen";
 import AboutUsScreen from "../screens/about/AboutScreen";
 import DisclaimerScreen from "../screens/legal/DisclaimerScreen";
 import FAQScreen from "../screens/legal/FAQScreen";
 import SupportScreen from "../screens/support/SupportScreen";
+
+// Blog Screens (public)
+import BlogListScreen from "../screens/blog/BlogListScreen";
+import BlogArticleScreen from "../screens/blog/BlogArticleScreen";
 
 // Admin Screen
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
@@ -87,12 +89,14 @@ const linking = {
       // Public Legal/Compliance screens - accessible without auth
       Terms: "terms",
       PrivacyPolicy: "privacy",
-      RefundPolicy: "refund",
-      ShippingDelivery: "shipping",
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
       Support: "support",
+      
+      // Public Blog screens - accessible without auth
+      Blog: "blog",
+      BlogArticle: "blog/:articleId",
       
       // Public Ask Referral screen - accessible without auth but actions require login
       AskReferralPublic: "ask-referral",
@@ -882,24 +886,6 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
-        name="RefundPolicy"
-        component={RefundPolicyScreen}
-        options={{
-          headerShown: true,
-          title: "Refund Policy",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="ShippingDelivery"
-        component={ShippingDeliveryScreen}
-        options={{
-          headerShown: true,
-          title: "Shipping & Delivery",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
         name="AboutUs"
         component={AboutUsScreen}
         options={{
@@ -923,6 +909,24 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "FAQ",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="Blog"
+        component={BlogListScreen}
+        options={{
+          headerShown: false,
+          title: "Career Blog - Job Search Tips & Advice",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="BlogArticle"
+        component={BlogArticleScreen}
+        options={{
+          headerShown: false,
+          title: "Blog Article",
           headerBackTitleVisible: false,
         }}
       />

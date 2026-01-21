@@ -1898,6 +1898,34 @@ export class UserService {
                 console.error('Error giving bonuses (registration still successful):', bonusError);
             }
 
+            // Send welcome email to new user
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendWelcomeEmail(user.Email, user.FirstName || 'there');
+            } catch (emailError) {
+                // Log but don't fail registration if email fails
+                console.error('Error sending welcome email (registration still successful):', emailError);
+            }
+
+            // Create NotificationPreferences with all flags enabled by default
+            try {
+                await dbService.executeQuery(`
+                    INSERT INTO NotificationPreferences (
+                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
+                        ReferralRequestEmail, ReferralRequestPush,
+                        ReferralClaimedEmail, ReferralClaimedPush,
+                        ReferralVerifiedEmail, ReferralVerifiedPush,
+                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
+                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
+                    ) VALUES (
+                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    )
+                `, [userId]);
+            } catch (prefError) {
+                // Log but don't fail registration if notification preferences creation fails
+                console.error('Error creating notification preferences (registration still successful):', prefError);
+            }
+
             // Generate tokens
             const tokens = AuthService.generateAuthTokens(user);
 

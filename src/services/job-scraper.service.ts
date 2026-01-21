@@ -1075,6 +1075,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     'palo alto networks inc': 'Palo Alto Networks',
     
     'okta inc': 'Okta',
+    'okta identity india': 'Okta',
+    'okta india': 'Okta',
     
     'snowflake inc': 'Snowflake',
     
@@ -1485,13 +1487,22 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         )
       `;
       
+      // Extract experience values and ensure they comply with CHK_Experience constraint
+      // Constraint: ExperienceMin >= 0 AND ExperienceMin <= ExperienceMax
+      let experienceMin = this.extractMinExperience(job.title, job.description);
+      let experienceMax = this.extractMaxExperience(job.title, job.description);
+      
+      // Safety check: ensure values comply with database constraint
+      experienceMin = Math.max(0, experienceMin);  // Min must be >= 0
+      experienceMax = Math.max(experienceMin, experienceMax);  // Max must be >= Min
+      
       const values = [
         jobId, organizationId, job.title, jobTypeId, workplaceTypeId,
         this.extractDepartment(job.title), job.description, job.location,
         this.extractCountry(job.location), job.workplaceType === 'Remote' ? 1 : 0,
         job.salaryMin, job.salaryMax, currencyId, 'Annual', 'Salary',
-        this.extractMinExperience(job.title, job.description), 
-        this.extractMaxExperience(job.title, job.description),
+        experienceMin, 
+        experienceMax,
         'Published', this.calculateJobPriority(job, jobAge), 'Public',
         actualPostedDate, this.calculateExpiryDate(actualPostedDate, jobAge),
         now, now, job.externalJobId,  // CreatedAt = now (when inserted), UpdatedAt = now
@@ -1525,6 +1536,17 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // Reject: Test/placeholder data
     if (/(test|sample|demo|placeholder|example|abc|xyz).*company/i.test(trimmed)) {
       return { valid: false, reason: 'Test data' };
+    }
+
+    // Reject: Confidential/Anonymous/Undisclosed employers
+    if (/^(confidential|anonymous|undisclosed|not disclosed|private employer)$/i.test(trimmed) ||
+        /^(confidential|anonymous)\s+(employer|company|jobs?)$/i.test(trimmed)) {
+      return { valid: false, reason: 'Confidential employer' };
+    }
+
+    // Reject: "Client of X" placeholder patterns from staffing agencies
+    if (/^(a\s+)?client\s+of\s+/i.test(trimmed)) {
+      return { valid: false, reason: 'Staffing agency placeholder' };
     }
 
     // Reject: Malformed (starts with *, ., or weird patterns)
@@ -1589,9 +1611,13 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // 🎯 STEP 3: Try to find similar organization using smart matching (pass original name for exact match)
     const similarOrg = await this.findSimilarOrganization(normalizedName, canonicalName);
     if (similarOrg) {
-      // If it's a Fortune 500 company, update the name to canonical
-      if (isFortune500 && similarOrg.Name !== canonicalName) {
-        await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+      // If it's a Fortune 500 company, update the name to canonical and fix industry if generic
+      if (isFortune500) {
+        const needsNameUpdate = similarOrg.Name !== canonicalName;
+        const hasGenericIndustry = !similarOrg.Industry || similarOrg.Industry === 'IT Jobs' || similarOrg.Industry === 'Unknown';
+        if (needsNameUpdate || hasGenericIndustry) {
+          await this.updateOrganizationName(similarOrg.OrganizationID, canonicalName, isFortune500, fortune500Match?.industry);
+        }
       }
       
       // 🔄 UPDATE existing organization with new data from APIs
@@ -1602,8 +1628,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // STEP 4: No similar organization found, create new one with enhanced data
     const enhancedOrgData = await this.getEnhancedOrganizationData(canonicalName, source, job);
     
-    // Override industry if Fortune 500 match provides better data
-    const finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
+    // Override industry if Fortune 500 match provides better data, then try company name
+    let finalIndustry = fortune500Match?.industry || enhancedOrgData.industry;
+    finalIndustry = this.enhanceIndustryFromCompanyName(canonicalName, finalIndustry);
     
     const insertQuery = `
       INSERT INTO Organizations (Name, Type, Industry, Size, Description, CreatedAt, UpdatedAt, IsActive, IsFortune500, LogoURL, Website, LinkedInProfile)
@@ -1723,8 +1750,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Industry if existing is generic and we have better info
-      if (enhancedData.industry !== 'Technology' && 
-          (existingData.Industry === 'Technology' || !existingData.Industry)) {
+      const genericIndustries = ['Technology', 'IT Jobs', 'Unknown', '', null];
+      if (enhancedData.industry && !genericIndustries.includes(enhancedData.industry) && 
+          genericIndustries.includes(existingData.Industry)) {
         updates.push(`Industry = @param${paramIndex}`);
         params.push(enhancedData.industry);
         paramIndex++;
@@ -2151,6 +2179,84 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return defaultIndustry;
   }
 
+  // 🏭 Enhance industry based on company name keywords
+  private static enhanceIndustryFromCompanyName(companyName: string, currentIndustry: string): string {
+    // Skip if already has a specific industry (not generic)
+    const genericIndustries = ['Technology', 'IT Jobs', 'Unknown', ''];
+    if (!genericIndustries.includes(currentIndustry)) {
+      return currentIndustry;
+    }
+    
+    const nameLower = companyName.toLowerCase();
+    
+    // Financial/Banking
+    if (/bank|finance|capital|invest|credit|insurance/i.test(nameLower) && !/food bank|blood bank/i.test(nameLower)) {
+      return nameLower.includes('insurance') ? 'Insurance' : 'Financial Services';
+    }
+    
+    // Healthcare
+    if (/hospital|medical|health|pharma|clinic|dental|therapy/i.test(nameLower)) {
+      return nameLower.includes('pharma') ? 'Pharmaceuticals' : 'Healthcare';
+    }
+    
+    // Education
+    if (/university|college|school|academy|institute|education/i.test(nameLower)) {
+      return 'Education';
+    }
+    
+    // Legal
+    if (/law firm|legal|attorney|lawyer/i.test(nameLower)) {
+      return 'Legal';
+    }
+    
+    // Hospitality
+    if (/hotel|resort|hospitality|restaurant|cafe/i.test(nameLower)) {
+      return 'Hospitality';
+    }
+    
+    // Automotive
+    if (/automotive|motors|car dealer|auto/i.test(nameLower)) {
+      return 'Automotive';
+    }
+    
+    // Aviation
+    if (/airline|aviation|aerospace/i.test(nameLower)) {
+      return 'Aviation';
+    }
+    
+    // Real Estate
+    if (/real estate|realty|property|housing/i.test(nameLower)) {
+      return 'Real Estate';
+    }
+    
+    // Logistics
+    if (/logistics|shipping|freight|transport|delivery/i.test(nameLower)) {
+      return 'Logistics';
+    }
+    
+    // Energy
+    if (/energy|oil|gas|solar|renewable|power/i.test(nameLower)) {
+      return nameLower.includes('solar') || nameLower.includes('renewable') ? 'Renewable Energy' : 'Energy';
+    }
+    
+    // Cybersecurity
+    if (/security|cyber|infosec/i.test(nameLower)) {
+      return 'Cybersecurity';
+    }
+    
+    // Semiconductors
+    if (/semiconductor|chip|foundry/i.test(nameLower)) {
+      return 'Semiconductors';
+    }
+    
+    // Construction
+    if (/construction|builder|contractor/i.test(nameLower)) {
+      return 'Construction';
+    }
+    
+    return currentIndustry;
+  }
+
   private static detectCurrencyFromLocation(location: string): number {
     if (!location) return 1; // USD default
     const locationLower = location.toLowerCase();
@@ -2246,7 +2352,11 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
     for (const pattern of expPatterns) {
       const match = content.match(pattern);
-      if (match) return parseInt(match[1]);
+      if (match) {
+        const exp = parseInt(match[1]);
+        // Ensure experience is non-negative and reasonable (0-50 years)
+        return Math.max(0, Math.min(exp, 50));
+      }
     }
 
     if (content.includes('senior') || content.includes('lead')) return 5;
@@ -2261,11 +2371,16 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     const content = `${title} ${description}`.toLowerCase();
     
     const rangeMatch = content.match(/(\d+)-(\d+)\s*years/);
-    if (rangeMatch) return parseInt(rangeMatch[2]);
+    if (rangeMatch) {
+      const maxExp = parseInt(rangeMatch[2]);
+      // Ensure max >= min and is reasonable (capped at 50 years)
+      return Math.max(minExp, Math.min(maxExp, 50));
+    }
 
     if (content.includes('senior') || content.includes('lead')) return Math.max(minExp + 5, 10);
     if (content.includes('mid')) return Math.max(minExp + 3, 7);
     
+    // Always ensure max >= min
     return Math.max(minExp + 3, 5);
   }
 
