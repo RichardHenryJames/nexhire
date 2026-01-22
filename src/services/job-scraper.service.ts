@@ -922,7 +922,6 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     // Microsoft - ALL VARIATIONS
     'microsoft corporation': 'Microsoft',
     'microsoft corp': 'Microsoft',
-    'microsoft azure': 'Microsoft',
     
     // Google/Alphabet - ALL VARIATIONS
     'google llc': 'Google',
@@ -1113,6 +1112,53 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     if (this.DUPLICATE_COMPANY_MAP[normalized]) {
       console.log(`📋 Duplicate detected: "${companyName}" → "${this.DUPLICATE_COMPANY_MAP[normalized]}"`);
       return this.DUPLICATE_COMPANY_MAP[normalized];
+    }
+    
+    // Major companies that should absorb all variations starting with their name
+    const majorCompanyPrefixes: Record<string, string> = {
+      'microsoft': 'Microsoft',
+      'google': 'Google',
+      'amazon': 'Amazon',
+      'meta': 'Meta',
+      'apple': 'Apple',
+      'netflix': 'Netflix',
+      'salesforce': 'Salesforce',
+      'oracle': 'Oracle',
+      'ibm': 'IBM',
+      'cisco': 'Cisco',
+      'intel': 'Intel',
+      'nvidia': 'NVIDIA',
+      'adobe': 'Adobe',
+      'vmware': 'VMware',
+      'dell': 'Dell',
+      'uber': 'Uber',
+      'airbnb': 'Airbnb',
+      'twitter': 'Twitter',
+      'linkedin': 'LinkedIn',
+      'spotify': 'Spotify',
+      'stripe': 'Stripe',
+      'paypal': 'PayPal',
+      'visa': 'Visa',
+      'mastercard': 'Mastercard',
+      'walmart': 'Walmart',
+      'target': 'Target',
+      'tata consultancy': 'Tata Consultancy Services',
+      'infosys': 'Infosys',
+      'wipro': 'Wipro',
+      'hcl': 'HCL Technologies',
+      'tech mahindra': 'Tech Mahindra',
+      'cognizant': 'Cognizant',
+      'accenture': 'Accenture',
+      'capgemini': 'Capgemini',
+      'deloitte': 'Deloitte',
+    };
+    
+    // Check if normalized name starts with a major company prefix
+    for (const [prefix, canonical] of Object.entries(majorCompanyPrefixes)) {
+      if (normalized.startsWith(prefix + ' ') || normalized === prefix) {
+        console.log(`📋 Major company prefix match: "${companyName}" → "${canonical}"`);
+        return canonical;
+      }
     }
     
     // Check partial matches (company name contains the key)

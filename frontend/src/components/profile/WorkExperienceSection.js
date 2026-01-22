@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal, TextInput, ActivityIndicator, Switch, ScrollView, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { showToast } from '../Toast';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
@@ -219,6 +220,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const isEditing = typeof editing === 'boolean' ? editing : ctxEditing;
   const { colors } = useTheme();
   const responsive = useResponsive();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const [experiences, setExperiences] = useState([]);
@@ -364,8 +366,6 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       return;
     }
 
-    // Show OTP input immediately for better UX
-    setShowOtpInput(true);
     setOtp(['', '', '', '']);
     setSendingOtp(true);
     setVerificationError('');
@@ -375,6 +375,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       
       if (response.success) {
+        setShowOtpInput(true);
         setOtpExpiryTime(Date.now() + (response.data?.expiresInMinutes || 10) * 60 * 1000);
         showToast(`OTP sent to ${response.data?.email || emailToSend}`, 'success');
       } else {
@@ -853,6 +854,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       <VerifiedReferrerOverlay
         visible={showVerifiedReferrerOverlay}
         onClose={() => setShowVerifiedReferrerOverlay(false)}
+        onAction={() => navigation.navigate('Referrals')}
         companyName={verifiedCompanyName}
       />
     </View>

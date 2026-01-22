@@ -13,7 +13,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -145,10 +144,10 @@ const Sparkle = ({ delay, x, y }) => {
 export default function VerifiedReferrerOverlay({
   visible,
   onClose,
+  onAction,
   companyName = '',
 }) {
   const { colors, isDarkMode } = useTheme();
-  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
   
   // Animations
@@ -257,6 +256,11 @@ export default function VerifiedReferrerOverlay({
       title: 'Earn up to ₹100 per Referral',
       description: 'Get up to ₹100 credited to your wallet when you successfully refer someone',
       highlight: true,
+    },
+    {
+      icon: 'briefcase-plus',
+      title: 'Post Jobs for FREE',
+      description: 'Share open positions at your company and get quality candidates through referrals',
     },
     {
       icon: 'account-check',
@@ -441,16 +445,23 @@ export default function VerifiedReferrerOverlay({
               </View>
             </View>
 
+            {/* Privacy Note */}
+            <View style={styles.privacyCard}>
+              <View style={styles.privacyHeader}>
+                <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
+                <Text style={styles.privacyTitle}>Your Privacy is Protected</Text>
+              </View>
+              <Text style={styles.privacyText}>
+                Your company email was only used for verification. It is never saved, stored, or shared with anyone.
+              </Text>
+            </View>
+
             {/* CTA Button */}
             <TouchableOpacity 
               style={styles.ctaButton} 
               onPress={() => {
-                // Navigate first, then close modal to avoid timing issues
-                navigation.navigate('Referrals');
-                // Close modal after a brief delay to ensure navigation completes
-                setTimeout(() => {
-                  onClose();
-                }, 100);
+                onClose();
+                if (onAction) onAction();
               }}
             >
               <LinearGradient
@@ -669,6 +680,31 @@ const createStyles = (colors, isDarkMode) =>
       color: 'rgba(255, 255, 255, 0.7)',
       lineHeight: 19,
       flex: 1,
+    },
+    privacyCard: {
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 24,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: 'rgba(59, 130, 246, 0.2)',
+    },
+    privacyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+      gap: 8,
+    },
+    privacyTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#3B82F6',
+    },
+    privacyText: {
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.7)',
+      lineHeight: 19,
     },
     ctaButton: {
       width: '100%',

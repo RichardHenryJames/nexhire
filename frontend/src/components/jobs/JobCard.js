@@ -29,7 +29,10 @@ const JobCard = ({
   hideReferral = false,
   // ✅ NEW: Props for employer publish action
   onPublish = null,
-  showPublish = false
+  showPublish = false,
+  // ✅ NEW: Props for delete action
+  onDelete = null,
+  showDelete = false
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -71,7 +74,7 @@ const JobCard = ({
     : '';
 
   // ✅ NEW: Check if we should show any actions row
-  const showActions = !hideApply || !hideSave || !hideReferral || showPublish;
+  const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
@@ -165,6 +168,14 @@ const JobCard = ({
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             ) : null
+          )}
+
+          {/* ✅ NEW: Delete button for draft jobs */}
+          {showDelete && onDelete && (
+            <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel="Delete job">
+              <Ionicons name="trash-outline" size={18} color="#fff" />
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
           )}
 
           {/* ✅ NEW: Publish button for employers (draft jobs only) */}
@@ -338,6 +349,15 @@ const createStyles = (colors) => StyleSheet.create({
     borderColor: colors.warning
   },
   requestingText: { color: colors.warning, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.error || '#dc2626',
+  },
+  deleteText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
   publishBtn: {
     flexDirection: 'row',
     alignItems: 'center',

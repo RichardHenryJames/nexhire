@@ -22,7 +22,7 @@ EmployerJobsScreen
 const TABS = [ 'draft', 'published' ];
 
 export default function EmployerJobsScreen({ navigation, route }) {
-  const { user, isVerifiedReferrer } = useAuth();
+  const { user, isVerifiedReferrer, loading: authLoading } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
@@ -81,7 +81,10 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   // Access control: Only employers and verified referrers can access this screen
   // Job seekers who are not verified should be redirected away
+  // Wait for auth loading to complete before checking access
   useEffect(() => {
+    if (authLoading) return; // Don't check until auth is loaded
+    
     const isEmployer = userType === 'Employer';
     const canAccess = isEmployer || isVerifiedReferrer;
     
@@ -93,7 +96,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
         params: { screen: 'Home' }
       });
     }
-  }, [userType, isVerifiedReferrer, navigation]);
+  }, [userType, isVerifiedReferrer, authLoading, navigation]);
 
   // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
   useEffect(() => {
@@ -156,6 +159,23 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const onRefresh = useCallback(()=>{ setRefreshing(true); load(1); }, [load]);
 
   const onSearchSubmit = () => load(1);
+
+  // ✅ NEW: Delete job handler
+  const handleDeleteJob = async (jobId) => {
+    try {
+      const res = await refopenAPI.deleteJob(jobId);
+      if (res?.success) {
+        showToast('Job deleted successfully', 'success');
+        // Remove from list
+        setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
+      } else {
+        showToast(res?.error || 'Failed to delete job', 'error');
+      }
+    } catch (e) {
+      console.error('Delete job error:', e);
+      showToast(e?.message || 'Failed to delete job', 'error');
+    }
+  };
 
   const initiatePublishJob = async (jobId, jobTitle, postedByReferrer = false) => {
     const PUBLISH_JOB_FEE = 50;
@@ -240,7 +260,10 @@ export default function EmployerJobsScreen({ navigation, route }) {
           hideApply // hide seeker actions
           hideReferral
           hideSave
-          // ? NEW: Pass publish props to JobCard
+          // ✅ Pass delete props to JobCard (only for drafts)
+          showDelete={isDraft}
+          onDelete={isDraft ? () => handleDeleteJob(job.JobID) : null}
+          // ✅ Pass publish props to JobCard
           showPublish={isDraft}
           onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title, job.PostedByType === 2) : null}
         />

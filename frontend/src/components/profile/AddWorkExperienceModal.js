@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ActivityIndicator, Switch, ScrollView, Image, Platform, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -126,6 +127,7 @@ export default function AddWorkExperienceModal({
 }) {
   const { colors } = useTheme();
   const responsive = useResponsive();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   // Form state
@@ -372,7 +374,6 @@ export default function AddWorkExperienceModal({
       return;
     }
 
-    setShowOtpInput(true);
     setOtp(['', '', '', '']);
     setSendingOtp(true);
     setVerificationError('');
@@ -380,6 +381,7 @@ export default function AddWorkExperienceModal({
     try {
       const response = await refopenAPI.sendCompanyEmailOTP(workExpId, emailToSend);
       if (response.success) {
+        setShowOtpInput(true);
         showToast(`OTP sent to ${response.data?.email || emailToSend}`, 'success');
       } else {
         setVerificationError(response.message || 'Failed to send OTP');
@@ -1020,6 +1022,10 @@ export default function AddWorkExperienceModal({
       <VerifiedReferrerOverlay
         visible={showVerifiedOverlay}
         onClose={() => setShowVerifiedOverlay(false)}
+        onAction={() => {
+          onClose();
+          navigation.navigate('Referrals');
+        }}
         companyName={verifiedCompanyName}
       />
     </>

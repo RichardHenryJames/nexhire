@@ -111,9 +111,9 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
-          // Fetch verification status for job seekers
+          // Fetch verification status for job seekers - await to ensure it completes before loading ends
           if (result.data?.UserType === 'JobSeeker') {
-            refreshVerificationStatus();
+            await refreshVerificationStatus();
           }
         } else {
           await refopenAPI.clearTokens();
