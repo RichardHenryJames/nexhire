@@ -89,37 +89,39 @@ export default function PublishJobConfirmModal({
               <Text style={styles.jobTitle}>Publish "{jobTitle}"</Text>
             </View>
 
-            {/* 💰 Cost Breakdown - Clean Card */}
-            <View style={styles.costCard}>
-              <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Cost</Text>
-                <Text style={[styles.costAmount, isPostedByReferrer && { color: '#10b981' }]}>
-                  {isPostedByReferrer ? 'FREE' : `₹${requiredAmount.toFixed(2)}`}
-                </Text>
-              </View>
-              
-              <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Current Balance</Text>
-                <Text style={[
-                  styles.balanceAmount,
-                  { color: hasInsufficientBalance ? '#ef4444' : '#10b981' }
-                ]}>
-                  ₹{currentBalance.toFixed(2)}
-                </Text>
-              </View>
+            {/* 💰 Cost Breakdown - Only show for paid jobs (not referrer posted) */}
+            {!isPostedByReferrer && (
+              <View style={styles.costCard}>
+                <View style={styles.costRow}>
+                  <Text style={styles.costLabel}>Cost</Text>
+                  <Text style={styles.costAmount}>
+                    ₹{requiredAmount.toFixed(2)}
+                  </Text>
+                </View>
+                
+                <View style={styles.costRow}>
+                  <Text style={styles.costLabel}>Current Balance</Text>
+                  <Text style={[
+                    styles.balanceAmount,
+                    { color: hasInsufficientBalance ? '#ef4444' : '#10b981' }
+                  ]}>
+                    ₹{currentBalance.toFixed(2)}
+                  </Text>
+                </View>
 
-              {!hasInsufficientBalance && (
-                <>
-                  <View style={styles.costDivider} />
-                  <View style={styles.balanceAfterRow}>
-                    <Text style={styles.balanceAfterLabel}>Balance After</Text>
-                    <Text style={styles.balanceAfterAmount}>
-                      ₹{balanceAfter.toFixed(2)}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
+                {!hasInsufficientBalance && (
+                  <>
+                    <View style={styles.costDivider} />
+                    <View style={styles.balanceAfterRow}>
+                      <Text style={styles.balanceAfterLabel}>Balance After</Text>
+                      <Text style={styles.balanceAfterAmount}>
+                        ₹{balanceAfter.toFixed(2)}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
 
             <View style={styles.benefitsBox}>
               <Text style={styles.benefitsHeading}>What happens next:</Text>

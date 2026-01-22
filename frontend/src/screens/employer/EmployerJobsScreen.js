@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -221,12 +221,13 @@ export default function EmployerJobsScreen({ navigation, route }) {
     try {
       const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
-        showToast('Job published successfully', 'success');
+        showToast('Job published! Use Copy Link to share.', 'success');
         
-        // Remove published job from current list immediately
+        // Remove published job from draft list immediately
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));
         
-        // Reload BOTH tabs to ensure data is fresh
+        // Reload and switch to Published tab
+        setActiveTab('published');
         await load(1);
         return;
       }
@@ -241,12 +242,28 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const openJob = (job) => navigation.navigate('JobDetails', { jobId: job.JobID });
 
+  // ✅ Copy share link with message
+  const handleCopyShareLink = async (job) => {
+    const jobUrl = `https://www.refopen.com/job/${job.JobID}`;
+    const message = `I'm referring for the "${job.Title}" role at ${job.OrganizationName || 'my company'}. Please find the link below and submit your referral request:\n\n${jobUrl}`;
+    
+    try {
+      await navigator.clipboard.writeText(message);
+      showToast('Link copied with message!', 'success');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      showToast('Failed to copy link', 'error');
+    }
+  };
+
   const renderJob = (job) => {
     const isDraft = job.Status === 'Draft';
+    const isPublished = !isDraft;
+    const isReferrerPosted = job.PostedByType === 2;
     
     // ? CRITICAL FIX: Client-side filtering as safety net
     // Only show Draft jobs in Draft tab, Published jobs in Published tab
-    const shouldShow = (activeTab === 'draft' && isDraft) || (activeTab === 'published' && !isDraft);
+    const shouldShow = (activeTab === 'draft' && isDraft) || (activeTab === 'published' && isPublished);
     
     if (!shouldShow) {
       return null;
@@ -263,9 +280,12 @@ export default function EmployerJobsScreen({ navigation, route }) {
           // ✅ Pass delete props to JobCard (only for drafts)
           showDelete={isDraft}
           onDelete={isDraft ? () => handleDeleteJob(job.JobID) : null}
-          // ✅ Pass publish props to JobCard
+          // ✅ Pass publish props to JobCard (only for drafts)
           showPublish={isDraft}
           onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title, job.PostedByType === 2) : null}
+          // ✅ Pass share props to JobCard (only for published referrer jobs)
+          showShare={isPublished && isReferrerPosted}
+          onShare={isPublished && isReferrerPosted ? () => handleCopyShareLink(job) : null}
         />
       </View>
     );
@@ -447,6 +467,6 @@ const createLocalStyles = (colors, responsive = {}) => {
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
-  }
+  },
 };
 };

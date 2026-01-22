@@ -32,7 +32,10 @@ const JobCard = ({
   showPublish = false,
   // ✅ NEW: Props for delete action
   onDelete = null,
-  showDelete = false
+  showDelete = false,
+  // ✅ NEW: Props for share/copy action
+  onShare = null,
+  showShare = false
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -74,7 +77,7 @@ const JobCard = ({
     : '';
 
   // ✅ NEW: Check if we should show any actions row
-  const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete;
+  const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete || showShare;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
@@ -184,6 +187,22 @@ const JobCard = ({
               <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
               <Text style={styles.publishText}>Publish</Text>
             </TouchableOpacity>
+          )}
+
+          {/* ✅ Social sharing buttons for published jobs */}
+          {showShare && onShare && (
+            <View style={styles.shareContainer}>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={onShare} accessibilityLabel="Share on LinkedIn">
+                <Ionicons name="logo-linkedin" size={18} color="#0077B5" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={onShare} accessibilityLabel="Share on WhatsApp">
+                <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareBtn} onPress={onShare} accessibilityLabel="Copy share link">
+                <Ionicons name="share-social-outline" size={16} color="#fff" />
+                <Text style={styles.shareText}>Share</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
@@ -367,6 +386,30 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.primary,
   },
   publishText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  shareContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  socialIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#10b981',
+  },
+  shareText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 12 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',

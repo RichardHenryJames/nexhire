@@ -98,6 +98,9 @@ const linking = {
       Blog: "blog",
       BlogArticle: "blog/:articleId",
       
+      // Public Job Details screen - accessible without auth but actions require login
+      JobDetailsPublic: "job/:jobId",
+      
       // Public Ask Referral screen - accessible without auth but actions require login
       AskReferralPublic: "ask-referral",
       
@@ -161,7 +164,7 @@ const linking = {
           },
 
           // Modal/Stack screens
-          JobDetails: "job/:jobId",
+          JobDetails: "job-details/:jobId",
           AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
@@ -947,6 +950,17 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: "Ask for Referral",
+          headerBackTitleVisible: false,
+        }}
+      />
+      
+      {/* Public Job Details Screen - accessible without auth but actions require login */}
+      <Stack.Screen
+        name="JobDetailsPublic"
+        component={JobDetailsScreen}
+        options={{
+          headerShown: true,
+          title: "Job Details",
           headerBackTitleVisible: false,
         }}
       />

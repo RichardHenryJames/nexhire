@@ -226,10 +226,8 @@ const { jobId, fromReferralRequest } = route.params || {};
   const handleApply = async () => {
     
     if (!user) {
-      Alert.alert('Login Required', 'Please login to apply for jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      showToast('Please login to apply for jobs', 'info');
+      navigation.navigate('Auth');
       return;
     }
 
@@ -255,16 +253,8 @@ const { jobId, fromReferralRequest } = route.params || {};
   const handleAskReferral = async () => {
     
     if (!user) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to ask for referrals', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      showToast('Please login to ask for referrals', 'info');
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1146,7 +1136,8 @@ const { jobId, fromReferralRequest } = route.params || {};
       )}
 
       {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
-      {isJobSeeker && !hasReferred && (
+      {/* Show for job seekers OR public users (not logged in) */}
+      {(isJobSeeker || !user) && !hasReferred && (
         <View style={styles.referralMessageSection}>
           {!showReferralMessageInput ? (
             // Collapsed state - just show button to expand
@@ -1197,7 +1188,8 @@ const { jobId, fromReferralRequest } = route.params || {};
       )}
 
       {/* 🆕 NEW: Cover Letter Section - appears before action buttons */}
-      {isJobSeeker && !hasApplied && (
+      {/* Show for job seekers OR public users (not logged in), but hide for referrer-posted jobs */}
+      {(isJobSeeker || !user) && !hasApplied && !isReferrerPosted && (
         <View style={styles.coverLetterSection}>
           {!showCoverLetterMessageInput ? (
             // Collapsed state - show button to expand
@@ -1250,7 +1242,8 @@ const { jobId, fromReferralRequest } = route.params || {};
       {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab OR when job is archived */}
       {!fromReferralRequest && !job.IsArchived && (
         <View style={styles.actionContainer}>        
-          {isJobSeeker && (
+          {/* Show Ask Referral for job seekers OR public users */}
+          {(isJobSeeker || !user) && (
             <TouchableOpacity 
               style={[
                 styles.referralButton,
@@ -1274,7 +1267,8 @@ const { jobId, fromReferralRequest } = route.params || {};
           )}
           
           {/* Apply button - hide for referrer-posted jobs (they should use Ask Referral instead) */}
-          {isJobSeeker && !isReferrerPosted && (
+          {/* Show for job seekers OR public users */}
+          {(isJobSeeker || !user) && !isReferrerPosted && (
             <TouchableOpacity 
               style={[
 
