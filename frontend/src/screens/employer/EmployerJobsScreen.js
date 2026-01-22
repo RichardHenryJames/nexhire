@@ -32,7 +32,11 @@ export default function EmployerJobsScreen({ navigation, route }) {
   // Get user type
   const userType = user?.type;
   
-  const [activeTab, setActiveTab] = useState('draft');
+  // Initialize activeTab from route params if provided, otherwise default to 'draft'
+  const [activeTab, setActiveTab] = useState(() => {
+    const initialTab = route.params?.initialTab;
+    return initialTab && TABS.includes(initialTab) ? initialTab : 'draft';
+  });
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,6 +104,14 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   // ? NEW: Listen for navigation params to switch tabs and update lists after publishing
   useEffect(() => {
+    // Handle initialTab param (from Publish button on ReferralScreen)
+    if (route.params?.initialTab && TABS.includes(route.params.initialTab)) {
+      const newTab = route.params.initialTab;
+      setActiveTab(newTab);
+      navigation.setParams({ initialTab: undefined });
+      // Note: The useEffect on activeTab will trigger load() automatically
+    }
+    
     if (route.params?.switchToTab) {
       const publishedJobId = route.params.publishedJobId;
       
@@ -249,7 +261,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
     
     try {
       await navigator.clipboard.writeText(message);
-      showToast('Link copied with message!', 'success');
+      showToast('Job link copied with message!', 'success');
     } catch (error) {
       console.error('Failed to copy:', error);
       showToast('Failed to copy link', 'error');

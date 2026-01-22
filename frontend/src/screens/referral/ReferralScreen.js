@@ -603,7 +603,9 @@ export default function ReferralScreen({ navigation }) {
             {isVerifiedReferrer && currentVerifiedCompany && (
               <TouchableOpacity 
                 style={styles.publishJobButton}
-                onPress={() => navigation.navigate('EmployerJobs')}
+                onPress={() => navigation.navigate('EmployerJobs', {
+                  initialTab: draftJobsCount > 0 ? 'draft' : 'published'
+                })}
               >
                 <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
                 <Text style={styles.postJobButtonText}>Publish{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
