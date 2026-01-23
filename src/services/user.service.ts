@@ -129,6 +129,13 @@ export class UserService {
                 console.error('Error sending welcome email (registration still successful):', emailError);
             }
             
+            // Send welcome message from Platform Admin (in-app message, no email)
+            // Fire-and-forget: don't await so registration isn't slowed down
+            import('./messaging.service').then(({ MessagingService }) => {
+                MessagingService.sendWelcomeMessageToNewUser(userId, user.FirstName || 'there')
+                    .catch(err => console.error('Error sending welcome message:', err));
+            });
+            
             // Create NotificationPreferences with all flags enabled by default
             try {
                 await dbService.executeQuery(`
@@ -1906,6 +1913,13 @@ export class UserService {
                 // Log but don't fail registration if email fails
                 console.error('Error sending welcome email (registration still successful):', emailError);
             }
+
+            // Send welcome message from Platform Admin (in-app message, no email)
+            // Fire-and-forget: don't await so registration isn't slowed down
+            import('./messaging.service').then(({ MessagingService }) => {
+                MessagingService.sendWelcomeMessageToNewUser(userId, user.FirstName || 'there')
+                    .catch(err => console.error('Error sending welcome message:', err));
+            });
 
             // Create NotificationPreferences with all flags enabled by default
             try {

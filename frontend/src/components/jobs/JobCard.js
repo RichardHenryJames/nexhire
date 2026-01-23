@@ -223,7 +223,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 14,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 4,
     borderRadius: 12,
     shadowColor: colors.shadow,
     shadowOpacity: 0.06,

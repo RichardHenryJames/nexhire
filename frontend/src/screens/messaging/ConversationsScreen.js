@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,14 @@ function ConversationsScreenMobile() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  
+  // Pagination state for infinite scroll
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, hasMore: true });
+  
+  // Refs to prevent duplicate load-more triggers (like JobsScreen)
+  const isLoadingMoreRef = useRef(false);
+  const lastLoadedPageRef = useRef(0);
 
   // ✅ Set dark theme header with + button for new chat (admin only)
   useEffect(() => {
@@ -76,7 +84,7 @@ function ConversationsScreenMobile() {
     try {
       // Fetch both in parallel for faster loading
       const [result, unreadResult] = await Promise.all([
-        messagingApi.getMyConversations(),
+        messagingApi.getMyConversations(1, pagination.pageSize),
         messagingApi.getUnreadCount()
       ]);
       
@@ -86,6 +94,14 @@ function ConversationsScreenMobile() {
           conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
         );
         setConversations(validConversations);
+        
+        // Update pagination state
+        const meta = result.meta || {};
+        setPagination(prev => ({
+          ...prev,
+          page: 1,
+          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (validConversations.length === prev.pageSize)
+        }));
       }
 
       if (unreadResult.success) {
@@ -97,7 +113,50 @@ function ConversationsScreenMobile() {
     setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [pagination.pageSize]);
+
+  // Load more conversations (infinite scroll)
+  const loadMoreConversations = useCallback(async () => {
+    if (loading || loadingMore || !pagination.hasMore) return;
+    if (isLoadingMoreRef.current) return;
+    
+    const nextPage = pagination.page + 1;
+    
+    // Prevent fetching same page twice
+    if (lastLoadedPageRef.current >= nextPage) return;
+    
+    try {
+      isLoadingMoreRef.current = true;
+      setLoadingMore(true);
+      const result = await messagingApi.getMyConversations(nextPage, pagination.pageSize);
+      
+      if (result.success) {
+        const newConversations = (result.data || []).filter(
+          conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
+        );
+        
+        setConversations(prev => [...prev, ...newConversations]);
+        
+        const meta = result.meta || {};
+        setPagination(prev => ({
+          ...prev,
+          page: nextPage,
+          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === prev.pageSize)
+        }));
+        
+        if (newConversations.length === 0) {
+          setPagination(prev => ({ ...prev, hasMore: false }));
+        } else {
+          lastLoadedPageRef.current = nextPage;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more conversations:', error);
+    } finally {
+      setLoadingMore(false);
+      isLoadingMoreRef.current = false;
+    }
+  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize]);
 
   // Refresh whenever the screen comes into focus (also handles initial load)
   useFocusEffect(
@@ -284,6 +343,13 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
         refreshControl={
 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
+        onEndReached={loadMoreConversations}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={loadingMore ? (
+          <View style={{ paddingVertical: 20 }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : null}
   ListEmptyComponent={
  <View style={styles.emptyContainer}>
   <Ionicons name="chatbubbles-outline" size={64} color={colors.gray300} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,14 @@ export default function MessagingLayoutDesktop() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  
+  // Pagination state for infinite scroll
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, hasMore: true });
+  
+  // Refs to prevent duplicate load-more triggers (like JobsScreen)
+  const isLoadingMoreRef = useRef(false);
+  const lastLoadedPageRef = useRef(0);
 
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
@@ -61,12 +69,20 @@ export default function MessagingLayoutDesktop() {
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
-      const result = await messagingApi.getMyConversations();
+      const result = await messagingApi.getMyConversations(1, pagination.pageSize);
       if (result.success) {
         const validConversations = (result.data || []).filter(
           conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
         );
         setConversations(validConversations);
+        
+        // Update pagination state
+        const meta = result.meta || {};
+        setPagination(prev => ({
+          ...prev,
+          page: 1,
+          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (validConversations.length === prev.pageSize)
+        }));
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -74,7 +90,50 @@ export default function MessagingLayoutDesktop() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [pagination.pageSize]);
+
+  // Load more conversations (infinite scroll)
+  const loadMoreConversations = useCallback(async () => {
+    if (loading || loadingMore || !pagination.hasMore) return;
+    if (isLoadingMoreRef.current) return;
+    
+    const nextPage = pagination.page + 1;
+    
+    // Prevent fetching same page twice
+    if (lastLoadedPageRef.current >= nextPage) return;
+    
+    try {
+      isLoadingMoreRef.current = true;
+      setLoadingMore(true);
+      const result = await messagingApi.getMyConversations(nextPage, pagination.pageSize);
+      
+      if (result.success) {
+        const newConversations = (result.data || []).filter(
+          conv => conv.LastMessagePreview && conv.LastMessagePreview.trim() !== ''
+        );
+        
+        setConversations(prev => [...prev, ...newConversations]);
+        
+        const meta = result.meta || {};
+        setPagination(prev => ({
+          ...prev,
+          page: nextPage,
+          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === prev.pageSize)
+        }));
+        
+        if (newConversations.length === 0) {
+          setPagination(prev => ({ ...prev, hasMore: false }));
+        } else {
+          lastLoadedPageRef.current = nextPage;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more conversations:', error);
+    } finally {
+      setLoadingMore(false);
+      isLoadingMoreRef.current = false;
+    }
+  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     loadConversations();
@@ -215,17 +274,27 @@ export default function MessagingLayoutDesktop() {
   };
 
   return (
-    <View style={{ flex: 1, flexDirection: 'column', height: '100%', backgroundColor: colors.background }}>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100vh', 
+      width: '100vw',
+      backgroundColor: colors.background, 
+      overflow: 'hidden',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+    }}>
       {/* Top Header Bar */}
-      <View style={{
+      <div style={{
+        display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
-        paddingHorizontal: 16,
+        padding: '12px 16px',
         backgroundColor: colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        borderBottom: `1px solid ${colors.border}`,
         minHeight: 56,
+        flexShrink: 0,
       }}>
         <TouchableOpacity
           onPress={handleBackPress}
@@ -234,19 +303,26 @@ export default function MessagingLayoutDesktop() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}>Messages</Text>
-      </View>
+      </div>
 
       {/* Main Content Area */}
-      <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'row', 
+        flex: 1, 
+        overflow: 'hidden',
+        minHeight: 0,
+      }}>
         {/* Left Panel - Conversations List */}
-        <View style={{
+        <div style={{
           width: 350,
           minWidth: 300,
           maxWidth: 400,
-          borderRightWidth: 1,
-          borderRightColor: colors.border,
+          borderRight: `1px solid ${colors.border}`,
+          display: 'flex',
           flexDirection: 'column',
           backgroundColor: colors.surface,
+          overflow: 'hidden',
         }}>
           {/* Search and New Message */}
           <View style={{
@@ -257,6 +333,7 @@ export default function MessagingLayoutDesktop() {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 12,
+            flexShrink: 0,
           }}>
             <View style={[styles.searchContainer, { backgroundColor: colors.background, flex: 1 }]}>
               <Ionicons name="search" size={18} color={colors.gray500} />
@@ -285,36 +362,44 @@ export default function MessagingLayoutDesktop() {
             )}
           </View>
 
-          {/* Conversations List */}
-          <FlatList
-          data={filteredConversations}
-          renderItem={renderConversation}
-          keyExtractor={(item) => item.ConversationID?.toString()}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              {loading ? (
-                <ActivityIndicator size="large" color={colors.primary} />
-              ) : (
-                <>
-                  <Ionicons name="chatbubbles-outline" size={48} color={colors.gray400} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversations</Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                    Start a new conversation
-                  </Text>
-                </>
-              )}
-            </View>
-          }
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-        />
-        </View>
+          {/* Conversations List - scrollable */}
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+            <FlatList
+            data={filteredConversations}
+            renderItem={renderConversation}
+            keyExtractor={(item) => item.ConversationID?.toString()}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            }
+            onEndReached={loadMoreConversations}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={loadingMore ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                {loading ? (
+                  <ActivityIndicator size="large" color={colors.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="chatbubbles-outline" size={48} color={colors.gray400} />
+                    <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversations</Text>
+                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                      Start a new conversation
+                    </Text>
+                  </>
+                )}
+              </View>
+            }
+            scrollEnabled={false}
+          />
+          </div>
+        </div>
 
         {/* Right Panel - Chat */}
-        <View style={{ flex: 1 }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ChatScreen
             embedded={true}
             embeddedConversationId={selectedConversation?.conversationId}
@@ -324,8 +409,8 @@ export default function MessagingLayoutDesktop() {
             onConversationUpdate={loadConversations}
             hideHeader={false}
           />
-        </View>
-      </View>
+        </div>
+      </div>
 
       {/* New Message Modal */}
       <Modal
@@ -408,7 +493,7 @@ export default function MessagingLayoutDesktop() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </div>
   );
 }
 

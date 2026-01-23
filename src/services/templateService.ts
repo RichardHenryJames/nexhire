@@ -560,6 +560,54 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This is a transaction notification fro
     },
 
     // ========================================
+    // ADMIN MESSAGE NOTIFICATIONS
+    // ========================================
+
+    'admin_new_message': {
+        subject: 'New Message from {{senderName}} on RefOpen',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    <tr>
+                        <td style="background: #4F46E5; padding: 32px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 22px;">New Message</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="color: #1a1a1a; font-size: 16px; margin: 0 0 16px 0;">
+                                You have a new message from <strong>{{senderName}}</strong>
+                            </p>
+                            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 0 0 24px 0;">
+                                <p style="color: #4a4a4a; font-size: 15px; margin: 0; white-space: pre-wrap;">{{messagePreview}}</p>
+                            </div>
+                            <a href="{{appUrl}}/messages" style="display: inline-block; background: #4F46E5; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500;">View Message</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background: #F8FAFC; padding: 24px; text-align: center; border-top: 1px solid #E2E8F0;">
+                            <p style="margin: 0; color: #64748B; font-size: 12px;">RefOpen - Get Referred, Get Hired</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+`
+    },
+
+    // ========================================
     // USER REGISTRATION
     // ========================================
 

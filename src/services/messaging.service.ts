@@ -2,9 +2,53 @@ import { dbService } from "./database.service";
 import { SignalRService } from "./signalr.service";
 import { WalletService } from "./wallet.service";
 import { PricingService } from "./pricing.service";
+import { EmailService } from "./emailService";
+import { TemplateService } from "./templateService";
 
 // Azure SignalR connection string
 const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || "";
+
+// Admin account email for message notifications
+const REFOPEN_ADMIN_EMAIL = "admin@refopen.com";
+const ADMIN_NOTIFICATION_EMAIL = "parimalkumar261@gmail.com";
+const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platform Admin UserID
+
+// Welcome message templates for new users (Job Seekers only) - sent as two messages
+const getWelcomeMessages = (firstName: string): { message1: string; message2: string } => ({
+  message1: `Hey ${firstName}! 👋
+
+Welcome to RefOpen — so glad you're here!
+
+Let's be real: job hunting sucks. Sending 100+ applications into the void, awkwardly DMing strangers on LinkedIn for referrals... we've all been there. It's exhausting and honestly, a bit cringe. 😅
+
+That's exactly why we built RefOpen.
+
+✨ **Here's how we do the heavy lifting for you:**
+
+When you tap "Ask Referral" on any job, your request is instantly broadcasted to ALL verified employees at that company. No more hunting for connections, no more awkward cold DMs. Just one click, and you're in front of people who can actually help. Plus, you get live tracking on all your referral requests! 📊
+
+🔗 **Found a job somewhere else?**
+No problem! Head to the "Ask Referral" tab and request referrals for ANY job — even ones not listed on RefOpen. Just paste the job URL or job ID, and we'll broadcast your request to verified employees at that company. Same magic, any job. ✨
+
+🎯 **Quick tips to get started:**
+• Complete your profile — referrers check profiles before accepting
+• Upload your resume — it makes their job easier
+• Browse jobs and tap "Ask Referral" on ones you love
+• Be genuine in your message — authenticity wins!`,
+
+  message2: `💼 **Already working somewhere?**
+Here's a bonus: You can become a Verified Referrer on RefOpen! Add your current work experience, verify your company email, and unlock:
+• Earn rewards for every successful referral
+• Post jobs from your company (broadcasted to all eligible seekers!)
+• Get shareable links to help more job seekers through social media
+
+Got questions? Just reply here — we're real humans and happy to help! 😊
+
+Learn more: https://www.refopen.com/about
+
+Wishing you all the best on your journey! 🚀
+— Team RefOpen 💜`
+});
 
 interface CreateConversationParams {
   user1Id: string;
@@ -329,10 +373,94 @@ export class MessagingService {
         console.error("SignalR emit error (non-critical):", err.message);
       });
 
+    // 📧 Admin message email notifications (async, non-blocking)
+    this.sendAdminMessageNotification(senderUserId, receiverUserId, content)
+      .catch((err) => {
+        console.error("Admin message email error (non-critical):", err.message);
+      });
+
     // Remove internal field from response
     delete newMessage.ReceiverUserID;
 
     return newMessage;
+  }
+
+  /**
+   * Send email notification for admin messages
+   * - If admin sends a message → email the recipient
+   * - If admin receives a message → email the admin notification address
+   */
+  private static async sendAdminMessageNotification(
+    senderUserId: string,
+    receiverUserId: string,
+    messageContent: string
+  ): Promise<void> {
+    try {
+      // Get sender and receiver emails
+      const usersQuery = `
+        SELECT UserID, Email, FirstName, LastName
+        FROM Users 
+        WHERE UserID IN (@param0, @param1)
+      `;
+      const usersResult = await dbService.executeQuery(usersQuery, [senderUserId, receiverUserId]);
+      
+      const users = usersResult.recordset;
+      const sender = users.find((u: any) => u.UserID === senderUserId);
+      const receiver = users.find((u: any) => u.UserID === receiverUserId);
+      
+      if (!sender || !receiver) return;
+      
+      const senderEmail = sender.Email?.toLowerCase();
+      const receiverEmail = receiver.Email?.toLowerCase();
+      const senderName = `${sender.FirstName || ''} ${sender.LastName || ''}`.trim() || 'RefOpen User';
+      const receiverName = `${receiver.FirstName || ''} ${receiver.LastName || ''}`.trim() || 'RefOpen User';
+      
+      const messagePreview = messageContent.length > 300 
+        ? messageContent.substring(0, 297) + '...' 
+        : messageContent;
+      
+      // Case 1: Admin (refopen@admin.com) sends a message → email the recipient
+      if (senderEmail === REFOPEN_ADMIN_EMAIL.toLowerCase()) {
+        console.log(`📧 Admin sent message to ${receiverEmail}, sending email notification...`);
+        
+        const template = TemplateService.render('admin_new_message', {
+          senderName: 'RefOpen Support',
+          messagePreview,
+          appUrl: process.env.APP_URL || 'https://www.refopen.com'
+        });
+        
+        await EmailService.send({
+          to: receiverEmail,
+          subject: template.subject,
+          html: template.html,
+          emailType: 'admin_message_to_user'
+        });
+        
+        console.log(`✅ Admin message notification sent to ${receiverEmail}`);
+      }
+      
+      // Case 2: Someone sends a message to admin → email admin notification address
+      if (receiverEmail === REFOPEN_ADMIN_EMAIL.toLowerCase()) {
+        console.log(`📧 User ${senderEmail} sent message to admin, notifying ${ADMIN_NOTIFICATION_EMAIL}...`);
+        
+        const template = TemplateService.render('admin_new_message', {
+          senderName: `${senderName} (${senderEmail})`,
+          messagePreview,
+          appUrl: process.env.APP_URL || 'https://www.refopen.com'
+        });
+        
+        await EmailService.send({
+          to: ADMIN_NOTIFICATION_EMAIL,
+          subject: `New message from ${senderName} on RefOpen`,
+          html: template.html,
+          emailType: 'user_message_to_admin'
+        });
+        
+        console.log(`✅ User message notification sent to admin at ${ADMIN_NOTIFICATION_EMAIL}`);
+      }
+    } catch (error: any) {
+      console.error('Error sending admin message notification:', error.message);
+    }
   }
 
   /**
@@ -808,5 +936,100 @@ SELECT COUNT(*) as Total
       message: `Profile view access unlocked for ${durationDays} days`,
       newBalance: wallet.Balance - profileViewCost
     };
+  }
+
+  /**
+   * Send welcome message from Platform Admin to new user
+   * Called during user registration - skips email notification
+   * Sends two separate messages for better readability
+   */
+  static async sendWelcomeMessageToNewUser(newUserId: string, firstName: string): Promise<void> {
+    try {
+      console.log(`📨 Sending welcome messages to new user: ${newUserId}`);
+      
+      // Get or create conversation between admin and new user
+      const conversation = await this.getOrCreateConversation({
+        user1Id: PLATFORM_ADMIN_USER_ID,
+        user2Id: newUserId
+      });
+      
+      if (!conversation?.ConversationID) {
+        console.error('Failed to create conversation for welcome message');
+        return;
+      }
+      
+      // Generate personalized welcome messages (two parts)
+      const welcomeMessages = getWelcomeMessages(firstName || 'there');
+      
+      // Insert first message
+      const preview1 = welcomeMessages.message1.length > 200 
+        ? welcomeMessages.message1.substring(0, 197) + "..." 
+        : welcomeMessages.message1;
+      
+      const insertQuery1 = `
+        INSERT INTO Messages (
+          ConversationID, 
+          SenderUserID, 
+          Content, 
+          MessageType,
+          CreatedAt
+        )
+        VALUES (@param0, @param1, @param2, 'Text', GETUTCDATE());
+        
+        UPDATE Conversations
+        SET 
+          LastMessageAt = GETUTCDATE(),
+          LastMessagePreview = @param3,
+          LastMessageSenderID = @param1,
+          UpdatedAt = GETUTCDATE()
+        WHERE ConversationID = @param0;
+      `;
+      
+      await dbService.executeQuery(insertQuery1, [
+        conversation.ConversationID,
+        PLATFORM_ADMIN_USER_ID,
+        welcomeMessages.message1,
+        preview1
+      ]);
+      
+      // Delay between messages to ensure proper ordering (message 1 before message 2)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Insert second message (with explicit later timestamp)
+      const preview2 = welcomeMessages.message2.length > 200 
+        ? welcomeMessages.message2.substring(0, 197) + "..." 
+        : welcomeMessages.message2;
+      
+      const insertQuery2 = `
+        INSERT INTO Messages (
+          ConversationID, 
+          SenderUserID, 
+          Content, 
+          MessageType,
+          CreatedAt
+        )
+        VALUES (@param0, @param1, @param2, 'Text', GETUTCDATE());
+        
+        UPDATE Conversations
+        SET 
+          LastMessageAt = GETUTCDATE(),
+          LastMessagePreview = @param3,
+          LastMessageSenderID = @param1,
+          UpdatedAt = GETUTCDATE()
+        WHERE ConversationID = @param0;
+      `;
+      
+      await dbService.executeQuery(insertQuery2, [
+        conversation.ConversationID,
+        PLATFORM_ADMIN_USER_ID,
+        welcomeMessages.message2,
+        preview2
+      ]);
+      
+      console.log(`✅ Welcome messages sent to user ${newUserId}`);
+    } catch (error: any) {
+      // Don't fail registration if welcome message fails
+      console.error('Error sending welcome message (non-critical):', error.message);
+    }
   }
 }

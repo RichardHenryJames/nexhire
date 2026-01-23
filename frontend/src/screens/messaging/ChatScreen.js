@@ -73,6 +73,9 @@ export default function ChatScreen({
 
   const loadMessages = useCallback(
     async (pageNum = 1, append = false) => {
+      // Guard: Don't load if no conversation selected
+      if (!conversationId) return;
+      
       try {
         if (pageNum === 1) setLoading(true);
         else setLoadingMore(true);
@@ -128,6 +131,9 @@ export default function ChatScreen({
   }, [messages, loadOtherUserProfile]);
 
   useEffect(() => {
+    // Guard: Don't run if no conversation is selected (desktop embedded mode initial state)
+    if (!conversationId) return;
+    
     let isMounted = true;
     let pollingInterval = null;
 
@@ -496,7 +502,7 @@ export default function ChatScreen({
   // For embedded mode - show placeholder when no conversation selected
   if (embedded && !conversationId) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background, height: '100%', justifyContent: 'center', alignItems: 'center' }]}>
         <Ionicons name="chatbubbles-outline" size={80} color={colors.gray400} />
         <Text style={[styles.emptyTitle, { color: colors.text, marginTop: 16 }]}>Select a conversation</Text>
         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -513,9 +519,10 @@ export default function ChatScreen({
         style={{
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          height: embedded ? "100%" : "100vh",
           backgroundColor: colors.background,
-          alignItems: responsive.isDesktop ? "center" : "stretch",
+          alignItems: responsive.isDesktop && !embedded ? "center" : "stretch",
+          overflow: "hidden",
         }}
       >
         <div
@@ -523,8 +530,9 @@ export default function ChatScreen({
             display: "flex",
             flexDirection: "column",
             width: "100%",
-            maxWidth: responsive.isDesktop ? 900 : "100%",
+            maxWidth: responsive.isDesktop && !embedded ? 900 : "100%",
             height: "100%",
+            overflow: "hidden",
           }}
         >
         <div
