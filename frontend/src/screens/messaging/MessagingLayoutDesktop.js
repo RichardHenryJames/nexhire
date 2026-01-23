@@ -41,7 +41,7 @@ export default function MessagingLayoutDesktop() {
   
   // Pagination state for infinite scroll
   const [loadingMore, setLoadingMore] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, hasMore: true });
   
   // Refs to prevent duplicate load-more triggers (like JobsScreen)
   const isLoadingMoreRef = useRef(false);
@@ -69,6 +69,13 @@ export default function MessagingLayoutDesktop() {
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
+      // Reset pagination refs for fresh load
+      lastLoadedPageRef.current = 0;
+      isLoadingMoreRef.current = false;
+      
+      // Reset pagination state immediately
+      setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
+      
       const result = await messagingApi.getMyConversations(1, pagination.pageSize);
       if (result.success) {
         const validConversations = (result.data || []).filter(
@@ -94,8 +101,9 @@ export default function MessagingLayoutDesktop() {
 
   // Load more conversations (infinite scroll)
   const loadMoreConversations = useCallback(async () => {
-    if (loading || loadingMore || !pagination.hasMore) return;
+    // Use ref for loading check to avoid stale closure
     if (isLoadingMoreRef.current) return;
+    if (!pagination.hasMore) return;
     
     const nextPage = pagination.page + 1;
     
@@ -115,15 +123,15 @@ export default function MessagingLayoutDesktop() {
         setConversations(prev => [...prev, ...newConversations]);
         
         const meta = result.meta || {};
+        const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === pagination.pageSize);
+        
         setPagination(prev => ({
           ...prev,
           page: nextPage,
-          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === prev.pageSize)
+          hasMore: newConversations.length === 0 ? false : hasMore
         }));
         
-        if (newConversations.length === 0) {
-          setPagination(prev => ({ ...prev, hasMore: false }));
-        } else {
+        if (newConversations.length > 0) {
           lastLoadedPageRef.current = nextPage;
         }
       }
@@ -133,7 +141,7 @@ export default function MessagingLayoutDesktop() {
       setLoadingMore(false);
       isLoadingMoreRef.current = false;
     }
-  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize]);
+  }, [pagination.hasMore, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     loadConversations();

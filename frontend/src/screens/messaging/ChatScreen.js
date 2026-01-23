@@ -985,6 +985,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    // Fix for mobile web where 100vh includes address bar
+    ...(Platform.OS === 'web' ? {
+      height: '100%',
+      minHeight: 0,
+    } : {}),
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       alignItems: 'center',
     } : {}),
@@ -993,6 +998,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    // Fix for mobile web
+    ...(Platform.OS === 'web' ? {
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
+    } : {}),
   },
   loadingContainer: {
     flex: 1,
@@ -1012,6 +1023,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     zIndex: 10,
+    flexShrink: 0,
+    minHeight: 56,
   },
   backButton: { padding: 4, marginRight: 12 },
   profilePicture: {

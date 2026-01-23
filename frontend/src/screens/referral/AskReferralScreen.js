@@ -589,16 +589,21 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Custom Sticky Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Ask for Referral</Text>
+      </View>
+
       <View style={styles.innerContainer}>
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 80 : 120 }}>
           {/* Google AdSense Ad at top - Referral page style */}
           <AdCard variant="referral" />
 
-        {/* ✅ NEW: Dynamic Fortune 500 Company Showcase */}
+        {/* Intro Section */}
         <View style={styles.introSection}>
-          <Text style={styles.introTitle}>🚀 Join Thousands Getting Referred</Text>
+          <Text style={styles.introTitle}>🚀 Broadcast Your Request</Text>
           <Text style={styles.introSubtitle}>
-            Top companies accept referrals every day
+            Reach employees at top companies.
           </Text>
           
           {/* Animated Company Logo Display */}
@@ -635,10 +640,6 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
             </Animated.View>
           )}
           
-          {/* Value Proposition - Short & Impactful */}
-          <Text style={styles.valueText}>
-            Get referrals from employees working at your dream company who are ready to refer candidates. <Text style={styles.valueHighlight}>Increase your chances by 15x.</Text>
-          </Text>
         </View>
 
         {/* Form */}
@@ -1023,6 +1024,28 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       alignItems: 'center',
     } : {}),
+  },
+  // Custom sticky header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    // Make header sticky on web
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
+    zIndex: 10,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
   },
   innerContainer: {
     width: '100%',

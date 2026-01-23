@@ -607,41 +607,13 @@ function MainStack() {
           headerShown: false, // Custom header in component
         }}
       />
-      {/* ?? NEW: Messages/Conversations screen */}
+      {/* 🆕 NEW: Messages/Conversations screen */}
       <Stack.Screen
         name="Messages"
         component={ConversationsScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          title: "Messages",
-          headerBackTitleVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                const navState = navigation.getState();
-                const routes = navState?.routes || [];
-                const currentIndex = navState?.index || 0;
-                
-                // If we have more than 1 route in the stack, go back normally
-                if (routes.length > 1 && currentIndex > 0) {
-                  navigation.goBack();
-                } else {
-                  // Hard refresh scenario - navigate to Home tab
-                  navigation.navigate('Main', {
-                    screen: 'MainTabs',
-                    params: {
-                      screen: 'Home'
-                    }
-                  });
-                }
-              }}
-              style={{ paddingLeft: 16 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
+        options={{
+          headerShown: false, // Custom header in component for sticky behavior on web
+        }}
       />
       {/* ?? NEW: View other user's profile */}
       <Stack.Screen
@@ -717,9 +689,7 @@ function MainStack() {
         name="AskReferral"
         component={AskReferralScreen}
         options={{
-          headerShown: true,
-          title: "Ask for Referral",
-          headerBackTitleVisible: false,
+          headerShown: false, // Custom sticky header in component
         }}
       />
       <Stack.Screen

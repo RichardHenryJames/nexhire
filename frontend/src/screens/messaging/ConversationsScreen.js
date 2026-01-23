@@ -54,7 +54,7 @@ function ConversationsScreenMobile() {
   
   // Pagination state for infinite scroll
   const [loadingMore, setLoadingMore] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, hasMore: true });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, hasMore: true });
   
   // Refs to prevent duplicate load-more triggers (like JobsScreen)
   const isLoadingMoreRef = useRef(false);
@@ -82,6 +82,13 @@ function ConversationsScreenMobile() {
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
+      // Reset pagination refs for fresh load
+      lastLoadedPageRef.current = 0;
+      isLoadingMoreRef.current = false;
+      
+      // Reset pagination state immediately
+      setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
+      
       // Fetch both in parallel for faster loading
       const [result, unreadResult] = await Promise.all([
         messagingApi.getMyConversations(1, pagination.pageSize),
@@ -117,8 +124,9 @@ function ConversationsScreenMobile() {
 
   // Load more conversations (infinite scroll)
   const loadMoreConversations = useCallback(async () => {
-    if (loading || loadingMore || !pagination.hasMore) return;
+    // Use ref for loading check to avoid stale closure
     if (isLoadingMoreRef.current) return;
+    if (!pagination.hasMore) return;
     
     const nextPage = pagination.page + 1;
     
@@ -138,15 +146,15 @@ function ConversationsScreenMobile() {
         setConversations(prev => [...prev, ...newConversations]);
         
         const meta = result.meta || {};
+        const hasMore = meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === pagination.pageSize);
+        
         setPagination(prev => ({
           ...prev,
           page: nextPage,
-          hasMore: meta.hasMore !== undefined ? Boolean(meta.hasMore) : (newConversations.length === prev.pageSize)
+          hasMore: newConversations.length === 0 ? false : hasMore
         }));
         
-        if (newConversations.length === 0) {
-          setPagination(prev => ({ ...prev, hasMore: false }));
-        } else {
+        if (newConversations.length > 0) {
           lastLoadedPageRef.current = nextPage;
         }
       }
@@ -156,7 +164,7 @@ function ConversationsScreenMobile() {
       setLoadingMore(false);
       isLoadingMoreRef.current = false;
     }
-  }, [loading, loadingMore, pagination.hasMore, pagination.page, pagination.pageSize]);
+  }, [pagination.hasMore, pagination.page, pagination.pageSize]);
 
   // Refresh whenever the screen comes into focus (also handles initial load)
   useFocusEffect(
@@ -311,152 +319,195 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
   }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-}
+  // Handle back navigation
+  const handleBack = () => {
+    const navState = navigation.getState();
+    const routes = navState?.routes || [];
+    const currentIndex = navState?.index || 0;
+    
+    // If we have more than 1 route in the stack, go back normally
+    if (routes.length > 1 && currentIndex > 0) {
+      navigation.goBack();
+    } else {
+      // Hard refresh scenario - navigate to Home tab
+      navigation.navigate('Main', {
+        screen: 'MainTabs',
+        params: {
+          screen: 'Home'
+        }
+      });
+    }
+  };
 
+  // Same structure as JobsScreen - search header fixed, list scrolls
   return (
     <View style={styles.container}>
-      <View style={styles.innerContainer}>
-      {/* Search Bar */}
+      {/* Custom Header - Fixed at top (like ProfileScreen's stickyHeader) */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={handleBack}
+          style={styles.headerButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Messages</Text>
+        
+        {isAdmin ? (
+          <TouchableOpacity 
+            onPress={() => setShowNewMessageModal(true)}
+            style={styles.headerButton}
+          >
+            <Ionicons name="add" size={24} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerButton} />
+        )}
+      </View>
+
+      {/* Search Bar - Fixed at top (like JobsScreen searchHeader) */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
         <TextInput
-   style={styles.searchInput}
+          style={styles.searchInput}
           placeholder="Search conversations..."
-    value={searchQuery}
-    onChangeText={setSearchQuery}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
           placeholderTextColor={colors.gray400}
         />
       </View>
 
-      {/* Conversations List */}
-      <FlatList
-      data={filteredConversations}
-        renderItem={renderConversation}
-        keyExtractor={(item) => item.ConversationID}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={
-<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-        onEndReached={loadMoreConversations}
-        onEndReachedThreshold={0.3}
-        ListFooterComponent={loadingMore ? (
-          <View style={{ paddingVertical: 20 }}>
-            <ActivityIndicator size="small" color={colors.primary} />
+      {/* Conversations List Container (like JobsScreen's flex:1 wrapper) */}
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : null}
-  ListEmptyComponent={
- <View style={styles.emptyContainer}>
-  <Ionicons name="chatbubbles-outline" size={64} color={colors.gray300} />
-            <Text style={styles.emptyText}>No conversations yet</Text>
-    {isAdmin && (
-      <Text style={styles.emptySubtext}>
-              Tap the + button to start a new conversation
-         </Text>
-    )}
-     </View>
-        }
-      />
+        ) : (
+          <FlatList
+            data={filteredConversations}
+            renderItem={renderConversation}
+            keyExtractor={(item) => item.ConversationID}
+            style={styles.conversationsList}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            onEndReached={loadMoreConversations}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={loadingMore ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="chatbubbles-outline" size={64} color={colors.gray300} />
+                <Text style={styles.emptyText}>No conversations yet</Text>
+                {isAdmin && (
+                  <Text style={styles.emptySubtext}>
+                    Tap the + button to start a new conversation
+                  </Text>
+                )}
+              </View>
+            }
+          />
+        )}
       </View>
       
- {/* ?? NEW: New Message Modal */}
+      {/* New Message Modal */}
       <Modal
         visible={showNewMessageModal}
         animationType="slide"
-    presentationStyle="pageSheet"
-onRequestClose={() => {
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
           setShowNewMessageModal(false);
- setUserSearchQuery('');
-  setSearchResults([]);
+          setUserSearchQuery('');
+          setSearchResults([]);
         }}
->
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-      <TouchableOpacity onPress={() => {
+            <TouchableOpacity onPress={() => {
               setShowNewMessageModal(false);
-       setUserSearchQuery('');
-  setSearchResults([]);
-      }}>
-    <Ionicons name="close" size={24} color={colors.text} />
-   </TouchableOpacity>
- <View style={styles.modalTitleContainer}>
+              setUserSearchQuery('');
+              setSearchResults([]);
+            }}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <View style={styles.modalTitleContainer}>
               <Ionicons name="add-circle" size={24} color={colors.primary} style={{ marginRight: 8 }} />
               <Text style={styles.modalTitle}>New Message</Text>
             </View>
-        <View style={{ width: 24 }} />
+            <View style={{ width: 24 }} />
           </View>
           
-       <View style={styles.modalSearchContainer}>
-   <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
-        <TextInput
-    style={styles.modalSearchInput}
-          placeholder="Search users by name..."
- value={userSearchQuery}
-   onChangeText={setUserSearchQuery}
-      placeholderTextColor={colors.gray400}
-       autoFocus
-        />
+          <View style={styles.modalSearchContainer}>
+            <Ionicons name="search" size={20} color={colors.gray500} style={styles.searchIcon} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search users by name..."
+              value={userSearchQuery}
+              onChangeText={setUserSearchQuery}
+              placeholderTextColor={colors.gray400}
+              autoFocus
+            />
           </View>
    
-    {searchingUsers ? (
-<View style={styles.modalLoadingContainer}>
-<ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.modalLoadingText}>Searching...</Text>
-       </View>
- ) : searchResults.length > 0 ? (
-        <FlatList
-       data={searchResults}
-      keyExtractor={(item) => item.UserID}
-       renderItem={({ item }) => (
-       <TouchableOpacity
-          style={styles.userResultItem}
-       onPress={() => handleSelectUser(item)}
-     activeOpacity={0.7}
-         >
-          <View style={styles.userResultAvatar}>
-  {item.ProfilePictureURL ? (
-     <Image
-       source={{ uri: item.ProfilePictureURL }}
-       style={styles.userResultAvatarImage}
-  />
-       ) : (
-      <View style={styles.userResultAvatarPlaceholder}>
-        <Text style={styles.userResultAvatarText}>
-           {item.UserName?.charAt(0).toUpperCase()}
-           </Text>
- </View>
-    )}
-        </View>
-        <Text style={styles.userResultName}>{item.UserName}</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-       </TouchableOpacity>
- )}
-      />
-       ) : userSearchQuery.trim().length > 0 ? (
-    <View style={styles.modalEmptyState}>
- <Ionicons name="search-outline" size={64} color={colors.gray300} />
-       <Text style={styles.modalEmptyText}>No users found</Text>
+          {searchingUsers ? (
+            <View style={styles.modalLoadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.modalLoadingText}>Searching...</Text>
+            </View>
+          ) : searchResults.length > 0 ? (
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item) => item.UserID}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.userResultItem}
+                  onPress={() => handleSelectUser(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.userResultAvatar}>
+                    {item.ProfilePictureURL ? (
+                      <Image
+                        source={{ uri: item.ProfilePictureURL }}
+                        style={styles.userResultAvatarImage}
+                      />
+                    ) : (
+                      <View style={styles.userResultAvatarPlaceholder}>
+                        <Text style={styles.userResultAvatarText}>
+                          {item.UserName?.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.userResultName}>{item.UserName}</Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+            />
+          ) : userSearchQuery.trim().length > 0 ? (
+            <View style={styles.modalEmptyState}>
+              <Ionicons name="search-outline" size={64} color={colors.gray300} />
+              <Text style={styles.modalEmptyText}>No users found</Text>
               <Text style={styles.modalEmptySubtext}>
-  Try a different search term
+                Try a different search term
               </Text>
-          </View>
- ) : (
-   <View style={styles.modalEmptyState}>
- <Ionicons name="people-outline" size={64} color={colors.gray300} />
-    <Text style={styles.modalEmptyText}>Search for users</Text>
-          <Text style={styles.modalEmptySubtext}>
-    Enter a name to find someone to message
-       </Text>
-       </View>
-   )}
-      </View>
-   </Modal>
-      
+            </View>
+          ) : (
+            <View style={styles.modalEmptyState}>
+              <Ionicons name="people-outline" size={64} color={colors.gray300} />
+              <Text style={styles.modalEmptyText}>Search for users</Text>
+              <Text style={styles.modalEmptySubtext}>
+                Enter a name to find someone to message
+              </Text>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -465,20 +516,38 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
-    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surface,
+  },
+  // Custom header (like ProfileScreen's stickyHeader)
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    // Make header sticky on web
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
+    zIndex: 11,
+  },
+  headerButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -488,6 +557,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.gray100,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    // Make header sticky on web (like HomeScreen's headerCompact)
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
+    zIndex: 10,
   },
   searchIcon: {
     marginRight: 8,
@@ -497,6 +570,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     outlineStyle: 'none',
+  },
+  conversationsList: {
+    flex: 1,
+    backgroundColor: colors.surface,
   },
   conversationItem: {
     flexDirection: 'row',

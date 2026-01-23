@@ -464,8 +464,7 @@ innerContainer: {
   flex: 1,
 },
 headerFixed: {
-  paddingTop: Platform.OS === 'ios' ? 44 : 16,
-  paddingBottom: 12,
+  paddingVertical: 12,
   position: Platform.OS === 'web' ? 'sticky' : 'relative',
   top: 0,
   left: 0,
