@@ -830,7 +830,7 @@ INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, I
 INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (5, N'MIN_AMOUNT', N'1', N'Minimum recharge amount', 1, '2026-01-03T18:51:12.293Z', '2026-01-03T18:51:12.293Z');
 INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (6, N'MAX_AMOUNT', N'50000', N'Maximum recharge amount', 1, '2026-01-03T18:51:12.293Z', '2026-01-03T18:51:12.293Z');
 INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (7, N'PROCESSING_TIME', N'1 business day', N'Time to process manual payments', 1, '2026-01-03T18:51:12.293Z', '2026-01-03T18:51:12.293Z');
-INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (8, N'SUPPORT_EMAIL', N'support@refopen.com', N'Support email', 1, '2026-01-03T18:51:12.293Z', '2026-01-03T18:51:12.293Z');
+INSERT INTO PaymentSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (8, N'SUPPORT_URL', N'https://www.refopen.com/support', N'Support page URL', 1, '2026-01-03T18:51:12.293Z', '2026-01-03T18:51:12.293Z');
 SET IDENTITY_INSERT PaymentSettings OFF;
 GO
 

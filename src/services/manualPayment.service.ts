@@ -39,7 +39,7 @@ export interface PaymentSettings {
   minAmount: number;
   maxAmount: number;
   processingTime: string;
-  supportEmail: string;
+  supportUrl: string;
   supportPhone: string;
 }
 
@@ -70,7 +70,7 @@ export const getPaymentSettings = async (): Promise<PaymentSettings> => {
       minAmount: parseFloat(settings['MIN_AMOUNT']) || 100,
       maxAmount: parseFloat(settings['MAX_AMOUNT']) || 50000,
       processingTime: settings['PROCESSING_TIME'] || '1 business day',
-      supportEmail: settings['SUPPORT_EMAIL'] || '',
+      supportUrl: settings['SUPPORT_URL'] || 'https://www.refopen.com/support',
       supportPhone: settings['SUPPORT_PHONE'] || ''
     };
   } catch (error: any) {
@@ -87,7 +87,7 @@ export const getPaymentSettings = async (): Promise<PaymentSettings> => {
       minAmount: 100,
       maxAmount: 50000,
       processingTime: '1 business day',
-      supportEmail: 'support@refopen.com',
+      supportUrl: 'https://www.refopen.com/support',
       supportPhone: ''
     };
   }

@@ -18,7 +18,6 @@ interface RenderedTemplate {
 const APP_CONFIG = {
     appName: 'RefOpen',
     appUrl: process.env.APP_URL || 'https://www.refopen.com',
-    supportEmail: 'support@refopen.com',
     logoUrl: 'https://www.refopen.com/logo.png'
 };
 
@@ -989,7 +988,6 @@ export class TemplateService {
             ...data,
             appName: APP_CONFIG.appName,
             appUrl: APP_CONFIG.appUrl,
-            supportEmail: APP_CONFIG.supportEmail,
             logoUrl: APP_CONFIG.logoUrl,
             unsubscribeUrl: `${APP_CONFIG.appUrl}/settings/notifications`,
             currentYear: new Date().getFullYear()

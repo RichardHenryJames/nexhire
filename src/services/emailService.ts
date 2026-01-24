@@ -13,7 +13,6 @@ import { dbService } from './database.service';
 const EMAIL_CONFIG = {
     senderAddress: process.env.EMAIL_SENDER_ADDRESS || 'noreply@refopen.com',
     connectionString: process.env.ACS_CONNECTION_STRING || '',
-    replyTo: process.env.EMAIL_REPLY_TO || 'support@refopen.com',
     appName: 'RefOpen',
     appUrl: process.env.APP_URL || 'https://www.refopen.com'
 };
@@ -40,7 +39,6 @@ interface SendEmailOptions {
     subject: string;
     html: string;
     text?: string;
-    replyTo?: string;
     userId?: string;
     emailType?: string;
     referenceType?: string;
@@ -108,11 +106,6 @@ export class EmailService {
                     to: recipients.map(email => ({ address: email }))
                 }
             };
-
-            // Add reply-to if specified
-            if (options.replyTo || EMAIL_CONFIG.replyTo) {
-                message.replyTo = [{ address: options.replyTo || EMAIL_CONFIG.replyTo }];
-            }
 
             // Send email
             const poller = await client.beginSend(message);

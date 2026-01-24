@@ -1202,7 +1202,7 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 | Channel | Purpose | Response Time |
 |---------|---------|---------------|
-| **📧 Email**: [support@refopen.com](mailto:support@refopen.com) | General support | 24-48 hours |
+| **🌐 Help Center**: [refopen.com/support](https://www.refopen.com/support) | General support | Always available |
 | **🐛 GitHub Issues**: [Issues](https://github.com/RichardHenryJames/refopen/issues) | Bug reports, feature requests | 1-3 business days |
 | **💬 Discussions**: [GitHub Discussions](https://github.com/RichardHenryJames/refopen/discussions) | Community Q&A | Community-driven |
 | **📚 Documentation**: [Docs](./docs/) | Technical documentation | Always available |

@@ -225,7 +225,7 @@ if (Test-Path $indexPath) {
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "customer service",
-        "email": "support@refopen.com"
+        "url": "https://www.refopen.com/support"
       }
     }
     </script>
