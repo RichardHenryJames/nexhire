@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 import { BLOG_ARTICLES } from './BlogListScreen';
 
 // Full article content
@@ -14,123 +15,506 @@ const ARTICLE_CONTENT = {
     sections: [
       {
         title: 'Why Referrals Matter in Your Job Search',
-        content: `Getting a job referral can be the single most impactful thing you do in your job search. Studies consistently show that referred candidates are 15 times more likely to get hired compared to those who apply through job boards.
+        content: `Getting a job referral can be the single most impactful thing you do in your job search. Studies consistently show that referred candidates are 15 times more likely to get hired compared to those who apply through job boards. This isn't just a minor advantage—it's a game-changing difference that can transform your entire job search strategy.
 
-But why are referrals so powerful? The answer lies in trust. When an employee refers someone, they're putting their reputation on the line. Hiring managers know this and give referred candidates more attention and consideration.
+But why are referrals so powerful? The answer lies in trust and social proof. When an employee refers someone, they're putting their professional reputation on the line. They're essentially telling their employer, "I vouch for this person." Hiring managers know this and give referred candidates significantly more attention and consideration than anonymous applicants.
 
-At top companies like Google, Amazon, Microsoft, and Meta, a significant percentage of hires come through employee referrals. In fact, many companies actively encourage their employees to refer qualified candidates by offering referral bonuses ranging from ₹50,000 to ₹5,00,000 or more.`
+The psychology behind this is fascinating. Employers face a fundamental challenge: they need to evaluate candidates based on limited information. Resumes can be embellished, interviews can be rehearsed, but a referral from a trusted employee provides genuine insight into a candidate's character, work ethic, and cultural fit.
+
+At top companies like Google, Amazon, Microsoft, Meta, Apple, and Netflix, a significant percentage of hires—often 30-50%—come through employee referrals. In fact, many companies actively encourage their employees to refer qualified candidates by offering referral bonuses ranging from ₹50,000 to ₹5,00,000 or more depending on the role and level.
+
+Consider these compelling statistics:
+• Referred candidates are hired 55% faster than those from career sites
+• The cost-per-hire for referred candidates is significantly lower
+• Referred employees have 45% higher retention rates after two years
+• 88% of employers rate employee referrals as the best source for above-average applicants
+
+The bottom line: if you're serious about landing your dream job, referrals should be at the center of your job search strategy, not an afterthought.`
       },
       {
         title: 'Step 1: Identify Your Target Companies',
-        content: `Before you start seeking referrals, you need to know where you want to work. Create a list of 10-15 companies that align with your career goals, skills, and values.
+        content: `Before you start seeking referrals, you need to know exactly where you want to work. Spray-and-pray doesn't work with referrals—you need to be strategic and focused. Create a prioritized list of 10-15 companies that align with your career goals, skills, and values.
 
-Consider factors like:
-• Company culture and work environment
-• Growth opportunities and career path
-• Compensation and benefits
-• Location or remote work options
-• Technology stack (for tech roles)
-• Company mission and values
+Consider these factors when building your list:
 
-Research each company thoroughly. Understand their products, recent news, and challenges they're solving. This knowledge will help you connect with employees and demonstrate genuine interest.`
+Company Culture and Work Environment:
+• What's the management style? (Flat vs. hierarchical)
+• How do teams collaborate?
+• What's the work-life balance like?
+• Is remote work supported?
+• What do current and former employees say on Glassdoor?
+
+Growth Opportunities and Career Path:
+• Does the company promote from within?
+• What's the typical career progression?
+• Are there learning and development programs?
+• How often do people get promoted?
+• What skills will you develop?
+
+Compensation and Benefits:
+• What are the salary ranges for your target role?
+• What's the equity/stock component?
+• What benefits are offered (health, retirement, etc.)?
+• Are there performance bonuses?
+• Check Levels.fyi and Glassdoor for data
+
+Technology Stack (for tech roles):
+• What programming languages and frameworks do they use?
+• Are they using modern technologies?
+• Do they contribute to open source?
+• What's their engineering blog like?
+• Will you be learning valuable skills?
+
+Company Mission and Values:
+• Do you believe in what they're building?
+• Does their mission resonate with you?
+• Are their values aligned with yours?
+• How do they treat their employees and community?
+
+Research each company thoroughly. Understand their products, recent news, funding status, competitors, and challenges they're solving. This knowledge will help you connect with employees and demonstrate genuine interest when you reach out. Set up Google Alerts for your target companies to stay informed about news and developments.
+
+Pro Tip: Create a spreadsheet tracking your target companies with columns for company name, target roles, employees you know, networking status, and application status. This will help you stay organized as you progress through your job search.`
       },
       {
         title: 'Step 2: Build Your Professional Network',
-        content: `The best referrals come from people who know and trust you. Here's how to build meaningful connections:
+        content: `The best referrals come from people who know and trust you. Building a strong professional network takes time, but it's an investment that pays dividends throughout your career. Here's how to build meaningful connections:
 
-LinkedIn Networking:
-• Optimize your LinkedIn profile with a professional photo and compelling headline
-• Connect with employees at your target companies
-• Engage with their posts by leaving thoughtful comments
+LinkedIn Networking (The Most Important Platform):
+
+Your LinkedIn profile is your professional landing page. Before reaching out to anyone, make sure it's optimized:
+• Professional headshot with good lighting and a neutral background
+• Compelling headline that showcases your value proposition
+• Detailed About section with keywords and personality
+• Complete work history with quantified achievements
+• Skills section with endorsements
+• Recommendations from colleagues and managers
+
+Once your profile is ready, start connecting strategically:
+• Search for employees at your target companies
+• Look for 2nd-degree connections (mutual connections)
+• Connect with recruiters at target companies
+• Follow company pages and engage with their content
+• Join LinkedIn Groups related to your industry
+
+Engagement is key. Don't just connect—interact:
+• Leave thoughtful comments on posts (not just "Great post!")
 • Share valuable content related to your industry
+• Congratulate connections on work anniversaries and promotions
+• Post your own insights and learnings
+• Aim for 10-15 minutes of engagement daily
 
-Alumni Networks:
-• Join your college/university alumni groups
-• Attend alumni events and meetups
-• Reach out to alumni working at target companies
+Alumni Networks (Your Secret Weapon):
+
+Your college or university alumni network is incredibly powerful:
+• Alumni are much more likely to respond to fellow alumni
+• Join official alumni groups on LinkedIn and Facebook
+• Attend alumni events and reunions
+• Use your university's alumni directory
+• Reach out to alumni at target companies with a personalized message
+
+Sample alumni outreach message:
+"Hi [Name], I noticed we're both [University] alumni! I'm currently exploring opportunities in [field] and saw you're doing amazing work at [Company]. Would you have 15 minutes for a quick chat about your experience there? I'd really appreciate any insights you could share. Go [Mascot]!"
 
 Professional Communities:
-• Join industry-specific Slack groups and Discord servers
-• Participate in tech meetups and conferences
+• Join industry-specific Slack groups (many are free)
+• Participate in Discord servers for your field
+• Attend local tech meetups and conferences
 • Contribute to open-source projects
-• Engage in online forums and communities`
+• Engage in forums like Reddit, Hacker News, or Stack Overflow
+• Join professional associations in your field
+
+Building Genuine Relationships:
+
+The key to networking is authenticity. Don't just reach out when you need something:
+• Offer value before asking for favors
+• Share job postings with your network
+• Make introductions between people who could help each other
+• Celebrate others' wins
+• Stay in touch regularly, not just when job searching
+
+Remember: Networking is about building relationships, not collecting contacts. Focus on quality over quantity. Ten genuine connections are worth more than 1,000 random LinkedIn connections.`
       },
       {
         title: 'Step 3: Use RefOpen to Request Referrals',
-        content: `RefOpen makes it easy to connect with employees who are willing to provide referrals. Here's how to use the platform effectively:
+        content: `RefOpen makes it easy to connect with employees who are willing to provide referrals at top companies. Unlike cold outreach where you're hoping someone will respond, RefOpen connects you with verified employees who have explicitly opted in to help job seekers.
 
-1. Complete Your Profile: Add your work experience, skills, education, and upload your resume. A complete profile increases your chances of getting a referral.
+Here's how to use the platform effectively:
 
-2. Search for Jobs: Browse thousands of job listings from top companies. Use filters to find roles that match your skills and preferences.
+1. Complete Your Profile (Critical!):
+Your profile is your first impression. A complete, professional profile dramatically increases your chances of getting a referral:
+• Add a professional profile photo
+• Write a compelling headline and summary
+• List your complete work experience with achievements
+• Add your education and certifications
+• Include your skills and expertise areas
+• Upload your updated resume
+• Link to your GitHub, portfolio, or LinkedIn
 
-3. Request a Referral: When you find a job you're interested in, click "Ask for Referral." Your request will be sent to verified employees at that company.
+Referrers will review your profile before accepting your request. Make sure it represents you well!
 
-4. Follow Up: Once a referrer claims your request, keep them updated on your application status. A good relationship can lead to more referrals in the future.`
+2. Search for Jobs Strategically:
+Browse thousands of job listings from top companies using RefOpen's powerful search:
+• Use filters to narrow by company, location, role type, and experience level
+• Save searches for roles you're interested in
+• Set up alerts for new matching jobs
+• Read job descriptions carefully before requesting referrals
+• Only request referrals for roles where you meet 60-70% of requirements
+
+3. Request a Referral:
+When you find a job you're genuinely interested in:
+• Click "Ask for Referral" on the job listing
+• Write a personalized message explaining why you're a good fit
+• Highlight relevant experience and achievements
+• Be specific about why you want this particular role at this company
+• Keep your message professional but personable
+
+4. Communicate Effectively:
+Once a referrer claims your request:
+• Respond promptly to any messages
+• Provide any additional information they request
+• Be professional and courteous
+• Thank them for their time and help
+• Keep them updated on your application status
+
+5. Follow Up and Maintain Relationships:
+• Send a thank you note after receiving a referral
+• Update your referrer when you get an interview
+• Let them know the outcome (offer or rejection)
+• Stay connected even if this particular opportunity doesn't work out
+• A good relationship can lead to future referrals
+
+Pro Tips for RefOpen Success:
+• Log in regularly to check for new job postings
+• Respond quickly when a referrer reaches out
+• Be selective—quality over quantity
+• Keep your profile and resume updated
+• Build a reputation by being professional and responsive`
       },
       {
         title: 'Step 4: Craft the Perfect Referral Request',
-        content: `Your referral request message can make or break your chances. Here's a template that works:
+        content: `Your referral request message can make or break your chances. Referrers receive many requests, so you need to stand out while being respectful of their time. Here's a comprehensive guide to crafting messages that get responses:
+
+Key Principles:
+• Personalize every message (no copy-paste)
+• Be concise but informative
+• Show you've done your research
+• Make it easy for them to help you
+• Be professional but authentic
+
+The Ideal Structure:
+
+1. Personalized Opening (1-2 sentences):
+Show you've done your homework. Mention something specific about them or their work.
+
+2. Your Background (2-3 sentences):
+Briefly explain who you are and your relevant experience. Focus on achievements, not just job titles.
+
+3. Why This Company/Role (1-2 sentences):
+Explain your genuine interest. Be specific—generic statements are obvious.
+
+4. The Ask (1 sentence):
+Make a clear, specific request.
+
+5. Professional Close:
+Thank them and make it easy to respond.
+
+Template for Cold Outreach:
 
 "Hi [Name],
 
-I came across your profile and noticed you work at [Company] as a [Role]. I'm very interested in the [Job Title] position and would be grateful if you could provide a referral.
+I came across your profile while researching [Company] and was impressed by your work on [specific project/post/achievement]. Your insights about [topic] really resonated with me.
 
-A bit about me: I have [X years] of experience in [relevant field] and have worked on [relevant projects/achievements]. I believe my skills in [specific skills] would be valuable for this role.
+I'm a [Your Title] with [X years] of experience in [relevant field]. In my current role at [Company], I [specific achievement with metrics]. I'm now looking for my next opportunity and am very interested in the [Job Title] position at [Company].
 
-I've attached my resume for your reference. Would you be open to a quick call to discuss?
+What draws me to [Company] specifically is [genuine reason—product, mission, technology, culture]. I believe my experience with [specific skill] would allow me to contribute meaningfully to [team/project].
+
+Would you be open to providing a referral or having a brief chat about your experience at [Company]? I'd be grateful for any guidance you could offer.
 
 Thank you for considering my request!
 
 Best regards,
+[Your Name]
+[LinkedIn Profile URL]"
+
+Template for Warm Outreach (Mutual Connection):
+
+"Hi [Name],
+
+[Mutual Connection] suggested I reach out to you. We were discussing [topic], and they mentioned you'd be a great person to talk to about opportunities at [Company].
+
+I'm currently a [Title] at [Company] specializing in [area]. I've been following [Company]'s work on [specific product/initiative] and am excited about the [Job Title] role.
+
+My background includes [relevant achievement]. I think this experience aligns well with what the team is looking for.
+
+Would you have 15 minutes to chat about your experience at [Company] and whether you think I might be a good fit for the team?
+
+Thanks so much for your time!
+
+Best,
 [Your Name]"
 
-Keep it concise, professional, and personalized. Mention specific details about the company or role to show genuine interest.`
+Common Mistakes to Avoid:
+• Sending the same generic message to everyone
+• Not explaining why you want THIS specific company
+• Making it all about you without showing value
+• Writing novels (keep it under 200 words)
+• Forgetting to proofread
+• Being too casual or too formal
+• Not including your LinkedIn or resume
+• Asking for too much upfront
+
+Follow-Up Strategy:
+If you don't hear back after 1 week, send a polite follow-up:
+"Hi [Name], I wanted to follow up on my previous message about the [Role] at [Company]. I understand you're busy, so no worries if this isn't a good time. If you're open to it, I'd still love to connect. Thanks again!"
+
+Only follow up once. If they don't respond, move on gracefully.`
       },
       {
         title: 'Step 5: Prepare for the Interview',
-        content: `Once you get a referral, you've passed the first hurdle. Now it's time to prepare thoroughly for the interview:
+        content: `Congratulations! Once you get a referral, you've cleared a significant hurdle. Your resume will receive genuine attention, and you'll likely get an interview. Now it's time to prepare thoroughly—remember, your referrer's reputation is tied to your performance.
 
-Research the Company:
-• Understand the company's products, competitors, and market position
-• Read recent news and press releases
-• Review the company's engineering blog (for tech roles)
-• Understand the interview process and what to expect
+Company Research (Deep Dive):
 
-Practice Technical Skills:
-• For tech roles, practice coding on platforms like LeetCode and HackerRank
-• Review system design concepts for senior roles
-• Prepare for behavioral questions using the STAR method
+Go beyond the basics:
+• Company History: When was it founded? Key milestones? Recent news?
+• Products and Services: Understand what they build/sell. Use the product if possible.
+• Business Model: How do they make money? Who are their customers?
+• Competitors: Who are they competing against? What's their competitive advantage?
+• Recent Developments: Check news, press releases, blog posts from the last 3-6 months
+• Leadership: Know the CEO, relevant executives, and your potential manager
+• Culture: Read Glassdoor reviews, company values, and employee testimonials
+• Interview Process: Research what to expect (check Glassdoor, Blind, LeetCode discuss)
+
+For Tech Roles:
+• Read the engineering blog
+• Understand the tech stack
+• Check their GitHub/open source contributions
+• Research the team you'd be joining
+
+Technical Preparation:
+
+For Software Engineering roles:
+• Data Structures: Arrays, Linked Lists, Trees, Graphs, Hash Tables, Heaps
+• Algorithms: Sorting, Searching, DFS/BFS, Dynamic Programming, Recursion
+• Practice Platforms: LeetCode (aim for 100-150 medium problems), HackerRank, CodeSignal
+• Focus on company-tagged problems for your target company
+• Practice coding on a whiteboard or Google Doc (no IDE autocomplete)
+• System Design: For senior roles, study distributed systems, databases, caching, load balancing
+
+For Non-Technical Roles:
+• Prepare case studies relevant to the role
+• Practice with real-world scenarios
+• Review relevant frameworks and methodologies
+• Prepare examples of your past work
+
+Behavioral Interview Preparation:
+
+Use the STAR method for all behavioral questions:
+• Situation: Set the context
+• Task: Describe your responsibility
+• Action: Explain what YOU did (use "I", not "we")
+• Result: Quantify the outcome
+
+Prepare 8-10 stories covering:
+• Leadership / Taking initiative
+• Handling conflict
+• Failure and what you learned
+• Teamwork and collaboration
+• Tight deadlines / Pressure
+• Innovative solutions
+• Customer focus
+• Going above and beyond
+
+Common Behavioral Questions:
+• Tell me about yourself (have a 2-minute pitch ready)
+• Why do you want to work here?
+• What's your greatest strength/weakness?
+• Tell me about a time you failed
+• Describe a conflict with a coworker
+• Why are you leaving your current job?
 
 Mock Interviews:
-• Practice with friends or colleagues
-• Use platforms like Pramp for peer mock interviews
-• Record yourself to identify areas for improvement
 
-Remember, your referrer's reputation is tied to your performance. Put in the work to make them proud!`
+Practice is essential:
+• Schedule mock interviews with friends or colleagues
+• Use platforms like Pramp or Interviewing.io for peer practice
+• Record yourself to identify verbal tics and areas for improvement
+• Practice thinking aloud while problem-solving
+• Time yourself to manage interview pacing
+
+Day Before the Interview:
+• Confirm time, location, and interviewer names
+• Prepare your outfit (business casual unless told otherwise)
+• Get directions or test video call software
+• Review your notes one more time
+• Get a good night's sleep
+
+Day of the Interview:
+• Eat a proper meal
+• Arrive 10-15 minutes early
+• Bring copies of your resume
+• Bring a notepad and pen
+• Turn off your phone
+• Take a deep breath and be confident!
+
+Remember: Your referrer believed in you enough to put their name on the line. Honor that trust by being thoroughly prepared.`
       },
       {
         title: 'Common Mistakes to Avoid',
-        content: `Many candidates make these mistakes when seeking referrals:
+        content: `Many candidates make these mistakes when seeking referrals. Learn from others' failures to maximize your success:
 
-1. Being Too Pushy: Don't spam employees with requests or follow-ups. Respect their time and decision.
+1. Being Too Pushy:
+The mistake: Sending multiple follow-ups, requesting referrals from the same person for different roles, or being aggressive in your communication.
+The fix: Send one thoughtful message and one follow-up. Respect their decision if they don't respond or decline. Patience and professionalism go a long way.
 
-2. Not Personalizing: Generic messages get ignored. Take time to personalize each request.
+2. Not Personalizing Messages:
+The mistake: Copy-pasting the same generic message to everyone. "Hi, I'm interested in a role at your company. Can you refer me?"
+The fix: Spend 10-15 minutes researching each person. Mention something specific about their work, background, or posts. Show that you chose to contact them specifically.
 
-3. Applying Without Qualifications: Only request referrals for roles where you meet at least 70% of the requirements.
+3. Applying Without Meeting Qualifications:
+The mistake: Requesting referrals for roles where you meet only 30-40% of the requirements.
+The fix: Only request referrals for roles where you meet at least 60-70% of the requirements. Referrers will review your profile, and requesting referrals for mismatched roles wastes everyone's time and damages your reputation.
 
-4. Forgetting to Follow Up: After getting referred, keep your referrer updated on your progress.
+4. Forgetting to Follow Up with Your Referrer:
+The mistake: Getting referred and then disappearing. Your referrer never hears from you again.
+The fix: Keep your referrer informed at every stage—interview scheduled, interview completed, offer/rejection received. They invested their reputation in you; they deserve updates.
 
-5. Not Saying Thank You: Always express gratitude, whether you get the job or not.
+5. Not Saying Thank You:
+The mistake: Forgetting to express gratitude, especially if you don't get the job.
+The fix: Always send a thank you note, regardless of the outcome. A referral is a favor, and showing appreciation builds long-term relationships.
 
-6. Burning Bridges: Even if you don't get the job, maintain the relationship for future opportunities.`
+6. Burning Bridges:
+The mistake: Being rude, ghosting, or acting unprofessionally after rejection.
+The fix: Stay professional no matter what. The tech industry is small, and people remember. Today's rejection could be tomorrow's opportunity at a different company.
+
+7. Only Networking When Job Searching:
+The mistake: Reaching out to people only when you need something.
+The fix: Build relationships continuously. Engage with connections' content, congratulate them on achievements, and offer help when you can. When you do need a referral, your request won't feel transactional.
+
+8. Having an Incomplete Profile:
+The mistake: Requesting referrals with a bare-bones LinkedIn or RefOpen profile.
+The fix: Complete your profile fully before reaching out. Referrers will check your background, and an incomplete profile signals low effort.
+
+9. Not Preparing Adequately for Interviews:
+The mistake: Getting a referral and then bombing the interview.
+The fix: Prepare like your career depends on it (because it might). Poor interview performance reflects badly on your referrer and could affect their willingness to refer others.
+
+10. Asking the Wrong People:
+The mistake: Requesting referrals from random employees with no connection to the hiring team.
+The fix: Prioritize people who work on the team you're applying to, or in a closely related function. Their referral carries more weight with the hiring manager.
+
+11. Expecting Instant Results:
+The mistake: Getting frustrated when referrals don't lead to immediate interviews or offers.
+The fix: Understand that referrals improve your odds significantly, but they're not a guarantee. The hiring process takes time. Stay patient and keep applying through multiple channels.
+
+12. Treating Referrals as Transactions:
+The mistake: Viewing referrals as a one-time transaction rather than relationship-building.
+The fix: Approach networking with a long-term mindset. The person who can't help you today might become your manager, colleague, or most valuable connection five years from now.`
       },
       {
-        title: 'Conclusion',
-        content: `Getting a job referral requires effort, but the rewards are well worth it. By building genuine relationships, leveraging platforms like RefOpen, and preparing thoroughly, you can significantly increase your chances of landing your dream job.
+        title: 'The Psychology of Successful Referral Networking',
+        content: `Understanding the psychology behind referrals can dramatically improve your success rate. Here's what's happening on both sides of the referral equation:
 
-Remember, the job search is a marathon, not a sprint. Stay persistent, keep learning, and never stop networking. Your dream job is just one referral away!
+Why People Give Referrals:
 
-Start your referral journey today on RefOpen and connect with employees at top companies who are ready to help you succeed.`
+1. Referral Bonuses: Let's be honest—money is a motivator. Many companies pay ₹50,000 to ₹5,00,000+ for successful referrals. But it's rarely just about the money.
+
+2. Helping Others: Most people genuinely want to help. They remember their own job search struggles and want to pay it forward.
+
+3. Improving Their Team: Good referrers want to work with great people. Bringing in top talent makes their job easier and more enjoyable.
+
+4. Social Capital: Referring someone who turns out to be a star employee boosts their reputation internally. They become known as someone who can identify talent.
+
+5. Strengthening Relationships: Referrals can strengthen professional relationships. If someone they referred succeeds, it creates a bond.
+
+Why People Don't Give Referrals:
+
+1. Risk Aversion: Referring someone who underperforms reflects poorly on them. Many people avoid this risk entirely.
+
+2. Time Constraints: Reviewing profiles and submitting referrals takes time. Busy employees may not prioritize it.
+
+3. Uncertainty: If they don't know you well, they may hesitate to vouch for you.
+
+4. Past Bad Experiences: Previous referrals who behaved poorly or ghosted can make people gun-shy.
+
+How to Use This Psychology:
+
+Make It Easy:
+• Provide all information they need upfront
+• Have a ready resume and clear explanation
+• Don't make them chase you for details
+
+Reduce Their Risk:
+• Be honest about your qualifications
+• Demonstrate thorough preparation
+• Show you'll represent them well
+
+Create Reciprocity:
+• Offer value before asking (share articles, make connections)
+• Express genuine appreciation
+• Follow through on your commitments
+
+Build Trust:
+• Be consistent in your communication
+• Do what you say you'll do
+• Maintain professionalism throughout
+
+The Give-to-Get Principle:
+
+The most successful networkers give more than they take:
+• Share job postings with others
+• Make introductions between people who could help each other
+• Congratulate people on achievements
+• Offer your expertise when you can help
+
+When you build a reputation as someone who helps others, people are naturally more willing to help you in return.`
+      },
+      {
+        title: 'Conclusion: Your Referral Action Plan',
+        content: `Getting a job referral requires effort, strategy, and persistence, but the rewards are well worth it. Let's summarize your action plan:
+
+Week 1-2: Foundation
+• Create your target company list (10-15 companies)
+• Optimize your LinkedIn profile completely
+• Complete your RefOpen profile
+• Update your resume
+
+Week 3-4: Network Building
+• Connect with 5-10 people at target companies daily
+• Engage with content on LinkedIn for 15 minutes daily
+• Join 2-3 professional communities
+• Reach out to alumni at target companies
+
+Week 5+: Active Outreach
+• Send 3-5 personalized referral requests per week
+• Request referrals on RefOpen for matching roles
+• Follow up on previous outreach
+• Prepare for interviews as they come
+
+Ongoing:
+• Keep your profile and resume updated
+• Maintain relationships with referrers
+• Update referrers on your progress
+• Help others when you can
+
+Key Metrics to Track:
+• Connection requests sent vs. accepted
+• Referral requests sent vs. fulfilled
+• Interviews obtained through referrals
+• Conversion rate (referrals to interviews to offers)
+
+Remember These Principles:
+• Quality over quantity in everything
+• Personalization is non-negotiable
+• Patience is essential
+• Professionalism at all times
+• Gratitude goes a long way
+
+The job search is a marathon, not a sprint. Stay persistent, keep learning, and never stop networking. Your dream job is just one referral away!
+
+Start your referral journey today on RefOpen and connect with employees at top companies who are ready to help you succeed. Every connection you make, every message you send, brings you one step closer to your next career opportunity.
+
+Good luck—you've got this!`
       }
     ]
   },
@@ -2653,208 +3037,940 @@ Use RefOpen to connect with professionals at your target companies online, and c
     sections: [
       {
         title: 'Understanding FAANG Interviews',
-        content: `FAANG (Facebook/Meta, Amazon, Apple, Netflix, Google) and similar top tech companies have rigorous interview processes. But with the right preparation, these interviews are very crackable.
+        content: `FAANG (Facebook/Meta, Amazon, Apple, Netflix, Google) and similar top tech companies like Microsoft, Uber, Airbnb, and LinkedIn have rigorous interview processes that are known for being challenging. However, with the right preparation strategy, these interviews are absolutely crackable—thousands of candidates succeed every year, and you can too.
 
-The typical interview process includes:
-• Recruiter Screen (30 mins)
-• Technical Phone Screen (45-60 mins)
-• Onsite/Virtual Onsite (4-6 rounds)
-  - 2-3 Coding rounds
-  - 1 System Design round (for senior roles)
-  - 1-2 Behavioral rounds
+Let's understand what makes these interviews different from typical tech interviews:
 
-Each company has its own culture and focus areas, but the fundamentals remain similar. Let's break down how to prepare for each stage.`
+The Bar is High, But Fair:
+These companies interview thousands of candidates annually. They've refined their process to be as objective as possible. They're not looking for geniuses—they're looking for candidates who can demonstrate strong problem-solving skills, write clean code, and communicate effectively.
+
+The Typical Interview Process:
+
+1. Recruiter Screen (30 mins):
+• Phone call with a recruiter
+• Discussion of your background and experience
+• Overview of the role and team
+• Basic compensation expectations
+• Timeline and process explanation
+
+2. Technical Phone Screen (45-60 mins):
+• Conducted by an engineer
+• One or two coding problems
+• Shared coding environment (CoderPad, CodeSignal, or similar)
+• Expect medium-level LeetCode problems
+• Some companies skip this and go straight to onsite
+
+3. Onsite/Virtual Onsite (4-6 rounds):
+• 2-3 Coding rounds (45-60 mins each)
+• 1-2 System Design rounds (for senior roles, 45-60 mins)
+• 1-2 Behavioral rounds (30-45 mins)
+• Sometimes a hiring manager round
+
+4. Team Matching (Some companies):
+• Google, Meta, and others have team matching after offer
+• You'll talk to potential teams
+• Both you and the team need to agree
+
+5. Offer:
+• Compensation discussion
+• Negotiation (yes, you should negotiate!)
+• Usually 1-2 weeks to decide
+
+The entire process typically takes 2-4 weeks from first contact to offer.
+
+Important Mindset Shifts:
+
+• It's a skill, not innate talent: Interview performance can be dramatically improved with practice. Many successful engineers failed their first few FAANG interviews.
+
+• They want you to succeed: Interviewers are not adversaries. They're trying to find reasons to hire you, not reject you.
+
+• One bad interview doesn't define you: Even with a bad round, you can recover. Focus on each interview independently.
+
+• Rejection is data, not failure: If you don't pass, learn what you need to improve and try again. Most companies allow reapplication after 6-12 months.`
       },
       {
-        title: 'Data Structures & Algorithms',
-        content: `This is the core of technical interviews. You need to be comfortable with:
+        title: 'Data Structures & Algorithms (DSA) Deep Dive',
+        content: `Data structures and algorithms are the foundation of technical interviews. You need to be comfortable implementing and using these without hesitation.
 
-Must-Know Data Structures:
-• Arrays and Strings
-• Hash Tables / Hash Maps
-• Linked Lists
-• Trees (Binary Trees, BSTs, Tries)
-• Graphs
-• Stacks and Queues
-• Heaps / Priority Queues
+MUST-KNOW DATA STRUCTURES:
 
-Must-Know Algorithms:
-• Two Pointers
-• Sliding Window
-• Binary Search
-• BFS and DFS
-• Dynamic Programming
-• Recursion and Backtracking
-• Sorting algorithms
+Arrays and Strings:
+• Master two-pointer technique
+• Sliding window patterns
+• In-place modifications
+• String manipulation (reverse, rotate, substring)
+• Time complexity: O(n) for traversal, O(1) for access
 
-Recommended Practice:
-• LeetCode: Focus on Medium difficulty (aim for 150-200 problems)
-• Patterns: Learn patterns, not just solutions
-• Blind 75: Start with this curated list
-• Company-tagged problems: Focus on your target company's frequently asked questions
+Hash Tables / Hash Maps:
+• The most important data structure for interviews
+• O(1) average lookup, insert, delete
+• Use for frequency counting, caching, lookups
+• Handle collisions (chaining vs. open addressing)
+• Python: dict, Java: HashMap, JavaScript: Map/Object
 
-Study Timeline:
-• 3-6 months for serious preparation
-• 2-3 hours daily coding practice
-• Weekly mock interviews`
+Linked Lists:
+• Singly and doubly linked lists
+• Fast and slow pointer technique (detect cycles!)
+• Reversal, merging sorted lists
+• Finding middle element
+• Watch for null pointer errors
+
+Trees:
+• Binary Trees: traversals (inorder, preorder, postorder)
+• Binary Search Trees: search, insert, delete
+• Balanced trees concept (AVL, Red-Black)
+• Tries: for prefix matching and autocomplete
+• Common patterns: DFS, BFS, level-order traversal
+
+Graphs:
+• Representation: adjacency list vs. matrix
+• BFS: shortest path in unweighted graphs
+• DFS: detecting cycles, topological sort
+• Union-Find: connected components
+• Dijkstra's: shortest path with weights
+
+Stacks and Queues:
+• LIFO vs. FIFO
+• Monotonic stack patterns
+• Use stack for parentheses matching, expression evaluation
+• Use queue for BFS, level-order traversal
+
+Heaps / Priority Queues:
+• Min-heap and max-heap
+• O(log n) insert and extract
+• Top K problems
+• Merge K sorted lists
+• Median of stream
+
+MUST-KNOW ALGORITHMS:
+
+Two Pointers:
+• Left and right pointers moving toward each other
+• Fast and slow pointers
+• Common uses: sorted array problems, palindrome checking
+
+Sliding Window:
+• Fixed-size window
+• Variable-size window with condition
+• Maximum/minimum subarray problems
+• Substring problems
+
+Binary Search:
+• Not just for sorted arrays!
+• Binary search the answer space
+• Finding boundaries (first/last occurrence)
+• Time complexity: O(log n)
+
+BFS (Breadth-First Search):
+• Level-order traversal
+• Shortest path in unweighted graphs
+• Use a queue
+• Track visited nodes
+
+DFS (Depth-First Search):
+• Tree and graph traversal
+• Backtracking problems
+• Detecting cycles
+• Topological sort
+
+Dynamic Programming:
+• The most feared topic, but learnable!
+• Break into subproblems
+• Memoization (top-down) vs. Tabulation (bottom-up)
+• Common patterns: 0/1 knapsack, LCS, LIS, coin change
+• Practice identifying DP problems
+
+Recursion and Backtracking:
+• Base case and recursive case
+• Generating permutations and combinations
+• Subset problems
+• N-Queens, Sudoku solver
+
+PRACTICE STRATEGY:
+
+LeetCode Approach:
+• Start with Easy (build confidence)
+• Focus on Medium (most interview questions)
+• Do Hard selectively (for FAANG)
+• Aim for 150-200 quality problems
+• Time yourself (45 mins per problem max)
+
+Pattern-Based Learning:
+Don't just solve random problems. Learn patterns:
+1. Solve 3-5 problems of each pattern
+2. Identify what makes them similar
+3. Create a template for each pattern
+4. Apply templates to new problems
+
+The Blind 75:
+Start with this curated list of 75 essential problems covering all major patterns. It's the most efficient way to prepare.
+
+Company-Tagged Problems:
+• LeetCode Premium shows company tags
+• Focus on problems asked by your target company
+• Recent problems (last 6 months) are most relevant
+
+STUDY TIMELINE:
+
+For working professionals (3-6 months):
+• 2-3 hours daily
+• Weekday: 2-3 problems
+• Weekend: mock interviews + review
+• Last 2 weeks: review patterns, no new problems
+
+For full-time preparation (6-8 weeks):
+• 5-6 hours daily
+• 4-5 problems per day
+• Weekly mock interviews
+• Last week: review and rest
+
+Weekly Mock Interviews:
+• Use Pramp (free peer practice)
+• Interviewing.io (practice with real engineers)
+• Practice with friends
+• Record yourself to review`
       },
       {
-        title: 'System Design (For Senior Roles)',
-        content: `System design interviews assess your ability to design large-scale distributed systems.
+        title: 'System Design Mastery (For L4+ Roles)',
+        content: `System design interviews assess your ability to architect large-scale distributed systems. This round typically appears for candidates with 3+ years of experience (L4/SDE2 and above).
 
-Key Concepts to Master:
-• Load Balancing
-• Caching (Redis, Memcached)
-• Database design (SQL vs NoSQL)
-• Sharding and Partitioning
-• Message Queues (Kafka, RabbitMQ)
-• Microservices architecture
-• CAP Theorem
-• API Design
+CORE CONCEPTS TO MASTER:
 
-Common System Design Questions:
-• Design Twitter/X
-• Design YouTube
-• Design WhatsApp
-• Design URL Shortener
-• Design Rate Limiter
-• Design News Feed
+Scaling Basics:
+• Vertical scaling (bigger machines) vs. Horizontal scaling (more machines)
+• Stateless vs. stateful services
+• When to scale: CPU-bound vs. IO-bound bottlenecks
+• Cost considerations
 
-How to Approach:
-1. Clarify requirements (5 mins)
-2. High-level design (10 mins)
-3. Deep dive into components (20 mins)
-4. Address bottlenecks and scaling (10 mins)
+Load Balancing:
+• Distribute traffic across multiple servers
+• Algorithms: Round Robin, Least Connections, IP Hash
+• Layer 4 (TCP) vs. Layer 7 (HTTP) load balancing
+• Health checks and failover
+• Tools: Nginx, HAProxy, AWS ELB
 
-Resources:
-• "Designing Data-Intensive Applications" book
-• System Design Primer (GitHub)
-• Grokking the System Design Interview
-• YouTube channels: ByteByteGo, Gaurav Sen`
+Caching:
+• Why cache: reduce latency, reduce database load
+• Cache strategies: cache-aside, write-through, write-back
+• Cache eviction: LRU, LFU, TTL
+• Distributed caching: Redis, Memcached
+• CDN for static content
+• Cache invalidation (the hard problem!)
+
+Databases:
+• SQL vs. NoSQL: know when to use each
+• ACID properties for transactions
+• Indexing: how it works, when to use
+• Replication: master-slave, master-master
+• Sharding: horizontal partitioning
+• Consistent hashing for distributed systems
+• Popular choices: PostgreSQL, MySQL, MongoDB, Cassandra, DynamoDB
+
+Message Queues:
+• Decouple services
+• Handle traffic spikes
+• Async processing
+• Tools: Kafka, RabbitMQ, SQS
+• Producer-consumer pattern
+• Dead letter queues
+
+Microservices:
+• Break monolith into services
+• Service discovery
+• API Gateway pattern
+• Circuit breaker pattern
+• Event-driven architecture
+
+CAP Theorem:
+• Consistency, Availability, Partition tolerance
+• Can only have 2 of 3 during network partition
+• CP systems: MongoDB, HBase
+• AP systems: Cassandra, DynamoDB
+• Real-world: tunable consistency
+
+API Design:
+• REST principles
+• GraphQL when appropriate
+• Rate limiting
+• Authentication (OAuth, JWT)
+• Versioning
+• Pagination
+
+COMMON SYSTEM DESIGN QUESTIONS:
+
+1. Design Twitter/X:
+• Tweet storage and timeline
+• Fan-out on read vs. fan-out on write
+• Handling celebrity accounts (many followers)
+• Search functionality
+• Real-time notifications
+
+2. Design YouTube:
+• Video upload and transcoding
+• Storage for petabytes of video
+• CDN for video delivery
+• Recommendation system
+• View counting at scale
+
+3. Design WhatsApp/Chat System:
+• Real-time messaging
+• Group chats
+• Message delivery guarantees
+• Online presence indicators
+• End-to-end encryption considerations
+
+4. Design URL Shortener:
+• Hash function for short URL
+• Database schema
+• Redirect mechanism
+• Analytics
+• Handling collisions
+
+5. Design Rate Limiter:
+• Token bucket vs. leaky bucket
+• Distributed rate limiting
+• Per-user vs. per-IP vs. global limits
+• Sliding window algorithm
+
+6. Design Instagram/News Feed:
+• Post storage and retrieval
+• Feed generation
+• Ranking algorithm
+• Image storage and CDN
+• Push vs. pull model
+
+THE SYSTEM DESIGN INTERVIEW FRAMEWORK:
+
+Step 1: Clarify Requirements (5 mins)
+• Functional requirements: What should the system do?
+• Non-functional requirements: Scale, latency, availability
+• Ask clarifying questions
+• Establish constraints and assumptions
+
+Step 2: High-Level Design (10 mins)
+• Draw main components
+• Show data flow
+• Identify major services
+• Keep it simple initially
+
+Step 3: Deep Dive (20 mins)
+• Pick 2-3 critical components
+• Go into detail
+• Database schema
+• API endpoints
+• Algorithms for specific features
+
+Step 4: Address Bottlenecks (10 mins)
+• Identify potential issues
+• Discuss scaling strategies
+• Talk about trade-offs
+• Mention monitoring and alerting
+
+RESOURCES FOR SYSTEM DESIGN:
+
+Books:
+• "Designing Data-Intensive Applications" by Martin Kleppmann (THE bible)
+• "System Design Interview" by Alex Xu (both volumes)
+
+Online:
+• System Design Primer (GitHub) - free, comprehensive
+• Grokking the System Design Interview (paid, structured)
+• ByteByteGo YouTube channel
+• Gaurav Sen YouTube channel
+• Hussein Nasser YouTube channel
+
+Practice:
+• Draw systems on paper/whiteboard
+• Practice explaining out loud
+• Do mock system design interviews
+• Review real architectures (Netflix, Uber, etc. have published blogs)`
       },
       {
-        title: 'Behavioral Interviews',
-        content: `Don't underestimate behavioral interviews—they can make or break your candidacy.
+        title: 'Behavioral Interviews: The Hidden Decider',
+        content: `Many candidates focus entirely on technical preparation and neglect behavioral interviews. This is a critical mistake. At FAANG companies, behavioral interviews can absolutely reject an otherwise strong technical candidate. They're evaluating culture fit, leadership potential, and collaboration skills.
 
-Amazon's Leadership Principles:
-Amazon is famous for their 16 leadership principles. Prepare 2-3 stories for each:
-• Customer Obsession
-• Ownership
-• Invent and Simplify
-• Bias for Action
-• Deliver Results
-• Earn Trust
-• Dive Deep
-• Have Backbone; Disagree and Commit
+AMAZON'S LEADERSHIP PRINCIPLES:
 
-The STAR Method:
-Structure your answers using STAR:
-• Situation: Set the context
-• Task: Describe your responsibility
-• Action: Explain what YOU did (use "I", not "we")
-• Result: Quantify the outcome
+Amazon is famous for their 16 Leadership Principles (LPs). Every Amazon interview includes LP questions. Other companies have similar values-based questions.
 
-Common Behavioral Questions:
-• Tell me about a time you failed
-• Describe a conflict with a teammate
-• When did you go above and beyond?
-• How do you handle tight deadlines?
-• Tell me about a time you disagreed with your manager
+Key Leadership Principles to Prepare:
+
+1. Customer Obsession:
+"Tell me about a time you went above and beyond for a customer/user."
+Prepare stories showing customer focus and impact.
+
+2. Ownership:
+"Tell me about a time you took on something outside your area of responsibility."
+Show initiative and end-to-end ownership.
+
+3. Invent and Simplify:
+"Tell me about a time you found a simple solution to a complex problem."
+Demonstrate innovation and simplification.
+
+4. Are Right, A Lot:
+"Tell me about a time you made a decision with incomplete data."
+Show good judgment and being open to new information.
+
+5. Learn and Be Curious:
+"Tell me about a time you learned something new that helped you in your job."
+Demonstrate continuous learning mindset.
+
+6. Hire and Develop the Best:
+"Tell me about a time you mentored or helped develop a colleague."
+Show investment in others' growth.
+
+7. Insist on the Highest Standards:
+"Tell me about a time you raised the bar for your team."
+Demonstrate high standards and attention to quality.
+
+8. Think Big:
+"Tell me about an idea you proposed that was significantly different from the status quo."
+Show vision and ambition.
+
+9. Bias for Action:
+"Tell me about a time you had to make a quick decision."
+Demonstrate speed and calculated risk-taking.
+
+10. Frugality:
+"Tell me about a time you accomplished a lot with limited resources."
+Show resourcefulness and efficiency.
+
+11. Earn Trust:
+"Tell me about a time you had to deliver difficult feedback."
+Demonstrate honesty and relationship building.
+
+12. Dive Deep:
+"Tell me about a time you had to dig into details to find the root cause."
+Show analytical skills and thoroughness.
+
+13. Have Backbone; Disagree and Commit:
+"Tell me about a time you disagreed with your manager or team."
+Show conviction and commitment once decisions are made.
+
+14. Deliver Results:
+"Tell me about your most significant professional achievement."
+Demonstrate track record of delivery.
+
+THE STAR METHOD (DETAILED):
+
+Structure every behavioral answer using STAR:
+
+Situation (15-20% of answer):
+• Set the context briefly
+• When, where, what was happening
+• Why it was challenging
+• Keep it concise—don't over-explain
+
+Task (10-15% of answer):
+• What was your specific responsibility?
+• What was expected of you?
+• What were the stakes?
+
+Action (50-60% of answer):
+• This is the MOST important part
+• Use "I", not "we"
+• Be specific about YOUR actions
+• Explain your thought process
+• Include obstacles you overcame
+• Show leadership, initiative, collaboration
+
+Result (15-20% of answer):
+• Quantify the outcome if possible
+• Business impact
+• What you learned
+• What you would do differently
+
+COMMON BEHAVIORAL QUESTIONS:
+
+About Failure:
+• "Tell me about a time you failed."
+• "Describe a mistake you made at work."
+• Focus on learning and improvement, not the failure itself.
+
+About Conflict:
+• "Tell me about a conflict with a coworker."
+• "Describe a time you disagreed with your manager."
+• Show emotional intelligence and resolution skills.
+
+About Leadership:
+• "Tell me about a time you led a project or initiative."
+• "Describe a time you influenced others without authority."
+• Don't need management experience—show informal leadership.
+
+About Challenges:
+• "Tell me about your biggest professional challenge."
+• "Describe a time you worked under pressure."
+• Show resilience and problem-solving.
+
+About Impact:
+• "What are you most proud of professionally?"
+• "Describe your biggest achievement."
+• Quantify your impact.
+
+PREPARE YOUR STORY BANK:
+
+Create 8-10 detailed stories that can be adapted for various questions:
+• A significant achievement with measurable impact
+• A time you failed and what you learned
+• A conflict with a colleague and how you resolved it
+• A time you disagreed with management
+• A time you went above and beyond
+• A time you dealt with ambiguity
+• A time you mentored or helped someone
+• A time you made a quick decision
+• A time you simplified something complex
+• A challenging project you delivered
+
+TIPS FOR BEHAVIORAL INTERVIEWS:
+
+• Be specific, not generic
+• Use "I" not "we" (show YOUR contribution)
+• Quantify results wherever possible
+• Show growth and learning from mistakes
+• Practice out loud (it's different from thinking through answers)
+• Have different stories for different questions
+• Be honest—interviewers can tell when you're fabricating
+• Show self-awareness and humility`
+      },
+      {
+        title: 'Company-Specific Preparation',
+        content: `Each FAANG company has unique interview styles, cultural values, and focus areas. Tailor your preparation accordingly.
+
+GOOGLE:
+
+Interview Style:
+• Heavy emphasis on algorithms and data structures
+• Often asks follow-up questions to initial solutions
+• "Googliness" - assesses cultural fit
+• Team matching happens AFTER offer
+
+What They Value:
+• Clean, efficient code
+• Strong problem-solving approach
+• Collaboration and humility
+• Cognitive ability
+• Leadership (even for individual contributors)
 
 Tips:
-• Prepare 8-10 detailed stories
-• Practice out loud
-• Be specific with numbers and outcomes
-• Show growth and learning`
-      },
-      {
-        title: 'Company-Specific Tips',
-        content: `Each FAANG company has unique aspects:
+• Practice optimizing solutions (don't stop at working code)
+• Be ready for "What if..." follow-ups
+• Show your thought process clearly
+• Google has high standards—don't be discouraged if you don't pass first time
 
-Google:
-• Focuses heavily on algorithms
-• Values clean, efficient code
-• "Googliness" - cultural fit matters
-• Expect follow-up questions to initial solutions
+Common Rounds:
+• 2-3 coding rounds
+• 1-2 behavioral (Googleyness)
+• 1 system design (L4+)
 
-Amazon:
-• Leadership Principles are CRITICAL
-• Bar Raiser round can be anyone
-• Working backwards from customer
-• Data-driven decision making
+AMAZON:
 
-Meta (Facebook):
-• Move fast culture
-• Strong emphasis on product sense
-• Ninja (coding) + Pirate (execution) evaluation
-• Focus on impact and scale
+Interview Style:
+• Leadership Principles dominate
+• Every interviewer evaluates against LPs
+• Bar Raiser round (can be any interviewer—they have veto power)
+• Practical coding problems
 
-Apple:
-• Secretive about process
-• Design thinking important
-• Cross-functional collaboration
+What They Value:
+• Customer obsession
+• Ownership mentality
+• Bias for action
+• Data-driven decisions
+• Frugality
+
+Tips:
+• Prepare 2-3 stories for EACH Leadership Principle
+• Use the STAR method religiously
+• Be ready for "Tell me more" deep dives
+• Quantify everything possible
+
+Common Rounds:
+• 4-5 loops (coding + behavioral mixed)
+• System Design/Architecture (senior)
+• Bar Raiser round (anyone)
+
+META (FACEBOOK):
+
+Interview Style:
+• "Ninja" (coding) and "Pirate" (execution) evaluation
+• Strong emphasis on impact and scale
+• Move fast culture reflected in interviews
+• Product sense questions for some roles
+
+What They Value:
+• Moving fast
+• Impact at scale
+• Bold decisions
+• Building things that matter
+• Open and honest communication
+
+Tips:
+• Focus on problems with large-scale impact
+• Show you can move quickly while maintaining quality
+• Be ready for product-related questions
+• Meta interviews are known to be tough but fair
+
+Common Rounds:
+• 2 coding rounds
+• 1 behavioral
+• 1 system design (E4+)
+• Optional: product sense
+
+APPLE:
+
+Interview Style:
+• More secretive about process
+• Heavy emphasis on design thinking
+• Cross-functional collaboration assessment
+• Attention to detail matters
+
+What They Value:
+• Design excellence
+• User experience focus
+• Integration and collaboration
 • Attention to detail
+• Passion for products
 
-Netflix:
+Tips:
+• Know Apple products well
+• Show appreciation for design and UX
+• Demonstrate cross-functional experience
+• Be prepared for detailed technical deep-dives
+
+Common Rounds:
+• Phone screens (can be multiple)
+• Onsite: 4-6 rounds
+• Mix of technical and behavioral
+
+NETFLIX:
+
+Interview Style:
 • Culture of freedom and responsibility
-• No formal coding rounds for some roles
+• Less structured than others
 • Heavy focus on past experience
-• "Keeper test" - would we fight to keep you?`
+• "Keeper Test" - would we fight to keep you?
+
+What They Value:
+• Independent judgment
+• High performance
+• Honesty and transparency
+• Courage to speak up
+• Innovation
+
+Tips:
+• Read the Netflix Culture Deck (famous document)
+• Be ready to discuss your decision-making process
+• Show you can thrive with autonomy
+• Demonstrate strong past impact
+
+Common Rounds:
+• Varies by role
+• Some roles have no coding rounds
+• Focus on experience and culture fit
+
+MICROSOFT:
+
+Interview Style:
+• Similar to Google in technical depth
+• Strong emphasis on problem-solving
+• Culture fit assessment
+• Growth mindset evaluation
+
+What They Value:
+• Growth mindset
+• Customer empathy
+• Collaboration
+• Diverse perspectives
+• Continuous learning
+
+Tips:
+• Show learning and growth trajectory
+• Demonstrate collaboration experiences
+• Be familiar with Microsoft products/services
+• Show interest in their cloud/AI initiatives
+
+Common Rounds:
+• 4-5 loops
+• Coding, design, behavioral mix
+• Final round with hiring manager`
       },
       {
-        title: 'Interview Day Tips',
-        content: `On the day of your interview:
+        title: 'Interview Day Execution',
+        content: `All your preparation comes down to execution on interview day. Here's how to perform at your best.
 
-Before:
-• Get 8 hours of sleep
-• Eat a good meal
-• Review your notes (don't cram)
-• Test your setup (for virtual interviews)
+THE DAY BEFORE:
+
+• Review your notes (don't cram new material)
+• Go through your behavioral stories once
+• Prepare your outfit (business casual unless told otherwise)
+• Check interview details: time, location/link, interviewers
+• For virtual: test your setup (camera, mic, lighting, internet)
+• Set multiple alarms
+• Get 7-8 hours of sleep (non-negotiable!)
+• Avoid alcohol
+• Prepare your questions for interviewers
+
+MORNING OF:
+
+• Wake up with plenty of time
+• Eat a good breakfast (protein + complex carbs)
+• Light exercise if it helps you (walk, yoga)
+• Review your key talking points briefly
+• Arrive 10-15 mins early (virtual: log in 5 mins early)
+• Deep breathing to calm nerves
+• Power pose if it helps your confidence
+
+FOR VIRTUAL INTERVIEWS:
+
+Technical Setup:
+• Stable internet (have mobile hotspot as backup)
+• Quiet room with good lighting (face the light source)
+• Neutral background (or blur)
+• Use a external keyboard and mouse if possible
+• Keep phone nearby (backup way to join)
+• Close unnecessary applications
 • Have water nearby
 
-During Coding:
-• Think out loud constantly
-• Ask clarifying questions
-• Start with brute force, then optimize
-• Test your code with examples
-• Consider edge cases
+Video Call Tips:
+• Look at the camera, not the screen (better eye contact)
+• Use headphones (better audio quality)
+• Mute when not speaking (avoid background noise)
+• Have paper and pen ready (or notes app on side)
 
-During System Design:
-• Drive the conversation
-• Make reasonable assumptions
-• Draw diagrams
-• Discuss trade-offs
-• Be open to feedback
+FOR IN-PERSON INTERVIEWS:
 
-Virtual Interview Tips:
-• Quiet, well-lit room
-• Stable internet connection
-• Use an external keyboard
-• Have backup plan (phone hotspot)
-• Look at the camera, not the screen`
+• Dress appropriately (business casual for tech)
+• Bring copies of your resume
+• Bring notepad and pen
+• Turn off your phone
+• Be polite to everyone (including reception)
+• Firm handshake, smile, eye contact
+
+DURING CODING INTERVIEWS:
+
+1. Read/Listen Carefully:
+• Don't start coding immediately
+• Repeat the problem in your own words
+• Write down key constraints
+
+2. Ask Clarifying Questions:
+• Input size/type constraints?
+• Edge cases?
+• Expected output format?
+• Optimization requirements?
+
+3. Think Out Loud:
+• Share your thought process
+• Discuss possible approaches
+• Explain trade-offs
+• The interviewer wants to understand how you think
+
+4. Start with Brute Force:
+• Get a working solution first
+• Discuss time/space complexity
+• Then optimize
+
+5. Code Cleanly:
+• Use meaningful variable names
+• Write modular code (helper functions)
+• Handle edge cases
+• Don't rush—clean code matters
+
+6. Test Your Code:
+• Walk through with a simple example
+• Check edge cases (empty input, single element, etc.)
+• Look for off-by-one errors
+• Don't wait for interviewer to point out bugs
+
+7. Analyze Complexity:
+• State time and space complexity
+• Discuss if optimization is possible
+• Be ready to improve
+
+DURING SYSTEM DESIGN:
+
+1. Clarify Scope (5 mins):
+• Ask about functional requirements
+• Ask about scale (users, requests, data size)
+• Establish constraints
+• Don't assume—ask!
+
+2. High-Level Design (10 mins):
+• Draw main components
+• Show data flow
+• Start simple
+• Use the whiteboard effectively
+
+3. Deep Dive (20 mins):
+• Pick critical components
+• Go into detail
+• Discuss database schema
+• Cover API design
+• Address interviewer's questions
+
+4. Scale and Bottlenecks (10 mins):
+• Identify potential issues
+• Discuss solutions
+• Talk about trade-offs
+• Mention monitoring
+
+5. Keep Interviewer Engaged:
+• Make it a conversation
+• Ask for feedback
+• Be open to suggestions
+• Don't be defensive
+
+DURING BEHAVIORAL:
+
+1. Use STAR Structure:
+• Keep answers to 2-3 minutes
+• Be specific, not generic
+• Quantify results
+
+2. Be Honest:
+• Don't fabricate stories
+• It's okay to say what you'd do differently
+• Show self-awareness
+
+3. Show Impact:
+• Use "I", not "we"
+• Focus on YOUR contribution
+• Connect to business outcomes
+
+HANDLING TOUGH SITUATIONS:
+
+If You're Stuck:
+• Don't panic—it happens to everyone
+• Talk through your thought process
+• Ask for hints (it's allowed!)
+• Try a different approach
+• Partial solutions are better than nothing
+
+If You Make a Mistake:
+• Acknowledge it quickly
+• Correct it calmly
+• Don't dwell on it
+• Move forward
+
+If You Don't Know Something:
+• Admit it honestly
+• Explain related concepts you DO know
+• Show how you'd learn/figure it out
+• Never pretend to know
+
+If the Interview Goes Badly:
+• Don't give up—interviews are independent
+• Reset mentally before the next round
+• Stay professional
+• Sometimes bad rounds still result in offers`
       },
       {
-        title: 'After the Interview',
-        content: `The interview isn't over when you hang up:
+        title: 'After the Interview: What Comes Next',
+        content: `The interview isn't over when you walk out or hang up. How you handle the post-interview period matters.
 
-Immediately After:
-• Write down questions you were asked
-• Note what went well and what didn't
-• Send thank you notes (optional but nice)
+IMMEDIATELY AFTER:
 
-If You Get an Offer:
-• Don't accept immediately
-• Ask for time to consider (1-2 weeks is normal)
-• Negotiate! (Use our salary negotiation guide)
-• Get everything in writing
+Write Down What Happened:
+• Questions you were asked
+• How you answered
+• What went well
+• What could have been better
+• Any follow-up questions you wish you'd asked
 
-If You Get Rejected:
-• Ask for feedback (some companies provide it)
-• Don't take it personally
-• Most successful candidates failed multiple times
-• Apply again after 6-12 months
+This helps you:
+• Prepare for similar questions in future
+• Identify areas to improve
+• Remember details for thank-you notes
 
-Use RefOpen to get referrals at FAANG companies. A referral can help your resume get noticed and provide insider tips for the interview process!`
+Send Thank You Notes (Optional but Nice):
+• Send within 24 hours
+• Personalize for each interviewer
+• Keep it brief
+• Mention something specific from your conversation
+• Reiterate interest
+
+Sample:
+"Hi [Name], Thank you for taking the time to speak with me today about the [Role] position. I really enjoyed our discussion about [specific topic]. I'm excited about the opportunity to contribute to [team/project]. Please let me know if there's any additional information I can provide. Best regards, [Your Name]"
+
+WHILE WAITING:
+
+Typical Timeline:
+• Recruiter follow-up: 1-3 business days
+• Feedback collection: 3-7 business days
+• Offer/Rejection: 1-2 weeks
+
+What to Do:
+• Don't obsess (easier said than done!)
+• Continue your job search
+• Prepare for other interviews
+• Follow up if you haven't heard back in 2 weeks
+
+Following Up:
+• Email your recruiter politely
+• Ask for a timeline update
+• Express continued interest
+• Don't be pushy
+
+IF YOU GET AN OFFER:
+
+Don't Accept Immediately:
+• Thank them enthusiastically
+• Ask for the offer in writing
+• Request time to review (1-2 weeks is normal)
+• Never accept on the spot (even if you want to)
+
+Review the Offer:
+• Base salary
+• Signing bonus
+• Equity (RSUs, options, vesting)
+• Performance bonus target
+• Benefits (health, retirement)
+• PTO
+• Start date
+• Level/title
+
+Negotiate (Yes, You Should!):
+• Almost every offer has negotiation room
+• Be professional and grateful
+• Justify your ask with data (competing offers, market rates)
+• Consider non-salary items (signing bonus, equity, start date)
+• Don't make ultimatums
+
+IF YOU GET REJECTED:
+
+It Happens to Everyone:
+• Most successful engineers failed multiple FAANG interviews
+• It's not a reflection of your worth
+• The interview process is imperfect
+
+Request Feedback:
+• Ask your recruiter for feedback
+• Not all companies provide it, but some do
+• Use it to improve
+
+Reflect and Improve:
+• What areas were weak?
+• What would you study differently?
+• Were you nervous? How can you manage that?
+
+Try Again:
+• Most companies allow reapplication after 6-12 months
+• Use the time to genuinely improve
+• Your next interview will be stronger
+
+Keep Perspective:
+• FAANG isn't the only path to success
+• Many great engineers work at other companies
+• The skills you built are valuable anywhere
+
+USE REFOPEN TO ACCELERATE YOUR JOURNEY:
+
+Whether you're preparing for your first FAANG interview or trying again after a rejection, RefOpen can help:
+• Get referrals from employees at FAANG companies
+• Skip the resume black hole
+• Connect with people who can share interview tips
+• Learn about team culture before joining
+
+Good luck—with proper preparation, you've got this! Thousands of candidates succeed at FAANG interviews every year, and you can be one of them.`
       }
     ]
   },
@@ -3834,6 +4950,7 @@ export default function BlogArticleScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ResponsiveContainer>
       {/* Hero Image with Superimposed Back Button */}
       <View style={styles.heroContainer}>
         <Image source={{ uri: article.image }} style={styles.heroImage} />
@@ -3905,6 +5022,7 @@ export default function BlogArticleScreen() {
       </View>
 
       <ComplianceFooter />
+      </ResponsiveContainer>
     </ScrollView>
   );
 }

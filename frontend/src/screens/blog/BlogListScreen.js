@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
+import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
 // Blog articles data
 export const BLOG_ARTICLES = [
@@ -265,6 +266,7 @@ export default function BlogListScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ResponsiveContainer>
       {/* Header Section with Back Button */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -311,6 +313,7 @@ export default function BlogListScreen() {
       </View>
 
       <ComplianceFooter currentPage="blog" />
+      </ResponsiveContainer>
     </ScrollView>
   );
 }
