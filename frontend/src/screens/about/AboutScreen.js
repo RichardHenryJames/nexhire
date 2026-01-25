@@ -532,6 +532,41 @@ const createStyles = (COLORS, responsive = {}) => StyleSheet.create({
       alignItems: 'center',
     } : {}),
   },
+  // Fixed Header - Like ProfileScreen
+  stickyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.bgPrimary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    // Make header sticky on web
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
+    zIndex: 100,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 1200 : '100%',
+  },
+  headerLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 32,
+  },
+  headerCTA: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  headerCTAText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   innerContainer: {
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 1200 : '100%',
@@ -620,12 +655,6 @@ export default function AboutScreen() {
     }
   };
 
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
   const containerStyle = {
     maxWidth: 1200,
     width: '100%',
@@ -645,6 +674,18 @@ export default function AboutScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Fixed Header with Logo - Like ProfileScreen */}
+      <View style={styles.stickyHeader}>
+        <TouchableOpacity onPress={openRefOpen} style={styles.headerLogoContainer}>
+          <Image source={RefOpenLogo} style={styles.headerLogo} resizeMode="contain" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={openRefOpen}>
+          <LinearGradient colors={COLORS.gradientPrimary} style={styles.headerCTA}>
+            <Text style={styles.headerCTAText}>Get Started Free</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.innerContainer}>
       {/* Dark gradient overlay */}
       <LinearGradient
@@ -665,59 +706,6 @@ export default function AboutScreen() {
         <View style={{ position: 'absolute', bottom: -120, left: -100, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' }} />
         <View style={{ position: 'absolute', bottom: 50, right: 30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }} />
       </View>
-      
-      {/* Fixed Home Button - Top Right */}
-      <TouchableOpacity
-        onPress={() => navigation.navigate('Main')}
-        style={{
-          position: 'fixed',
-          top: Platform.OS === 'ios' ? 50 : 20,
-          right: 20,
-          zIndex: 200,
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: COLORS.primary,
-          justifyContent: 'center',
-          alignItems: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 4,
-          elevation: 5,
-        }}
-      >
-        <Ionicons name="home" size={22} color="#fff" />
-      </TouchableOpacity>
-
-      {/* Sticky Header */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          backgroundColor: '#000000',
-          opacity: headerOpacity,
-          paddingTop: Platform.OS === 'ios' ? 50 : 16,
-          paddingBottom: 12,
-          paddingHorizontal: 20,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.border,
-        }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', maxWidth: 1200, alignSelf: 'center', width: '100%' }}>
-          <TouchableOpacity onPress={openRefOpen} style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image source={RefOpenLogo} style={{ width: 140, height: 36 }} resizeMode="contain" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={openRefOpen}>
-            <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Get Started Free</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
 
       <Animated.ScrollView
         ref={scrollViewRef}
@@ -741,15 +729,10 @@ export default function AboutScreen() {
         {/* ============================================ */}
         <LinearGradient
           colors={[COLORS.bgSecondary, COLORS.bgPrimary]}
-          style={{ paddingTop: Platform.OS === 'ios' ? 110 : 90, paddingBottom: 60 }}
+          style={{ paddingTop: 40, paddingBottom: 60 }}
         >
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
-              {/* RefOpen Logo */}
-              <TouchableOpacity onPress={openRefOpen} style={{ marginBottom: 24 }}>
-                <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" />
-              </TouchableOpacity>
-
               {/* Main Headline */}
               <Text
                 style={{
@@ -880,131 +863,6 @@ export default function AboutScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* AI-POWERED FEATURE HIGHLIGHT */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgSecondary }}>
-          <View style={containerStyle}>
-            <LinearGradient
-              colors={[`${COLORS.pink}15`, `${COLORS.primary}10`, `${COLORS.accent}08`]}
-              style={{
-                borderRadius: 32,
-                padding: isLargeScreen ? 48 : 32,
-                borderWidth: 1,
-                borderColor: `${COLORS.pink}40`,
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Decorative AI sparkles */}
-              <View style={{ position: 'absolute', top: 20, right: 30, opacity: 0.3 }}>
-                <Text style={{ fontSize: 40, color: COLORS.pink }}>✨</Text>
-              </View>
-              <View style={{ position: 'absolute', bottom: 30, left: 40, opacity: 0.2 }}>
-                <Text style={{ fontSize: 28, color: COLORS.accent }}>✨</Text>
-              </View>
-              
-              <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', alignItems: 'center' }}>
-                {/* Left - AI Logo Image */}
-                <View style={{ alignItems: 'center', marginRight: isLargeScreen ? 48 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
-                  <Image
-                    source={AILogo}
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 28,
-                      marginBottom: 16,
-                    }}
-                    resizeMode="contain"
-                  />
-                  <View style={{
-                    backgroundColor: `${COLORS.pink}30`,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: COLORS.pink,
-                  }}>
-                    <Text style={{ color: COLORS.pink, fontWeight: '700', fontSize: 13 }}>✨ AI-POWERED</Text>
-                  </View>
-                </View>
-
-                {/* Right - Content */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{
-                    fontSize: isLargeScreen ? 36 : 28,
-                    fontWeight: '800',
-                    color: COLORS.textPrimary,
-                    marginBottom: 16,
-                    textAlign: isLargeScreen ? 'left' : 'center',
-                  }}>
-                    Smart Job Recommendations
-                  </Text>
-                  <Text style={{
-                    fontSize: 16,
-                    lineHeight: 26,
-                    color: COLORS.textSecondary,
-                    marginBottom: 24,
-                    textAlign: isLargeScreen ? 'left' : 'center',
-                  }}>
-                    Our AI analyzes your skills, experience, and preferences to surface jobs you'll actually love. 
-                    No more scrolling through hundreds of irrelevant listings. Get personalized matches that fit your career goals.
-                  </Text>
-
-                  {/* AI Features Grid */}
-                  <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap' }}>
-                    {[
-                      { icon: 'bulb', text: 'Smart matching based on your profile', color: COLORS.warning },
-                      { icon: 'trending-up', text: 'Learns from your activity over time', color: COLORS.success },
-                      { icon: 'flash', text: 'Daily personalized job alerts', color: COLORS.accent },
-                      { icon: 'search', text: 'AI-powered search understands intent', color: COLORS.primary },
-                    ].map((item, index) => (
-                      <View key={index} style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        marginBottom: 14,
-                        marginRight: isLargeScreen ? 32 : 0,
-                        width: isLargeScreen ? '45%' : '100%',
-                      }}>
-                        <View style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 10,
-                          backgroundColor: `${item.color}20`,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginRight: 12,
-                        }}>
-                          <Ionicons name={item.icon} size={18} color={item.color} />
-                        </View>
-                        <Text style={{ fontSize: 14, color: COLORS.textPrimary, flex: 1 }}>{item.text}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 20, alignSelf: isLargeScreen ? 'flex-start' : 'center' }}>
-                    <LinearGradient
-                      colors={['#EC4899', '#8B5CF6']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: 28,
-                        paddingVertical: 14,
-                        borderRadius: 14,
-                      }}
-                    >
-                      <Text style={{ fontSize: 18, marginRight: 8 }}>✨</Text>
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Get AI-Matched Jobs</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </LinearGradient>
-          </View>
-        </View>
-
-        {/* ============================================ */}
         {/* SECTION 1: JOB SEEKERS (50%) */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
@@ -1049,29 +907,6 @@ export default function AboutScreen() {
               <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 8 }}>
                 <Image source={HiredImg} style={{ width: isLargeScreen ? 320 : 260, height: isLargeScreen ? 200 : 160, borderRadius: 16 }} resizeMode="contain" />
               </View>
-            </View>
-
-            {/* Benefits Card - Always below steps */}
-            <View style={{ marginBottom: 48 }}>
-              <LinearGradient
-                colors={[`${COLORS.primary}15`, `${COLORS.primary}05`]}
-                style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: `${COLORS.primary}30` }}
-              >
-                <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
-                <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
-                <BenefitItem icon="people" text="One referral request reaches ALL verified employees at that company" color={COLORS.primary} COLORS={COLORS} />
-                <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
-                <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
-                <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
-                <BenefitItem icon="chatbubbles" text="Direct messaging with employers & referrers" color={COLORS.pink} COLORS={COLORS} />
-                <BenefitItem icon="bookmark" text="Save jobs and get AI recommendations" color={COLORS.secondary} COLORS={COLORS} />
-
-                <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 24 }}>
-                  <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Start Finding Jobs →</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </LinearGradient>
             </View>
 
             {/* Two Referral Modes Section */}
@@ -1377,6 +1212,158 @@ export default function AboutScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+
+        {/* ============================================ */}
+        {/* AI-POWERED FEATURE HIGHLIGHT */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgSecondary }}>
+          <View style={containerStyle}>
+            <LinearGradient
+              colors={[`${COLORS.pink}15`, `${COLORS.primary}10`, `${COLORS.accent}08`]}
+              style={{
+                borderRadius: 32,
+                padding: isLargeScreen ? 48 : 32,
+                borderWidth: 1,
+                borderColor: `${COLORS.pink}40`,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Decorative AI sparkles */}
+              <View style={{ position: 'absolute', top: 20, right: 30, opacity: 0.3 }}>
+                <Text style={{ fontSize: 40, color: COLORS.pink }}>✨</Text>
+              </View>
+              <View style={{ position: 'absolute', bottom: 30, left: 40, opacity: 0.2 }}>
+                <Text style={{ fontSize: 28, color: COLORS.accent }}>✨</Text>
+              </View>
+              
+              <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', alignItems: 'center' }}>
+                {/* Left - AI Logo Image */}
+                <View style={{ alignItems: 'center', marginRight: isLargeScreen ? 48 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
+                  <Image
+                    source={AILogo}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 28,
+                      marginBottom: 16,
+                    }}
+                    resizeMode="contain"
+                  />
+                  <View style={{
+                    backgroundColor: `${COLORS.pink}30`,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: COLORS.pink,
+                  }}>
+                    <Text style={{ color: COLORS.pink, fontWeight: '700', fontSize: 13 }}>✨ AI-POWERED</Text>
+                  </View>
+                </View>
+
+                {/* Right - Content */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: isLargeScreen ? 36 : 28,
+                    fontWeight: '800',
+                    color: COLORS.textPrimary,
+                    marginBottom: 16,
+                    textAlign: isLargeScreen ? 'left' : 'center',
+                  }}>
+                    Smart Job Recommendations
+                  </Text>
+                  <Text style={{
+                    fontSize: 16,
+                    lineHeight: 26,
+                    color: COLORS.textSecondary,
+                    marginBottom: 24,
+                    textAlign: isLargeScreen ? 'left' : 'center',
+                  }}>
+                    Our AI analyzes your skills, experience, and preferences to surface jobs you'll actually love. 
+                    No more scrolling through hundreds of irrelevant listings. Get personalized matches that fit your career goals.
+                  </Text>
+
+                  {/* AI Features Grid */}
+                  <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap' }}>
+                    {[
+                      { icon: 'bulb', text: 'Smart matching based on your profile', color: COLORS.warning },
+                      { icon: 'trending-up', text: 'Learns from your activity over time', color: COLORS.success },
+                      { icon: 'flash', text: 'Daily personalized job alerts', color: COLORS.accent },
+                      { icon: 'search', text: 'AI-powered search understands intent', color: COLORS.primary },
+                    ].map((item, index) => (
+                      <View key={index} style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 14,
+                        marginRight: isLargeScreen ? 32 : 0,
+                        width: isLargeScreen ? '45%' : '100%',
+                      }}>
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          backgroundColor: `${item.color}20`,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginRight: 12,
+                        }}>
+                          <Ionicons name={item.icon} size={18} color={item.color} />
+                        </View>
+                        <Text style={{ fontSize: 14, color: COLORS.textPrimary, flex: 1 }}>{item.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 20, alignSelf: isLargeScreen ? 'flex-start' : 'center' }}>
+                    <LinearGradient
+                      colors={['#EC4899', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: 28,
+                        paddingVertical: 14,
+                        borderRadius: 14,
+                      }}
+                    >
+                      <Text style={{ fontSize: 18, marginRight: 8 }}>✨</Text>
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Get AI-Matched Jobs</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* ============================================ */}
+        {/* WHY JOB SEEKERS LOVE REFOPEN */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgPrimary }}>
+          <View style={containerStyle}>
+            <LinearGradient
+              colors={[`${COLORS.primary}15`, `${COLORS.primary}05`]}
+              style={{ borderRadius: 24, padding: 28, borderWidth: 1, borderColor: `${COLORS.primary}30` }}
+            >
+              <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 24 }}>Why Job Seekers Love RefOpen</Text>
+              <BenefitItem icon="briefcase" text="Apply directly to jobs with one click" color={COLORS.blue} COLORS={COLORS} />
+              <BenefitItem icon="people" text="One referral request reaches ALL verified employees at that company" color={COLORS.primary} COLORS={COLORS} />
+              <BenefitItem icon="globe" text="External referrals: Got a job link? We'll find referrers!" color={COLORS.accent} COLORS={COLORS} />
+              <BenefitItem icon="flash" text="Skip the resume black hole - get noticed" color={COLORS.warning} COLORS={COLORS} />
+              <BenefitItem icon="analytics" text="Track applications & referrals in real-time" color={COLORS.success} COLORS={COLORS} />
+              <BenefitItem icon="chatbubbles" text="Direct messaging with employers & referrers" color={COLORS.pink} COLORS={COLORS} />
+              <BenefitItem icon="bookmark" text="Save jobs and get AI recommendations" color={COLORS.secondary} COLORS={COLORS} />
+
+              <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 24 }}>
+                <LinearGradient colors={COLORS.gradientPrimary} style={{ paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Start Finding Jobs →</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
         </View>
 

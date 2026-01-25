@@ -159,6 +159,66 @@ export const BLOG_ARTICLES = [
     date: 'December 8, 2025',
     author: 'RefOpen Team',
   },
+  {
+    id: 'faang-interview-guide',
+    title: 'FAANG Interview Guide: How to Crack Google, Amazon, Meta & More',
+    excerpt: 'Comprehensive preparation guide for FAANG interviews. Learn the exact strategies, resources, and timelines used by successful candidates.',
+    image: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?w=800',
+    category: 'Interview',
+    readTime: '15 min read',
+    date: 'December 5, 2025',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'internship-to-fulltime',
+    title: 'Internship to Full-Time: How to Convert Your Internship into a Job Offer',
+    excerpt: 'Learn the proven strategies that help interns get return offers. From day one actions to final presentation tips.',
+    image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
+    category: 'Internship',
+    readTime: '9 min read',
+    date: 'December 3, 2025',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'work-life-balance-tech',
+    title: 'Work-Life Balance in Tech: A Realistic Guide for 2026',
+    excerpt: 'Burnout is real. Learn how top performers maintain balance while excelling in demanding tech roles. Practical tips from industry veterans.',
+    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800',
+    category: 'Wellness',
+    readTime: '8 min read',
+    date: 'December 1, 2025',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'side-projects-portfolio',
+    title: 'Building a Portfolio That Gets You Hired: Side Project Ideas for 2026',
+    excerpt: 'No experience? Build it! Learn which side projects actually impress hiring managers and how to showcase them effectively.',
+    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+    category: 'Portfolio',
+    readTime: '10 min read',
+    date: 'November 28, 2025',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'layoff-recovery',
+    title: 'Laid Off? Here\'s Your 30-Day Action Plan to Bounce Back',
+    excerpt: 'A layoff isn\'t the end—it can be a new beginning. Follow this structured plan to land your next role faster and stronger.',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800',
+    category: 'Career Recovery',
+    readTime: '11 min read',
+    date: 'November 25, 2025',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'negotiate-job-offer',
+    title: 'How to Negotiate Multiple Job Offers: A Strategic Guide',
+    excerpt: 'Got multiple offers? Learn how to leverage them ethically, negotiate the best package, and make the right decision.',
+    image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800',
+    category: 'Negotiation',
+    readTime: '9 min read',
+    date: 'November 22, 2025',
+    author: 'RefOpen Team',
+  },
 ];
 
 const BlogCard = ({ article, onPress, colors, styles }) => {
@@ -183,35 +243,21 @@ const BlogCard = ({ article, onPress, colors, styles }) => {
 
 export default function BlogListScreen() {
   const navigation = useNavigation();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const responsive = useResponsive();
-  const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const styles = useMemo(() => createStyles(colors, responsive, isDark), [colors, responsive, isDark]);
 
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Career Blog',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Home' } });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
+  // Smart back navigation handler
+  const handleBackPress = () => {
+    const navState = navigation.getState();
+    const routes = navState?.routes || [];
+    const currentIndex = navState?.index || 0;
+    if (routes.length > 1 && currentIndex > 0) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Home' } });
+    }
+  };
 
   const handleArticlePress = (article) => {
     navigation.navigate('BlogArticle', { articleId: article.id });
@@ -219,9 +265,21 @@ export default function BlogListScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header Section */}
+      {/* Header Section with Back Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Career Blog</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleBackPress}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <View style={styles.backButtonCircle}>
+              <Ionicons name="arrow-back" size={18} color={isDark ? colors.text : '#FFFFFF'} />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Career Blog</Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <Text style={styles.headerSubtitle}>
           Expert tips, guides, and insights to help you land your dream job
         </Text>
@@ -252,12 +310,12 @@ export default function BlogListScreen() {
         ))}
       </View>
 
-      <ComplianceFooter />
+      <ComplianceFooter currentPage="blog" />
     </ScrollView>
   );
 }
 
-const createStyles = (colors, responsive) => StyleSheet.create({
+const createStyles = (colors, responsive, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -266,20 +324,45 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    padding: 24,
-    backgroundColor: colors.primary,
-    marginBottom: 20,
+    backgroundColor: isDark ? colors.surface : colors.primary,
+    paddingTop: 14,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: responsive.isLargeScreen ? 32 : 28,
-    fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  backButton: {
+    // Back button takes left position
+  },
+  backButtonCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: isDark ? colors.gray100 : 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 32, // Same as back button for centering
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: responsive.isLargeScreen ? 24 : 20,
+    fontWeight: typography.weights.bold,
+    color: isDark ? colors.text : '#FFFFFF',
+    textAlign: 'center',
+  },
   headerSubtitle: {
-    fontSize: typography.sizes.md,
-    color: 'rgba(255,255,255,0.9)',
-    lineHeight: 24,
+    fontSize: typography.sizes.sm,
+    color: isDark ? colors.textSecondary : 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   featuredSection: {
     paddingHorizontal: 16,
@@ -355,5 +438,9 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   date: {
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
+  },
+  headerButton: {
+    marginLeft: 16,
+    padding: 4,
   },
 });

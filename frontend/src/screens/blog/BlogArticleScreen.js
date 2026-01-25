@@ -2648,6 +2648,1147 @@ Whether you're an introvert or extrovert, find an approach that works for you. T
 Use RefOpen to connect with professionals at your target companies online, and combine it with in-person networking for maximum impact!`
       }
     ]
+  },
+  'faang-interview-guide': {
+    sections: [
+      {
+        title: 'Understanding FAANG Interviews',
+        content: `FAANG (Facebook/Meta, Amazon, Apple, Netflix, Google) and similar top tech companies have rigorous interview processes. But with the right preparation, these interviews are very crackable.
+
+The typical interview process includes:
+• Recruiter Screen (30 mins)
+• Technical Phone Screen (45-60 mins)
+• Onsite/Virtual Onsite (4-6 rounds)
+  - 2-3 Coding rounds
+  - 1 System Design round (for senior roles)
+  - 1-2 Behavioral rounds
+
+Each company has its own culture and focus areas, but the fundamentals remain similar. Let's break down how to prepare for each stage.`
+      },
+      {
+        title: 'Data Structures & Algorithms',
+        content: `This is the core of technical interviews. You need to be comfortable with:
+
+Must-Know Data Structures:
+• Arrays and Strings
+• Hash Tables / Hash Maps
+• Linked Lists
+• Trees (Binary Trees, BSTs, Tries)
+• Graphs
+• Stacks and Queues
+• Heaps / Priority Queues
+
+Must-Know Algorithms:
+• Two Pointers
+• Sliding Window
+• Binary Search
+• BFS and DFS
+• Dynamic Programming
+• Recursion and Backtracking
+• Sorting algorithms
+
+Recommended Practice:
+• LeetCode: Focus on Medium difficulty (aim for 150-200 problems)
+• Patterns: Learn patterns, not just solutions
+• Blind 75: Start with this curated list
+• Company-tagged problems: Focus on your target company's frequently asked questions
+
+Study Timeline:
+• 3-6 months for serious preparation
+• 2-3 hours daily coding practice
+• Weekly mock interviews`
+      },
+      {
+        title: 'System Design (For Senior Roles)',
+        content: `System design interviews assess your ability to design large-scale distributed systems.
+
+Key Concepts to Master:
+• Load Balancing
+• Caching (Redis, Memcached)
+• Database design (SQL vs NoSQL)
+• Sharding and Partitioning
+• Message Queues (Kafka, RabbitMQ)
+• Microservices architecture
+• CAP Theorem
+• API Design
+
+Common System Design Questions:
+• Design Twitter/X
+• Design YouTube
+• Design WhatsApp
+• Design URL Shortener
+• Design Rate Limiter
+• Design News Feed
+
+How to Approach:
+1. Clarify requirements (5 mins)
+2. High-level design (10 mins)
+3. Deep dive into components (20 mins)
+4. Address bottlenecks and scaling (10 mins)
+
+Resources:
+• "Designing Data-Intensive Applications" book
+• System Design Primer (GitHub)
+• Grokking the System Design Interview
+• YouTube channels: ByteByteGo, Gaurav Sen`
+      },
+      {
+        title: 'Behavioral Interviews',
+        content: `Don't underestimate behavioral interviews—they can make or break your candidacy.
+
+Amazon's Leadership Principles:
+Amazon is famous for their 16 leadership principles. Prepare 2-3 stories for each:
+• Customer Obsession
+• Ownership
+• Invent and Simplify
+• Bias for Action
+• Deliver Results
+• Earn Trust
+• Dive Deep
+• Have Backbone; Disagree and Commit
+
+The STAR Method:
+Structure your answers using STAR:
+• Situation: Set the context
+• Task: Describe your responsibility
+• Action: Explain what YOU did (use "I", not "we")
+• Result: Quantify the outcome
+
+Common Behavioral Questions:
+• Tell me about a time you failed
+• Describe a conflict with a teammate
+• When did you go above and beyond?
+• How do you handle tight deadlines?
+• Tell me about a time you disagreed with your manager
+
+Tips:
+• Prepare 8-10 detailed stories
+• Practice out loud
+• Be specific with numbers and outcomes
+• Show growth and learning`
+      },
+      {
+        title: 'Company-Specific Tips',
+        content: `Each FAANG company has unique aspects:
+
+Google:
+• Focuses heavily on algorithms
+• Values clean, efficient code
+• "Googliness" - cultural fit matters
+• Expect follow-up questions to initial solutions
+
+Amazon:
+• Leadership Principles are CRITICAL
+• Bar Raiser round can be anyone
+• Working backwards from customer
+• Data-driven decision making
+
+Meta (Facebook):
+• Move fast culture
+• Strong emphasis on product sense
+• Ninja (coding) + Pirate (execution) evaluation
+• Focus on impact and scale
+
+Apple:
+• Secretive about process
+• Design thinking important
+• Cross-functional collaboration
+• Attention to detail
+
+Netflix:
+• Culture of freedom and responsibility
+• No formal coding rounds for some roles
+• Heavy focus on past experience
+• "Keeper test" - would we fight to keep you?`
+      },
+      {
+        title: 'Interview Day Tips',
+        content: `On the day of your interview:
+
+Before:
+• Get 8 hours of sleep
+• Eat a good meal
+• Review your notes (don't cram)
+• Test your setup (for virtual interviews)
+• Have water nearby
+
+During Coding:
+• Think out loud constantly
+• Ask clarifying questions
+• Start with brute force, then optimize
+• Test your code with examples
+• Consider edge cases
+
+During System Design:
+• Drive the conversation
+• Make reasonable assumptions
+• Draw diagrams
+• Discuss trade-offs
+• Be open to feedback
+
+Virtual Interview Tips:
+• Quiet, well-lit room
+• Stable internet connection
+• Use an external keyboard
+• Have backup plan (phone hotspot)
+• Look at the camera, not the screen`
+      },
+      {
+        title: 'After the Interview',
+        content: `The interview isn't over when you hang up:
+
+Immediately After:
+• Write down questions you were asked
+• Note what went well and what didn't
+• Send thank you notes (optional but nice)
+
+If You Get an Offer:
+• Don't accept immediately
+• Ask for time to consider (1-2 weeks is normal)
+• Negotiate! (Use our salary negotiation guide)
+• Get everything in writing
+
+If You Get Rejected:
+• Ask for feedback (some companies provide it)
+• Don't take it personally
+• Most successful candidates failed multiple times
+• Apply again after 6-12 months
+
+Use RefOpen to get referrals at FAANG companies. A referral can help your resume get noticed and provide insider tips for the interview process!`
+      }
+    ]
+  },
+  'internship-to-fulltime': {
+    sections: [
+      {
+        title: 'The Internship Conversion Advantage',
+        content: `Converting your internship to a full-time offer is significantly easier than applying externally. Here's why:
+
+Conversion Rates:
+• Top tech companies convert 70-90% of interns
+• You're a known quantity—less risk for the company
+• You already understand the culture and codebase
+• Hiring you is faster and cheaper than external recruiting
+
+What Companies Look For:
+• Technical competence
+• Cultural fit
+• Growth potential
+• Initiative and ownership
+• Collaboration skills
+
+The bar for conversion is often LOWER than external hiring because they've already invested in you. Your job is not to be perfect—it's to show potential.`
+      },
+      {
+        title: 'Week 1: Set the Foundation',
+        content: `First impressions matter. Here's how to start strong:
+
+Day 1:
+• Arrive early (or log in early for remote)
+• Meet your manager, mentor, and team
+• Set up your development environment
+• Understand your project scope
+
+First Week Goals:
+• Complete onboarding tasks quickly
+• Schedule 1:1s with key team members
+• Understand the team's goals and priorities
+• Ship something small (even a typo fix counts!)
+
+Questions to Ask Your Manager:
+• What does success look like for this internship?
+• How will I be evaluated?
+• What are the team's current priorities?
+• Who should I talk to for [specific area]?
+• What's the best way to get help when stuck?
+
+Pro Tip: Create an internship document tracking your projects, learnings, and impact. This will be invaluable for your final presentation.`
+      },
+      {
+        title: 'During the Internship: Excel at Your Work',
+        content: `Technical excellence is the foundation:
+
+Code Quality:
+• Write clean, readable code
+• Add tests for your changes
+• Document your work
+• Ask for code reviews early and often
+• Incorporate feedback gracefully
+
+Project Execution:
+• Break down tasks into smaller pieces
+• Communicate progress regularly
+• Flag blockers early
+• Under-promise, over-deliver
+• Ship incrementally, not all at once
+
+When You're Stuck:
+• Try to solve it yourself first (15-30 mins)
+• Document what you've tried
+• Ask for help with specific questions
+• Don't disappear for days struggling alone
+
+Going Above and Beyond:
+• Volunteer for additional tasks
+• Help other interns or new team members
+• Fix bugs you encounter (with approval)
+• Propose improvements to processes
+• Participate in team activities and events`
+      },
+      {
+        title: 'Building Relationships',
+        content: `Your network matters as much as your output:
+
+With Your Manager:
+• Weekly 1:1s are crucial—never skip them
+• Come prepared with updates and questions
+• Ask for feedback regularly
+• Share your career interests
+• Keep them informed of challenges
+
+With Your Mentor:
+• Leverage their expertise
+• Ask about their career path
+• Get advice on company politics
+• Request introductions to others
+
+With Your Team:
+• Attend all team meetings and events
+• Offer to help teammates
+• Share knowledge and learnings
+• Be positive and enthusiastic
+• Respect everyone's time
+
+Beyond Your Team:
+• Attend company talks and events
+• Meet interns from other teams
+• Connect with senior engineers
+• Build relationships with PMs, designers, etc.
+
+The people you meet as an intern could be your future managers, colleagues, or references. Invest in these relationships!`
+      },
+      {
+        title: 'The Final Presentation',
+        content: `Most internships end with a presentation. This is your chance to shine:
+
+Preparation:
+• Start preparing 1-2 weeks before
+• Practice multiple times
+• Get feedback from your mentor
+• Anticipate tough questions
+
+Structure:
+1. Introduction (who you are, what team)
+2. Problem statement (why your project matters)
+3. Approach (how you solved it)
+4. Demo (show, don't just tell)
+5. Impact (metrics, business value)
+6. Learnings (what you gained)
+7. Future work (what's next)
+
+Tips for Success:
+• Tell a story, don't just list features
+• Focus on YOUR contributions
+• Quantify impact wherever possible
+• Be honest about challenges faced
+• Show enthusiasm for your work
+• Keep it within time limit
+
+Common Mistakes:
+• Too much technical detail
+• Not enough context
+• Downplaying your contributions
+• Going over time
+• Not practicing enough`
+      },
+      {
+        title: 'Navigating the Conversion Process',
+        content: `Understanding the timeline and process:
+
+Typical Timeline:
+• Mid-internship check-in (feedback opportunity)
+• Final presentation (last 1-2 weeks)
+• Feedback from team
+• Hiring committee review
+• Offer (usually within 2-4 weeks)
+
+What Gets Discussed:
+• Quality of your work
+• Collaboration and communication
+• Cultural fit
+• Growth potential
+• Manager's recommendation
+
+If You Don't Get an Offer:
+• Ask for specific feedback
+• Thank your team for the opportunity
+• Stay in touch with contacts
+• Apply again next year (many do!)
+• The experience is still valuable
+
+If You Get an Offer:
+• Express gratitude
+• Ask for details in writing
+• Understand the timeline for accepting
+• Negotiate if appropriate
+• Consider your options carefully
+
+RefOpen can help you find internship opportunities at top companies. Get referred by employees and increase your chances of landing that dream internship!`
+      }
+    ]
+  },
+  'work-life-balance-tech': {
+    sections: [
+      {
+        title: 'The Reality of Tech Work Culture',
+        content: `Let's be honest: tech can be demanding. Long hours, on-call rotations, tight deadlines, and the "always connected" culture can take a toll.
+
+The Statistics:
+• 57% of tech workers report burnout
+• Average tech employee works 50+ hours/week
+• Remote work has blurred work-life boundaries
+• "Hustle culture" is glorified but unsustainable
+
+But here's the truth: the most successful long-term performers are NOT the ones burning themselves out. They're the ones who manage their energy sustainably.
+
+This guide will help you find balance without sacrificing your career growth.`
+      },
+      {
+        title: 'Setting Boundaries',
+        content: `Boundaries are not laziness—they're essential for sustainable performance.
+
+Communication Boundaries:
+• Set "office hours" and communicate them
+• Turn off Slack notifications after hours
+• Don't respond to non-urgent emails at night
+• Use "schedule send" for messages written late
+
+Time Boundaries:
+• Block focus time on your calendar
+• Protect your lunch break
+• Set a hard stop time most days
+• Take your vacation days (all of them!)
+
+Mental Boundaries:
+• Don't check email first thing in the morning
+• Create a "shutdown ritual" to end your day
+• Keep work devices out of the bedroom
+• Have hobbies unrelated to tech
+
+What to Say:
+• "I'll look at this first thing tomorrow"
+• "I'm not available for meetings after 5pm"
+• "Let me check my calendar and get back to you"
+• "I'm on vacation and won't be checking messages"
+
+Remember: Boundaries get easier with time. Start small and build up.`
+      },
+      {
+        title: 'Managing Energy, Not Just Time',
+        content: `Time management is outdated. Energy management is the new skill.
+
+Understand Your Energy Patterns:
+• When are you most focused? (Morning? Afternoon?)
+• What activities drain you vs. energize you?
+• How many "deep work" hours do you have per day?
+• When do you need breaks?
+
+Structure Your Day:
+• Do creative/complex work during peak energy
+• Handle meetings and emails during low energy
+• Batch similar tasks together
+• Include buffer time between meetings
+
+Energy Boosters:
+• Short walks (even 10 minutes helps)
+• Proper hydration
+• Healthy snacks
+• Brief social interactions
+• Sunlight exposure
+
+Energy Drains to Avoid:
+• Back-to-back meetings all day
+• Multitasking
+• Constant context switching
+• Social media scrolling
+• Sugar crashes from junk food`
+      },
+      {
+        title: 'Physical Health Essentials',
+        content: `Your body affects your mind. Physical health is career health.
+
+Sleep (Non-Negotiable):
+• Aim for 7-8 hours
+• Consistent sleep/wake times
+• No screens 1 hour before bed
+• Cool, dark bedroom
+• Sleep > working late (seriously)
+
+Exercise:
+• 150 mins moderate activity per week minimum
+• Standing/walking meetings when possible
+• Stretch breaks during the day
+• Find exercise you actually enjoy
+• Morning exercise = better energy all day
+
+Ergonomics:
+• Proper desk and chair setup
+• Monitor at eye level
+• Take breaks every 45-60 minutes
+• Consider a standing desk
+• Get your eyes checked
+
+Nutrition:
+• Don't skip meals
+• Limit caffeine after 2pm
+• Stay hydrated
+• Keep healthy snacks accessible
+• Meal prep to avoid junk food`
+      },
+      {
+        title: 'Mental Health Matters',
+        content: `In tech, we optimize systems. We need to optimize ourselves too.
+
+Warning Signs of Burnout:
+• Constant exhaustion even after rest
+• Cynicism about work
+• Decreased productivity
+• Physical symptoms (headaches, insomnia)
+• Detachment from colleagues
+
+Preventive Practices:
+• Regular breaks (Pomodoro technique)
+• Journaling or reflection
+• Therapy/counseling (normalize this!)
+• Meditation or mindfulness
+• Hobbies outside of tech
+
+When to Seek Help:
+• Persistent anxiety or depression
+• Panic attacks
+• Substance use to cope
+• Thoughts of self-harm
+• Inability to function
+
+Resources:
+• Employee Assistance Programs (EAP)
+• Online therapy (BetterHelp, etc.)
+• Mental health apps (Headspace, Calm)
+• Support communities
+• Your manager (if you trust them)`
+      },
+      {
+        title: 'Having a Life Outside Work',
+        content: `The best engineers have interests beyond code.
+
+Why It Matters:
+• Prevents burnout
+• Builds creativity
+• Provides perspective
+• Creates talking points
+• Makes you more interesting
+
+Ideas to Explore:
+• Sports or fitness activities
+• Creative hobbies (music, art, writing)
+• Learning new skills (languages, cooking)
+• Volunteering
+• Travel and exploration
+• Time with friends and family
+
+Making Time:
+• Schedule personal activities like meetings
+• Say no to optional work events sometimes
+• Batch errands efficiently
+• Reduce time wasters (social media, TV)
+• Quality over quantity with commitments
+
+Building Community:
+• Join clubs or groups
+• Regular friend/family time
+• Local meetups (non-tech!)
+• Religious or spiritual communities
+• Neighborhood involvement
+
+Use RefOpen to find companies known for good work-life balance. During your job search, ask about culture and look for signs of sustainable practices!`
+      }
+    ]
+  },
+  'side-projects-portfolio': {
+    sections: [
+      {
+        title: 'Why Side Projects Matter',
+        content: `In 2026, a strong portfolio can be worth more than a degree. Here's why:
+
+For Fresh Graduates:
+• Demonstrates practical skills
+• Shows initiative and passion
+• Compensates for lack of experience
+• Proves you can ship products
+
+For Career Changers:
+• Bridges the experience gap
+• Showcases transferable skills
+• Provides talking points for interviews
+• Builds confidence
+
+For Experienced Developers:
+• Shows you're still learning
+• Demonstrates leadership (open source)
+• Explores new technologies
+• Could become a startup!
+
+What Recruiters Look For:
+• Completed projects (not abandoned)
+• Clean code and documentation
+• Relevant technologies
+• Problem-solving ability
+• Creativity and initiative`
+      },
+      {
+        title: 'Project Ideas That Impress',
+        content: `Not all projects are equal. Here are ideas that actually stand out:
+
+High-Impact Project Categories:
+
+1. Solve a Real Problem
+• Tool that automates your daily tasks
+• App for a local business
+• Solution for a community need
+
+2. Clone a Popular App (With a Twist)
+• Twitter clone with unique feature
+• E-commerce with AI recommendations
+• Note-taking app with collaboration
+
+3. AI/ML Projects (Hot in 2026)
+• Chatbot using LLMs
+• Image classification app
+• Recommendation system
+• AI-powered automation tool
+
+4. Full-Stack Applications
+• Job board (like RefOpen!)
+• Social platform
+• Dashboard with analytics
+• Booking/scheduling system
+
+5. Developer Tools
+• CLI tools
+• VS Code extensions
+• GitHub Actions
+• API wrappers
+
+What to Avoid:
+• Tutorial projects without modifications
+• Incomplete projects
+• Projects with no documentation
+• Outdated technology stacks
+• Over-engineered simple solutions`
+      },
+      {
+        title: 'Building Your Project',
+        content: `How to actually complete projects (most people don't):
+
+Phase 1: Planning (1 week)
+• Define clear scope (start SMALL)
+• Choose your tech stack wisely
+• Create a simple roadmap
+• Set a realistic deadline
+
+Phase 2: MVP (2-4 weeks)
+• Focus on core functionality only
+• Don't optimize prematurely
+• Ship something that works
+• Get feedback early
+
+Phase 3: Polish (1-2 weeks)
+• Fix bugs and edge cases
+• Add documentation
+• Clean up the code
+• Deploy to production
+
+Phase 4: Present (Ongoing)
+• Write a compelling README
+• Create screenshots/demo videos
+• Add to your portfolio site
+• Share on social media
+
+Time Management:
+• 1-2 hours daily is enough
+• Weekends for bigger features
+• Consistency > intensity
+• Take breaks to avoid burnout`
+      },
+      {
+        title: 'Showcasing Your Portfolio',
+        content: `A great project hidden is a waste. Here's how to showcase:
+
+GitHub Best Practices:
+• Clear, descriptive README
+• Include setup instructions
+• Add screenshots/GIFs
+• Use proper commit messages
+• Pin your best repositories
+• Maintain a consistent activity graph
+
+Portfolio Website:
+• Simple, clean design
+• Mobile-responsive
+• Fast loading
+• Live project links
+• Contact information
+• About section with personality
+
+README Template:
+1. Project title and tagline
+2. Demo link/screenshot
+3. Problem it solves
+4. Key features
+5. Tech stack used
+6. How to run locally
+7. Future improvements
+
+Write About Your Projects:
+• Blog posts about challenges
+• Twitter/LinkedIn threads
+• Dev.to or Medium articles
+• YouTube walkthroughs`
+      },
+      {
+        title: 'Leveraging Projects in Job Search',
+        content: `Your projects should actively help your job search:
+
+On Your Resume:
+• Dedicate a "Projects" section
+• Include tech stack and metrics
+• Link to live demos and GitHub
+• Highlight impact (users, stars, etc.)
+
+In Interviews:
+• Prepare to explain any project deeply
+• Know architecture decisions and trade-offs
+• Be honest about challenges faced
+• Discuss what you'd do differently
+
+Talking Points to Prepare:
+• Why did you build this?
+• What was the hardest part?
+• How did you make technical decisions?
+• What did you learn?
+• How would you scale it?
+
+Connecting Projects to Job Requirements:
+• Read job descriptions carefully
+• Highlight relevant projects
+• Build new projects targeting skills you lack
+• Update portfolio for each application
+
+Use RefOpen to find jobs that match your project skills. When requesting referrals, mention relevant projects that demonstrate your abilities!`
+      }
+    ]
+  },
+  'layoff-recovery': {
+    sections: [
+      {
+        title: 'Day 1: Process and Breathe',
+        content: `First, know this: You're not alone. Tech layoffs affect thousands of talented people, and a layoff is not a reflection of your worth.
+
+Immediate Steps:
+• Take time to process your emotions
+• Review your severance package carefully
+• Understand your benefits (health insurance, etc.)
+• Get everything in writing
+• Don't sign anything immediately—you usually have time
+
+What You're Entitled To:
+• Severance pay (varies by company/tenure)
+• Unused PTO payout
+• COBRA or extended health coverage
+• Stock vesting details
+• Outplacement services (if offered)
+
+Financial Quick Check:
+• Calculate your runway (savings ÷ monthly expenses)
+• File for unemployment benefits immediately
+• Review and reduce non-essential expenses
+• Don't panic-sell investments
+
+Emotional Health:
+• It's okay to grieve
+• Reach out to friends and family
+• Avoid making major decisions today
+• Take a few days before job searching`
+      },
+      {
+        title: 'Week 1: Get Organized',
+        content: `After processing, it's time to get strategic.
+
+Update Your Documents:
+• Refresh your resume
+• Update LinkedIn (use #OpenToWork carefully)
+• Gather references and contact info
+• Save work samples/portfolio pieces (check legal)
+• Export important contacts
+
+Financial Planning:
+• Create a budget for unemployment period
+• Look into COBRA alternatives (marketplace, spouse's plan)
+• Understand unemployment benefit timeline
+• Identify areas to cut spending temporarily
+
+Create Your Job Search System:
+• Spreadsheet to track applications
+• Set daily/weekly goals
+• Organize networking contacts
+• Schedule your job search like a job
+
+Mindset Reset:
+• This is a marathon, not a sprint
+• Quality applications > quantity
+• Take care of yourself
+• It typically takes 1-2 months per $10K salary`
+      },
+      {
+        title: 'Week 2-3: Network Intensively',
+        content: `80% of jobs are filled through networking. This is your focus.
+
+Immediate Network:
+• Tell everyone you know you're looking
+• Reach out to former colleagues
+• Connect with your manager/skip level
+• Join laid-off support groups (many exist!)
+
+LinkedIn Strategy:
+• Post about your layoff (optional but effective)
+• Engage with content in your field
+• Reach out to connections at target companies
+• Join relevant groups
+• Turn on "Open to Work" (visible to recruiters)
+
+Informational Interviews:
+• Ask for 15-20 minute calls
+• Learn about companies and roles
+• Ask for other connections
+• Don't directly ask for a job (let it come naturally)
+
+Message Template:
+"Hi [Name], I was recently laid off from [Company] and am exploring new opportunities. I've always admired [Target Company]'s work in [area]. Would you have 15 minutes to share your experience there? I'd really appreciate any insights."
+
+Use RefOpen:
+• Request referrals from verified employees
+• Browse jobs from companies actively hiring
+• Connect with insiders at your dream companies`
+      },
+      {
+        title: 'Week 3-4: Apply Strategically',
+        content: `Now start applications, but be strategic.
+
+Quality Over Quantity:
+• 5-10 tailored applications > 50 generic ones
+• Research each company thoroughly
+• Customize your resume for each role
+• Write specific cover letters
+
+Where to Apply:
+• Company career pages (often first)
+• LinkedIn Jobs
+• Indeed, Glassdoor
+• Niche job boards (Wellfound, etc.)
+• RefOpen for referral-backed applications
+
+Application Tracking:
+• Log every application
+• Note contacts at each company
+• Track follow-ups needed
+• Record interview stages
+
+Follow-Up Strategy:
+• Connect with hiring managers on LinkedIn
+• Send follow-up emails after 1 week
+• Don't be annoying, but be persistent
+• Apply to multiple roles at larger companies`
+      },
+      {
+        title: 'During the Search: Stay Sharp',
+        content: `Job searching is a job. Treat it seriously.
+
+Daily Routine:
+• Morning: Applications and follow-ups
+• Afternoon: Networking and learning
+• Exercise and self-care built in
+• Regular breaks to prevent burnout
+
+Keep Skills Sharp:
+• Take online courses
+• Contribute to open source
+• Build a side project
+• Practice coding challenges
+• Stay updated on industry trends
+
+Interview Prep:
+• Review common questions
+• Practice with mock interviews
+• Prepare your stories (STAR method)
+• Research companies before interviews
+
+Mental Health:
+• Rejections are normal—don't take them personally
+• Celebrate small wins
+• Stay connected with people
+• Consider therapy if struggling
+• Remember: this is temporary`
+      },
+      {
+        title: 'When Offers Come',
+        content: `Your hard work will pay off. Here's how to handle offers:
+
+Evaluating Offers:
+• Total compensation (salary + equity + bonus)
+• Benefits (health, 401k match, etc.)
+• Role and growth potential
+• Company stability
+• Work-life balance
+• Location/remote policy
+
+Negotiation (Yes, Even Now):
+• You can still negotiate!
+• Research market rates
+• Consider the full package
+• Be professional and grateful
+• Get everything in writing
+
+If It's Not Ideal:
+• Consider stepping stones
+• Weigh short-term vs. long-term
+• Don't accept out of desperation if possible
+• It's okay to keep looking while employed
+
+Starting Strong:
+• Take time between jobs if possible
+• Start with a positive attitude
+• Build relationships quickly
+• Deliver early wins
+
+Your career isn't defined by one layoff—it's defined by how you respond. You've got this!`
+      }
+    ]
+  },
+  'negotiate-job-offer': {
+    sections: [
+      {
+        title: 'The Multiple Offer Advantage',
+        content: `Having multiple offers is a powerful position. Here's how to maximize it:
+
+Why Multiple Offers Help:
+• Leverage in negotiations
+• Better understanding of your market value
+• Ability to compare cultures and opportunities
+• Reduced pressure to accept a bad offer
+
+Common Scenarios:
+• Two or more simultaneous offers
+• One offer with another pending
+• Competing against a counter-offer
+• Different roles at different levels
+
+Important Principles:
+• Be honest (don't fabricate offers)
+• Be respectful of everyone's time
+• Make decisions you can live with
+• Relationships matter—don't burn bridges`
+      },
+      {
+        title: 'Managing Timeline',
+        content: `Timing is everything with multiple offers.
+
+The Challenge:
+• Offers have deadlines
+• Interviews move at different speeds
+• You need time to decide
+
+Strategies:
+
+Asking for Extensions:
+• Always ask—most companies extend
+• Be honest: "I'm in final rounds elsewhere"
+• Request 1-2 weeks (reasonable)
+• Show enthusiasm to soften the ask
+
+Script:
+"Thank you so much for the offer—I'm very excited about [Company]. I'm currently in the final stages with another company and want to make a fully informed decision. Would it be possible to have until [date] to respond? I want to give this the consideration it deserves."
+
+Speeding Up Other Processes:
+• Tell companies you have deadlines
+• Ask if they can expedite
+• Be direct about your timeline
+
+Script:
+"I wanted to let you know I've received another offer with a deadline of [date]. [Company] is my top choice, and I'd love to complete the process before then if possible."
+
+When Timelines Don't Align:
+• You may need to decide with incomplete info
+• Consider asking for more time again
+• Make the best decision you can`
+      },
+      {
+        title: 'Comparing Offers Objectively',
+        content: `Create a framework to compare apples to oranges:
+
+Financial Comparison:
+
+1. Total Cash Compensation
+• Base salary
+• Signing bonus (amortize over expected tenure)
+• Annual bonus (consider target vs. actual)
+
+2. Equity Value
+• Stock grants or options
+• Vesting schedule
+• Company valuation/stage
+• Liquidity potential
+
+3. Benefits
+• Health insurance (compare plans)
+• 401k match
+• PTO days
+• Parental leave
+• Other perks
+
+Non-Financial Factors:
+
+Role:
+• Scope and impact
+• Growth potential
+• Learning opportunities
+• Team quality
+
+Company:
+• Stability and runway
+• Culture and values
+• Work-life balance
+• Remote/location policy
+• Career trajectory
+
+Create a Scoring Matrix:
+• Weight factors by importance to you
+• Score each offer 1-5
+• Total the weighted scores
+• Use as input, not the final answer`
+      },
+      {
+        title: 'Negotiation Tactics',
+        content: `With multiple offers, you have leverage. Use it wisely.
+
+When to Reveal Other Offers:
+• After you have a written offer
+• When negotiating compensation
+• Don't bluff—be honest
+
+How to Mention Competing Offers:
+• "I've received another offer at [X level/amount]"
+• Don't demand—collaborate
+• Show you want to make it work
+
+Script:
+"I'm very excited about joining [Company]. I've received another offer that's at [$X amount / Y level], and I'm hoping we can find a way to close the gap. Is there flexibility in [base/equity/signing bonus]?"
+
+What to Negotiate:
+• Base salary
+• Equity grants
+• Signing bonus
+• Start date
+• Level/title
+• Remote flexibility
+• PTO
+
+What's Usually Firm:
+• Benefits packages
+• Standard bonus targets
+• Vesting schedules
+
+Negotiating Without Being Pushy:
+• Express enthusiasm first
+• Ask, don't demand
+• Be specific about what you want
+• Know when to stop`
+      },
+      {
+        title: 'Making the Final Decision',
+        content: `After negotiating, you need to decide.
+
+Decision Framework:
+
+1. Revisit Your Priorities
+• What matters most to you right now?
+• Where do you want to be in 5 years?
+• What can you not compromise on?
+
+2. Listen to Your Gut
+• Which offer excites you most?
+• Where do you see yourself thriving?
+• What does your instinct say?
+
+3. Talk to People
+• Friends and family
+• Mentors
+• People at each company
+• Former employees (LinkedIn)
+
+4. Consider the Worst Case
+• What if the company fails?
+• What if you don't like the job?
+• What's your backup plan?
+
+Making Peace with Uncertainty:
+• No offer is perfect
+• You can't predict the future
+• A "wrong" choice can lead to great things
+• You can always change later
+
+Announcing Your Decision:
+• Thank everyone involved
+• Be gracious to companies you decline
+• Keep relationships warm
+• Tie up loose ends professionally`
+      },
+      {
+        title: 'Declining Offers Gracefully',
+        content: `How you decline matters for your reputation.
+
+General Principles:
+• Respond promptly
+• Be appreciative
+• Keep it brief
+• Don't over-explain
+• Leave the door open
+
+Email Template:
+"Dear [Name],
+
+Thank you so much for the offer to join [Company] as [Role]. After careful consideration, I've decided to accept another opportunity that more closely aligns with my current career goals.
+
+I truly enjoyed learning about [Company] and was impressed by the team. I hope our paths cross again in the future.
+
+Thank you again for your time and consideration.
+
+Best regards,
+[Your Name]"
+
+What to Avoid:
+• Ghosting (unprofessional)
+• Detailed comparisons
+• Criticizing the company/offer
+• Delayed responses
+
+Maintaining Relationships:
+• Connect on LinkedIn
+• Thank your interviewers individually
+• You may want to work there later!
+
+Use RefOpen to continue building relationships at companies you're interested in—even ones you declined. The tech world is small, and today's declined offer could be tomorrow's dream job!`
+      }
+    ]
   }
 };
 
