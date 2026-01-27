@@ -82,10 +82,10 @@ export class DailyJobEmailService {
             
             // First get user's job title preference
             const userPrefQuery = `
-                SELECT TOP 1 JobTitle FROM Applicants WHERE UserID = @param0
+                SELECT TOP 1 CurrentJobTitle FROM Applicants WHERE UserID = @param0
             `;
             const prefResult = await dbService.executeQuery(userPrefQuery, [userId]);
-            const userJobTitle = prefResult.recordset?.[0]?.JobTitle || '';
+            const userJobTitle = prefResult.recordset?.[0]?.CurrentJobTitle || '';
             
             // Build a simple query - prioritize jobs matching user's title
             const jobsQuery = `
