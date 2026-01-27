@@ -66,10 +66,20 @@ export default function DatePicker({
     return false;
   })();
   
-  // Convert value to Date object
-  const dateValue = value 
-    ? (value instanceof Date ? value : new Date(value))
-    : null;
+  // Convert value to Date object - handle timezone properly
+  // When parsing "YYYY-MM-DD" string, treat it as local date not UTC
+  const dateValue = (() => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    
+    // If it's a YYYY-MM-DD string, parse it as local date
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day); // month is 0-indexed
+    }
+    
+    return new Date(value);
+  })();
 
   const handleChange = (event, selectedDate) => {
     // On Android, picker closes automatically
@@ -78,8 +88,12 @@ export default function DatePicker({
     }
     
     if (selectedDate) {
-      // Return ISO string format (YYYY-MM-DD)
-      const isoString = selectedDate.toISOString().split('T')[0];
+      // Return ISO string format (YYYY-MM-DD) in LOCAL timezone (not UTC)
+      // Using toISOString() shifts the date due to timezone conversion
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const isoString = `${year}-${month}-${day}`;
       onChange(isoString);
     }
   };
