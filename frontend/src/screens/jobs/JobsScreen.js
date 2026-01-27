@@ -1216,6 +1216,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             isReferred={isReferred}
             isSaved={isSaved}
             isReferralRequesting={isReferralRequesting}
+            currentUserId={user?.UserID}
           />
         </View>
       );

@@ -17,36 +17,52 @@ const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platfo
 const getWelcomeMessages = (firstName: string): { message1: string; message2: string } => ({
   message1: `Hey ${firstName}! 👋
 
-Welcome to RefOpen — so glad you're here!
+Welcome to RefOpen — we're so glad you're here!
 
-Let's be real: job hunting sucks. Sending 100+ applications into the void, awkwardly DMing strangers on LinkedIn for referrals... we've all been there. It's exhausting and honestly, a bit cringe. 😅
+Job hunting can be exhausting — sending countless applications into the void, awkwardly DMing strangers on LinkedIn for referrals. We've all been there. That's exactly why we built RefOpen. 🚀
 
-That's exactly why we built RefOpen.
+✨ **How RefOpen Works:**
 
-✨ **Here's how we do the heavy lifting for you:**
+1️⃣ **Browse Jobs** — Explore 125,000+ jobs from top companies
+👉 [Browse Jobs](https://www.refopen.com/jobs)
 
-When you tap "Ask Referral" on any job, your request is instantly broadcasted to ALL verified employees at that company. No more hunting for connections, no more awkward cold DMs. Just one click, and you're in front of people who can actually help. Plus, you get live tracking on all your referral requests! 📊
+2️⃣ **Ask Referral** — Tap "Ask Referral" on any job, and your request is instantly sent to ALL verified employees at that company. No hunting for connections, no awkward DMs!
 
-🔗 **Found a job somewhere else?**
-No problem! Head to the "Ask Referral" tab and request referrals for ANY job — even ones not listed on RefOpen. Just paste the job URL or job ID, and we'll broadcast your request to verified employees at that company. Same magic, any job. ✨
+3️⃣ **Track Everything** — See real-time updates on all your referral requests
+👉 [Track My Requests](https://www.refopen.com/referrals/my-requests)
+
+🔗 **Found a job elsewhere?**
+No problem! Use the Ask Referral tab to request referrals for ANY job — even ones not on RefOpen. Just paste the job URL!
+👉 [Ask Referral](https://www.refopen.com/ask-referral)
 
 🎯 **Quick tips to get started:**
 • Complete your profile — referrers check profiles before accepting
-• Upload your resume — it makes their job easier
-• Browse jobs and tap "Ask Referral" on ones you love
-• Be genuine in your message — authenticity wins!`,
+• Upload your resume — makes their job easier
+• Write a genuine message — authenticity wins!
 
-  message2: `💼 **Already working somewhere?**
-Here's a bonus: You can become a Verified Referrer on RefOpen! Add your current work experience, verify your company email, and unlock:
-• Earn rewards for every successful referral
-• Post jobs from your company (broadcasted to all eligible seekers!)
-• Get shareable links to help more job seekers through social media
+📝 [Complete your profile here](https://www.refopen.com/profile)`,
+
+  message2: `💼 **Already employed?**
+
+You can become a Verified Referrer! Add your work experience, verify your company email, and unlock:
+
+✅ Earn rewards for every successful referral
+✅ Post jobs from your company
+✅ Help job seekers land their dream roles
+✅ Withdraw earnings to UPI or bank account
+
+🔧 [Verify your work email](https://www.refopen.com/settings)
+
+📚 **Helpful Links:**
+• [Browse Jobs](https://www.refopen.com/jobs)
+• [Ask Referral](https://www.refopen.com/ask-referral)
+• [Your Profile](https://www.refopen.com/profile)
+• [Learn More](https://www.refopen.com/about)
+• [Need Help](https://www.refopen.com/support)
 
 Got questions? Just reply here — we're real humans and happy to help! 😊
 
-Learn more: https://www.refopen.com/about
-
-Wishing you all the best on your journey! 🚀
+Best of luck on your journey! 🚀
 — Team RefOpen 💜`
 });
 

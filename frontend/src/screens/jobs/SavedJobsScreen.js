@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import JobCard from '../../components/jobs/JobCard';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 
 const SavedJobsScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [savedJobs, setSavedJobs] = useState([]);
@@ -145,9 +147,10 @@ const SavedJobsScreen = ({ navigation }) => {
         onUnsave={() => {
           handleUnsave(item);
         }}
+        currentUserId={user?.UserID}
       />
     );
-  }, [handleJobPress, handleUnsave]);
+  }, [handleJobPress, handleUnsave, user?.UserID]);
 
   // Empty state
   const renderEmptyState = () => {

@@ -425,6 +425,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
                   hideSave={true}
                   isReferred={isReferred}
                   isReferralRequesting={isReferralRequesting}
+                  currentUserId={user?.UserID}
                 />
               );
             })}

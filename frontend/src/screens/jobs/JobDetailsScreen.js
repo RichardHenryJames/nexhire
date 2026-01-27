@@ -48,6 +48,9 @@ const { jobId, fromReferralRequest } = route.params || {};
   // For referrer-posted jobs, hide Apply button and show Ask Referral only
   const isReferrerPosted = job?.PostedByType === 2;
   
+  // Hide Ask Referral button if current user is the one who posted this job
+  const isOwnPostedJob = user?.UserID && job?.PostedByUserID && user.UserID === job.PostedByUserID;
+  
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [referralMode, setReferralMode] = useState(false);
   const [hasReferred, setHasReferred] = useState(false);
@@ -1136,8 +1139,8 @@ const { jobId, fromReferralRequest } = route.params || {};
       )}
 
       {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
-      {/* Show for job seekers OR public users (not logged in) */}
-      {(isJobSeeker || !user) && !hasReferred && (
+      {/* Show for job seekers OR public users (not logged in), but NOT for own posted jobs */}
+      {(isJobSeeker || !user) && !hasReferred && !isOwnPostedJob && (
         <View style={styles.referralMessageSection}>
           {!showReferralMessageInput ? (
             // Collapsed state - just show button to expand
@@ -1242,8 +1245,8 @@ const { jobId, fromReferralRequest } = route.params || {};
       {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab OR when job is archived */}
       {!fromReferralRequest && !job.IsArchived && (
         <View style={styles.actionContainer}>        
-          {/* Show Ask Referral for job seekers OR public users */}
-          {(isJobSeeker || !user) && (
+          {/* Show Ask Referral for job seekers OR public users, but NOT if they posted this job */}
+          {(isJobSeeker || !user) && !isOwnPostedJob && (
             <TouchableOpacity 
               style={[
                 styles.referralButton,

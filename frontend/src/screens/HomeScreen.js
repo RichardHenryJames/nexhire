@@ -1072,7 +1072,7 @@ const [dashboardData, setDashboardData] = useState({
                 contentContainerStyle={styles.horizontalScroll}
               >
                 {dashboardData.f500Jobs.map((job, index) => (
-                  <JobCard key={job.JobID || index} job={job} />
+                  <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
                 ))}
               </ScrollView>
             </View>
@@ -1099,7 +1099,7 @@ const [dashboardData, setDashboardData] = useState({
               contentContainerStyle={styles.horizontalScroll}
             >
               {recentJobs.map((job, index) => (
-                <JobCard key={job.JobID || index} job={job} />
+                <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
               ))}
             </ScrollView>
           </View>

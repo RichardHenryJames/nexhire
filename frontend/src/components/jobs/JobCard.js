@@ -35,7 +35,9 @@ const JobCard = ({
   showDelete = false,
   // ✅ NEW: Props for share/copy action
   onShare = null,
-  showShare = false
+  showShare = false,
+  // ✅ NEW: Current user ID to hide Ask Referral for own posted jobs
+  currentUserId = null
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -45,6 +47,9 @@ const JobCard = ({
   // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
   // For referrer-posted jobs, hide Apply and show Ask Referral only
   const isReferrerPosted = job.PostedByType === 2;
+  
+  // Check if this job was posted by the current user (hide Ask Referral for own jobs)
+  const isOwnPostedJob = currentUserId && job.PostedByUserID && currentUserId === job.PostedByUserID;
   
   const title = job.Title || 'Untitled Job';
   const org = job.OrganizationName || 'Unknown Company';
@@ -149,8 +154,8 @@ const JobCard = ({
             )
           )}
 
-          {/* Referral button / states */}
-          {!hideReferral && (
+          {/* Referral button / states - hide for own posted jobs */}
+          {!hideReferral && !isOwnPostedJob && (
             isReferralRequesting ? (
               <View style={styles.requestingPill} accessibilityRole="text">
                 <Ionicons name="time-outline" size={18} color="#f59e0b" />

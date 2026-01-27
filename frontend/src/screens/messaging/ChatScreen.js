@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -19,6 +20,165 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
+
+// Regex patterns for detecting links in messages
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+
+// Helper to parse text and make URLs clickable (supports markdown links)
+const parseMessageContent = (content, isMine, colors) => {
+  if (!content) return null;
+  
+  const result = [];
+  let lastIndex = 0;
+  let match;
+  
+  // First, handle markdown links [text](url)
+  const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  let processedContent = content;
+  const markdownLinks = [];
+  
+  while ((match = markdownRegex.exec(content)) !== null) {
+    markdownLinks.push({
+      fullMatch: match[0],
+      text: match[1],
+      url: match[2],
+      index: match.index
+    });
+  }
+  
+  // If we have markdown links, process them
+  if (markdownLinks.length > 0) {
+    let currentIndex = 0;
+    markdownLinks.forEach((link, i) => {
+      // Add text before the link
+      if (link.index > currentIndex) {
+        result.push(content.substring(currentIndex, link.index));
+      }
+      // Add the clickable link with display text
+      result.push(
+        <Text
+          key={`md-link-${i}`}
+          style={{
+            color: isMine ? '#E0E7FF' : colors.primary,
+            textDecorationLine: 'underline',
+          }}
+          onPress={() => Linking.openURL(link.url)}
+        >
+          {link.text}
+        </Text>
+      );
+      currentIndex = link.index + link.fullMatch.length;
+    });
+    // Add remaining text
+    if (currentIndex < content.length) {
+      result.push(content.substring(currentIndex));
+    }
+    return result;
+  }
+  
+  // Fallback: handle plain URLs
+  const parts = content.split(URL_REGEX);
+  
+  return parts.map((part, index) => {
+    if (URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      return (
+        <Text
+          key={index}
+          style={{
+            color: isMine ? '#E0E7FF' : colors.primary,
+            textDecorationLine: 'underline',
+          }}
+          onPress={() => Linking.openURL(part)}
+        >
+          {part}
+        </Text>
+      );
+    }
+    return part;
+  });
+};
+
+// Helper for web - returns JSX elements with clickable links
+const parseMessageContentWeb = (content, isMine, colors) => {
+  if (!content) return null;
+  
+  const result = [];
+  let match;
+  
+  // First, handle markdown links [text](url)
+  const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  const markdownLinks = [];
+  
+  while ((match = markdownRegex.exec(content)) !== null) {
+    markdownLinks.push({
+      fullMatch: match[0],
+      text: match[1],
+      url: match[2],
+      index: match.index
+    });
+  }
+  
+  // If we have markdown links, process them
+  if (markdownLinks.length > 0) {
+    let currentIndex = 0;
+    markdownLinks.forEach((link, i) => {
+      // Add text before the link
+      if (link.index > currentIndex) {
+        result.push(content.substring(currentIndex, link.index));
+      }
+      // Add the clickable link with display text
+      result.push(
+        <a
+          key={`md-link-${i}`}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: isMine ? '#E0E7FF' : colors.primary,
+            textDecoration: 'underline',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {link.text}
+        </a>
+      );
+      currentIndex = link.index + link.fullMatch.length;
+    });
+    // Add remaining text
+    if (currentIndex < content.length) {
+      result.push(content.substring(currentIndex));
+    }
+    return result;
+  }
+  
+  // Fallback: handle plain URLs
+  const parts = content.split(URL_REGEX);
+  
+  return parts.map((part, index) => {
+    if (URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: isMine ? '#E0E7FF' : colors.primary,
+            textDecoration: 'underline',
+            wordBreak: 'break-all',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 export default function ChatScreen({ 
   // Props for embedded mode (desktop WhatsApp-style layout)
@@ -429,7 +589,7 @@ export default function ChatScreen({
               (isSending || isFailed) && styles.messageTextFaded,
             ]}
           >
-            {item.Content}
+            {parseMessageContent(item.Content, isMine, colors)}
           </Text>
           <View style={styles.messageFooter}>
             <Text
@@ -734,7 +894,7 @@ export default function ChatScreen({
                           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         }}
                       >
-                        {item.Content}
+                        {parseMessageContentWeb(item.Content, isMine, colors)}
                       </div>
                       <div
                         style={{
