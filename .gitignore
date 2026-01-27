@@ -50,5 +50,6 @@ frontend/env-config.*.json
 *.vscode/
 
 frontend/web-build/*
+frontend/dist/*
 
 frontend/.expo/*
