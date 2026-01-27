@@ -60,6 +60,8 @@ You can become a Verified Referrer! Add your work experience, verify your compan
 • [Learn More](https://www.refopen.com/about)
 • [Need Help](https://www.refopen.com/support)
 
+🌐 **Follow Us:** 💼 [LinkedIn](https://www.linkedin.com/company/refopen) • 📸 [Instagram](https://www.instagram.com/refopensolutions) • [X (Twitter)](https://x.com/refopensolution)
+
 Got questions? Just reply here — we're real humans and happy to help! 😊
 
 Best of luck on your journey! 🚀

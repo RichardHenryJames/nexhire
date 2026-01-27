@@ -782,13 +782,37 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This is a transaction notification fro
                             </table>
                             
                             <!-- Help Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin-bottom: 24px;">
                                 <tr>
                                     <td style="padding: 20px 24px;">
                                         <p style="margin: 0 0 8px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">Need help?</p>
                                         <p style="margin: 0; color: #64748B; font-size: 13px; line-height: 1.6;">
                                             If you have any questions or need assistance, visit our <a href="{{appUrl}}/support" style="color: #4F46E5; text-decoration: none;">Help Center</a> or reply to this email. We're here to help you succeed.
                                         </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Social Media Links -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 16px 0;">
+                                        <p style="margin: 0 0 12px 0; color: #64748B; font-size: 13px;">Follow us on social media</p>
+                                        <table cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="https://www.linkedin.com/company/refopen" style="color: #0A66C2; text-decoration: none; font-size: 13px;">LinkedIn</a>
+                                                </td>
+                                                <td style="padding: 0 8px; color: #E2E8F0;">|</td>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="https://www.instagram.com/refopensolutions" style="color: #E4405F; text-decoration: none; font-size: 13px;">Instagram</a>
+                                                </td>
+                                                <td style="padding: 0 8px; color: #E2E8F0;">|</td>
+                                                <td style="padding: 0 8px;">
+                                                    <a href="https://x.com/refopensolution" style="color: #1DA1F2; text-decoration: none; font-size: 13px;">X (Twitter)</a>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>

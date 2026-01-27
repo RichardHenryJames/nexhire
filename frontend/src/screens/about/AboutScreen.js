@@ -22,7 +22,7 @@
  * - 20% Employers (post jobs, hire talent)
  */
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -591,7 +591,8 @@ export default function AboutScreen() {
   const styles = useMemo(() => createStyles(COLORS, responsive), [COLORS, responsive]);
   
   // Get 4 random testimonials on each render
-  const [testimonials] = React.useState(() => getRandomTestimonials(4, COLORS));
+  const [testimonials] = useState(() => getRandomTestimonials(4, COLORS));
+  const [showEmployersSection, setShowEmployersSection] = useState(false);
 
   // Scroll to top on mount/refresh - run immediately on web
   useEffect(() => {
@@ -1082,31 +1083,30 @@ export default function AboutScreen() {
 
             <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', marginBottom: 48 }}>
               {/* Traditional */}
-              <View style={{ flex: 1, margin: 8, backgroundColor: COLORS.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.border }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.error, marginBottom: 16 }}>❌ Traditional Referrals</Text>
-                <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 24, marginBottom: 12 }}>
-                  • You refer someone on LinkedIn{'\n'}
-                  • They apply through company portal{'\n'}
-                  • You wait months to hear anything{'\n'}
-                  • They don't get hired (most don't){'\n'}
-                  • <Text style={{ color: COLORS.error, fontWeight: '600' }}>You get NOTHING for your time</Text>
-                </Text>
+              <View style={{ flex: 1, margin: 8 }}>
+                <LinearGradient colors={[`${COLORS.error}15`, `${COLORS.error}05`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: `${COLORS.error}40`, height: '100%' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.error, marginBottom: 20 }}>❌ Traditional Referrals</Text>
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 28 }}>• You refer someone on LinkedIn</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 28 }}>• They apply through company portal</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 28 }}>• You wait months to hear anything</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 28 }}>• They don't get hired (most don't)</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.error, lineHeight: 28, fontWeight: '600' }}>• You get NOTHING for your time</Text>
+                  </View>
+                </LinearGradient>
               </View>
 
               {/* RefOpen */}
               <View style={{ flex: 1, margin: 8 }}>
-                <LinearGradient colors={[`${COLORS.success}20`, `${COLORS.success}08`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.success, height: '100%' }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginBottom: 16 }}>✅ RefOpen Referrals</Text>
-                  <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 24, marginBottom: 12 }}>
-                    • 📝 Post referral jobs for FREE{'\n'}
-                    • 💰 Earn upto ₹100 per referral{'\n'}
-                    • 🏆 Verified badge on your profile{'\n'}
-                    • 🤝 Help others land great jobs{'\n'}
-                    • 📊 Priority access to referral requests{'\n'}
-                    • 💳 Easy withdrawal via UPI/bank{'\n'}
-                    • 📩 No inbox flood - refer through RefOpen{'\n'}
-                    • <Text style={{ color: COLORS.success, fontWeight: '600' }}>BONUS: Company bonus if hired!</Text>
-                  </Text>
+                <LinearGradient colors={[`${COLORS.success}15`, `${COLORS.success}05`]} style={{ borderRadius: 24, padding: 24, borderWidth: 1, borderColor: `${COLORS.success}40`, height: '100%' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.success, marginBottom: 20 }}>✅ RefOpen Referrals</Text>
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 28 }}>• Post referral jobs for FREE</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 28 }}>• Earn upto ₹100 per referral</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 28 }}>• Verified badge on your profile</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 28 }}>• No inbox flood - all in one place</Text>
+                    <Text style={{ fontSize: 14, color: COLORS.success, lineHeight: 28, fontWeight: '600' }}>• PLUS company bonus if hired!</Text>
+                  </View>
                 </LinearGradient>
               </View>
             </View>
@@ -1155,183 +1155,142 @@ export default function AboutScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* SECTION 3: EMPLOYERS (20%) */}
+        {/* SECTION 3: EMPLOYERS (20%) - COLLAPSIBLE */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgSecondary }}>
           <View style={containerStyle}>
-            <SectionHeader
-              tag="For Employers"
-              tagColor={COLORS.blue}
-              title="Hire Exceptional Talent Faster"
-              subtitle="The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster."
-              COLORS={COLORS}
-              isLargeScreen={isLargeScreen}
-              isMediumScreen={isMediumScreen}
-            />
+            {/* Clickable Header to Toggle */}
+            <TouchableOpacity 
+              onPress={() => setShowEmployersSection(!showEmployersSection)}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                paddingVertical: 16,
+                marginBottom: showEmployersSection ? 24 : 0,
+              }}
+            >
+              <View style={{ backgroundColor: `${COLORS.blue}20`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 12 }}>
+                <Text style={{ color: COLORS.blue, fontWeight: '700', fontSize: 12, textTransform: 'uppercase' }}>For Employers</Text>
+              </View>
+              <Text style={{ fontSize: isLargeScreen ? 28 : 22, fontWeight: '800', color: COLORS.textPrimary, marginRight: 12 }}>Hire Exceptional Talent Faster</Text>
+              <Ionicons name={showEmployersSection ? 'chevron-up' : 'chevron-down'} size={24} color={COLORS.blue} />
+            </TouchableOpacity>
 
-            {/* Feature Cards */}
-            <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap', justifyContent: 'center', alignItems: isLargeScreen ? 'stretch' : 'center' }}>
-              <FeatureCard
-                icon="create"
-                title="Post Jobs Instantly"
-                description="Create beautiful job listings in minutes. Reach 50,000+ qualified professionals actively seeking opportunities."
-                gradient={COLORS.gradientBlue}
-                index={0}
-                isLargeScreen={isLargeScreen}
-                isMediumScreen={isMediumScreen}
-              />
-              <FeatureCard
-                icon="people"
-                title="Leverage Employee Networks"
-                description="Your employees are on RefOpen. When they refer, candidates are pre-vetted and more likely to be a cultural fit."
-                gradient={COLORS.gradientPrimary}
-                index={1}
-                isLargeScreen={isLargeScreen}
-                isMediumScreen={isMediumScreen}
-              />
-              <FeatureCard
-                icon="analytics"
-                title="Track & Measure"
-                description="Full analytics on your hiring funnel. See which sources bring the best candidates and optimize your process."
-                gradient={COLORS.gradientSecondary}
-                index={2}
-                isLargeScreen={isLargeScreen}
-                isMediumScreen={isMediumScreen}
-              />
-            </View>
+            {/* Collapsible Content */}
+            {showEmployersSection && (
+              <>
+                <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 32, maxWidth: 600, alignSelf: 'center' }}>
+                  The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster.
+                </Text>
 
-            {/* CTA for Employers */}
-            <View style={{ alignItems: 'center', marginTop: 32 }}>
-              <TouchableOpacity onPress={openRefOpen}>
-                <LinearGradient
-                  colors={COLORS.gradientBlue}
-                  style={{ paddingHorizontal: 32, paddingVertical: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center' }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Post Your First Job Free</Text>
-                  <Ionicons name="arrow-forward" size={20} color="#fff" />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
+                {/* Feature Cards */}
+                <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap', justifyContent: 'center', alignItems: isLargeScreen ? 'stretch' : 'center' }}>
+                  <FeatureCard
+                    icon="create"
+                    title="Post Jobs Instantly"
+                    description="Create beautiful job listings in minutes. Reach 50,000+ qualified professionals actively seeking opportunities."
+                    gradient={COLORS.gradientBlue}
+                    index={0}
+                    isLargeScreen={isLargeScreen}
+                    isMediumScreen={isMediumScreen}
+                  />
+                  <FeatureCard
+                    icon="people"
+                    title="Leverage Employee Networks"
+                    description="Your employees are on RefOpen. When they refer, candidates are pre-vetted and more likely to be a cultural fit."
+                    gradient={COLORS.gradientPrimary}
+                    index={1}
+                    isLargeScreen={isLargeScreen}
+                    isMediumScreen={isMediumScreen}
+                  />
+                  <FeatureCard
+                    icon="analytics"
+                    title="Track & Measure"
+                    description="Full analytics on your hiring funnel. See which sources bring the best candidates and optimize your process."
+                    gradient={COLORS.gradientSecondary}
+                    index={2}
+                    isLargeScreen={isLargeScreen}
+                    isMediumScreen={isMediumScreen}
+                  />
+                </View>
+
+                {/* CTA for Employers */}
+                <View style={{ alignItems: 'center', marginTop: 32 }}>
+                  <TouchableOpacity onPress={openRefOpen}>
+                    <LinearGradient
+                      colors={COLORS.gradientBlue}
+                      style={{ paddingHorizontal: 32, paddingVertical: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center' }}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Post Your First Job Free</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
 
         {/* ============================================ */}
-        {/* AI-POWERED FEATURE HIGHLIGHT */}
+        {/* AI-POWERED FEATURE HIGHLIGHT - COMPACT */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgSecondary }}>
+        <View style={{ paddingVertical: 32, backgroundColor: COLORS.bgSecondary }}>
           <View style={containerStyle}>
             <LinearGradient
-              colors={[`${COLORS.pink}15`, `${COLORS.primary}10`, `${COLORS.accent}08`]}
+              colors={[`${COLORS.pink}12`, `${COLORS.primary}08`]}
               style={{
-                borderRadius: 32,
-                padding: isLargeScreen ? 48 : 32,
+                borderRadius: 20,
+                padding: isLargeScreen ? 32 : 24,
                 borderWidth: 1,
-                borderColor: `${COLORS.pink}40`,
-                position: 'relative',
-                overflow: 'hidden',
+                borderColor: `${COLORS.pink}30`,
               }}
             >
-              {/* Decorative AI sparkles */}
-              <View style={{ position: 'absolute', top: 20, right: 30, opacity: 0.3 }}>
-                <Text style={{ fontSize: 40, color: COLORS.pink }}>✨</Text>
-              </View>
-              <View style={{ position: 'absolute', bottom: 30, left: 40, opacity: 0.2 }}>
-                <Text style={{ fontSize: 28, color: COLORS.accent }}>✨</Text>
-              </View>
-              
               <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', alignItems: 'center' }}>
                 {/* Left - AI Logo Image */}
-                <View style={{ alignItems: 'center', marginRight: isLargeScreen ? 48 : 0, marginBottom: isLargeScreen ? 0 : 32 }}>
+                <View style={{ alignItems: 'center', marginRight: isLargeScreen ? 32 : 0, marginBottom: isLargeScreen ? 0 : 20 }}>
                   <Image
                     source={AILogo}
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 28,
-                      marginBottom: 16,
-                    }}
+                    style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 8 }}
                     resizeMode="contain"
                   />
-                  <View style={{
-                    backgroundColor: `${COLORS.pink}30`,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: COLORS.pink,
-                  }}>
-                    <Text style={{ color: COLORS.pink, fontWeight: '700', fontSize: 13 }}>✨ AI-POWERED</Text>
+                  <View style={{ backgroundColor: `${COLORS.pink}30`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                    <Text style={{ color: COLORS.pink, fontWeight: '700', fontSize: 11 }}>✨ AI-POWERED</Text>
                   </View>
                 </View>
 
                 {/* Right - Content */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{
-                    fontSize: isLargeScreen ? 36 : 28,
-                    fontWeight: '800',
-                    color: COLORS.textPrimary,
-                    marginBottom: 16,
-                    textAlign: isLargeScreen ? 'left' : 'center',
-                  }}>
+                  <Text style={{ fontSize: isLargeScreen ? 24 : 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8, textAlign: isLargeScreen ? 'left' : 'center' }}>
                     Smart Job Recommendations
                   </Text>
-                  <Text style={{
-                    fontSize: 16,
-                    lineHeight: 26,
-                    color: COLORS.textSecondary,
-                    marginBottom: 24,
-                    textAlign: isLargeScreen ? 'left' : 'center',
-                  }}>
-                    Our AI analyzes your skills, experience, and preferences to surface jobs you'll actually love. 
-                    No more scrolling through hundreds of irrelevant listings. Get personalized matches that fit your career goals.
+                  <Text style={{ fontSize: 14, lineHeight: 22, color: COLORS.textSecondary, marginBottom: 16, textAlign: isLargeScreen ? 'left' : 'center' }}>
+                    Our AI analyzes your skills and preferences to surface jobs you'll love. Get personalized matches that fit your career goals.
                   </Text>
 
-                  {/* AI Features Grid */}
-                  <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap' }}>
+                  {/* AI Features - Inline Tags */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: isLargeScreen ? 'flex-start' : 'center' }}>
                     {[
-                      { icon: 'bulb', text: 'Smart matching based on your profile', color: COLORS.warning },
-                      { icon: 'trending-up', text: 'Learns from your activity over time', color: COLORS.success },
-                      { icon: 'flash', text: 'Daily personalized job alerts', color: COLORS.accent },
-                      { icon: 'search', text: 'AI-powered search understands intent', color: COLORS.primary },
+                      { icon: 'bulb', text: 'Smart Matching', color: COLORS.warning },
+                      { icon: 'trending-up', text: 'Learns Over Time', color: COLORS.success },
+                      { icon: 'flash', text: 'Daily Alerts', color: COLORS.accent },
                     ].map((item, index) => (
-                      <View key={index} style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        marginBottom: 14,
-                        marginRight: isLargeScreen ? 32 : 0,
-                        width: isLargeScreen ? '45%' : '100%',
-                      }}>
-                        <View style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 10,
-                          backgroundColor: `${item.color}20`,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginRight: 12,
-                        }}>
-                          <Ionicons name={item.icon} size={18} color={item.color} />
-                        </View>
-                        <Text style={{ fontSize: 14, color: COLORS.textPrimary, flex: 1 }}>{item.text}</Text>
+                      <View key={index} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: `${item.color}15`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginRight: 8, marginBottom: 8 }}>
+                        <Ionicons name={item.icon} size={14} color={item.color} style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: '500' }}>{item.text}</Text>
                       </View>
                     ))}
                   </View>
 
-                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 20, alignSelf: isLargeScreen ? 'flex-start' : 'center' }}>
+                  <TouchableOpacity onPress={openRefOpen} style={{ marginTop: 16, alignSelf: isLargeScreen ? 'flex-start' : 'center' }}>
                     <LinearGradient
                       colors={['#EC4899', '#8B5CF6']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: 28,
-                        paddingVertical: 14,
-                        borderRadius: 14,
-                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
                     >
-                      <Text style={{ fontSize: 18, marginRight: 8 }}>✨</Text>
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Get AI-Matched Jobs</Text>
+                      <Text style={{ fontSize: 14, marginRight: 6 }}>✨</Text>
+                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Get AI-Matched Jobs</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -1425,58 +1384,6 @@ export default function AboutScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* TESTIMONIALS */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgSecondary }}>
-          <View style={containerStyle}>
-            <SectionHeader
-              tag="Success Stories"
-              tagColor={COLORS.warning}
-              title="What Our Users Say"
-              COLORS={COLORS}
-              isLargeScreen={isLargeScreen}
-              isMediumScreen={isMediumScreen}
-            />
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8 }}>
-              {testimonials.map((item, index) => (
-                <TouchableOpacity key={index} onPress={openRefOpen} activeOpacity={0.8}>
-                  <View
-                    style={{
-                      backgroundColor: COLORS.bgCard,
-                      borderRadius: 24,
-                      padding: 24,
-                      marginHorizontal: 8,
-                      width: isLargeScreen ? 360 : isMediumScreen ? 320 : contentWidth - 48,
-                      borderWidth: 1,
-                      borderColor: COLORS.border,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Ionicons key={star} name="star" size={16} color={COLORS.warning} style={{ marginRight: 2 }} />
-                      ))}
-                    </View>
-                    <Text style={{ fontSize: 15, color: COLORS.textPrimary, lineHeight: 24, fontStyle: 'italic', marginBottom: 20 }}>
-                      "{item.quote}"
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <LinearGradient colors={item.gradient} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{item.name.charAt(0)}</Text>
-                      </LinearGradient>
-                      <View>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.textPrimary }}>{item.name}</Text>
-                        <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>{item.role} • {item.company}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-
-        {/* ============================================ */}
         {/* FINAL CTA */}
         {/* ============================================ */}
         <LinearGradient
@@ -1543,6 +1450,19 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
                 Find Jobs. Apply Direct. Get Referred. Hire Talent.
               </Text>
+
+              {/* Social Media Links */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 20 }}>
+                <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/company/refopen')} style={{ padding: 8 }}>
+                  <Ionicons name="logo-linkedin" size={28} color={COLORS.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('https://www.instagram.com/refopensolutions')} style={{ padding: 8 }}>
+                  <Ionicons name="logo-instagram" size={28} color="#E4405F" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('https://x.com/refopensolution')} style={{ padding: 8 }}>
+                  <Ionicons name="logo-twitter" size={28} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
               <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
                 © 2024 RefOpen. All rights reserved.

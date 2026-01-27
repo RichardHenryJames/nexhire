@@ -22,6 +22,14 @@ import messagingApi from '../../services/messagingApi';
 import webSocketService from '../../services/websocketService';
 import ChatScreen from './ChatScreen';
 
+// Helper to strip markdown from message preview
+const stripMarkdown = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');  // Remove [link](url) -> link
+};
+
 // Main Desktop Messaging Layout
 export default function MessagingLayoutDesktop() {
   const navigation = useNavigation();
@@ -268,7 +276,7 @@ export default function MessagingLayoutDesktop() {
             <Text style={styles.timestamp}>{formatTimestamp(item.LastMessageAt)}</Text>
           </View>
           <Text style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]} numberOfLines={1}>
-            {item.LastMessagePreview || 'No messages yet'}
+            {stripMarkdown(item.LastMessagePreview) || 'No messages yet'}
           </Text>
         </View>
 

@@ -30,109 +30,105 @@ const parseMessageContent = (content, isMine, colors) => {
   if (!content) return null;
   
   const result = [];
+  
+  // Combined regex for bold (**text**) and markdown links [text](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  
   let lastIndex = 0;
   let match;
   
-  // First, handle markdown links [text](url)
-  const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  let processedContent = content;
-  const markdownLinks = [];
-  
-  while ((match = markdownRegex.exec(content)) !== null) {
-    markdownLinks.push({
-      fullMatch: match[0],
-      text: match[1],
-      url: match[2],
-      index: match.index
-    });
-  }
-  
-  // If we have markdown links, process them
-  if (markdownLinks.length > 0) {
-    let currentIndex = 0;
-    markdownLinks.forEach((link, i) => {
-      // Add text before the link
-      if (link.index > currentIndex) {
-        result.push(content.substring(currentIndex, link.index));
-      }
-      // Add the clickable link with display text
+  while ((match = combinedRegex.exec(content)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      result.push(content.substring(lastIndex, match.index));
+    }
+    
+    if (match[1]) {
+      // Bold text: **text**
+      result.push(
+        <Text key={`bold-${match.index}`} style={{ fontWeight: '700' }}>
+          {match[2]}
+        </Text>
+      );
+    } else if (match[3]) {
+      // Markdown link: [text](url)
       result.push(
         <Text
-          key={`md-link-${i}`}
+          key={`link-${match.index}`}
           style={{
             color: isMine ? '#E0E7FF' : colors.primary,
             textDecorationLine: 'underline',
           }}
-          onPress={() => Linking.openURL(link.url)}
+          onPress={() => Linking.openURL(match[5])}
         >
-          {link.text}
+          {match[4]}
         </Text>
       );
-      currentIndex = link.index + link.fullMatch.length;
-    });
-    // Add remaining text
-    if (currentIndex < content.length) {
-      result.push(content.substring(currentIndex));
     }
-    return result;
+    
+    lastIndex = match.index + match[0].length;
   }
   
-  // Fallback: handle plain URLs
-  const parts = content.split(URL_REGEX);
+  // Add remaining text
+  if (lastIndex < content.length) {
+    result.push(content.substring(lastIndex));
+  }
   
-  return parts.map((part, index) => {
-    if (URL_REGEX.test(part)) {
-      URL_REGEX.lastIndex = 0;
-      return (
-        <Text
-          key={index}
-          style={{
-            color: isMine ? '#E0E7FF' : colors.primary,
-            textDecorationLine: 'underline',
-          }}
-          onPress={() => Linking.openURL(part)}
-        >
-          {part}
-        </Text>
-      );
-    }
-    return part;
-  });
+  // If no matches, check for plain URLs as fallback
+  if (result.length === 0) {
+    const parts = content.split(URL_REGEX);
+    return parts.map((part, index) => {
+      if (URL_REGEX.test(part)) {
+        URL_REGEX.lastIndex = 0;
+        return (
+          <Text
+            key={index}
+            style={{
+              color: isMine ? '#E0E7FF' : colors.primary,
+              textDecorationLine: 'underline',
+            }}
+            onPress={() => Linking.openURL(part)}
+          >
+            {part}
+          </Text>
+        );
+      }
+      return part;
+    });
+  }
+  
+  return result;
 };
 
-// Helper for web - returns JSX elements with clickable links
+// Helper for web - returns JSX elements with clickable links and bold
 const parseMessageContentWeb = (content, isMine, colors) => {
   if (!content) return null;
   
   const result = [];
+  
+  // Combined regex for bold (**text**) and markdown links [text](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  
+  let lastIndex = 0;
   let match;
   
-  // First, handle markdown links [text](url)
-  const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  const markdownLinks = [];
-  
-  while ((match = markdownRegex.exec(content)) !== null) {
-    markdownLinks.push({
-      fullMatch: match[0],
-      text: match[1],
-      url: match[2],
-      index: match.index
-    });
-  }
-  
-  // If we have markdown links, process them
-  if (markdownLinks.length > 0) {
-    let currentIndex = 0;
-    markdownLinks.forEach((link, i) => {
-      // Add text before the link
-      if (link.index > currentIndex) {
-        result.push(content.substring(currentIndex, link.index));
-      }
-      // Add the clickable link with display text
+  while ((match = combinedRegex.exec(content)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      result.push(content.substring(lastIndex, match.index));
+    }
+    
+    if (match[1]) {
+      // Bold text: **text**
+      result.push(
+        <strong key={`bold-${match.index}`}>{match[2]}</strong>
+      );
+    } else if (match[3]) {
+      // Markdown link: [text](url)
       result.push(
         <a
-          key={`md-link-${i}`}
-          href={link.url}
+          key={`link-${match.index}`}
+          href={match[5]}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -141,43 +137,47 @@ const parseMessageContentWeb = (content, isMine, colors) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {link.text}
+          {match[4]}
         </a>
       );
-      currentIndex = link.index + link.fullMatch.length;
-    });
-    // Add remaining text
-    if (currentIndex < content.length) {
-      result.push(content.substring(currentIndex));
     }
-    return result;
+    
+    lastIndex = match.index + match[0].length;
   }
   
-  // Fallback: handle plain URLs
-  const parts = content.split(URL_REGEX);
+  // Add remaining text
+  if (lastIndex < content.length) {
+    result.push(content.substring(lastIndex));
+  }
   
-  return parts.map((part, index) => {
-    if (URL_REGEX.test(part)) {
-      URL_REGEX.lastIndex = 0;
-      return (
-        <a
-          key={index}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            color: isMine ? '#E0E7FF' : colors.primary,
-            textDecoration: 'underline',
-            wordBreak: 'break-all',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
+  // If no matches, check for plain URLs as fallback
+  if (result.length === 0) {
+    const parts = content.split(URL_REGEX);
+    return parts.map((part, index) => {
+      if (URL_REGEX.test(part)) {
+        URL_REGEX.lastIndex = 0;
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: isMine ? '#E0E7FF' : colors.primary,
+              textDecoration: 'underline',
+              wordBreak: 'break-all',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  }
+  
+  return result;
 };
 
 export default function ChatScreen({ 

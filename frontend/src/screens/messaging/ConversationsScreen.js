@@ -22,6 +22,14 @@ import messagingApi from '../../services/messagingApi';
 import MessagingLayoutDesktop from './MessagingLayoutDesktop';
 import { showToast } from '../../components/Toast';
 
+// Helper to strip markdown from message preview
+const stripMarkdown = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');  // Remove [link](url) -> link
+};
+
 // Wrapper component to handle desktop vs mobile layout
 export default function ConversationsScreen() {
   const responsive = useResponsive();
@@ -229,7 +237,7 @@ function ConversationsScreenMobile() {
 style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
       numberOfLines={1}
           >
-  {item.LastMessagePreview || 'No messages yet'}
+  {stripMarkdown(item.LastMessagePreview) || 'No messages yet'}
           </Text>
         </View>
 
