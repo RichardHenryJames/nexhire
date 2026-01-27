@@ -445,19 +445,18 @@ const StatCard = ({ icon, value, label, gradient, COLORS, isLargeScreen, isMediu
       colors={[`${gradient[0]}15`, `${gradient[1]}08`]}
       style={{
         borderRadius: 20,
-        padding: isLargeScreen ? 24 : 18,
+        padding: isLargeScreen ? 28 : isMediumScreen ? 22 : 18,
         alignItems: 'center',
-        margin: 6,
-        minWidth: isLargeScreen ? 180 : isMediumScreen ? 150 : 140,
+        minWidth: isLargeScreen ? 200 : isMediumScreen ? 160 : 140,
         borderWidth: 1,
         borderColor: `${gradient[0]}30`,
       }}
     >
-      <LinearGradient colors={gradient} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-        <Ionicons name={icon} size={22} color="#fff" />
+      <LinearGradient colors={gradient} style={{ width: 52, height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+        <Ionicons name={icon} size={24} color="#fff" />
       </LinearGradient>
-      <Text style={{ fontSize: isLargeScreen ? 28 : 24, fontWeight: '800', color: COLORS.textPrimary }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center', fontWeight: '500' }}>{label}</Text>
+      <Text style={{ fontSize: isLargeScreen ? 32 : isMediumScreen ? 28 : 24, fontWeight: '800', color: COLORS.textPrimary }}>{value}</Text>
+      <Text style={{ fontSize: isLargeScreen ? 13 : 11, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center', fontWeight: '500' }}>{label}</Text>
     </LinearGradient>
   </TouchableOpacity>
 );
@@ -513,10 +512,10 @@ const BenefitItem = ({ icon, text, color, COLORS }) => (
 );
 
 // Big Number Highlight
-const BigNumber = ({ number, label, color, COLORS, isLargeScreen }) => (
-  <View style={{ alignItems: 'center', paddingHorizontal: isLargeScreen ? 40 : 20, paddingVertical: 16 }}>
-    <Text style={{ fontSize: isLargeScreen ? 64 : 48, fontWeight: '800', color }}>{number}</Text>
-    <Text style={{ fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>{label}</Text>
+const BigNumber = ({ number, label, color, COLORS, isLargeScreen, isMediumScreen }) => (
+  <View style={{ alignItems: 'center', paddingHorizontal: isLargeScreen ? 40 : isMediumScreen ? 24 : 12, paddingVertical: isLargeScreen ? 16 : 10 }}>
+    <Text style={{ fontSize: isLargeScreen ? 64 : isMediumScreen ? 48 : 32, fontWeight: '800', color }}>{number}</Text>
+    <Text style={{ fontSize: isLargeScreen ? 14 : 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>{label}</Text>
   </View>
 );
 
@@ -729,7 +728,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         <LinearGradient
           colors={[COLORS.bgSecondary, COLORS.bgPrimary]}
-          style={{ paddingTop: 40, paddingBottom: 60 }}
+          style={{ paddingTop: 40 }}
         >
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
@@ -836,7 +835,7 @@ export default function AboutScreen() {
           </View>
 
           {/* Floating Companies */}
-          <View style={{ marginTop: 48 }}>
+          <View style={{ marginTop: 32 }}>
             <Text style={{ textAlign: 'center', fontSize: 12, color: COLORS.textMuted, marginBottom: 16, letterSpacing: 1 }}>
               EMPLOYEES FROM THESE COMPANIES ARE ON REFOPEN
             </Text>
@@ -851,9 +850,9 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* STATS SECTION */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 32, backgroundColor: COLORS.bgPrimary }}>
+        <View style={{ paddingTop: 40, paddingBottom: 40, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: isLargeScreen ? 16 : 8 }}>
               <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="briefcase" value="125K+" label="Active Jobs" gradient={COLORS.gradientSecondary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
               <StatCard icon="business" value="2,500+" label="Companies" gradient={COLORS.gradientSuccess} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
@@ -865,7 +864,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* SECTION 1: JOB SEEKERS (50%) */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
+        <View style={{ paddingTop: 40, paddingBottom: 40, backgroundColor: COLORS.bgSecondary }}>
           <View style={containerStyle}>
             <SectionHeader
               tag="For Job Seekers"
@@ -878,12 +877,12 @@ export default function AboutScreen() {
             />
 
             {/* Big Impact Numbers */}
-            <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', justifyContent: 'center', alignItems: 'center', marginBottom: 48, backgroundColor: COLORS.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: COLORS.border }}>
-              <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} COLORS={COLORS} isLargeScreen={isLargeScreen} />
-              <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="15x" label="Higher Hiring Rate with Referral" color={COLORS.accent} COLORS={COLORS} isLargeScreen={isLargeScreen} />
-              <View style={{ width: 1, height: 60, backgroundColor: COLORS.border, display: isLargeScreen ? 'flex' : 'none' }} />
-              <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} COLORS={COLORS} isLargeScreen={isLargeScreen} />
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 48, backgroundColor: COLORS.bgCard, borderRadius: isLargeScreen ? 24 : 16, padding: isLargeScreen ? 24 : 12, borderWidth: 1, borderColor: COLORS.border }}>
+              <BigNumber number="125K+" label="Active Jobs" color={COLORS.primary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <View style={{ width: 1, height: isLargeScreen ? 60 : 40, backgroundColor: COLORS.border }} />
+              <BigNumber number="15x" label="Higher Hiring Rate with Referral" color={COLORS.accent} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
+              <View style={{ width: 1, height: isLargeScreen ? 60 : 40, backgroundColor: COLORS.border }} />
+              <BigNumber number="48hrs" label="Avg Response Time" color={COLORS.success} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
             </View>
 
             {/* How it works - Always vertical layout */}
@@ -1036,7 +1035,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* SECTION 2: REFERRERS (30%) */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgPrimary }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
             <SectionHeader
               tag="For Employees Who Refer"
@@ -1156,7 +1155,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* SECTION 3: EMPLOYERS (20%) */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgSecondary }}>
           <View style={containerStyle}>
             <SectionHeader
               tag="For Employers"
@@ -1284,7 +1283,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* WHY JOB SEEKERS LOVE REFOPEN */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgPrimary }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
             <LinearGradient
               colors={[`${COLORS.primary}15`, `${COLORS.primary}05`]}
@@ -1311,7 +1310,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* COMPANIES GRID */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 64, backgroundColor: COLORS.bgPrimary }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
             <SectionHeader
               tag="Trusted by Employees At"
@@ -1372,7 +1371,7 @@ export default function AboutScreen() {
           colors={[COLORS.primary, '#7C3AED', '#9333EA']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ paddingVertical: 80 }}
+          style={{ paddingVertical: 40 }}
         >
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
@@ -1423,7 +1422,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* FOOTER */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 48, backgroundColor: COLORS.bgSecondary, borderTopWidth: 1, borderTopColor: COLORS.border }}>
+        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgSecondary, borderTopWidth: 1, borderTopColor: COLORS.border }}>
           <View style={containerStyle}>
             <View style={{ alignItems: 'center' }}>
               <TouchableOpacity onPress={openRefOpen} style={{ marginBottom: 16 }}>
