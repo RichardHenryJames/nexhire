@@ -31,8 +31,8 @@ const parseMessageContent = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**) and markdown links [text](url)
-  const combinedRegex = /(\*\*([^*]+)\*\*)|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // Combined regex for bold (**text**), markdown images ![alt](url), and markdown links [text](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -51,6 +51,16 @@ const parseMessageContent = (content, isMine, colors) => {
         </Text>
       );
     } else if (match[3]) {
+      // Markdown image: ![alt](url) - render as inline image
+      result.push(
+        <Image
+          key={`img-${match.index}`}
+          source={{ uri: match[5] }}
+          style={{ width: 16, height: 16, marginRight: 4 }}
+          resizeMode="contain"
+        />
+      );
+    } else if (match[6]) {
       // Markdown link: [text](url)
       result.push(
         <Text
@@ -59,9 +69,9 @@ const parseMessageContent = (content, isMine, colors) => {
             color: isMine ? '#E0E7FF' : colors.primary,
             textDecorationLine: 'underline',
           }}
-          onPress={() => Linking.openURL(match[5])}
+          onPress={() => Linking.openURL(match[8])}
         >
-          {match[4]}
+          {match[7]}
         </Text>
       );
     }
@@ -106,8 +116,8 @@ const parseMessageContentWeb = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**) and markdown links [text](url)
-  const combinedRegex = /(\*\*([^*]+)\*\*)|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // Combined regex for bold (**text**), markdown images ![alt](url), and markdown links [text](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -124,11 +134,21 @@ const parseMessageContentWeb = (content, isMine, colors) => {
         <strong key={`bold-${match.index}`}>{match[2]}</strong>
       );
     } else if (match[3]) {
+      // Markdown image: ![alt](url) - render as inline image
+      result.push(
+        <img
+          key={`img-${match.index}`}
+          src={match[5]}
+          alt={match[4] || ''}
+          style={{ width: 16, height: 16, marginRight: 4, verticalAlign: 'middle' }}
+        />
+      );
+    } else if (match[6]) {
       // Markdown link: [text](url)
       result.push(
         <a
           key={`link-${match.index}`}
-          href={match[5]}
+          href={match[8]}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -137,7 +157,7 @@ const parseMessageContentWeb = (content, isMine, colors) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {match[4]}
+          {match[7]}
         </a>
       );
     }

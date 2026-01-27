@@ -592,7 +592,6 @@ export default function AboutScreen() {
   
   // Get 4 random testimonials on each render
   const [testimonials] = useState(() => getRandomTestimonials(4, COLORS));
-  const [showEmployersSection, setShowEmployersSection] = useState(false);
 
   // Scroll to top on mount/refresh - run immediately on web
   useEffect(() => {
@@ -852,7 +851,7 @@ export default function AboutScreen() {
         {/* ============================================ */}
         {/* STATS SECTION */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 48, backgroundColor: COLORS.bgPrimary }}>
+        <View style={{ paddingVertical: 32, backgroundColor: COLORS.bgPrimary }}>
           <View style={containerStyle}>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
               <StatCard icon="people" value="50K+" label="Job Seekers" gradient={COLORS.gradientPrimary} COLORS={COLORS} isLargeScreen={isLargeScreen} isMediumScreen={isMediumScreen} />
@@ -1155,80 +1154,63 @@ export default function AboutScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* SECTION 3: EMPLOYERS (20%) - COLLAPSIBLE */}
+        {/* SECTION 3: EMPLOYERS (20%) */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 40, backgroundColor: COLORS.bgSecondary }}>
+        <View style={{ paddingVertical: 80, backgroundColor: COLORS.bgSecondary }}>
           <View style={containerStyle}>
-            {/* Clickable Header to Toggle */}
-            <TouchableOpacity 
-              onPress={() => setShowEmployersSection(!showEmployersSection)}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                paddingVertical: 16,
-                marginBottom: showEmployersSection ? 24 : 0,
-              }}
-            >
-              <View style={{ backgroundColor: `${COLORS.blue}20`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 12 }}>
-                <Text style={{ color: COLORS.blue, fontWeight: '700', fontSize: 12, textTransform: 'uppercase' }}>For Employers</Text>
-              </View>
-              <Text style={{ fontSize: isLargeScreen ? 28 : 22, fontWeight: '800', color: COLORS.textPrimary, marginRight: 12 }}>Hire Exceptional Talent Faster</Text>
-              <Ionicons name={showEmployersSection ? 'chevron-up' : 'chevron-down'} size={24} color={COLORS.blue} />
-            </TouchableOpacity>
+            <SectionHeader
+              tag="For Employers"
+              tagColor={COLORS.primary}
+              title="Hire Exceptional Talent Faster"
+              subtitle="The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster."
+              COLORS={COLORS}
+              isLargeScreen={isLargeScreen}
+              isMediumScreen={isMediumScreen}
+            />
 
-            {/* Collapsible Content */}
-            {showEmployersSection && (
-              <>
-                <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 32, maxWidth: 600, alignSelf: 'center' }}>
-                  The best candidates come through referrals. Post jobs, leverage your employees' networks, and hire faster.
-                </Text>
+            {/* Feature Cards */}
+            <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap', justifyContent: 'center', alignItems: isLargeScreen ? 'stretch' : 'center', marginBottom: 32 }}>
+              <FeatureCard
+                icon="create"
+                title="Post Jobs Instantly"
+                description="Create beautiful job listings in minutes. Reach 50,000+ qualified professionals actively seeking opportunities."
+                gradient={COLORS.gradientBlue}
+                index={0}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
+              />
+              <FeatureCard
+                icon="people"
+                title="Leverage Employee Networks"
+                description="Your employees are on RefOpen. When they refer, candidates are pre-vetted and more likely to be a cultural fit."
+                gradient={COLORS.gradientPrimary}
+                index={1}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
+              />
+              <FeatureCard
+                icon="analytics"
+                title="Track & Measure"
+                description="Full analytics on your hiring funnel. See which sources bring the best candidates and optimize your process."
+                gradient={COLORS.gradientSecondary}
+                index={2}
+                isLargeScreen={isLargeScreen}
+                isMediumScreen={isMediumScreen}
+              />
+            </View>
 
-                {/* Feature Cards */}
-                <View style={{ flexDirection: isLargeScreen ? 'row' : 'column', flexWrap: 'wrap', justifyContent: 'center', alignItems: isLargeScreen ? 'stretch' : 'center' }}>
-                  <FeatureCard
-                    icon="create"
-                    title="Post Jobs Instantly"
-                    description="Create beautiful job listings in minutes. Reach 50,000+ qualified professionals actively seeking opportunities."
-                    gradient={COLORS.gradientBlue}
-                    index={0}
-                    isLargeScreen={isLargeScreen}
-                    isMediumScreen={isMediumScreen}
-                  />
-                  <FeatureCard
-                    icon="people"
-                    title="Leverage Employee Networks"
-                    description="Your employees are on RefOpen. When they refer, candidates are pre-vetted and more likely to be a cultural fit."
-                    gradient={COLORS.gradientPrimary}
-                    index={1}
-                    isLargeScreen={isLargeScreen}
-                    isMediumScreen={isMediumScreen}
-                  />
-                  <FeatureCard
-                    icon="analytics"
-                    title="Track & Measure"
-                    description="Full analytics on your hiring funnel. See which sources bring the best candidates and optimize your process."
-                    gradient={COLORS.gradientSecondary}
-                    index={2}
-                    isLargeScreen={isLargeScreen}
-                    isMediumScreen={isMediumScreen}
-                  />
-                </View>
-
-                {/* CTA for Employers */}
-                <View style={{ alignItems: 'center', marginTop: 32 }}>
-                  <TouchableOpacity onPress={openRefOpen}>
-                    <LinearGradient
-                      colors={COLORS.gradientBlue}
-                      style={{ paddingHorizontal: 32, paddingVertical: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center' }}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Post Your First Job Free</Text>
-                      <Ionicons name="arrow-forward" size={20} color="#fff" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+            {/* CTA for Employers */}
+            <View style={{ alignItems: 'center' }}>
+              <TouchableOpacity onPress={openRefOpen}>
+                <LinearGradient
+                  colors={COLORS.gradientBlue}
+                  style={{ paddingHorizontal: 32, paddingVertical: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 }}>Post Your First Job Free</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
