@@ -77,22 +77,48 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Use the SAME logic as Jobs screen - JobService.getJobs with personalization
-            // The backend automatically ranks jobs by user's job title, preferences, etc.
-            const params = {
-                page: 1,
-                pageSize: 10,
-                excludeUserApplications: userId, // This triggers personalization ranking
-                postedWithinDays: 30,
-                skipFresherFilter: true // Don't apply restrictive fresher filter for emails
-            };
+            // Use lightweight query to get recent jobs matching user's job title
+            // JobService.getJobs with personalization CTEs times out in Azure Functions
             
-            const result = await JobService.getJobs(params);
-            if (result.jobs && result.jobs.length > 0) {
-                return result.jobs as unknown as JobForEmail[];
+            // First get user's job title preference
+            const userPrefQuery = `
+                SELECT TOP 1 JobTitle FROM Applicants WHERE UserID = @param0
+            `;
+            const prefResult = await dbService.executeQuery(userPrefQuery, [userId]);
+            const userJobTitle = prefResult.recordset?.[0]?.JobTitle || '';
+            
+            // Build a simple query - prioritize jobs matching user's title
+            const jobsQuery = `
+                SELECT TOP 10
+                    j.JobID, j.Title,
+                    o.Name as OrganizationName,
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    j.Location, j.City, j.Country,
+                    j.SalaryRangeMin, j.SalaryRangeMax,
+                    jt.Value as JobTypeName,
+                    wt.Value as WorkplaceTypeName,
+                    j.PublishedAt,
+                    CASE WHEN LOWER(j.Title) LIKE '%' + LOWER(@param1) + '%' THEN 1 ELSE 0 END as TitleMatch
+                FROM Jobs j
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                WHERE j.Status = 'Published'
+                  AND j.PublishedAt >= DATEADD(DAY, -30, GETDATE())
+                  AND NOT EXISTS (
+                      SELECT 1 FROM JobApplications ja
+                      INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                      WHERE a.UserID = @param0 AND ja.JobID = j.JobID
+                  )
+                ORDER BY TitleMatch DESC, j.PublishedAt DESC
+            `;
+            
+            const result = await dbService.executeQuery(jobsQuery, [userId, userJobTitle || '']);
+            if (result.recordset && result.recordset.length > 0) {
+                return result.recordset as JobForEmail[];
             }
             
-            // Fallback: Get latest 5 published jobs if no personalized results
+            // Fallback: Get latest 5 published jobs if nothing found
             const fallbackQuery = `
                 SELECT TOP 5
                     j.JobID, j.Title,
