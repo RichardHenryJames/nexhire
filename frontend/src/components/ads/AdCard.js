@@ -44,6 +44,12 @@ const AD_CLIENT = 'ca-pub-7167287641762329';
  */
 const loadAdSenseScript = () => {
   return new Promise((resolve) => {
+    // 🚨 If ads are disabled globally, don't load anything
+    if (!ADS_ENABLED) {
+      resolve(false);
+      return;
+    }
+
     if (Platform.OS !== 'web') {
       resolve(false);
       return;
