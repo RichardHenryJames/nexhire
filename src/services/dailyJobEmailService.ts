@@ -115,7 +115,9 @@ export class DailyJobEmailService {
             return fallbackResult.recordset || [];
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
-            return [];
+            // Store error for debugging - will be included in result
+            (error as any).__dailyEmailDebug = `getTopJobsForUser failed: ${error.message}`;
+            throw error; // Re-throw so caller can see the actual error
         }
     }
 
@@ -194,8 +196,9 @@ export class DailyJobEmailService {
 
     /**
      * Send daily job recommendation email to a single user
+     * Returns: { success: boolean, errorDetail?: string }
      */
-    static async sendEmailToUser(user: UserForEmail): Promise<boolean> {
+    static async sendEmailToUser(user: UserForEmail): Promise<{ success: boolean; errorDetail?: string }> {
         try {
             // Get top 5 jobs for this user
             const jobs = await this.getTopJobsForUser(user.UserID);
@@ -203,7 +206,7 @@ export class DailyJobEmailService {
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
                 console.log(`⏭️ Skipping email for ${user.Email} - no jobs found`);
-                return false;
+                return { success: false, errorDetail: `No jobs found for user ${user.Email} (UserID: ${user.UserID})` };
             }
             
             // Generate job cards HTML
@@ -226,11 +229,15 @@ export class DailyJobEmailService {
                 emailType: 'daily_job_recommendations'
             });
             
-            return result.success;
+            if (result.success) {
+                return { success: true };
+            } else {
+                return { success: false, errorDetail: `Email send failed for ${user.Email} (jobs found: ${jobs.length})` };
+            }
             
         } catch (error: any) {
             console.error(`❌ Failed to send email to ${user.Email}:`, error.message);
-            return false;
+            return { success: false, errorDetail: `Exception for ${user.Email}: ${error.message}` };
         }
     }
 
@@ -270,12 +277,14 @@ export class DailyJobEmailService {
                     const batchResult = batchResults[j];
                     const user = batch[j];
                     
-                    if (batchResult.status === 'fulfilled' && batchResult.value) {
+                    if (batchResult.status === 'fulfilled' && batchResult.value.success) {
                         result.emailsSent++;
                     } else {
                         result.emailsFailed++;
                         if (batchResult.status === 'rejected') {
                             result.errors.push(`${user.Email}: ${batchResult.reason?.message || 'Unknown error'}`);
+                        } else if (batchResult.status === 'fulfilled' && batchResult.value.errorDetail) {
+                            result.errors.push(batchResult.value.errorDetail);
                         }
                     }
                 }
@@ -349,14 +358,14 @@ export class DailyJobEmailService {
                 return result;
             }
 
-            const success = await this.sendEmailToUser(user);
+            const sendResult = await this.sendEmailToUser(user);
             
-            if (success) {
+            if (sendResult.success) {
                 result.emailsSent = 1;
                 console.log(`✅ Test email sent successfully to ${user.Email}`);
             } else {
                 result.emailsFailed = 1;
-                result.errors.push(`Email send failed for ${user.Email} (jobs found: ${jobs.length})`);
+                result.errors.push(sendResult.errorDetail || `Email send failed for ${user.Email} (jobs found: ${jobs.length})`);
             }
 
             return result;
