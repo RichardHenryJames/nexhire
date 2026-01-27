@@ -436,13 +436,16 @@ export class ReferrerNotificationEmailService {
         triggerType: 'Timer' | 'Manual'
     ): Promise<void> {
         try {
+            const durationSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+            const errors = result.errors.length > 0 ? result.errors.join('; ') : '';
+            
             const query = `
                 INSERT INTO DailyJobEmailLogs (
-                    ExecutionID, StartTime, EndTime, TotalUsers, EmailsSent, EmailsFailed, 
-                    TriggerType, Status, ErrorDetails
+                    ExecutionID, StartTime, EndTime, DurationSeconds, TotalUsers, 
+                    EmailsSent, EmailsFailed, Errors, TriggerType
                 ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, @param5, 
-                    @param6, @param7, @param8
+                    @param0, @param1, @param2, @param3, @param4, 
+                    @param5, @param6, @param7, @param8
                 )
             `;
             
@@ -450,12 +453,12 @@ export class ReferrerNotificationEmailService {
                 executionId,
                 startTime,
                 endTime,
+                durationSeconds,
                 result.totalReferrers,
                 result.emailsSent,
                 result.emailsFailed,
-                triggerType,
-                result.emailsFailed === 0 ? 'Success' : 'PartialSuccess',
-                result.errors.length > 0 ? result.errors.join('; ') : null
+                errors,
+                triggerType
             ]);
         } catch (error) {
             console.error('Failed to log referrer email run:', error);

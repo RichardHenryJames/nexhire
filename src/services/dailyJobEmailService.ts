@@ -73,6 +73,7 @@ export class DailyJobEmailService {
     /**
      * Get top 10 recommended jobs for a user (FREE - no wallet deduction)
      * Uses the SAME logic as Jobs screen - JobService.getJobs with personalization
+     * NOTE: We skip fresher filter for emails to ensure users get job recommendations
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
@@ -82,7 +83,8 @@ export class DailyJobEmailService {
                 page: 1,
                 pageSize: 10,
                 excludeUserApplications: userId, // This triggers personalization ranking
-                postedWithinDays: 30
+                postedWithinDays: 30,
+                skipFresherFilter: true // Don't apply restrictive fresher filter for emails
             };
             
             const result = await JobService.getJobs(params);
