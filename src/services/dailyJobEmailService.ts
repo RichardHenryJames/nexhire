@@ -341,6 +341,14 @@ export class DailyJobEmailService {
 
             console.log(`📧 Sending test daily job email to ${user.Email}...`);
 
+            // Get jobs first to check if that's the issue
+            const jobs = await this.getTopJobsForUser(user.UserID);
+            if (!jobs || jobs.length === 0) {
+                result.emailsFailed = 1;
+                result.errors.push(`No jobs found for user ${user.Email} (UserID: ${user.UserID})`);
+                return result;
+            }
+
             const success = await this.sendEmailToUser(user);
             
             if (success) {
@@ -348,14 +356,14 @@ export class DailyJobEmailService {
                 console.log(`✅ Test email sent successfully to ${user.Email}`);
             } else {
                 result.emailsFailed = 1;
-                result.errors.push(`Failed to send email to ${user.Email}`);
+                result.errors.push(`Email send failed for ${user.Email} (jobs found: ${jobs.length})`);
             }
 
             return result;
 
         } catch (error: any) {
             console.error('❌ Test email error:', error.message);
-            result.errors.push(error.message);
+            result.errors.push(`Error: ${error.message}`);
             return result;
         }
     }
