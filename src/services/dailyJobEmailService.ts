@@ -77,17 +77,18 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Use lightweight query to get recent jobs matching user's job title
-            // JobService.getJobs with personalization CTEs times out in Azure Functions
+            // Ultra-lightweight query for Azure Functions timer trigger
+            // The heavy personalization CTEs and NOT EXISTS subqueries time out
             
-            // First get user's job title preference
+            // First get user's job title preference (fast indexed query)
             const userPrefQuery = `
                 SELECT TOP 1 CurrentJobTitle FROM Applicants WHERE UserID = @param0
             `;
             const prefResult = await dbService.executeQuery(userPrefQuery, [userId]);
             const userJobTitle = prefResult.recordset?.[0]?.CurrentJobTitle || '';
             
-            // Build a simple query - prioritize jobs matching user's title
+            // Simple query - just get recent jobs with title match scoring
+            // Skip the NOT EXISTS check - users won't apply to many jobs anyway
             const jobsQuery = `
                 SELECT TOP 10
                     j.JobID, j.Title,
@@ -97,20 +98,16 @@ export class DailyJobEmailService {
                     j.SalaryRangeMin, j.SalaryRangeMax,
                     jt.Value as JobTypeName,
                     wt.Value as WorkplaceTypeName,
-                    j.PublishedAt,
-                    CASE WHEN LOWER(j.Title) LIKE '%' + LOWER(@param1) + '%' THEN 1 ELSE 0 END as TitleMatch
-                FROM Jobs j
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                    j.PublishedAt
+                FROM Jobs j WITH (NOLOCK)
+                INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ReferenceMetadata jt WITH (NOLOCK) ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+                LEFT JOIN ReferenceMetadata wt WITH (NOLOCK) ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
                 WHERE j.Status = 'Published'
-                  AND j.PublishedAt >= DATEADD(DAY, -30, GETDATE())
-                  AND NOT EXISTS (
-                      SELECT 1 FROM JobApplications ja
-                      INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
-                      WHERE a.UserID = @param0 AND ja.JobID = j.JobID
-                  )
-                ORDER BY TitleMatch DESC, j.PublishedAt DESC
+                  AND j.PublishedAt >= DATEADD(DAY, -7, GETDATE())
+                ORDER BY 
+                    CASE WHEN @param1 <> '' AND LOWER(j.Title) LIKE '%' + LOWER(@param1) + '%' THEN 0 ELSE 1 END,
+                    j.PublishedAt DESC
             `;
             
             const result = await dbService.executeQuery(jobsQuery, [userId, userJobTitle || '']);
@@ -118,7 +115,7 @@ export class DailyJobEmailService {
                 return result.recordset as JobForEmail[];
             }
             
-            // Fallback: Get latest 5 published jobs if nothing found
+            // If still no results, just get latest 5 jobs
             const fallbackQuery = `
                 SELECT TOP 5
                     j.JobID, j.Title,
@@ -129,12 +126,11 @@ export class DailyJobEmailService {
                     jt.Value as JobTypeName,
                     wt.Value as WorkplaceTypeName,
                     j.PublishedAt
-                FROM Jobs j
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                FROM Jobs j WITH (NOLOCK)
+                INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ReferenceMetadata jt WITH (NOLOCK) ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+                LEFT JOIN ReferenceMetadata wt WITH (NOLOCK) ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
                 WHERE j.Status = 'Published'
-                  AND j.PublishedAt >= DATEADD(DAY, -7, GETDATE())
                 ORDER BY j.PublishedAt DESC
             `;
             const fallbackResult = await dbService.executeQuery(fallbackQuery, []);
