@@ -78,13 +78,16 @@ export class DailyJobEmailService {
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
             // Use JobService.getJobs() - same as Jobs screen, already personalized and fast
-            // NOTE: Don't pass excludeUserApplications - that triggers heavy CTEs
+            // Pass excludeUserApplications (userId) to enable personalization based on user's:
+            // - Job preferences (preferredJobTypes, preferredWorkTypes, preferredLocations)
+            // - Work experience (latestJobTitle for role-based scoring)
             const { jobs } = await JobService.getJobs({
                 page: 1,
                 pageSize: 5,
                 sortBy: 'PublishedAt',
                 sortOrder: 'desc',
-                status: 'Published'
+                status: 'Published',
+                excludeUserApplications: userId  // This enables personalization!
             });
 
             // Map to JobForEmail format
