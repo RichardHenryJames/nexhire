@@ -25,22 +25,24 @@ export class SavedJobsService {
   static async saveJob(userId: string, jobId: string) {
     const applicantId = await this.ensureApplicant(userId);
     const q = `
-      IF NOT EXISTS (SELECT 1 FROM SavedJobs WHERE JobID = @param0 AND ApplicantID = @param1)
+      IF NOT EXISTS (SELECT 1 FROM SavedJobs WITH (NOLOCK) WHERE JobID = @param0 AND ApplicantID = @param1)
       BEGIN
         INSERT INTO SavedJobs (JobID, ApplicantID) VALUES (@param0, @param1);
       END;
 
       SELECT 
-        j.*, 
+        j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+        j.OrganizationID, j.PostedByType, j.PostedByUserID,
+        j.Location, j.City, j.State, j.Country, j.IsRemote,
+        j.ExperienceMin, j.ExperienceMax,
+        j.PublishedAt, j.CreatedAt, j.Status,
         o.Name as OrganizationName, 
-        o.LogoURL as OrganizationLogo,
-        jt.Value as JobTypeName, 
-        wt.Value as WorkplaceTypeName
-      FROM SavedJobs sj
-      INNER JOIN Jobs j ON sj.JobID = j.JobID
-      INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-      INNER JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+        ISNULL(o.LogoURL, '') as OrganizationLogo,
+        (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.JobTypeID AND RefType = 'JobType') as JobTypeName,
+        (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.WorkplaceTypeID AND RefType = 'WorkplaceType') as WorkplaceTypeName
+      FROM SavedJobs sj WITH (NOLOCK)
+      INNER JOIN Jobs j WITH (NOLOCK) ON sj.JobID = j.JobID
+      INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
       WHERE sj.JobID = @param0 AND sj.ApplicantID = @param1;
     `;
     const res = await dbService.executeQuery(q, [jobId, applicantId]);
@@ -54,24 +56,27 @@ export class SavedJobsService {
 
   static async getMySavedJobs(userId: string, { page, pageSize }: PaginationParams) {
     const applicantId = await this.ensureApplicant(userId);
-    const countRes = await dbService.executeQuery('SELECT COUNT(*) as total FROM SavedJobs WHERE ApplicantID = @param0', [applicantId]);
+    const countRes = await dbService.executeQuery('SELECT COUNT(*) as total FROM SavedJobs WITH (NOLOCK) WHERE ApplicantID = @param0', [applicantId]);
     const total = countRes.recordset?.[0]?.total || 0;
     const totalPages = Math.max(Math.ceil(total / pageSize), 1);
     if (total === 0) return { jobs: [], total: 0, totalPages: 1 };
 
     const offset = (page - 1) * pageSize;
+    // Optimized query: use inline subqueries for ReferenceMetadata to avoid slow JOINs
     const q = `
       SELECT 
-        j.*, 
+        j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+        j.OrganizationID, j.PostedByType, j.PostedByUserID,
+        j.Location, j.City, j.State, j.Country, j.IsRemote,
+        j.ExperienceMin, j.ExperienceMax,
+        j.PublishedAt, j.CreatedAt, j.Status,
         o.Name as OrganizationName, 
-        o.LogoURL as OrganizationLogo,
-        jt.Value as JobTypeName, 
-        wt.Value as WorkplaceTypeName
-      FROM SavedJobs sj
-      INNER JOIN Jobs j ON sj.JobID = j.JobID
-      INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-      INNER JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+        ISNULL(o.LogoURL, '') as OrganizationLogo,
+        (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.JobTypeID AND RefType = 'JobType') as JobTypeName,
+        (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.WorkplaceTypeID AND RefType = 'WorkplaceType') as WorkplaceTypeName
+      FROM SavedJobs sj WITH (NOLOCK)
+      INNER JOIN Jobs j WITH (NOLOCK) ON sj.JobID = j.JobID
+      INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
       WHERE sj.ApplicantID = @param0
       ORDER BY sj.SavedAt DESC
       OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY
