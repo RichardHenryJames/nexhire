@@ -77,8 +77,40 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Minimal query - just get latest published jobs
-            // All previous attempts timed out, try absolute minimum
+            // Get user's job title for lightweight personalization (fast indexed lookup)
+            const userQuery = `SELECT TOP 1 CurrentJobTitle FROM Applicants WITH (NOLOCK) WHERE UserID = @param0`;
+            const userResult = await dbService.executeQuery(userQuery, [userId]);
+            const userJobTitle = userResult.recordset?.[0]?.CurrentJobTitle || '';
+            
+            // Lightweight personalized query - prioritize title matches
+            // Uses simple CASE in ORDER BY which SQL Server handles efficiently
+            const query = `
+                SELECT TOP 5
+                    j.JobID, j.Title,
+                    o.Name as OrganizationName,
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    j.Location, j.City, j.Country,
+                    j.SalaryRangeMin, j.SalaryRangeMax,
+                    jt.Value as JobTypeName,
+                    wt.Value as WorkplaceTypeName,
+                    j.PublishedAt
+                FROM Jobs j WITH (NOLOCK)
+                INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ReferenceMetadata jt WITH (NOLOCK) ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+                LEFT JOIN ReferenceMetadata wt WITH (NOLOCK) ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                WHERE j.Status = 'Published'
+                  AND j.PublishedAt >= DATEADD(DAY, -14, GETDATE())
+                ORDER BY 
+                    CASE WHEN @param1 <> '' AND j.Title LIKE '%' + @param1 + '%' THEN 0 ELSE 1 END,
+                    j.PublishedAt DESC
+            `;
+            const result = await dbService.executeQuery(query, [userId, userJobTitle]);
+            
+            if (result.recordset && result.recordset.length > 0) {
+                return result.recordset as JobForEmail[];
+            }
+            
+            // Fallback: Just get latest 5 jobs without any filters
             const fallbackQuery = `
                 SELECT TOP 5
                     j.JobID, j.Title,
@@ -96,8 +128,8 @@ export class DailyJobEmailService {
                 WHERE j.Status = 'Published'
                 ORDER BY j.PublishedAt DESC
             `;
-            const result = await dbService.executeQuery(fallbackQuery, []);
-            return result.recordset || [];
+            const fallbackResult = await dbService.executeQuery(fallbackQuery, []);
+            return fallbackResult.recordset || [];
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
             // Store error for debugging - will be included in result
