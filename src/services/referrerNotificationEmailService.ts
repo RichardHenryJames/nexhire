@@ -300,6 +300,14 @@ export class ReferrerNotificationEmailService {
             const appUrl = process.env.APP_URL || 'https://www.refopen.com';
             const requestCardsHtml = this.generateRequestCardsHtml(requests, totalCount);
 
+            // Handle singular/plural for proper grammar
+            const isSingular = totalCount === 1;
+            const candidateWord = isSingular ? 'Candidate' : 'Candidates';
+            const candidateWordLower = isSingular ? 'candidate' : 'candidates';
+            const needWord = isSingular ? 'Needs' : 'Need';
+            const requestWord = isSingular ? 'Request' : 'Requests';
+            const isAre = isSingular ? 'is' : 'are';
+
             const template = TemplateService.render('referrer_open_requests', {
                 firstName: referrer.FirstName || 'there',
                 companyName: referrer.CompanyName,
@@ -310,7 +318,12 @@ export class ReferrerNotificationEmailService {
                 totalReferred: stats.totalReferred,
                 totalEarnings: stats.totalEarnings,
                 requestCardsHtml,
-                appUrl
+                appUrl,
+                candidateWord,
+                candidateWordLower,
+                needWord,
+                requestWord,
+                isAre
             });
 
             await EmailService.send({

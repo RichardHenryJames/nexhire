@@ -76,11 +76,6 @@ const JobCard = ({
   const jobTypeName = job.JobTypeName || resolveNameById(jobTypes, job.JobTypeID, 'JobTypeID', 'Type');
   const workplaceName = job.WorkplaceTypeName || resolveNameById(workplaceTypes, job.WorkplaceTypeID, 'WorkplaceTypeID', 'Type') || (job.WorkplaceType || (job.IsRemote ? 'Remote' : ''));
 
-  const hasSalary = job.SalaryRangeMin != null && job.SalaryRangeMax != null;
-  const salaryText = hasSalary
-    ? `$${Number(job.SalaryRangeMin).toLocaleString()} - $${Number(job.SalaryRangeMax).toLocaleString()} ${job.SalaryPeriod || 'Annual'}`
-    : '';
-
   // ✅ NEW: Check if we should show any actions row
   const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete || showShare;
 
@@ -124,10 +119,16 @@ const JobCard = ({
         </View>
       )}
 
-      {/* Salary row - separate from buttons */}
-      {hasSalary && (
+      {/* Experience Required row - show instead of salary */}
+      {(job.ExperienceMin != null || job.ExperienceMax != null) && (
         <View style={styles.salaryRow}>
-          <Text style={styles.salary} numberOfLines={1}>{salaryText}</Text>
+          <Text style={styles.salary} numberOfLines={1}>
+            {job.ExperienceMin != null && job.ExperienceMax != null
+              ? `${job.ExperienceMin} - ${job.ExperienceMax} years exp`
+              : job.ExperienceMin != null
+                ? `${job.ExperienceMin}+ years exp`
+                : `Up to ${job.ExperienceMax} years exp`}
+          </Text>
         </View>
       )}
 

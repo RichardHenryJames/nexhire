@@ -602,7 +602,7 @@ export class JobService {
                 j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
                 j.OrganizationID, j.PostedByType,
                 j.Location, j.City, j.State, j.Country, j.IsRemote, 
-                j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+                j.ExperienceMin, j.ExperienceMax,
                 j.PublishedAt, j.CreatedAt,
                 jt.Value as JobTypeName,
                 wt.Value as WorkplaceTypeName,

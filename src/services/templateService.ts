@@ -835,7 +835,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
     // ========================================
 
     'referrer_open_requests': {
-        subject: '{{openCount}} Candidates Need Your Referral at {{companyName}}',
+        subject: '{{openCount}} {{candidateWord}} {{needWord}} Your Referral at {{companyName}}',
         html: `
 <!DOCTYPE html>
 <html>
@@ -852,8 +852,8 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                     <!-- Header -->
                     <tr>
                         <td style="background: #10B981; padding: 40px; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Open Referral Requests</h1>
-                            <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 15px;">Help candidates at {{companyName}}</p>
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Open Referral {{requestWord}}</h1>
+                            <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 15px;">Help {{candidateWordLower}} at {{companyName}}</p>
                         </td>
                     </tr>
                     
@@ -865,7 +865,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                             </p>
                             
                             <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
-                                <strong style="color: #10B981;">{{openCount}} candidates</strong> are looking for a referral at <strong style="color: #1a1a1a;">{{companyName}}</strong>. 
+                                <strong style="color: #10B981;">{{openCount}} {{candidateWordLower}}</strong> {{isAre}} looking for a referral at <strong style="color: #1a1a1a;">{{companyName}}</strong>. 
                                 Your help can make a difference in someone's career.
                             </p>
                             
