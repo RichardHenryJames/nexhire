@@ -38,7 +38,7 @@ interface JobForEmail {
     SalaryRangeMax: number | null;
     JobTypeName: string;
     WorkplaceTypeName: string;
-    PublishedAt: Date;
+    PublishedAt: Date | null;
 }
 
 export class DailyJobEmailService {
@@ -99,11 +99,11 @@ export class DailyJobEmailService {
                 Location: job.Location || '',
                 City: job.City || '',
                 Country: job.Country || '',
-                SalaryRangeMin: job.SalaryRangeMin,
-                SalaryRangeMax: job.SalaryRangeMax,
+                SalaryRangeMin: job.SalaryRangeMin ?? null,
+                SalaryRangeMax: job.SalaryRangeMax ?? null,
                 JobTypeName: (job as any).JobTypeName || '',
                 WorkplaceTypeName: (job as any).WorkplaceTypeName || '',
-                PublishedAt: job.PublishedAt
+                PublishedAt: job.PublishedAt ?? null
             }));
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
