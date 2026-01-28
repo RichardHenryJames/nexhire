@@ -99,7 +99,7 @@ export class JobService {
         preferredCompanySizeParam: string
     ): string {
         // Scores are additive; higher means better match.
-        // Weights (simple + stable): JobType=3, WorkplaceType=2, Location=2, CompanySize=1
+        // Weights: WorkplaceType=4 (highest), JobType=2, Location=2, CompanySize=1
         // PERF: expects CTEs `pjt`, `pwt`, `ploc` to exist so STRING_SPLIT runs once per request.
         return `(
             (CASE
@@ -108,7 +108,7 @@ export class JobService {
                     FROM pjt
                     WHERE pjt.v = LOWER(REPLACE(LTRIM(RTRIM(jt.Value)), ' ', ''))
                 )
-                THEN 3 ELSE 0
+                THEN 2 ELSE 0
             END)
             +
             (CASE
@@ -118,7 +118,7 @@ export class JobService {
                     FROM pwt
                     WHERE pwt.v = LOWER(REPLACE(LTRIM(RTRIM(wt.Value)), ' ', ''))
                  )
-                THEN 2 ELSE 0
+                THEN 4 ELSE 0
             END)
             +
             (CASE
@@ -626,11 +626,23 @@ export class JobService {
         const hasRoleTitle = (personalization.latestJobTitle || '').toString().trim().length > 0;
         const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
+        // Workplace type ordering: Remote (444) > Hybrid (442) > Onsite (443)
+        // Used as LAST tiebreaker - within same relevance AND same preferences, prefer Remote
+        const workplaceOrderSql = `CASE j.WorkplaceTypeID WHEN 444 THEN 1 WHEN 442 THEN 2 WHEN 443 THEN 3 ELSE 4 END`;
+
+        // IDEAL ORDERING (like Naukri/LinkedIn):
+        // 1. Role title match (Senior Backend Engineer)
+        // 2. Preference score (workplace=4pts, job type=2pts, location=2pts, company size=1pt)
+        // 3. Workplace type as tiebreaker (Remote > Hybrid > Onsite)
+        // 4. Recency (PublishedAt)
+        // This way: Remote Engineer (any type) > Hybrid Engineer > Onsite Engineer
         const orderPrefix = skipPersonalization
-            ? '' // No personalization ordering
+            ? `${workplaceOrderSql}, ` // No personalization: just Remote > Hybrid > Onsite
             : (hasSearchText
-                ? `${preferenceScoreSql} DESC, `
-                : (useRoleTitleScore ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ` : `${preferenceScoreSql} DESC, `));
+                ? `${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                : (useRoleTitleScore 
+                    ? `${roleTitleScoreSql} DESC, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                    : `${preferenceScoreSql} DESC, ${workplaceOrderSql}, `));
 
         // Page-based pagination without COUNT(*): fetch one extra row to determine hasMore.
         const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;

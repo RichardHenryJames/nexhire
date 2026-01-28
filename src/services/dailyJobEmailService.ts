@@ -81,9 +81,10 @@ export class DailyJobEmailService {
             // Pass excludeUserApplications (userId) to enable personalization based on user's:
             // - Job preferences (preferredJobTypes, preferredWorkTypes, preferredLocations)
             // - Work experience (latestJobTitle for role-based scoring)
+            // Default ordering: Remote > Hybrid > Onsite (when no workplace preference set)
             const { jobs } = await JobService.getJobs({
                 page: 1,
-                pageSize: 5,
+                pageSize: 10,  // Show 10 jobs in email
                 sortBy: 'PublishedAt',
                 sortOrder: 'desc',
                 status: 'Published',
