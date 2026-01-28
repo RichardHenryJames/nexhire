@@ -135,22 +135,19 @@ const JobCard = ({
       {/* ✅ UPDATED: Show actions row if any action is visible OR if publish button should show */}
       {showActions && (
         <View style={styles.actionsRow}>
-          {/* Save button - only show if not hidden */}
+          {/* Save button - only show if not hidden (icon only, no text) */}
           {!hideSave && (
             savedContext ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
                 <Ionicons name="bookmark" size={18} color={colors.white} />
-                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : isSaved ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
                 <Ionicons name="bookmark" size={18} color={colors.white} />
-                <Text style={styles.savedText}>Saved</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
                 <Ionicons name="bookmark-outline" size={18} color={colors.primary} />
-                <Text style={styles.saveText}>Save</Text>
               </TouchableOpacity>
             )
           )}
