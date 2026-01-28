@@ -77,24 +77,21 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Simple query - just get latest 5 published jobs from last 14 days
-            // NOLOCK hints prevent blocking, no complex WHERE/ORDER BY to avoid timeouts
+            // Absolute minimum query - no date filter, no params
+            // v2 - testing if any query works
             const query = `
                 SELECT TOP 5
                     j.JobID, j.Title,
                     o.Name as OrganizationName,
-                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    '' as OrganizationLogo,
                     j.Location, j.City, j.Country,
                     j.SalaryRangeMin, j.SalaryRangeMax,
-                    jt.Value as JobTypeName,
-                    wt.Value as WorkplaceTypeName,
+                    'Full-time' as JobTypeName,
+                    'Remote' as WorkplaceTypeName,
                     j.PublishedAt
                 FROM Jobs j WITH (NOLOCK)
                 INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ReferenceMetadata jt WITH (NOLOCK) ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-                LEFT JOIN ReferenceMetadata wt WITH (NOLOCK) ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
                 WHERE j.Status = 'Published'
-                  AND j.PublishedAt >= DATEADD(DAY, -14, GETDATE())
                 ORDER BY j.PublishedAt DESC
             `;
             const result = await dbService.executeQuery(query, []);
