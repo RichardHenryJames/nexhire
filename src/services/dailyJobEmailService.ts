@@ -77,30 +77,35 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Optimized query - removed ReferenceMetadata JOINs which were causing timeout
-            // Use inline subqueries instead of JOIN for better performance
-            const query = `
-                SELECT TOP 5
-                    j.JobID, j.Title,
-                    o.Name as OrganizationName,
-                    ISNULL(o.LogoURL, '') as OrganizationLogo,
-                    j.Location, j.City, j.Country,
-                    j.SalaryRangeMin, j.SalaryRangeMax,
-                    (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.JobTypeID AND RefType = 'JobType') as JobTypeName,
-                    (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.WorkplaceTypeID AND RefType = 'WorkplaceType') as WorkplaceTypeName,
-                    j.PublishedAt
-                FROM Jobs j WITH (NOLOCK)
-                INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
-                WHERE j.Status = 'Published'
-                ORDER BY j.PublishedAt DESC
-            `;
-            const result = await dbService.executeQuery(query, []);
-            return result.recordset || [];
+            // Use JobService.getJobs() - same as Jobs screen, already personalized and fast
+            // NOTE: Don't pass excludeUserApplications - that triggers heavy CTEs
+            const { jobs } = await JobService.getJobs({
+                page: 1,
+                pageSize: 5,
+                sortBy: 'PublishedAt',
+                sortOrder: 'desc',
+                status: 'Published'
+            });
+
+            // Map to JobForEmail format
+            return jobs.map(job => ({
+                JobID: job.JobID,
+                Title: job.Title,
+                OrganizationName: (job as any).OrganizationName || '',
+                OrganizationLogo: (job as any).OrganizationLogo || '',
+                Location: job.Location || '',
+                City: job.City || '',
+                Country: job.Country || '',
+                SalaryRangeMin: job.SalaryRangeMin,
+                SalaryRangeMax: job.SalaryRangeMax,
+                JobTypeName: (job as any).JobTypeName || '',
+                WorkplaceTypeName: (job as any).WorkplaceTypeName || '',
+                PublishedAt: job.PublishedAt
+            }));
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
-            // Store error for debugging - will be included in result
             (error as any).__dailyEmailDebug = `getTopJobsForUser failed: ${error.message}`;
-            throw error; // Re-throw so caller can see the actual error
+            throw error;
         }
     }
 
