@@ -953,13 +953,17 @@ const { jobId, fromReferralRequest } = route.params || {};
           </View>
         </View>
         
-        <Text style={styles.salary}>{formatSalary()}</Text>
-        
-        {/* Status tags */}
+        {/* Status tags - Experience Required added here */}
         <View style={styles.tagsContainer}>
           <Text style={styles.tag}>{job.JobTypeName || 'Full-time'}</Text>
-          {job.ExperienceLevel && (
-            <Text style={[styles.tag, styles.experienceTag]}>{job.ExperienceLevel}</Text>
+          {(job.ExperienceMin != null || job.ExperienceMax != null) && (
+            <Text style={[styles.tag, styles.experienceTag]}>
+              {job.ExperienceMin != null && job.ExperienceMax != null
+                ? `${job.ExperienceMin}-${job.ExperienceMax} yrs exp`
+                : job.ExperienceMin != null
+                  ? `${job.ExperienceMin}+ yrs exp`
+                  : `0-${job.ExperienceMax} yrs exp`}
+            </Text>
           )}
           {job.IsRemote && (
             <Text style={[styles.tag, styles.remoteTag]}>Remote</Text>
@@ -991,13 +995,18 @@ const { jobId, fromReferralRequest } = route.params || {};
           label="Application Deadline"
           value={formatDate(job.ApplicationDeadline)}
         />
-        {job.ExperienceMin || job.ExperienceMax ? (
+        {(job.ExperienceMin != null || job.ExperienceMax != null) && (
           <InfoRow
             icon="school"
             label="Experience Required"
             value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
           />
-        ) : null}
+        )}
+        <InfoRow
+          icon="cash"
+          label="Salary"
+          value={formatSalary()}
+        />
       </View>
 
       {/* ✅ NEW: Job Tags Section - Only show if there are valid skills after filtering */}
@@ -1538,12 +1547,6 @@ const createStyles = (colors, responsive = {}) => {
     color: colors.primary,
     fontWeight: typography.weights.medium,
     marginLeft: 6,
-  },
-  salary: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    marginBottom: 12,
   },
   tagsContainer: {
     flexDirection: 'row',
