@@ -77,17 +77,17 @@ export class DailyJobEmailService {
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Absolute minimum query - no date filter, no params
-            // v2 - testing if any query works
+            // Optimized query - removed ReferenceMetadata JOINs which were causing timeout
+            // Use inline subqueries instead of JOIN for better performance
             const query = `
                 SELECT TOP 5
                     j.JobID, j.Title,
                     o.Name as OrganizationName,
-                    '' as OrganizationLogo,
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
                     j.Location, j.City, j.Country,
                     j.SalaryRangeMin, j.SalaryRangeMax,
-                    'Full-time' as JobTypeName,
-                    'Remote' as WorkplaceTypeName,
+                    (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.JobTypeID AND RefType = 'JobType') as JobTypeName,
+                    (SELECT TOP 1 Value FROM ReferenceMetadata WITH (NOLOCK) WHERE ReferenceID = j.WorkplaceTypeID AND RefType = 'WorkplaceType') as WorkplaceTypeName,
                     j.PublishedAt
                 FROM Jobs j WITH (NOLOCK)
                 INNER JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
