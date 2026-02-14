@@ -78,14 +78,14 @@ export class UserVerificationService {
       );
 
       // Send OTP email
-      await EmailService.sendEmail(
-        collegeEmail,
-        'NexHire - Verify Your College Email',
-        `
+      await EmailService.send({
+        to: collegeEmail,
+        subject: 'RefOpen - Verify Your College Email',
+        html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h2 style="color: #1a1a1a; margin-bottom: 8px;">Verify Your College Email</h2>
           <p style="color: #666; font-size: 15px; margin-bottom: 24px;">
-            Use the code below to verify your college email and get your verified badge on NexHire.
+            Use the code below to verify your college email and get your verified badge on RefOpen.
           </p>
           <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
             <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0 0 8px 0;">Your verification code</p>
@@ -94,7 +94,7 @@ export class UserVerificationService {
           <p style="color: #999; font-size: 13px;">This code expires in ${OTP_EXPIRY_MINUTES} minutes. If you didn't request this, please ignore this email.</p>
         </div>
         `
-      );
+      });
 
       // Also create/update the UserVerifications record
       const existing = await dbService.executeQuery(
