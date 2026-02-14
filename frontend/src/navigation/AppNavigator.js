@@ -93,6 +93,7 @@ import ResumeAnalyzerScreen from "../screens/tools/ResumeAnalyzerScreen";
 
 // Services Screen (Career tools hub for job seekers)
 import ServicesScreen from "../screens/ServicesScreen";
+import GetVerifiedScreen from "../screens/GetVerifiedScreen";
 
 // Service Placeholder Screens
 import ATSBeatSheetScreen from "../screens/services/ATSBeatSheetScreen";
@@ -134,6 +135,9 @@ const linking = {
       BlindReview: "services/blind-review",
       CareerSimulator: "services/career-simulator",
       MarketPulse: "services/market-pulse",
+      
+      // Get Verified screen
+      GetVerified: "get-verified",
       
       // Public Blog screens - accessible without auth
       Blog: "blog",
@@ -833,6 +837,11 @@ function MainStack() {
       <Stack.Screen
         name="BecomeReferrer"
         component={BecomeReferrerScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GetVerified"
+        component={GetVerifiedScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

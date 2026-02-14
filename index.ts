@@ -4151,3 +4151,57 @@ app.http("admin-service-interest-stats", {
   route: "management/service-interests/stats",
   handler: getServiceInterestStats,
 });
+
+// ============================================================
+// User Verification Routes (Get Verified - Blue Tick)
+// ============================================================
+import { sendCollegeEmailOTP, verifyCollegeEmailOTP, submitAadhaarVerification, getUserVerificationStatus, adminGetPendingVerifications, adminApproveVerification, adminRejectVerification } from "./src/controllers/user-verification.controller";
+
+app.http("send-college-email-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/user/college-email/send-otp",
+  handler: sendCollegeEmailOTP,
+});
+
+app.http("verify-college-email-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/user/college-email/verify-otp",
+  handler: verifyCollegeEmailOTP,
+});
+
+app.http("submit-aadhaar-verification", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/user/aadhaar/submit",
+  handler: submitAadhaarVerification,
+});
+
+app.http("get-user-verification-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "verification/user/status",
+  handler: getUserVerificationStatus,
+});
+
+app.http("admin-get-pending-verifications", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/verifications/pending",
+  handler: adminGetPendingVerifications,
+});
+
+app.http("admin-approve-verification", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/verifications/{verificationId}/approve",
+  handler: adminApproveVerification,
+});
+
+app.http("admin-reject-verification", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/verifications/{verificationId}/reject",
+  handler: adminRejectVerification,
+});

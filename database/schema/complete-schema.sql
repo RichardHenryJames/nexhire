@@ -576,7 +576,7 @@ BEGIN
     CREATE TABLE EmailVerificationOTPs (
         OTPID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
         UserID UNIQUEIDENTIFIER NOT NULL,
-        WorkExperienceID UNIQUEIDENTIFIER NOT NULL,
+        WorkExperienceID UNIQUEIDENTIFIER NULL,
         Email NVARCHAR(255) NOT NULL,
         OTPCode CHAR(4) NOT NULL,
         Purpose NVARCHAR(50) NOT NULL DEFAULT ('COMPANY_EMAIL_VERIFICATION'),
@@ -2975,6 +2975,53 @@ IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_WalletRecharge_Pa
 BEGIN
     ALTER TABLE WalletRechargeOrders ADD CONSTRAINT FK_WalletRecharge_Pack
         FOREIGN KEY (PackID) REFERENCES WalletBonusPacks(PackID);
+END
+GO
+
+-- ============================================================
+-- Table: UserVerifications
+-- Purpose: Track user verification submissions (college email, Aadhaar)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserVerifications')
+BEGIN
+    CREATE TABLE UserVerifications (
+        VerificationID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        Method NVARCHAR(30) NOT NULL,
+        Status NVARCHAR(30) NOT NULL DEFAULT ('Pending'),
+        CollegeEmail NVARCHAR(255) NULL,
+        CollegeName NVARCHAR(255) NULL,
+        CollegeEmailVerified BIT NOT NULL DEFAULT (0),
+        AadhaarPhotoURL NVARCHAR(1000) NULL,
+        SelfiePhotoURL NVARCHAR(1000) NULL,
+        ReviewedBy UNIQUEIDENTIFIER NULL,
+        ReviewedAt DATETIME2(7) NULL,
+        RejectionReason NVARCHAR(500) NULL,
+        CreatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        UpdatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        CONSTRAINT PK_UserVerifications PRIMARY KEY (VerificationID),
+        CONSTRAINT FK_UserVerifications_Users FOREIGN KEY (UserID) REFERENCES Users(UserID),
+        CONSTRAINT FK_UserVerifications_ReviewedBy FOREIGN KEY (ReviewedBy) REFERENCES Users(UserID)
+    );
+    PRINT 'Created table UserVerifications';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_UserVerifications_UserID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_UserVerifications_UserID ON UserVerifications(UserID);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_UserVerifications_Status')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_UserVerifications_Status ON UserVerifications(Status);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_UserVerifications_Method')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_UserVerifications_Method ON UserVerifications(Method);
 END
 GO
 
