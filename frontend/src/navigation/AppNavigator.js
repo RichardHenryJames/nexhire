@@ -124,6 +124,17 @@ const linking = {
       // Primary SEO-friendly path (short and memorable)
       ResumeAnalyzer: "resume-analyzer",
       
+      // Public Service Screens - accessible without auth
+      Services: "services",
+      ATSBeatSheet: "services/resume-builder",
+      InterviewDecoded: "services/interview-prep",
+      SalarySpy: "services/salary-spy",
+      OfferCoach: "services/offer-coach",
+      LinkedInOptimizer: "services/linkedin-optimizer",
+      BlindReview: "services/blind-review",
+      CareerSimulator: "services/career-simulator",
+      MarketPulse: "services/market-pulse",
+      
       // Public Blog screens - accessible without auth
       Blog: "blog",
       BlogArticle: "blog/:articleId",
@@ -186,7 +197,6 @@ const linking = {
               CreateJob: "create-job",
               AskReferral: "ask-for-referral",
               Referrals: "referrals",
-              Services: "services",
               Notifications: "notifications",
               Admin: {
                 path: "admin/:tab?",
@@ -249,15 +259,6 @@ const linking = {
           // Social Share Submit screen with platform parameter
           SocialShareSubmit: "SocialShareSubmit",
 
-          // Service Screens
-          ATSBeatSheet: "services/resume-builder",
-          InterviewDecoded: "services/interview-prep",
-          SalarySpy: "services/salary-spy",
-          OfferCoach: "services/offer-coach",
-          LinkedInOptimizer: "services/linkedin-optimizer",
-          BlindReview: "services/blind-review",
-          CareerSimulator: "services/career-simulator",
-          MarketPulse: "services/market-pulse",
         },
       },
     },
