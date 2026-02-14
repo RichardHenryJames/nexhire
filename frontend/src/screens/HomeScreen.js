@@ -33,7 +33,7 @@ import ProfileSlider from '../components/ProfileSlider';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
-const { user, isEmployer, isJobSeeker, isAdmin, currentWork, refreshVerificationStatus } = useAuth();
+const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, currentWork, refreshVerificationStatus } = useAuth();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -966,34 +966,25 @@ const [dashboardData, setDashboardData] = useState({
                   </TouchableOpacity>
                 )}
 
-                {/* � Become Verified Member Card - Only show if current job is NOT verified and stats loaded */}
-                {!loadingStats && !stats.isCurrentJobVerified && (
+                {/* 🔵 Get Verified Card - Only show if NOT already verified */}
+                {!loadingStats && !isVerifiedUser && (
                   <TouchableOpacity 
                     style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
-                    onPress={handleBecomeVerifiedReferrer}
+                    onPress={() => navigation.navigate('GetVerified')}
                     activeOpacity={0.8}
-                    disabled={navigatingToVerify}
                   >
                     <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
-                      {navigatingToVerify ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <Ionicons 
-                          name="shield-checkmark" 
-                          size={24} 
-                          color={colors.primary} 
-                        />
-                      )}
+                      <Ionicons 
+                        name="checkmark-circle" 
+                        size={24} 
+                        color={colors.primary} 
+                      />
                     </View>
                     <View style={styles.quickActionContent}>
-                      <Text style={styles.quickActionTitle}>Become a Verified Member</Text>
-                      <Text style={styles.quickActionDescription}>Priority referrals & earn cash rewards</Text>
+                      <Text style={styles.quickActionTitle}>Get Verified 🔵</Text>
+                      <Text style={styles.quickActionDescription}>Blue tick via company email, college email, or Aadhaar</Text>
                     </View>
-                    {navigatingToVerify ? (
-                      <ActivityIndicator size="small" color={colors.gray400} />
-                    ) : (
-                      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                    )}
+                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                   </TouchableOpacity>
                 )}
 
