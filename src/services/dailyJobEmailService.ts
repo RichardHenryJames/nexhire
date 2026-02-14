@@ -1,0 +1,458 @@
+/**
+ * Daily Job Email Service
+ * 
+ * Sends personalized job recommendations to users daily at 9 PM IST
+ * Uses AI job recommendation logic WITHOUT wallet deduction
+ */
+
+import { dbService } from './database.service';
+import { EmailService } from './emailService';
+import { TemplateService } from './templateService';
+import { AIJobRecommendationService } from './ai-job-recommendation.service';
+import { JobService } from './job.service';
+
+const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
+
+interface DailyEmailResult {
+    totalUsers: number;
+    emailsSent: number;
+    emailsFailed: number;
+    errors: string[];
+}
+
+interface UserForEmail {
+    UserID: string;
+    Email: string;
+    FirstName: string;
+}
+
+interface JobForEmail {
+    JobID: string;
+    Title: string;
+    OrganizationName: string;
+    OrganizationLogo: string;
+    Location: string;
+    City: string;
+    Country: string;
+    SalaryRangeMin: number | null;
+    SalaryRangeMax: number | null;
+    JobTypeName: string;
+    WorkplaceTypeName: string;
+    PublishedAt: Date | null;
+}
+
+export class DailyJobEmailService {
+
+    /**
+     * Get users eligible for daily job emails
+     * Active JobSeeker users with DailyJobRecommendationEmail enabled
+     */
+    static async getEligibleUsers(): Promise<UserForEmail[]> {
+        const query = `
+            SELECT 
+                u.UserID,
+                u.Email,
+                u.FirstName
+            FROM Users u
+            INNER JOIN Applicants a ON u.UserID = a.UserID
+            LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
+            WHERE u.IsActive = 1
+              AND u.Email IS NOT NULL
+              AND u.Email != ''
+              AND u.UserType = 'JobSeeker'
+              AND COALESCE(np.DailyJobRecommendationEmail, 1) = 1
+            ORDER BY u.CreatedAt DESC
+        `;
+        
+        const result = await dbService.executeQuery(query, []);
+        return result.recordset || [];
+    }
+
+    /**
+     * Get total job count for a user (for email subject/CTA)
+     */
+    static async getTotalJobCountForUser(userId: string): Promise<number> {
+        try {
+            // Simple count of all published jobs
+            const result = await dbService.executeQuery(
+                `SELECT COUNT(*) as total FROM Jobs WHERE Status = 'Published'`,
+                []
+            );
+            return result.recordset?.[0]?.total || 0;
+        } catch (error: any) {
+            console.warn(`Failed to get total job count for user ${userId}:`, error.message);
+            return 0;
+        }
+    }
+
+    /**
+     * Get top 5 recommended jobs for a user (FREE - no wallet deduction)
+     * Uses the SAME logic as Jobs screen - JobService.getJobs with personalization
+     * NOTE: We skip fresher filter for emails to ensure users get job recommendations
+     */
+    static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
+        try {
+            // Use JobService.getJobs() - same as Jobs screen, already personalized and fast
+            // Pass excludeUserApplications (userId) to enable personalization based on user's:
+            // - Job preferences (preferredJobTypes, preferredWorkTypes, preferredLocations)
+            // - Work experience (latestJobTitle for role-based scoring)
+            // Default ordering: Remote > Hybrid > Onsite (when no workplace preference set)
+            const { jobs } = await JobService.getJobs({
+                page: 1,
+                pageSize: 5,  // Show 5 jobs in email (changed from 10)
+                sortBy: 'PublishedAt',
+                sortOrder: 'desc',
+                status: 'Published',
+                excludeUserApplications: userId  // This enables personalization!
+            });
+
+            // Map to JobForEmail format
+            return jobs.map(job => ({
+                JobID: job.JobID,
+                Title: job.Title,
+                OrganizationName: (job as any).OrganizationName || '',
+                OrganizationLogo: (job as any).OrganizationLogo || '',
+                Location: job.Location || '',
+                City: job.City || '',
+                Country: job.Country || '',
+                SalaryRangeMin: job.SalaryRangeMin ?? null,
+                SalaryRangeMax: job.SalaryRangeMax ?? null,
+                JobTypeName: (job as any).JobTypeName || '',
+                WorkplaceTypeName: (job as any).WorkplaceTypeName || '',
+                PublishedAt: job.PublishedAt ?? null
+            }));
+        } catch (error: any) {
+            console.warn(`Failed to get jobs for user ${userId}:`, error.message);
+            (error as any).__dailyEmailDebug = `getTopJobsForUser failed: ${error.message}`;
+            throw error;
+        }
+    }
+
+    /**
+     * Generate HTML for job cards in email (Instahyre style - clean list layout)
+     */
+    static generateJobCardsHtml(jobs: JobForEmail[]): string {
+        if (!jobs || jobs.length === 0) {
+            return `
+                <tr>
+                    <td style="padding: 20px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0; color: #666; font-size: 14px;">No new jobs found matching your profile today. Check back tomorrow!</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        return jobs.map((job, index) => {
+            const location = job.City || job.Location || job.Country || '';
+            const jobUrl = `${APP_URL}/jobs/${job.JobID}`;
+            const logoFallback = `<div style="width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 8px; display: inline-block; text-align: center; line-height: 48px; color: white; font-weight: bold; font-size: 20px;">${(job.OrganizationName || 'J').charAt(0).toUpperCase()}</div>`;
+            
+            // Build info line: Job Type • Workplace • Location
+            const infoParts: string[] = [];
+            if (job.JobTypeName) infoParts.push(job.JobTypeName);
+            if (job.WorkplaceTypeName) infoParts.push(job.WorkplaceTypeName);
+            if (location) infoParts.push(location);
+            const infoLine = infoParts.join(' • ');
+            
+            return `
+                <tr>
+                    <td style="padding: 16px 0; border-bottom: 1px solid #e5e7eb;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td width="56" valign="middle">
+                                    ${job.OrganizationLogo 
+                                        ? `<img src="${job.OrganizationLogo}" alt="${job.OrganizationName}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: contain; background: #f9fafb; display: block;" />`
+                                        : logoFallback
+                                    }
+                                </td>
+                                <td valign="middle" style="padding-left: 12px;">
+                                    <!-- Job Title -->
+                                    <a href="${jobUrl}" style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a1a; text-decoration: none; display: block;">
+                                        ${job.Title}
+                                    </a>
+                                    <!-- Company -->
+                                    <p style="margin: 0 0 4px 0; font-size: 14px; color: #4f46e5; font-weight: 500;">
+                                        ${job.OrganizationName}
+                                    </p>
+                                    <!-- Job Info -->
+                                    <p style="margin: 0; font-size: 13px; color: #6b7280;">
+                                        ${infoLine || 'View details'}
+                                    </p>
+                                </td>
+                                <td width="70" valign="middle" align="right">
+                                    <a href="${jobUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500;">View</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Format salary for display
+     */
+    private static formatSalary(min: number | null, max: number | null): string {
+        if (!min && !max) return '';
+        
+        const formatNum = (n: number) => {
+            if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
+            if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+            if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
+            return `₹${n}`;
+        };
+        
+        if (min && max) {
+            return `${formatNum(min)} - ${formatNum(max)}`;
+        }
+        return min ? `${formatNum(min)}+` : `Up to ${formatNum(max!)}`;
+    }
+
+    /**
+     * Send daily job recommendation email to a single user
+     * Returns: { success: boolean, errorDetail?: string }
+     */
+    static async sendEmailToUser(user: UserForEmail): Promise<{ success: boolean; errorDetail?: string }> {
+        try {
+            // Get total job count and top 5 jobs in parallel
+            const [totalJobs, jobs] = await Promise.all([
+                this.getTotalJobCountForUser(user.UserID),
+                this.getTopJobsForUser(user.UserID)
+            ]);
+            
+            // Skip if no jobs found
+            if (!jobs || jobs.length === 0) {
+                console.log(`⏭️ Skipping email for ${user.Email} - no jobs found`);
+                return { success: false, errorDetail: `No jobs found for user ${user.Email} (UserID: ${user.UserID})` };
+            }
+            
+            // Generate job cards HTML
+            const jobCardsHtml = this.generateJobCardsHtml(jobs);
+            
+            // Render email template with total job count
+            const template = TemplateService.render('daily_job_recommendations', {
+                firstName: user.FirstName || 'there',
+                jobCardsHtml,
+                jobCount: jobs.length,
+                totalJobs: totalJobs || jobs.length
+            });
+            
+            // Send email
+            const result = await EmailService.send({
+                to: user.Email,
+                subject: template.subject,
+                html: template.html,
+                text: template.text,
+                userId: user.UserID,
+                emailType: 'daily_job_recommendations'
+            });
+            
+            if (result.success) {
+                return { success: true };
+            } else {
+                return { success: false, errorDetail: `Email send failed for ${user.Email} (jobs found: ${jobs.length})` };
+            }
+            
+        } catch (error: any) {
+            console.error(`❌ Failed to send email to ${user.Email}:`, error.message);
+            return { success: false, errorDetail: `Exception for ${user.Email}: ${error.message}` };
+        }
+    }
+
+    /**
+     * Main method: Send daily job emails to all eligible users
+     */
+    static async sendDailyJobEmails(): Promise<DailyEmailResult> {
+        const result: DailyEmailResult = {
+            totalUsers: 0,
+            emailsSent: 0,
+            emailsFailed: 0,
+            errors: []
+        };
+
+        try {
+            // Get eligible users
+            const users = await this.getEligibleUsers();
+            result.totalUsers = users.length;
+
+            if (users.length === 0) {
+                console.log('📭 No eligible users for daily job emails');
+                return result;
+            }
+
+            console.log(`📧 Sending daily job emails to ${users.length} users...`);
+
+            // Process users in batches of 10 to avoid overwhelming the email service
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < users.length; i += BATCH_SIZE) {
+                const batch = users.slice(i, i + BATCH_SIZE);
+                
+                const batchResults = await Promise.allSettled(
+                    batch.map(user => this.sendEmailToUser(user))
+                );
+                
+                for (let j = 0; j < batchResults.length; j++) {
+                    const batchResult = batchResults[j];
+                    const user = batch[j];
+                    
+                    if (batchResult.status === 'fulfilled' && batchResult.value.success) {
+                        result.emailsSent++;
+                    } else {
+                        result.emailsFailed++;
+                        if (batchResult.status === 'rejected') {
+                            result.errors.push(`${user.Email}: ${batchResult.reason?.message || 'Unknown error'}`);
+                        } else if (batchResult.status === 'fulfilled' && batchResult.value.errorDetail) {
+                            result.errors.push(batchResult.value.errorDetail);
+                        }
+                    }
+                }
+                
+                // Small delay between batches to avoid rate limiting
+                if (i + BATCH_SIZE < users.length) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            console.log(`✅ Daily job emails complete: ${result.emailsSent} sent, ${result.emailsFailed} failed`);
+            return result;
+
+        } catch (error: any) {
+            console.error('❌ Daily job email service error:', error.message);
+            result.errors.push(error.message);
+            return result;
+        }
+    }
+
+    /**
+     * Send daily job email to a specific user (for testing)
+     */
+    static async sendDailyJobEmailsForUser(userId: string): Promise<DailyEmailResult> {
+        const result: DailyEmailResult = {
+            totalUsers: 0,
+            emailsSent: 0,
+            emailsFailed: 0,
+            errors: []
+        };
+
+        try {
+            // Get specific user details with notification preference check
+            const userQuery = `
+                SELECT 
+                    u.UserID,
+                    u.Email,
+                    u.FirstName,
+                    COALESCE(np.DailyJobRecommendationEmail, 1) as DailyJobRecommendationEmail
+                FROM Users u
+                LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
+                WHERE u.UserID = @param0
+                  AND u.IsActive = 1
+                  AND u.Email IS NOT NULL
+            `;
+            
+            const userResult = await dbService.executeQuery(userQuery, [userId]);
+            
+            if (!userResult.recordset || userResult.recordset.length === 0) {
+                result.errors.push(`User ${userId} not found or inactive`);
+                return result;
+            }
+
+            const user = userResult.recordset[0];
+            result.totalUsers = 1;
+
+            // Check if user has daily job recommendation emails enabled
+            if (!user.DailyJobRecommendationEmail) {
+                console.log(`⏭️ Skipping ${user.Email} - DailyJobRecommendationEmail is disabled`);
+                result.errors.push(`User ${user.Email} has DailyJobRecommendationEmail disabled`);
+                return result;
+            }
+
+            console.log(`📧 Sending test daily job email to ${user.Email}...`);
+
+            // Get jobs first to check if that's the issue
+            const jobs = await this.getTopJobsForUser(user.UserID);
+            if (!jobs || jobs.length === 0) {
+                result.emailsFailed = 1;
+                result.errors.push(`No jobs found for user ${user.Email} (UserID: ${user.UserID})`);
+                return result;
+            }
+
+            const sendResult = await this.sendEmailToUser(user);
+            
+            if (sendResult.success) {
+                result.emailsSent = 1;
+                console.log(`✅ Test email sent successfully to ${user.Email}`);
+            } else {
+                result.emailsFailed = 1;
+                result.errors.push(sendResult.errorDetail || `Email send failed for ${user.Email} (jobs found: ${jobs.length})`);
+            }
+
+            return result;
+
+        } catch (error: any) {
+            console.error('❌ Test email error:', error.message);
+            result.errors.push(`Error: ${error.message}`);
+            return result;
+        }
+    }
+
+    /**
+     * Log daily email run to database
+     */
+    static async logEmailRun(
+        executionId: string,
+        startTime: Date,
+        endTime: Date,
+        result: DailyEmailResult,
+        triggerType: 'TimerTrigger' | 'Manual' = 'TimerTrigger'
+    ): Promise<void> {
+        try {
+            // First ensure table exists
+            await dbService.executeQuery(`
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DailyJobEmailLogs')
+                BEGIN
+                    CREATE TABLE DailyJobEmailLogs (
+                        LogID INT IDENTITY(1,1) PRIMARY KEY,
+                        ExecutionID NVARCHAR(100) NOT NULL,
+                        StartTime DATETIME2 NOT NULL,
+                        EndTime DATETIME2 NOT NULL,
+                        DurationSeconds INT,
+                        TotalUsers INT NOT NULL DEFAULT 0,
+                        EmailsSent INT NOT NULL DEFAULT 0,
+                        EmailsFailed INT NOT NULL DEFAULT 0,
+                        Errors NVARCHAR(MAX),
+                        TriggerType NVARCHAR(50) NOT NULL DEFAULT 'Manual',
+                        CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                    );
+                    CREATE INDEX IX_DailyJobEmailLogs_StartTime ON DailyJobEmailLogs(StartTime DESC);
+                END
+            `, []);
+
+            const durationSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+            
+            await dbService.executeQuery(`
+                INSERT INTO DailyJobEmailLogs (
+                    ExecutionID, StartTime, EndTime, DurationSeconds,
+                    TotalUsers, EmailsSent, EmailsFailed, Errors, TriggerType
+                ) VALUES (
+                    @param0, @param1, @param2, @param3,
+                    @param4, @param5, @param6, @param7, @param8
+                )
+            `, [
+                executionId,
+                startTime,
+                endTime,
+                durationSeconds,
+                result.totalUsers,
+                result.emailsSent,
+                result.emailsFailed,
+                result.errors.slice(0, 10).join('; '), // Limit errors stored
+                triggerType
+            ]);
+        } catch (error: any) {
+            console.warn('⚠️ Failed to log daily email run:', error.message);
+        }
+    }
+}
+
+export default DailyJobEmailService;

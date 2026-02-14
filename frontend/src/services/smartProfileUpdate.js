@@ -1,0 +1,336 @@
+/**
+ * ========================================================================
+ * Smart Profile Update Service - React Native Integration
+ * ========================================================================
+ * 
+ * This service automatically routes profile fields to the correct backend
+ * endpoints based on which database table they belong to.
+ * 
+ * Integrates seamlessly with your existing RefOpen React Native app.
+ * ========================================================================
+ */
+
+// Field routing configuration based on your exact database schema
+const FIELD_ROUTING = {
+  // Users table fields - handled by /users/profile endpoint
+  USERS_TABLE: [
+    'firstName',
+    'lastName', 
+    'phone',
+    'dateOfBirth',
+    'gender',
+    'profilePictureURL',
+    'profileVisibility'
+  ],
+  
+  // Applicants table fields - handled by /applicants/{userId}/profile endpoint
+  APPLICANTS_TABLE: [
+    // Privacy settings
+    'hideCurrentCompany',
+    'hideSalaryDetails',
+    'allowRecruitersToContact',
+    'isOpenToWork',
+    'openToRefer', // ? NEW: Enable referral functionality
+    
+    // Professional information (? REMOVED old salary fields)
+    'headline',
+    'summary',
+    'currentJobTitle',
+    'currentCompany',
+    'yearsOfExperience',
+    'noticePeriod',
+    
+    // Skills and experience
+    'primarySkills',
+    'secondarySkills',
+    'languages',
+    'certifications',
+    'workExperience',
+    
+    // Education (? Enhanced with GraduationYear and GPA)
+    'institution',
+    'highestEducation',
+    'fieldOfStudy',
+    'graduationYear',
+    'gpa',
+    
+    // Job preferences (? REMOVED old salary fields)
+    'preferredJobTypes',
+    'preferredWorkTypes',
+    'preferredLocations',
+    'preferredRoles',
+    'preferredIndustries',
+    // ? NEW: Keep MinimumSalary as simple field for quick filtering
+    'minimumSalary',
+    'preferredCompanySize',
+    
+    // Location and availability
+    'nationality',
+    'currentLocation',
+    'immediatelyAvailable',
+    'willingToRelocate',
+    'jobSearchStatus',
+    
+    // Social profiles
+    'linkedInProfile',
+    'githubProfile',
+    
+    // Documents - REMOVED: primaryResumeURL (handled separately via resume API)
+    'additionalDocuments',
+    
+    // Status fields
+    'isFeatured',
+    'featuredUntil',
+    'tags',
+    
+    // ? REMOVED old salary fields (currentSalary, expectedSalaryMin, expectedSalaryMax, etc.)
+    // ? REMOVED: lastJobAppliedAt, searchScore (system-managed, not user input)
+    // ? REMOVED: primaryResumeURL (resumes handled via separate ApplicantResumes table)
+    
+    // ? NEW: Salary breakdown handled separately via dedicated API endpoints
+    'salaryBreakdown' // This will be handled specially in backend, not as a direct column update
+  ]
+};
+
+/**
+ * Smart profile update service that automatically routes fields to correct endpoints
+ */
+class SmartProfileUpdateService {
+  constructor(apiClient) {
+    this.apiClient = apiClient;
+  }
+
+  /**
+   * MAIN FIX: Smart update that routes fields to correct tables
+   */
+  async updateProfile(userId, profileData) {
+    try {
+      
+      // Split data by database table
+      const { usersData, applicantsData, unknownFields } = this.routeFields(profileData);
+      
+      // Log routing results
+      if (unknownFields.length > 0) {
+        console.warn('Unknown fields ignored:', unknownFields);
+      }
+      
+      // Execute updates in parallel
+      const updatePromises = [];
+      const results = {
+        usersUpdated: false,
+        applicantsUpdated: false,
+        usersData: null,
+        applicantsData: null,
+        errors: []
+      };
+      
+      // Update Users table if needed
+      if (Object.keys(usersData).length > 0) {
+        updatePromises.push(
+          this.updateUsersTable(usersData)
+            .then(result => {
+              results.usersUpdated = true;
+              results.usersData = result;
+            })
+            .catch(error => {
+              console.error('Users table update failed:', error);
+              results.errors.push(`Users update failed: ${error.message}`);
+            })
+        );
+      }
+      
+      // Update Applicants table if needed
+      if (Object.keys(applicantsData).length > 0) {
+        updatePromises.push(
+          this.updateApplicantsTable(userId, applicantsData)
+            .then(result => {
+              results.applicantsUpdated = true;
+              results.applicantsData = result;
+            })
+            .catch(error => {
+              console.error('Applicants table update failed:', error);
+              results.errors.push(`Applicants update failed: ${error.message}`);
+            })
+        );
+      }
+      
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      
+      
+      return results;
+      
+    } catch (error) {
+      console.error('Smart Profile Update failed:', error);
+      throw new Error(`Profile update failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Route fields to correct database tables
+   */
+  routeFields(profileData) {
+    const usersData = {};
+    const applicantsData = {};
+    const unknownFields = [];
+    
+    Object.keys(profileData).forEach(field => {
+      if (FIELD_ROUTING.USERS_TABLE.includes(field)) {
+        usersData[field] = profileData[field];
+      } else if (FIELD_ROUTING.APPLICANTS_TABLE.includes(field)) {
+        applicantsData[field] = profileData[field];
+      } else {
+        unknownFields.push(field);
+      }
+    });
+    
+    return { usersData, applicantsData, unknownFields };
+  }
+
+  /**
+   * Update Users table via /users/profile endpoint
+   */
+  async updateUsersTable(usersData) {
+    const response = await this.apiClient.updateProfile(usersData);
+    return response.data || response;
+  }
+
+  /**
+   * Update Applicants table via /applicants/{userId}/profile endpoint
+   */
+  async updateApplicantsTable(userId, applicantsData) {
+    const response = await this.apiClient.updateApplicantProfile(userId, applicantsData);
+    return response.data || response;
+  }
+
+  /**
+   * Validate field names against known schema
+   */
+  static validateFields(fields) {
+    const allValidFields = [...FIELD_ROUTING.USERS_TABLE, ...FIELD_ROUTING.APPLICANTS_TABLE];
+    
+    const valid = fields.filter(field => allValidFields.includes(field));
+    const invalid = fields.filter(field => !allValidFields.includes(field));
+    
+    return { valid, invalid };
+  }
+
+  /**
+   * Get field routing information
+   */
+  static getFieldRouting() {
+    return {
+      usersFields: FIELD_ROUTING.USERS_TABLE,
+      applicantsFields: FIELD_ROUTING.APPLICANTS_TABLE,
+      totalFields: FIELD_ROUTING.USERS_TABLE.length + FIELD_ROUTING.APPLICANTS_TABLE.length
+    };
+  }
+}
+
+/**
+ * Enhanced AuthContext methods that use smart routing
+ */
+export const createSmartAuthMethods = (refopenAPI, setUser, setError) => {
+  const smartProfileService = new SmartProfileUpdateService(refopenAPI);
+
+  // Create bound methods to avoid context issues
+  const updateProfileSmart = async (profileData) => {
+    try {
+      setError(null);
+      
+      const userId = refopenAPI.getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User ID not found. Please login again.');
+      }
+      
+      const result = await smartProfileService.updateProfile(userId, profileData);
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Smart update completed with some issues:', result.errors);
+        setError(`Profile updated with some issues: ${result.errors.join(', ')}`);
+      }
+      
+      // Refresh user data if Users table was updated
+      if (result.usersUpdated && result.usersData) {
+        setUser(prevUser => ({ ...prevUser, ...result.usersData }));
+      }
+      
+      return {
+        success: true,
+        message: result.errors.length > 0 
+          ? `Profile updated with ${result.errors.length} issues` 
+          : 'Profile updated successfully',
+        usersUpdated: result.usersUpdated,
+        applicantsUpdated: result.applicantsUpdated,
+        errors: result.errors
+      };
+      
+    } catch (error) {
+      const errorMessage = error.message || 'Smart profile update failed';
+      console.error('Smart profile update error:', error);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  return {
+    /**
+     * Smart profile update that fixes the hide current company issue
+     */
+    updateProfileSmart,
+
+    /**
+     * Quick toggle for privacy settings (the main fix!)
+     */
+    async togglePrivacySetting(setting, value) {
+      try {
+        
+        const profileData = { [setting]: value };
+        const result = await updateProfileSmart(profileData);
+        
+        
+        return result;
+      } catch (error) {
+        console.error(`? Failed to toggle ${setting}:`, error);
+        throw error;
+      }
+    },
+
+    /**
+     * Bulk profile update with smart routing
+     */
+    async updateCompleteProfile(profileData) {
+      return await updateProfileSmart(profileData);
+    }
+  };
+};
+
+/**
+ * React Native hook for smart profile updates
+ */
+export const useSmartProfile = (refopenAPI, user, setUser, setError) => {
+  // Get the bound smart methods
+  const smartMethods = createSmartAuthMethods(refopenAPI, setUser, setError);
+
+  // Return properly bound methods
+  return {
+    updateProfile: smartMethods.updateProfileSmart,
+    togglePrivacySetting: smartMethods.togglePrivacySetting,
+    updateCompleteProfile: smartMethods.updateCompleteProfile,
+    validateFields: (fields) => SmartProfileUpdateService.validateFields(fields),
+    getFieldRouting: () => SmartProfileUpdateService.getFieldRouting(),
+    user,
+    isAuthenticated: !!user
+  };
+};
+
+/**
+ * Convenience function for direct use
+ */
+export const updateUserProfileSmart = async (refopenAPI, userId, profileData) => {
+  const service = new SmartProfileUpdateService(refopenAPI);
+  return service.updateProfile(userId, profileData);
+};
+
+export { SmartProfileUpdateService, FIELD_ROUTING };
+export default SmartProfileUpdateService;

@@ -1,0 +1,44 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/bundles/*",
+      "/assets/*",
+      "/favicon.ico",
+      "/favicon.svg",
+      "/manifest.json",
+      "/robots.txt",
+      "/ads.txt",
+      "/sitemap.xml",
+      "/*.js",
+      "/*.css",
+      "/google*.html"
+    ]
+  },
+  "globalHeaders": {
+    "cache-control": "no-cache, no-store, must-revalidate",
+    "pragma": "no-cache",
+    "expires": "0",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self)",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://pagead2.googlesyndication.com https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://refopenstoragesi.blob.core.windows.net https://*.googleusercontent.com https://*.google.com https://*.gstatic.com https://images.unsplash.com https://via.placeholder.com; connect-src 'self' https://refopen-api-func.azurewebsites.net https://api.razorpay.com https://refopen-signalr.service.signalr.net wss://refopen-signalr.service.signalr.net https://cdn.jsdelivr.net https://www.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://pagead2.googlesyndication.com https://api.frankfurter.app https://api.exchangerate.host; frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com"
+  },
+  "routes": [
+    {
+      "route": "/index.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "route": "/",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    }
+  ]
+}

@@ -1,0 +1,279 @@
+/**
+ * ShareEarnScreen - Standalone screen for Share & Earn
+ * Social media sharing rewards + invite friends referral code
+ */
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import refopenAPI from '../services/api';
+import { showToast } from '../components/Toast';
+
+const PLATFORMS = [
+  { key: 'LinkedIn', icon: 'logo-linkedin', color: '#0A66C2', reward: 30, label: 'Post about RefOpen' },
+  { key: 'Twitter', icon: null, color: '#000', reward: 20, label: 'Post about RefOpen', useXLogo: true },
+  { key: 'Instagram', icon: 'logo-instagram', color: '#E4405F', reward: 20, label: 'Post or Story' },
+  { key: 'Facebook', icon: 'logo-facebook', color: '#1877F2', reward: 15, label: 'Share about RefOpen' },
+];
+
+export default function ShareEarnScreen() {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  const { colors, isDark } = useTheme();
+  const [approvedPlatforms, setApprovedPlatforms] = useState([]);
+
+  const referralCode = user?.UserID?.split('-')[0] || '';
+
+  useEffect(() => {
+    const fetchClaims = async () => {
+      try {
+        const result = await refopenAPI.apiCall('/social-share/my-claims');
+        if (result.success) {
+          const claims = Array.isArray(result.data) ? result.data : (result.data?.claims || []);
+          const approved = claims.filter(c => c.Status === 'Approved').map(c => c.Platform);
+          setApprovedPlatforms(approved);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch social claims:', err);
+      }
+    };
+    fetchClaims();
+  }, []);
+
+  const copyText = async (text, label) => {
+    try {
+      if (Platform.OS === 'web' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      showToast(`${label} copied!`, 'success');
+    } catch (e) {
+      showToast('Failed to copy', 'error');
+    }
+  };
+
+  const handleClose = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('MainTabs', { screen: 'Home' });
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: Platform.OS === 'ios' ? 56 : Platform.OS === 'web' ? 16 : 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.background,
+      }}>
+        <TouchableOpacity onPress={handleClose} style={{ padding: 4 }}>
+          <Ionicons name="close" size={26} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Share & Earn</Text>
+        <View style={{ width: 34 }} />
+      </View>
+
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Banner */}
+        <View style={{
+          backgroundColor: '#6366F1',
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 24,
+          overflow: 'hidden',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: '#FFF', marginBottom: 6 }}>
+                💰 Get Free Credits!
+              </Text>
+              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)' }}>
+                Share on social media or invite friends
+              </Text>
+            </View>
+            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 28 }}>✨</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Post on Social Media */}
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#E91E6320', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="megaphone" size={18} color="#E91E63" />
+            </View>
+            <Text style={{ marginLeft: 10, fontSize: 16, fontWeight: '700', color: colors.text }}>
+              Post on Social Media
+            </Text>
+          </View>
+
+          {/* 2x2 Grid */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            {PLATFORMS.map((p) => {
+              const isApproved = approvedPlatforms.includes(p.key);
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: isApproved ? colors.background : colors.surface,
+                    borderRadius: 16,
+                    padding: 16,
+                    borderWidth: 2,
+                    borderColor: isApproved ? '#10B981' : (p.key === 'Twitter' && isDark ? colors.text : p.color),
+                    opacity: isApproved ? 0.7 : 1,
+                  }}
+                  disabled={isApproved}
+                  onPress={() => navigation.navigate('SocialShareSubmit', { platform: p.key })}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <View style={{
+                      width: 44, height: 44, borderRadius: 12,
+                      backgroundColor: p.key === 'Twitter' && isDark ? colors.text : p.color,
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {p.useXLogo ? (
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: isDark ? colors.background : '#FFF' }}>𝕏</Text>
+                      ) : (
+                        <Ionicons name={p.icon} size={24} color="#FFF" />
+                      )}
+                    </View>
+                    {isApproved ? (
+                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={18} color="#FFF" />
+                      </View>
+                    ) : (
+                      <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                        <Text style={{ fontSize: 14, color: '#10B981', fontWeight: '800' }}>₹{p.reward}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
+                    {p.key === 'Twitter' ? 'X (Twitter)' : p.key}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>
+                    {isApproved ? 'Reward earned!' : p.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Note */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, backgroundColor: colors.surface, padding: 12, borderRadius: 10 }}>
+            <Ionicons name="gift-outline" size={16} color={colors.textSecondary} />
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
+              Submit proof & earn credits
+            </Text>
+          </View>
+        </View>
+
+        {/* Divider */}
+        <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 20 }} />
+
+        {/* Invite Friends */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.primary + '20', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="people" size={18} color={colors.primary} />
+            </View>
+            <Text style={{ marginLeft: 10, fontSize: 16, fontWeight: '700', color: colors.text }}>
+              Invite Friends
+            </Text>
+            <View style={{ marginLeft: 'auto', backgroundColor: '#10B98120', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+              <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '700' }}>₹25 each!</Text>
+            </View>
+          </View>
+
+          {/* Referral Code Card */}
+          <View style={{
+            backgroundColor: colors.surface,
+            borderRadius: 16,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Your Referral Code</Text>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.primary, letterSpacing: 3 }}>{referralCode}</Text>
+              </View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+                onPress={() => copyText(referralCode, 'Code')}
+              >
+                <Ionicons name="copy-outline" size={18} color="#FFF" />
+                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Copy</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Share Link */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.background,
+                padding: 12,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderStyle: 'dashed',
+              }}
+              onPress={() => copyText(`https://refopen.com/register?ref=${referralCode}`, 'Link')}
+            >
+              <Ionicons name="link" size={16} color={colors.primary} />
+              <Text style={{ flex: 1, marginLeft: 10, fontSize: 12, color: colors.primary }} numberOfLines={1}>
+                refopen.com/register?ref={referralCode}
+              </Text>
+              <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Reward Info */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Ionicons name="person-add" size={20} color={colors.primary} />
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>They get</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#10B981' }}>₹25</Text>
+              </View>
+              <View style={{ width: 1, height: 40, backgroundColor: colors.border }} />
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Ionicons name="gift" size={20} color="#F59E0B" />
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>You get</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#10B981' }}>₹25</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
