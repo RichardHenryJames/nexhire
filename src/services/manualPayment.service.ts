@@ -1,0 +1,600 @@
+/**
+ * Manual Payment Service
+ * Handles manual bank/UPI payment submissions while Razorpay verification is pending
+ */
+
+import { dbService } from './database.service';
+import { v4 as uuidv4 } from 'uuid';
+import { EmailService } from './emailService';
+import { TemplateService } from './templateService';
+import { PromoService } from './promo.service';
+import { WalletService } from './wallet.service';
+
+// Admin notification emails - supports comma-separated list from env
+const getAdminEmails = (): string[] => {
+  const emails = process.env.ADMIN_NOTIFICATION_EMAILS || '';
+  return emails.split(',').map(e => e.trim()).filter(e => e.length > 0);
+};
+
+export interface ManualPaymentSubmission {
+  submissionId?: string;
+  userId: string;
+  walletId?: string;
+  amount: number;
+  paymentMethod: 'UPI' | 'Bank Transfer' | 'NEFT' | 'IMPS' | 'RTGS';
+  referenceNumber: string;
+  paymentDate: string;
+  proofImageURL?: string;
+  userRemarks?: string;
+  status?: 'Pending' | 'Approved' | 'Rejected';
+  adminRemarks?: string;
+  packId?: number;
+  promoCode?: string;
+}
+
+export interface PaymentSettings {
+  upiId: string;
+  upiName: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankIfsc: string;
+  bankBranch: string | null;
+  minAmount: number;
+  maxAmount: number;
+  processingTime: string;
+  supportUrl: string;
+  supportPhone: string;
+}
+
+/**
+ * Get payment settings (bank/UPI details)
+ */
+export const getPaymentSettings = async (): Promise<PaymentSettings> => {
+  try {
+    const result = await dbService.executeQuery(`
+      SELECT SettingKey, SettingValue 
+      FROM PaymentSettings 
+      WHERE IsActive = 1
+    `);
+
+    const settings: any = {};
+    for (const row of result.recordset) {
+      settings[row.SettingKey] = row.SettingValue;
+    }
+
+    return {
+      upiId: settings['UPI_ID'] || '',
+      upiName: settings['UPI_NAME'] || '',
+      bankName: settings['BANK_NAME'] || '',
+      bankAccountName: settings['BANK_ACCOUNT_NAME'] || '',
+      bankAccountNumber: settings['BANK_ACCOUNT_NUMBER'] || '',
+      bankIfsc: settings['BANK_IFSC'] || '',
+      bankBranch: settings['BANK_BRANCH'] || null,
+      minAmount: parseFloat(settings['MIN_AMOUNT']) || 100,
+      maxAmount: parseFloat(settings['MAX_AMOUNT']) || 50000,
+      processingTime: settings['PROCESSING_TIME'] || '1 business day',
+      supportUrl: settings['SUPPORT_URL'] || 'https://www.refopen.com/support',
+      supportPhone: settings['SUPPORT_PHONE'] || ''
+    };
+  } catch (error: any) {
+    console.error('Error fetching payment settings:', error);
+    // SECURITY: Never hardcode bank details in source code.
+    // Payment settings must be configured in the PaymentSettings database table.
+    // If DB is unavailable, return empty values and show an error to the user.
+    console.error('CRITICAL: PaymentSettings table query failed. Manual payments will be unavailable.');
+    return {
+      upiId: '',
+      upiName: '',
+      bankName: '',
+      bankAccountName: '',
+      bankAccountNumber: '',
+      bankIfsc: '',
+      bankBranch: null,
+      minAmount: 100,
+      maxAmount: 50000,
+      processingTime: '1 business day',
+      supportUrl: 'https://www.refopen.com/support',
+      supportPhone: ''
+    };
+  }
+};
+
+/**
+ * Submit a manual payment proof
+ */
+export const submitManualPayment = async (
+  userId: string,
+  data: ManualPaymentSubmission
+): Promise<{ success: boolean; message: string; submissionId?: string }> => {
+  try {
+    // Validate amount
+    const settings = await getPaymentSettings();
+    if (data.amount < settings.minAmount) {
+      return { success: false, message: `Minimum amount is ₹${settings.minAmount}` };
+    }
+    if (data.amount > settings.maxAmount) {
+      return { success: false, message: `Maximum amount is ₹${settings.maxAmount}` };
+    }
+
+    // Check for duplicate reference number
+    const existingCheck = await dbService.executeQuery(`
+      SELECT SubmissionID FROM ManualPaymentSubmissions 
+      WHERE ReferenceNumber = @param0
+    `, [data.referenceNumber]);
+
+    if (existingCheck.recordset && existingCheck.recordset.length > 0) {
+      return { success: false, message: 'This reference number has already been submitted. Please check your submissions.' };
+    }
+
+    // Get user's wallet ID
+    let walletId = data.walletId;
+    if (!walletId) {
+      const walletResult = await dbService.executeQuery(`
+        SELECT WalletID FROM Wallets WHERE UserID = @param0
+      `, [userId]);
+      walletId = walletResult.recordset?.[0]?.WalletID || null;
+    }
+
+    const submissionId = uuidv4();
+
+    await dbService.executeQuery(`
+      INSERT INTO ManualPaymentSubmissions (
+        SubmissionID, UserID, WalletID, Amount, PaymentMethod, 
+        ReferenceNumber, PaymentDate, ProofImageURL, UserRemarks, Status,
+        PackID, PromoCode
+      ) VALUES (
+        @param0, @param1, @param2, @param3, @param4,
+        @param5, @param6, @param7, @param8, 'Pending',
+        @param9, @param10
+      )
+    `, [
+      submissionId,
+      userId,
+      walletId,
+      data.amount,
+      data.paymentMethod,
+      data.referenceNumber,
+      data.paymentDate,
+      data.proofImageURL || null,
+      data.userRemarks || null,
+      data.packId || null,
+      data.promoCode || null
+    ]);
+
+    // Send email notification to admin (async, non-blocking)
+    sendManualPaymentNotification(submissionId, userId, data).catch(err => {
+      console.error('Failed to send manual payment notification email:', err);
+    });
+
+    return {
+      success: true,
+      message: `Payment proof submitted successfully. Your wallet will be credited within ${settings.processingTime}.`,
+      submissionId
+    };
+
+  } catch (error: any) {
+    console.error('Error submitting manual payment:', error);
+    if (error.message?.includes('duplicate') || error.message?.includes('UNIQUE')) {
+      return { success: false, message: 'This reference number has already been submitted.' };
+    }
+    return { success: false, message: error.message || 'Failed to submit payment proof' };
+  }
+};
+
+/**
+ * Send email notification for new manual payment submission
+ */
+const sendManualPaymentNotification = async (
+  submissionId: string, 
+  userId: string, 
+  data: ManualPaymentSubmission
+): Promise<void> => {
+  try {
+    // Get user details
+    const userResult = await dbService.executeQuery(
+      `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`,
+      [userId]
+    );
+    const user = userResult.recordset[0];
+    
+    const userName = user ? `${user.FirstName} ${user.LastName}` : 'Unknown User';
+    const userEmail = user?.Email || 'Not provided';
+    
+    // Build user remarks section conditionally
+    const userRemarksSection = data.userRemarks ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; margin: 0 0 25px 0;">
+        <tr>
+          <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #92400e; font-size: 12px; text-transform: uppercase;">User Remarks</p>
+            <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.5;">${data.userRemarks}</p>
+          </td>
+        </tr>
+      </table>
+    ` : '';
+    
+    // Use the template service
+    const { subject, html, text } = TemplateService.render('new_manual_payment', {
+      submissionId: submissionId,
+      amount: data.amount.toLocaleString('en-IN'),
+      paymentMethod: data.paymentMethod,
+      referenceNumber: data.referenceNumber,
+      paymentDate: new Date(data.paymentDate).toLocaleDateString('en-IN', {
+        dateStyle: 'medium'
+      }),
+      userName: userName,
+      userEmail: userEmail,
+      userId: userId,
+      userRemarksSection: userRemarksSection,
+      submittedAt: new Date().toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Kolkata'
+      })
+    });
+    
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) {
+      console.warn('⚠️ No admin emails configured, skipping payment notification');
+      return;
+    }
+    
+    await EmailService.send({
+      to: adminEmails,
+      subject: subject,
+      html: html,
+      text: text,
+      emailType: 'manual_payment_notification',
+      referenceType: 'ManualPayment',
+      referenceId: submissionId
+    });
+    
+    console.log(`✅ Manual payment notification sent to ${adminEmails.join(', ')} for submission ${submissionId}`);
+  } catch (error) {
+    console.error('Error sending manual payment notification:', error);
+  }
+};
+
+/**
+ * Get user's manual payment submissions
+ */
+export const getUserManualPayments = async (userId: string): Promise<any[]> => {
+  try {
+    const result = await dbService.executeQuery(`
+      SELECT 
+        m.SubmissionID as submissionId,
+        m.Amount as amount,
+        m.PaymentMethod as paymentMethod,
+        m.ReferenceNumber as referenceNumber,
+        m.PaymentDate as paymentDate,
+        m.ProofImageURL as proofImageUrl,
+        m.UserRemarks as userRemarks,
+        m.Status as status,
+        m.AdminRemarks as adminRemarks,
+        m.CreatedAt as createdAt,
+        m.ReviewedAt as reviewedAt,
+        p.Name as packName,
+        m.PromoCode as promoCode
+      FROM ManualPaymentSubmissions m
+      LEFT JOIN WalletBonusPacks p ON m.PackID = p.PackID
+      WHERE m.UserID = @param0
+      ORDER BY m.CreatedAt DESC
+    `, [userId]);
+
+    return result.recordset || [];
+  } catch (error: any) {
+    console.error('Error fetching user manual payments:', error);
+    return [];
+  }
+};
+
+/**
+ * Admin: Get all pending manual payments
+ */
+export const getPendingManualPayments = async (): Promise<any[]> => {
+  try {
+    const result = await dbService.executeQuery(`
+      SELECT 
+        m.SubmissionID as submissionId,
+        m.UserID as userId,
+        u.Email as userEmail,
+        u.FirstName + ' ' + u.LastName as userName,
+        m.Amount as amount,
+        m.PaymentMethod as paymentMethod,
+        m.ReferenceNumber as referenceNumber,
+        m.PaymentDate as paymentDate,
+        m.ProofImageURL as proofImageUrl,
+        m.UserRemarks as userRemarks,
+        m.Status as status,
+        m.CreatedAt as createdAt,
+        p.Name as packName,
+        p.BonusAmount as packBonusAmount,
+        m.PromoCode as promoCode,
+        m.BonusCredited as bonusCredited
+      FROM ManualPaymentSubmissions m
+      JOIN Users u ON m.UserID = u.UserID
+      LEFT JOIN WalletBonusPacks p ON m.PackID = p.PackID
+      WHERE m.Status = 'Pending'
+      ORDER BY m.CreatedAt ASC
+    `);
+
+    return result.recordset || [];
+  } catch (error: any) {
+    console.error('Error fetching pending manual payments:', error);
+    return [];
+  }
+};
+
+/**
+ * Admin: Get all manual payments with optional status filter
+ */
+export const getAllManualPayments = async (status: string | null = null): Promise<any[]> => {
+  try {
+    let query = `
+      SELECT 
+        m.SubmissionID as submissionId,
+        m.UserID as userId,
+        u.Email as userEmail,
+        u.FirstName + ' ' + u.LastName as userName,
+        m.Amount as amount,
+        m.PaymentMethod as paymentMethod,
+        m.ReferenceNumber as referenceNumber,
+        m.PaymentDate as paymentDate,
+        m.ProofImageURL as proofImageUrl,
+        m.UserRemarks as userRemarks,
+        m.Status as status,
+        m.AdminRemarks as adminRemarks,
+        m.ReviewedBy as reviewedBy,
+        m.ReviewedAt as reviewedAt,
+        m.CreatedAt as createdAt,
+        p.Name as packName,
+        p.BonusAmount as packBonusAmount,
+        m.PromoCode as promoCode,
+        m.BonusCredited as bonusCredited
+      FROM ManualPaymentSubmissions m
+      JOIN Users u ON m.UserID = u.UserID
+      LEFT JOIN WalletBonusPacks p ON m.PackID = p.PackID
+    `;
+    
+    const params: any[] = [];
+    if (status) {
+      query += ` WHERE m.Status = @param0`;
+      params.push(status);
+    }
+    
+    query += ` ORDER BY m.CreatedAt DESC`;
+
+    const result = await dbService.executeQuery(query, params);
+
+    return result.recordset || [];
+  } catch (error: any) {
+    console.error('Error fetching all manual payments:', error);
+    return [];
+  }
+};
+
+/**
+ * Admin: Approve a manual payment
+ */
+export const approveManualPayment = async (
+  submissionId: string,
+  adminUserId: string,
+  adminRemarks?: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Get submission details with user info
+    const submission = await dbService.executeQuery(`
+      SELECT 
+        mps.UserID, 
+        mps.WalletID, 
+        mps.Amount, 
+        mps.Status,
+        mps.PaymentMethod,
+        mps.ReferenceNumber,
+        mps.PackID,
+        mps.PromoCode,
+        u.Email,
+        u.FirstName
+      FROM ManualPaymentSubmissions mps
+      JOIN Users u ON mps.UserID = u.UserID
+      WHERE mps.SubmissionID = @param0
+    `, [submissionId]);
+
+    if (!submission.recordset || submission.recordset.length === 0) {
+      return { success: false, message: 'Submission not found' };
+    }
+
+    const sub = submission.recordset[0];
+    if (sub.Status !== 'Pending') {
+      return { success: false, message: `This submission is already ${sub.Status}` };
+    }
+
+    // Credit wallet FIRST before updating status
+    let walletId = sub.WalletID;
+    if (!walletId) {
+      // Get or create wallet
+      const walletResult = await dbService.executeQuery(`
+        SELECT WalletID FROM Wallets WHERE UserID = @param0
+      `, [sub.UserID]);
+      
+      if (walletResult.recordset && walletResult.recordset.length > 0) {
+        walletId = walletResult.recordset[0].WalletID;
+      } else {
+        // Create wallet
+        walletId = uuidv4();
+        await dbService.executeQuery(`
+          INSERT INTO Wallets (WalletID, UserID, Balance, CurrencyID, Status, CreatedAt, UpdatedAt)
+          VALUES (@param0, @param1, 0, 4, 'Active', GETUTCDATE(), GETUTCDATE())
+        `, [walletId, sub.UserID]);
+      }
+    }
+
+    // Add balance to wallet
+    await dbService.executeQuery(`
+      UPDATE Wallets
+      SET Balance = Balance + @param1,
+          UpdatedAt = GETUTCDATE(),
+          LastTransactionAt = GETUTCDATE()
+      WHERE WalletID = @param0
+    `, [walletId, sub.Amount]);
+
+    // Get current balance for transaction record
+    const balanceResult = await dbService.executeQuery(`
+      SELECT Balance FROM Wallets WHERE WalletID = @param0
+    `, [walletId]);
+    let balanceAfter = balanceResult.recordset[0]?.Balance || sub.Amount;
+    const balanceBefore = balanceAfter - sub.Amount;
+
+    // Add transaction record
+    await dbService.executeQuery(`
+      INSERT INTO WalletTransactions (
+        TransactionID, WalletID, TransactionType, Amount, 
+        BalanceBefore, BalanceAfter, CurrencyID, Source,
+        PaymentReference, Description, Status, CreatedAt
+      ) VALUES (
+        @param0, @param1, 'Credit', @param2,
+        @param3, @param4, 4, 'Manual_Payment',
+        @param5, 'Bank/UPI Transfer', 'Completed', GETUTCDATE()
+      )
+    `, [uuidv4(), walletId, sub.Amount, balanceBefore, balanceAfter, submissionId]);
+
+    // === AUTO-CREDIT BONUS (Pack + Promo) ===
+    let totalBonus = 0;
+
+    // 1. Bonus Pack — if user selected a pack, credit the bonus amount
+    if (sub.PackID) {
+      const pack = await PromoService.findMatchingPack(sub.Amount);
+      if (pack && pack.BonusAmount > 0) {
+        await WalletService.creditBonus(
+          sub.UserID,
+          pack.BonusAmount,
+          'RECHARGE_BONUS',
+          `Bonus Pack: ${pack.Name} — ₹${pack.BonusAmount} extra credit`
+        );
+        totalBonus += pack.BonusAmount;
+      }
+    }
+
+    // 2. Promo Code — if user applied a promo code, validate and credit
+    if (sub.PromoCode) {
+      const promoResult = await PromoService.validatePromoCode(sub.PromoCode, sub.UserID, sub.Amount);
+      if (promoResult.valid && promoResult.bonusAmount && promoResult.bonusAmount > 0) {
+        await WalletService.creditBonus(
+          sub.UserID,
+          promoResult.bonusAmount,
+          'RECHARGE_BONUS',
+          `Promo ${sub.PromoCode}: ₹${promoResult.bonusAmount} extra credit`
+        );
+        await PromoService.applyPromoCode(sub.PromoCode, sub.UserID, sub.Amount, promoResult.bonusAmount);
+        totalBonus += promoResult.bonusAmount;
+      }
+    }
+
+    // Update bonus credited on the submission record
+    if (totalBonus > 0) {
+      await dbService.executeQuery(`
+        UPDATE ManualPaymentSubmissions SET BonusCredited = @param1 WHERE SubmissionID = @param0
+      `, [submissionId, totalBonus]);
+      // Re-fetch balance for email
+      const updatedBalance = await dbService.executeQuery(`SELECT Balance FROM Wallets WHERE WalletID = @param0`, [walletId]);
+      balanceAfter = updatedBalance.recordset[0]?.Balance || balanceAfter + totalBonus;
+    }
+
+    // Update submission status to Approved ONLY AFTER wallet is credited
+    await dbService.executeQuery(`
+      UPDATE ManualPaymentSubmissions
+      SET Status = 'Approved',
+          AdminRemarks = @param1,
+          ReviewedBy = @param2,
+          ReviewedAt = GETUTCDATE(),
+          UpdatedAt = GETUTCDATE()
+      WHERE SubmissionID = @param0
+    `, [submissionId, adminRemarks || 'Payment verified', adminUserId]);
+
+    // Send approval email to user
+    try {
+      const appUrl = process.env.APP_URL || 'https://www.refopen.com';
+      const { subject, html, text } = TemplateService.render('payment_approved', {
+        firstName: sub.FirstName || 'there',
+        amount: sub.Amount.toLocaleString('en-IN'),
+        totalCredited: (sub.Amount + totalBonus).toLocaleString('en-IN'),
+        bonusLine: totalBonus > 0
+          ? `<p style="margin: 8px 0 0 0; color: #047857; font-size: 13px;">₹${sub.Amount.toLocaleString('en-IN')} payment + ₹${totalBonus.toLocaleString('en-IN')} bonus</p>`
+          : '',
+        newBalance: balanceAfter.toLocaleString('en-IN'),
+        referenceNumber: sub.ReferenceNumber || submissionId,
+        paymentMethod: sub.PaymentMethod || 'Bank Transfer',
+        approvedAt: new Date().toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'Asia/Kolkata'
+        }),
+        walletUrl: `${appUrl}/wallet`
+      });
+
+      await EmailService.send({
+        to: sub.Email,
+        subject: subject,
+        html: html,
+        text: text,
+        emailType: 'payment_approved',
+        referenceType: 'ManualPayment',
+        referenceId: submissionId
+      });
+
+      console.log(`✅ Payment approval email sent to ${sub.Email} for submission ${submissionId}`);
+    } catch (emailError) {
+      // Log but don't fail the approval if email fails
+      console.error('Error sending payment approval email:', emailError);
+    }
+
+    return { success: true, message: 'Payment approved and wallet credited' };
+
+  } catch (error: any) {
+    console.error('Error approving manual payment:', error);
+    return { success: false, message: error.message || 'Failed to approve payment' };
+  }
+};
+
+/**
+ * Admin: Reject a manual payment
+ */
+export const rejectManualPayment = async (
+  submissionId: string,
+  adminUserId: string,
+  adminRemarks: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const result = await dbService.executeQuery(`
+      UPDATE ManualPaymentSubmissions
+      SET Status = 'Rejected',
+          AdminRemarks = @param1,
+          ReviewedBy = @param2,
+          ReviewedAt = GETUTCDATE(),
+          UpdatedAt = GETUTCDATE()
+      WHERE SubmissionID = @param0 AND Status = 'Pending'
+    `, [submissionId, adminRemarks, adminUserId]);
+
+    if (!result.rowsAffected || result.rowsAffected[0] === 0) {
+      return { success: false, message: 'Submission not found or already processed' };
+    }
+
+    return { success: true, message: 'Payment rejected' };
+
+  } catch (error: any) {
+    console.error('Error rejecting manual payment:', error);
+    return { success: false, message: error.message || 'Failed to reject payment' };
+  }
+};
+
+export const manualPaymentService = {
+  getSettings: getPaymentSettings,
+  submit: submitManualPayment,
+  getUserPayments: getUserManualPayments,
+  getPending: getPendingManualPayments,
+  getAll: getAllManualPayments,
+  approve: approveManualPayment,
+  reject: rejectManualPayment
+};
+
+export default manualPaymentService;

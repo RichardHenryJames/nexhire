@@ -1,0 +1,247 @@
+Indian Institute of Technology Bombay
+Indian Institute of Technology Delhi
+Indian Institute of Technology Madras
+Indian Institute of Technology Kanpur
+Indian Institute of Technology Kharagpur
+Indian Institute of Technology Roorkee
+Indian Institute of Technology Guwahati
+Indian Institute of Technology Hyderabad
+Indian Institute of Technology Indore
+Indian Institute of Technology BHU Varanasi
+Indian Institute of Technology Gandhinagar
+Indian Institute of Technology Patna
+Indian Institute of Technology Ropar
+Indian Institute of Technology Bhubaneswar
+Indian Institute of Technology Mandi
+Indian Institute of Technology Jodhpur
+Indian Institute of Technology Palakkad
+Indian Institute of Technology Tirupati
+Indian Institute of Technology Dhanbad
+Indian Institute of Technology Jammu
+Indian Institute of Technology Goa
+Indian Institute of Technology Dharwad
+National Institute of Technology Tiruchirappalli
+National Institute of Technology Karnataka Surathkal
+National Institute of Technology Rourkela
+National Institute of Technology Warangal
+National Institute of Technology Calicut
+National Institute of Technology Kurukshetra
+National Institute of Technology Durgapur
+National Institute of Technology Jamshedpur
+National Institute of Technology Silchar
+National Institute of Technology Hamirpur
+National Institute of Technology Jalandhar
+National Institute of Technology Patna
+National Institute of Technology Raipur
+National Institute of Technology Agartala
+National Institute of Technology Arunachal Pradesh
+National Institute of Technology Delhi
+National Institute of Technology Goa
+National Institute of Technology Manipur
+National Institute of Technology Meghalaya
+National Institute of Technology Mizoram
+National Institute of Technology Nagaland
+National Institute of Technology Puducherry
+National Institute of Technology Sikkim
+National Institute of Technology Srinagar
+National Institute of Technology Uttarakhand
+Birla Institute of Technology and Science Pilani
+Vellore Institute of Technology
+Delhi Technological University
+Netaji Subhas University of Technology
+Jadavpur University
+Anna University
+College of Engineering Pune
+PSG College of Technology
+Thapar Institute of Engineering and Technology
+Manipal Institute of Technology
+SRM Institute of Science and Technology
+Amrita Vishwa Vidyapeetham
+Kalinga Institute of Industrial Technology
+Lovely Professional University
+Chandigarh University
+Jamia Millia Islamia
+Aligarh Muslim University
+Banaras Hindu University
+Andhra University College of Engineering
+Osmania University
+University College of Engineering Anna University
+Jadavpur University Faculty of Engineering
+National Institute of Technology Surat
+National Institute of Technology Allahabad
+Sardar Vallabhbhai National Institute of Technology Surat
+Motilal Nehru National Institute of Technology Allahabad
+Maulana Azad National Institute of Technology Bhopal
+Visvesvaraya National Institute of Technology Nagpur
+National Institute of Technology Jaipur
+Dr. B. R. Ambedkar National Institute of Technology Jalandhar
+Malviya National Institute of Technology Jaipur
+Shri Mata Vaishno Devi University
+Jaypee Institute of Information Technology
+Guru Gobind Singh Indraprastha University
+Bharati Vidyapeeth College of Engineering
+BMS College of Engineering Bangalore
+RV College of Engineering
+PES University
+MS Ramaiah Institute of Technology
+International Institute of Information Technology Hyderabad
+Indian Institute of Information Technology Allahabad
+Dhirubhai Ambani Institute of Information and Communication Technology
+Institute of Chemical Technology Mumbai
+Indian Institute of Space Science and Technology
+Defence Institute of Advanced Technology
+Coimbatore Institute of Technology
+Thiagarajar College of Engineering
+Government College of Technology Coimbatore
+K. J. Somaiya College of Engineering
+Sardar Patel College of Engineering
+Fr. Conceicao Rodrigues College of Engineering
+K. K. Wagh Institute of Engineering Education and Research
+Walchand College of Engineering Sangli
+Veermata Jijabai Technological Institute
+Government College of Engineering Aurangabad
+Vishwakarma Institute of Technology
+Sinhgad College of Engineering
+Maharashtra Institute of Technology
+MIT Academy of Engineering
+National Institute of Technology Meghalaya
+Indian Institute of Engineering Science and Technology Shibpur
+Heritage Institute of Technology
+Haldia Institute of Technology
+Kalyani Government Engineering College
+Academy of Technology
+Techno India University
+Guru Nanak Dev Engineering College
+Chitkara University
+Punjab Engineering College
+Dr. B. R. Ambedkar NIT Jalandhar
+Beant College of Engineering and Technology
+Sant Longowal Institute of Engineering and Technology
+National Institute of Technology Hamirpur
+Jaypee University of Information Technology
+Institute of Engineering and Technology DAVV
+Shri Govindram Seksaria Institute of Technology and Science
+Maulana Azad National Institute of Technology
+Rajiv Gandhi Proudyogiki Vishwavidyalaya
+Indian Institute of Technology BHU
+University of Petroleum and Energy Studies
+Graphic Era University
+DIT University
+Uttaranchal University
+Quantum University
+Birla Institute of Technology Mesra
+National Institute of Technology Patna
+BIT Sindri
+Indian School of Mines
+Gaya College of Engineering
+Muzaffarpur Institute of Technology
+Nalanda College of Engineering
+Indian Institute of Technology Ropar
+Birla Institute of Technology and Science Goa
+Goa Engineering College
+Don Bosco College of Engineering
+Fr. Agnel College of Engineering
+Birla Institute of Technology and Science Hyderabad
+CBIT Hyderabad
+Vasavi College of Engineering
+CVR College of Engineering
+Gokaraju Rangaraju Institute of Engineering and Technology
+Vardhaman College of Engineering
+Muffakham Jah College of Engineering and Technology
+VNR Vignana Jyothi Institute of Engineering and Technology
+Vignan's Foundation for Science Technology and Research
+Gayatri Vidya Parishad College of Engineering
+Andhra Loyola Institute of Engineering and Technology
+GITAM University
+Koneru Lakshmaiah Education Foundation
+Acharya Nagarjuna University
+Sri Venkateswara University College of Engineering
+Chaitanya Bharathi Institute of Technology
+Kakatiya Institute of Technology and Science
+CMR Engineering College
+BVRIT Hyderabad College of Engineering for Women
+National Institute of Technology Warangal
+Jawaharlal Nehru Technological University Hyderabad
+Jawaharlal Nehru Technological University Kakinada
+Siddharth Institute of Engineering and Technology
+Rajiv Gandhi University of Knowledge Technologies
+Indian Institute of Information Technology Design and Manufacturing Kancheepuram
+College of Engineering Guindy
+Madras Institute of Technology
+PSG College of Technology Coimbatore
+SSN College of Engineering
+Velammal Engineering College
+Sri Sivasubramaniya Nadar College of Engineering
+Rajalakshmi Engineering College
+St. Joseph's College of Engineering
+Easwari Engineering College
+SRM Valliammai Engineering College
+K. S. Rangasamy College of Technology
+Kongu Engineering College
+K. L. N. College of Engineering
+Kumaraguru College of Technology
+Amrita School of Engineering Coimbatore
+Sri Ramakrishna Engineering College
+Karunya Institute of Technology and Sciences
+Rajalakshmi Institute of Technology
+Panimalar Engineering College
+Hindustan Institute of Technology and Science
+Sri Sairam Engineering College
+B. S. Abdur Rahman Crescent Institute of Science and Technology
+SRM Institute of Science and Technology Ramapuram
+Chennai Institute of Technology
+Saveetha Engineering College
+R. M. K. Engineering College
+Jeppiaar Engineering College
+Jerusalem College of Engineering
+Sri Venkateswara College of Engineering
+Aarupadai Veedu Institute of Technology
+Mepco Schlenk Engineering College
+Sethu Institute of Technology
+Kamaraj College of Engineering and Technology
+Kalasalingam Academy of Research and Education
+Bannari Amman Institute of Technology
+Adhiyamaan College of Engineering
+K. S. R. College of Engineering
+Erode Sengunthar Engineering College
+Sona College of Technology
+National Institute of Technology Tiruchirappalli
+Annamalai University Faculty of Engineering
+Pondicherry Engineering College
+Pondicherry University Engineering Campus
+National Institute of Technology Puducherry
+Indira Gandhi Institute of Technology
+Periyar Maniammai Institute of Science and Technology
+Bharath Institute of Higher Education and Research
+Sathyabama Institute of Science and Technology
+SRM Institute of Science and Technology Kattankulathur
+VIT Vellore
+VIT Chennai
+VIT Amaravati
+VIT Bhopal
+Amrita Vishwa Vidyapeetham Bengaluru
+Amrita Vishwa Vidyapeetham Amritapuri
+Amrita Vishwa Vidyapeetham Kochi
+Amrita Vishwa Vidyapeetham Mysuru
+National Institute of Technology Karnataka
+BMS College of Engineering
+R V College of Engineering
+PES University
+MS Ramaiah Institute of Technology
+BMS Institute of Technology and Management
+Dayananda Sagar College of Engineering
+Ramaiah University of Applied Sciences
+New Horizon College of Engineering
+Atria Institute of Technology
+CMR Institute of Technology
+Sir M. Visvesvaraya Institute of Technology
+NIE Institute of Technology
+Acharya Institute of Technology
+B. N. M. Institute of Technology
+Bangalore Institute of Technology
+Nitte Meenakshi Institute of Technology
+Presidency University Bangalore
+REVA University
+Jain University Faculty of Engineering and Technology
+Christ University Faculty of Engineering
+JSS Science and Technology University

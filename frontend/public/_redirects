@@ -1,0 +1,12 @@
+# Netlify/Azure Static Web Apps redirect rules for SPA
+# This ensures all routes are handled by React Router (client-side routing)
+
+# API routes should not be redirected
+/api/*  /api/:splat  200
+
+# Static build artifacts must not be rewritten to index.html
+/bundles/*  /bundles/:splat  200
+/assets/*   /assets/:splat   200
+
+# All other routes should serve index.html (SPA)
+/*    /index.html   200

@@ -1,0 +1,55 @@
+# Visual Studio / .NET related files
+.vs/
+*.suo
+*.user
+bin/
+obj/
+TestResults/
+*.csproj.user
+packages/
+.env
+.env.local
+.env.development
+backups/*
+
+# Node.js related files
+node_modules/
+npm-debug.log*
+
+src/secret/*
+
+# Azure Functions / Development tools
+azure-functions-core-tools/
+*.jar
+
+# Build output
+/dist/
+build/
+out/
+
+# Logs and databases
+*.log
+*.db
+
+# Scripts with sensitive data
+scripts/database/users-to-delete.txt
+temp-*.js
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment files (local only - .env.prod is safe with Key Vault refs)
+*.pem
+local.settings.json
+env-config.*.json
+frontend/env-config.*.json
+
+# IDE specific
+*.sublime-workspace
+*.vscode/
+
+frontend/web-build/*
+frontend/dist/*
+
+frontend/.expo/*
