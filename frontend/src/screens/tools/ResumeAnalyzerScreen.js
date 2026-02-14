@@ -732,7 +732,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
       <View style={styles.screenHeader}>
         <TouchableOpacity 
           onPress={() => {
-            navigation.navigate('Services');
+            navigation.navigate('MainTabs', { screen: 'Services' });
           }}
           style={styles.backButton}
         >

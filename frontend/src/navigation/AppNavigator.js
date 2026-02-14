@@ -125,16 +125,7 @@ const linking = {
       // Primary SEO-friendly path (short and memorable)
       ResumeAnalyzer: "resume-analyzer",
       
-      // Public Service Screens - accessible without auth
-      Services: "services",
-      ATSBeatSheet: "services/resume-builder",
-      InterviewDecoded: "services/interview-prep",
-      SalarySpy: "services/salary-spy",
-      OfferCoach: "services/offer-coach",
-      LinkedInOptimizer: "services/linkedin-optimizer",
-      BlindReview: "services/blind-review",
-      CareerSimulator: "services/career-simulator",
-      MarketPulse: "services/market-pulse",
+      // Service sub-screens handled in Main stack below
       
       // Get Verified screen
       GetVerified: "get-verified",
@@ -213,8 +204,19 @@ const linking = {
               },
               AdminPayments: "AdminPayments",
               AdminSupport: "AdminSupport",
+              Services: "services",
             },
           },
+
+          // Service sub-screens (no tab bar)
+          ATSBeatSheet: "services/resume-builder",
+          InterviewDecoded: "services/interview-prep",
+          SalarySpy: "services/salary-spy",
+          OfferCoach: "services/offer-coach",
+          LinkedInOptimizer: "services/linkedin-optimizer",
+          BlindReview: "services/blind-review",
+          CareerSimulator: "services/career-simulator",
+          MarketPulse: "services/market-pulse",
 
           // Profile screen (slides from Home)
           Profile: "profile",
@@ -1079,16 +1081,6 @@ export default function AppNavigator() {
           headerShown: false,
           title: "Resume Analyzer - AI Job Match Tool",
           headerBackTitleVisible: false,
-        }}
-      />
-
-      {/* Services Screen - accessible from ProfileSlider for verified referrers */}
-      <Stack.Screen
-        name="Services"
-        component={ServicesScreen}
-        options={{
-          headerShown: false,
-          title: "Career Tools & Services",
         }}
       />
 
