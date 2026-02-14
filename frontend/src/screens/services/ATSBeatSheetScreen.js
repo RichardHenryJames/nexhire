@@ -47,7 +47,7 @@ export default function ATSBeatSheetScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Services' })} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Services' } })} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Resume Builder</Text>

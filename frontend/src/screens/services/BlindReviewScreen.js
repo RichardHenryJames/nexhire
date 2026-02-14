@@ -46,7 +46,7 @@ export default function BlindReviewScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Services' })} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Services' } })} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Blind Review</Text>
