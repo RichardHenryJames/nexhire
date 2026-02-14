@@ -4127,7 +4127,7 @@ app.http("submit-service-interest", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "services/interest",
-  handler: withErrorHandling(submitServiceInterest),
+  handler: submitServiceInterest,
 });
 
 /**
@@ -4138,7 +4138,7 @@ app.http("get-service-interests", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
   route: "services/interests",
-  handler: withErrorHandling(getUserServiceInterests),
+  handler: getUserServiceInterests,
 });
 
 /**
@@ -4149,5 +4149,5 @@ app.http("admin-service-interest-stats", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
   route: "management/service-interests/stats",
-  handler: withErrorHandling(getServiceInterestStats),
+  handler: getServiceInterestStats,
 });

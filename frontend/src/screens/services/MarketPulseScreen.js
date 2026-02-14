@@ -32,7 +32,7 @@ export default function MarketPulseScreen({ navigation }) {
   const handleInterest = async () => {
     setLoading(true);
     try {
-      const result = await refopenAPI.apiCall('/services/interest', 'POST', { serviceName: SERVICE_NAME });
+      const result = await refopenAPI.apiCall('/services/interest', { method: 'POST', body: JSON.stringify({ serviceName: SERVICE_NAME }) });
       if (result?.success || result?.alreadyExists) {
         setSubmitted(true);
       }
