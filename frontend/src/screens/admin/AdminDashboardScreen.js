@@ -27,7 +27,7 @@ import refopenAPI from '../../services/api';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'transactions', 'emailLogs', 'resumeAnalyzer', 'socialShare'];
+const VALID_TABS = ['overview', 'users', 'activity', 'services', 'referrals', 'transactions', 'emailLogs', 'resumeAnalyzer', 'socialShare'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -72,6 +72,9 @@ export default function AdminDashboardScreen() {
   const [activityDays, setActivityDays] = useState(30);
   const [activitySort, setActivitySort] = useState('views'); // 'views' or 'lastActive'
   
+  // Services interest data
+  const [servicesData, setServicesData] = useState(null);
+  
   // Social Share Claims data
   const [socialShareData, setSocialShareData] = useState(null);
   
@@ -81,7 +84,7 @@ export default function AdminDashboardScreen() {
   const [socialRejectionReason, setSocialRejectionReason] = useState('');
   
   // Track which tabs have been loaded
-  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false, emailLogs: false, resumeAnalyzer: false, activity: false, socialShare: false });
+  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false, emailLogs: false, resumeAnalyzer: false, activity: false, services: false, socialShare: false });
   
   // ScrollView ref for scroll to top
   const scrollViewRef = useRef(null);
@@ -98,6 +101,7 @@ export default function AdminDashboardScreen() {
     emailLogs: false,
     resumeAnalyzer: false,
     activity: false,
+    services: false,
     socialShare: false
   });
 
@@ -266,13 +270,6 @@ export default function AdminDashboardScreen() {
       setTabLoading(prev => ({ ...prev, activity: true }));
       const response = await refopenAPI.apiCall(`/management/activity/analytics?days=${days}`);
       if (response.success) {
-        // Also fetch service interest stats
-        try {
-          const interestResponse = await refopenAPI.apiCall('/management/service-interests/stats');
-          if (interestResponse.success) {
-            response.data.serviceInterests = interestResponse.data;
-          }
-        } catch (e) { /* silently fail */ }
         setActivityData(response.data);
         loadedTabs.current.activity = true;
       }
@@ -280,6 +277,23 @@ export default function AdminDashboardScreen() {
       console.error('Error loading activity data:', error);
     } finally {
       setTabLoading(prev => ({ ...prev, activity: false }));
+    }
+  }, []);
+
+  // Load services interest data
+  const loadServices = useCallback(async (force = false) => {
+    if (loadedTabs.current.services && !force) return;
+    try {
+      setTabLoading(prev => ({ ...prev, services: true }));
+      const response = await refopenAPI.apiCall('/management/service-interests/stats');
+      if (response.success) {
+        setServicesData(response.data);
+        loadedTabs.current.services = true;
+      }
+    } catch (error) {
+      console.error('Error loading services data:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, services: false }));
     }
   }, []);
 
@@ -359,11 +373,14 @@ export default function AdminDashboardScreen() {
       case 'activity':
         loadActivity();
         break;
+      case 'services':
+        loadServices();
+        break;
       case 'socialShare':
         loadSocialShare();
         break;
     }
-  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadActivity, loadSocialShare]);
+  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadActivity, loadServices, loadSocialShare]);
 
   // Initial load - just overview
   useEffect(() => {
@@ -477,6 +494,7 @@ export default function AdminDashboardScreen() {
           { key: 'overview', label: 'Overview', icon: 'grid-outline' },
           { key: 'users', label: 'Users', icon: 'people-outline' },
           { key: 'activity', label: 'Activity', icon: 'pulse-outline' },
+          { key: 'services', label: 'Services', icon: 'rocket-outline' },
           { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
           { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
           { key: 'emailLogs', label: 'Email Logs', icon: 'mail-outline' },
@@ -1237,13 +1255,65 @@ export default function AdminDashboardScreen() {
   );
   };
 
+  // Services Tab - Service Interest Tracking
+  const renderServicesTab = () => {
+    if (tabLoading.services && !servicesData) {
+      return <TabLoadingSpinner />;
+    }
+    
+    const SERVICE_LABELS = {
+      ResumeAnalyzer: 'Resume Analyzer',
+      ATSBeatSheet: 'Resume Builder',
+      InterviewDecoded: 'Interview Prep',
+      LinkedInOptimizer: 'LinkedIn Optimizer',
+      SalarySpy: 'Salary Spy',
+      OfferCoach: 'Offer Coach',
+      MarketPulse: 'Market Pulse',
+      BlindReview: 'Blind Review',
+      CareerSimulator: 'Career Simulator',
+    };
+
+    if (!servicesData?.counts?.length) {
+      return (
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+          <Ionicons name="rocket-outline" size={48} color={colors.textSecondary} />
+          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>No Interest Data Yet</Text>
+          <Text style={[styles.sectionSubtitle, { textAlign: 'center' }]}>Users can express interest in services from the Services tab. Data will appear here once they do.</Text>
+        </View>
+      );
+    }
+
+    const maxCount = Math.max(...servicesData.counts.map(c => c.count), 1);
+
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🔥 Service Interest ({servicesData.totalInterests} total)</Text>
+          <Text style={styles.sectionSubtitle}>User demand for upcoming tools — ranked by interest</Text>
+        </View>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
+          {servicesData.counts.map((item, index) => (
+            <View key={item.serviceName} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: index < servicesData.counts.length - 1 ? 1 : 0, borderBottomColor: colors.border + '40' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textSecondary, width: 24 }}>#{index + 1}</Text>
+              <Text style={[styles.userName, { flex: 1, fontSize: 14 }]}>{SERVICE_LABELS[item.serviceName] || item.serviceName}</Text>
+              <View style={{ flex: 2, height: 20, backgroundColor: colors.border + '60', borderRadius: 10, overflow: 'hidden', marginHorizontal: 12 }}>
+                <View style={{ width: `${(item.count / maxCount) * 100}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: 10 }} />
+              </View>
+              <Text style={[styles.userEmail, { width: 40, textAlign: 'right', fontWeight: '700', fontSize: 15, color: colors.text }]}>{item.count}</Text>
+            </View>
+          ))}
+        </View>
+      </>
+    );
+  };
+
   // Activity Tab - User Analytics & Tracking
   const renderActivityTab = () => {
     if (tabLoading.activity && !activityData) {
       return <TabLoadingSpinner />;
     }
 
-    const { summary, activeUsers, allUsersInPeriod, screenStats, dropOffPoints, dailyTrend, hourlyPattern, userFlow, deviceBreakdown, browserBreakdown, platformBreakdown, serviceInterests } = activityData || {};
+    const { summary, activeUsers, allUsersInPeriod, screenStats, dropOffPoints, dailyTrend, hourlyPattern, userFlow, deviceBreakdown, browserBreakdown, platformBreakdown } = activityData || {};
     const isDesktopView = responsive.isDesktop || responsive.isTablet;
 
     // Reusable component for active user card
@@ -1772,42 +1842,6 @@ export default function AdminDashboardScreen() {
       );
     };
 
-    // Service Interest Demand
-    const renderServiceInterests = () => {
-      if (!serviceInterests?.counts?.length) return null;
-      const maxCount = Math.max(...serviceInterests.counts.map(c => c.count), 1);
-      const SERVICE_LABELS = {
-        ResumeAnalyzer: 'Resume Analyzer',
-        ATSBeatSheet: 'Resume Builder',
-        InterviewDecoded: 'Interview Prep',
-        LinkedInOptimizer: 'LinkedIn Optimizer',
-        SalarySpy: 'Salary Spy',
-        OfferCoach: 'Offer Coach',
-        MarketPulse: 'Market Pulse',
-        BlindReview: 'Blind Review',
-        CareerSimulator: 'Career Simulator',
-      };
-      return (
-        <>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🔥 Service Interest ({serviceInterests.totalInterests} total)</Text>
-            <Text style={styles.sectionSubtitle}>User demand for upcoming tools</Text>
-          </View>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
-            {serviceInterests.counts.map((item, index) => (
-              <View key={item.serviceName} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: index < serviceInterests.counts.length - 1 ? 1 : 0, borderBottomColor: colors.border + '40' }}>
-                <Text style={[styles.userName, { flex: 1, fontSize: 13 }]}>{SERVICE_LABELS[item.serviceName] || item.serviceName}</Text>
-                <View style={{ flex: 2, height: 18, backgroundColor: colors.border + '60', borderRadius: 9, overflow: 'hidden', marginHorizontal: 10 }}>
-                  <View style={{ width: `${(item.count / maxCount) * 100}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: 9 }} />
-                </View>
-                <Text style={[styles.userEmail, { width: 35, textAlign: 'right', fontWeight: '700', color: colors.text }]}>{item.count}</Text>
-              </View>
-            ))}
-          </View>
-        </>
-      );
-    };
-
     return (
       <>
         {renderSummaryCards()}
@@ -1815,9 +1849,6 @@ export default function AdminDashboardScreen() {
 
         {isDesktopView ? (
           <>
-            {/* Row 0: Service Interests */}
-            {renderServiceInterests()}
-
             {/* Row 1: Daily Trend + Hourly Pattern */}
             <View style={{ flexDirection: 'row', gap: 20 }}>
               <View style={{ flex: 1 }}>{renderDailyTrend()}</View>
@@ -1844,7 +1875,6 @@ export default function AdminDashboardScreen() {
           </>
         ) : (
           <>
-            {renderServiceInterests()}
             {renderDailyTrend()}
             {renderHourlyPattern()}
             {renderDeviceBrowserBreakdown()}
@@ -2225,6 +2255,7 @@ export default function AdminDashboardScreen() {
           {activeTab === 'overview' && renderOverviewTab()}
           {activeTab === 'users' && renderUsersTab()}
           {activeTab === 'activity' && renderActivityTab()}
+          {activeTab === 'services' && renderServicesTab()}
           {activeTab === 'referrals' && renderReferralsTab()}
           {activeTab === 'transactions' && renderTransactionsTab()}
           {activeTab === 'emailLogs' && renderEmailLogsTab()}
