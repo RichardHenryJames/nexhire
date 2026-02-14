@@ -125,7 +125,15 @@ const linking = {
       // Primary SEO-friendly path (short and memorable)
       ResumeAnalyzer: "resume-analyzer",
       
-      // Service sub-screens handled in Main stack below
+      // Service sub-screens (public Stack.Screens at root)
+      ATSBeatSheet: "services/resume-builder",
+      InterviewDecoded: "services/interview-prep",
+      SalarySpy: "services/salary-spy",
+      OfferCoach: "services/offer-coach",
+      LinkedInOptimizer: "services/linkedin-optimizer",
+      BlindReview: "services/blind-review",
+      CareerSimulator: "services/career-simulator",
+      MarketPulse: "services/market-pulse",
       
       // Get Verified screen
       GetVerified: "get-verified",
@@ -207,16 +215,6 @@ const linking = {
               Services: "services",
             },
           },
-
-          // Service sub-screens (no tab bar)
-          ATSBeatSheet: "services/resume-builder",
-          InterviewDecoded: "services/interview-prep",
-          SalarySpy: "services/salary-spy",
-          OfferCoach: "services/offer-coach",
-          LinkedInOptimizer: "services/linkedin-optimizer",
-          BlindReview: "services/blind-review",
-          CareerSimulator: "services/career-simulator",
-          MarketPulse: "services/market-pulse",
 
           // Profile screen (slides from Home)
           Profile: "profile",
