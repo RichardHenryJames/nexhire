@@ -82,7 +82,7 @@ export const adminGetPendingVerifications = withAuth(async (
   if (user.userType !== 'Admin') {
     return { status: 403, jsonBody: { success: false, error: 'Admin access required' } };
   }
-  const result = await UserVerificationService.getPendingVerifications();
+  const result = await UserVerificationService.getAllVerifications();
   return { status: result.success ? 200 : 500, jsonBody: result };
 });
 

@@ -33,10 +33,13 @@ export default function AdminPaymentsScreen() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [allPayments, setAllPayments] = useState([]);
   const [processingPayment, setProcessingPayment] = useState(null);
-  const [activeTab, setActiveTab] = useState('withdrawals'); // withdrawals, pending, all
+  const [activeTab, setActiveTab] = useState('withdrawals'); // withdrawals, payments
+  const [subTab, setSubTab] = useState('pending'); // pending, completed
   
   // Withdrawal state
+  const [allWithdrawals, setAllWithdrawals] = useState([]);
   const [pendingWithdrawals, setPendingWithdrawals] = useState([]);
+  const [completedWithdrawals, setCompletedWithdrawals] = useState([]);
   const [processingWithdrawal, setProcessingWithdrawal] = useState(null);
   
   // Rejection modal state
@@ -84,12 +87,15 @@ export default function AdminPaymentsScreen() {
 
   const loadPendingWithdrawals = useCallback(async () => {
     try {
-      const response = await refopenAPI.apiCall('/management/withdrawals?status=Pending');
+      const response = await refopenAPI.apiCall('/management/withdrawals');
       if (response.success) {
-        setPendingWithdrawals(response.data?.withdrawals || []);
+        const all = response.data?.withdrawals || [];
+        setAllWithdrawals(all);
+        setPendingWithdrawals(all.filter(w => w.Status === 'Pending'));
+        setCompletedWithdrawals(all.filter(w => w.Status !== 'Pending').sort((a, b) => new Date(b.ProcessedAt || b.RequestedAt) - new Date(a.ProcessedAt || a.RequestedAt)));
       }
     } catch (error) {
-      console.error('Error loading pending withdrawals:', error);
+      console.error('Error loading withdrawals:', error);
     }
   }, []);
 
@@ -474,21 +480,28 @@ export default function AdminPaymentsScreen() {
     </View>
   );
 
+  // Completed payments (approved + rejected, sorted by time desc)
+  const completedPayments = allPayments.filter(p => p.status !== 'Pending').sort((a, b) => new Date(b.reviewedAt || b.createdAt) - new Date(a.reviewedAt || a.createdAt));
+
   const tabs = [
-    { key: 'withdrawals', label: `Withdrawals (${pendingWithdrawals.length})`, icon: 'wallet' },
-    { key: 'pending', label: `Payments (${pendingPayments.length})`, icon: 'time' },
-    { key: 'all', label: `All (${allPayments.length})`, icon: 'list' },
+    { key: 'withdrawals', label: `Withdrawals`, icon: 'wallet' },
+    { key: 'payments', label: `Payments`, icon: 'card' },
+  ];
+
+  const subTabs = [
+    { key: 'pending', label: `Pending (${activeTab === 'withdrawals' ? pendingWithdrawals.length : pendingPayments.length})` },
+    { key: 'completed', label: `Completed (${activeTab === 'withdrawals' ? completedWithdrawals.length : completedPayments.length})` },
   ];
 
   return (
     <View style={styles.container}>
-      {/* Tabs */}
+      {/* Main Tabs */}
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => { setActiveTab(tab.key); setSubTab('pending'); }}
           >
             <Ionicons 
               name={tab.icon} 
@@ -502,6 +515,21 @@ export default function AdminPaymentsScreen() {
         ))}
       </View>
 
+      {/* Sub Tabs */}
+      <View style={[styles.tabsContainer, { borderBottomWidth: 0, paddingTop: 0 }]}>
+        {subTabs.map(st => (
+          <TouchableOpacity
+            key={st.key}
+            style={[styles.tab, { paddingVertical: 8 }, subTab === st.key && { borderBottomWidth: 2, borderBottomColor: subTab === st.key && st.key === 'pending' ? '#F59E0B' : '#10B981' }]}
+            onPress={() => setSubTab(st.key)}
+          >
+            <Text style={[styles.tabText, subTab === st.key && { color: subTab === st.key && st.key === 'pending' ? '#F59E0B' : '#10B981', fontWeight: '700' }]}>
+              {st.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -509,7 +537,8 @@ export default function AdminPaymentsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {activeTab === 'withdrawals' && (
+        {/* Withdrawals - Pending */}
+        {activeTab === 'withdrawals' && subTab === 'pending' && (
           <>
             {pendingWithdrawals.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -525,7 +554,42 @@ export default function AdminPaymentsScreen() {
           </>
         )}
 
-        {activeTab === 'pending' && (
+        {/* Withdrawals - Completed */}
+        {activeTab === 'withdrawals' && subTab === 'completed' && (
+          <>
+            {completedWithdrawals.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="document-text-outline" size={64} color={colors.textSecondary} />
+                <Text style={styles.emptyTitle}>No History</Text>
+                <Text style={styles.emptyText}>No completed withdrawals yet.</Text>
+              </View>
+            ) : (
+              <View style={styles.cardsGrid}>
+                {completedWithdrawals.map(w => (
+                  <View key={w.WithdrawalID} style={styles.paymentCard}>
+                    <View style={styles.paymentHeader}>
+                      <Text style={styles.paymentAmount}>₹{w.Amount}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: (w.Status === 'Completed' ? '#10B981' : '#EF4444') + '20' }]}>
+                        <Text style={[styles.statusText, { color: w.Status === 'Completed' ? '#10B981' : '#EF4444' }]}>{w.Status}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.paymentDetails}>
+                      <View style={styles.paymentRow}><Text style={styles.paymentLabel}>User:</Text><Text style={styles.paymentValue}>{w.FirstName} {w.LastName}</Text></View>
+                      <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Email:</Text><Text style={styles.paymentValue}>{w.Email || '-'}</Text></View>
+                      {w.UpiId && <View style={styles.paymentRow}><Text style={styles.paymentLabel}>UPI:</Text><Text style={styles.paymentValue}>{w.UpiId}</Text></View>}
+                      {w.PaymentReference && <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Ref:</Text><Text style={styles.paymentValue}>{w.PaymentReference}</Text></View>}
+                      {w.RejectionReason && <View style={styles.paymentRow}><Text style={[styles.paymentLabel, {color:'#EF4444'}]}>Reason:</Text><Text style={[styles.paymentValue, {color:'#EF4444'}]}>{w.RejectionReason}</Text></View>}
+                      <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Date:</Text><Text style={styles.paymentValue}>{formatDateTime(w.ProcessedAt || w.RequestedAt)}</Text></View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Payments - Pending */}
+        {activeTab === 'payments' && subTab === 'pending' && (
           <>
             {pendingPayments.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -541,17 +605,18 @@ export default function AdminPaymentsScreen() {
           </>
         )}
 
-        {activeTab === 'all' && (
+        {/* Payments - Completed */}
+        {activeTab === 'payments' && subTab === 'completed' && (
           <>
-            {allPayments.length === 0 ? (
+            {completedPayments.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="document-text-outline" size={64} color={colors.textSecondary} />
-                <Text style={styles.emptyTitle}>No Payments Yet</Text>
-                <Text style={styles.emptyText}>No manual payment submissions found.</Text>
+                <Text style={styles.emptyTitle}>No History</Text>
+                <Text style={styles.emptyText}>No completed payments yet.</Text>
               </View>
             ) : (
               <View style={styles.cardsGrid}>
-                {allPayments.map(payment => renderPaymentCard(payment, false))}
+                {completedPayments.map(payment => renderPaymentCard(payment, false))}
               </View>
             )}
           </>

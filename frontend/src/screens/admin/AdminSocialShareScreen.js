@@ -29,7 +29,8 @@ export default function AdminSocialShareScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [claims, setClaims] = useState([]);
-  const [stats, setStats] = useState({});
+  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [subTab, setSubTab] = useState('pending');
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -39,7 +40,7 @@ export default function AdminSocialShareScreen() {
       const res = await refopenAPI.apiCall('/management/social-share/claims');
       if (res.success) {
         setClaims(res.data?.claims || []);
-        setStats(res.data?.stats || {});
+        setStats(res.data?.stats || { pending: 0, approved: 0, rejected: 0 });
       }
     } catch (err) {
       console.error('Error loading social share claims:', err);
@@ -85,6 +86,74 @@ export default function AdminSocialShareScreen() {
 
   const styles = makeStyles(colors, responsive);
 
+  const pendingClaims = claims.filter(c => c.Status === 'Pending');
+  const completedClaims = claims.filter(c => c.Status !== 'Pending');
+  const currentList = subTab === 'pending' ? pendingClaims : completedClaims;
+
+  const renderClaimCard = (claim) => (
+    <View key={claim.ClaimID} style={styles.card}>
+      {/* Platform + User */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ backgroundColor: getPlatformColor(claim.Platform) + '20', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+          {renderPlatformIcon(claim.Platform)}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{claim.FirstName} {claim.LastName}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{claim.Email}</Text>
+        </View>
+      </View>
+
+      {/* Status */}
+      <View style={{ backgroundColor: getStatusColor(claim.Status) + '20', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 10 }}>
+        <Text style={{ color: getStatusColor(claim.Status), fontSize: 12, fontWeight: '700' }}>{claim.Status}</Text>
+      </View>
+
+      {/* Rejection reason */}
+      {claim.Status === 'Rejected' && claim.RejectionReason && (
+        <View style={{ backgroundColor: '#EF444410', padding: 10, borderRadius: 8, marginBottom: 10 }}>
+          <Text style={{ color: '#EF4444', fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{claim.RejectionReason}</Text>
+        </View>
+      )}
+
+      {/* Details */}
+      <View style={{ marginBottom: claim.Status === 'Pending' ? 12 : 0 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <Ionicons name="gift-outline" size={16} color={colors.textSecondary} />
+          <Text style={{ color: colors.textSecondary, marginLeft: 8, fontSize: 14 }}>Reward: ₹{claim.RewardAmount}</Text>
+        </View>
+        {claim.PostURL && (
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }} onPress={() => Linking.openURL(claim.PostURL)}>
+            <Ionicons name="link-outline" size={16} color={colors.primary} />
+            <Text style={{ marginLeft: 8, color: colors.primary, fontSize: 14 }}>View Post</Text>
+          </TouchableOpacity>
+        )}
+        {claim.ScreenshotURL && (
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }} onPress={() => Linking.openURL(claim.ScreenshotURL)}>
+            <Ionicons name="image-outline" size={16} color={colors.primary} />
+            <Text style={{ marginLeft: 8, color: colors.primary, fontSize: 14 }}>View Screenshot</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+          {new Date(claim.ReviewedAt || claim.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+
+      {/* Actions - only pending */}
+      {claim.Status === 'Pending' && (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(claim.ClaimID)}>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Text style={styles.btnText}>Approve</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(claim)}>
+            <Ionicons name="close" size={18} color="#fff" />
+            <Text style={styles.btnText}>Reject</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -95,6 +164,16 @@ export default function AdminSocialShareScreen() {
         <View style={styles.backBtn} />
       </View>
 
+      {/* Sub Tabs */}
+      <View style={styles.subTabsRow}>
+        <TouchableOpacity style={[styles.subTab, subTab === 'pending' && styles.subTabActive]} onPress={() => setSubTab('pending')}>
+          <Text style={[styles.subTabText, subTab === 'pending' && { color: '#F59E0B', fontWeight: '700' }]}>Pending ({stats.pending || 0})</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.subTab, subTab === 'completed' && styles.subTabCompleted]} onPress={() => setSubTab('completed')}>
+          <Text style={[styles.subTabText, subTab === 'completed' && { color: '#10B981', fontWeight: '700' }]}>Completed ({(stats.approved || 0) + (stats.rejected || 0)})</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -102,95 +181,15 @@ export default function AdminSocialShareScreen() {
       >
         {loading ? (
           <View style={{ padding: 60, alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : currentList.length === 0 ? (
+          <View style={{ padding: 60, alignItems: 'center' }}>
+            <Ionicons name={subTab === 'pending' ? 'megaphone-outline' : 'document-text-outline'} size={56} color={colors.textSecondary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
+              {subTab === 'pending' ? 'All caught up!' : 'No history'}
+            </Text>
+          </View>
         ) : (
-          <>
-            {/* Stats */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-              <View style={[styles.statBox, { backgroundColor: '#F59E0B15' }]}>
-                <Text style={[styles.statNum, { color: '#F59E0B' }]}>{stats.pending || 0}</Text>
-                <Text style={styles.statLabel}>Pending</Text>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: '#10B98115' }]}>
-                <Text style={[styles.statNum, { color: '#10B981' }]}>{stats.approved || 0}</Text>
-                <Text style={styles.statLabel}>Approved</Text>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: '#EF444415' }]}>
-                <Text style={[styles.statNum, { color: '#EF4444' }]}>{stats.rejected || 0}</Text>
-                <Text style={styles.statLabel}>Rejected</Text>
-              </View>
-            </View>
-
-            {claims.length === 0 ? (
-              <View style={{ padding: 60, alignItems: 'center' }}>
-                <Ionicons name="megaphone-outline" size={56} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', marginTop: 12 }}>No claims yet</Text>
-              </View>
-            ) : (
-              claims.map((claim, idx) => (
-                <View key={claim.ClaimID || idx} style={styles.card}>
-                  {/* Platform + User */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <View style={{ backgroundColor: getPlatformColor(claim.Platform) + '20', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                      {renderPlatformIcon(claim.Platform)}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{claim.FirstName} {claim.LastName}</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{claim.Email}</Text>
-                    </View>
-                  </View>
-
-                  {/* Status */}
-                  <View style={{ backgroundColor: getStatusColor(claim.Status) + '20', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 10 }}>
-                    <Text style={{ color: getStatusColor(claim.Status), fontSize: 12, fontWeight: '700' }}>{claim.Status}</Text>
-                  </View>
-
-                  {/* Rejection reason */}
-                  {claim.Status === 'Rejected' && claim.RejectionReason && (
-                    <View style={{ backgroundColor: '#EF444410', padding: 10, borderRadius: 8, marginBottom: 10 }}>
-                      <Text style={{ color: '#EF4444', fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{claim.RejectionReason}</Text>
-                    </View>
-                  )}
-
-                  {/* Details */}
-                  <View style={{ marginBottom: claim.Status === 'Pending' ? 12 : 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                      <Ionicons name="gift-outline" size={16} color={colors.textSecondary} />
-                      <Text style={{ color: colors.textSecondary, marginLeft: 8, fontSize: 14 }}>Reward: ₹{claim.RewardAmount}</Text>
-                    </View>
-                    {claim.PostURL && (
-                      <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }} onPress={() => Linking.openURL(claim.PostURL)}>
-                        <Ionicons name="link-outline" size={16} color={colors.primary} />
-                        <Text style={{ marginLeft: 8, color: colors.primary, fontSize: 14 }}>View Post</Text>
-                      </TouchableOpacity>
-                    )}
-                    {claim.ScreenshotURL && (
-                      <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }} onPress={() => Linking.openURL(claim.ScreenshotURL)}>
-                        <Ionicons name="image-outline" size={16} color={colors.primary} />
-                        <Text style={{ marginLeft: 8, color: colors.primary, fontSize: 14 }}>View Screenshot</Text>
-                      </TouchableOpacity>
-                    )}
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-                      {new Date(claim.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-
-                  {/* Actions */}
-                  {claim.Status === 'Pending' && (
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                      <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(claim.ClaimID)}>
-                        <Ionicons name="checkmark" size={18} color="#fff" />
-                        <Text style={styles.btnText}>Approve</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(claim)}>
-                        <Ionicons name="close" size={18} color="#fff" />
-                        <Text style={styles.btnText}>Reject</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              ))
-            )}
-          </>
+          currentList.map(renderClaimCard)
         )}
       </ScrollView>
 
@@ -237,9 +236,11 @@ function makeStyles(colors, responsive) {
     backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
     content: { padding: 16, ...(isDesktop ? { maxWidth: 700, alignSelf: 'center', width: '100%' } : {}) },
-    statBox: { flex: 1, borderRadius: 10, padding: 12, alignItems: 'center' },
-    statNum: { fontSize: 22, fontWeight: '800' },
-    statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginTop: 2 },
+    subTabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16 },
+    subTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+    subTabActive: { borderBottomWidth: 2, borderBottomColor: '#F59E0B' },
+    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: '#10B981' },
+    subTabText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
     card: { backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
     approveBtn: { flex: 1, backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     rejectBtn: { flex: 1, backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
