@@ -80,8 +80,11 @@ import SupportScreen from "../screens/support/SupportScreen";
 import BlogListScreen from "../screens/blog/BlogListScreen";
 import BlogArticleScreen from "../screens/blog/BlogArticleScreen";
 
-// Admin Screen
+// Admin Screens
+import AdminActionCenterScreen from "../screens/admin/AdminActionCenterScreen";
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminVerificationsScreen from "../screens/admin/AdminVerificationsScreen";
+import AdminSocialShareScreen from "../screens/admin/AdminSocialShareScreen";
 import AdminPaymentsScreen from "../screens/admin/AdminPaymentsScreen";
 import AdminSupportScreen from "../screens/admin/AdminSupportScreen";
 
@@ -209,6 +212,7 @@ const linking = {
               },
               AdminPayments: "AdminPayments",
               AdminSupport: "AdminSupport",
+              ActionCenter: "action-center",
               Services: "services",
             },
           },
@@ -439,12 +443,10 @@ function MainTabNavigator() {
             iconName = focused ? "notifications" : "notifications-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
+          } else if (route.name === "ActionCenter") {
+            iconName = focused ? "flash" : "flash-outline";
           } else if (route.name === "Admin") {
-            iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
-          } else if (route.name === "AdminPayments") {
-            iconName = focused ? "cash" : "cash-outline";
-          } else if (route.name === "AdminSupport") {
-            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+            iconName = focused ? "stats-chart" : "stats-chart-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -539,25 +541,17 @@ function MainTabNavigator() {
 
       {isAdmin && (
         <Tab.Screen
+          name="ActionCenter"
+          component={AdminActionCenterScreen}
+          options={{ title: "Action Center" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
           name="Admin"
           component={AdminDashboardScreen}
-          options={{ title: "Admin Dashboard" }}
-        />
-      )}
-
-      {isAdmin && (
-        <Tab.Screen
-          name="AdminPayments"
-          component={AdminPaymentsScreen}
-          options={{ title: "Payments" }}
-        />
-      )}
-
-      {isAdmin && (
-        <Tab.Screen
-          name="AdminSupport"
-          component={AdminSupportScreen}
-          options={{ title: "Support" }}
+          options={{ title: "Analytics" }}
         />
       )}
 
@@ -787,27 +781,53 @@ function MainStack() {
       <Stack.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}
-        options={{
-          headerShown: false,
-        }}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AdminVerifications"
+        component={AdminVerificationsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AdminSocialShare"
+        component={AdminSocialShareScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AdminPayments"
         component={AdminPaymentsScreen}
-        options={{
+        options={({ navigation: nav }) => ({
           headerShown: true,
           title: "Payment Approvals",
           headerBackTitleVisible: false,
-        }}
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => {
+              const state = nav.getState();
+              if (state?.routes?.length > 1) nav.goBack();
+              else nav.navigate('Main', { screen: 'ActionCenter' });
+            }} style={{ paddingHorizontal: 12 }}>
+              <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen
         name="AdminSupport"
         component={AdminSupportScreen}
-        options={{
+        options={({ navigation: nav }) => ({
           headerShown: true,
           title: "Support Tickets",
           headerBackTitleVisible: false,
-        }}
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => {
+              const state = nav.getState();
+              if (state?.routes?.length > 1) nav.goBack();
+              else nav.navigate('Main', { screen: 'ActionCenter' });
+            }} style={{ paddingHorizontal: 12 }}>
+              <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen
         name="Referral"

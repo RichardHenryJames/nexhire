@@ -372,10 +372,17 @@ export const getAdminDashboardReferrals = withAuth(async (
       dbService.executeQuery(`
         SELECT TOP 10
           o.OrganizationID, o.Name AS OrganizationName, o.LogoURL,
-          (SELECT COUNT(*) FROM Jobs j WHERE j.OrganizationID = o.OrganizationID) AS JobCount,
-          (SELECT COUNT(*) FROM ReferralRequests rr WHERE rr.OrganizationID = o.OrganizationID) AS ReferralCount
+          jc.JobCount, ISNULL(rc.ReferralCount, 0) AS ReferralCount
         FROM Organizations o
-        ORDER BY (SELECT COUNT(*) FROM Jobs j WHERE j.OrganizationID = o.OrganizationID) DESC
+        INNER JOIN (
+          SELECT OrganizationID, COUNT(*) AS JobCount
+          FROM Jobs GROUP BY OrganizationID
+        ) jc ON jc.OrganizationID = o.OrganizationID
+        LEFT JOIN (
+          SELECT OrganizationID, COUNT(*) AS ReferralCount
+          FROM ReferralRequests GROUP BY OrganizationID
+        ) rc ON rc.OrganizationID = o.OrganizationID
+        ORDER BY jc.JobCount DESC
       `, [])
     ]);
 

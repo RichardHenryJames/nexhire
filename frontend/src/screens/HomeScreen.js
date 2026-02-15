@@ -743,6 +743,21 @@ const [dashboardData, setDashboardData] = useState({
               <View style={styles.secondaryCardsContainer}>
                 <TouchableOpacity 
                   style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('ActionCenter')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#EF4444' + '20' }]}>
+                    <Ionicons name="flash" size={24} color="#EF4444" />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Action Center</Text>
+                    <Text style={styles.quickActionDescription}>Verifications, payments, social share, support</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
                   onPress={() => navigation.navigate('Admin')}
                   activeOpacity={0.8}
                 >
@@ -750,38 +765,8 @@ const [dashboardData, setDashboardData] = useState({
                     <Ionicons name="stats-chart" size={24} color={colors.primary} />
                   </View>
                   <View style={styles.quickActionContent}>
-                    <Text style={styles.quickActionTitle}>Admin Dashboard</Text>
-                    <Text style={styles.quickActionDescription}>View platform analytics and stats</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.quickActionCard}
-                  onPress={() => navigation.navigate('AdminPayments')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: colors.success + '20' }]}>
-                    <Ionicons name="card" size={24} color={colors.success} />
-                  </View>
-                  <View style={styles.quickActionContent}>
-                    <Text style={styles.quickActionTitle}>Manage Payments</Text>
-                    <Text style={styles.quickActionDescription}>Review and approve payments</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.quickActionCard}
-                  onPress={() => navigation.navigate('AdminSupport')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: colors.warning + '20' }]}>
-                    <Ionicons name="chatbubbles" size={24} color={colors.warning} />
-                  </View>
-                  <View style={styles.quickActionContent}>
-                    <Text style={styles.quickActionTitle}>Support Tickets</Text>
-                    <Text style={styles.quickActionDescription}>Handle user support requests</Text>
+                    <Text style={styles.quickActionTitle}>Analytics</Text>
+                    <Text style={styles.quickActionDescription}>Users, activity, referrals, transactions</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
