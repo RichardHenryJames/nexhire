@@ -28,7 +28,7 @@ import { showToast } from '../../components/Toast';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'services', 'referrals', 'transactions', 'emailLogs', 'resumeAnalyzer', 'socialShare', 'verifications'];
+const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -440,7 +440,7 @@ export default function AdminDashboardScreen() {
     }
   }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadActivity, loadServices, loadSocialShare, loadVerifications]);
 
-  // Initial load - just overview
+  // Initial load
   useEffect(() => {
     if (isAdmin) {
       loadOverview();
@@ -552,33 +552,20 @@ export default function AdminDashboardScreen() {
           { key: 'overview', label: 'Overview', icon: 'grid-outline' },
           { key: 'users', label: 'Users', icon: 'people-outline' },
           { key: 'activity', label: 'Activity', icon: 'pulse-outline' },
-          { key: 'services', label: 'Services', icon: 'rocket-outline' },
           { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
           { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
-          { key: 'emailLogs', label: 'Email Logs', icon: 'mail-outline' },
-          { key: 'resumeAnalyzer', label: 'Resume Analyzer', icon: 'analytics-outline' },
-          { key: 'socialShare', label: 'Social Share', icon: 'megaphone-outline' },
-          { key: 'verifications', label: 'Verifications', icon: 'shield-checkmark-outline' },
+          { key: 'services', label: 'Services', icon: 'rocket-outline' },
+          { key: 'emailLogs', label: 'Emails', icon: 'mail-outline' },
+          { key: 'resumeAnalyzer', label: 'Resume', icon: 'analytics-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => handleTabChange(tab.key)}
           >
-            <Ionicons 
-              name={tab.icon} 
-              size={16} 
-              color={activeTab === tab.key ? colors.primary : colors.textSecondary} 
-            />
-            <Text style={[
-              styles.tabText, 
-              activeTab === tab.key && styles.tabTextActive
-            ]}>
-              {tab.label}
-            </Text>
-            {tabLoading[tab.key] && (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
-            )}
+            <Ionicons name={tab.icon} size={16} color={activeTab === tab.key ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+            {tabLoading[tab.key] && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -2519,130 +2506,8 @@ export default function AdminDashboardScreen() {
           {activeTab === 'transactions' && renderTransactionsTab()}
           {activeTab === 'emailLogs' && renderEmailLogsTab()}
           {activeTab === 'resumeAnalyzer' && renderResumeAnalyzerTab()}
-          {activeTab === 'socialShare' && renderSocialShareTab()}
-          {activeTab === 'verifications' && renderVerificationsTab()}
         </ScrollView>
       </View>
-
-      {/* Social Share Rejection Modal */}
-      <Modal
-        visible={socialRejectModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelSocialReject}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="close-circle" size={40} color="#EF4444" />
-              <Text style={styles.modalTitle}>Reject Social Share Claim</Text>
-            </View>
-
-            {selectedSocialClaim && (
-              <View style={styles.claimSummary}>
-                <Text style={styles.claimUser}>
-                  {selectedSocialClaim.FirstName} {selectedSocialClaim.LastName}
-                </Text>
-                <Text style={styles.claimPlatform}>
-                  Platform: {selectedSocialClaim.Platform} • Reward: ₹{selectedSocialClaim.RewardAmount}
-                </Text>
-              </View>
-            )}
-
-            <Text style={styles.modalLabel}>Reason for rejection:</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter reason (e.g., Post not public, RefOpen not tagged...)"
-              placeholderTextColor={colors.textSecondary}
-              value={socialRejectionReason}
-              onChangeText={setSocialRejectionReason}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              autoFocus
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={cancelSocialReject}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalRejectButton]}
-                onPress={confirmSocialReject}
-              >
-                <Ionicons name="close-circle" size={18} color="#FFF" />
-                <Text style={styles.modalRejectText}>Reject Claim</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Verification Rejection Modal */}
-      <Modal
-        visible={verificationRejectModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelVerificationReject}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="close-circle" size={40} color="#EF4444" />
-              <Text style={styles.modalTitle}>Reject Verification</Text>
-            </View>
-
-            {selectedVerification && (
-              <View style={styles.claimSummary}>
-                <Text style={styles.claimUser}>
-                  {selectedVerification.FirstName} {selectedVerification.LastName}
-                </Text>
-                <Text style={styles.claimPlatform}>
-                  Method: {selectedVerification.Method === 'Aadhaar' ? '🪪 Aadhaar Card' : selectedVerification.Method} • {selectedVerification.Email}
-                </Text>
-              </View>
-            )}
-
-            <Text style={styles.modalLabel}>Reason for rejection:</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter reason (e.g., Photo unclear, Name mismatch, Aadhaar not visible...)"
-              placeholderTextColor={colors.textSecondary}
-              value={verificationRejectionReason}
-              onChangeText={setVerificationRejectionReason}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              autoFocus
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={cancelVerificationReject}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalRejectButton]}
-                onPress={confirmVerificationReject}
-              >
-                <Ionicons name="close-circle" size={18} color="#FFF" />
-                <Text style={styles.modalRejectText}>Reject</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
