@@ -188,36 +188,10 @@ export default function ProfileScreen({ navigation, route }) {
     }
   }, [route?.params?.openShareModal]);
 
-  // 🎯 Handler for "Become a Verified Referrer" button
-  const handleBecomeVerifiedReferrer = useCallback(async () => {
-    setNavigatingToVerify(true);
-    try {
-      // Fetch user's work experiences
-      const res = await refopenAPI.getMyWorkExperiences();
-      if (res.success && res.data) {
-        setWorkExperiencesForVerify(res.data);
-        // Find current work experience
-        const current = res.data.find(exp => exp.IsCurrent === 1 || exp.IsCurrent === true);
-        if (current) {
-          setCurrentWorkExperience(current);
-          setShowConfirmCompanyModal(true);
-        } else {
-          // No current company, show add work experience modal directly
-          setCurrentWorkExperience(null);
-          setShowAddWorkModal(true);
-        }
-      } else {
-        // No work experiences, show add work experience modal
-        setCurrentWorkExperience(null);
-        setShowAddWorkModal(true);
-      }
-    } catch (error) {
-      console.error('Error fetching work experiences:', error);
-      showToast('Failed to load your work experiences. Please try again.', 'error');
-    } finally {
-      setNavigatingToVerify(false);
-    }
-  }, []);
+  // 🎯 Handler for "Get Verified" button — navigates to GetVerified screen
+  const handleBecomeVerifiedReferrer = useCallback(() => {
+    navigation.navigate('GetVerified');
+  }, [navigation]);
   
   const loadExtendedProfile = async () => {
     try {
