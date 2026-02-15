@@ -822,11 +822,41 @@ function MainStack() {
       <Stack.Screen
         name="Referral"
         component={ReferralScreen}
-        options={{
+        options={({ navigation: nav }) => ({
           headerShown: true,
-          title: "Referral",
+          title: "Provide Referral",
           headerBackTitleVisible: false,
-        }}
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            color: colors.text,
+          },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                const navState = nav.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+
+                if (nav.canGoBack() && routes.length > 1 && currentIndex > 0) {
+                  nav.goBack();
+                  return;
+                }
+
+                nav.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: { screen: 'Home' },
+                });
+              }}
+              style={{ paddingLeft: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen
         name="AskReferral"
