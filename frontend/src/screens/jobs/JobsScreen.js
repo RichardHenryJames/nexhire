@@ -700,35 +700,36 @@ export default function JobsScreen({ navigation, route }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🎯 PRIORITY 4: Load only when filter modal opens - Organizations/Companies
+  // 🎯 PRIORITY 4: Preload companies in background after jobs load (2s delay)
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const companiesLoadedRef = useRef(false);
 
   useEffect(() => {
-    // Only load companies when filter modal is opened and not already loaded
-    if (showFilters && !companiesLoadedRef.current && !loadingCompanies) {
-      companiesLoadedRef.current = true;
-      setLoadingCompanies(true);
-      
-      (async () => {
-        try {
-          const orgs = await refopenAPI.getOrganizations('');
-          if (orgs?.success) {
-            // Filter out organizations without names, but preserve backend sort order (Fortune 500 first, then alphabetical)
-            const filteredOrgs = orgs.data.filter(org => {
-              const hasName = org.name && org.name.trim().length > 0;
-              return hasName;
-            });
-            setCompanies(filteredOrgs);
+    const timer = setTimeout(() => {
+      if (!companiesLoadedRef.current) {
+        companiesLoadedRef.current = true;
+        setLoadingCompanies(true);
+        
+        (async () => {
+          try {
+            const orgs = await refopenAPI.getOrganizations('');
+            if (orgs?.success) {
+              const filteredOrgs = orgs.data.filter(org => {
+                const hasName = org.name && org.name.trim().length > 0;
+                return hasName;
+              });
+              setCompanies(filteredOrgs);
+            }
+          } catch (e) {
+            console.warn('Failed to load organizations:', e.message);
+          } finally {
+            setLoadingCompanies(false);
           }
-        } catch (e) {
-          console.warn('Failed to load organizations:', e.message);
-        } finally {
-          setLoadingCompanies(false);
-        }
-      })();
-    }
-  }, [showFilters, loadingCompanies]);
+        })();
+      }
+    }, 2000); // Wait 2s for jobs to load first
+    return () => clearTimeout(timer);
+  }, []);
 
   // Track modal open and loading states
   const showFiltersRef = useRef(false);

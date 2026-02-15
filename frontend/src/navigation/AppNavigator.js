@@ -199,7 +199,6 @@ const linking = {
               Jobs: "jobs",
               CreateJob: "create-job",
               AskReferral: "ask-for-referral",
-              Referrals: "referrals",
               Notifications: "notifications",
               Admin: {
                 path: "admin/:tab?",
@@ -242,6 +241,9 @@ const linking = {
           
           // Become a verified referrer
           BecomeReferrer: "become-referrer",
+          
+          // Provide Referral (verified referrers)
+          Referral: "provide-referral",
           
           // Get Verified (blue tick)
           GetVerified: "get-verified",
@@ -435,8 +437,6 @@ function MainTabNavigator() {
             iconName = focused ? "add-circle" : "add-circle-outline";
           } else if (route.name === "AskReferral") {
             iconName = focused ? "person-add" : "person-add-outline";
-          } else if (route.name === "Referrals") {
-            iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Services") {
             iconName = focused ? "grid" : "grid-outline";
           } else if (route.name === "Notifications") {
@@ -518,18 +518,8 @@ function MainTabNavigator() {
         />
       )}
 
-      {/* Verified referrers see Refer tab, non-verified job seekers see Services tab */}
-      {isJobSeeker && isVerifiedReferrer && (
-        <Tab.Screen
-          name="Referrals"
-          component={ReferralScreen}
-          options={{ 
-            title: "Refer",
-          }}
-        />
-      )}
-
-      {isJobSeeker && !isVerifiedReferrer && (
+      {/* All job seekers see Services tab */}
+      {isJobSeeker && (
         <Tab.Screen
           name="Services"
           component={ServicesScreen}
