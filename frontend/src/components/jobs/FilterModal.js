@@ -22,6 +22,7 @@ const FilterModal = ({
   
   const [selectedCategory, setSelectedCategory] = useState('workMode');
   const [companySearchQuery, setCompanySearchQuery] = useState('');
+  const [debouncedCompanyQuery, setDebouncedCompanyQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(100); // Show first 100 companies initially
 
   // Auto-select category when modal opens with initialSection
@@ -30,6 +31,19 @@ const FilterModal = ({
       setSelectedCategory(initialSection);
     }
   }, [visible, initialSection]);
+
+  // Debounce company search - 200ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedCompanyQuery(companySearchQuery), 200);
+    return () => clearTimeout(timer);
+  }, [companySearchQuery]);
+
+  // Memoized company filtering
+  const filteredCompanies = useMemo(() => {
+    if (debouncedCompanyQuery.trim() === '') return companies;
+    const q = debouncedCompanyQuery.toLowerCase();
+    return companies.filter(org => org.name.toLowerCase().includes(q));
+  }, [companies, debouncedCompanyQuery]);
 
 const isSectionActive = (section) => {
    switch (section) {
@@ -140,13 +154,8 @@ default:
         );
 
       case 'company':
-              const filteredCompanies = companies.filter(org => {
-          const matches = companySearchQuery.trim() === '' || 
-            org.name.toLowerCase().includes(companySearchQuery.toLowerCase());
-          return matches;
-        });
-        // For search results, show all matches. Otherwise, paginate
-        const displayCompanies = companySearchQuery.trim() !== '' 
+        // Use pre-memoized filteredCompanies
+        const displayCompanies = debouncedCompanyQuery.trim() !== '' 
           ? filteredCompanies 
           : filteredCompanies.slice(0, displayLimit);
         

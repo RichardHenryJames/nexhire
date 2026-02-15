@@ -39,6 +39,7 @@ export default function ProfileSlider({ visible, onClose }) {
   const [mounted, setMounted] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
+  const [pendingReferralCount, setPendingReferralCount] = useState(0);
 
   useEffect(() => {
     if (visible) {
@@ -61,6 +62,18 @@ export default function ProfileSlider({ visible, onClose }) {
           console.warn('Wallet balance fetch failed:', e);
         }
       })();
+      // Fetch pending referral requests for verified referrers
+      if (isVerifiedReferrer) {
+        (async () => {
+          try {
+            const res = await refopenAPI.getMyReferrerRequests(1, 50);
+            if (res.success && res.data) {
+              const active = res.data.filter(r => r.Status === 'Pending' || r.Status === 'Claimed');
+              setPendingReferralCount(active.length);
+            }
+          } catch (e) {}
+        })();
+      }
     }
   }, [visible]);
 
@@ -164,13 +177,12 @@ export default function ProfileSlider({ visible, onClose }) {
         },
       ],
     }] : [{
-      title: '🛠️ Career Tools',
+      title: '� Referrer',
       items: [
         {
-          icon: 'grid-outline',
-          label: 'Services',
-          onPress: () => navigateTo('Services'),
-        },
+          icon: 'people-outline',
+          label: 'Provide Referral',
+          onPress: () => navigateTo('Referral'),          badge: pendingReferralCount,        },
       ],
     }]),
     {
@@ -569,6 +581,11 @@ export default function ProfileSlider({ visible, onClose }) {
                     }}>
                       {item.rightText}
                     </Text>
+                  )}
+                  {item.badge > 0 && (
+                    <View style={{ backgroundColor: '#EF4444', borderRadius: 10, minWidth: 22, height: 22, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               ))}
