@@ -535,9 +535,9 @@ export default function UserProfileHeader({
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <>
-                <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
                 <Text style={[styles.becomeReferrerText, { color: colors.primary }]}>
-                  Become a Verified Member
+                  Get Verified
                 </Text>
               </>
             )}

@@ -28,9 +28,23 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Personal email domains blocked
 const PERSONAL_DOMAINS = [
-  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
-  'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com',
-  'ymail.com', 'gmx.com', 'rediffmail.com',
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'outlook.in', 'hotmail.co.in', 'live.in',
+  // Yahoo
+  'yahoo.com', 'yahoo.co.in', 'yahoo.in', 'ymail.com', 'rocketmail.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Others
+  'aol.com', 'mail.com', 'protonmail.com', 'proton.me', 'zoho.com', 'zoho.in',
+  'gmx.com', 'gmx.net', 'fastmail.com', 'tutanota.com', 'hey.com',
+  'inbox.com', 'mail.ru', 'yandex.com', 'yandex.ru',
+  // India-specific
+  'rediffmail.com', 'rediff.com', 'sify.com', 'in.com',
+  // Temp/disposable
+  'guerrillamail.com', 'tempmail.com', 'throwaway.email', 'mailinator.com',
+  'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'dispostable.com',
 ];
 
 const normalizeCompanyName = (name) => {
@@ -86,6 +100,10 @@ export default function GetVerifiedScreen({ navigation }) {
   // College email state
   const [collegeEmail, setCollegeEmail] = useState('');
   const [collegeName, setCollegeName] = useState('');
+  const [collegeSearch, setCollegeSearch] = useState('');
+  const [collegeResults, setCollegeResults] = useState([]);
+  const [allColleges, setAllColleges] = useState([]);
+  const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
 
   // Shared OTP state
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -113,6 +131,7 @@ export default function GetVerifiedScreen({ navigation }) {
     checkExistingStatus();
     fetchWorkExperiences();
     fetchJobRoles();
+    fetchColleges();
   }, []);
 
   // Resend timer
@@ -165,6 +184,39 @@ export default function GetVerifiedScreen({ navigation }) {
         setJobRoles(res.data.sort((a, b) => (a.Value || '').localeCompare(b.Value || '')));
       }
     } catch (err) {}
+  };
+
+  const fetchColleges = async () => {
+    try {
+      const res = await refopenAPI.getColleges('India');
+      if (res.success && Array.isArray(res.data)) {
+        setAllColleges(res.data);
+      }
+    } catch (err) {}
+  };
+
+  const handleCollegeSearch = (text) => {
+    setCollegeSearch(text);
+    setCollegeName(text);
+    if (text.length < 2) {
+      setCollegeResults([]);
+      setShowCollegeDropdown(false);
+      return;
+    }
+    const lower = text.toLowerCase();
+    const filtered = allColleges.filter(c => 
+      c.name?.toLowerCase().includes(lower) || 
+      (c.state && c.state.toLowerCase().includes(lower))
+    ).slice(0, 8);
+    setCollegeResults(filtered);
+    setShowCollegeDropdown(filtered.length > 0);
+  };
+
+  const selectCollege = (college) => {
+    setCollegeName(college.name);
+    setCollegeSearch(college.name);
+    setCollegeResults([]);
+    setShowCollegeDropdown(false);
   };
 
   const guessEmailDomain = (name) => {
@@ -405,9 +457,9 @@ export default function GetVerifiedScreen({ navigation }) {
         </View>
       )}
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => animateToStep(STEPS.METHOD)} disabled={hasPendingAadhaar}>
-        <Text style={styles.primaryButtonText}>{hasPendingAadhaar ? 'Pending Review...' : 'Get Started'}</Text>
-        {!hasPendingAadhaar && <Ionicons name="arrow-forward" size={18} color="#fff" />}
+      <TouchableOpacity style={styles.primaryButton} onPress={() => animateToStep(STEPS.METHOD)}>
+        <Text style={styles.primaryButtonText}>Get Started</Text>
+        <Ionicons name="arrow-forward" size={18} color="#fff" />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -445,16 +497,20 @@ export default function GetVerifiedScreen({ navigation }) {
       </TouchableOpacity>
 
       {/* Method 3: Aadhaar */}
-      <TouchableOpacity style={[styles.methodCard, method === METHODS.AADHAAR && styles.methodCardSelected]} onPress={() => setMethod(METHODS.AADHAAR)}>
+      <TouchableOpacity style={[styles.methodCard, method === METHODS.AADHAAR && styles.methodCardSelected, hasPendingAadhaar && { opacity: 0.5 }]} onPress={() => { if (!hasPendingAadhaar) setMethod(METHODS.AADHAAR); }} disabled={hasPendingAadhaar}>
         <View style={[styles.methodIcon, { backgroundColor: '#F59E0B15' }]}>
           <MaterialCommunityIcons name="card-account-details" size={24} color="#F59E0B" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.methodTitle}>Aadhaar Card</Text>
-          <Text style={styles.methodDesc}>Upload Aadhaar card photo + selfie for manual verification</Text>
-          <View style={[styles.badge, { backgroundColor: '#FEF3C7' }]}><Text style={[styles.badgeText, { color: '#92400E' }]}>24-48 hrs ⏱️</Text></View>
+          {hasPendingAadhaar ? (
+            <Text style={[styles.methodDesc, { color: '#D97706' }]}>⏳ Your Aadhaar is pending admin review. Try another method for instant verification.</Text>
+          ) : (
+            <Text style={styles.methodDesc}>Upload Aadhaar card photo + selfie for manual verification</Text>
+          )}
+          <View style={[styles.badge, { backgroundColor: hasPendingAadhaar ? '#FEF3C7' : '#FEF3C7' }]}><Text style={[styles.badgeText, { color: '#92400E' }]}>{hasPendingAadhaar ? 'Pending Review ⏳' : '24-48 hrs ⏱️'}</Text></View>
         </View>
-        <Ionicons name={method === METHODS.AADHAAR ? 'radio-button-on' : 'radio-button-off'} size={22} color={method === METHODS.AADHAAR ? colors.primary : colors.textSecondary} />
+        <Ionicons name={method === METHODS.AADHAAR ? 'radio-button-on' : 'radio-button-off'} size={22} color={hasPendingAadhaar ? colors.gray400 : (method === METHODS.AADHAAR ? colors.primary : colors.textSecondary)} />
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.primaryButton, !method && { opacity: 0.5 }]} onPress={() => { if (method) animateToStep(STEPS.VERIFY); }} disabled={!method}>
@@ -530,7 +586,22 @@ export default function GetVerifiedScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Verify College Email</Text>
             <Text style={[styles.sectionSubtitle, { marginBottom: 16 }]}>Use your college or university email to get verified instantly</Text>
             <Text style={styles.inputLabel}>College / University Name</Text>
-            <TextInput style={styles.input} value={collegeName} onChangeText={setCollegeName} placeholder="e.g., IIT Bombay, VIT Vellore..." placeholderTextColor={colors.textSecondary} />
+            <TextInput style={styles.input} value={collegeSearch || collegeName} onChangeText={handleCollegeSearch} placeholder="Search your college..." placeholderTextColor={colors.textSecondary} />
+            {showCollegeDropdown && (
+              <View style={[styles.dropdownContainer, { maxHeight: 200, marginTop: -8, marginBottom: 8 }]}>
+                <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                  {collegeResults.map((college, idx) => (
+                    <TouchableOpacity key={idx} style={styles.dropdownItem} onPress={() => selectCollege(college)}>
+                      <Ionicons name="school-outline" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dropdownItemText} numberOfLines={1}>{college.name}</Text>
+                        {college.state && <Text style={[styles.dropdownItemSubtext, { color: colors.textSecondary, fontSize: 11 }]}>{college.state}</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
             <Text style={styles.inputLabel}>College Email</Text>
             <TextInput style={styles.input} value={collegeEmail} onChangeText={setCollegeEmail} placeholder="you@college.edu.in" placeholderTextColor={colors.textSecondary} keyboardType="email-address" autoCapitalize="none" />
             <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp} disabled={sendingOtp}>
@@ -710,8 +781,11 @@ function makeStyles(colors, isDark, responsive) {
     inputLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6, marginTop: 14 },
     input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text },
     dropdown: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: -4, marginBottom: 8, maxHeight: 180 },
-    dropdownItem: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border + '40' },
+    dropdownContainer: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: 'hidden' },
+    dropdownItem: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border + '40', flexDirection: 'row', alignItems: 'center' },
     dropdownText: { fontSize: 14, color: colors.text },
+    dropdownItemText: { fontSize: 14, color: colors.text, fontWeight: '500' },
+    dropdownItemSubtext: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
     emailInputRow: { flexDirection: 'row', alignItems: 'center' },
     emailDomain: { fontSize: 14, color: colors.textSecondary, marginLeft: 4, fontWeight: '500' },
     workPreview: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },

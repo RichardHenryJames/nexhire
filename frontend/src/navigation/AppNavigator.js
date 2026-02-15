@@ -135,9 +135,6 @@ const linking = {
       CareerSimulator: "services/career-simulator",
       MarketPulse: "services/market-pulse",
       
-      // Get Verified screen
-      GetVerified: "get-verified",
-      
       // Public Blog screens - accessible without auth
       Blog: "blog",
       BlogArticle: "blog/:articleId",
@@ -241,6 +238,9 @@ const linking = {
           
           // Become a verified referrer
           BecomeReferrer: "become-referrer",
+          
+          // Get Verified (blue tick)
+          GetVerified: "get-verified",
           
           // Employer Jobs screen for verified referrers to view their draft/published jobs
           EmployerJobs: "my-jobs",

@@ -20,10 +20,23 @@ const MAX_OTP_ATTEMPTS = 3;
 
 // Personal email domains blocked for college email
 const PERSONAL_DOMAINS = [
-  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
-  'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com',
-  'ymail.com', 'gmx.com', 'fastmail.com', 'tutanota.com', 'hey.com',
-  'rediffmail.com', 'in.com', 'sify.com'
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'outlook.in', 'hotmail.co.in', 'live.in',
+  // Yahoo
+  'yahoo.com', 'yahoo.co.in', 'yahoo.in', 'ymail.com', 'rocketmail.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Others
+  'aol.com', 'mail.com', 'protonmail.com', 'proton.me', 'zoho.com', 'zoho.in',
+  'gmx.com', 'gmx.net', 'fastmail.com', 'tutanota.com', 'hey.com',
+  'inbox.com', 'mail.ru', 'yandex.com', 'yandex.ru',
+  // India-specific
+  'rediffmail.com', 'rediff.com', 'sify.com', 'in.com',
+  // Temp/disposable
+  'guerrillamail.com', 'tempmail.com', 'throwaway.email', 'mailinator.com',
+  'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'dispostable.com',
 ];
 
 // Known education email domain patterns
@@ -47,16 +60,6 @@ export class UserVerificationService {
       }
       if (PERSONAL_DOMAINS.includes(domain)) {
         return { success: false, error: 'Personal emails are not allowed. Please use your college/university email.' };
-      }
-
-      // Check for existing pending Aadhaar verification
-      const existingAadhaar = await dbService.executeQuery(
-        `SELECT VerificationID FROM UserVerifications 
-         WHERE UserID = @param0 AND Method = 'Aadhaar' AND Status = 'Pending'`,
-        [userId]
-      );
-      if (existingAadhaar.recordset.length > 0) {
-        return { success: false, error: 'You have a pending Aadhaar verification. Please wait for admin review.' };
       }
 
       // Expire any existing OTPs for this user with USER_VERIFICATION purpose

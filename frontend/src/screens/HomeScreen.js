@@ -966,44 +966,6 @@ const [dashboardData, setDashboardData] = useState({
                   </TouchableOpacity>
                 )}
 
-                {/* 🔵 Get Verified Card - Only show if NOT already verified */}
-                {!loadingStats && !isVerifiedUser && (
-                  <TouchableOpacity 
-                    style={[styles.quickActionCard, { borderColor: colors.primary + '30', borderWidth: 1 }]}
-                    onPress={() => navigation.navigate('GetVerified')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
-                      <Ionicons 
-                        name="checkmark-circle" 
-                        size={24} 
-                        color={colors.primary} 
-                      />
-                    </View>
-                    <View style={styles.quickActionContent}>
-                      <Text style={styles.quickActionTitle}>Get Verified 🔵</Text>
-                      <Text style={styles.quickActionDescription}>Blue tick via company email, college email, or Aadhaar</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                  </TouchableOpacity>
-                )}
-
-                {/* 🎯 Resume Analyzer Card - AI-powered resume analysis */}
-                <TouchableOpacity 
-                  style={styles.quickActionCard}
-                  onPress={() => navigation.navigate('ResumeAnalyzer', { userId: user?.UserID })}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#9333EA' + '20' }]}>
-                    <Ionicons name="document-text" size={24} color="#9333EA" />
-                  </View>
-                  <View style={styles.quickActionContent}>
-                    <Text style={styles.quickActionTitle}>Resume Analyzer</Text>
-                    <Text style={styles.quickActionDescription}>AI-powered resume analysis for jobs</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                </TouchableOpacity>
-
                 {/* 🎯 Get Free Credits - Only show if not all platforms approved */}
                 {approvedSocialPlatforms.length < 4 && (
                   <TouchableOpacity 
