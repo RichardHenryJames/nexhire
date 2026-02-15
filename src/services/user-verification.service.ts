@@ -286,28 +286,41 @@ export class UserVerificationService {
   }
 
   /**
-   * Admin: Get all pending verifications
+   * Admin: Get all verifications
    */
-  static async getPendingVerifications(): Promise<any> {
+  static async getAllVerifications(): Promise<any> {
     try {
       const result = await dbService.executeQuery(`
         SELECT v.VerificationID, v.UserID, v.Method, v.Status, 
                v.CollegeName, v.AadhaarPhotoURL, v.SelfiePhotoURL,
-               v.RejectionReason, v.CreatedAt, v.UpdatedAt,
+               v.RejectionReason, v.ReviewedAt, v.CreatedAt, v.UpdatedAt,
                u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL
         FROM UserVerifications v
         JOIN Users u ON v.UserID = u.UserID
-        WHERE v.Status = 'Pending'
-        ORDER BY v.CreatedAt ASC
+        ORDER BY v.CreatedAt DESC
       `);
+
+      const all = result.recordset || [];
+      const pending = all.filter((v: any) => v.Status === 'Pending');
+      const completed = all.filter((v: any) => v.Status !== 'Pending');
 
       return {
         success: true,
-        data: result.recordset
+        data: {
+          all,
+          pending,
+          completed,
+          stats: {
+            total: all.length,
+            pending: pending.length,
+            approved: all.filter((v: any) => v.Status === 'Approved').length,
+            rejected: all.filter((v: any) => v.Status === 'Rejected').length,
+          }
+        }
       };
     } catch (error: any) {
-      console.error('Error getting pending verifications:', error);
-      return { success: false, error: 'Failed to get pending verifications' };
+      console.error('Error getting verifications:', error);
+      return { success: false, error: 'Failed to get verifications' };
     }
   }
 

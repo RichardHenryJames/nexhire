@@ -29,7 +29,10 @@ export default function AdminVerificationsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [verifications, setVerifications] = useState([]);
+  const [pending, setPending] = useState([]);
+  const [completed, setCompleted] = useState([]);
+  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [subTab, setSubTab] = useState('pending');
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -37,8 +40,10 @@ export default function AdminVerificationsScreen() {
   const fetchData = useCallback(async () => {
     try {
       const res = await refopenAPI.apiCall('/management/verifications/pending');
-      if (res.success && Array.isArray(res.data)) {
-        setVerifications(res.data);
+      if (res.success && res.data) {
+        setPending(res.data.pending || []);
+        setCompleted(res.data.completed || []);
+        setStats(res.data.stats || { pending: 0, approved: 0, rejected: 0 });
       }
     } catch (err) {
       console.error('Error loading verifications:', err);
@@ -96,6 +101,93 @@ export default function AdminVerificationsScreen() {
 
   const styles = makeStyles(colors, responsive);
 
+  const renderVerificationCard = (v, showActions = true) => (
+    <View key={v.VerificationID} style={[styles.card, { borderLeftColor: getMethodColor(v.Method), borderLeftWidth: 4 }]}>
+      {/* Method + Status + Date */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ backgroundColor: getMethodColor(v.Method) + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: getMethodColor(v.Method) }}>{getMethodLabel(v.Method)}</Text>
+        </View>
+        {v.Status !== 'Pending' && (
+          <View style={{ backgroundColor: (v.Status === 'Approved' ? '#10B981' : '#EF4444') + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: v.Status === 'Approved' ? '#10B981' : '#EF4444' }}>{v.Status}</Text>
+          </View>
+        )}
+        <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+          {new Date(v.ReviewedAt || v.CreatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+
+      {/* User */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        {v.ProfilePictureURL ? (
+          <Image source={{ uri: v.ProfilePictureURL }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} />
+        ) : (
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+            <Ionicons name="person" size={20} color={colors.primary} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{v.FirstName} {v.LastName}</Text>
+          <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Email}</Text>
+          {v.Phone && <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Phone}</Text>}
+        </View>
+      </View>
+
+      {/* College */}
+      {v.CollegeName && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 8, borderRadius: 8 }}>
+          <Ionicons name="school" size={16} color="#8B5CF6" style={{ marginRight: 8 }} />
+          <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>{v.CollegeName}</Text>
+        </View>
+      )}
+
+      {/* Rejection reason */}
+      {v.Status === 'Rejected' && v.RejectionReason && (
+        <View style={{ backgroundColor: '#EF444410', padding: 10, borderRadius: 8, marginBottom: 10 }}>
+          <Text style={{ color: '#EF4444', fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{v.RejectionReason}</Text>
+        </View>
+      )}
+
+      {/* Aadhaar photos */}
+      {v.Method === 'Aadhaar' && (v.AadhaarPhotoURL || v.SelfiePhotoURL) && (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Documents:</Text>
+          <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
+            {v.AadhaarPhotoURL && (
+              <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.AadhaarPhotoURL, '_blank')} style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Aadhaar Card</Text>
+                <Image source={{ uri: v.AadhaarPhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
+              </TouchableOpacity>
+            )}
+            {v.SelfiePhotoURL && (
+              <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.SelfiePhotoURL, '_blank')} style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Selfie</Text>
+                <Image source={{ uri: v.SelfiePhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Actions - only for pending */}
+      {showActions && v.Status === 'Pending' && (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(v.VerificationID)}>
+            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            <Text style={styles.btnText}>Approve</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(v)}>
+            <Ionicons name="close-circle" size={18} color="#fff" />
+            <Text style={styles.btnText}>Reject</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  const currentList = subTab === 'pending' ? pending : completed;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -107,6 +199,16 @@ export default function AdminVerificationsScreen() {
         <View style={styles.backBtn} />
       </View>
 
+      {/* Sub Tabs */}
+      <View style={styles.subTabsRow}>
+        <TouchableOpacity style={[styles.subTab, subTab === 'pending' && styles.subTabActive]} onPress={() => setSubTab('pending')}>
+          <Text style={[styles.subTabText, subTab === 'pending' && { color: '#F59E0B', fontWeight: '700' }]}>Pending ({stats.pending})</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.subTab, subTab === 'completed' && styles.subTabCompleted]} onPress={() => setSubTab('completed')}>
+          <Text style={[styles.subTabText, subTab === 'completed' && { color: '#10B981', fontWeight: '700' }]}>Completed ({stats.approved + stats.rejected})</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -114,89 +216,18 @@ export default function AdminVerificationsScreen() {
       >
         {loading ? (
           <View style={{ padding: 60, alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : verifications.length === 0 ? (
+        ) : currentList.length === 0 ? (
           <View style={{ padding: 60, alignItems: 'center' }}>
-            <Ionicons name="shield-checkmark-outline" size={56} color={colors.textSecondary} />
-            <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', marginTop: 12 }}>All caught up!</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>No pending verifications</Text>
+            <Ionicons name={subTab === 'pending' ? 'shield-checkmark-outline' : 'document-text-outline'} size={56} color={colors.textSecondary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', marginTop: 12 }}>
+              {subTab === 'pending' ? 'All caught up!' : 'No history'}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
+              {subTab === 'pending' ? 'No pending verifications' : 'No completed verifications yet'}
+            </Text>
           </View>
         ) : (
-          <>
-            <View style={styles.countBanner}>
-              <Text style={styles.countText}>{verifications.length} pending</Text>
-            </View>
-
-            {verifications.map((v, idx) => (
-              <View key={v.VerificationID || idx} style={[styles.card, { borderLeftColor: getMethodColor(v.Method), borderLeftWidth: 4 }]}>
-                {/* Method + Date */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  <View style={{ backgroundColor: getMethodColor(v.Method) + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: getMethodColor(v.Method) }}>{getMethodLabel(v.Method)}</Text>
-                  </View>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginLeft: 10 }}>
-                    {new Date(v.CreatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-
-                {/* User */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                  {v.ProfilePictureURL ? (
-                    <Image source={{ uri: v.ProfilePictureURL }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} />
-                  ) : (
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                      <Ionicons name="person" size={20} color={colors.primary} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{v.FirstName} {v.LastName}</Text>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Email}</Text>
-                    {v.Phone && <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Phone}</Text>}
-                  </View>
-                </View>
-
-                {/* College */}
-                {v.CollegeName && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 8, borderRadius: 8 }}>
-                    <Ionicons name="school" size={16} color="#8B5CF6" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>{v.CollegeName}</Text>
-                  </View>
-                )}
-
-                {/* Aadhaar photos */}
-                {v.Method === 'Aadhaar' && (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Documents:</Text>
-                    <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
-                      {v.AadhaarPhotoURL && (
-                        <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.AadhaarPhotoURL, '_blank')} style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Aadhaar Card</Text>
-                          <Image source={{ uri: v.AadhaarPhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
-                        </TouchableOpacity>
-                      )}
-                      {v.SelfiePhotoURL && (
-                        <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.SelfiePhotoURL, '_blank')} style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Selfie</Text>
-                          <Image source={{ uri: v.SelfiePhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* Actions */}
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(v.VerificationID)}>
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={styles.btnText}>Approve</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(v)}>
-                    <Ionicons name="close-circle" size={18} color="#fff" />
-                    <Text style={styles.btnText}>Reject</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </>
+          currentList.map((v) => renderVerificationCard(v, subTab === 'pending'))
         )}
       </ScrollView>
 
@@ -243,8 +274,11 @@ function makeStyles(colors, responsive) {
     backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
     content: { padding: 16, ...(isDesktop ? { maxWidth: 700, alignSelf: 'center', width: '100%' } : {}) },
-    countBanner: { backgroundColor: '#F59E0B20', borderRadius: 8, padding: 10, marginBottom: 16, alignItems: 'center' },
-    countText: { color: '#F59E0B', fontWeight: '700', fontSize: 14 },
+    subTabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16 },
+    subTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+    subTabActive: { borderBottomWidth: 2, borderBottomColor: '#F59E0B' },
+    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: '#10B981' },
+    subTabText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
     card: { backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
     approveBtn: { flex: 1, backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     rejectBtn: { flex: 1, backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
