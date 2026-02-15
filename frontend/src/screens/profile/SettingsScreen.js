@@ -630,7 +630,7 @@ export default function SettingsScreen({ navigation, route }) {
               style={[styles.textInput, { height: 100 }]}
               value={jobSeekerProfile.summary}
               onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, summary: text }))}
-              placeholder="Tell referrers about yourself"
+              placeholder="Tell others about yourself"
               placeholderTextColor={colors.gray400}
               multiline
             />

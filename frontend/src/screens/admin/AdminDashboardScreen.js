@@ -23,11 +23,12 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'services', 'referrals', 'transactions', 'emailLogs', 'resumeAnalyzer', 'socialShare'];
+const VALID_TABS = ['overview', 'users', 'activity', 'services', 'referrals', 'transactions', 'emailLogs', 'resumeAnalyzer', 'socialShare', 'verifications'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -83,8 +84,14 @@ export default function AdminDashboardScreen() {
   const [selectedSocialClaim, setSelectedSocialClaim] = useState(null);
   const [socialRejectionReason, setSocialRejectionReason] = useState('');
   
+  // Verifications data
+  const [verificationsData, setVerificationsData] = useState(null);
+  const [verificationRejectModalVisible, setVerificationRejectModalVisible] = useState(false);
+  const [selectedVerification, setSelectedVerification] = useState(null);
+  const [verificationRejectionReason, setVerificationRejectionReason] = useState('');
+  
   // Track which tabs have been loaded
-  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false, emailLogs: false, resumeAnalyzer: false, activity: false, services: false, socialShare: false });
+  const loadedTabs = useRef({ overview: false, users: false, referrals: false, transactions: false, emailLogs: false, resumeAnalyzer: false, activity: false, services: false, socialShare: false, verifications: false });
   
   // ScrollView ref for scroll to top
   const scrollViewRef = useRef(null);
@@ -102,7 +109,8 @@ export default function AdminDashboardScreen() {
     resumeAnalyzer: false,
     activity: false,
     services: false,
-    socialShare: false
+    socialShare: false,
+    verifications: false
   });
 
   // Handle tab change with URL update for deep linking
@@ -314,7 +322,54 @@ export default function AdminDashboardScreen() {
     }
   }, []);
 
-  // Social Share rejection handlers (outside render for modal access)
+  // Load verifications data
+  const loadVerifications = useCallback(async () => {
+    if (loadedTabs.current.verifications) return;
+    try {
+      setTabLoading(prev => ({ ...prev, verifications: true }));
+      const response = await refopenAPI.apiCall('/management/verifications/pending');
+      if (response.success) {
+        setVerificationsData(response.data);
+        loadedTabs.current.verifications = true;
+      }
+    } catch (error) {
+      console.error('Error loading verifications:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, verifications: false }));
+    }
+  }, []);
+
+  // Verification rejection handlers
+  const confirmVerificationReject = async () => {
+    if (!verificationRejectionReason.trim()) {
+      Alert.alert('Error', 'Please enter a rejection reason');
+      return;
+    }
+    try {
+      const response = await refopenAPI.apiCall(`/management/verifications/${selectedVerification.VerificationID}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: verificationRejectionReason })
+      });
+      if (response.success) {
+        setVerificationRejectModalVisible(false);
+        setSelectedVerification(null);
+        setVerificationRejectionReason('');
+        loadedTabs.current.verifications = false;
+        loadVerifications();
+      } else {
+        Alert.alert('Error', response.error || 'Failed to reject verification');
+      }
+    } catch (error) {
+      console.error('Error rejecting verification:', error);
+      Alert.alert('Error', 'Failed to reject verification');
+    }
+  };
+
+  const cancelVerificationReject = () => {
+    setVerificationRejectModalVisible(false);
+    setSelectedVerification(null);
+    setVerificationRejectionReason('');
+  };
   const confirmSocialReject = async () => {
     if (!socialRejectionReason.trim()) {
       Alert.alert('Error', 'Please enter a rejection reason');
@@ -379,8 +434,11 @@ export default function AdminDashboardScreen() {
       case 'socialShare':
         loadSocialShare();
         break;
+      case 'verifications':
+        loadVerifications();
+        break;
     }
-  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadActivity, loadServices, loadSocialShare]);
+  }, [activeTab, isAdmin, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadActivity, loadServices, loadSocialShare, loadVerifications]);
 
   // Initial load - just overview
   useEffect(() => {
@@ -500,6 +558,7 @@ export default function AdminDashboardScreen() {
           { key: 'emailLogs', label: 'Email Logs', icon: 'mail-outline' },
           { key: 'resumeAnalyzer', label: 'Resume Analyzer', icon: 'analytics-outline' },
           { key: 'socialShare', label: 'Social Share', icon: 'megaphone-outline' },
+          { key: 'verifications', label: 'Verifications', icon: 'shield-checkmark-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -2222,6 +2281,206 @@ export default function AdminDashboardScreen() {
     );
   };
 
+  // ─── Verifications Tab ─────────────────────
+  const renderVerificationsTab = () => {
+    if (tabLoading.verifications && !verificationsData) {
+      return <TabLoadingSpinner />;
+    }
+
+    const verifications = Array.isArray(verificationsData) ? verificationsData : [];
+    const isMobileView = responsive.isMobile;
+
+    const handleApproveVerification = async (verificationId) => {
+      try {
+        const response = await refopenAPI.apiCall(`/management/verifications/${verificationId}/approve`, { method: 'POST' });
+        if (response.success) {
+          loadedTabs.current.verifications = false;
+          loadVerifications();
+          showToast('Verification approved! User now has blue tick.', 'success');
+        } else {
+          Alert.alert('Error', response.error || 'Failed to approve');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to approve verification');
+      }
+    };
+
+    const handleRejectVerification = (verification) => {
+      setSelectedVerification(verification);
+      setVerificationRejectionReason('');
+      setVerificationRejectModalVisible(true);
+    };
+
+    const getMethodLabel = (method) => {
+      switch (method) {
+        case 'Aadhaar': return '🪪 Aadhaar Card';
+        case 'CollegeEmail': return '🎓 College Email';
+        case 'CompanyEmail': return '🏢 Company Email';
+        default: return method;
+      }
+    };
+
+    const getMethodColor = (method) => {
+      switch (method) {
+        case 'Aadhaar': return '#F59E0B';
+        case 'CollegeEmail': return '#8B5CF6';
+        case 'CompanyEmail': return '#3B82F6';
+        default: return colors.primary;
+      }
+    };
+
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🛡️ Pending Verifications</Text>
+          <Text style={styles.sectionSubtitle}>Review and approve user verification requests</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: '#F59E0B20' }]}>
+            <Text style={[styles.statValue, { color: colors.text, fontSize: isMobileView ? 20 : 24 }]}>{verifications.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: isMobileView ? 11 : 12 }]}>Pending</Text>
+          </View>
+        </View>
+
+        {verifications.length === 0 ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Ionicons name="shield-checkmark-outline" size={48} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { marginTop: 12 }]}>No pending verifications</Text>
+          </View>
+        ) : (
+          <View style={{ width: '100%' }}>
+            {verifications.map((v, index) => (
+              <View key={v.VerificationID || index} style={{
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: getMethodColor(v.Method) + '40',
+              }}>
+                {/* Header: Method badge + User info */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <View style={{
+                    backgroundColor: getMethodColor(v.Method) + '20',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    marginRight: 10,
+                  }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: getMethodColor(v.Method) }}>
+                      {getMethodLabel(v.Method)}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                    {new Date(v.CreatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+
+                {/* User details */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  {v.ProfilePictureURL ? (
+                    <Image source={{ uri: v.ProfilePictureURL }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} />
+                  ) : (
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                      <Ionicons name="person" size={20} color={colors.primary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{v.FirstName} {v.LastName}</Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Email}</Text>
+                    {v.Phone && <Text style={{ fontSize: 12, color: colors.textSecondary }}>{v.Phone}</Text>}
+                  </View>
+                </View>
+
+                {/* College name for college email */}
+                {v.CollegeName && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 8, borderRadius: 8 }}>
+                    <Ionicons name="school" size={16} color="#8B5CF6" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>{v.CollegeName}</Text>
+                  </View>
+                )}
+
+                {/* Aadhaar photos */}
+                {v.Method === 'Aadhaar' && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Submitted Documents:</Text>
+                    <View style={{ flexDirection: isMobileView ? 'column' : 'row', gap: 12 }}>
+                      {v.AadhaarPhotoURL && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (Platform.OS === 'web') window.open(v.AadhaarPhotoURL, '_blank');
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Aadhaar Card</Text>
+                          <Image
+                            source={{ uri: v.AadhaarPhotoURL }}
+                            style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }}
+                            resizeMode="contain"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {v.SelfiePhotoURL && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (Platform.OS === 'web') window.open(v.SelfiePhotoURL, '_blank');
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Selfie Photo</Text>
+                          <Image
+                            source={{ uri: v.SelfiePhotoURL }}
+                            style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }}
+                            resizeMode="contain"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Approve / Reject buttons */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#10B981',
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                    onPress={() => handleApproveVerification(v.VerificationID)}
+                  >
+                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Approve</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#EF4444',
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                    onPress={() => handleRejectVerification(v)}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </>
+    );
+  };
+
   const getScoreColor = (score) => {
     if (score >= 80) return '#10B981';
     if (score >= 60) return '#22C55E';
@@ -2261,6 +2520,7 @@ export default function AdminDashboardScreen() {
           {activeTab === 'emailLogs' && renderEmailLogsTab()}
           {activeTab === 'resumeAnalyzer' && renderResumeAnalyzerTab()}
           {activeTab === 'socialShare' && renderSocialShareTab()}
+          {activeTab === 'verifications' && renderVerificationsTab()}
         </ScrollView>
       </View>
 
@@ -2318,6 +2578,66 @@ export default function AdminDashboardScreen() {
               >
                 <Ionicons name="close-circle" size={18} color="#FFF" />
                 <Text style={styles.modalRejectText}>Reject Claim</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Verification Rejection Modal */}
+      <Modal
+        visible={verificationRejectModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelVerificationReject}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="close-circle" size={40} color="#EF4444" />
+              <Text style={styles.modalTitle}>Reject Verification</Text>
+            </View>
+
+            {selectedVerification && (
+              <View style={styles.claimSummary}>
+                <Text style={styles.claimUser}>
+                  {selectedVerification.FirstName} {selectedVerification.LastName}
+                </Text>
+                <Text style={styles.claimPlatform}>
+                  Method: {selectedVerification.Method === 'Aadhaar' ? '🪪 Aadhaar Card' : selectedVerification.Method} • {selectedVerification.Email}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.modalLabel}>Reason for rejection:</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter reason (e.g., Photo unclear, Name mismatch, Aadhaar not visible...)"
+              placeholderTextColor={colors.textSecondary}
+              value={verificationRejectionReason}
+              onChangeText={setVerificationRejectionReason}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              autoFocus
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={cancelVerificationReject}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalRejectButton]}
+                onPress={confirmVerificationReject}
+              >
+                <Ionicons name="close-circle" size={18} color="#FFF" />
+                <Text style={styles.modalRejectText}>Reject</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -35,7 +35,25 @@ import DatePicker from '../../components/DatePicker';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Personal email domains that are blocked
-const PERSONAL_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'mail.com', 'protonmail.com', 'ymail.com', 'aol.com', 'zoho.com', 'rediffmail.com'];
+const PERSONAL_DOMAINS = [
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'outlook.in', 'hotmail.co.in', 'live.in',
+  // Yahoo
+  'yahoo.com', 'yahoo.co.in', 'yahoo.in', 'ymail.com', 'rocketmail.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Others
+  'aol.com', 'mail.com', 'protonmail.com', 'proton.me', 'zoho.com', 'zoho.in',
+  'gmx.com', 'gmx.net', 'fastmail.com', 'tutanota.com', 'hey.com',
+  'inbox.com', 'mail.ru', 'yandex.com', 'yandex.ru',
+  // India-specific
+  'rediffmail.com', 'rediff.com', 'sify.com', 'in.com',
+  // Temp/disposable
+  'guerrillamail.com', 'tempmail.com', 'throwaway.email', 'mailinator.com',
+  'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'dispostable.com',
+];
 
 // Smart domain-company matching (same logic as WorkExperienceSection)
 const normalizeCompanyName = (name) => {
@@ -430,7 +448,6 @@ export default function BecomeReferrerScreen({ navigation }) {
         { icon: 'cash-outline', color: '#10B981', title: 'Earn upto ₹100 & exciting RefPoints', desc: 'Get paid for every successful referral you make' },
         { icon: 'briefcase-outline', color: '#EC4899', title: 'Post jobs for free', desc: 'Post referral jobs at your company at no cost' },
         { icon: 'ribbon-outline', color: '#8B5CF6', title: 'Verified badge', desc: 'Stand out with a verified referrer badge on your profile' },
-        { icon: 'people-outline', color: colors.primary, title: 'Help job seekers', desc: 'Make a real impact by referring talented candidates' },
         { icon: 'notifications-outline', color: '#F59E0B', title: 'Get notified instantly', desc: 'Receive alerts when someone needs a referral at your company' },
       ].map((item, idx) => (
         <View key={idx} style={styles.advantageCard}>
@@ -444,26 +461,7 @@ export default function BecomeReferrerScreen({ navigation }) {
         </View>
       ))}
 
-      {/* How it works */}
-      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>How it works</Text>
-      
-      {[
-        { step: '1', title: 'Confirm your company', desc: 'Tell us where you currently work' },
-        { step: '2', title: 'Verify with company email', desc: 'Enter your work email to receive an OTP' },
-        { step: '3', title: 'Start referring!', desc: 'You\'re verified — start earning rewards' },
-      ].map((item, idx) => (
-        <View key={idx} style={styles.howItWorksRow}>
-          <View style={styles.stepBubble}>
-            <Text style={styles.stepBubbleText}>{item.step}</Text>
-          </View>
-          <View style={styles.howItWorksContent}>
-            <Text style={styles.howItWorksTitle}>{item.title}</Text>
-            <Text style={styles.howItWorksDesc}>{item.desc}</Text>
-          </View>
-        </View>
-      ))}
-
-      <View style={{ height: 100 }} />
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 
@@ -627,7 +625,7 @@ export default function BecomeReferrerScreen({ navigation }) {
           </View>
           <Text style={styles.stepTitle}>Verify your company email</Text>
           <Text style={styles.stepDesc}>
-            Enter your work email address. We'll send a 4-digit OTP to verify you work at {companyName}. Your email is used once and never stored.
+            Enter your work email address. We'll send a 4-digit OTP to verify you work at {companyName}. <Text style={{ fontWeight: '700' }}>Your email is used once and never stored.</Text>
           </Text>
         </View>
 
@@ -764,16 +762,6 @@ export default function BecomeReferrerScreen({ navigation }) {
 
     return (
       <View style={styles.bottomBar}>
-        {/* Step indicators */}
-        <View style={styles.stepIndicators}>
-          {['Intro', 'Work', 'Verify'].map((label, idx) => (
-            <View key={idx} style={styles.stepIndicatorItem}>
-              <View style={[styles.stepDot, step >= idx && styles.stepDotActive]} />
-              <Text style={[styles.stepLabel, step >= idx && styles.stepLabelActive]}>{label}</Text>
-            </View>
-          ))}
-        </View>
-
         {/* Action buttons */}
         <View style={styles.bottomActions}>
           {step > STEPS.INTRO && (
@@ -838,6 +826,18 @@ export default function BecomeReferrerScreen({ navigation }) {
         <Text style={styles.headerTitle}>Become a Referrer</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      {/* Step indicator at top */}
+      {step < STEPS.SUCCESS && (
+        <View style={styles.stepIndicators}>
+          {['Intro', 'Work', 'Verify'].map((label, idx) => (
+            <View key={idx} style={styles.stepIndicatorItem}>
+              <View style={[styles.stepDot, step >= idx && styles.stepDotActive]} />
+              <Text style={[styles.stepLabel, step >= idx && styles.stepLabelActive]}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Content */}
       <KeyboardAvoidingView
@@ -1294,7 +1294,9 @@ function makeStyles(colors, isDark, responsive = {}) {
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 24,
-      marginBottom: 12,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#333' : '#E5E7EB',
     },
     stepIndicatorItem: {
       alignItems: 'center',

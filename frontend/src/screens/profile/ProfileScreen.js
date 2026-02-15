@@ -565,7 +565,7 @@ export default function ProfileScreen({ navigation, route }) {
             ) : (
               <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
                 <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                <Text style={styles.emptySectionCtaText}>Add a summary to tell referrers about yourself</Text>
+                <Text style={styles.emptySectionCtaText}>Add a summary to tell others about yourself</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -499,23 +499,19 @@ export default function UserProfileHeader({
     let badgeColor = colors.gray600;
     let badgeIcon = 'person';
 
-    // For JobSeekers - show "Become Verified Referrer" button if not verified, or "Verified Referrer" badge if verified
+    // For JobSeekers - show "Get Verified" button only if not verified (badges already show next to name)
     if (userType === 'JobSeeker') {
       // Don't show anything while loading verification status
       if (loadingVerificationStatus) {
         return null;
       }
-      if (isVerifiedReferrer) {
-        // Show Verified badge
-        return (
-          <View style={[styles.statusBadge, { backgroundColor: colors.success + '15' }]}>
-            <Ionicons name="shield-checkmark" size={14} color={colors.success} />
-            <Text style={[styles.statusBadgeText, { color: colors.success }]}>
-              Verified
-            </Text>
-          </View>
-        );
-      } else if (onBecomeVerifiedReferrer) {
+
+      // Already verified (blue tick or referrer) — badges show next to name, don't duplicate here
+      if (isVerifiedUser || isVerifiedReferrer) {
+        return null;
+      }
+
+      if (onBecomeVerifiedReferrer) {
         // Show "Become Verified Referrer" button
         return (
           <TouchableOpacity 
