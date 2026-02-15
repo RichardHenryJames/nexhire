@@ -1626,14 +1626,68 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return { valid: false, reason: 'Placeholder pattern' };
     }
 
+    // Reject: Company names with "Hiring For" baked in (scraped job title mixed into company name)
+    if (/hiring\s+for/i.test(trimmed)) {
+      return { valid: false, reason: 'Job title mixed into company name (Hiring For)' };
+    }
+
+    // Reject: "Sales Demo" or "CEIPAL Demo" type test/demo orgs
+    if (/^(sales\s+demo|ceipal.*demo)/i.test(trimmed)) {
+      return { valid: false, reason: 'Demo/test organization' };
+    }
+
+    // Reject: Names that are clearly a description, not a company
+    if (/\b(creating applications|allow consumers|recession resistant|startup creating)\b/i.test(trimmed)) {
+      return { valid: false, reason: 'Description instead of company name' };
+    }
+
+    // Reject: Names longer than 80 chars with pipe or multiple dashes (likely tagline appended)
+    if (trimmed.length > 80 && (/\|/.test(trimmed) || (trimmed.match(/ - /g) || []).length >= 2)) {
+      return { valid: false, reason: 'Name too long with taglines' };
+    }
+
     return { valid: true };
+  }
+
+  /**
+   * 🧹 SANITIZE: Clean up company name before saving to database
+   * Strips pipe-separated taglines, 4-digit numbered prefixes, and long dash taglines
+   */
+  private static sanitizeCompanyName(name: string): string {
+    let cleaned = name.trim();
+
+    // Strip pipe-separated taglines: "Nubis | Salesforce Solutions" → "Nubis"
+    // Skip if first part is too short (e.g. "R|O|C") or pipe is part of the name
+    if (cleaned.includes('|')) {
+      const parts = cleaned.split('|').map(s => s.trim());
+      if (parts[0].length >= 3 && parts.length >= 2 && parts[1].length > 10) {
+        cleaned = parts[0];
+      }
+    }
+
+    // Strip 4-digit numbered prefix: "6032-DePuy Synthes" → "DePuy Synthes"
+    cleaned = cleaned.replace(/^\d{4,}-/, '').trim();
+
+    // Strip long dash taglines (only if result > 60 chars and part after dash looks like a tagline)
+    if (cleaned.length > 60 && cleaned.includes(' - ')) {
+      const dashIdx = cleaned.indexOf(' - ');
+      const before = cleaned.substring(0, dashIdx).trim();
+      const after = cleaned.substring(dashIdx + 3).trim();
+      const taglinePatterns = /\b(Best|Leading|Top|#1|Certified|Powered|Accredited|India's|Expert|Specialist|Agency for|Solutions for)\b/i;
+      if (before.length >= 5 && (after.length > 30 || taglinePatterns.test(after))) {
+        cleaned = before;
+      }
+    }
+
+    return cleaned.substring(0, 100);
   }
 
   // 🏢 ENHANCED: Get or create organization with Fortune 500 matching AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
-    const cleanName = companyName.trim().substring(0, 100);
+    // 🧹 STEP 0: Sanitize company name (strip taglines, numbered prefixes, etc.)
+    const cleanName = this.sanitizeCompanyName(companyName);
     
-    // 🛡️ STEP 0: Validate company name BEFORE any processing
+    // 🛡️ STEP 0.5: Validate company name BEFORE any processing
     const validation = this.isValidCompanyName(cleanName);
     if (!validation.valid) {
       console.warn(`⚠️ Skipping invalid company name "${cleanName}": ${validation.reason}`);
