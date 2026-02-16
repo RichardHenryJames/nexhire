@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Platform, Linking, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -254,17 +254,48 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   const openJob = (job) => navigation.navigate('JobDetails', { jobId: job.JobID });
 
-  // ✅ Copy share link with message
-  const handleCopyShareLink = async (job) => {
+  // ✅ Share message builder
+  const buildShareMessage = (job) => {
     const jobUrl = `https://www.refopen.com/job/${job.JobID}`;
-    const message = `I'm referring for the "${job.Title}" role at ${job.OrganizationName || 'my company'}. Please find the link below and submit your referral request:\n\n${jobUrl}`;
-    
+    return `I'm referring for the "${job.Title}" role at ${job.OrganizationName || 'my company'}. Please find the link below and submit your referral request:\n\n${jobUrl}`;
+  };
+
+  // ✅ WhatsApp share
+  const handleShareWhatsApp = (job) => {
+    const message = buildShareMessage(job);
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    Linking.openURL(whatsappUrl).catch(() => {
+      showToast('Could not open WhatsApp', 'error');
+    });
+  };
+
+  // ✅ LinkedIn share
+  const handleShareLinkedIn = (job) => {
+    const jobUrl = `https://www.refopen.com/job/${job.JobID}`;
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(jobUrl)}`;
+    Linking.openURL(linkedInUrl).catch(() => {
+      showToast('Could not open LinkedIn', 'error');
+    });
+  };
+
+  // ✅ Native share (copy link + system share sheet)
+  const handleNativeShare = async (job) => {
+    const message = buildShareMessage(job);
     try {
-      await navigator.clipboard.writeText(message);
-      showToast('Job link copied with message!', 'success');
+      if (Platform.OS === 'web') {
+        if (navigator.share) {
+          await navigator.share({ title: job.Title, text: message });
+        } else {
+          await navigator.clipboard.writeText(message);
+          showToast('Job link copied!', 'success');
+        }
+      } else {
+        await Share.share({ message });
+      }
     } catch (error) {
-      console.error('Failed to copy:', error);
-      showToast('Failed to copy link', 'error');
+      if (error.name !== 'AbortError') {
+        console.error('Share failed:', error);
+      }
     }
   };
 
@@ -295,9 +326,11 @@ export default function EmployerJobsScreen({ navigation, route }) {
           // ✅ Pass publish props to JobCard (only for drafts)
           showPublish={isDraft}
           onPublish={isDraft ? () => initiatePublishJob(job.JobID, job.Title, job.PostedByType === 2) : null}
-          // ✅ Pass share props to JobCard (only for published referrer jobs)
-          showShare={isPublished && isReferrerPosted}
-          onShare={isPublished && isReferrerPosted ? () => handleCopyShareLink(job) : null}
+          // ✅ Pass share props to JobCard (for all published jobs)
+          showShare={isPublished}
+          onShareWhatsApp={isPublished ? () => handleShareWhatsApp(job) : null}
+          onShareLinkedIn={isPublished ? () => handleShareLinkedIn(job) : null}
+          onShare={isPublished ? () => handleNativeShare(job) : null}
         />
       </View>
     );
