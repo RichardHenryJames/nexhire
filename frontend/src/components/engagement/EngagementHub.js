@@ -23,28 +23,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { typography } from '../../styles/theme';
+import refopenAPI from '../../services/api';
 import StreakTracker from './StreakTracker';
 
 // ─── Constants ────────────────────────────────────────────────
 const CHECKLIST_KEY = 'refopen_daily_checklist';
-const ACTIVITY_PULSE_KEY = 'refopen_activity_pulse';
 const NUDGE_DISMISS_KEY = 'refopen_nudge_dismiss';
 
-// Profile fields we track for completeness
+// Profile fields matching the backend's 20-field completeness logic exactly
+// See: user.service.ts → recalculateApplicantProfileCompleteness()
 const PROFILE_FIELDS = [
-  { key: 'FirstName', label: 'First name', weight: 1 },
-  { key: 'LastName', label: 'Last name', weight: 1 },
-  { key: 'Email', label: 'Email', weight: 1 },
-  { key: 'Phone', label: 'Phone number', weight: 2 },
-  { key: 'ProfilePictureURL', label: 'Profile photo', weight: 3 },
-  { key: 'Headline', label: 'Professional headline', weight: 2 },
-  { key: 'CurrentJobTitle', label: 'Current job title', weight: 2 },
-  { key: 'CurrentCompany', label: 'Current company', weight: 2 },
-  { key: 'Location', label: 'Location', weight: 1 },
-  { key: 'Summary', label: 'Professional summary', weight: 2 },
+  // Basic Info (Users table) — 5 fields
+  { key: 'FirstName', label: 'First name', category: 'Basic Info' },
+  { key: 'LastName', label: 'Last name', category: 'Basic Info' },
+  { key: 'Email', label: 'Email', category: 'Basic Info' },
+  { key: 'Phone', label: 'Phone number', category: 'Basic Info' },
+  { key: 'ProfilePictureURL', label: 'Profile photo', category: 'Basic Info' },
+  // Professional Info (Applicants table) — 6 fields
+  { key: 'Headline', label: 'Professional headline', category: 'Professional' },
+  { key: 'CurrentJobTitle', label: 'Current job title', category: 'Professional' },
+  { key: 'CurrentCompanyName', altKey: 'CurrentCompany', label: 'Current company', category: 'Professional' },
+  { key: 'TotalExperienceMonths', altKey: 'YearsOfExperience', label: 'Years of experience', category: 'Professional', isNumeric: true },
+  { key: 'CurrentLocation', label: 'Location', category: 'Professional' },
+  { key: 'Summary', label: 'Professional summary', category: 'Professional' },
+  // Education — 3 fields
+  { key: 'HighestEducation', label: 'Highest education', category: 'Education' },
+  { key: 'FieldOfStudy', label: 'Field of study', category: 'Education' },
+  { key: 'Institution', label: 'Institution / University', category: 'Education' },
+  // Skills & Preferences — 4 fields
+  { key: 'PrimarySkills', label: 'Primary skills', category: 'Skills' },
+  { key: 'PreferredJobTypes', label: 'Preferred job types', category: 'Preferences' },
+  { key: 'PreferredWorkTypes', label: 'Preferred work types', category: 'Preferences' },
+  { key: 'workExperiences', label: 'Work experience entry', category: 'Professional', isArray: true },
+  // Bonus — 2 fields
+  { key: 'resumes', label: 'Resume upload', category: 'Documents', isArray: true },
+  { key: 'LinkedInProfile', label: 'LinkedIn profile', category: 'Social' },
 ];
 
-const TOTAL_WEIGHT = PROFILE_FIELDS.reduce((s, f) => s + f.weight, 0);
+const TOTAL_FIELDS = PROFILE_FIELDS.length; // 20, matches backend
 
 // ─── Helper: time-of-day greeting ─────────────────────────────
 const getGreeting = () => {
@@ -73,20 +89,34 @@ const getSubtitle = (user) => {
   return SUBTITLES[dayOfYear % SUBTITLES.length];
 };
 
-// ─── Helper: profile completeness ────────────────────────────
-const calcCompleteness = (user) => {
-  if (!user) return { percent: 0, missing: PROFILE_FIELDS.map(f => f.label) };
+// ─── Helper: profile completeness (matches backend's 20-field logic) ──
+const calcCompleteness = (data) => {
+  if (!data) return { percent: 0, missing: PROFILE_FIELDS.map(f => f.label), missingByCategory: {} };
   let filled = 0;
   const missing = [];
+  const missingByCategory = {};
+
   PROFILE_FIELDS.forEach(f => {
-    const val = user[f.key];
-    if (val && val !== '' && val !== null && val !== undefined) {
-      filled += f.weight;
+    let val;
+    if (f.isArray) {
+      // workExperiences, resumes — check array length
+      val = data[f.key];
+      if (Array.isArray(val) && val.length > 0) { filled++; return; }
+    } else if (f.isNumeric) {
+      // TotalExperienceMonths / YearsOfExperience — check > 0
+      val = data[f.key] || data[f.altKey];
+      if (val && Number(val) > 0) { filled++; return; }
     } else {
-      missing.push(f.label);
+      val = data[f.key] || (f.altKey ? data[f.altKey] : null);
+      if (val && String(val).trim().length > 0) { filled++; return; }
     }
+    // Not filled
+    missing.push(f.label);
+    if (!missingByCategory[f.category]) missingByCategory[f.category] = [];
+    missingByCategory[f.category].push(f.label);
   });
-  return { percent: Math.round((filled / TOTAL_WEIGHT) * 100), missing };
+
+  return { percent: Math.round((filled / TOTAL_FIELDS) * 100), missing, missingByCategory };
 };
 
 // ─── Helper: daily checklist ─────────────────────────────────
@@ -97,17 +127,7 @@ const DEFAULT_TASKS = [
   { id: 'explore_companies', label: 'Explore a company', icon: 'business-outline', screen: 'Jobs' },
 ];
 
-// ─── Helper: activity pulse (simulated social proof) ────────
-const generatePulseData = () => {
-  const hour = new Date().getHours();
-  const dayFactor = hour >= 9 && hour <= 18 ? 1.5 : 0.8; // busier during work hours
-  return {
-    referralsToday: Math.floor((15 + Math.random() * 35) * dayFactor),
-    hiredThisWeek: Math.floor(5 + Math.random() * 15),
-    activeNow: Math.floor((50 + Math.random() * 200) * dayFactor),
-    newJobs24h: Math.floor(20 + Math.random() * 80),
-  };
-};
+
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -119,39 +139,47 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
 
   // ── State ──────────────────────────────────────────────────
   const [checklist, setChecklist] = useState([]);
-  const [pulseData, setPulseData] = useState(null);
+  const [checklistCollapsed, setChecklistCollapsed] = useState(false);
   const [dismissedNudge, setDismissedNudge] = useState(null);
   const [profileComplete, setProfileComplete] = useState({ percent: 0, missing: [] });
 
   // ── Animations ─────────────────────────────────────────────
-  const pulseAnim = useRef(new Animated.Value(0.6)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // ── Init ────────────────────────────────────────────────────
   useEffect(() => {
     loadChecklist();
-    loadPulseData();
     loadDismissedNudge();
+    fetchProfileCompleteness();
 
     // Entrance animation
     Animated.parallel([
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
-
-    // Pulse dot animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.6, duration: 1000, useNativeDriver: true }),
-      ])
-    ).start();
   }, []);
 
-  useEffect(() => {
-    setProfileComplete(calcCompleteness(user));
-  }, [user]);
+  // Fetch real profile completeness from backend
+  const fetchProfileCompleteness = async () => {
+    try {
+      // Use getApplicantProfile for JobSeekers (same as ProfileScreen) — getProfile() doesn't return completeness
+      const res = isJobSeeker && user?.UserID
+        ? await refopenAPI.getApplicantProfile(user.UserID)
+        : await refopenAPI.getProfile();
+      if (res.success && res.data) {
+        const backendPercent = res.data.ProfileCompleteness || res.data.profileCompleteness || 0;
+        // Also compute missing fields locally for the "add X" hint
+        const local = calcCompleteness(res.data);
+        setProfileComplete({ percent: backendPercent || local.percent, missing: local.missing });
+      } else {
+        setProfileComplete(calcCompleteness(user));
+      }
+    } catch (e) {
+      // Fallback to local calc if API fails
+      setProfileComplete(calcCompleteness(user));
+    }
+  };
 
   // ── Checklist logic ────────────────────────────────────────
   const loadChecklist = async () => {
@@ -192,26 +220,10 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
   const totalTasks = checklist.length;
   const allDone = completedCount === totalTasks && totalTasks > 0;
 
-  // ── Pulse data ─────────────────────────────────────────────
-  const loadPulseData = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(ACTIVITY_PULSE_KEY);
-      const now = Date.now();
-      if (stored) {
-        const data = JSON.parse(stored);
-        // Refresh every 30 minutes
-        if (now - data.timestamp < 30 * 60 * 1000) {
-          setPulseData(data.pulse);
-          return;
-        }
-      }
-      const pulse = generatePulseData();
-      setPulseData(pulse);
-      await AsyncStorage.setItem(ACTIVITY_PULSE_KEY, JSON.stringify({ pulse, timestamp: now }));
-    } catch (e) {
-      setPulseData(generatePulseData());
-    }
-  };
+  // Auto-collapse when all done
+  useEffect(() => {
+    if (allDone) setChecklistCollapsed(true);
+  }, [allDone]);
 
   // ── Nudge dismiss ──────────────────────────────────────────
   const loadDismissedNudge = async () => {
@@ -296,6 +308,20 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
   const firstName = user?.FirstName || 'there';
   const greeting = getGreeting();
 
+  // ── Fake activity pulse (deterministic per day, changes daily) ──
+  const fakePulse = useMemo(() => {
+    const d = new Date();
+    const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const hash = (n) => Math.abs(Math.floor(Math.sin(seed * n) * 10000));
+    // Also add hour-based micro-variation so it feels more "live"
+    const hourBump = Math.floor(d.getHours() / 3); // changes every 3 hours
+    return {
+      active: 30 + (hash(1) % 50) + (hourBump * 2),        // 30–90
+      referrals: 15 + (hash(2) % 35) + hourBump,            // 15–57
+      hired: 5 + (hash(3) % 15),                             // 5–19 (weekly, no hour bump)
+    };
+  }, []);
+
   if (!user || !isJobSeeker) return null;
 
   // ═══════════════════════════════════════════════════════════
@@ -317,20 +343,18 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
         <StreakTracker compact />
       </View>
 
-      {/* ─── 2. ACTIVITY PULSE ────────────────────────────── */}
-      {pulseData && (
-        <View style={[styles.pulseBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Animated.View style={[styles.pulseDot, { opacity: pulseAnim, backgroundColor: '#10B981' }]} />
-          <Text style={[styles.pulseText, { color: colors.gray600 }]}>
-            <Text style={{ fontWeight: '700', color: '#10B981' }}>{pulseData.activeNow}</Text> active now{'  '}·{'  '}
-            <Text style={{ fontWeight: '700', color: colors.primary }}>{pulseData.referralsToday}</Text> referrals today{'  '}·{'  '}
-            <Text style={{ fontWeight: '700', color: '#F59E0B' }}>{pulseData.hiredThisWeek}</Text> hired this week
-          </Text>
-        </View>
-      )}
+      {/* ─── 2. ACTIVITY PULSE (daily-seeded social proof) ──── */}
+      <View style={[styles.pulseBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.pulseDot, { backgroundColor: '#10B981' }]} />
+        <Text style={[styles.pulseText, { color: colors.gray600 }]}>
+          <Text style={{ fontWeight: '700', color: '#10B981' }}>{fakePulse.active}</Text> active now{'  '}·{'  '}
+          <Text style={{ fontWeight: '700', color: colors.primary }}>{fakePulse.referrals}</Text> referrals today{'  '}·{'  '}
+          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>{fakePulse.hired}</Text> hired this week
+        </Text>
+      </View>
 
-      {/* ─── 3. PROFILE COMPLETION (only if < 80%) ────────── */}
-      {profileComplete.percent < 80 && (
+      {/* ─── 3. PROFILE COMPLETION (only if < 100%) ───────── */}
+      {profileComplete.percent < 100 && (
         <TouchableOpacity
           style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => navigation.navigate('Settings')}
@@ -360,7 +384,9 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
                   ? 'Completed profiles get 5x more referral responses'
                   : profileComplete.percent < 60
                     ? `Add your ${profileComplete.missing[0]?.toLowerCase()} to boost visibility`
-                    : 'Almost there! A few more fields for maximum impact'
+                    : profileComplete.percent < 90
+                      ? `${profileComplete.missing.length} field${profileComplete.missing.length > 1 ? 's' : ''} left for 100%`
+                      : 'Almost perfect! Just 1-2 more fields'
                 }
               </Text>
             </View>
@@ -374,34 +400,61 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
                 : profileComplete.percent < 60 ? '#F59E0B' : '#10B981',
             }]} />
           </View>
+          {/* Missing fields hint — show top 3 missing items */}
+          {profileComplete.missing.length > 0 && (
+            <View style={styles.missingFieldsRow}>
+              {profileComplete.missing.slice(0, 3).map((field, i) => (
+                <View key={i} style={[styles.missingTag, { backgroundColor: colors.background }]}>
+                  <Ionicons name="add-circle-outline" size={12} color={colors.gray500} />
+                  <Text style={[styles.missingTagText, { color: colors.gray500 }]}>{field}</Text>
+                </View>
+              ))}
+              {profileComplete.missing.length > 3 && (
+                <Text style={[styles.missingMore, { color: colors.gray400 }]}>
+                  +{profileComplete.missing.length - 3} more
+                </Text>
+              )}
+            </View>
+          )}
         </TouchableOpacity>
       )}
 
       {/* ─── 4. DAILY CHECKLIST ───────────────────────────── */}
       <View style={[styles.checklistCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.checklistHeader}>
+        <TouchableOpacity
+          style={styles.checklistHeader}
+          onPress={() => setChecklistCollapsed(prev => !prev)}
+          activeOpacity={0.8}
+        >
           <View style={styles.checklistTitleRow}>
             <Text style={[styles.checklistTitle, { color: colors.text }]}>
               {allDone ? '🎉 All done for today!' : '📋 Daily Goals'}
             </Text>
-            <View style={[styles.checklistBadge, {
-              backgroundColor: allDone ? '#10B981' : colors.primary + '20',
-            }]}>
-              <Text style={[styles.checklistBadgeText, {
-                color: allDone ? '#fff' : colors.primary,
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.checklistBadge, {
+                backgroundColor: allDone ? '#10B981' : colors.primary + '20',
               }]}>
-                {completedCount}/{totalTasks}
-              </Text>
+                <Text style={[styles.checklistBadgeText, {
+                  color: allDone ? '#fff' : colors.primary,
+                }]}>
+                  {completedCount}/{totalTasks}
+                </Text>
+              </View>
+              <Ionicons
+                name={checklistCollapsed || allDone ? 'chevron-down' : 'chevron-up'}
+                size={16}
+                color={colors.gray400}
+              />
             </View>
           </View>
-          {!allDone && (
+          {!allDone && !checklistCollapsed && (
             <Text style={[styles.checklistSub, { color: colors.gray500 }]}>
               Complete daily tasks to build career momentum
             </Text>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {checklist.map((task, i) => (
+        {!checklistCollapsed && checklist.map((task, i) => (
           <TouchableOpacity
             key={task.id}
             style={[
@@ -473,8 +526,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
 // ═══════════════════════════════════════════════════════════════
 const createStyles = (colors) => StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 4,
     gap: 12,
   },
@@ -574,6 +626,30 @@ const createStyles = (colors) => StyleSheet.create({
   profileProgressFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  missingFieldsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  missingTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  missingTagText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  missingMore: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 2,
   },
 
   // ─── Checklist ─────────────────────────────────────────────

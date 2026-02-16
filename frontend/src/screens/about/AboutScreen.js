@@ -113,12 +113,12 @@ const COMPANIES = [
 // TESTIMONIALS - Real experiences from RefOpen users
 // ============================================
 const TESTIMONIALS = [
-  { quote: "Applied to 200+ jobs with no callbacks. Posted my profile on RefOpen and within a week, someone at Google reached out to refer me. Now I'm an L4 SWE there.", name: "Priya S.", role: "Software Engineer", company: "Google", avatar: "P" },
-  { quote: "I was mass-applying on LinkedIn for 4 months straight. Joined RefOpen, connected with a referrer at Amazon, and had my first interview scheduled in 10 days.", name: "Amit K.", role: "Data Scientist", company: "Amazon", avatar: "A" },
-  { quote: "As a referrer, I love that I get paid for every referral I submit - not just when someone gets hired. Already made ₹8,000 this month and counting.", name: "Rahul M.", role: "Senior PM", company: "Microsoft", avatar: "R" },
-  { quote: "Cold DMs on LinkedIn felt awkward and rarely got responses. RefOpen made the whole referral ask feel natural - the platform does the matchmaking for you.", name: "Neha T.", role: "Product Designer", company: "Figma", avatar: "N" },
+  { quote: "Spent ₹49 on a referral request. Got a call from Google in 4 days. Now earning ₹45 LPA. Best ₹49 I ever spent.", name: "Priya S.", role: "Software Engineer", company: "Google", avatar: "P" },
+  { quote: "Made ₹8,*** last month just referring people from my company. It takes 2 minutes per referral. Easiest side income ever.", name: "Rahul M.", role: "Senior PM", company: "Microsoft", avatar: "R" },
+  { quote: "The free Resume Analyzer caught 12 issues my resume had — including broken ATS formatting. Fixed them, got referred via RefOpen, hired at Amazon in 3 weeks.", name: "Amit K.", role: "Data Scientist", company: "Amazon", avatar: "A" },
+  { quote: "I'm from a Tier 2 college. Nobody on LinkedIn responded to my DMs. On RefOpen, a Flipkart engineer claimed my request in 6 hours. Got the offer within 2 weeks.", name: "Sneha V.", role: "Frontend Developer", company: "Flipkart", avatar: "S" },
+  { quote: "Cold DMs on LinkedIn felt desperate. RefOpen made referrals feel professional — like a marketplace, not begging. Got 3 referrals in my first week.", name: "Neha T.", role: "Product Designer", company: "CRED", avatar: "N" },
   { quote: "Hired 4 engineers through RefOpen referrals this quarter. The quality of candidates is noticeably higher when they come through trusted connections.", name: "Jason L.", role: "Engineering Manager", company: "Stripe", avatar: "J" },
-  { quote: "Moved from a service company to a product role at Meta. My referrer guided me through the whole process - couldn't have done it without this platform.", name: "Karthik R.", role: "Software Engineer", company: "Meta", avatar: "K" },
 ];
 
 // ============================================
@@ -585,7 +585,7 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
-        <View style={{ paddingTop: isLg ? 48 : 28, paddingBottom: 40, ...containerStyle }}>
+        <View style={{ paddingTop: isLg ? 32 : 20, paddingBottom: 24, ...containerStyle }}>
           <View style={{ alignItems: 'center' }}>
             {/* Badge */}
             <View
@@ -598,7 +598,7 @@ export default function AboutScreenNew() {
                 borderRadius: 100,
                 borderWidth: 1,
                 borderColor: 'rgba(99,102,241,0.3)',
-                marginBottom: 32,
+                marginBottom: 20,
               }}
             >
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.emerald, marginRight: 10 }} />
@@ -608,7 +608,7 @@ export default function AboutScreenNew() {
             </View>
 
             {/* Main headline with gradient text effect */}
-            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
               <Text
                 style={{
                   fontSize: isLg ? 72 : isMd ? 52 : 38,
@@ -632,7 +632,7 @@ export default function AboutScreenNew() {
                 textAlign: 'center',
                 lineHeight: isLg ? 32 : 26,
                 maxWidth: 640,
-                marginBottom: 48,
+                marginBottom: 28,
               }}
             >
               Stop cold-applying. Referred candidates are{' '}
@@ -665,7 +665,7 @@ export default function AboutScreenNew() {
             </View>
 
             {/* Trust indicators */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, opacity: 0.6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, opacity: 0.6 }}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons key={i} name="star" size={16} color={C.amber} style={{ marginRight: 2 }} />
               ))}
@@ -675,25 +675,16 @@ export default function AboutScreenNew() {
         </View>
 
         {/* ============================================ */}
-        {/* COMPANIES MARQUEE */}
+        {/* STATS SECTION — Immediate social proof */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 40, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.border }}>
-          <Text style={{ textAlign: 'center', fontSize: 12, color: C.textMuted, letterSpacing: 2, marginBottom: 24, textTransform: 'uppercase' }}>
-            Employees from these companies are on RefOpen
-          </Text>
-          <CompanyMarquee companies={COMPANIES} C={C} />
-        </View>
-
-        {/* ============================================ */}
-        {/* STATS SECTION */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 80, ...containerStyle }}>
+        <View style={{ paddingVertical: 32, ...containerStyle }}>
           <View
             style={{
-              flexDirection: isLg ? 'row' : 'column',
+              flexDirection: isLg ? 'row' : 'row',
+              flexWrap: 'wrap',
               justifyContent: 'center',
               alignItems: 'center',
-              gap: isLg ? 0 : 32,
+              gap: isLg ? 0 : 16,
             }}
           >
             <StatItem value="125K+" label="Active Jobs" color={C.primary} C={C} isLg={isLg} />
@@ -709,8 +700,8 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         {/* BENTO GRID - FOR JOB SEEKERS */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 60, ...containerStyle }}>
-          <View style={{ alignItems: 'center', marginBottom: 48 }}>
+        <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <View
               style={{
                 backgroundColor: 'rgba(99,102,241,0.15)',
@@ -719,12 +710,12 @@ export default function AboutScreenNew() {
                 borderRadius: 100,
                 borderWidth: 1,
                 borderColor: 'rgba(99,102,241,0.3)',
-                marginBottom: 20,
+                marginBottom: 16,
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.primary, textTransform: 'uppercase' }}>For Job Seekers</Text>
             </View>
-            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+            <Text style={{ fontSize: isLg ? 36 : 28, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
               Your Dream Job is{'\n'}One Referral Away
             </Text>
           </View>
@@ -732,259 +723,97 @@ export default function AboutScreenNew() {
           {/* Bento Grid */}
           <View style={{ flexDirection: isLg ? 'row' : 'column', flexWrap: 'wrap' }}>
             {/* Large feature card */}
-            <BentoCard span={isLg ? 2 : 1} height={320} gradient={C.gradPrimary} C={C}>
-              <Ionicons name="briefcase" size={40} color="rgba(255,255,255,0.9)" style={{ marginBottom: 20 }} />
-              <Text style={{ fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 12 }}>
+            <BentoCard span={isLg ? 2 : 1} height={280} gradient={C.gradPrimary} C={C}>
+              <Ionicons name="briefcase" size={36} color="rgba(255,255,255,0.9)" style={{ marginBottom: 16 }} />
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 10 }}>
                 Apply Directly to 125K+ Jobs
               </Text>
-              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', lineHeight: 26 }}>
-                Browse jobs from Fortune 500 companies and startups. One-click apply with your profile. AI-powered recommendations find perfect matches.
+              <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', lineHeight: 24 }}>
+                Browse jobs from Fortune 500 companies and startups. One-click apply with your profile.
               </Text>
             </BentoCard>
 
             {/* Ask Referral card */}
-            <BentoCard span={1} height={320} C={C}>
-              <LinearGradient colors={C.gradAccent} style={{ width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-                <Ionicons name="hand-right" size={28} color="#fff" />
+            <BentoCard span={1} height={280} C={C}>
+              <LinearGradient colors={C.gradAccent} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <Ionicons name="hand-right" size={24} color="#fff" />
               </LinearGradient>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 10 }}>Ask for Referral</Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>Ask for Referral</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
-                One request reaches ALL verified employees at that company. Skip the cold DMs.
+                One request reaches ALL verified employees at that company. Skip cold DMs.
               </Text>
             </BentoCard>
 
             {/* External Referral */}
-            <BentoCard span={1} height={280} C={C}>
-              <LinearGradient colors={C.gradEmerald} style={{ width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-                <Ionicons name="globe" size={28} color="#fff" />
+            <BentoCard span={1} height={240} C={C}>
+              <LinearGradient colors={C.gradEmerald} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <Ionicons name="globe" size={24} color="#fff" />
               </LinearGradient>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 10 }}>External Jobs</Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>External Jobs</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
-                Found a job on a company's career site? Paste the URL and we'll connect you with referrers at that company.
+                Found a job elsewhere? Paste the URL and we connect you with referrers.
               </Text>
             </BentoCard>
 
             {/* Track Applications */}
-            <BentoCard span={1} height={280} C={C}>
-              <LinearGradient colors={C.gradAmber} style={{ width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-                <Ionicons name="analytics" size={28} color="#fff" />
+            <BentoCard span={1} height={240} C={C}>
+              <LinearGradient colors={C.gradAmber} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <Ionicons name="analytics" size={24} color="#fff" />
               </LinearGradient>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 10 }}>Real-Time Tracking</Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>Real-Time Tracking</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
-                Track all applications, referral requests, and messages in one beautiful dashboard.
+                Track all applications, referrals, and messages in one dashboard.
               </Text>
             </BentoCard>
 
             {/* AI Recommendations */}
-            <BentoCard span={1} height={280} gradient={['#7C3AED', '#A855F7', '#D946EF']} C={C}>
-              <Text style={{ fontSize: 40, marginBottom: 16 }}>✨</Text>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 10 }}>AI-Powered</Text>
+            <BentoCard span={1} height={240} gradient={['#7C3AED', '#A855F7', '#D946EF']} C={C}>
+              <Text style={{ fontSize: 36, marginBottom: 12 }}>✨</Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 }}>AI-Powered</Text>
               <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 22 }}>
-                Our AI learns your preferences and surfaces jobs you'll actually love. Daily personalized alerts.
+                AI learns your preferences and surfaces jobs you'll actually love.
               </Text>
             </BentoCard>
           </View>
         </View>
 
         {/* ============================================ */}
-        {/* BENTO GRID - FOR REFERRERS */}
+        {/* ZERO RISK GUARANTEE */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 60, backgroundColor: 'rgba(16,185,129,0.03)', ...containerStyle }}>
-          <View style={{ alignItems: 'center', marginBottom: 48 }}>
-            <View
-              style={{
-                backgroundColor: 'rgba(16,185,129,0.15)',
-                paddingHorizontal: 16,
-                paddingVertical: 6,
-                borderRadius: 100,
-                borderWidth: 1,
-                borderColor: 'rgba(16,185,129,0.3)',
-                marginBottom: 20,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.emerald, textTransform: 'uppercase' }}>For Referrers</Text>
-            </View>
-            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
-              Turn LinkedIn DMs{'\n'}Into Real Income
-            </Text>
-            <Text style={{ fontSize: 16, color: C.textSub, marginTop: 16, textAlign: 'center', maxWidth: 500 }}>
-              Stop ignoring referral requests. Get paid for every single referral — not just when they get hired.
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: isLg ? 'row' : 'column', flexWrap: 'wrap' }}>
-            {/* Earning card */}
-            <BentoCard span={isLg ? 1.5 : 1} height={360} gradient={C.gradEmerald} C={C}>
-              <Text style={{ fontSize: 48, marginBottom: 16 }}>💰</Text>
-              <Text style={{ fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 12 }}>Earn Per Referral</Text>
-              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.9)', lineHeight: 26, marginBottom: 24 }}>
-                Get instant rewards for every referral you submit. Plus your company's bonus if they get hired!
-              </Text>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 16, padding: 20 }}>
-                <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }}>Top referrers earn</Text>
-                <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff' }}>$3K+/month</Text>
-              </View>
-            </BentoCard>
-
-            {/* How it works */}
-            <BentoCard span={1} height={360} C={C}>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 24 }}>How It Works</Text>
-              {[
-                { num: '01', title: 'Get Verified', desc: 'Connect work email' },
-                { num: '02', title: 'Post Jobs', desc: 'List open positions' },
-                { num: '03', title: 'Refer & Earn', desc: 'Instant rewards' },
-              ].map((step, i) => (
-                <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: C.emerald, marginRight: 16, width: 30 }}>{step.num}</Text>
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: C.text }}>{step.title}</Text>
-                    <Text style={{ fontSize: 13, color: C.textMuted }}>{step.desc}</Text>
-                  </View>
-                </View>
-              ))}
-              <GlowButton title="Start Earning" gradient={C.gradEmerald} onPress={() => goToApp()} size="small" />
-            </BentoCard>
-          </View>
-        </View>
-
-        {/* ============================================ */}
-        {/* FOR EMPLOYERS */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 60, ...containerStyle }}>
-          <View style={{ alignItems: 'center', marginBottom: 48 }}>
-            <View
-              style={{
-                backgroundColor: 'rgba(59,130,246,0.15)',
-                paddingHorizontal: 16,
-                paddingVertical: 6,
-                borderRadius: 100,
-                borderWidth: 1,
-                borderColor: 'rgba(59,130,246,0.3)',
-                marginBottom: 20,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.accentBright, textTransform: 'uppercase' }}>For Employers</Text>
-            </View>
-            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
-              Hire Better, Faster
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: isLg ? 'row' : 'column' }}>
-            {[
-              { icon: 'create', title: 'Post Jobs Free', desc: 'Reach 50K+ qualified professionals instantly.', gradient: ['#3B82F6', '#2563EB'] },
-              { icon: 'people', title: 'Referral Network', desc: 'Leverage your employees\' networks for better hires.', gradient: ['#8B5CF6', '#7C3AED'] },
-              { icon: 'analytics', title: 'Track & Measure', desc: 'Full analytics on your hiring funnel.', gradient: ['#06B6D4', '#0891B2'] },
-            ].map((item, i) => (
-              <BentoCard key={i} span={1} height={260} gradient={item.gradient} C={C}>
-                <Ionicons name={item.icon} size={36} color="rgba(255,255,255,0.9)" style={{ marginBottom: 16 }} />
-                <Text style={{ fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 8 }}>{item.title}</Text>
-                <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 22 }}>{item.desc}</Text>
-              </BentoCard>
-            ))}
-          </View>
-        </View>
-
-        {/* ============================================ */}
-        {/* CAREER TOOLS                                */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 60, ...containerStyle }}>
-          <View style={{ alignItems: 'center', marginBottom: 40 }}>
-            <View
-              style={{
-                backgroundColor: 'rgba(167,139,250,0.15)',
-                paddingHorizontal: 16,
-                paddingVertical: 6,
-                borderRadius: 100,
-                borderWidth: 1,
-                borderColor: 'rgba(167,139,250,0.3)',
-                marginBottom: 20,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.violet, textTransform: 'uppercase' }}>Career Tools</Text>
-            </View>
-            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
-              9 AI-Powered Career Tools.{"\n"}One Platform.
-            </Text>
-            <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', marginTop: 16, maxWidth: 520 }}>
-              We're building the most complete career toolkit — so you never have to pay for 5 different subscriptions again.
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-            {CAREER_TOOLS.map((tool) => (
-              <TouchableOpacity
-                key={tool.id}
-                activeOpacity={0.9}
-                onPress={tool.ready ? goToResumeAnalyzer : goToApp}
-                style={{
-                  backgroundColor: C.bgCard, borderRadius: 20, padding: 22,
-                  borderWidth: 1, borderColor: tool.ready ? 'rgba(34,211,238,0.3)' : C.border,
-                  width: isLg ? '30%' : isMd ? '45%' : '100%',
-                }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <LinearGradient
-                    colors={tool.gradient}
-                    style={{ width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
-                  >
-                    <Ionicons name={tool.icon} size={22} color="#fff" />
-                  </LinearGradient>
-                  {tool.ready && (
-                    <View
-                      style={{
-                        backgroundColor: tool.free ? 'rgba(34,211,238,0.15)' : 'rgba(52,211,153,0.15)',
-                        paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-                      }}
-                    >
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: tool.free ? C.accent : C.emerald, letterSpacing: 0.5 }}>
-                        {tool.free ? '🆓 FREE' : '✅ LIVE'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: C.text, marginBottom: 6 }}>{tool.title}</Text>
-                <Text style={{ fontSize: 13, color: C.textSub, lineHeight: 20 }}>{tool.desc}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* ============================================ */}
-        {/* ZERO RISK GUARANTEE                         */}
-        {/* ============================================ */}
-        <View style={{ paddingVertical: 60, ...containerStyle }}>
+        <View style={{ paddingVertical: 32, ...containerStyle }}>
           <LinearGradient
             colors={['rgba(52,211,153,0.12)', 'rgba(16,185,129,0.06)', 'rgba(52,211,153,0.02)']}
             style={{
-              borderRadius: 28, padding: isLg ? 48 : 28,
+              borderRadius: 24, padding: isLg ? 36 : 24,
               borderWidth: 1.5, borderColor: 'rgba(52,211,153,0.25)', alignItems: 'center',
             }}
           >
-            <Ionicons name="shield-checkmark" size={48} color={C.emerald} style={{ marginBottom: 20 }} />
-            <Text style={{ fontSize: isLg ? 36 : 26, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1, marginBottom: 16 }}>
-              Zero Risk. We Mean It.
-            </Text>
-            <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', maxWidth: 520, lineHeight: 26, marginBottom: 32 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="shield-checkmark" size={32} color={C.emerald} style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: isLg ? 28 : 22, fontWeight: '800', color: C.text, letterSpacing: -1 }}>
+                Zero Risk. We Mean It.
+              </Text>
+            </View>
+            <Text style={{ fontSize: 14, color: C.textSub, textAlign: 'center', maxWidth: 520, lineHeight: 22, marginBottom: 20 }}>
               We know you've been burned by "job platforms" before. That's why we built the hold system:
             </Text>
 
-            <View style={{ flexDirection: isLg ? 'row' : 'column', gap: 16, width: '100%' }}>
+            <View style={{ flexDirection: isLg ? 'row' : 'column', gap: 12, width: '100%' }}>
               {[
-                { icon: 'lock-closed', title: 'Money Held, Not Charged', desc: 'Your ₹49 is held — not taken. It\'s only charged when a referrer actually submits your referral.' },
-                { icon: 'refresh', title: 'Auto-Refund in 14 Days', desc: 'No referrer picks up your request? Full refund. Automatic. No forms, no emails, no begging.' },
-                { icon: 'close-circle', title: 'Cancel Anytime', desc: 'Changed your mind? Cancel within 1 hour for zero fee. Even after that, minimal cancellation charges.' },
+                { icon: 'lock-closed', title: 'Money Held, Not Charged', desc: '₹49 held — only charged when a referrer actually submits.' },
+                { icon: 'refresh', title: 'Auto-Refund in 14 Days', desc: 'No referrer? Full automatic refund. No forms, no emails.' },
+                { icon: 'close-circle', title: 'Cancel Anytime', desc: 'Changed your mind? Cancel anytime with ease.' },
               ].map((item, i) => (
                 <View
                   key={i}
                   style={{
-                    flex: 1, backgroundColor: 'rgba(52,211,153,0.08)', borderRadius: 20, padding: 24,
+                    flex: 1, backgroundColor: 'rgba(52,211,153,0.08)', borderRadius: 16, padding: 18,
                     borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)', alignItems: 'center',
                   }}
                 >
-                  <Ionicons name={item.icon} size={32} color={C.emerald} style={{ marginBottom: 14 }} />
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center', marginBottom: 8 }}>{item.title}</Text>
-                  <Text style={{ fontSize: 13, color: C.textSub, textAlign: 'center', lineHeight: 20 }}>{item.desc}</Text>
+                  <Ionicons name={item.icon} size={26} color={C.emerald} style={{ marginBottom: 10 }} />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: C.text, textAlign: 'center', marginBottom: 4 }}>{item.title}</Text>
+                  <Text style={{ fontSize: 12, color: C.textSub, textAlign: 'center', lineHeight: 18 }}>{item.desc}</Text>
                 </View>
               ))}
             </View>
@@ -994,12 +823,12 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         {/* TESTIMONIALS */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 80 }}>
-          <View style={{ alignItems: 'center', marginBottom: 48, ...containerStyle }}>
-            <Text style={{ fontSize: isLg ? 36 : 26, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+        <View style={{ paddingVertical: 36 }}>
+          <View style={{ alignItems: 'center', marginBottom: 24, ...containerStyle }}>
+            <Text style={{ fontSize: isLg ? 32 : 24, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
               Real People. Real Results.
             </Text>
-            <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', marginTop: 12, maxWidth: 500 }}>
+            <Text style={{ fontSize: 14, color: C.textSub, textAlign: 'center', marginTop: 8, maxWidth: 500 }}>
               From people who were exactly where you are right now.
             </Text>
           </View>
@@ -1011,23 +840,197 @@ export default function AboutScreenNew() {
         </View>
 
         {/* ============================================ */}
+        {/* COMPANIES MARQUEE */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 28, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.border }}>
+          <Text style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>
+            Employees from these companies are on RefOpen
+          </Text>
+          <CompanyMarquee companies={COMPANIES} C={C} />
+        </View>
+
+        {/* ============================================ */}
+        {/* CAREER TOOLS                                */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <View style={{ alignItems: 'center', marginBottom: 28 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(167,139,250,0.15)',
+                paddingHorizontal: 16,
+                paddingVertical: 6,
+                borderRadius: 100,
+                borderWidth: 1,
+                borderColor: 'rgba(167,139,250,0.3)',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.violet, textTransform: 'uppercase' }}>Career Tools</Text>
+            </View>
+            <Text style={{ fontSize: isLg ? 36 : 28, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+              9 AI-Powered Career Tools.{"\n"}One Platform.
+            </Text>
+            <Text style={{ fontSize: 14, color: C.textSub, textAlign: 'center', marginTop: 12, maxWidth: 520 }}>
+              The most complete career toolkit — no more paying for 5 different subscriptions.
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+            {CAREER_TOOLS.map((tool) => (
+              <TouchableOpacity
+                key={tool.id}
+                activeOpacity={0.9}
+                onPress={tool.ready ? goToResumeAnalyzer : goToApp}
+                style={{
+                  backgroundColor: C.bgCard, borderRadius: 16, padding: 18,
+                  borderWidth: 1, borderColor: tool.ready ? 'rgba(34,211,238,0.3)' : C.border,
+                  width: isLg ? '30%' : isMd ? '45%' : '100%',
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <LinearGradient
+                    colors={tool.gradient}
+                    style={{ width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                  >
+                    <Ionicons name={tool.icon} size={20} color="#fff" />
+                  </LinearGradient>
+                  {tool.ready && (
+                    <View
+                      style={{
+                        backgroundColor: tool.free ? 'rgba(34,211,238,0.15)' : 'rgba(52,211,153,0.15)',
+                        paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+                      }}
+                    >
+                      <Text style={{ fontSize: 9, fontWeight: '700', color: tool.free ? C.accent : C.emerald, letterSpacing: 0.5 }}>
+                        {tool.free ? '🆓 FREE' : '✅ LIVE'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 4 }}>{tool.title}</Text>
+                <Text style={{ fontSize: 12, color: C.textSub, lineHeight: 18 }}>{tool.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ============================================ */}
+        {/* BENTO GRID - FOR REFERRERS */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 40, backgroundColor: 'rgba(16,185,129,0.03)', ...containerStyle }}>
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(16,185,129,0.15)',
+                paddingHorizontal: 16,
+                paddingVertical: 6,
+                borderRadius: 100,
+                borderWidth: 1,
+                borderColor: 'rgba(16,185,129,0.3)',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.emerald, textTransform: 'uppercase' }}>For Referrers</Text>
+            </View>
+            <Text style={{ fontSize: isLg ? 36 : 28, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+              Turn LinkedIn DMs{'\n'}Into Real Income
+            </Text>
+            <Text style={{ fontSize: 14, color: C.textSub, marginTop: 12, textAlign: 'center', maxWidth: 500 }}>
+              Get paid for every single referral — not just when they get hired.
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: isLg ? 'row' : 'column', flexWrap: 'wrap' }}>
+            {/* Earning card */}
+            <BentoCard span={isLg ? 1.5 : 1} height={320} gradient={C.gradEmerald} C={C}>
+              <Text style={{ fontSize: 40, marginBottom: 12 }}>💰</Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#fff', marginBottom: 10 }}>Earn Per Referral</Text>
+              <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', lineHeight: 24, marginBottom: 20 }}>
+                Instant rewards for every referral. Plus your company's bonus if they get hired!
+              </Text>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 14, padding: 16 }}>
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Top referrers earn</Text>
+                <Text style={{ fontSize: 32, fontWeight: '800', color: '#fff' }}>$3K+/month</Text>
+              </View>
+            </BentoCard>
+
+            {/* How it works */}
+            <BentoCard span={1} height={320} C={C}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 20 }}>How It Works</Text>
+              {[
+                { num: '01', title: 'Get Verified', desc: 'Connect work email' },
+                { num: '02', title: 'Post Jobs', desc: 'List open positions' },
+                { num: '03', title: 'Refer & Earn', desc: 'Instant rewards' },
+              ].map((step, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.emerald, marginRight: 14, width: 28 }}>{step.num}</Text>
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{step.title}</Text>
+                    <Text style={{ fontSize: 12, color: C.textMuted }}>{step.desc}</Text>
+                  </View>
+                </View>
+              ))}
+              <GlowButton title="Start Earning" gradient={C.gradEmerald} onPress={() => goToApp()} size="small" />
+            </BentoCard>
+          </View>
+        </View>
+
+        {/* ============================================ */}
+        {/* FOR EMPLOYERS */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View
+              style={{
+                backgroundColor: 'rgba(59,130,246,0.15)',
+                paddingHorizontal: 16,
+                paddingVertical: 6,
+                borderRadius: 100,
+                borderWidth: 1,
+                borderColor: 'rgba(59,130,246,0.3)',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.accentBright, textTransform: 'uppercase' }}>For Employers</Text>
+            </View>
+            <Text style={{ fontSize: isLg ? 36 : 28, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+              Hire Better, Faster
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: isLg ? 'row' : 'column' }}>
+            {[
+              { icon: 'create', title: 'Post Jobs Free', desc: 'Reach 50K+ qualified professionals instantly.', gradient: ['#3B82F6', '#2563EB'] },
+              { icon: 'people', title: 'Referral Network', desc: 'Leverage your employees\' networks for better hires.', gradient: ['#8B5CF6', '#7C3AED'] },
+              { icon: 'analytics', title: 'Track & Measure', desc: 'Full analytics on your hiring funnel.', gradient: ['#06B6D4', '#0891B2'] },
+            ].map((item, i) => (
+              <BentoCard key={i} span={1} height={220} gradient={item.gradient} C={C}>
+                <Ionicons name={item.icon} size={32} color="rgba(255,255,255,0.9)" style={{ marginBottom: 12 }} />
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 6 }}>{item.title}</Text>
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 20 }}>{item.desc}</Text>
+              </BentoCard>
+            ))}
+          </View>
+        </View>
+
+        {/* ============================================ */}
         {/* FINAL CTA */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 100, ...containerStyle }}>
+        <View style={{ paddingVertical: 48, ...containerStyle }}>
           <LinearGradient
             colors={['rgba(99,102,241,0.15)', 'rgba(34,211,238,0.08)', 'rgba(52,211,153,0.05)']}
             style={{
-              borderRadius: 32,
-              padding: isLg ? 80 : 40,
+              borderRadius: 28,
+              padding: isLg ? 48 : 28,
               alignItems: 'center',
               borderWidth: 1,
               borderColor: C.borderGlow,
             }}
           >
-            <Text style={{ fontSize: isLg ? 52 : 36, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1, marginBottom: 20 }}>
+            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1, marginBottom: 16 }}>
               Ready to Transform{'\n'}Your Career?
             </Text>
-            <Text style={{ fontSize: 17, color: C.textSub, textAlign: 'center', marginBottom: 40, maxWidth: 500 }}>
+            <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', marginBottom: 28, maxWidth: 500 }}>
               Join 10,000+ professionals who found their dream jobs through referrals.
             </Text>
             <View style={{ flexDirection: isLg ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
@@ -1043,7 +1046,7 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         {/* FOOTER */}
         {/* ============================================ */}
-        <View style={{ paddingVertical: 60, borderTopWidth: 1, borderTopColor: C.border }}>
+        <View style={{ paddingVertical: 36, borderTopWidth: 1, borderTopColor: C.border }}>
           <View style={{ alignItems: 'center', ...containerStyle }}>
             <TouchableOpacity onPress={() => Linking.openURL(REFOPEN_URL)} style={{ marginBottom: 20 }}>
               <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" />
