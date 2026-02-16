@@ -35,6 +35,8 @@ const JobCard = ({
   showDelete = false,
   // ✅ NEW: Props for share/copy action
   onShare = null,
+  onShareWhatsApp = null,
+  onShareLinkedIn = null,
   showShare = false,
   // ✅ NEW: Current user ID to hide Ask Referral for own posted jobs
   currentUserId = null
@@ -192,15 +194,15 @@ const JobCard = ({
           )}
 
           {/* ✅ Social sharing buttons for published jobs */}
-          {showShare && onShare && (
+          {showShare && (
             <View style={styles.shareContainer}>
-              <TouchableOpacity style={styles.socialIconBtn} onPress={onShare} accessibilityLabel="Share on LinkedIn">
+              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#0077B5' + '40' }]} onPress={onShareLinkedIn} accessibilityLabel="Share on LinkedIn">
                 <Ionicons name="logo-linkedin" size={18} color="#0077B5" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialIconBtn} onPress={onShare} accessibilityLabel="Share on WhatsApp">
+              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#25D366' + '40' }]} onPress={onShareWhatsApp} accessibilityLabel="Share on WhatsApp">
                 <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.shareBtn} onPress={onShare} accessibilityLabel="Copy share link">
+              <TouchableOpacity style={styles.shareBtn} onPress={onShare} accessibilityLabel="Share job">
                 <Ionicons name="share-social-outline" size={16} color="#fff" />
                 <Text style={styles.shareText}>Share</Text>
               </TouchableOpacity>
