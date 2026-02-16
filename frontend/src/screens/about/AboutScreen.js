@@ -17,7 +17,7 @@
  * Route: /about-new
  */
 
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,10 +25,8 @@ import {
   Dimensions,
   TouchableOpacity,
   Image,
-  Animated,
   Platform,
   Linking,
-  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useResponsive from '../../hooks/useResponsive';
@@ -41,7 +39,7 @@ import ComplianceFooter from '../../components/ComplianceFooter';
 // Assets
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const REFOPEN_URL = 'https://www.refopen.com';
 const ASK_REFERRAL_URL = 'https://www.refopen.com/ask-referral';
 
@@ -136,286 +134,96 @@ const CAREER_TOOLS = [
   { id: 9, title: 'Career Simulator', desc: 'AI maps your 3-year career trajectory with salary projections', icon: 'rocket', gradient: ['#EA580C', '#FB923C'], ready: false, free: false },
 ];
 
-// ============================================
-// ANIMATED FLOATING ORB
-// ============================================
-const FloatingOrb = ({ color, size, initialX, initialY, duration = 8000 }) => {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    const animateOrb = () => {
-      Animated.loop(
-        Animated.parallel([
-          Animated.sequence([
-            Animated.timing(translateY, { toValue: -30, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.timing(translateY, { toValue: 30, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.timing(translateY, { toValue: 0, duration: duration / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(translateX, { toValue: 20, duration: duration * 0.7, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.timing(translateX, { toValue: -20, duration: duration * 0.7, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-            Animated.timing(translateX, { toValue: 0, duration: duration * 0.6, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(scale, { toValue: 1.2, duration: duration * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-            Animated.timing(scale, { toValue: 0.9, duration: duration * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-            Animated.timing(scale, { toValue: 1, duration: duration * 0.5, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          ]),
-        ])
-      ).start();
-    };
-    const timeout = setTimeout(animateOrb, Math.random() * 1000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left: initialX,
-        top: initialY,
-        width: size,
-        height: size,
-        borderRadius: size,
-        backgroundColor: color,
-        opacity: 0.6,
-        transform: [{ translateY }, { translateX }, { scale }],
-        ...(Platform.OS === 'web' ? { filter: `blur(${size * 0.4}px)` } : {}),
-      }}
-    />
-  );
-};
 
 // ============================================
-// MARQUEE - Auto-scrolling companies
+// COMPANY LIST - Static horizontal scroll
 // ============================================
-const CompanyMarquee = ({ companies, C, speed = 30 }) => {
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const duplicatedCompanies = [...companies, ...companies, ...companies];
-  const itemWidth = 140;
-  const totalWidth = companies.length * itemWidth;
-
-  useEffect(() => {
-    const animate = () => {
-      scrollX.setValue(0);
-      Animated.loop(
-        Animated.timing(scrollX, {
-          toValue: -totalWidth,
-          duration: totalWidth * speed,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      ).start();
-    };
-    animate();
-  }, []);
-
-  return (
-    <View style={{ overflow: 'hidden', height: 80 }}>
-      <Animated.View
+const CompanyMarquee = ({ companies, C }) => (
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8 }}>
+    {companies.map((company, index) => (
+      <View
+        key={`${company.name}-${index}`}
         style={{
-          flexDirection: 'row',
-          transform: [{ translateX: scrollX }],
+          width: 140, height: 70, marginHorizontal: 8,
+          backgroundColor: C.bgCard, borderRadius: 16,
+          borderWidth: 1, borderColor: C.border,
+          justifyContent: 'center', alignItems: 'center', flexDirection: 'row',
         }}
       >
-        {duplicatedCompanies.map((company, index) => (
-          <View
-            key={`${company.name}-${index}`}
-            style={{
-              width: itemWidth,
-              height: 70,
-              marginHorizontal: 8,
-              backgroundColor: C.bgCard,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexDirection: 'row',
-            }}
-          >
-            <Image
-              source={{ uri: `https://www.google.com/s2/favicons?domain=${company.domain}&sz=128` }}
-              style={{ width: 28, height: 28, marginRight: 10 }}
-              resizeMode="contain"
-            />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: C.textSub }}>{company.name}</Text>
-          </View>
-        ))}
-      </Animated.View>
-    </View>
-  );
-};
+        <Image
+          source={{ uri: `https://www.google.com/s2/favicons?domain=${company.domain}&sz=128` }}
+          style={{ width: 28, height: 28, marginRight: 10 }}
+          resizeMode="contain"
+        />
+        <Text style={{ fontSize: 13, fontWeight: '600', color: C.textSub }}>{company.name}</Text>
+      </View>
+    ))}
+  </ScrollView>
+);
 
 // ============================================
-// BENTO CARD - Modern grid card with animations
+// BENTO CARD - Static grid card
 // ============================================
-const BentoCard = ({ children, span = 1, height = 280, gradient, C, style, onPress }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: false }),
-      ])
-    ).start();
-  }, []);
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true, tension: 100 }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100 }).start();
-  };
-
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.5] });
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.95}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={onPress || (() => Linking.openURL(REFOPEN_URL))}
-      style={{ flex: span, minHeight: height, margin: 6, ...style }}
-    >
-      <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
-        {gradient ? (
-          <LinearGradient
-            colors={gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              flex: 1,
-              borderRadius: 24,
-              padding: 24,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              overflow: 'hidden',
-            }}
-          >
-            {children}
-          </LinearGradient>
-        ) : (
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 24,
-              padding: 24,
-              borderWidth: 1,
-              borderColor: C.border,
-              overflow: 'hidden',
-              ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)' } : {}),
-            }}
-          >
-            {/* Animated glow effect */}
-            <Animated.View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 200,
-                height: 200,
-                borderRadius: 100,
-                backgroundColor: C.glow,
-                opacity: glowOpacity,
-              }}
-            />
-            {children}
-          </View>
-        )}
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
+const BentoCard = ({ children, span = 1, height = 280, gradient, C, style, onPress }) => (
+  <TouchableOpacity
+    activeOpacity={0.9}
+    onPress={onPress || (() => Linking.openURL(REFOPEN_URL))}
+    style={{ flex: span, minHeight: height, margin: 6, ...style }}
+  >
+    {gradient ? (
+      <LinearGradient
+        colors={gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flex: 1, borderRadius: 24, padding: 24,
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden',
+        }}
+      >
+        {children}
+      </LinearGradient>
+    ) : (
+      <View
+        style={{
+          flex: 1, backgroundColor: C.bgCard, borderRadius: 24, padding: 24,
+          borderWidth: 1, borderColor: C.border, overflow: 'hidden',
+        }}
+      >
+        {children}
+      </View>
+    )}
+  </TouchableOpacity>
+);
 
 // ============================================
-// GLOWING BUTTON
+// SIMPLE GRADIENT BUTTON
 // ============================================
 const GlowButton = ({ title, icon, gradient, onPress, size = 'large' }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: false }),
-      ])
-    ).start();
-  }, []);
-
-  const glowScale = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] });
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0.7] });
-
   const isLarge = size === 'large';
-
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onPress}
-      onPressIn={() => Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true }).start()}
-      onPressOut={() => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start()}
-    >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        {/* Outer glow */}
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: -8,
-            left: -8,
-            right: -8,
-            bottom: -8,
-            borderRadius: isLarge ? 20 : 14,
-            backgroundColor: gradient[0],
-            opacity: glowOpacity,
-            transform: [{ scale: glowScale }],
-          }}
-        />
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: isLarge ? 32 : 20,
-            paddingVertical: isLarge ? 18 : 12,
-            borderRadius: isLarge ? 16 : 12,
-          }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: isLarge ? 16 : 14, marginRight: icon ? 8 : 0 }}>{title}</Text>
-          {icon && <Ionicons name={icon} size={isLarge ? 20 : 16} color="#fff" />}
-        </LinearGradient>
-      </Animated.View>
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
+      <LinearGradient
+        colors={gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+          paddingHorizontal: isLarge ? 32 : 20, paddingVertical: isLarge ? 18 : 12,
+          borderRadius: isLarge ? 16 : 12,
+        }}
+      >
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: isLarge ? 16 : 14, marginRight: icon ? 8 : 0 }}>{title}</Text>
+        {icon && <Ionicons name={icon} size={isLarge ? 20 : 16} color="#fff" />}
+      </LinearGradient>
     </TouchableOpacity>
   );
 };
 
 // ============================================
-// TESTIMONIAL CARD - Floating design
+// TESTIMONIAL CARD - Static
 // ============================================
 const TestimonialCard = ({ item, index, C }) => {
-  const floatAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, { toValue: -8, duration: 3000 + index * 500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(floatAnim, { toValue: 8, duration: 3000 + index * 500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
   const gradients = [
     ['#6366F1', '#8B5CF6'],
     ['#06B6D4', '#22D3EE'],
@@ -426,18 +234,13 @@ const TestimonialCard = ({ item, index, C }) => {
   ];
 
   return (
-    <Animated.View style={{ transform: [{ translateY: floatAnim }], marginHorizontal: 8, marginBottom: 16, width: 320 }}>
+    <View style={{ marginHorizontal: 8, marginBottom: 16, width: 320 }}>
       <View
         style={{
-          backgroundColor: C.bgCard,
-          borderRadius: 20,
-          padding: 24,
-          borderWidth: 1,
-          borderColor: C.border,
-          ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)' } : {}),
+          backgroundColor: C.bgCard, borderRadius: 20, padding: 24,
+          borderWidth: 1, borderColor: C.border,
         }}
       >
-        {/* Quote icon */}
         <View style={{ position: 'absolute', top: 16, right: 16, opacity: 0.1 }}>
           <Ionicons name="chatbubble-ellipses" size={40} color={C.text} />
         </View>
@@ -449,14 +252,7 @@ const TestimonialCard = ({ item, index, C }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <LinearGradient
             colors={gradients[index % gradients.length]}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 12,
-            }}
+            style={{ width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}
           >
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{item.avatar}</Text>
           </LinearGradient>
@@ -466,36 +262,20 @@ const TestimonialCard = ({ item, index, C }) => {
           </View>
         </View>
       </View>
-    </Animated.View>
-  );
-};
-
-// ============================================
-// STAT ITEM with animated underline
-// ============================================
-const StatItem = ({ value, label, color, C, isLg }) => {
-  const lineWidth = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(lineWidth, {
-      toValue: 1,
-      duration: 1000,
-      delay: 500,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, []);
-
-  const width = lineWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-
-  return (
-    <View style={{ alignItems: 'center', paddingHorizontal: isLg ? 32 : 16 }}>
-      <Text style={{ fontSize: isLg ? 56 : 36, fontWeight: '800', color, letterSpacing: -2 }}>{value}</Text>
-      <Animated.View style={{ height: 3, backgroundColor: color, borderRadius: 2, marginVertical: 8, width }} />
-      <Text style={{ fontSize: isLg ? 14 : 12, color: C.textSub, textAlign: 'center' }}>{label}</Text>
     </View>
   );
 };
+
+// ============================================
+// STAT ITEM - Static
+// ============================================
+const StatItem = ({ value, label, color, C, isLg }) => (
+  <View style={{ alignItems: 'center', paddingHorizontal: isLg ? 32 : 16 }}>
+    <Text style={{ fontSize: isLg ? 56 : 36, fontWeight: '800', color, letterSpacing: -2 }}>{value}</Text>
+    <View style={{ height: 3, backgroundColor: color, borderRadius: 2, marginVertical: 8, width: '100%' }} />
+    <Text style={{ fontSize: isLg ? 14 : 12, color: C.textSub, textAlign: 'center' }}>{label}</Text>
+  </View>
+);
 
 // ============================================
 // MAIN COMPONENT
@@ -505,7 +285,6 @@ export default function AboutScreenNew() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuth();
   const { isDesktop, isTablet, isMobile } = useResponsive();
-  const scrollRef = useRef(null);
 
   // Navigate to Main if logged in, Auth (Login) if logged out
   const goToApp = () => navigation.navigate(isAuthenticated ? 'Main' : 'Auth');
@@ -535,13 +314,6 @@ export default function AboutScreenNew() {
         colors={C.gradHero}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: SCREEN_HEIGHT * 1.2 }}
       />
-
-      {/* Floating orbs for depth */}
-      <FloatingOrb color="rgba(99,102,241,0.3)" size={400} initialX={-100} initialY={100} duration={10000} />
-      <FloatingOrb color="rgba(34,211,238,0.25)" size={300} initialX={SCREEN_WIDTH - 150} initialY={200} duration={12000} />
-      <FloatingOrb color="rgba(52,211,153,0.2)" size={250} initialX={SCREEN_WIDTH / 2 - 100} initialY={500} duration={9000} />
-      <FloatingOrb color="rgba(251,113,133,0.2)" size={200} initialX={50} initialY={800} duration={11000} />
-      <FloatingOrb color="rgba(167,139,250,0.25)" size={350} initialX={SCREEN_WIDTH - 200} initialY={1000} duration={13000} />
 
       {/* Header */}
       <View
@@ -581,7 +353,7 @@ export default function AboutScreenNew() {
         )}
       </View>
 
-      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
@@ -648,20 +420,11 @@ export default function AboutScreenNew() {
                 gradient={C.gradPrimary}
                 onPress={() => goToApp()}
               />
-              <TouchableOpacity onPress={() => goToApp()}>
-                <View
-                  style={{
-                    paddingHorizontal: 32,
-                    paddingVertical: 18,
-                    borderRadius: 16,
-                    borderWidth: 1.5,
-                    borderColor: C.borderGlow,
-                    backgroundColor: 'rgba(99,102,241,0.1)',
-                  }}
-                >
-                  <Text style={{ color: C.primaryBright, fontWeight: '700', fontSize: 16 }}>Get Referred →</Text>
-                </View>
-              </TouchableOpacity>
+              <GlowButton
+                title="Get Referred →"
+                gradient={C.gradAccent}
+                onPress={() => goToApp()}
+              />
             </View>
 
             {/* Trust indicators */}
