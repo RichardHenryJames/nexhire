@@ -124,7 +124,6 @@ const DEFAULT_TASKS = [
   { id: 'browse_jobs', label: 'Browse new jobs', icon: 'briefcase-outline', screen: 'Jobs' },
   { id: 'check_referrals', label: 'Check referral status', icon: 'people-outline', screen: 'MyReferralRequests' },
   { id: 'resume_check', label: 'Analyze your resume', icon: 'document-text-outline', screen: 'ResumeAnalyzer' },
-  { id: 'explore_companies', label: 'Explore a company', icon: 'business-outline', screen: 'Jobs' },
 ];
 
 
