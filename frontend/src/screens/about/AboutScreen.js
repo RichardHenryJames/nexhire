@@ -951,6 +951,47 @@ export default function AboutScreenNew() {
         </View>
 
         {/* ============================================ */}
+        {/* ZERO RISK GUARANTEE                         */}
+        {/* ============================================ */}
+        <View style={{ paddingVertical: 60, ...containerStyle }}>
+          <LinearGradient
+            colors={['rgba(52,211,153,0.12)', 'rgba(16,185,129,0.06)', 'rgba(52,211,153,0.02)']}
+            style={{
+              borderRadius: 28, padding: isLg ? 48 : 28,
+              borderWidth: 1.5, borderColor: 'rgba(52,211,153,0.25)', alignItems: 'center',
+            }}
+          >
+            <Ionicons name="shield-checkmark" size={48} color={C.emerald} style={{ marginBottom: 20 }} />
+            <Text style={{ fontSize: isLg ? 36 : 26, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1, marginBottom: 16 }}>
+              Zero Risk. We Mean It.
+            </Text>
+            <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', maxWidth: 520, lineHeight: 26, marginBottom: 32 }}>
+              We know you've been burned by "job platforms" before. That's why we built the hold system:
+            </Text>
+
+            <View style={{ flexDirection: isLg ? 'row' : 'column', gap: 16, width: '100%' }}>
+              {[
+                { icon: 'lock-closed', title: 'Money Held, Not Charged', desc: 'Your ₹49 is held — not taken. It\'s only charged when a referrer actually submits your referral.' },
+                { icon: 'refresh', title: 'Auto-Refund in 14 Days', desc: 'No referrer picks up your request? Full refund. Automatic. No forms, no emails, no begging.' },
+                { icon: 'close-circle', title: 'Cancel Anytime', desc: 'Changed your mind? Cancel within 1 hour for zero fee. Even after that, minimal cancellation charges.' },
+              ].map((item, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flex: 1, backgroundColor: 'rgba(52,211,153,0.08)', borderRadius: 20, padding: 24,
+                    borderWidth: 1, borderColor: 'rgba(52,211,153,0.15)', alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name={item.icon} size={32} color={C.emerald} style={{ marginBottom: 14 }} />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center', marginBottom: 8 }}>{item.title}</Text>
+                  <Text style={{ fontSize: 13, color: C.textSub, textAlign: 'center', lineHeight: 20 }}>{item.desc}</Text>
+                </View>
+              ))}
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* ============================================ */}
         {/* TESTIMONIALS */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 80 }}>

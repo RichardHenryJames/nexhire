@@ -29,6 +29,7 @@ import useResponsive from '../hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 import { showToast } from '../components/Toast';
 import ProfileSlider from '../components/ProfileSlider';
+import EngagementHub from '../components/engagement/EngagementHub';
 
 const { width } = Dimensions.get('window');
 
@@ -80,6 +81,9 @@ const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
 // 🎯 NEW: Social share claims to show/hide Earn Credits button
 const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState([]);
+
+// 🎯 NEW: Wallet balance for header badge
+const [walletBalance, setWalletBalance] = useState(null);
   
 const [dashboardData, setDashboardData] = useState({
   // Enhanced stats from backend
@@ -269,6 +273,18 @@ const [dashboardData, setDashboardData] = useState({
       }
     })();
 
+    // 🎯 NEW: Fetch wallet balance for header badge
+    const walletPromise = (async () => {
+      try {
+        const result = await refopenAPI.apiCall('/wallet');
+        if (result.success && result.data) {
+          setWalletBalance(result.data.Balance ?? result.data.balance ?? 0);
+        }
+      } catch (err) {
+        console.warn('Wallet balance fetch failed:', err);
+      }
+    })();
+
     // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
     let referrerRequestsPromise = Promise.resolve();
     if (isJobSeeker) {
@@ -300,7 +316,8 @@ const [dashboardData, setDashboardData] = useState({
       f500CompaniesPromise,
       referrerRequestsPromise,
       unreadCountPromise,
-      socialSharePromise
+      socialSharePromise,
+      walletPromise
     ]).catch(err => {
       console.error('Error in dashboard data fetch:', err);
     });
@@ -705,21 +722,33 @@ const [dashboardData, setDashboardData] = useState({
           )}
         </View>
         
-        {/* Right: Messages button with unread badge */}
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Messages')}
-          activeOpacity={0.7}
-          style={styles.messagesButton}
-        >
-          <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-          {unreadMessageCount > 0 && (
-            <View style={styles.messagesBadge}>
-              <Text style={styles.messagesBadgeText}>
-                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-              </Text>
-            </View>
+        {/* Right: Wallet + Messages buttons */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {walletBalance !== null && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Wallet')}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#10B981' + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginRight: 4 }}
+            >
+              <Ionicons name="wallet-outline" size={16} color="#10B981" />
+              <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '700', marginLeft: 3, fontFamily: typography.fontFamily }}>₹{walletBalance}</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Messages')}
+            activeOpacity={0.7}
+            style={styles.messagesButton}
+          >
+            <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+            {unreadMessageCount > 0 && (
+              <View style={styles.messagesBadge}>
+                <Text style={styles.messagesBadgeText}>
+                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       )}
 
@@ -866,6 +895,14 @@ const [dashboardData, setDashboardData] = useState({
             </>
           ) : (
             <>
+              {/* 🎯 Engagement Hub — Greeting, Streak, Profile Completion, Daily Checklist, Nudges */}
+              <EngagementHub
+                navigation={navigation}
+                dashboardStats={dashboardData.stats}
+                applications={dashboardData.recentApplications}
+                savedJobs={0}
+              />
+
               {/* 🎯 Get Referrals Card - Premium Design with F500 Logo Scroll */}
               <TouchableOpacity 
                 style={styles.premiumActionCard}
