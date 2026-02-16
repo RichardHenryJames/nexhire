@@ -453,7 +453,7 @@ export default function AboutScreenNew() {
     if (isAuthenticated) {
       navigation.navigate('Main', { screen: 'ServicesTab', params: { screen: 'ResumeAnalyzer' } });
     } else {
-      navigation.navigate('ResumeAnalyzerPublic');
+      navigation.navigate('ResumeAnalyzer');
     }
   };
 
