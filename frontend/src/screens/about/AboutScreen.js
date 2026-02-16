@@ -996,11 +996,11 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         <View style={{ paddingVertical: 80 }}>
           <View style={{ alignItems: 'center', marginBottom: 48, ...containerStyle }}>
-            <Text style={{ fontSize: isLg ? 44 : 32, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
-              Real Stories from Our Community
+            <Text style={{ fontSize: isLg ? 36 : 26, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
+              Real People. Real Results.
             </Text>
             <Text style={{ fontSize: 16, color: C.textSub, textAlign: 'center', marginTop: 12, maxWidth: 500 }}>
-              Job seekers, referrers, and hiring managers share their RefOpen experience
+              From people who were exactly where you are right now.
             </Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
