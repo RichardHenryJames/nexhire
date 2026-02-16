@@ -141,7 +141,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
   const [checklist, setChecklist] = useState([]);
   const [checklistCollapsed, setChecklistCollapsed] = useState(false);
   const [dismissedNudge, setDismissedNudge] = useState(null);
-  const [profileComplete, setProfileComplete] = useState({ percent: 0, missing: [] });
+  const [profileComplete, setProfileComplete] = useState(null); // null = still loading
 
   // ── Animations ─────────────────────────────────────────────
   const slideAnim = useRef(new Animated.Value(-20)).current;
@@ -159,6 +159,15 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  // Re-fetch profile completeness when user comes back to HomeScreen (e.g. from Settings)
+  useEffect(() => {
+    if (!navigation) return;
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchProfileCompleteness();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   // Fetch real profile completeness from backend
   const fetchProfileCompleteness = async () => {
@@ -245,7 +254,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
 
   // ── Smart nudge selection ──────────────────────────────────
   const getSmartNudge = useCallback(() => {
-    if (!user || !isJobSeeker) return null;
+    if (!user || !isJobSeeker || !profileComplete) return null;
 
     const { percent, missing } = profileComplete;
 
@@ -308,19 +317,57 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
   const firstName = user?.FirstName || 'there';
   const greeting = getGreeting();
 
-  // ── Fake activity pulse (deterministic per day, changes daily) ──
-  const fakePulse = useMemo(() => {
+  // ── Fake activity pulse (natural curve, refreshes every 2 min) ──
+  // Time-of-day multiplier for "active now": low at night, peaks 11am–3pm, dips evening
+  //   hr:  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23
+  const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1.0,.98,.95,.88,.78,.65,.50,.38,.28,.20,.14,.10];
+
+  // Cumulative activity weights for "referrals today" — running total that ONLY goes up
+  // Each hour's weight = how many referrals happen in that hour (proportional to activity)
+  // Sum at hour H = total referrals accumulated from 12am to H
+  const HOURLY_RATE = [.3,.2,.2,.1,.1,.2,.5,1.2,2.0,3.0,3.8,4.2,4.5,4.3,4.0,3.5,3.0,2.5,2.0,1.5,1.0,.7,.5,.4];
+  // Pre-compute cumulative sum: CUM[h] = sum of HOURLY_RATE[0..h-1]
+  const CUM = HOURLY_RATE.reduce((acc, v) => { acc.push((acc.length ? acc[acc.length - 1] : 0) + v); return acc; }, []);
+  const DAY_TOTAL = CUM[CUM.length - 1]; // ~42.7
+
+  const computePulse = useCallback(() => {
     const d = new Date();
-    const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-    const hash = (n) => Math.abs(Math.floor(Math.sin(seed * n) * 10000));
-    // Also add hour-based micro-variation so it feels more "live"
-    const hourBump = Math.floor(d.getHours() / 3); // changes every 3 hours
+    const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const hash = (n) => Math.abs(Math.floor(Math.sin(daySeed * n) * 10000));
+
+    const hr = d.getHours();
+    const min = d.getMinutes();
+
+    // ── Active now: uses instantaneous activity curve ──
+    const curMul = TOD[hr];
+    const nxtMul = TOD[(hr + 1) % 24];
+    const timeMul = curMul + (nxtMul - curMul) * (min / 60);
+
+    // Per-2-min jitter so it feels alive (±3 wobble)
+    const slot = Math.floor((hr * 60 + min) / 2);
+    const jitter = (Math.abs(Math.floor(Math.sin((daySeed + slot) * 7) * 100)) % 7) - 3;
+
+    const baseActive = 20 + (hash(1) % 30); // 20–49 daily base
+
+    // ── Referrals today: cumulative, always increasing ──
+    // Interpolate between CUM[hr] and CUM[hr+1] based on minutes
+    const cumNow = (hr > 0 ? CUM[hr - 1] : 0) + HOURLY_RATE[hr] * (min / 60);
+    const cumFraction = cumNow / DAY_TOTAL; // 0.0 at midnight → 1.0 at end of day
+    const dailyRefTarget = 25 + (hash(2) % 30); // 25–54 total referrals by end of day
+    const refNow = Math.max(1, Math.round(dailyRefTarget * cumFraction));
+
     return {
-      active: 30 + (hash(1) % 50) + (hourBump * 2),        // 30–90
-      referrals: 15 + (hash(2) % 35) + hourBump,            // 15–57
-      hired: 5 + (hash(3) % 15),                             // 5–19 (weekly, no hour bump)
+      active:    Math.max(5, Math.round(baseActive + 70 * timeMul + jitter)),  // ~5 at 3am, ~90 at 1pm
+      referrals: refNow,                                                        // ~1 at midnight → 25–54 by 11pm, always ↑
+      hired:     5 + (hash(3) % 15),                                            // 5–19, stable per day
     };
   }, []);
+
+  const [fakePulse, setFakePulse] = useState(computePulse);
+  useEffect(() => {
+    const interval = setInterval(() => setFakePulse(computePulse()), 2 * 60 * 1000); // refresh every 2 min
+    return () => clearInterval(interval);
+  }, [computePulse]);
 
   if (!user || !isJobSeeker) return null;
 
@@ -353,8 +400,8 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
         </Text>
       </View>
 
-      {/* ─── 3. PROFILE COMPLETION (only if < 100%) ───────── */}
-      {profileComplete.percent < 100 && (
+      {/* ─── 3. PROFILE COMPLETION (only if loaded & < 100%) ── */}
+      {profileComplete && profileComplete.percent < 100 && (
         <TouchableOpacity
           style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => navigation.navigate('Settings')}
