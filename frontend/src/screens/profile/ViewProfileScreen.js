@@ -332,6 +332,9 @@ export default function ViewProfileScreen() {
           showStats={false}
           showProgress={false}
           isVerifiedUser={profile?.IsVerifiedUser || profile?.IsVerifiedReferrer}
+          isVerifiedReferrer={profile?.IsVerifiedReferrer}
+          currentWorkLogo={profile?.workExperiences?.find(w => w.IsCurrent)?.OrganizationLogo}
+          currentWorkCompany={profile?.CurrentCompanyName}
           loadingVerificationStatus={loading}
         />
 
