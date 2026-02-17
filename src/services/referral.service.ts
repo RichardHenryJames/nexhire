@@ -635,8 +635,13 @@ export class ReferralService {
                 )
             `;
             
-            // Get applicant name for history
-            const applicantQuery = `SELECT FirstName, LastName FROM Users WHERE UserID = @param0`;
+            // Get applicant name for history (applicantId is ApplicantID, need to join to Users)
+            const applicantQuery = `
+                SELECT u.FirstName, u.LastName 
+                FROM Users u 
+                JOIN Applicants a ON a.UserID = u.UserID 
+                WHERE a.ApplicantID = @param0
+            `;
             const applicantResult = await dbService.executeQuery(applicantQuery, [applicantId]);
             const applicantName = applicantResult.recordset?.[0] 
                 ? `${applicantResult.recordset[0].FirstName} ${applicantResult.recordset[0].LastName}`
