@@ -265,7 +265,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
         color: '#8B5CF6',
         title: 'Add a profile photo',
         subtitle: 'Profiles with photos get 5x more referral responses',
-        action: () => navigation.navigate('Settings'),
+        action: () => navigation.navigate('Profile'),
         actionLabel: 'Add Photo',
       };
     }

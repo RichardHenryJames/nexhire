@@ -418,21 +418,21 @@ export default function ProfileScreen({ navigation, route }) {
       {/* Sticky Header */}
       <View style={styles.stickyHeader}>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.7}
-          style={styles.headerIconButton}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Profile</Text>
-
-        <TouchableOpacity
           onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] }))}
           activeOpacity={0.7}
           style={styles.headerIconButton}
         >
           <Ionicons name="close" size={24} color={colors.text || '#000'} />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Profile</Text>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Settings')}
+          activeOpacity={0.7}
+          style={styles.headerIconButton}
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
         </TouchableOpacity>
       </View>
 
