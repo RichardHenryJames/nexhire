@@ -362,7 +362,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const OrgPickerButton = () => {
     return (
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Company</Text>
+        <Text style={styles.inputLabel}>Company <Text style={{ color: '#EF4444' }}>*</Text></Text>
         <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
           {formData.currentCompany ? (
             <View style={styles.companySelectorContent}>

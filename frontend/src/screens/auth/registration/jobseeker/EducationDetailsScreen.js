@@ -618,7 +618,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               value={getCollegeDisplayText()}
               placeholder="Search and select your institution"
               onPress={() => openModal('college')}
-              required={true}
+              required={false}
             />
 
             <SelectionButton
@@ -662,7 +662,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             {/* Enhanced: Graduation Year and GPA fields for BOTH Students and Experienced */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
-                Graduation Year {experienceType === 'Student' && <Text style={styles.required}>*</Text>}
+                Graduation Year <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.textInput}
