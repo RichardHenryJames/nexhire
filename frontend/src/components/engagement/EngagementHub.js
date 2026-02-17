@@ -573,7 +573,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
 const createStyles = (colors) => StyleSheet.create({
   container: {
     paddingTop: 8,
-    paddingBottom: 4,
+    paddingBottom: 12,
     gap: 12,
   },
 
