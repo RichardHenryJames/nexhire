@@ -46,7 +46,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Industry as industry,
                     IsFortune500 as isFortune500
                 FROM Organizations WITH (INDEX(IX_Organizations_IsFortune500))
-                WHERE IsActive = 1 AND IsFortune500 = 1
+                WHERE IsActive = 1 AND IsFortune500 = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY Name ASC
             `;
         } else if (hasSearch) {
@@ -59,7 +59,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Industry as industry,
                     IsFortune500 as isFortune500
                 FROM Organizations
-                WHERE IsActive = 1 AND Name LIKE @param${paramIndex}
+                WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL) AND Name LIKE @param${paramIndex}
             `;
             queryParams.push(`%${searchParam}%`);
             paramIndex++;
@@ -78,7 +78,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Industry as industry,
                     IsFortune500 as isFortune500
                 FROM Organizations
-                WHERE IsActive = 1
+                WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY IsFortune500 DESC, Name ASC
             `;
         }

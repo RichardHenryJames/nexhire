@@ -354,10 +354,10 @@ export class WorkExperienceService {
     if (result.recordset && result.recordset.length > 0) {
       return result.recordset[0].OrganizationID;
     }
-    // Create minimal organization row (uses IDENTITY int key)
+    // Create minimal organization row (uses IDENTITY int key) - marked as user-created
     const insertQuery = `
-            INSERT INTO Organizations (Name, CreatedAt, UpdatedAt, IsActive)
-            VALUES (@param0, GETUTCDATE(), GETUTCDATE(), 1);
+            INSERT INTO Organizations (Name, IsUserCreated, CreatedAt, UpdatedAt, IsActive)
+            VALUES (@param0, 1, GETUTCDATE(), GETUTCDATE(), 1);
             SELECT SCOPE_IDENTITY() AS OrganizationID;
         `;
     result = await dbService.executeQuery(insertQuery, [name]);
