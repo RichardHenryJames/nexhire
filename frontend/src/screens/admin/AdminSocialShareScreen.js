@@ -21,9 +21,7 @@ export default function AdminSocialShareScreen() {
   const responsive = useResponsive();
 
   const goToActionCenter = () => {
-    const state = navigation.getState();
-    if (state?.routes?.length > 1) navigation.goBack();
-    else navigation.navigate('Main', { screen: 'ActionCenter' });
+    navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
   };
 
   const [loading, setLoading] = useState(true);

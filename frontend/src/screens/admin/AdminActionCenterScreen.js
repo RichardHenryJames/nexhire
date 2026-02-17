@@ -59,13 +59,13 @@ export default function AdminActionCenterScreen() {
 
   const actions = [
     {
-      key: 'verifications',
-      title: 'Verifications',
-      desc: 'Approve Aadhaar, college email submissions',
-      icon: 'shield-checkmark-outline',
-      color: '#8B5CF6',
-      screen: 'AdminVerifications',
-      badge: counts.verifications,
+      key: 'support',
+      title: 'Support Tickets',
+      desc: 'Reply to users, resolve issues',
+      icon: 'chatbubbles-outline',
+      color: '#F59E0B',
+      screen: 'AdminSupport',
+      badge: counts.support,
     },
     {
       key: 'payments',
@@ -86,13 +86,13 @@ export default function AdminActionCenterScreen() {
       badge: counts.socialShare,
     },
     {
-      key: 'support',
-      title: 'Support Tickets',
-      desc: 'Reply to users, resolve issues',
-      icon: 'chatbubbles-outline',
-      color: '#F59E0B',
-      screen: 'AdminSupport',
-      badge: counts.support,
+      key: 'verifications',
+      title: 'Verifications',
+      desc: 'Approve Aadhaar, college email submissions',
+      icon: 'shield-checkmark-outline',
+      color: '#8B5CF6',
+      screen: 'AdminVerifications',
+      badge: counts.verifications,
     },
   ];
 
