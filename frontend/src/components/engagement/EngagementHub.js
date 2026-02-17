@@ -358,7 +358,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
     return {
       active:    Math.max(5, Math.round(baseActive + 70 * timeMul + jitter)),  // ~5 at 3am, ~90 at 1pm
       referrals: refNow,                                                        // ~1 at midnight → 25–54 by 11pm, always ↑
-      hired:     5 + (hash(3) % 15),                                            // 5–19, stable per day
+      resumesAnalyzed: Math.max(3, Math.round((150 + (hash(3) % 100)) * cumFraction)), // ~3 at midnight → 150–249 by end of day, always ↑
     };
   }, []);
 
@@ -395,7 +395,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
         <Text style={[styles.pulseText, { color: colors.gray600 }]}>
           <Text style={{ fontWeight: '700', color: '#10B981' }}>{fakePulse.active}</Text> active now{'  '}·{'  '}
           <Text style={{ fontWeight: '700', color: colors.primary }}>{fakePulse.referrals}</Text> referrals today{'  '}·{'  '}
-          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>{fakePulse.hired}</Text> hired this week
+          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>{fakePulse.resumesAnalyzed}</Text> resumes analyzed today
         </Text>
       </View>
 
