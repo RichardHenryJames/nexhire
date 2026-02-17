@@ -15,18 +15,15 @@ const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platfo
 
 // Welcome message template for new users (Job Seekers only) - single concise message
 const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
-Welcome to **RefOpen** — we're glad you're here!
+So glad you're here — welcome to **RefOpen!** 🎉
 
-🚀 **How it works:**
-Browse 125K+ jobs, tap "Ask Referral" — your request goes to **ALL** verified employees at that company. No awkward DMs!
+🚀 **125K+ Jobs** — Browse & apply directly. Want an edge? Tap "Ask Referral" → your request reaches **ALL** verified employees at that company.
 
-🤔 **Not sure which company?**
-No worries! Just check "Open to any company" while asking a referral — we'll broadcast your request to referrers across multiple companies matching your role.
+🤔 **Not sure which company?** Check "Open to any company" — we'll match you with referrers across companies.
 
-💼 **Already employed?**
-Verify your work email to earn cash for every referral you submit + get priority on your own requests.
+🛠️ **Career Tools** — Try our AI Resume Analyzer, Cover Letter AI, Interview Prep & more.
 
-🎯 **Quick tip:** Complete your profile & upload your resume — referrers check before accepting.
+💼 **Already working?** Verify your work email → earn cash for referrals + get priority.
 
 **Follow us:**
 ![LinkedIn](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen)

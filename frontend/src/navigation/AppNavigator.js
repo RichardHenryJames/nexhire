@@ -209,8 +209,8 @@ const linking = {
                   tab: (tab) => tab === 'overview' ? '' : tab,
                 },
               },
-              AdminPayments: "AdminPayments",
-              AdminSupport: "AdminSupport",
+              AdminPayments: "admin-payments",
+              AdminSupport: "admin-support",
               ActionCenter: "action-center",
               Services: "services",
             },
@@ -268,6 +268,12 @@ const linking = {
           ShareEarn: "share-earn",
           // Social Share Submit screen with platform parameter
           SocialShareSubmit: "SocialShareSubmit",
+
+          // Admin Action Center sub-screens (stack screens, not tabs)
+          AdminVerifications: "admin-verifications",
+          AdminSocialShare: "admin-social-share",
+          AdminPayments: "admin-payments",
+          AdminSupport: "admin-support",
 
         },
       },
