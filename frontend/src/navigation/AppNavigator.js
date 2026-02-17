@@ -209,8 +209,6 @@ const linking = {
                   tab: (tab) => tab === 'overview' ? '' : tab,
                 },
               },
-              AdminPayments: "admin-payments",
-              AdminSupport: "admin-support",
               ActionCenter: "action-center",
               Services: "services",
             },
