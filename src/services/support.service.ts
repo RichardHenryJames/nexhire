@@ -403,17 +403,17 @@ export class SupportService {
         
         ticketsQuery += `
             ORDER BY 
-                CASE st.Priority 
-                    WHEN 'Urgent' THEN 1 
-                    WHEN 'High' THEN 2 
-                    WHEN 'Medium' THEN 3 
-                    WHEN 'Low' THEN 4 
-                END,
                 CASE st.Status 
                     WHEN 'Open' THEN 1 
                     WHEN 'InProgress' THEN 2 
                     WHEN 'Resolved' THEN 3 
                     WHEN 'Closed' THEN 4 
+                END,
+                CASE st.Priority 
+                    WHEN 'Urgent' THEN 1 
+                    WHEN 'High' THEN 2 
+                    WHEN 'Medium' THEN 3 
+                    WHEN 'Low' THEN 4 
                 END,
                 st.CreatedAt DESC
             OFFSET @param${ticketParamIndex} ROWS FETCH NEXT @param${ticketParamIndex + 1} ROWS ONLY
