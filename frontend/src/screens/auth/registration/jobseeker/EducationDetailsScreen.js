@@ -332,13 +332,11 @@ export default function EducationDetailsScreen({ navigation, route }) {
   })();
 
   const isGraduationYearValid = (() => {
-    if (experienceType !== 'Student') return true;
     const year = String(formData.graduationYear || '').trim();
     return /^\d{4}$/.test(year);
   })();
 
   const isContinueEnabled = Boolean(
-    isCollegeProvided &&
       formData.degreeTypeKey &&
       formData.degreeType &&
       formData.fieldOfStudy &&
