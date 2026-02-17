@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { frontendConfig } from '../../../../config/appConfig';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
@@ -398,8 +399,8 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         ...(formData.location && { location: formData.location.trim() }),
         ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
         termsAccepted: true, // User has accepted T&C checkbox
-        termsVersion: 'v1.0',
-        privacyPolicyVersion: 'v1.0',
+        termsVersion: frontendConfig.legal.termsVersion,
+        privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
         
         // Include all the collected data for profile completion
         experienceType,

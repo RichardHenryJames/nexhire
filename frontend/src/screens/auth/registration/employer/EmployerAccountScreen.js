@@ -18,6 +18,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { frontendConfig } from '../../../../config/appConfig';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
 
@@ -124,8 +125,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
           ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           termsAccepted: true,
-          termsVersion: 'v1.0',
-          privacyPolicyVersion: 'v1.0',
+          termsVersion: frontendConfig.legal.termsVersion,
+          privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
           
           // Add Google OAuth data
           googleAuth: {
@@ -202,8 +203,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...(dateOfBirth && { dateOfBirth }),
           ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
           termsAccepted: true,
-          termsVersion: 'v1.0',
-          privacyPolicyVersion: 'v1.0',
+          termsVersion: frontendConfig.legal.termsVersion,
+          privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
           ...organizationPayload,
         };
 
