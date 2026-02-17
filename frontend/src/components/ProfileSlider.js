@@ -194,8 +194,8 @@ export default function ProfileSlider({ visible, onClose }) {
           onPress: () => navigateTo('Settings'),
         },
         {
-          icon: 'mail-outline',
-          label: 'Contact Us',
+          icon: 'help-circle-outline',
+          label: 'Help & Support',
           onPress: () => navigateTo('Support'),
         },
       ],

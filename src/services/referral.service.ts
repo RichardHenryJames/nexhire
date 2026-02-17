@@ -758,17 +758,13 @@ export class ReferralService {
                         ? `${referrerResult.recordset[0].FirstName} ${referrerResult.recordset[0].LastName}`
                         : 'Referrer';
 
-                    const ticketSubject = `Referral Dispute: ${applicantName} unverified referral by ${referrerName}`;
-                    const ticketMessage = `Seeker "${applicantName}" has marked a referral as unverified.\n\n` +
+                    const ticketSubject = `Referral Dispute: ${jobInfo?.JobTitle || 'Job'} at ${jobInfo?.CompanyName || 'Company'}`;
+                    const ticketMessage = `A referral has been marked as unverified.\n\n` +
                         `📋 Details:\n` +
                         `• Referral Request ID: ${dto.requestID}\n` +
-                        `• Job: ${jobInfo?.JobTitle || 'N/A'} at ${jobInfo?.CompanyName || 'N/A'}\n` +
-                        `• Referrer: ${referrerName}\n` +
-                        `• Seeker: ${applicantName}\n\n` +
-                        `⚠️ Action Required:\n` +
-                        `Please review the referral proof and verify within 2 working days.\n` +
-                        `If the unverification is valid, process a refund to the seeker.\n` +
-                        `If invalid, change status back to Completed/Verified.`;
+                        `• Job: ${jobInfo?.JobTitle || 'N/A'} at ${jobInfo?.CompanyName || 'N/A'}\n\n` +
+                        `Our team will review the referral proof and respond within 2 working days. ` +
+                        `If the dispute is valid, you will receive a full refund to your wallet.`;
 
                     // Use seeker's UserID to create the ticket
                     const seekerUserQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
