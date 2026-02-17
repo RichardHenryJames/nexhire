@@ -796,9 +796,7 @@ function MainStack() {
           headerBackTitleVisible: false,
           headerLeft: () => (
             <TouchableOpacity onPress={() => {
-              const state = nav.getState();
-              if (state?.routes?.length > 1) nav.goBack();
-              else nav.navigate('Main', { screen: 'ActionCenter' });
+              nav.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
             }} style={{ paddingHorizontal: 12 }}>
               <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
             </TouchableOpacity>
@@ -814,9 +812,7 @@ function MainStack() {
           headerBackTitleVisible: false,
           headerLeft: () => (
             <TouchableOpacity onPress={() => {
-              const state = nav.getState();
-              if (state?.routes?.length > 1) nav.goBack();
-              else nav.navigate('Main', { screen: 'ActionCenter' });
+              nav.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
             }} style={{ paddingHorizontal: 12 }}>
               <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
             </TouchableOpacity>
