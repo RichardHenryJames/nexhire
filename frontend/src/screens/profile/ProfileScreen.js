@@ -422,7 +422,7 @@ export default function ProfileScreen({ navigation, route }) {
           activeOpacity={0.7}
           style={styles.headerIconButton}
         >
-          <Ionicons name="close" size={24} color={colors.text || '#000'} />
+          <Ionicons name="arrow-back" size={24} color={colors.text || '#000'} />
         </TouchableOpacity>
 
         <Text style={styles.title}>Profile</Text>
