@@ -29,7 +29,7 @@ export interface ReferralRequest {
     JobID: string; // Required - can be internal GUID or external job identifier
     ApplicantID: string;
     ResumeID: string;
-    Status: 'Pending' | 'Completed' | 'Verified';
+    Status: 'Pending' | 'Completed' | 'Verified' | 'Unverified' | 'Refunded';
     RequestedAt: Date;
     AssignedReferrerID?: string;
     ReferredAt?: Date;

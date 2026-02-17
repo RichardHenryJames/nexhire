@@ -201,6 +201,7 @@ import {
   addMessage,
   getMessages,
   closeTicket,
+  refundReferral,
 } from "./src/controllers/support.controller";
 
 // Import social share controller
@@ -1679,6 +1680,14 @@ app.http("support-close-ticket", {
   authLevel: "anonymous",
   route: "support/tickets/{ticketId}/close",
   handler: withErrorHandling(closeTicket),
+});
+
+// Admin: Refund seeker for unverified referral dispute
+app.http("support-referral-refund", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/referral-refund",
+  handler: withErrorHandling(refundReferral),
 });
 
 // ========================================================================

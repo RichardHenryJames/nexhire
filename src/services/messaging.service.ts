@@ -13,63 +13,28 @@ const REFOPEN_ADMIN_EMAIL = "admin@refopen.com";
 const ADMIN_NOTIFICATION_EMAIL = "parimalkumar261@gmail.com";
 const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platform Admin UserID
 
-// Welcome message templates for new users (Job Seekers only) - sent as two messages
-const getWelcomeMessages = (firstName: string): { message1: string; message2: string } => ({
-  message1: `Hey ${firstName}! 👋
+// Welcome message template for new users (Job Seekers only) - single concise message
+const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
+Welcome to RefOpen — we're glad you're here!
 
-Welcome to RefOpen — we're so glad you're here!
+🚀 How it works:
+Browse 125K+ jobs, tap "Ask Referral" — your request goes to ALL verified employees at that company. No awkward DMs!
 
-Job hunting can be exhausting — sending countless applications into the void, awkwardly DMing strangers on LinkedIn for referrals. We've all been there. That's exactly why we built RefOpen. 🚀
+🤔 Not sure which company?
+No worries! Just check "Open to any company" while asking a referral — we'll broadcast your request to referrers across multiple companies matching your role.
 
-✨ **How RefOpen Works:**
+💼 Already employed?
+Verify your work email to earn cash for every referral you submit + get priority on your own requests.
 
-1️⃣ **Browse Jobs** — Explore 125,000+ jobs from top companies
-👉 [Browse Jobs](https://www.refopen.com/jobs)
+🎯 Quick tip: Complete your profile & upload your resume — referrers check before accepting.
 
-2️⃣ **Ask Referral** — Tap "Ask Referral" on any job, and your request is instantly sent to ALL verified employees at that company. No hunting for connections, no awkward DMs!
+Follow us:
+LinkedIn — linkedin.com/company/refopen
+Instagram — instagram.com/refopensolutions
+X — x.com/refopensolution
 
-3️⃣ **Track Everything** — See real-time updates on all your referral requests
-👉 [Track My Requests](https://www.refopen.com/referrals/my-requests)
-
-🔗 **Found a job elsewhere?**
-No problem! Use the Ask Referral tab to request referrals for ANY job — even ones not on RefOpen. Just paste the job URL!
-👉 [Ask Referral](https://www.refopen.com/ask-referral)
-
-🎯 **Quick tips to get started:**
-• Complete your profile — referrers check profiles before accepting
-• Upload your resume — makes their job easier
-• Write a genuine message — authenticity wins!
-
-📝 [Complete your profile here](https://www.refopen.com/profile)`,
-
-  message2: `💼 **Already employed?**
-
-Become a **Verified Member** — get referrals faster AND earn cash rewards!
-
-✅ Priority referrals — Verified members get noticed first
-✅ Earn cash — Get paid for every refer you submit
-✅ Spend or withdraw — Use earnings for referrals or cash out to bank/UPI
-✅ Verified badge — Stand out with a trusted profile
-
-🔧 [Verify your work email](https://www.refopen.com/settings)
-
-📚 **Helpful Links:**
-• [Browse Jobs](https://www.refopen.com/jobs)
-• [Ask Referral](https://www.refopen.com/ask-referral)
-• [Your Profile](https://www.refopen.com/profile)
-• [Learn More](https://www.refopen.com/about)
-• [Need Help](https://www.refopen.com/support)
-
-🌐 **Follow Us:**
-![LinkedIn](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen)
-![Instagram](https://www.google.com/s2/favicons?domain=instagram.com&sz=32) [Instagram](https://www.instagram.com/refopensolutions)
-![X](https://www.google.com/s2/favicons?domain=x.com&sz=32) [X (Twitter)](https://x.com/refopensolution)
-
-Got questions? Just reply here — we're real humans and happy to help! 😊
-
-Best of luck on your journey! 🚀
-— Team RefOpen 💜`
-});
+Questions? Just reply here — we're real humans! 😊
+— Team RefOpen 💜`;
 
 interface CreateConversationParams {
   user1Id: string;
@@ -991,11 +956,11 @@ SELECT COUNT(*) as Total
   /**
    * Send welcome message from Platform Admin to new user
    * Called during user registration - skips email notification
-   * Sends two separate messages for better readability
+   * Sends a single concise welcome message
    */
   static async sendWelcomeMessageToNewUser(newUserId: string, firstName: string): Promise<void> {
     try {
-      console.log(`📨 Sending welcome messages to new user: ${newUserId}`);
+      console.log(`📨 Sending welcome message to new user: ${newUserId}`);
       
       // Get or create conversation between admin and new user
       const conversation = await this.getOrCreateConversation({
@@ -1008,15 +973,14 @@ SELECT COUNT(*) as Total
         return;
       }
       
-      // Generate personalized welcome messages (two parts)
-      const welcomeMessages = getWelcomeMessages(firstName || 'there');
+      // Generate personalized welcome message
+      const welcomeMessage = getWelcomeMessage(firstName || 'there');
       
-      // Insert first message
-      const preview1 = welcomeMessages.message1.length > 200 
-        ? welcomeMessages.message1.substring(0, 197) + "..." 
-        : welcomeMessages.message1;
+      const preview = welcomeMessage.length > 200 
+        ? welcomeMessage.substring(0, 197) + "..." 
+        : welcomeMessage;
       
-      const insertQuery1 = `
+      const insertQuery = `
         INSERT INTO Messages (
           ConversationID, 
           SenderUserID, 
@@ -1035,61 +999,27 @@ SELECT COUNT(*) as Total
         WHERE ConversationID = @param0;
       `;
       
-      await dbService.executeQuery(insertQuery1, [
+      await dbService.executeQuery(insertQuery, [
         conversation.ConversationID,
         PLATFORM_ADMIN_USER_ID,
-        welcomeMessages.message1,
-        preview1
-      ]);
-      
-      // Delay between messages to ensure proper ordering (message 1 before message 2)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Insert second message (with explicit later timestamp)
-      const preview2 = welcomeMessages.message2.length > 200 
-        ? welcomeMessages.message2.substring(0, 197) + "..." 
-        : welcomeMessages.message2;
-      
-      const insertQuery2 = `
-        INSERT INTO Messages (
-          ConversationID, 
-          SenderUserID, 
-          Content, 
-          MessageType,
-          CreatedAt
-        )
-        VALUES (@param0, @param1, @param2, 'Text', GETUTCDATE());
-        
-        UPDATE Conversations
-        SET 
-          LastMessageAt = GETUTCDATE(),
-          LastMessagePreview = @param3,
-          LastMessageSenderID = @param1,
-          UpdatedAt = GETUTCDATE()
-        WHERE ConversationID = @param0;
-      `;
-      
-      await dbService.executeQuery(insertQuery2, [
-        conversation.ConversationID,
-        PLATFORM_ADMIN_USER_ID,
-        welcomeMessages.message2,
-        preview2
+        welcomeMessage,
+        preview
       ]);
 
-      // 🔔 In-app notification for welcome messages
+      // 🔔 In-app notification for welcome message
       try {
         const { InAppNotificationService } = await import('./inAppNotification.service');
         await InAppNotificationService.notifyNewMessage(
           newUserId,
           'RefOpen Support',
-          preview2,
+          preview,
           conversation.ConversationID
         );
       } catch (notifErr: any) {
         console.error('Welcome notification error (non-critical):', notifErr.message);
       }
       
-      console.log(`✅ Welcome messages sent to user ${newUserId}`);
+      console.log(`✅ Welcome message sent to user ${newUserId}`);
     } catch (error: any) {
       // Don't fail registration if welcome message fails
       console.error('Error sending welcome message (non-critical):', error.message);

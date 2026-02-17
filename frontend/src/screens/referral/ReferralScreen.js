@@ -84,7 +84,7 @@ export default function ReferralScreen({ navigation }) {
   // Define which statuses belong to which tab
   // Expired shows in Open tab with "Expired" badge so referrers can see what happened
   const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed', 'Expired'];
-  const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified', 'Unverified'];
+  const CLOSED_STATUSES = ['ProofUploaded', 'Completed', 'Verified', 'Unverified', 'Refunded'];
 
   // Load user's current verified company from work experiences
   // Use cached currentWork from AuthContext for instant display, then refresh in background
@@ -575,6 +575,13 @@ export default function ReferralScreen({ navigation }) {
           {request.Status === 'Verified' && (
             <View style={styles.verifiedBadgeCorner}>
               <Ionicons name="trophy" size={14} color="#F59E0B" />
+            </View>
+          )}
+
+          {/* Unverified Badge */}
+          {request.Status === 'Unverified' && (
+            <View style={[styles.verifiedBadgeCorner, { backgroundColor: '#EF444415', borderRadius: 8, padding: 4 }]}>
+              <Ionicons name="alert-circle" size={14} color="#EF4444" />
             </View>
           )}
         </View>

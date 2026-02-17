@@ -5,6 +5,8 @@
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { SupportService } from '../services/support.service';
+import { WalletService } from '../services/wallet.service';
+import { dbService } from '../services/database.service';
 import { 
     withErrorHandling, 
     authenticate,
@@ -439,6 +441,140 @@ export const closeTicket = withAuth(async (
                 success: false, 
                 error: error?.message || 'Failed to close ticket',
                 errorCode: error?.name || 'Error' 
+            }
+        };
+    }
+});
+
+/**
+ * Admin: Refund seeker for an unverified referral dispute
+ * POST /support/referral-refund
+ * Body: { requestId: string }
+ */
+export const refundReferral = withAuth(async (
+    req: HttpRequest,
+    context: InvocationContext,
+    user
+): Promise<HttpResponseInit> => {
+    try {
+        // Admin only
+        const adminCheck = verifyAdmin(user);
+        if (adminCheck) return adminCheck;
+
+        const body = await extractRequestBody(req);
+        const { requestId } = body;
+
+        if (!requestId) {
+            throw new ValidationError('requestId is required');
+        }
+
+        // Get referral request details
+        const reqQuery = `
+            SELECT rr.RequestID, rr.Status, rr.ApplicantID, rr.AssignedReferrerID,
+                   rr.OrganizationID, rr.JobTitle,
+                   o.Name as CompanyName
+            FROM ReferralRequests rr
+            LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
+            WHERE rr.RequestID = @param0
+        `;
+        const reqResult = await dbService.executeQuery(reqQuery, [requestId]);
+
+        if (!reqResult.recordset?.length) {
+            throw new NotFoundError('Referral request not found');
+        }
+
+        const referral = reqResult.recordset[0];
+
+        if (referral.Status !== 'Unverified') {
+            throw new ValidationError(`Cannot refund: referral status is "${referral.Status}", expected "Unverified"`);
+        }
+
+        // Get seeker's UserID from ApplicantID
+        const seekerQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
+        const seekerResult = await dbService.executeQuery(seekerQuery, [referral.ApplicantID]);
+        const seekerUserId = seekerResult.recordset?.[0]?.UserID;
+
+        if (!seekerUserId) {
+            throw new NotFoundError('Seeker user not found');
+        }
+
+        // Find how much was charged — check WalletHolds or WalletTransactions for this request
+        let refundAmount = 0;
+
+        // First check converted hold
+        const holdQuery = `
+            SELECT Amount FROM WalletHolds 
+            WHERE ReferralRequestID = @param0 AND Status = 'Converted'
+        `;
+        const holdResult = await dbService.executeQuery(holdQuery, [requestId]);
+        
+        if (holdResult.recordset?.length) {
+            refundAmount = holdResult.recordset[0].Amount;
+        } else {
+            // Fallback: check debit transaction
+            const txnQuery = `
+                SELECT t.Amount FROM WalletTransactions t
+                JOIN Wallets w ON t.WalletID = w.WalletID
+                WHERE w.UserID = @param0 
+                AND t.TransactionType = 'Debit'
+                AND t.Source = 'Referral_Request'
+                AND t.Description LIKE '%' + @param1 + '%'
+                ORDER BY t.CreatedAt DESC
+            `;
+            const txnResult = await dbService.executeQuery(txnQuery, [seekerUserId, requestId.substring(0, 8)]);
+            if (txnResult.recordset?.length) {
+                refundAmount = txnResult.recordset[0].Amount;
+            }
+        }
+
+        if (refundAmount <= 0) {
+            // Use default pricing as fallback
+            refundAmount = 49; // Default referral cost
+        }
+
+        // Credit refund to seeker's wallet
+        const refundResult = await WalletService.creditBonus(
+            seekerUserId,
+            refundAmount,
+            'ADMIN_BONUS',
+            `Refund for unverified referral (${referral.JobTitle || 'Job'} at ${referral.CompanyName || 'Company'}) - Request #${requestId.substring(0, 8)}`
+        );
+
+        // Update referral status to 'Refunded'
+        await dbService.executeQuery(
+            `UPDATE ReferralRequests SET Status = 'Refunded' WHERE RequestID = @param0`,
+            [requestId]
+        );
+
+        // Get seeker name for response
+        const seekerNameQuery = `SELECT FirstName, LastName FROM Users WHERE UserID = @param0`;
+        const seekerNameResult = await dbService.executeQuery(seekerNameQuery, [seekerUserId]);
+        const seekerName = seekerNameResult.recordset?.[0]
+            ? `${seekerNameResult.recordset[0].FirstName} ${seekerNameResult.recordset[0].LastName}`
+            : 'Seeker';
+
+        context.log(`✅ Refunded ₹${refundAmount} to ${seekerName} for referral ${requestId}`);
+
+        return {
+            status: 200,
+            jsonBody: successResponse({
+                refundAmount,
+                seekerName,
+                newBalance: refundResult.newBalance,
+                transactionId: refundResult.transactionId,
+            }, `₹${refundAmount} refunded to ${seekerName}'s wallet`)
+        };
+    } catch (error: any) {
+        context.error('Refund referral error:', error);
+        const status = error instanceof NotFoundError ? 404 :
+                      error instanceof AuthorizationError ? 403 :
+                      error instanceof ValidationError ? 400 : 500;
+        return {
+            status,
+            jsonBody: {
+                success: false,
+                error: error?.message || 'Failed to process refund',
+                errorCode: error?.name || 'Error'
             }
         };
     }
