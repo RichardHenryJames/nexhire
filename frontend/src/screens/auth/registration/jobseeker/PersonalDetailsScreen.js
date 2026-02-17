@@ -261,8 +261,15 @@ export default function PersonalDetailsScreen({ navigation, route }) {
 
   // Validation functions
   const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // Validates: user@domain.tld where TLD is 2-6 letters
+    // Also supports subdomains like user@mail.domain.com
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(email)) return false;
+    // Reject common typos: .comm .conn .coom .orgg etc.
+    const tld = email.split('.').pop().toLowerCase();
+    const validTLDs = ['com','org','net','edu','gov','io','in','co','uk','us','info','biz','dev','app','ai','me','xyz','tech','online','site','ac','mil'];
+    // Allow any 2-3 letter TLD (country codes) + known longer TLDs
+    return tld.length <= 3 || validTLDs.includes(tld);
   };
 
   const validatePassword = (password) => {

@@ -348,7 +348,7 @@ export default function AboutScreenNew() {
             >
               <Text style={{ color: C.primaryBright, fontWeight: '700', fontSize: 14 }}>Sign In</Text>
             </TouchableOpacity>
-            <GlowButton title="Sign Up" gradient={C.gradPrimary} onPress={() => navigation.navigate('Auth', { screen: 'Login' })} size="small" />
+            <GlowButton title="Sign Up" gradient={C.gradPrimary} onPress={() => navigation.navigate('Auth', { screen: 'JobSeekerFlow', params: { screen: 'ExperienceTypeSelection', params: { userType: 'JobSeeker', fromGoogleAuth: false, googleUser: null } } })} size="small" />
           </View>
         )}
       </View>
