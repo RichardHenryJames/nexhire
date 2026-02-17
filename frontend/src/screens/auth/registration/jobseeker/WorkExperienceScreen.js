@@ -328,6 +328,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
     }
 
     // Validate current work if filled
+    if (hasCurrentWork && !currentWorkData.currentCompany?.trim() && !currentWorkData.organizationId) {
+      showToast('Please select or enter your company name', 'error');
+      return;
+    }
     if (hasCurrentWork && !currentWorkData.startDate?.trim()) {
       showToast('Please enter start date for your current position', 'error');
       return;

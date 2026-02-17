@@ -1290,6 +1290,7 @@ BEGIN
         IsActive BIT NULL DEFAULT ((1)),
         IsFortune500 BIT NOT NULL DEFAULT ((0)),
         VerifiedReferrersCount INT NOT NULL DEFAULT ((0)),
+        IsUserCreated BIT NOT NULL DEFAULT ((0)),
         NormalizedName AS (lower(replace(replace([Name],' ',''),'.',''))) PERSISTED,
         CONSTRAINT PK__Organiza__CADB0B7268D137E7 PRIMARY KEY (OrganizationID)
     );

@@ -349,10 +349,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const handleContinue = async () => {
     const customCollege = String(formData.customCollege || '').trim();
 
-    if (!formData.college && !customCollege) {
-      showToast('Please select your college/school', 'error');
-      return;
-    }
     if (formData.college?.name === 'Other' && !customCollege) {
       showToast('Please enter your college/school name', 'error');
       return;
@@ -369,7 +365,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       showToast('Please select your current year', 'error');
       return;
     }
-    if (experienceType === 'Student' && !/^\d{4}$/.test(String(formData.graduationYear || '').trim())) {
+    if (!/^\d{4}$/.test(String(formData.graduationYear || '').trim())) {
       showToast('Please enter a valid graduation year (YYYY)', 'error');
       return;
     }
