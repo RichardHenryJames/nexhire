@@ -15,25 +15,24 @@ const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platfo
 
 // Welcome message template for new users (Job Seekers only) - single concise message
 const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
-Welcome to RefOpen — we're glad you're here!
+Welcome to **RefOpen** — we're glad you're here!
 
-🚀 How it works:
-Browse 125K+ jobs, tap "Ask Referral" — your request goes to ALL verified employees at that company. No awkward DMs!
+🚀 **How it works:**
+Browse 125K+ jobs, tap "Ask Referral" — your request goes to **ALL** verified employees at that company. No awkward DMs!
 
-🤔 Not sure which company?
+🤔 **Not sure which company?**
 No worries! Just check "Open to any company" while asking a referral — we'll broadcast your request to referrers across multiple companies matching your role.
 
-💼 Already employed?
+💼 **Already employed?**
 Verify your work email to earn cash for every referral you submit + get priority on your own requests.
 
-🎯 Quick tip: Complete your profile & upload your resume — referrers check before accepting.
+🎯 **Quick tip:** Complete your profile & upload your resume — referrers check before accepting.
 
-Follow us:
-LinkedIn — linkedin.com/company/refopen
-Instagram — instagram.com/refopensolutions
-X — x.com/refopensolution
+**Follow us:**
+![LinkedIn](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen)
+![Instagram](https://www.google.com/s2/favicons?domain=instagram.com&sz=32) [Instagram](https://www.instagram.com/refopensolutions)
+![X](https://www.google.com/s2/favicons?domain=x.com&sz=32) [X (Twitter)](https://x.com/refopensolution)
 
-Questions? Just reply here — we're real humans! 😊
 — Team RefOpen 💜`;
 
 interface CreateConversationParams {
