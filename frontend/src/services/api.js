@@ -3026,6 +3026,24 @@ if (!resumeId) {
     });
   }
 
+  /**
+   * Admin: Refund seeker for an unverified referral dispute
+   */
+  async refundReferral(requestId) {
+    if (!this.token) {
+      await this.init();
+    }
+
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    return this.apiCall('/support/referral-refund', {
+      method: 'POST',
+      body: JSON.stringify({ requestId }),
+    });
+  }
+
   // ========================================================================
   // TOOLS - PUBLIC AI-POWERED UTILITIES
   // ========================================================================

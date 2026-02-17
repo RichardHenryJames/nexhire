@@ -205,6 +205,8 @@ export default function MyReferralRequestsScreen() {
         return '#ffd700';
       case 'Unverified':
         return '#ef4444'; // Red - not verified
+      case 'Refunded':
+        return '#10B981'; // Green - money returned
       case 'Cancelled':
         return colors.danger;
       case 'Expired':
@@ -232,6 +234,8 @@ export default function MyReferralRequestsScreen() {
         return 'trophy';
       case 'Unverified':
         return 'alert-circle';
+      case 'Refunded':
+        return 'wallet-outline';
       case 'Cancelled':
         return 'close-circle-outline';
       case 'Expired':
@@ -259,6 +263,8 @@ export default function MyReferralRequestsScreen() {
         return 'Verified';
       case 'Unverified':
         return 'Unverified';
+      case 'Refunded':
+        return 'Refunded ✓';
       case 'Cancelled':
         return 'Cancelled';
       case 'Expired':
@@ -287,7 +293,12 @@ export default function MyReferralRequestsScreen() {
       const result = await refopenAPI.verifyReferralCompletion(requestId, verified);
       if (result.success) {
         const newStatus = verified ? 'Verified' : 'Unverified';
-        showToast(`Referral ${verified ? 'verified' : 'marked as unverified'}`, 'success');
+        showToast(
+          verified
+            ? 'Referral verified! Referrer has been rewarded.'
+            : 'Marked as unverified. A support ticket has been created — our team will review within 2 working days.',
+          verified ? 'success' : 'info'
+        );
         setMyRequests((prev) =>
           prev.map((r) =>
             r.RequestID === requestId
@@ -765,34 +776,40 @@ export default function MyReferralRequestsScreen() {
               ?{'\n\n'}Please confirm whether you received a legitimate referral from this person.
             </Text>
 
-            {verifyTarget?.request?.ProofDescription && (
-              <View style={styles.referrerMessageBox}>
-                <View style={styles.referrerMessageHeader}>
-                  <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
-                  <Text style={styles.referrerMessageLabel}>Referrer's Message:</Text>
+            {/* Referral Proof Section — compact */}
+            {(verifyTarget?.request?.ProofDescription || verifyTarget?.request?.ProofFileURL) && (
+              <View style={{ backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 10, marginBottom: 12 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Referral Proof</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {verifyTarget?.request?.ProofDescription && (
+                    <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 8, padding: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons name="chatbubble-outline" size={12} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '600', marginLeft: 4 }}>Message</Text>
+                      </View>
+                      <Text style={{ color: colors.text, fontSize: 12, fontStyle: 'italic', lineHeight: 16 }} numberOfLines={3}>
+                        "{verifyTarget.request.ProofDescription}"
+                      </Text>
+                    </View>
+                  )}
+                  {verifyTarget?.request?.ProofFileURL && (
+                    <TouchableOpacity
+                      style={{ flex: verifyTarget?.request?.ProofDescription ? 0 : 1, backgroundColor: '#007AFF10', borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', minWidth: 80 }}
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          window.open(verifyTarget.request.ProofFileURL, '_blank');
+                        } else {
+                          Linking.openURL(verifyTarget.request.ProofFileURL);
+                        }
+                      }}
+                    >
+                      <Ionicons name="document-attach" size={20} color="#007AFF" />
+                      <Text style={{ color: '#007AFF', fontSize: 10, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>View Proof</Text>
+                      <Ionicons name="open-outline" size={12} color="#007AFF" style={{ marginTop: 2 }} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <Text style={styles.referrerMessageText}>
-                  "{verifyTarget.request.ProofDescription}"
-                </Text>
               </View>
-            )}
-
-            {/* View Proof Button */}
-            {verifyTarget?.request?.ProofFileURL && (
-              <TouchableOpacity 
-                style={styles.viewProofBtn}
-                onPress={() => {
-                  if (Platform.OS === 'web') {
-                    window.open(verifyTarget.request.ProofFileURL, '_blank');
-                  } else {
-                    Linking.openURL(verifyTarget.request.ProofFileURL);
-                  }
-                }}
-              >
-                <Ionicons name="document-attach" size={18} color="#007AFF" />
-                <Text style={styles.viewProofBtnText}>View Proof Uploaded by Referrer</Text>
-                <Ionicons name="open-outline" size={16} color="#007AFF" />
-              </TouchableOpacity>
             )}
 
             <View style={styles.verifyInfoBox}>
@@ -800,6 +817,30 @@ export default function MyReferralRequestsScreen() {
               <Text style={styles.verifyInfoText}>
                 Your feedback helps us verify authentic referrers and improve the platform for everyone.
               </Text>
+            </View>
+
+            {/* Dispute Warning */}
+            <View style={{
+              backgroundColor: '#F59E0B' + '0D',
+              borderColor: '#F59E0B' + '35',
+              borderWidth: 1,
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 16,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Ionicons name="warning" size={15} color="#F59E0B" />
+                <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 12, marginLeft: 6 }}>Before clicking 'No'</Text>
+              </View>
+              <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                This will raise a dispute. Our team will review the proof and respond within 2 working days. If found invalid, you'll get a full refund.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 8, backgroundColor: colors.surface, borderRadius: 6, padding: 8 }}>
+                <Text style={{ fontSize: 13, marginRight: 6 }}>💡</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 16, flex: 1 }}>
+                  Some companies don't send confirmation emails. Check your <Text style={{ fontWeight: '700', color: colors.text }}>Spam</Text> or <Text style={{ fontWeight: '700', color: colors.text }}>Junk</Text> folder before disputing.
+                </Text>
+              </View>
             </View>
 
             <View style={styles.confirmActions}>

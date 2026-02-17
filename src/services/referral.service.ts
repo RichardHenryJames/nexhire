@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { WalletService } from './wallet.service';
 import { PricingService } from './pricing.service';
 import { NotificationService } from './notificationService';
+import { SupportService } from './support.service';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
 import {
     ReferralPlan,
@@ -725,6 +726,63 @@ export class ReferralService {
                     }
                 } catch (err) {
                     console.warn('Non-critical: Failed to send referral verified email:', err);
+                }
+            }
+
+            // If UNVERIFIED, auto-create a support ticket for admin review
+            if (!dto.verified && referrerId) {
+                try {
+                    // Get job/company details for the ticket
+                    const jobQuery = `
+                        SELECT 
+                            COALESCE(j.Title, rr.JobTitle, 'Job Position') as JobTitle,
+                            COALESCE(jo.Name, eo.Name, 'Company') as CompanyName
+                        FROM ReferralRequests rr
+                        LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                        LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                        LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                        WHERE rr.RequestID = @param0
+                    `;
+                    const jobResult = await dbService.executeQuery(jobQuery, [dto.requestID]);
+                    const jobInfo = jobResult.recordset?.[0];
+
+                    // Get referrer name
+                    const referrerQuery = `SELECT FirstName, LastName FROM Users WHERE UserID = @param0`;
+                    const referrerResult = await dbService.executeQuery(referrerQuery, [referrerId]);
+                    const referrerName = referrerResult.recordset?.[0]
+                        ? `${referrerResult.recordset[0].FirstName} ${referrerResult.recordset[0].LastName}`
+                        : 'Referrer';
+
+                    const ticketSubject = `Referral Dispute: ${applicantName} unverified referral by ${referrerName}`;
+                    const ticketMessage = `Seeker "${applicantName}" has marked a referral as unverified.\n\n` +
+                        `📋 Details:\n` +
+                        `• Referral Request ID: ${dto.requestID}\n` +
+                        `• Job: ${jobInfo?.JobTitle || 'N/A'} at ${jobInfo?.CompanyName || 'N/A'}\n` +
+                        `• Referrer: ${referrerName}\n` +
+                        `• Seeker: ${applicantName}\n\n` +
+                        `⚠️ Action Required:\n` +
+                        `Please review the referral proof and verify within 2 working days.\n` +
+                        `If the unverification is valid, process a refund to the seeker.\n` +
+                        `If invalid, change status back to Completed/Verified.`;
+
+                    // Use seeker's UserID to create the ticket
+                    const seekerUserQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
+                    const seekerUserResult = await dbService.executeQuery(seekerUserQuery, [applicantId]);
+                    const seekerUserId = seekerUserResult.recordset?.[0]?.UserID;
+
+                    // Fallback: if we can't find UserID from Applicants, use applicantId directly
+                    const ticketUserId = seekerUserId || applicantId;
+
+                    await SupportService.createTicket({
+                        userId: ticketUserId,
+                        category: 'Referrals',
+                        subject: ticketSubject,
+                        message: ticketMessage,
+                    });
+
+                    console.log(`📩 Auto-created support ticket for unverified referral ${dto.requestID}`);
+                } catch (err) {
+                    console.warn('Non-critical: Failed to auto-create support ticket for unverified referral:', err);
                 }
             }
 

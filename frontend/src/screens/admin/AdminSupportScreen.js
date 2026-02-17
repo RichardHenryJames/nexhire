@@ -75,6 +75,7 @@ export default function AdminSupportScreen() {
   const [newStatus, setNewStatus] = useState('');
   const [newPriority, setNewPriority] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   // Conversation state
   const [messages, setMessages] = useState([]);
@@ -244,6 +245,47 @@ export default function AdminSupportScreen() {
       showToast('Something went wrong', 'error');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  // Extract referral request ID from ticket message (for Referral Dispute tickets)
+  const extractRequestId = (ticket) => {
+    if (!ticket?.Message) return null;
+    const match = ticket.Message.match(/Referral Request ID:\s*([A-Fa-f0-9-]{36})/);
+    return match ? match[1] : null;
+  };
+
+  const isReferralDispute = (ticket) => {
+    return ticket?.Category === 'Referrals' && ticket?.Subject?.includes('Referral Dispute');
+  };
+
+  const handleRefundReferral = async () => {
+    const requestId = extractRequestId(selectedTicket);
+    if (!requestId) {
+      showToast('Could not find referral request ID in ticket', 'error');
+      return;
+    }
+
+    try {
+      setRefunding(true);
+      const result = await refopenAPI.refundReferral(requestId);
+      if (result.success) {
+        showToast(`✅ ${result.message || 'Refund processed'}`, 'success');
+        // Auto-send a message about the refund
+        await refopenAPI.sendSupportTicketMessage(
+          selectedTicket.TicketID,
+          `Refund of ₹${result.data?.refundAmount || ''} has been processed to your wallet. The referral has been marked as Refunded.`
+        );
+        closeResponseModal();
+        loadData();
+      } else {
+        showToast(result.error || 'Failed to process refund', 'error');
+      }
+    } catch (error) {
+      console.error('Refund error:', error);
+      showToast('Failed to process refund', 'error');
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -541,6 +583,37 @@ export default function AdminSupportScreen() {
                   <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                   <Text style={styles.closedBannerText}>This ticket is closed</Text>
                 </View>
+              )}
+
+              {/* Refund Button - Only for Referral Dispute tickets */}
+              {isReferralDispute(selectedTicket) && selectedTicket.Status !== 'Closed' && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#EF444415',
+                    borderWidth: 1,
+                    borderColor: '#EF4444',
+                    borderRadius: 10,
+                    padding: 12,
+                    marginTop: 12,
+                    opacity: refunding ? 0.6 : 1,
+                  }}
+                  onPress={handleRefundReferral}
+                  disabled={refunding}
+                >
+                  {refunding ? (
+                    <ActivityIndicator color="#EF4444" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="wallet-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>
+                        Refund Seeker & Mark as Refunded
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               )}
 
               <View style={styles.modalActions}>
