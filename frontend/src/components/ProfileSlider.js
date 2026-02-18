@@ -68,7 +68,11 @@ export default function ProfileSlider({ visible, onClose }) {
           try {
             const res = await refopenAPI.getMyReferrerRequests(1, 50);
             if (res.success && res.data) {
-              const active = res.data.filter(r => r.Status === 'Pending' || r.Status === 'Claimed');
+              const requests = Array.isArray(res.data) ? res.data : (res.data.requests || []);
+              const active = requests.filter(r => 
+                r.Status === 'Pending' || r.Status === 'Claimed' || 
+                r.Status === 'NotifiedToReferrers' || r.Status === 'Viewed'
+              );
               setPendingReferralCount(active.length);
             }
           } catch (e) {}
@@ -136,7 +140,7 @@ export default function ProfileSlider({ visible, onClose }) {
   // Categorized menu sections
   const menuSections = [
     {
-      title: '� Wallet & Rewards',
+      title: '💰 Wallet & Rewards',
       items: [
         {
           icon: 'wallet-outline',
@@ -177,7 +181,7 @@ export default function ProfileSlider({ visible, onClose }) {
         },
       ],
     }] : [{
-      title: '� Referrer',
+      title: '🏅 Referrer',
       items: [
         {
           icon: 'people-outline',
@@ -521,11 +525,11 @@ export default function ProfileSlider({ visible, onClose }) {
               {/* Section Header */}
               <View style={{
                 paddingHorizontal: 20,
-                paddingTop: 16,
-                paddingBottom: 8,
+                paddingTop: 10,
+                paddingBottom: 4,
               }}>
                 <Text style={{
-                  fontSize: 13,
+                  fontSize: 11,
                   fontWeight: '700',
                   color: colors.textSecondary,
                   textTransform: 'uppercase',
@@ -544,15 +548,15 @@ export default function ProfileSlider({ visible, onClose }) {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingVertical: 13,
+                    paddingVertical: 10,
                     paddingHorizontal: 20,
                   }}
                 >
-                  <Ionicons name={item.icon} size={22} color={colors.textSecondary} />
+                  <Ionicons name={item.icon} size={20} color={colors.textSecondary} />
                   <Text style={{
                     color: colors.text,
-                    fontSize: 15,
-                    marginLeft: 16,
+                    fontSize: 14,
+                    marginLeft: 14,
                     flex: 1,
                   }} numberOfLines={1}>
                     {item.label}
@@ -564,27 +568,27 @@ export default function ProfileSlider({ visible, onClose }) {
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={{
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 10,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
                         }}
                       >
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>NEW</Text>
+                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>NEW</Text>
                       </LinearGradient>
                     </Animated.View>
                   )}
                   {item.rightText && (
                     <Text style={{
                       color: colors.primary,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: '700',
                     }}>
                       {item.rightText}
                     </Text>
                   )}
                   {item.badge > 0 && (
-                    <View style={{ backgroundColor: '#EF4444', borderRadius: 10, minWidth: 22, height: 22, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
+                    <View style={{ backgroundColor: '#EF4444', borderRadius: 9, minWidth: 20, height: 20, paddingHorizontal: 5, justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -596,7 +600,7 @@ export default function ProfileSlider({ visible, onClose }) {
                   height: 1,
                   backgroundColor: colors.border,
                   marginHorizontal: 20,
-                  marginTop: 8,
+                  marginTop: 4,
                 }} />
               )}
             </View>
@@ -606,17 +610,17 @@ export default function ProfileSlider({ visible, onClose }) {
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
-            paddingVertical: 14,
+            paddingVertical: 10,
             paddingHorizontal: 20,
-            marginTop: 8,
+            marginTop: 4,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}>
-            <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={22} color={colors.textSecondary} />
+            <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={20} color={colors.textSecondary} />
             <Text style={{
               color: colors.text,
-              fontSize: 15,
-              marginLeft: 16,
+              fontSize: 14,
+              marginLeft: 14,
               flex: 1,
             }}>
               Dark Mode
@@ -635,20 +639,20 @@ export default function ProfileSlider({ visible, onClose }) {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              paddingVertical: 14,
+              paddingVertical: 10,
               paddingHorizontal: 20,
-              marginTop: 4,
+              marginTop: 2,
               borderTopWidth: 1,
               borderTopColor: colors.border,
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             <Text style={{
               color: '#EF4444',
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: '600',
-              marginLeft: 16,
+              marginLeft: 14,
             }}>
               Log Out
             </Text>
