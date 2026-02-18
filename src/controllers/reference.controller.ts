@@ -189,6 +189,7 @@ export const getOrganizationById = async (req: any): Promise<any> => {
                 Website as website,
                 LinkedInProfile as linkedIn,
                 Description as description,
+                Headquarters as location,
                 VerificationStatus as verification,
                 IsFortune500 as isFortune500,
                 CreatedAt as createdAt,

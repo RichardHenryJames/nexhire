@@ -14,6 +14,7 @@ import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
@@ -95,33 +96,6 @@ const ManualRechargeScreen = ({ navigation }) => {
   useEffect(() => {
     loadData();
   }, []);
-
-  // ✅ Smart back navigation for hard refresh scenarios (same as WalletRechargeScreen)
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Add Money to Wallet',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || '700', color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16, padding: 4 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Wallet');
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   const loadData = async () => {
     try {
@@ -343,6 +317,7 @@ const ManualRechargeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <SubScreenHeader title="Add Money" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* QR Payment — prominent at top */}
         {settings && (

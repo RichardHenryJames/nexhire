@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
@@ -45,14 +46,7 @@ export default function ATSBeatSheetScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => { if (navigation.canGoBack()) { navigation.goBack(); } else { navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Services' } }); } }} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Resume Builder</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <SubScreenHeader title="Resume Builder" fallbackTab="Services" />
 
       {/* Lock Content */}
       <View style={styles.content}>
