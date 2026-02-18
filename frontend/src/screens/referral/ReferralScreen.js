@@ -673,43 +673,6 @@ export default function ReferralScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
-        {/* HomeScreen-style Header: Profile + Title + Messages */}
-        <View style={styles.headerCompact}>
-          {/* Left: Profile avatar */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setProfileSliderVisible(true)}
-          >
-            {profilePhotoUrl ? (
-              <Image source={{ uri: profilePhotoUrl }} style={styles.headerProfilePic} />
-            ) : (
-              <View style={styles.headerProfilePicPlaceholder}>
-                <Ionicons name="person" size={22} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Center: Title */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={styles.headerTitle}>Provide Referral</Text>
-          </View>
-
-          {/* Right: Messages button with unread badge */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Messages')}
-            activeOpacity={0.7}
-            style={styles.messagesButton}
-          >
-            <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-            {unreadMessageCount > 0 && (
-              <View style={styles.messagesBadge}>
-                <Text style={styles.messagesBadgeText}>
-                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
 
         {/* Post Job / Publish buttons row */}
         {isVerifiedReferrer && currentVerifiedCompany && (
