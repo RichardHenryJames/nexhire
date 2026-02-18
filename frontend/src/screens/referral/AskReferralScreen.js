@@ -27,8 +27,7 @@ import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: 
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
-import ProfileSlider from '../../components/ProfileSlider';
-import messagingApi from '../../services/messagingApi';
+import TabHeader from '../../components/TabHeader';
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker, isAuthenticated } = useAuth();
@@ -114,18 +113,11 @@ const [openToAnyCompany, setOpenToAnyCompany] = useState(false);
 // 💰 Effective cost depends on open-to-any checkbox (must be after openToAnyCompany state)
 const effectiveCost = openToAnyCompany ? pricing.openToAnyReferralCost : pricing.referralRequestCost;
 
-// Profile slider state (same as HomeScreen)
-const [profileSliderVisible, setProfileSliderVisible] = useState(false);
-const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
-
 // Search state (same as HomeScreen)
 const [headerSearchQuery, setHeaderSearchQuery] = useState('');
 const [headerSearchResults, setHeaderSearchResults] = useState([]);
 const [headerSearchLoading, setHeaderSearchLoading] = useState(false);
 const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
-
-// Messages unread count
-const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // ✅ Hide navigation header - replaced with custom HomeScreen-style header
   useEffect(() => {
@@ -168,22 +160,6 @@ const [unreadMessageCount, setUnreadMessageCount] = useState(0);
     }, 300);
     return () => clearTimeout(timer);
   }, [headerSearchQuery, searchOrganizationsHeader]);
-
-  // Fetch unread message count
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      (async () => {
-        try {
-          const result = await messagingApi.getUnreadCount();
-          if (result.success && result.data) {
-            setUnreadMessageCount(result.data.TotalUnread || 0);
-          }
-        } catch (err) {
-          setUnreadMessageCount(0);
-        }
-      })();
-    }
-  }, [isAuthenticated, user]);
 
   // Load initial data - ⚡ Staggered loading for optimal performance
   useEffect(() => {
@@ -641,112 +617,71 @@ const [unreadMessageCount, setUnreadMessageCount] = useState(0);
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* HomeScreen-style Header: Profile + Search + Messages */}
-      <View style={styles.headerCompact}>
-        {/* Left: Profile avatar */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => {
-            if (!requireAuth('view profile')) return;
-            setProfileSliderVisible(true);
-          }}
-        >
-          {profilePhotoUrl ? (
-            <Image source={{ uri: profilePhotoUrl }} style={styles.profilePicture} />
-          ) : (
-            <View style={styles.profilePicturePlaceholder}>
-              <Ionicons name="person" size={22} color="#fff" />
+      {/* Header: Profile + Search + Messages */}
+      <TabHeader
+        navigation={navigation}
+        centerContent={
+          <View style={styles.searchContainerMain}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons
+                name="search"
+                size={18}
+                color={colors.gray400}
+                style={styles.searchIconStyle}
+              />
+              <TextInput
+                style={styles.headerSearchInput}
+                placeholder="Search companies..."
+                placeholderTextColor={colors.gray400}
+                value={headerSearchQuery}
+                onChangeText={setHeaderSearchQuery}
+                onFocus={() => headerSearchQuery.trim().length >= 2 && setShowHeaderSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowHeaderSearchResults(false), 300)}
+              />
+              {headerSearchLoading && (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+              )}
             </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Center: Search bar */}
-        <View style={styles.searchContainerMain}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons
-              name="search"
-              size={18}
-              color={colors.gray400}
-              style={styles.searchIconStyle}
-            />
-            <TextInput
-              style={styles.headerSearchInput}
-              placeholder="Search companies..."
-              placeholderTextColor={colors.gray400}
-              value={headerSearchQuery}
-              onChangeText={setHeaderSearchQuery}
-              onFocus={() => headerSearchQuery.trim().length >= 2 && setShowHeaderSearchResults(true)}
-              onBlur={() => setTimeout(() => setShowHeaderSearchResults(false), 300)}
-            />
-            {headerSearchLoading && (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+            {showHeaderSearchResults && headerSearchResults.length > 0 && (
+              <View style={styles.searchResultsDropdown}>
+                <FlatList
+                  data={headerSearchResults}
+                  keyExtractor={(item) => item.id.toString()}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.searchResultItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        if (!requireAuth('view company details')) return;
+                        navigation.navigate('OrganizationDetails', { organizationId: item.id });
+                        setShowHeaderSearchResults(false);
+                        setHeaderSearchQuery('');
+                      }}
+                    >
+                      {item.logoURL ? (
+                        <Image source={{ uri: item.logoURL }} style={styles.orgLogoHeader} />
+                      ) : (
+                        <View style={styles.orgLogoPlaceholderHeader}>
+                          <Ionicons name="business" size={20} color={colors.gray400} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.orgNameHeader} numberOfLines={1}>{item.name}</Text>
+                        {item.industry && (
+                          <Text style={styles.orgIndustryHeader} numberOfLines={1}>{item.industry}</Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
+                    </TouchableOpacity>
+                  )}
+                  style={{ maxHeight: 300 }}
+                />
+              </View>
             )}
           </View>
-
-          {/* Search Results Dropdown */}
-          {showHeaderSearchResults && headerSearchResults.length > 0 && (
-            <View style={styles.searchResultsDropdown}>
-              <FlatList
-                data={headerSearchResults}
-                keyExtractor={(item) => item.id.toString()}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.searchResultItem}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      if (!requireAuth('view company details')) return;
-                      navigation.navigate('OrganizationDetails', {
-                        organizationId: item.id
-                      });
-                      setShowHeaderSearchResults(false);
-                      setHeaderSearchQuery('');
-                    }}
-                  >
-                    {item.logoURL ? (
-                      <Image
-                        source={{ uri: item.logoURL }}
-                        style={styles.orgLogoHeader}
-                      />
-                    ) : (
-                      <View style={styles.orgLogoPlaceholderHeader}>
-                        <Ionicons name="business" size={20} color={colors.gray400} />
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.orgNameHeader} numberOfLines={1}>{item.name}</Text>
-                      {item.industry && (
-                        <Text style={styles.orgIndustryHeader} numberOfLines={1}>{item.industry}</Text>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
-                  </TouchableOpacity>
-                )}
-                style={{ maxHeight: 300 }}
-              />
-            </View>
-          )}
-        </View>
-
-        {/* Right: Messages button with unread badge */}
-        <TouchableOpacity
-          onPress={() => {
-            if (!requireAuth('view messages')) return;
-            navigation.navigate('Messages');
-          }}
-          activeOpacity={0.7}
-          style={styles.messagesButton}
-        >
-          <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-          {unreadMessageCount > 0 && (
-            <View style={styles.messagesBadge}>
-              <Text style={styles.messagesBadgeText}>
-                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+        }
+      />
 
       <View style={styles.innerContainer}>
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 80 : 120 }}>
@@ -1227,11 +1162,6 @@ const [unreadMessageCount, setUnreadMessageCount] = useState(0);
         isOpenToAny={referralCompanyName === 'All Companies'}
       />
 
-      {/* LinkedIn-style Profile Slider */}
-      <ProfileSlider
-        visible={profileSliderVisible}
-        onClose={() => setProfileSliderVisible(false)}
-      />
     </KeyboardAvoidingView>
   );
 }

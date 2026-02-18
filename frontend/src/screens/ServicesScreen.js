@@ -25,6 +25,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../services/api';
+import TabHeader from '../components/TabHeader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -248,6 +249,11 @@ export default function ServicesScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TabHeader
+        title="Career Tools"
+        gradient={['#2563EB', '#1D4ED8']}
+        navigation={navigation}
+      />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -255,31 +261,6 @@ export default function ServicesScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero Section ──────────────────────────────── */}
-        <LinearGradient
-          colors={isDark ? ['#1D4ED8', '#1E3A5F'] : ['#2563EB', '#1D4ED8']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.heroBanner, isDesktop && styles.heroBannerDesktop]}
-        >
-          <View style={styles.heroContent}>
-            <View style={styles.heroIconRow}>
-              <View style={styles.heroIconBg}>
-                <Ionicons name="rocket" size={24} color="#FFFFFF" />
-              </View>
-              <View style={styles.heroBadge}>
-                <Text style={styles.heroBadgeText}>AI-Powered</Text>
-              </View>
-            </View>
-            <Text style={styles.heroTitle}>Career Tools</Text>
-            <Text style={styles.heroSubtitle}>
-              Supercharge your job search with AI-powered tools built to help you land your dream role faster.
-            </Text>
-          </View>
-          {/* Decorative circles */}
-          <View style={[styles.heroCircle, styles.heroCircle1]} />
-          <View style={[styles.heroCircle, styles.heroCircle2]} />
-        </LinearGradient>
 
         {/* ── Section Label ─────────────────────────────── */}
         <View style={[styles.sectionHeader, isDesktop && { maxWidth: 900 }]}>
@@ -404,24 +385,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 30,
   },
-  heroCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  heroCircle1: {
-    width: 200,
-    height: 200,
-    top: -60,
-    right: -40,
-  },
-  heroCircle2: {
-    width: 120,
-    height: 120,
-    bottom: -30,
-    right: 60,
-  },
-
   // Section
   sectionHeader: {
     flexDirection: 'row',

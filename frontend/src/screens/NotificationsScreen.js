@@ -10,19 +10,15 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  StyleSheet,
   Platform,
   Animated,
-  Linking,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
-import messagingApi from '../services/messagingApi';
-import ProfileSlider from '../components/ProfileSlider';
+import TabHeader from '../components/TabHeader';
 import { colors as brandColors } from '../styles/theme';
 
 const TYPE_COLORS = {
@@ -84,13 +80,6 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  // Profile slider state
-  const [profileSliderVisible, setProfileSliderVisible] = useState(false);
-  const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
-
-  // Messages unread count
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -125,17 +114,6 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchNotifications(1);
-      // Fetch unread message count
-      (async () => {
-        try {
-          const result = await messagingApi.getUnreadCount();
-          if (result.success && result.data) {
-            setUnreadMessageCount(result.data.TotalUnread || 0);
-          }
-        } catch (err) {
-          setUnreadMessageCount(0);
-        }
-      })();
     }, [])
   );
 
@@ -367,78 +345,15 @@ export default function NotificationsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' ? { height: '100vh', overflow: 'hidden' } : {}) }}>
       {/* Header: Profile + Notifications + Messages */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingTop: Platform.OS === 'ios' ? 44 : 12,
-        paddingBottom: 12,
-        backgroundColor: colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        gap: 8,
-        zIndex: 10000,
-        elevation: 10,
-        position: Platform.OS === 'web' ? 'sticky' : 'relative',
-        top: 0,
-      }}>
-        {/* Left: Profile avatar */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setProfileSliderVisible(true)}
-        >
-          {profilePhotoUrl ? (
-            <Image source={{ uri: profilePhotoUrl }} style={{
-              width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: colors.primary,
-            }} />
-          ) : (
-            <View style={{
-              width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary,
-              justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.primary,
-            }}>
-              <Ionicons name="person" size={22} color="#fff" />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Center: Title + Mark all read */}
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
-            Notifications
-          </Text>
-          {unreadCount > 0 && (
-            <TouchableOpacity onPress={handleMarkAllRead}>
-              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                Mark all read
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Right: Messages button */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Messages')}
-          activeOpacity={0.7}
-          style={{
-            width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15',
-            justifyContent: 'center', alignItems: 'center', position: 'relative',
-          }}
-        >
-          <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-          {unreadMessageCount > 0 && (
-            <View style={{
-              position: 'absolute', top: -4, right: -4, backgroundColor: colors.danger || '#EF4444',
-              borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center',
-              paddingHorizontal: 4, borderWidth: 2, borderColor: colors.surface,
-            }}>
-              <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' }}>
-                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+      <TabHeader
+        title="Notifications"
+        navigation={navigation}
+        subtitle={unreadCount > 0 ? (
+          <TouchableOpacity onPress={handleMarkAllRead}>
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', marginTop: 2 }}>Mark all read</Text>
+          </TouchableOpacity>
+        ) : null}
+      />
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -475,12 +390,6 @@ export default function NotificationsScreen() {
           )}
         </ScrollView>
       )}
-
-      {/* LinkedIn-style Profile Slider */}
-      <ProfileSlider
-        visible={profileSliderVisible}
-        onClose={() => setProfileSliderVisible(false)}
-      />
     </View>
   );
 }

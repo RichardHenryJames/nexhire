@@ -166,12 +166,12 @@ async function run() {
                     // SAFE: Only delete status history for this user's own requests (not requests where they were just the referrer)
                     `DELETE FROM ReferralRequestStatusHistory WHERE RequestID IN (SELECT RequestID FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
                     // ReferralExpirationLogs is a system log — no user FK
-                    `DELETE FROM ReferralRewards WHERE ReferrerID = @uid`,
+                    `DELETE FROM ReferralRewards WHERE ReferrerID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     // SAFE: Delete this user's own referral requests (they're the applicant)
                     `DELETE FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     // SAFE: Unassign this user as referrer on other people's requests (don't delete their requests)
                     `UPDATE ReferralRequests SET AssignedReferrerID = NULL, Status = 'Pending', ReferredAt = NULL WHERE AssignedReferrerID = @uid`,
-                    `DELETE FROM ReferrerStats WHERE ReferrerID = @uid`,
+                    `DELETE FROM ReferrerStats WHERE ReferrerID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM SocialShareClaims WHERE UserID = @uid`,
                     // Applicant profile data
                     `DELETE FROM ApplicantProfileViews WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
