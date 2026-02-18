@@ -122,7 +122,7 @@ export default function FAQScreen() {
       questions: [
         {
           question: 'How do I search for jobs?',
-          answer: 'Use our powerful search features:\n• Search by job title, company, or keywords\n• Filter by location, experience level, salary range\n• Filter by job type (Full-time, Part-time, Contract)\n• Filter by workplace type (Remote, On-site, Hybrid)\n• Filter by top companies (Fortune 500)\n• Use AI-powered job recommendations for personalized matches'
+          answer: 'Use our powerful search features:\n• Search by job title, company, or keywords\n• Filter by location, experience level, salary range\n• Filter by job type (Full-time, Part-time, Contract)\n• Filter by workplace type (Remote, On-site, Hybrid)\n• Filter by top companies\n• Use AI-powered job recommendations for personalized matches'
         },
         {
           question: 'Can I apply directly without a referral?',

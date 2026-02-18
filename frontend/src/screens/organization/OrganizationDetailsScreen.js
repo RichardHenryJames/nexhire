@@ -212,13 +212,6 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                     </Text>
                   </View>
                 )}
-                
-                {(organization.isFortune500 === true || organization.isFortune500 === 1) && (
-                  <View style={[styles.badge, styles.fortune500Badge]}>
-                    <Ionicons name="trophy" size={14} color="#B8860B" />
-                    <Text style={styles.fortune500Text}>Fortune 500</Text>
-                  </View>
-                )}
               </View>
 
               {/* Quick Links */}

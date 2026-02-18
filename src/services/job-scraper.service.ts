@@ -1806,6 +1806,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
   // 🔄 Update existing organization with new API data (ENHANCED with Clearbit data)
   private static async updateOrganizationWithApiData(organizationId: number, companyName: string, source: string, job: ScrapedJob, existingData: any): Promise<void> {
     try {
+      // 🛡️ GUARD: If company is in our Fortune 500 / Notable list, its data is authoritative
+      // Don't let scraper overwrite industry, description, or LinkedIn for known companies
+      const knownCompany = findFortune500Match(companyName);
+      
       const enhancedData = await this.getEnhancedOrganizationData(companyName, source, job);
       
       // Only update if we have new/better information
@@ -1830,12 +1834,15 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Description if we have better info (from Clearbit)
+      // Don't overwrite for known companies unless existing is auto-generated junk
       if (enhancedData.description && enhancedData.description !== `${companyName} - ${enhancedData.industry} company`) {
         if (!existingData.Description || existingData.Description.includes('Auto-created from')) {
-          updates.push(`Description = @param${paramIndex}`);
-          params.push(enhancedData.description);
-          paramIndex++;
-          console.log(`📝 Adding description to ${companyName}`);
+          if (!knownCompany || !existingData.Description) {
+            updates.push(`Description = @param${paramIndex}`);
+            params.push(enhancedData.description);
+            paramIndex++;
+            console.log(`📝 Adding description to ${companyName}`);
+          }
         }
       }
       
@@ -1849,18 +1856,24 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         }
       }
       
-      // Update Industry if existing is generic and we have better info
-      const genericIndustries = ['Technology', 'IT Jobs', 'Unknown', '', null];
-      if (enhancedData.industry && !genericIndustries.includes(enhancedData.industry) && 
-          genericIndustries.includes(existingData.Industry)) {
-        updates.push(`Industry = @param${paramIndex}`);
-        params.push(enhancedData.industry);
-        paramIndex++;
-        console.log(`🏭 Updating industry for ${companyName}: ${enhancedData.industry}`);
+      // Update Industry if existing is truly generic and we have better info
+      // NEVER override for known companies (Fortune 500 / Notable) — their industry is authoritative
+      if (!knownCompany) {
+        const trulyGenericIndustries = ['IT Jobs', 'Unknown', '', null];
+        if (enhancedData.industry && !trulyGenericIndustries.includes(enhancedData.industry) && 
+            trulyGenericIndustries.includes(existingData.Industry)) {
+          updates.push(`Industry = @param${paramIndex}`);
+          params.push(enhancedData.industry);
+          paramIndex++;
+          console.log(`🏭 Updating industry for ${companyName}: ${enhancedData.industry}`);
+        }
       }
       
-      // Update LinkedInProfile if we have one (prefer Clearbit data over generated)
-      if (enhancedData.linkedInProfile && !existingData.LinkedInProfile) {
+      // Update LinkedInProfile ONLY if we have a REAL one from Clearbit (not auto-generated)
+      // Don't overwrite existing LinkedIn URLs with generated guesses
+      if (enhancedData.linkedInProfile && !existingData.LinkedInProfile && 
+          !enhancedData.linkedInProfile.includes(companyName.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
+        // Only use if it came from Clearbit (has different slug than just sanitized company name)
         updates.push(`LinkedInProfile = @param${paramIndex}`);
         params.push(enhancedData.linkedInProfile);
         paramIndex++;
@@ -2238,42 +2251,41 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
   // 🏭 Enhance industry classification from job data
   private static enhanceIndustryFromJob(title: string, description: string, defaultIndustry: string): string {
+    // Skip enhancement if industry already set from a known source (Fortune 500 / Clearbit)
+    if (defaultIndustry && defaultIndustry !== 'Technology' && defaultIndustry !== 'Unknown') {
+      return defaultIndustry;
+    }
+
     const content = `${title} ${description}`.toLowerCase();
     
-    // Financial Services
-    if (content.includes('fintech') || content.includes('banking') || content.includes('finance') || 
-        content.includes('payment') || content.includes('blockchain') || content.includes('crypto')) {
+    // Financial Services (strict - avoid matching generic finance keywords in any job desc)
+    if (content.includes('fintech') || content.includes('banking platform') || 
+        content.includes('payment processing') || content.includes('blockchain')) {
       return 'Financial Services';
     }
     
-    // Healthcare
-    if (content.includes('health') || content.includes('medical') || content.includes('biotech') || 
-        content.includes('pharma') || content.includes('telemedicine')) {
+    // Healthcare (strict - only if it's clearly a healthcare company, not just a health-related job)
+    if (content.includes('biotech') || content.includes('pharma') || 
+        content.includes('telemedicine') || content.includes('healthtech')) {
       return 'Healthcare';
     }
     
-    // E-commerce
-    if (content.includes('e-commerce') || content.includes('ecommerce') || content.includes('retail') || 
-        content.includes('marketplace') || content.includes('shopping')) {
+    // E-commerce (strict)
+    if (content.includes('e-commerce platform') || content.includes('ecommerce platform') || 
+        content.includes('marketplace platform')) {
       return 'E-commerce';
     }
     
-    // Education
-    if (content.includes('edtech') || content.includes('education') || content.includes('learning') || 
-        content.includes('university') || content.includes('training')) {
+    // Education (strict - only edtech platforms, not jobs mentioning "training")
+    if (content.includes('edtech') || content.includes('education platform') || 
+        content.includes('learning management')) {
       return 'Education Technology';
     }
     
-    // Gaming
-    if (content.includes('gaming') || content.includes('game') || content.includes('unity') || 
-        content.includes('unreal')) {
+    // Gaming (strict - only game companies, not ML jobs mentioning "game theory")
+    if (content.includes('game studio') || content.includes('game development company') || 
+        content.includes('video game')) {
       return 'Gaming & Entertainment';
-    }
-    
-    // AI/ML
-    if (content.includes('artificial intelligence') || content.includes('machine learning') || 
-        content.includes('deep learning') || content.includes('ai ') || content.includes('ml ')) {
-      return 'Artificial Intelligence';
     }
     
     return defaultIndustry;

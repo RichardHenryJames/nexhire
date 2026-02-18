@@ -496,7 +496,7 @@ export default function AboutScreenNew() {
                 Apply Directly to 125K+ Jobs
               </Text>
               <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', lineHeight: 24 }}>
-                Browse jobs from Fortune 500 companies and startups. One-click apply with your profile.
+                Browse jobs from top companies and startups. One-click apply with your profile.
               </Text>
             </BentoCard>
 
