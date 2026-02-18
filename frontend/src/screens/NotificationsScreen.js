@@ -1,7 +1,7 @@
 /**
  * NotificationsScreen - Full screen notification list for bottom tab
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
