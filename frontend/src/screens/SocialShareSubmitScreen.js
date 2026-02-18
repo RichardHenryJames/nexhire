@@ -384,87 +384,48 @@ export default function SocialShareSubmitScreen() {
 
         {canSubmit && (
           <>
-            {/* Requirements */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Requirements</Text>
-              {config.requirements.map((req, index) => (
-                <View key={index} style={styles.requirementRow}>
-                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                  <Text style={styles.requirementText}>{req}</Text>
-                </View>
+            {/* Simple Steps */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, paddingHorizontal: 4 }}>
+              {[
+                { icon: 'copy-outline', label: 'Copy' },
+                { icon: 'arrow-forward', label: '' },
+                { icon: 'share-outline', label: 'Paste & Post' },
+                { icon: 'arrow-forward', label: '' },
+                { icon: 'image-outline', label: 'Submit Proof' },
+                { icon: 'arrow-forward', label: '' },
+                { icon: 'cash-outline', label: `Earn ₹${config.reward}` },
+              ].map((step, i) => (
+                step.icon === 'arrow-forward' ? (
+                  <Ionicons key={i} name="chevron-forward" size={16} color={colors.textSecondary} style={{ alignSelf: 'center' }} />
+                ) : (
+                  <View key={i} style={{ alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: config.color + '20', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={step.icon} size={18} color={config.color} />
+                    </View>
+                    <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '500' }}>{step.label}</Text>
+                  </View>
+                )
               ))}
             </View>
 
-            {/* Sample Post */}
-            <View style={styles.section}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.sectionTitle}>Sample Post</Text>
-                <TouchableOpacity 
-                  style={styles.copyButton}
-                  onPress={() => copyToClipboard(config.samplePost)}
-                >
-                  <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                  <Text style={styles.copyButtonText}>Copy</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.samplePostBox}>
-                <Text style={styles.samplePostText}>{config.samplePost}</Text>
-              </View>
-              <Text style={styles.hashtagsText}>{config.hashtags}</Text>
+            {/* Post to copy — no "Sample" label, user copies as-is */}
+            <View style={styles.samplePostBox}>
+              <Text style={styles.samplePostText}>{config.samplePost}</Text>
             </View>
+            <TouchableOpacity 
+              style={[styles.submitButton, { backgroundColor: config.color, marginTop: 10, marginBottom: 20 }]}
+              onPress={() => copyToClipboard(config.samplePost)}
+            >
+              <Ionicons name="copy-outline" size={18} color="#FFF" />
+              <Text style={styles.submitButtonText}>Copy & Post on {config.displayName || platform}</Text>
+            </TouchableOpacity>
 
-            {/* Quick Copy Links */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Quick Copy Links</Text>
-              <View style={{ gap: 10 }}>
-                <TouchableOpacity 
-                  style={[styles.quickCopyRow, { backgroundColor: '#0A66C220', borderColor: '#0A66C2' }]}
-                  onPress={() => copyToClipboard(REFOPEN_SOCIALS.linkedin)}
-                >
-                  <Ionicons name="logo-linkedin" size={20} color="#0A66C2" />
-                  <Text style={[styles.quickCopyText, { color: '#0A66C2' }]} numberOfLines={1}>
-                    {REFOPEN_SOCIALS.linkedin}
-                  </Text>
-                  <Ionicons name="copy-outline" size={18} color="#0A66C2" />
-                </TouchableOpacity>
-
-                {platform === 'Instagram' && (
-                  <TouchableOpacity 
-                    style={[styles.quickCopyRow, { backgroundColor: '#E4405F20', borderColor: '#E4405F' }]}
-                    onPress={() => copyToClipboard('@refopensolutions')}
-                  >
-                    <Ionicons name="logo-instagram" size={20} color="#E4405F" />
-                    <Text style={[styles.quickCopyText, { color: '#E4405F' }]}>
-                      @refopensolutions
-                    </Text>
-                    <Ionicons name="copy-outline" size={18} color="#E4405F" />
-                  </TouchableOpacity>
-                )}
-
-                {platform === 'Twitter' && (
-                  <TouchableOpacity 
-                    style={[styles.quickCopyRow, { backgroundColor: colors.text + '15', borderColor: colors.text }]}
-                    onPress={() => copyToClipboard('@refopensolution')}
-                  >
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>𝕏</Text>
-                    <Text style={[styles.quickCopyText, { color: colors.text }]}>
-                      @refopensolution
-                    </Text>
-                    <Ionicons name="copy-outline" size={18} color={colors.text} />
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity 
-                  style={[styles.quickCopyRow, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-                  onPress={() => copyToClipboard(REFOPEN_SOCIALS.website)}
-                >
-                  <Ionicons name="globe-outline" size={20} color={colors.primary} />
-                  <Text style={[styles.quickCopyText, { color: colors.primary }]}>
-                    {REFOPEN_SOCIALS.website}
-                  </Text>
-                  <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
+            {/* Disclaimer */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF950010', borderRadius: 10, padding: 12, marginBottom: 16, gap: 8 }}>
+              <Ionicons name="warning-outline" size={16} color="#FF9500" />
+              <Text style={{ flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>
+                You must follow <Text style={{ fontWeight: '700', color: colors.text }} onPress={() => Linking.openURL(REFOPEN_SOCIALS.linkedin)}>RefOpen on LinkedIn</Text> to be eligible for credits on any platform.
+              </Text>
             </View>
 
             {/* Post URL Input */}
@@ -481,16 +442,9 @@ export default function SocialShareSubmitScreen() {
               />
             </View>
 
-            {/* AND Divider - Both are required */}
-            <View style={styles.orDivider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.orText}>AND</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
             {/* Screenshot Upload */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Upload Screenshot <Text style={{ color: '#EF4444' }}>*</Text></Text>
+              <Text style={styles.sectionTitle}>Screenshot <Text style={{ color: '#EF4444' }}>*</Text></Text>
               <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
                 {screenshotUri ? (
                   <View style={{ alignItems: 'center' }}>
@@ -499,9 +453,8 @@ export default function SocialShareSubmitScreen() {
                   </View>
                 ) : (
                   <>
-                    <Ionicons name="cloud-upload-outline" size={40} color={colors.textSecondary} />
-                    <Text style={styles.uploadText}>Tap to upload screenshot</Text>
-                    <Text style={styles.uploadSubtext}>PNG, JPG up to 5MB</Text>
+                    <Ionicons name="cloud-upload-outline" size={36} color={colors.textSecondary} />
+                    <Text style={styles.uploadText}>Upload screenshot of your post</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -518,18 +471,10 @@ export default function SocialShareSubmitScreen() {
               ) : (
                 <>
                   <Ionicons name="paper-plane" size={20} color="#FFF" />
-                  <Text style={styles.submitButtonText}>Submit for Review</Text>
+                  <Text style={styles.submitButtonText}>Submit for ₹{config.reward}</Text>
                 </>
               )}
             </TouchableOpacity>
-
-            {/* Note */}
-            <View style={styles.noteBox}>
-              <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
-              <Text style={styles.noteText}>
-                We'll verify your post and credit ₹{config.reward} to your wallet once approved.
-              </Text>
-            </View>
           </>
         )}
       </ScrollView>
