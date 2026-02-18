@@ -871,24 +871,6 @@ const [dashboardData, setDashboardData] = useState({
                   <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                 </TouchableOpacity>
 
-                {/* 🎯 Get Free Credits - Only show if not all platforms approved */}
-                {approvedSocialPlatforms.length < 4 && (
-                  <TouchableOpacity 
-                    style={styles.quickActionCard}
-                    onPress={() => navigation.navigate('ShareEarn')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.quickActionIcon, { backgroundColor: '#10B981' + '20' }]}>
-                      <Ionicons name="gift" size={24} color="#10B981" />
-                    </View>
-                    <View style={styles.quickActionContent}>
-                      <Text style={styles.quickActionTitle}>Get Free Credits</Text>
-                      <Text style={styles.quickActionDescription}>Share on social media & earn wallet credits</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                  </TouchableOpacity>
-                )}
-
                 {/* Google AdSense Ad - Employer Home */}
                 <AdCard variant="home" />
               </View>
@@ -983,24 +965,6 @@ const [dashboardData, setDashboardData] = useState({
                     <View style={styles.quickActionContent}>
                       <Text style={styles.quickActionTitle}>My Referrals</Text>
                       <Text style={styles.quickActionDescription}>Help others get their dream job</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-                  </TouchableOpacity>
-                )}
-
-                {/* 🎯 Get Free Credits - Only show if not all platforms approved */}
-                {approvedSocialPlatforms.length < 4 && (
-                  <TouchableOpacity 
-                    style={styles.quickActionCard}
-                    onPress={() => navigation.navigate('ShareEarn')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.quickActionIcon, { backgroundColor: '#10B981' + '20' }]}>
-                      <Ionicons name="gift" size={24} color="#10B981" />
-                    </View>
-                    <View style={styles.quickActionContent}>
-                      <Text style={styles.quickActionTitle}>Get Free Credits</Text>
-                      <Text style={styles.quickActionDescription}>Share on social media & earn wallet credits</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
                   </TouchableOpacity>

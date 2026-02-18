@@ -94,29 +94,6 @@ export default function ShareEarnScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Banner */}
-        <View style={{
-          backgroundColor: '#6366F1',
-          borderRadius: 16,
-          padding: 20,
-          marginBottom: 24,
-          overflow: 'hidden',
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: '#FFF', marginBottom: 6 }}>
-                💰 Get Free Credits!
-              </Text>
-              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)' }}>
-                Share on social media or invite friends
-              </Text>
-            </View>
-            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 28 }}>✨</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Post on Social Media */}
         <View style={{ marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
