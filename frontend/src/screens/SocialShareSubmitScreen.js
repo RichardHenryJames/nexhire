@@ -294,11 +294,7 @@ export default function SocialShareSubmitScreen() {
 
   // Handle close button - navigate back or to home if no history
   const handleClose = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('MainTabs', { screen: 'Profile' });
-    }
+    navigation.navigate('ShareEarn');
   };
 
   return (
