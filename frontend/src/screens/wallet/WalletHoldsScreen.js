@@ -235,7 +235,7 @@ export default function WalletHoldsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Wallet Holds" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Wallet Holds" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
           data={holds}

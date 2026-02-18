@@ -363,7 +363,7 @@ export default function PostReferralJobScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Post Job" fallbackTab="Home" />
+      <SubScreenHeader title="Post Job" directBack="Referral" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

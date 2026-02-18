@@ -13,25 +13,26 @@
  *  - showWallet: boolean (show wallet balance badge before messages)
  *  - walletBalance: number|null
  *  - onProfilePress: function (override profile press, default opens slider)
- *  - navigation: navigation object
+ *  - navigation: navigation object (optional, falls back to useNavigation)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
-  Platform,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
 import ProfileSlider from './ProfileSlider';
-import refopenAPI from '../services/api';
+import { HEADER_CONTAINER_BASE, HEADER_TITLE } from './headerStyles';
 
 export default function TabHeader({
   title,
@@ -43,27 +44,23 @@ export default function TabHeader({
   showWallet = false,
   walletBalance = null,
   onProfilePress,
-  navigation,
+  navigation: navProp = null,
 }) {
+  const navigation = navProp || useNavigation();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const [profileSliderVisible, setProfileSliderVisible] = useState(false);
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const { unreadCount: unreadMessageCount, refreshUnreadCount } = useUnreadMessages();
 
   const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
-  // Fetch unread messages on focus
+  // Refresh unread count on focus (uses shared context — deduped, throttled)
   useFocusEffect(
     useCallback(() => {
       if (showMessages) {
-        (async () => {
-          try {
-            const res = await refopenAPI.apiCall('/messages/unread-count');
-            if (res.success) setUnreadMessageCount(res.data?.count || 0);
-          } catch (e) {}
-        })();
+        refreshUnreadCount();
       }
-    }, [showMessages])
+    }, [showMessages, refreshUnreadCount])
   );
 
   const handleProfilePress = () => {
@@ -179,12 +176,7 @@ export default function TabHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12,
-    paddingBottom: 12,
-    zIndex: 10000,
-    elevation: 10,
-    ...(Platform.OS === 'web' ? { position: 'sticky', top: 0 } : {}),
+    ...HEADER_CONTAINER_BASE,
   },
   headerRow: {
     flexDirection: 'row',
@@ -210,8 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...HEADER_TITLE,
   },
   walletBadge: {
     flexDirection: 'row',

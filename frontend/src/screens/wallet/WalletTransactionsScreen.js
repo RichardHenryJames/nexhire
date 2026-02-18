@@ -231,7 +231,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Transaction History" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Transaction History" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
           data={transactions}

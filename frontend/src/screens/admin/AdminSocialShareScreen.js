@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
@@ -19,10 +20,6 @@ export default function AdminSocialShareScreen() {
   const { colors } = useTheme();
   const { isAdmin } = useAuth();
   const responsive = useResponsive();
-
-  const goToActionCenter = () => {
-    navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
-  };
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -154,13 +151,7 @@ export default function AdminSocialShareScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goToActionCenter} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Social Share Claims</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <SubScreenHeader title="Social Share Claims" fallbackTab="ActionCenter" />
 
       {/* Sub Tabs */}
       <View style={styles.subTabsRow}>
@@ -230,9 +221,6 @@ function makeStyles(colors, responsive) {
   const isDesktop = Platform.OS === 'web' && responsive?.isDesktop;
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 16 : 50, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-    backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
     content: { padding: 16, ...(isDesktop ? { maxWidth: 700, alignSelf: 'center', width: '100%' } : {}) },
     subTabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16 },
     subTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },

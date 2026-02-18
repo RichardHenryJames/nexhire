@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import SubScreenHeader from '../components/SubScreenHeader';
 import useResponsive from '../hooks/useResponsive';
 import { showToast } from '../components/Toast';
 import refopenAPI from '../services/api';
@@ -704,7 +705,10 @@ export default function GetVerifiedScreen({ navigation }) {
           ? 'Your blue tick badge is now active. You\'ll stand out on every interaction!'
           : 'Our team will review your documents within 24-48 hours. You\'ll be notified once verified.'}
       </Text>
-      <TouchableOpacity style={[styles.primaryButton, { marginTop: 32 }]} onPress={() => navigation.goBack()}>
+      <TouchableOpacity style={[styles.primaryButton, { marginTop: 32 }]} onPress={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Home' } });
+      }}>
         <Text style={styles.primaryButtonText}>Back to Profile</Text>
       </TouchableOpacity>
     </View>
@@ -713,16 +717,28 @@ export default function GetVerifiedScreen({ navigation }) {
   // ─── Step labels ──
   const stepLabels = ['Intro', 'Method', method === METHODS.COMPANY_EMAIL ? 'Work & OTP' : method === METHODS.COLLEGE_EMAIL ? 'Email OTP' : 'Upload', 'Done'];
 
+  // ─── Bottom Bar (matches BecomeReferrerScreen pattern) ──
+  const renderBottomBar = () => {
+    if (step === STEPS.SUCCESS || step === STEPS.INTRO) return null;
+
+    return (
+      <View style={styles.bottomBar}>
+        <View style={styles.bottomActions}>
+          <TouchableOpacity style={styles.backButton} onPress={() => animateToStep(step - 1)}>
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => { if (step > 0) animateToStep(step - 1); else navigation.goBack(); }} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Get Verified</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <SubScreenHeader
+        title="Get Verified"
+        fallbackTab="Home"
+      />
 
       {/* Step indicator */}
       {step < STEPS.SUCCESS && (
@@ -745,6 +761,9 @@ export default function GetVerifiedScreen({ navigation }) {
         {step === STEPS.VERIFY && method === METHODS.AADHAAR && renderAadhaarVerify()}
         {step === STEPS.SUCCESS && renderSuccess()}
       </Animated.View>
+
+      {/* Bottom bar */}
+      {renderBottomBar()}
     </View>
   );
 }
@@ -755,9 +774,6 @@ function makeStyles(colors, isDark, responsive) {
   const maxW = isDesktop ? 560 : '100%';
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-    backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
     stepContainer: { flex: 1 },
     stepContent: { padding: 20, maxWidth: maxW, width: '100%', alignSelf: 'center' },
     heroBanner: { borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 8 },
@@ -810,5 +826,9 @@ function makeStyles(colors, isDark, responsive) {
     stepDotActive: { backgroundColor: colors.primary },
     stepLabel: { fontSize: 10, color: colors.textSecondary },
     stepLabelActive: { color: colors.primary, fontWeight: '600' },
+    bottomBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: isDark ? '#333' : '#E5E7EB', paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 30 : 16, ...(isDesktop ? { maxWidth: 560, alignSelf: 'center', width: '100%' } : {}) },
+    bottomActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    backButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: isDark ? '#333' : '#F3F4F6', gap: 4 },
+    backButtonText: { fontSize: 14, fontWeight: '600', color: colors.text },
   });
 }

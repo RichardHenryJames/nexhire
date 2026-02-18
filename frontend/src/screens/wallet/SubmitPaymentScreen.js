@@ -255,7 +255,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <SubScreenHeader title="Submit Payment" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Submit Payment" directBack="Wallet" />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
 
         {/* Step 1: Amount */}

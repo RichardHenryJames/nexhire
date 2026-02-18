@@ -772,7 +772,7 @@ export default function ApplicationsScreen({ navigation }) {
     <View style={styles.container}>
       <SubScreenHeader
         title={pagination.total > 0 ? `${isEmployer ? 'Job Applications' : 'My Applications'} (${pagination.total})` : (isEmployer ? 'Job Applications' : 'My Applications')}
-        fallbackTab="Home"
+        fallbackTab="Jobs"
       />
       <View style={styles.innerContainer}>
         {/* Info banner - showing last 2 weeks */}

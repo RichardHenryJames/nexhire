@@ -293,17 +293,12 @@ export default function SocialShareSubmitScreen() {
     );
   }
 
-  // Handle close button - navigate back or to home if no history
-  const handleClose = () => {
-    navigation.navigate('ShareEarn');
-  };
-
   return (
     <View style={styles.container}>
       <SubScreenHeader
         title={`Share on ${config.displayName || platform}`}
         icon="close"
-        onBack={handleClose}
+        directBack="ShareEarn"
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={{ padding: 16 }}>

@@ -180,7 +180,7 @@ export default function WalletScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="My Wallet" fallbackTab="Home" />
+      <SubScreenHeader title="My Wallet" directBack="Home" />
       <View style={styles.innerContainer}>
       {/* Wallet Balance Card */}
       <View style={styles.balanceCard}>
