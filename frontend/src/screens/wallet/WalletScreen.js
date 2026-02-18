@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 
@@ -66,26 +67,6 @@ export default function WalletScreen({ navigation, route }) {
       fetchWithdrawable();
     }
   }, [showWithdrawModal]);
-
-  // ✅ Always navigate back to Profile screen
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'My Wallet',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16, padding: 4 }} 
-          onPress={() => {
-            navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Load wallet data
   const loadWalletData = useCallback(async (showLoader = true) => {
@@ -199,6 +180,7 @@ export default function WalletScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="My Wallet" fallbackTab="Home" />
       <View style={styles.innerContainer}>
       {/* Wallet Balance Card */}
       <View style={styles.balanceCard}>

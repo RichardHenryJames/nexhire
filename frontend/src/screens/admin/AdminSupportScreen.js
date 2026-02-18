@@ -21,6 +21,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { colors as brandColors } from '../../styles/theme';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 // Status configurations
 const STATUS_CONFIG = {
@@ -84,15 +85,6 @@ export default function AdminSupportScreen() {
   // Detail modal
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [detailTicket, setDetailTicket] = useState(null);
-
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Support Tickets',
-      headerStyle: { backgroundColor: colors.surface },
-      headerTintColor: colors.text,
-      headerTitleStyle: { color: colors.text, fontWeight: 'bold' },
-    });
-  }, [navigation, colors]);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -787,6 +779,7 @@ export default function AdminSupportScreen() {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Support Tickets" fallbackTab="ActionCenter" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

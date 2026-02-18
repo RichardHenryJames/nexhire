@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 
@@ -24,34 +25,6 @@ export default function WithdrawalRequestsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-
-  // Header setup
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Withdrawal Requests',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16, padding: 4 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              // Lost context - redirect to Wallet screen
-              navigation.navigate('Wallet');
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Load withdrawal data
   const loadWithdrawals = useCallback(async (showLoader = true) => {
@@ -198,6 +171,7 @@ export default function WithdrawalRequestsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Withdrawals" fallbackTab="Home" />
       <View style={styles.innerContainer}>
         {withdrawals.length === 0 ? (
           <View style={styles.emptyState}>

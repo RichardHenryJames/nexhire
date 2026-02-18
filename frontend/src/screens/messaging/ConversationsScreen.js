@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
@@ -350,29 +351,16 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
   // Same structure as JobsScreen - search header fixed, list scrolls
   return (
     <View style={styles.container}>
-      {/* Custom Header - Fixed at top (like ProfileScreen's stickyHeader) */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={handleBack}
-          style={styles.headerButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Messages</Text>
-        
-        {isAdmin ? (
-          <TouchableOpacity 
-            onPress={() => setShowNewMessageModal(true)}
-            style={styles.headerButton}
-          >
+      {/* Header */}
+      <SubScreenHeader
+        title="Messages"
+        fallbackTab="Home"
+        rightContent={isAdmin ? (
+          <TouchableOpacity onPress={() => setShowNewMessageModal(true)} style={styles.headerButton}>
             <Ionicons name="add" size={24} color={colors.text} />
           </TouchableOpacity>
-        ) : (
-          <View style={styles.headerButton} />
-        )}
-      </View>
+        ) : null}
+      />
 
       {/* Search Bar - Fixed at top (like JobsScreen searchHeader) */}
       <View style={styles.searchContainer}>

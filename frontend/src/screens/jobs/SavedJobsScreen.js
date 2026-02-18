@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import JobCard from '../../components/jobs/JobCard';
 import refopenAPI from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
@@ -107,49 +108,6 @@ const SavedJobsScreen = ({ navigation }) => {
     loadSavedJobs();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update navigation header with count
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs',
-    });
-  }, [savedCount, navigation]);
-
-  // ✅ Smart back navigation (hard-refresh safe) - same as JobDetails/Applications
-  // Also set header style for dark mode support
-  useEffect(() => {
-    navigation.setOptions({
-      headerStyle: {
-        backgroundColor: colors.surface,
-      },
-      headerTintColor: colors.text,
-      headerTitleStyle: {
-        color: colors.text,
-      },
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => {
-            const navState = navigation.getState?.();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: { screen: 'Profile' },
-              });
-            }
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
-
   // Refresh handler
   const onRefresh = () => {
     setRefreshing(true);
@@ -247,6 +205,7 @@ const SavedJobsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title={savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs'} fallbackTab="Home" />
       <View style={styles.innerContainer}>
         {/* Job list */}
         <FlatList

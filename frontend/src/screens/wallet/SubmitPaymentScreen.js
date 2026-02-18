@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
@@ -85,32 +86,6 @@ const SubmitPaymentScreen = ({ navigation }) => {
   useEffect(() => {
     loadData();
   }, []);
-
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Submit Payment',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || '700', color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity
-          style={{ marginLeft: 16, padding: 4 }}
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('WalletRecharge');
-            }
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   const loadData = async () => {
     try {
@@ -280,6 +255,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <SubScreenHeader title="Submit Payment" fallbackTab="Home" />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
 
         {/* Step 1: Amount */}

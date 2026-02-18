@@ -17,6 +17,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 // Support categories
 const CATEGORIES = [
@@ -62,33 +63,6 @@ export default function SupportScreen() {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
-  // Navigation header
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Support',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Load tickets when history tab is active
   useEffect(() => {
@@ -576,6 +550,7 @@ export default function SupportScreen() {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Help & Support" fallbackTab="Home" />
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity

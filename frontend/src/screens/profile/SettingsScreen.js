@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1467,34 +1468,7 @@ export default function SettingsScreen({ navigation, route }) {
     <View style={styles.container}>
       <View style={styles.innerContainer}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => {
-              // ✅ Smart back navigation - check if we have meaningful navigation history
-              const navState = navigation.getState();
-              const routes = navState?.routes || [];
-              const currentIndex = navState?.index || 0;
-              
-              // If we have more than 1 route in the stack, go back normally
-              if (routes.length > 1 && currentIndex > 0) {
-                navigation.goBack();
-              } else {
-                // Hard refresh scenario - navigate to Profile tab
-                navigation.navigate('Main', {
-                  screen: 'MainTabs',
-                  params: {
-                    screen: 'Profile'
-                  }
-                });
-              }
-            }} 
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <SubScreenHeader title="Settings" fallbackTab="Home" />
 
         <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Account Details Section */}

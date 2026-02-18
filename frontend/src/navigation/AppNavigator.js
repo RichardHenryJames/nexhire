@@ -601,11 +601,7 @@ function MainStack() {
       <Stack.Screen
         name="JobDetails"
         component={JobDetailsScreen}
-        options={{
-          headerShown: true,
-          title: "Job Details",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AIRecommendedJobs"
@@ -617,92 +613,23 @@ function MainStack() {
       <Stack.Screen
         name="SavedJobs"
         component={SavedJobsScreen}
-        options={{
-          headerShown: true,
-          title: "Saved Jobs",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Applications"
         component={ApplicationsScreen}
-        options={{
-          headerShown: true,
-          title: "My Applications",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="MyReferralRequests"
         component={MyReferralRequestsScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          title: "My Referral Requests",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                const navState = navigation.getState();
-                const routes = navState?.routes || [];
-                const currentIndex = navState?.index || 0;
-
-                if (navigation.canGoBack() && routes.length > 1 && currentIndex > 0) {
-                  navigation.goBack();
-                  return;
-                }
-
-                navigation.navigate('Main', {
-                  screen: 'MainTabs',
-                  params: {
-                    screen: 'AskReferral',
-                  },
-                });
-              }}
-              style={{ paddingLeft: 16 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
+        options={{ headerShown: false }}
       />
       {/* ?? NEW: Referral Tracking screen */}
       <Stack.Screen
         name="ReferralTracking"
         component={ReferralTrackingScreen}
-        options={{
-          headerShown: true,
-          title: "Referral Tracking",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-        }}
+        options={{ headerShown: false }}
       />
       {/* ?? NEW: Chat screen for messaging */}
       <Stack.Screen
@@ -765,11 +692,7 @@ function MainStack() {
       <Stack.Screen
         name="OrganizationDetails"
         component={OrganizationDetailsScreen}
-        options={{
-          headerShown: true,
-          title: "Company Details",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       {/* Admin Dashboard - Admin only */}
       <Stack.Screen
@@ -790,73 +713,17 @@ function MainStack() {
       <Stack.Screen
         name="AdminPayments"
         component={AdminPaymentsScreen}
-        options={({ navigation: nav }) => ({
-          headerShown: true,
-          title: "Payment Approvals",
-          headerBackTitleVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => {
-              nav.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
-            }} style={{ paddingHorizontal: 12 }}>
-              <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
-            </TouchableOpacity>
-          ),
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AdminSupport"
         component={AdminSupportScreen}
-        options={({ navigation: nav }) => ({
-          headerShown: true,
-          title: "Support Tickets",
-          headerBackTitleVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => {
-              nav.navigate('Main', { screen: 'MainTabs', params: { screen: 'ActionCenter' } });
-            }} style={{ paddingHorizontal: 12 }}>
-              <Ionicons name="arrow-back" size={24} color={colors?.text || '#000'} />
-            </TouchableOpacity>
-          ),
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Referral"
         component={ReferralScreen}
-        options={({ navigation: nav }) => ({
-          headerShown: true,
-          title: "Provide Referral",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                const navState = nav.getState();
-                const routes = navState?.routes || [];
-                const currentIndex = navState?.index || 0;
-
-                if (nav.canGoBack() && routes.length > 1 && currentIndex > 0) {
-                  nav.goBack();
-                  return;
-                }
-
-                nav.navigate('Main', {
-                  screen: 'MainTabs',
-                  params: { screen: 'Home' },
-                });
-              }}
-              style={{ paddingLeft: 16 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AskReferral"
@@ -868,11 +735,7 @@ function MainStack() {
       <Stack.Screen
         name="ReferralPlans"
         component={ReferralPlansScreen}
-        options={{
-          headerShown: true,
-          title: "Subscription Plans",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="BecomeReferrer"
@@ -887,90 +750,44 @@ function MainStack() {
       <Stack.Screen
         name="PostReferralJob"
         component={PostReferralJobScreen}
-        options={{
-          headerShown: true,
-          title: "Post a Job to Refer",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-        }}
+        options={{ headerShown: false }}
       />
       {/* EmployerJobs - Separate stack screen for verified referrers to view their draft/published jobs */}
       <Stack.Screen
         name="EmployerJobs"
         component={EmployerJobsScreen}
-        options={{
-          headerShown: true,
-          title: "My Posted Jobs",
-          headerBackTitleVisible: false,
-          headerStyle: {
-            backgroundColor: colors.surface,
-          },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            color: colors.text,
-          },
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Payment"
         component={PaymentScreen}
-        options={{
-          headerShown: true,
-          title: "Secure Payment",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       {/* NEW: Wallet screens */}
       <Stack.Screen
         name="Wallet"
         component={WalletScreen}
-        options={{
-          headerShown: true,
-          title: "My Wallet",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="WalletTransactions"
         component={WalletTransactionsScreen}
-        options={{
-          headerShown: true,
-          title: "Transaction History",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="WalletRecharge"
         component={ManualRechargeScreen}
-        options={{
-          headerShown: true,
-          title: "Add Money to Wallet",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="SubmitPayment"
         component={SubmitPaymentScreen}
-        options={{
-          headerShown: true,
-          title: "Submit Payment",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="WithdrawalRequests"
         component={WithdrawalRequestsScreen}
-        options={{
-          headerShown: true,
-          title: "Withdrawal Requests",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="PaymentSuccess"
@@ -984,11 +801,7 @@ function MainStack() {
       <Stack.Screen
         name="WalletHolds"
         component={WalletHoldsScreen}
-        options={{
-          headerShown: true,
-          title: "Wallet Holds",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -1041,20 +854,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Terms"
         component={TermsScreen}
-        options={{
-          headerShown: true,
-          title: "Terms & Conditions",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
-        options={{
-          headerShown: true,
-          title: "Privacy Policy",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AboutUs"
@@ -1068,20 +873,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Disclaimer"
         component={DisclaimerScreen}
-        options={{
-          headerShown: true,
-          title: "Disclaimer",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="FAQ"
         component={FAQScreen}
-        options={{
-          headerShown: true,
-          title: "FAQ",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Blog"
@@ -1104,11 +901,7 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Support"
         component={SupportScreen}
-        options={{
-          headerShown: true,
-          title: "Help & Support",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       
       {/* Public Resume Analyzer Tool - accessible without auth */}
@@ -1136,22 +929,14 @@ export default function AppNavigator() {
       <Stack.Screen
         name="AskReferralPublic"
         component={AskReferralScreen}
-        options={{
-          headerShown: true,
-          title: "Ask for Referral",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       
       {/* Public Job Details Screen - accessible without auth but actions require login */}
       <Stack.Screen
         name="JobDetailsPublic"
         component={JobDetailsScreen}
-        options={{
-          headerShown: true,
-          title: "Job Details",
-          headerBackTitleVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       
       {/* Public Password Reset Screens - accessible without auth */}

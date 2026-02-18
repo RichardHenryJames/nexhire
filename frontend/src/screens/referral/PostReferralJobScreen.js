@@ -18,6 +18,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 /**
  * PostReferralJobScreen - Simplified job posting for verified referrers
@@ -92,38 +93,6 @@ export default function PostReferralJobScreen({ navigation, route }) {
   useEffect(() => {
     loadReferenceData();
   }, []);
-
-  // ✅ Smart back navigation - handle hard refresh scenario
-  useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ paddingLeft: 16 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            
-            // If we have more than 1 route in the stack, go back normally
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              // Hard refresh scenario - navigate to Referrals tab
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: {
-                  screen: 'Referrals'
-                }
-              });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Fetch organization details when organizationId is available
   useEffect(() => {
@@ -394,6 +363,7 @@ export default function PostReferralJobScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Post Job" fallbackTab="Home" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

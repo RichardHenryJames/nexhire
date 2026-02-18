@@ -17,6 +17,7 @@ import RenderHtml from 'react-native-render-html';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -89,49 +90,6 @@ const { jobId, fromReferralRequest } = route.params || {};
     const custom = coverLetter.trim();
     return custom.length ? custom : fallback;
   }, [coverLetter, job?.Title]);
-
-  // ✅ Navigation header with smart back button
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Job Details',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={styles.headerButton} 
-          onPress={() => {
-            // ✅ Smart back navigation - check if we have meaningful navigation history
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            
-            // If we have more than 1 route in the stack, go back normally
-            // This handles: Jobs -> JobDetails (back should go to Jobs)
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              // Hard refresh scenario - navigate to Home tab
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: {
-                  screen: 'Home'
-                }
-              });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-      // ✅ Only show save button for job seekers (not employers)
-      headerRight: (hasApplied || isEmployer) ? undefined : () => (
-        <TouchableOpacity style={styles.headerButton} onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
-        </TouchableOpacity>
-      )
-    });
-  }, [navigation, isSaved, hasApplied, isEmployer]);
 
   // Load job details and referral status
   useEffect(() => {
@@ -880,6 +838,16 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SubScreenHeader
+        title="Job Details"
+        fallbackTab="Home"
+        rightContent={(!hasApplied && !isEmployer) ? (
+          <TouchableOpacity onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
+          </TouchableOpacity>
+        ) : null}
+      />
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <ResponsiveContainer style={styles.contentWrapper}>
       {/* Header */}
@@ -1421,6 +1389,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       />
       </ResponsiveContainer>
     </ScrollView>
+    </View>
   );
 }
 

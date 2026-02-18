@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 const FAQItem = ({ question, answer, colors, styles }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -40,33 +41,6 @@ export default function FAQScreen() {
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ✅ Navigation header with smart back button (hard-refresh safe)
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'FAQ',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ marginLeft: 16 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Profile' } });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
-  
   const faqData = [
     {
       category: 'About Refopen',
@@ -305,6 +279,7 @@ export default function FAQScreen() {
 
   return (
     <View style={styles.container}>
+    <SubScreenHeader title="FAQ" fallbackTab="Home" />
     <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
     <View style={styles.innerContainer}>
       <View style={styles.content}>

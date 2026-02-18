@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 
@@ -42,47 +43,6 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
   const [recentJobs, setRecentJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [error, setError] = useState(null);
-
-  // Navigation header
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Company Details',
-      headerStyle: { 
-        backgroundColor: colors.surface, 
-        elevation: 0, 
-        shadowOpacity: 0, 
-        borderBottomWidth: 1, 
-        borderBottomColor: colors.border 
-      },
-      headerTitleStyle: { 
-        fontSize: typography.sizes.lg, 
-        fontWeight: typography.weights.bold, 
-        color: colors.text 
-      },
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ padding: 8, marginLeft: 8 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: { screen: 'Home' }
-              });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   useEffect(() => {
     if (!organizationId) {
@@ -201,6 +161,8 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SubScreenHeader title="Company Details" fallbackTab="Home" />
     <ScrollView 
       style={styles.container} 
       contentContainerStyle={styles.scrollContent}
@@ -435,6 +397,7 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
         )}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
