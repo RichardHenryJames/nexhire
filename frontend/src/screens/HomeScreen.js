@@ -21,14 +21,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
-import messagingApi from '../services/messagingApi';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 import useResponsive from '../hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 import { showToast } from '../components/Toast';
-import ProfileSlider from '../components/ProfileSlider';
+import TabHeader from '../components/TabHeader';
 import EngagementHub from '../components/engagement/EngagementHub';
 
 const { width } = Dimensions.get('window');
@@ -40,7 +39,6 @@ const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
 const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 const [showHeader, setShowHeader] = useState(true);
-const [profileSliderVisible, setProfileSliderVisible] = useState(false);
 const [refreshing, setRefreshing] = useState(false);
 
 // Organization search state
@@ -77,7 +75,6 @@ const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
 
 // 🎯 NEW: Unread message count for messages icon badge
-const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
 // 🎯 NEW: Social share claims to show/hide Earn Credits button
 const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState([]);
@@ -242,19 +239,6 @@ const [dashboardData, setDashboardData] = useState({
         }
       })();
     }
-
-    // 🎯 NEW: Fetch unread message count
-    const unreadCountPromise = (async () => {
-      try {
-        const result = await messagingApi.getUnreadCount();
-        if (result.success && result.data) {
-          setUnreadMessageCount(result.data.TotalUnread || 0);
-        }
-      } catch (err) {
-        console.warn('Unread count fetch failed:', err);
-        setUnreadMessageCount(0);
-      }
-    })();
 
     // 🎯 NEW: Fetch social share claims to check if user completed all
     const socialSharePromise = (async () => {
@@ -628,128 +612,81 @@ const [dashboardData, setDashboardData] = useState({
   // ⚡ Remove the global loading screen - show content immediately
 
   const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
-  const profilePhotoUrl =
-    user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
   return (
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
       {showHeader && (
-      <View style={styles.headerCompact}>
-        {/* Left: Profile avatar */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setProfileSliderVisible(true)}
-        >
-          {profilePhotoUrl ? (
-            <Image source={{ uri: profilePhotoUrl }} style={styles.profilePicture} />
-          ) : (
-            <View style={styles.profilePicturePlaceholder}>
-              <Ionicons name="person" size={22} color={colors.white} />
-            </View>
-          )}
-        </TouchableOpacity>
-        
-        {/* Center: Search bar */}
-        <View style={styles.searchContainerMain}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons 
-              name="search" 
-              size={18} 
-              color={colors.gray400} 
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search companies..."
-              placeholderTextColor={colors.gray400}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onFocus={() => searchQuery.trim().length >= 2 && setShowSearchResults(true)}
-              onBlur={() => setTimeout(() => setShowSearchResults(false), 300)}
-            />
-            {searchLoading && (
-              <ActivityIndicator size="small" color={colors.primary} style={styles.searchLoader} />
-            )}
-          </View>
-          
-          {/* Search Results Dropdown */}
-          {showSearchResults && searchResults.length > 0 && (
-            <View style={styles.searchResultsDropdown}>
-              <FlatList
-                data={searchResults}
-                keyExtractor={(item) => item.id.toString()}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.searchResultItem}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      // ✅ Use onPress instead of onPressIn to allow scrolling
-                      
-                      // Navigate
-                      navigation.navigate('OrganizationDetails', { 
-                        organizationId: item.id 
-                      });
-                      
-                      // Clear state after navigation
-                      setShowSearchResults(false);
-                      setSearchQuery('');
-                    }}
-                  >
-                    {item.logoURL ? (
-                      <Image 
-                        source={{ uri: item.logoURL }} 
-                        style={styles.orgLogo}
-                      />
-                    ) : (
-                      <View style={styles.orgLogoPlaceholder}>
-                        <Ionicons name="business" size={20} color={colors.gray400} />
-                      </View>
-                    )}
-                    <View style={styles.orgInfo}>
-                      <Text style={styles.orgName} numberOfLines={1}>{item.name}</Text>
-                      {item.industry && (
-                        <Text style={styles.orgIndustry} numberOfLines={1}>{item.industry}</Text>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
-                  </TouchableOpacity>
-                )}
-                style={styles.searchResultsList}
+      <TabHeader
+        navigation={navigation}
+        showWallet={true}
+        walletBalance={walletBalance}
+        centerContent={
+          <View style={styles.searchContainerMain}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons 
+                name="search" 
+                size={18} 
+                color={colors.gray400} 
+                style={styles.searchIcon}
               />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search companies..."
+                placeholderTextColor={colors.gray400}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onFocus={() => searchQuery.trim().length >= 2 && setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 300)}
+              />
+              {searchLoading && (
+                <ActivityIndicator size="small" color={colors.primary} style={styles.searchLoader} />
+              )}
             </View>
-          )}
-        </View>
-        
-        {/* Right: Wallet + Messages buttons */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          {walletBalance !== null && (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Wallet')}
-              activeOpacity={0.7}
-              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#10B981' + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, marginRight: 4 }}
-            >
-              <Ionicons name="wallet-outline" size={16} color="#10B981" />
-              <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '700', marginLeft: 3, fontFamily: typography.fontFamily }}>₹{walletBalance}</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Messages')}
-            activeOpacity={0.7}
-            style={styles.messagesButton}
-          >
-            <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-            {unreadMessageCount > 0 && (
-              <View style={styles.messagesBadge}>
-                <Text style={styles.messagesBadgeText}>
-                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-                </Text>
+            {showSearchResults && searchResults.length > 0 && (
+              <View style={styles.searchResultsDropdown}>
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item) => item.id.toString()}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.searchResultItem}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        navigation.navigate('OrganizationDetails', { 
+                          organizationId: item.id 
+                        });
+                        setShowSearchResults(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      {item.logoURL ? (
+                        <Image 
+                          source={{ uri: item.logoURL }} 
+                          style={styles.orgLogo}
+                        />
+                      ) : (
+                        <View style={styles.orgLogoPlaceholder}>
+                          <Ionicons name="business" size={20} color={colors.gray400} />
+                        </View>
+                      )}
+                      <View style={styles.orgInfo}>
+                        <Text style={styles.orgName} numberOfLines={1}>{item.name}</Text>
+                        {item.industry && (
+                          <Text style={styles.orgIndustry} numberOfLines={1}>{item.industry}</Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
+                    </TouchableOpacity>
+                  )}
+                  style={styles.searchResultsList}
+                />
               </View>
             )}
-          </TouchableOpacity>
-        </View>
-      </View>
+          </View>
+        }
+      />
       )}
 
       <ScrollView
@@ -1148,12 +1085,6 @@ const [dashboardData, setDashboardData] = useState({
         visible={showVerifiedOverlay}
         onClose={() => setShowVerifiedOverlay(false)}
         companyName={verifiedCompanyName}
-      />
-
-      {/* LinkedIn-style Profile Slider */}
-      <ProfileSlider
-        visible={profileSliderVisible}
-        onClose={() => setProfileSliderVisible(false)}
       />
     </>
   );
