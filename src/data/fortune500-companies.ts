@@ -1,7 +1,14 @@
 /**
- * Fortune 500 Companies List
- * Source: Fortune 500 2024 + Global Tech Giants
- * Used as canonical names for company normalization
+ * Famous Companies List — Used for:
+ *   1. Name normalization (canonical names + alternate spellings)
+ *   2. Industry classification (authoritative, not overwritten by scraper)
+ *   3. "Famous company" flag in DB (IsFortune500 column — reused for backward compatibility)
+ * 
+ * Includes: US Fortune 500 + Global Tech Giants + Major Indian Companies + Top Consulting Firms
+ * 
+ * If a company has rank → it's in the list → IsFortune500 = true in DB
+ * rank is just a unique ID to mark inclusion — NOT necessarily the actual Fortune 500 position
+ * rank 1-500 = US Fortune 500, rank 501-599 = Indian companies, rank 600+ = other notable global companies
  */
 
 export interface Fortune500Company {
@@ -296,27 +303,32 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Airbnb',
     alternateNames: ['Airbnb Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 600
   },
   {
     canonicalName: 'Spotify',
     alternateNames: ['Spotify Technology'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 601
   },
   {
     canonicalName: 'Snap',
     alternateNames: ['Snap Inc', 'Snapchat'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 602
   },
   {
     canonicalName: 'Twitter',
     alternateNames: ['Twitter Inc', 'X Corp', 'X'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 603
   },
   {
     canonicalName: 'LinkedIn',
     alternateNames: ['LinkedIn Corp', 'LinkedIn Corporation'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 604
   },
   {
     canonicalName: 'Dell',
@@ -339,104 +351,124 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'VMware',
     alternateNames: ['VMware Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 605
   },
   {
     canonicalName: 'ServiceNow',
     alternateNames: ['ServiceNow Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 606
   },
   {
     canonicalName: 'Workday',
     alternateNames: ['Workday Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 607
   },
   {
     canonicalName: 'Zoom',
     alternateNames: ['Zoom Video Communications', 'Zoom Communications'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 608
   },
   {
     canonicalName: 'Slack',
     alternateNames: ['Slack Technologies'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 609
   },
   {
     canonicalName: 'Atlassian',
     alternateNames: ['Atlassian Corporation'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 610
   },
   {
     canonicalName: 'Square',
     alternateNames: ['Block Inc', 'Block', 'Cash App'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 611
   },
   {
     canonicalName: 'Stripe',
     alternateNames: ['Stripe Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 612
   },
   {
     canonicalName: 'Shopify',
     alternateNames: ['Shopify Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 613
   },
   {
     canonicalName: 'Intuit',
     alternateNames: ['Intuit Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 614
   },
   {
     canonicalName: 'Autodesk',
     alternateNames: ['Autodesk Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 615
   },
 
   // Indian Tech Companies (Major Players)
   {
     canonicalName: 'Tata Consultancy Services',
     alternateNames: ['TCS', 'Tata Consulting', 'TCS Ltd'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 501
   },
   {
     canonicalName: 'Infosys',
     alternateNames: ['Infosys Technologies', 'Infosys Ltd'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 502
   },
   {
     canonicalName: 'Wipro',
     alternateNames: ['Wipro Technologies', 'Wipro Ltd'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 503
   },
   {
     canonicalName: 'HCL Technologies',
     alternateNames: ['HCL', 'HCL Tech'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 504
   },
   {
     canonicalName: 'Tech Mahindra',
     alternateNames: ['Tech Mahindra Ltd'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 505
   },
   {
     canonicalName: 'Cognizant',
     alternateNames: ['Cognizant Technology Solutions'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 646
   },
   {
     canonicalName: 'Accenture',
     alternateNames: ['Accenture plc', 'Accenture Ltd'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 647
   },
   {
     canonicalName: 'Capgemini',
     alternateNames: ['Capgemini SE'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 648
   },
   {
     canonicalName: 'Deloitte',
     alternateNames: ['Deloitte Consulting', 'Deloitte Touche Tohmatsu'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 706
   },
 
   // More Fortune 500 - Healthcare
@@ -703,7 +735,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Mars',
     alternateNames: ['Mars Inc', 'Mars Incorporated'],
-    industry: 'Food & Beverage'
+    industry: 'Food & Beverage',
+    rank: 643
   },
   {
     canonicalName: 'Starbucks',
@@ -810,7 +843,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Sprint',
     alternateNames: ['Sprint Corporation', 'Sprint Nextel'],
-    industry: 'Telecommunications'
+    industry: 'Telecommunications',
+    rank: 644
   },
 
   // Media & Entertainment
@@ -835,7 +869,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Sony',
     alternateNames: ['Sony Corporation', 'Sony Group'],
-    industry: 'Entertainment'
+    industry: 'Entertainment',
+    rank: 616
   },
 
   // Logistics & Transportation
@@ -922,107 +957,128 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Seagate',
     alternateNames: ['Seagate Technology'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 617
   },
   {
     canonicalName: 'Synopsys',
     alternateNames: ['Synopsys Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 618
   },
   {
     canonicalName: 'Cadence',
     alternateNames: ['Cadence Design Systems'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 619
   },
   {
     canonicalName: 'Palo Alto Networks',
     alternateNames: ['Palo Alto', 'PANW'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 620
   },
   {
     canonicalName: 'Fortinet',
     alternateNames: ['Fortinet Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 621
   },
   {
     canonicalName: 'CrowdStrike',
     alternateNames: ['CrowdStrike Holdings'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 622
   },
   {
     canonicalName: 'Snowflake',
     alternateNames: ['Snowflake Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 623
   },
   {
     canonicalName: 'Databricks',
     alternateNames: ['Databricks Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 624
   },
   {
     canonicalName: 'MongoDB',
     alternateNames: ['MongoDB Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 625
   },
   {
     canonicalName: 'Splunk',
     alternateNames: ['Splunk Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 626
   },
   {
     canonicalName: 'Twilio',
     alternateNames: ['Twilio Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 627
   },
   {
     canonicalName: 'Okta',
     alternateNames: ['Okta Inc', 'Okta Identity India', 'Okta India'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 628
   },
   {
     canonicalName: 'DocuSign',
     alternateNames: ['DocuSign Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 629
   },
   {
     canonicalName: 'HubSpot',
     alternateNames: ['HubSpot Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 630
   },
   {
     canonicalName: 'Zendesk',
     alternateNames: ['Zendesk Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 631
   },
   {
     canonicalName: 'Box',
     alternateNames: ['Box Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 632
   },
   {
     canonicalName: 'Dropbox',
     alternateNames: ['Dropbox Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 633
   },
   {
     canonicalName: 'Roblox',
     alternateNames: ['Roblox Corp', 'Roblox Corporation'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 634
   },
   {
     canonicalName: 'Unity',
     alternateNames: ['Unity Technologies', 'Unity Software'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 635
   },
   {
     canonicalName: 'Epic Games',
     alternateNames: ['Epic'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 636
   },
   {
     canonicalName: 'Riot Games',
     alternateNames: ['Riot'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 637
   },
   {
     canonicalName: 'Electronic Arts',
@@ -1033,44 +1089,52 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Activision Blizzard',
     alternateNames: ['Activision', 'Blizzard', 'Activision Blizzard Inc'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 638
   },
   {
     canonicalName: 'Take-Two Interactive',
     alternateNames: ['Take-Two', 'Rockstar Games'],
-    industry: 'Technology'
+    industry: 'Technology',
+    rank: 639
   },
 
   // Consulting & Professional Services
   {
     canonicalName: 'McKinsey',
     alternateNames: ['McKinsey & Company', 'McKinsey and Company'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 700
   },
   {
     canonicalName: 'Boston Consulting Group',
     alternateNames: ['BCG'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 701
   },
   {
     canonicalName: 'Bain',
     alternateNames: ['Bain & Company', 'Bain and Company'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 702
   },
   {
     canonicalName: 'PwC',
     alternateNames: ['PricewaterhouseCoopers', 'PricewaterhouseCoopers LLP'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 703
   },
   {
     canonicalName: 'EY',
     alternateNames: ['Ernst & Young', 'Ernst and Young', 'EY Global'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 704
   },
   {
     canonicalName: 'KPMG',
     alternateNames: ['KPMG LLP'],
-    industry: 'Consulting'
+    industry: 'Consulting',
+    rank: 705
   },
 
   // E-commerce & Marketplaces
@@ -1083,54 +1147,64 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Etsy',
     alternateNames: ['Etsy Inc'],
-    industry: 'E-commerce'
+    industry: 'E-commerce',
+    rank: 640
   },
   {
     canonicalName: 'Wayfair',
     alternateNames: ['Wayfair Inc'],
-    industry: 'E-commerce'
+    industry: 'E-commerce',
+    rank: 641
   },
   {
     canonicalName: 'Chewy',
     alternateNames: ['Chewy Inc'],
-    industry: 'E-commerce'
+    industry: 'E-commerce',
+    rank: 642
   },
 
   // More Indian Companies
   {
     canonicalName: 'Tata Motors',
     alternateNames: ['Tata', 'Tata Motors Ltd'],
-    industry: 'Automotive'
+    industry: 'Automotive',
+    rank: 506
   },
   {
     canonicalName: 'Reliance Industries',
     alternateNames: ['Reliance', 'RIL'],
-    industry: 'Conglomerate'
+    industry: 'Conglomerate',
+    rank: 507
   },
   {
     canonicalName: 'ICICI Bank',
     alternateNames: ['ICICI'],
-    industry: 'Financial Services'
+    industry: 'Financial Services',
+    rank: 508
   },
   {
     canonicalName: 'HDFC Bank',
     alternateNames: ['HDFC'],
-    industry: 'Financial Services'
+    industry: 'Financial Services',
+    rank: 509
   },
   {
     canonicalName: 'State Bank of India',
     alternateNames: ['SBI'],
-    industry: 'Financial Services'
+    industry: 'Financial Services',
+    rank: 510
   },
   {
     canonicalName: 'Bharti Airtel',
     alternateNames: ['Airtel'],
-    industry: 'Telecommunications'
+    industry: 'Telecommunications',
+    rank: 511
   },
   {
     canonicalName: 'Mahindra',
     alternateNames: ['Mahindra & Mahindra', 'M&M'],
-    industry: 'Automotive'
+    industry: 'Automotive',
+    rank: 512
   },
 
   // Fortune 500: 100-200
@@ -1573,7 +1647,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Sodexo',
     alternateNames: ['Sodexo Inc'],
-    industry: 'Services'
+    industry: 'Services',
+    rank: 645
   },
   {
     canonicalName: 'Cintas',
@@ -1736,7 +1811,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Five Below',
     alternateNames: ['Five Below Inc'],
-    industry: 'Retail'
+    industry: 'Retail',
+    rank: 800
   },
   {
     canonicalName: 'Burlington Stores',
@@ -1759,7 +1835,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Academy Sports',
     alternateNames: ['Academy Sports + Outdoors'],
-    industry: 'Retail'
+    industry: 'Retail',
+    rank: 801
   },
   {
     canonicalName: 'GameStop',
@@ -1896,17 +1973,20 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Levi Strauss',
     alternateNames: ['Levi\'s', 'Levi Strauss & Co'],
-    industry: 'Consumer Goods'
+    industry: 'Consumer Goods',
+    rank: 802
   },
   {
     canonicalName: 'Skechers',
     alternateNames: ['Skechers USA'],
-    industry: 'Consumer Goods'
+    industry: 'Consumer Goods',
+    rank: 803
   },
   {
     canonicalName: 'Crocs',
     alternateNames: ['Crocs Inc'],
-    industry: 'Consumer Goods'
+    industry: 'Consumer Goods',
+    rank: 804
   },
   {
     canonicalName: 'Yum! Brands',
@@ -1923,22 +2003,26 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Chipotle',
     alternateNames: ['Chipotle Mexican Grill'],
-    industry: 'Food & Beverage'
+    industry: 'Food & Beverage',
+    rank: 805
   },
   {
     canonicalName: 'Domino\'s Pizza',
     alternateNames: ['Dominos', 'Domino\'s Pizza Inc'],
-    industry: 'Food & Beverage'
+    industry: 'Food & Beverage',
+    rank: 807
   },
   {
     canonicalName: 'Papa John\'s',
     alternateNames: ['Papa Johns International'],
-    industry: 'Food & Beverage'
+    industry: 'Food & Beverage',
+    rank: 808
   },
   {
     canonicalName: 'Wendy\'s',
     alternateNames: ['Wendys', 'The Wendy\'s Company'],
-    industry: 'Food & Beverage'
+    industry: 'Food & Beverage',
+    rank: 809
   },
   {
     canonicalName: 'Restaurant Brands International',
@@ -1973,7 +2057,8 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
   {
     canonicalName: 'Wyndham Hotels & Resorts',
     alternateNames: ['Wyndham'],
-    industry: 'Hospitality'
+    industry: 'Hospitality',
+    rank: 806
   },
   {
     canonicalName: 'MGM Resorts International',
@@ -3219,6 +3304,230 @@ export const FORTUNE_500_COMPANIES: Fortune500Company[] = [
     industry: 'Insurance',
     rank: 500
   },
+  // Major Indian Companies & Startups
+  {
+    canonicalName: 'Flipkart',
+    alternateNames: ['Flipkart Internet', 'Flipkart India'],
+    industry: 'E-commerce',
+    rank: 520
+  },
+  {
+    canonicalName: 'PhonePe',
+    alternateNames: ['PhonePe India'],
+    industry: 'Financial Technology',
+    rank: 521
+  },
+  {
+    canonicalName: 'Meesho',
+    alternateNames: ['Meesho Inc'],
+    industry: 'E-commerce',
+    rank: 522
+  },
+  {
+    canonicalName: 'Razorpay',
+    alternateNames: ['Razorpay Software'],
+    industry: 'Financial Technology',
+    rank: 523
+  },
+  {
+    canonicalName: 'Paytm',
+    alternateNames: ['One97 Communications', 'Paytm Payments Bank'],
+    industry: 'Financial Technology',
+    rank: 524
+  },
+  {
+    canonicalName: 'Swiggy',
+    alternateNames: ['Bundl Technologies'],
+    industry: 'Food Delivery',
+    rank: 525
+  },
+  {
+    canonicalName: 'Zomato',
+    alternateNames: ['Zomato Ltd'],
+    industry: 'Food Delivery',
+    rank: 526
+  },
+  {
+    canonicalName: 'BYJU\'S',
+    alternateNames: ['Think and Learn', 'Byjus'],
+    industry: 'Education Technology',
+    rank: 527
+  },
+  {
+    canonicalName: 'Ola',
+    alternateNames: ['ANI Technologies', 'Ola Cabs'],
+    industry: 'Transportation',
+    rank: 528
+  },
+  {
+    canonicalName: 'Zerodha',
+    alternateNames: ['Zerodha Broking'],
+    industry: 'Financial Technology',
+    rank: 529
+  },
+  {
+    canonicalName: 'Dream11',
+    alternateNames: ['Dream Sports'],
+    industry: 'Gaming & Sports',
+    rank: 530
+  },
+  {
+    canonicalName: 'CRED',
+    alternateNames: ['Dreamplug Technologies'],
+    industry: 'Financial Technology',
+    rank: 531
+  },
+  {
+    canonicalName: 'Freshworks',
+    alternateNames: ['Freshworks Inc', 'Freshdesk'],
+    industry: 'SaaS',
+    rank: 532
+  },
+  {
+    canonicalName: 'Zoho',
+    alternateNames: ['Zoho Corporation'],
+    industry: 'SaaS',
+    rank: 533
+  },
+  {
+    canonicalName: 'Myntra',
+    alternateNames: ['Myntra Designs'],
+    industry: 'E-commerce',
+    rank: 534
+  },
+  {
+    canonicalName: 'Nykaa',
+    alternateNames: ['FSN E-Commerce Ventures', 'Nykaa Fashion'],
+    industry: 'E-commerce',
+    rank: 535
+  },
+  {
+    canonicalName: 'Groww',
+    alternateNames: ['Billionbrains Garage Ventures'],
+    industry: 'Financial Technology',
+    rank: 536
+  },
+  {
+    canonicalName: 'upGrad',
+    alternateNames: ['upGrad Education'],
+    industry: 'Education Technology',
+    rank: 537
+  },
+  {
+    canonicalName: 'Unacademy',
+    alternateNames: ['Sorting Hat Technologies'],
+    industry: 'Education Technology',
+    rank: 538
+  },
+  {
+    canonicalName: 'PolicyBazaar',
+    alternateNames: ['PB Fintech', 'Policybazaar Insurance'],
+    industry: 'Insurance Technology',
+    rank: 539
+  },
+  {
+    canonicalName: 'ShareChat',
+    alternateNames: ['Mohalla Tech'],
+    industry: 'Social Media',
+    rank: 540
+  },
+  {
+    canonicalName: 'Lenskart',
+    alternateNames: ['Lenskart Solutions'],
+    industry: 'E-commerce',
+    rank: 541
+  },
+  {
+    canonicalName: 'OYO',
+    alternateNames: ['OYO Rooms', 'Oravel Stays'],
+    industry: 'Hospitality',
+    rank: 542
+  },
+  {
+    canonicalName: 'Cars24',
+    alternateNames: ['Cars24 Services'],
+    industry: 'Automotive',
+    rank: 543
+  },
+  {
+    canonicalName: 'Jupiter',
+    alternateNames: ['Jupiter Money', 'Amica Financial'],
+    industry: 'Financial Technology',
+    rank: 544
+  },
+  {
+    canonicalName: 'Jio',
+    alternateNames: ['Reliance Jio', 'Jio Platforms'],
+    industry: 'Telecommunications',
+    rank: 545
+  },
+  {
+    canonicalName: 'Infosys BPM',
+    alternateNames: ['Infosys BPO'],
+    industry: 'IT Services',
+    rank: 546
+  },
+  {
+    canonicalName: 'L&T',
+    alternateNames: ['Larsen & Toubro', 'Larsen and Toubro'],
+    industry: 'Engineering & Construction',
+    rank: 547
+  },
+  {
+    canonicalName: 'Hindustan Unilever',
+    alternateNames: ['HUL', 'Hindustan Lever'],
+    industry: 'Consumer Goods',
+    rank: 548
+  },
+  {
+    canonicalName: 'ITC',
+    alternateNames: ['ITC Limited'],
+    industry: 'Conglomerate',
+    rank: 549
+  },
+  {
+    canonicalName: 'Asian Paints',
+    alternateNames: ['Asian Paints Ltd'],
+    industry: 'Manufacturing',
+    rank: 550
+  },
+  {
+    canonicalName: 'Bajaj Finance',
+    alternateNames: ['Bajaj Finserv'],
+    industry: 'Financial Services',
+    rank: 551
+  },
+  {
+    canonicalName: 'Kotak Mahindra Bank',
+    alternateNames: ['Kotak Bank'],
+    industry: 'Financial Services',
+    rank: 552
+  },
+  {
+    canonicalName: 'Axis Bank',
+    alternateNames: ['Axis Bank Ltd'],
+    industry: 'Financial Services',
+    rank: 553
+  },
+  {
+    canonicalName: 'Titan Company',
+    alternateNames: ['Titan Industries', 'Titan'],
+    industry: 'Consumer Goods',
+    rank: 554
+  },
+  {
+    canonicalName: 'Sun Pharmaceutical',
+    alternateNames: ['Sun Pharma', 'Sun Pharmaceutical Industries'],
+    industry: 'Pharmaceuticals',
+    rank: 555
+  },
+  {
+    canonicalName: 'Wipro Limited',
+    alternateNames: ['Wipro Infrastructure'],
+    industry: 'IT Services',
+    rank: 556
+  },
+
 ];
 
 /**
@@ -3241,7 +3550,7 @@ export function findFortune500Match(companyName: string): {
       return {
         canonicalName: company.canonicalName,
         industry: company.industry,
-        isFortune500: true,
+        isFortune500: !!company.rank,
         rank: company.rank
       };
     }
@@ -3252,7 +3561,7 @@ export function findFortune500Match(companyName: string): {
         return {
           canonicalName: company.canonicalName,
           industry: company.industry,
-          isFortune500: true,
+          isFortune500: !!company.rank,
           rank: company.rank
         };
       }
@@ -3268,7 +3577,7 @@ export function findFortune500Match(companyName: string): {
         return {
           canonicalName: company.canonicalName,
           industry: company.industry,
-          isFortune500: true,
+          isFortune500: !!company.rank,
           rank: company.rank
         };
       }
@@ -3289,5 +3598,6 @@ export function getAllFortune500Names(): string[] {
  * Check if a company is Fortune 500 (boolean check)
  */
 export function isFortune500Company(companyName: string): boolean {
-  return findFortune500Match(companyName) !== null;
+  const match = findFortune500Match(companyName);
+  return match !== null && match.isFortune500;
 }

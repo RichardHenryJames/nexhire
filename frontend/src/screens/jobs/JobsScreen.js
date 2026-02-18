@@ -1751,9 +1751,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             activeOpacity={0.8}
           >
             <Ionicons name="bookmark" size={20} color="#FFFFFF" />
-            {savedIds.length > 0 && (
+            {savedCount > 0 && (
               <View style={styles.fabBadge}>
-                <Text style={styles.fabBadgeText}>{savedIds.length}</Text>
+                <Text style={styles.fabBadgeText}>{savedCount}</Text>
               </View>
             )}
           </TouchableOpacity>

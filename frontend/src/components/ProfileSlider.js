@@ -62,16 +62,17 @@ export default function ProfileSlider({ visible, onClose }) {
           console.warn('Wallet balance fetch failed:', e);
         }
       })();
-      // Fetch pending referral requests for verified referrers
+      // Fetch available referral requests for verified referrers (all open requests for their company)
       if (isVerifiedReferrer) {
         (async () => {
           try {
-            const res = await refopenAPI.getMyReferrerRequests(1, 50);
+            const res = await refopenAPI.getAvailableReferralRequests(1, 100);
             if (res.success && res.data) {
               const requests = Array.isArray(res.data) ? res.data : (res.data.requests || []);
+              // Only count active/open requests (not expired, completed, etc.)
               const active = requests.filter(r => 
-                r.Status === 'Pending' || r.Status === 'Claimed' || 
-                r.Status === 'NotifiedToReferrers' || r.Status === 'Viewed'
+                r.Status === 'NotifiedToReferrers' || r.Status === 'Viewed' || 
+                r.Status === 'Pending' || r.Status === 'Claimed'
               );
               setPendingReferralCount(active.length);
             }
