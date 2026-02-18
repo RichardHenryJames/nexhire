@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../contexts/ThemeContext';
 import refopenAPI from '../services/api';
 import { showToast } from '../components/Toast';
+import SubScreenHeader from '../components/SubScreenHeader';
 
 // RefOpen Social Media Links
 const REFOPEN_SOCIALS = {
@@ -299,17 +300,11 @@ export default function SocialShareSubmitScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Custom Header with Close Button */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.closeButton} 
-          onPress={handleClose}
-        >
-          <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Share on {config.displayName || platform}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <SubScreenHeader
+        title={`Share on ${config.displayName || platform}`}
+        icon="close"
+        onBack={handleClose}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={{ padding: 16 }}>
         {/* Header Card */}

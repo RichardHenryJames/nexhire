@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useAuth } from '../../contexts/AuthContext';
 import { typography, spacing, borderRadius } from '../../styles/theme';
@@ -728,22 +729,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      {/* Header with back button */}
-      <View style={styles.screenHeader}>
-        <TouchableOpacity 
-          onPress={() => {
-            if (navigation.canGoBack()) { navigation.goBack(); } else { navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Services' } }); }
-          }}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.screenHeaderTitleRow}>
-          <Ionicons name="analytics" size={20} color={colors.primary} />
-          <Text style={styles.screenHeaderTitle}>Resume Analyzer</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
+      <SubScreenHeader title="Resume Analyzer" fallbackTab="Services" />
 
       {isDesktop ? (
         // Desktop layout — always side-by-side, right panel content changes

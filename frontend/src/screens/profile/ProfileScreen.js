@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import ComplianceFooter from '../../components/ComplianceFooter';
@@ -416,25 +417,19 @@ export default function ProfileScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       {/* Sticky Header */}
-      <View style={styles.stickyHeader}>
-        <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] }))}
-          activeOpacity={0.7}
-          style={styles.headerIconButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text || '#000'} />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Profile</Text>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.7}
-          style={styles.headerIconButton}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
-        </TouchableOpacity>
-      </View>
+      <SubScreenHeader
+        title="Profile"
+        fallbackTab="Home"
+        rightContent={
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
+          </TouchableOpacity>
+        }
+      />
 
       <Animated.ScrollView
         ref={scrollRef}

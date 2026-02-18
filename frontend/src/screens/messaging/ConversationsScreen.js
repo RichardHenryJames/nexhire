@@ -69,25 +69,6 @@ function ConversationsScreenMobile() {
   const isLoadingMoreRef = useRef(false);
   const lastLoadedPageRef = useRef(0);
 
-  // ✅ Set dark theme header with + button for new chat (admin only)
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Messages',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerTintColor: colors.text,
-      headerRight: isAdmin ? () => (
-        <TouchableOpacity
-          onPress={() => setShowNewMessageModal(true)}
-          style={{ paddingHorizontal: 16, paddingVertical: 8 }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="add" size={28} color={colors.text} />
-        </TouchableOpacity>
-      ) : undefined,
-    });
-  }, [navigation, colors, isAdmin]);
-
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
