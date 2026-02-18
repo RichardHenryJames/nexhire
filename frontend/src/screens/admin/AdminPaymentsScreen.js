@@ -20,6 +20,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 export default function AdminPaymentsScreen() {
   const navigation = useNavigation();
@@ -53,15 +54,6 @@ export default function AdminPaymentsScreen() {
   const [paymentReference, setPaymentReference] = useState('');
   const [withdrawalAction, setWithdrawalAction] = useState('approve'); // 'approve' or 'reject'
   const [withdrawalRejectionReason, setWithdrawalRejectionReason] = useState('');
-
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Payment Approvals',
-      headerStyle: { backgroundColor: colors.surface },
-      headerTintColor: colors.text,
-      headerTitleStyle: { color: colors.text, fontWeight: 'bold' },
-    });
-  }, [navigation, colors]);
 
   const loadPendingPayments = useCallback(async () => {
     try {
@@ -495,6 +487,7 @@ export default function AdminPaymentsScreen() {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Payment Approvals" fallbackTab="ActionCenter" />
       {/* Main Tabs */}
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (

@@ -30,6 +30,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 import refopenAPI from '../../services/api';
 import VerifiedReferrerOverlay from '../../components/VerifiedReferrerOverlay';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import DatePicker from '../../components/DatePicker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -819,13 +820,7 @@ export default function BecomeReferrerScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBack} onPress={smartGoBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Become a Referrer</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <SubScreenHeader title="Become a Referrer" fallbackTab="Home" />
 
       {/* Step indicator at top */}
       {step < STEPS.SUCCESS && (

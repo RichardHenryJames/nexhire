@@ -11,6 +11,7 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import useResponsive from '../../hooks/useResponsive';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 /*
 EmployerJobsScreen
@@ -50,38 +51,6 @@ export default function EmployerJobsScreen({ navigation, route }) {
   const [publishConfirmData, setPublishConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.jobPublishCost, jobId: null, jobTitle: '' });
   
   const abortRef = useRef(null);
-
-  // ✅ Smart back navigation - handle hard refresh scenario
-  useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity 
-          style={{ paddingLeft: 16 }} 
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            
-            // If we have more than 1 route in the stack, go back normally
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              // Hard refresh scenario - navigate to Referrals tab
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: {
-                  screen: 'Referrals'
-                }
-              });
-            }
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Access control: Only employers and verified referrers can access this screen
   // Job seekers who are not verified should be redirected away
@@ -338,6 +307,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
 
   return (
     <View style={localStyles.container}>
+      <SubScreenHeader title="My Posted Jobs" fallbackTab="Home" />
       <View style={localStyles.innerContainer}>
       {/* Search + Filter Bar */}
       <View style={jobStyles.searchHeader}>

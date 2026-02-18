@@ -14,6 +14,7 @@ import refopenAPI from '../../services/api';
 import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 export default function WalletHoldsScreen({ navigation }) {
   const { colors } = useTheme();
@@ -25,33 +26,6 @@ export default function WalletHoldsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('Active'); // 'Active', 'Converted', 'Released', or null for all
-
-  // Smart back navigation
-  useEffect(() => {
-    navigation.setOptions({
-      title: 'Wallet Holds',
-      headerStyle: { backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-      headerTitleStyle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity
-          style={{ marginLeft: 16, padding: 4 }}
-          onPress={() => {
-            const navState = navigation.getState();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Wallet');
-            }
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   const loadHolds = useCallback(async (statusFilter = filter, showLoader = true) => {
     try {
@@ -261,6 +235,7 @@ export default function WalletHoldsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Wallet Holds" fallbackTab="Home" />
       <View style={styles.innerContainer}>
         <FlatList
           data={holds}

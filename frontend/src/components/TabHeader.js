@@ -163,7 +163,7 @@ export default function TabHeader({
           {headerContent}
         </LinearGradient>
       ) : (
-        <View style={[styles.container, { backgroundColor: colors.surface }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           {headerContent}
         </View>
       )}

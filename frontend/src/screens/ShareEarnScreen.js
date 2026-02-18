@@ -11,7 +11,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import SubScreenHeader from '../components/SubScreenHeader';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -67,23 +67,11 @@ export default function ShareEarnScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'ios' ? 56 : Platform.OS === 'web' ? 16 : 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        backgroundColor: colors.background,
-      }}>
-        <TouchableOpacity onPress={handleClose} style={{ padding: 4 }}>
-          <Ionicons name="close" size={26} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Share & Earn</Text>
-        <View style={{ width: 34 }} />
-      </View>
+      <SubScreenHeader
+        title="Share & Earn"
+        icon="close"
+        onBack={handleClose}
+      />
 
       <ScrollView 
         style={{ flex: 1 }}

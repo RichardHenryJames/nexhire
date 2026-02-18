@@ -20,6 +20,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 /**
  * ReferralTrackingScreen - Shows detailed tracking/history of a referral request
@@ -86,25 +87,6 @@ export default function ReferralTrackingScreen() {
       });
     }
   };
-
-  // Set header style
-  useEffect(() => {
-    navigation.setOptions({
-      headerStyle: { backgroundColor: colors.surface },
-      headerTintColor: colors.text,
-      headerTitle: 'Referral Tracking',
-      headerTitleStyle: { color: colors.text },
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={handleGoBack}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{ paddingHorizontal: 12, paddingVertical: 8 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   useFocusEffect(
     useCallback(() => {
@@ -490,6 +472,7 @@ export default function ReferralTrackingScreen() {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader title="Referral Tracking" fallbackTab="Home" />
       <View style={styles.innerContainer}>
         <ScrollView
           style={styles.content}

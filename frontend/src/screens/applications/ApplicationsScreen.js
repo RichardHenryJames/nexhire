@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -86,56 +87,6 @@ export default function ApplicationsScreen({ navigation }) {
     loadReferralData();
     loadPrimaryResume();
   }, []); // Fixed: was <></> which is invalid syntax
-
-  // Update navigation header with count
-  useEffect(() => {
-    const title = isEmployer ? 'Job Applications' : 'My Applications';
-    if (pagination.total > 0) {
-      navigation.setOptions({
-        headerTitle: `${title} (${pagination.total})`,
-      });
-    } else {
-      navigation.setOptions({
-        headerTitle: title,
-      });
-    }
-  }, [pagination.total, isEmployer, navigation]);
-
-  // ✅ Smart back navigation (hard-refresh safe) - mirror JobDetailsScreen
-  // Also set header style for dark mode support
-  useEffect(() => {
-    navigation.setOptions({
-      headerStyle: {
-        backgroundColor: colors.surface,
-      },
-      headerTintColor: colors.text,
-      headerTitleStyle: {
-        color: colors.text,
-      },
-      headerLeft: () => (
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => {
-            const navState = navigation.getState?.();
-            const routes = navState?.routes || [];
-            const currentIndex = navState?.index || 0;
-
-            if (routes.length > 1 && currentIndex > 0) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Main', {
-                screen: 'MainTabs',
-                params: { screen: 'Profile' },
-              });
-            }
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, colors]);
 
   // Auto-refresh: Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
@@ -819,6 +770,10 @@ export default function ApplicationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <SubScreenHeader
+        title={pagination.total > 0 ? `${isEmployer ? 'Job Applications' : 'My Applications'} (${pagination.total})` : (isEmployer ? 'Job Applications' : 'My Applications')}
+        fallbackTab="Home"
+      />
       <View style={styles.innerContainer}>
         {/* Info banner - showing last 2 weeks */}
         {applications.length > 0 && (

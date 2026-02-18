@@ -22,6 +22,7 @@ import useResponsive from '../../hooks/useResponsive';
 import ViewReferralRequestModal from '../../components/ViewReferralRequestModal';
 import { showToast } from '../../components/Toast';
 import ProfileSlider from '../../components/ProfileSlider';
+import SubScreenHeader from '../../components/SubScreenHeader';
 
 export default function ReferralScreen({ navigation }) {
   const { user, userId, isVerifiedReferrer, currentWork, loading: authLoading, refreshVerificationStatus } = useAuth();
@@ -673,6 +674,7 @@ export default function ReferralScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
+        <SubScreenHeader title="Provide Referral" fallbackTab="Home" />
 
         {/* Post Job / Publish buttons row */}
         {isVerifiedReferrer && currentVerifiedCompany && (

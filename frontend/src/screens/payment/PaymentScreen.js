@@ -14,6 +14,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { frontendConfig } from '../../config/appConfig'; // Added
@@ -180,8 +181,9 @@ export default function PaymentScreen({ route, navigation }) {
     );
   }
 
-  // Payment initiation screen
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SubScreenHeader title="Secure Payment" fallbackTab="Home" />
     <ScrollView style={styles.container}>
       <View style={styles.innerContainer}>
       <View style={styles.content}>
@@ -233,6 +235,7 @@ export default function PaymentScreen({ route, navigation }) {
       </View>
       </View>
     </ScrollView>
+    </View>
   );
 }
 

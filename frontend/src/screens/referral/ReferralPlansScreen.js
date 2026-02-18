@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -178,6 +179,8 @@ export default function ReferralPlansScreen({ navigation }) {
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SubScreenHeader title="Subscription Plans" fallbackTab="Home" />
     <ScrollView style={styles.container}>
       <View style={styles.innerContainer}>
         <View style={styles.content}>
@@ -251,6 +254,7 @@ export default function ReferralPlansScreen({ navigation }) {
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
