@@ -3,14 +3,22 @@
  * 
  * Used by: SavedJobs, Applications, MyReferralRequests, Messages,
  *          Settings, Wallet, ProfileViews, ShareEarn, BecomeReferrer,
- *          WalletTransactions, WalletRecharge, WithdrawalRequests, etc.
+ *          WalletTransactions, WalletRecharge, WithdrawalRequests,
+ *          AdminSocialShare, AdminVerifications, GetVerified, etc.
+ * 
+ * Back behavior (3 tiers, mutually exclusive):
+ *   1. onBack        — Full override. If set, only this runs.
+ *   2. directBack    — Always navigate directly to this screen name.
+ *                      No goBack(), no fallbackTab. Use for non-tab parents
+ *                      like 'Wallet' that aren't in MainTabs.
+ *   3. Default       — goBack() if history exists, else fallbackTab (MainTabs).
  * 
  * Features:
  * - Left: Back arrow (or close icon)
- * - Center: Title (static or dynamic)
+ * - Center: Title (static or dynamic), or custom centerContent
+ * - Optional subtitle below title
  * - Right: Optional custom content
- * - Smart back: goBack if possible, else navigate to fallback tab
- * - Consistent styling with TabHeader
+ * - Consistent styling with TabHeader (shared headerStyles)
  * - No border (matches TabHeader)
  * - Sticky on web
  */
@@ -20,17 +28,20 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Platform,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
+import { HEADER_CONTAINER_BASE, HEADER_TITLE, HEADER_BACK_BUTTON } from './headerStyles';
 
 export default function SubScreenHeader({
   title = '',                        // Center title text
+  centerContent = null,             // Custom center content (overrides title)
+  subtitle = null,                  // Optional subtitle below title
   icon = 'arrow-back',              // Left icon: 'arrow-back' or 'close'
-  fallbackTab = 'Home',             // Fallback tab when can't go back
+  fallbackTab = 'Home',             // Fallback tab when can't go back (via MainTabs)
+  directBack = null,                // Always navigate to this screen (skip goBack & fallbackTab)
   onBack = null,                    // Override back behavior entirely
   rightContent = null,              // Custom right-side content (buttons, badges)
   navigation: navProp = null,       // Optional navigation prop (fallback to useNavigation)
@@ -39,10 +50,17 @@ export default function SubScreenHeader({
   const { colors } = useTheme();
 
   const handleBack = () => {
+    // Tier 1: Full override
     if (onBack) {
       onBack();
       return;
     }
+    // Tier 2: Direct navigate (non-tab parent, e.g. 'Wallet')
+    if (directBack) {
+      nav.navigate(directBack);
+      return;
+    }
+    // Tier 3: goBack if history, else fallback to tab
     const state = nav.getState();
     const routes = state?.routes || [];
     const currentIndex = state?.index || 0;
@@ -65,11 +83,16 @@ export default function SubScreenHeader({
         <Ionicons name={icon} size={24} color={colors.text} />
       </TouchableOpacity>
 
-      {/* Center: Title */}
-      <View style={styles.center}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-          {title}
-        </Text>
+      {/* Center: Custom content or Title + optional subtitle */}
+      <View style={[styles.center, centerContent ? { alignItems: 'stretch' } : null]}>
+        {centerContent || (
+          <>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+              {title}
+            </Text>
+            {subtitle}
+          </>
+        )}
       </View>
 
       {/* Right: Custom content or empty spacer */}
@@ -85,28 +108,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12,
-    paddingBottom: 12,
-    gap: 8,
-    zIndex: 10000,
-    elevation: 10,
-    ...(Platform.OS === 'web' ? { position: 'sticky', top: 0 } : {}),
+    ...HEADER_CONTAINER_BASE,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...HEADER_BACK_BUTTON,
   },
   center: {
     flex: 1,
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...HEADER_TITLE,
   },
   right: {
     minWidth: 40,

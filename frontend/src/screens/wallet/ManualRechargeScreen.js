@@ -317,7 +317,7 @@ const ManualRechargeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <SubScreenHeader title="Add Money" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Add Money" directBack="Wallet" />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* QR Payment — prominent at top */}
         {settings && (

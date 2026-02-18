@@ -205,7 +205,7 @@ const SavedJobsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title={savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs'} fallbackTab="Home" />
+      <SubScreenHeader title={savedCount > 0 ? `Saved Jobs (${savedCount})` : 'Saved Jobs'} fallbackTab="Jobs" />
       <View style={styles.innerContainer}>
         {/* Job list */}
         <FlatList

@@ -61,17 +61,13 @@ export default function ShareEarnScreen() {
     }
   };
 
-  const handleClose = () => {
-    navigation.navigate('MainTabs', { screen: 'Home' });
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <SubScreenHeader
         title="Share & Earn"
         icon="close"
-        onBack={handleClose}
+        directBack="Home"
       />
 
       <ScrollView 

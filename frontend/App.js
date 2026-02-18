@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { JobProvider } from './src/contexts/JobContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { PricingProvider } from './src/contexts/PricingContext';
+import { UnreadMessagesProvider } from './src/contexts/UnreadMessagesContext';
 import AppNavigator, { linking } from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import { ToastHost } from './src/components/Toast';
@@ -230,6 +231,7 @@ function ThemedAppRoot() {
       <SafeAreaProvider style={{ flex: 1 }}>
         <PricingProvider>
           <AuthProvider>
+            <UnreadMessagesProvider>
             <JobProvider>
               <NavigationContainer
                 ref={navigationRef}
@@ -256,6 +258,7 @@ function ThemedAppRoot() {
                 <ToastHost />
               </NavigationContainer>
             </JobProvider>
+            </UnreadMessagesProvider>
           </AuthProvider>
         </PricingProvider>
       </SafeAreaProvider>

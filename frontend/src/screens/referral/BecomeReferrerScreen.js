@@ -127,18 +127,6 @@ export default function BecomeReferrerScreen({ navigation }) {
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Smart navigation helper - detect if opened via deep link / page refresh
-  const smartGoBack = () => {
-    const navState = navigation.getState();
-    const routes = navState?.routes || [];
-    const currentIndex = navState?.index || 0;
-    if (routes.length > 1 && currentIndex > 0) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Home' } });
-    }
-  };
-
   // If opened via deep link / page refresh (no navigation history), redirect to Home
   useEffect(() => {
     if (!user) {
@@ -855,7 +843,7 @@ export default function BecomeReferrerScreen({ navigation }) {
         visible={showSuccess}
         onClose={() => {
           setShowSuccess(false);
-          smartGoBack();
+          navigation.goBack();
         }}
         companyName={companyName}
       />

@@ -472,7 +472,7 @@ export default function ReferralTrackingScreen() {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Referral Tracking" fallbackTab="Home" />
+      <SubScreenHeader title="Referral Tracking" directBack="MyReferralRequests" />
       <View style={styles.innerContainer}>
         <ScrollView
           style={styles.content}

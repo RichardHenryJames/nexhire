@@ -841,7 +841,7 @@ const { jobId, fromReferralRequest } = route.params || {};
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SubScreenHeader
         title="Job Details"
-        fallbackTab="Home"
+        fallbackTab="Jobs"
         rightContent={(!hasApplied && !isEmployer) ? (
           <TouchableOpacity onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />

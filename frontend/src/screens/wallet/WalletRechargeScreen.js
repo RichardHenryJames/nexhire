@@ -322,7 +322,7 @@ export default function WalletRechargeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Add Money" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Add Money" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
           {/* Header */}

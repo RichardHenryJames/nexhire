@@ -171,7 +171,7 @@ export default function WithdrawalRequestsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Withdrawals" onBack={() => { if (navigation.canGoBack()) navigation.goBack(); else navigation.navigate('Wallet'); }} />
+      <SubScreenHeader title="Withdrawals" directBack="Wallet" />
       <View style={styles.innerContainer}>
         {withdrawals.length === 0 ? (
           <View style={styles.emptyState}>
