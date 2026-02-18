@@ -61,11 +61,7 @@ export default function ShareEarnScreen() {
   };
 
   const handleClose = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('MainTabs', { screen: 'Home' });
-    }
+    navigation.navigate('MainTabs', { screen: 'Home' });
   };
 
   return (

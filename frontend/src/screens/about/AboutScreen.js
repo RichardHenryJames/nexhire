@@ -17,7 +17,7 @@
  * Route: /about-new
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,8 +36,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
-// Assets
+// Assets — preloaded for instant render
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
+if (Platform.OS === 'web') {
+  const img = new window.Image();
+  img.src = typeof RefOpenLogo === 'number' ? '' : (RefOpenLogo?.uri || RefOpenLogo);
+}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const REFOPEN_URL = 'https://www.refopen.com';
@@ -330,7 +334,7 @@ export default function AboutScreenNew() {
         }}
       >
         <TouchableOpacity onPress={() => Linking.openURL(REFOPEN_URL)}>
-          <Image source={RefOpenLogo} style={{ width: 130, height: 36 }} resizeMode="contain" />
+          <Image source={RefOpenLogo} style={{ width: 130, height: 36 }} resizeMode="contain" fadeDuration={0} />
         </TouchableOpacity>
         {isAuthenticated ? (
           <GlowButton title="Get Started" gradient={C.gradPrimary} onPress={() => goToApp()} size="small" />
@@ -812,7 +816,7 @@ export default function AboutScreenNew() {
         <View style={{ paddingVertical: 36, borderTopWidth: 1, borderTopColor: C.border }}>
           <View style={{ alignItems: 'center', ...containerStyle }}>
             <TouchableOpacity onPress={() => Linking.openURL(REFOPEN_URL)} style={{ marginBottom: 20 }}>
-              <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" />
+              <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" fadeDuration={0} />
             </TouchableOpacity>
             <Text style={{ fontSize: 14, color: C.textSub, marginBottom: 24 }}>
               Find Jobs · Get Referred · Hire Talent · Earn Rewards
