@@ -251,7 +251,6 @@ export default function ServicesScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TabHeader
         title="Career Tools"
-        gradient={['#2563EB', '#1D4ED8']}
         navigation={navigation}
       />
       <ScrollView

@@ -74,8 +74,6 @@ const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 // 🎯 NEW: Referrer requests (referrals that came to me)
 const [myReferrerRequests, setMyReferrerRequests] = useState([]);
 
-// 🎯 NEW: Unread message count for messages icon badge
-
 // 🎯 NEW: Social share claims to show/hide Earn Credits button
 const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState([]);
 
@@ -299,7 +297,6 @@ const [dashboardData, setDashboardData] = useState({
       applicationsPromise,
       f500CompaniesPromise,
       referrerRequestsPromise,
-      unreadCountPromise,
       socialSharePromise,
       walletPromise
     ]).catch(err => {
@@ -1134,22 +1131,6 @@ sectionLoaderText: {
   fontSize: typography.sizes.sm,
   color: colors.gray600,
 },
-headerCompact: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 12,
-  paddingVertical: 12,
-  paddingTop: Platform.OS === 'ios' ? 44 : 12,
-  backgroundColor: colors.surface,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
-  gap: 8,
-  zIndex: 10000,
-  elevation: 10,
-  position: Platform.OS === 'web' ? 'sticky' : 'relative',
-  top: 0,
-},
   brandName: {
     fontSize: 18,
     fontWeight: typography.weights.bold,
@@ -1243,34 +1224,6 @@ headerCompact: {
     fontSize: typography.sizes.xs,
     color: colors.gray600,
   },
-  messagesButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  messagesBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.danger || '#EF4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-  messagesBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: typography.weights.bold,
-  },
   headerLeft: {
     flex: 1,
   },
@@ -1284,23 +1237,8 @@ headerCompact: {
   headerRight: {
     marginLeft: 16,
   },
-  profilePicture: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  profilePicturePlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
+  
+  // ── Sections ──
   greeting: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
