@@ -10,7 +10,6 @@ export const createStyles = (colors, responsive = {}) => {
   },
   
   searchContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
