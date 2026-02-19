@@ -281,10 +281,12 @@ const linking = {
 
 // Job Seeker Registration Flow
 function JobSeekerFlow() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen
@@ -335,6 +337,7 @@ function EmployerFlow() {
 // Auth Stack Navigator with complete registration flows
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
+  const { colors } = useTheme();
 
 
   // FIXED: Better initial route logic
@@ -349,6 +352,7 @@ function AuthStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
       }}
       initialRouteName={getInitialRoute()}
     >
@@ -587,6 +591,7 @@ function MainStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
@@ -812,6 +817,7 @@ function MainStack() {
 // Root Navigator
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
+  const { colors } = useTheme();
 
 
   // Show loading screen while checking authentication state
@@ -832,6 +838,7 @@ export default function AppNavigator() {
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
       }}
     >
       {/* Auth Stack - always present for deep linking */}

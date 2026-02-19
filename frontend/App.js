@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -113,6 +113,18 @@ function ThemedAppRoot() {
   const routeNameRef = useRef();
   const currentActivityIdRef = useRef(null);
   const appState = useRef(AppState.currentState);
+
+  // Build navigation theme to prevent white flash on screen transitions
+  const navigationTheme = React.useMemo(() => ({
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+      card: colors.surface || colors.background,
+      border: colors.border || '#E0E0E0',
+      text: colors.textPrimary || colors.text,
+    },
+  }), [isDark, colors]);
 
   // Track screen view
   const trackScreenView = useCallback(async (screenName, previousScreen = null) => {
@@ -256,6 +268,7 @@ function ThemedAppRoot() {
             <JobProvider>
               <NavigationContainer
                 ref={navigationRef}
+                theme={navigationTheme}
                 linking={linking}
                 onStateChange={onNavigationStateChange}
                 onReady={() => {
