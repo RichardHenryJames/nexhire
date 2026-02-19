@@ -560,8 +560,8 @@ const ManualRechargeScreen = ({ navigation }) => {
           <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 10, paddingHorizontal: 4 }}>Frequently Asked Questions</Text>
           {[
             {
-              q: 'Can I withdraw my wallet balance?',
-              a: 'No. Wallet balance is non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.',
+              q: 'Can I withdraw my added wallet balance?',
+              a: 'No. Recharged balance and bonuses are non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.',
             },
             {
               q: 'How does manual recharge work?',
