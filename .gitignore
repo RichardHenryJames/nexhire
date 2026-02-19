@@ -53,3 +53,8 @@ frontend/web-build/*
 frontend/dist/*
 
 frontend/.expo/*
+
+# Android signing credentials
+*.keystore
+*.jks
+frontend/credentials.json
