@@ -364,7 +364,7 @@ export default function WalletRechargeScreen({ navigation }) {
   return (
     <ScreenWrapper withKeyboard>
     <View style={styles.container}>
-      <SubScreenHeader title="Add Money" />
+      <SubScreenHeader title="Add Money" fallbackTab="Home" />
       <View style={styles.innerContainer}>
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
           {/* Header */}
