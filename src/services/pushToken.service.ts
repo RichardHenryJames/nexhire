@@ -5,7 +5,7 @@
 
 import { DatabaseService } from './database.service';
 
-const db = new DatabaseService();
+const db = DatabaseService.getInstance();
 
 export class PushTokenService {
   /**
