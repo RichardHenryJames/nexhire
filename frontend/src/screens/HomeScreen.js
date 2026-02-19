@@ -59,6 +59,10 @@ const [f500LogoScrollRef] = useState(useRef(null));
 const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
 const scrollIntervalRef = useRef(null);
 
+// ⚡ Throttle: track last fetch time to avoid refetching on every tab switch
+const lastFetchTimeRef = useRef(0);
+const FETCH_STALENESS_MS = 30000; // 30 seconds
+
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
 
@@ -140,6 +144,9 @@ const [dashboardData, setDashboardData] = useState({
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
+    // ⚡ Record fetch time for staleness checks
+    lastFetchTimeRef.current = Date.now();
+
     // ⚡ Start all fetches in parallel for better performance
     
     // 1. Dashboard Stats
@@ -311,7 +318,11 @@ const [dashboardData, setDashboardData] = useState({
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchDashboardData();
+      // ⚡ Only refetch if data is stale (older than 30s) to avoid lag on tab switch
+      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
+        fetchDashboardData();
+      }
     });
 
     return unsubscribe;
