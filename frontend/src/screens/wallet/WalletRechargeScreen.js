@@ -17,6 +17,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
+import { usePricing } from '../../contexts/PricingContext';
 
 // Animated percentage badge with fill effect
 const BonusPercentBadge = ({ percent }) => {
@@ -76,7 +77,9 @@ const BonusPercentBadge = ({ percent }) => {
 export default function WalletRechargeScreen({ navigation }) {
   const { colors } = useTheme();
   const responsive = useResponsive();
+  const { pricing } = usePricing();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const [expandedFaq, setExpandedFaq] = useState(null);
   
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -572,6 +575,62 @@ export default function WalletRechargeScreen({ navigation }) {
                 <Text style={styles.paymentMethodText}>Netbanking</Text>
               </View>
             </View>
+          </View>
+
+          {/* FAQ Section */}
+          <View style={{ marginTop: 24, marginBottom: 32 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 12 }}>Frequently Asked Questions</Text>
+            {[
+              {
+                q: 'Can I withdraw my wallet balance?',
+                a: 'No. Wallet balance is non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.',
+              },
+              {
+                q: 'How does the bonus on packs work?',
+                a: 'When you select a pack, you pay less and receive more. For example, pay ₹89 and get ₹100 in your wallet — that\'s a 12% bonus. The bonus is credited instantly and usable like regular balance.',
+              },
+              {
+                q: 'What payment methods are accepted?',
+                a: 'UPI, credit/debit cards, and netbanking — all processed securely via Razorpay, an RBI-licensed payment gateway. We never store your card or bank details.',
+              },
+              {
+                q: 'Can I recharge a custom amount?',
+                a: 'Yes! Enter any amount (min ₹1, max ₹1,00,000). Note: pack bonus is only applied when you select a pack or enter an amount matching a pack.',
+              },
+              {
+                q: 'How do promo codes work?',
+                a: 'Enter a valid promo code to receive extra bonus credits on top of your recharge. Promo codes have usage limits and expiry dates.',
+              },
+              {
+                q: 'What can I spend wallet balance on?',
+                a: `• Referral request at a specific company — ₹${pricing.referralRequestCost}\n• Open-to-any-company referral — ₹${pricing.openToAnyReferralCost}\n• AI Job Recommendations (${pricing.aiAccessDurationDays} days) — ₹${pricing.aiJobsCost}\n• Profile Views (${pricing.profileViewAccessDurationDays} days) — ₹${pricing.profileViewCost}`,
+              },
+              {
+                q: 'What happens when I request a referral?',
+                a: `When you request a referral, ₹${pricing.referralRequestCost} is placed on hold (not deducted). If a referrer picks up your request, the hold converts to a debit. If no one picks it up within 14 days, the full amount is automatically released back to your wallet.`,
+              },
+              {
+                q: 'My payment was deducted but balance not updated?',
+                a: 'This is rare — balance usually updates within seconds. If it doesn\'t, contact us via "Need Help?" and we\'ll resolve it within 24 hours.',
+              },
+            ].map((item, idx) => (
+              <View key={idx} style={{ backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: colors.border + '40' }}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}
+                >
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text, marginRight: 8 }}>{item.q}</Text>
+                  <Ionicons name={expandedFaq === idx ? 'chevron-up' : 'chevron-down'} size={18} color={colors.primary} />
+                </TouchableOpacity>
+                {expandedFaq === idx && (
+                  <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 0 }}>
+                    <View style={{ height: 1, backgroundColor: colors.border + '30', marginBottom: 10 }} />
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>{item.a}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
         </ScrollView>
       </View>
