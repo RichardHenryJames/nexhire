@@ -118,20 +118,6 @@ export default ({ config }) => {
     },
     plugins: [
       'expo-router',
-      'expo-secure-store',
-      [
-        'expo-document-picker',
-        {
-          iCloudContainerEnvironment: 'Production',
-        },
-      ],
-      [
-        'expo-image-picker',
-        {
-          photosPermission: 'RefOpen accesses your photos to let you upload profile images.',
-          cameraPermission: 'RefOpen accesses your camera to let you take profile photos.',
-        },
-      ],
     ],
     experiments: {
       typedRoutes: true,
