@@ -75,6 +75,7 @@ export default ({ config }) => {
     ...config,
     name: currentEnvConfig.name,
     slug: 'refopen',
+    owner: 'parimalkumar',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -136,6 +137,11 @@ export default ({ config }) => {
     experiments: {
       typedRoutes: true,
     },
-    extra: extraConfig, // Exposed to app at runtime
+    extra: {
+      ...extraConfig,
+      eas: {
+        projectId: 'fd95890b-34f4-4da8-a4ca-bc95684b279f',
+      },
+    },
   };
 };
