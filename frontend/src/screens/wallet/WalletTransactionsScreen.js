@@ -244,6 +244,10 @@ export default function WalletTransactionsScreen({ navigation }) {
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={styles.listContent}
+          windowSize={11}
+          maxToRenderPerBatch={10}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS !== 'web'}
         />
       </View>
     </View>

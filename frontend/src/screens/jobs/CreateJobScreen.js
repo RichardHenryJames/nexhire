@@ -7,6 +7,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import { typography } from '../../styles/theme';
 
 // Debounce hook for organization search
@@ -413,6 +414,7 @@ export default function CreateJobScreen({ navigation }) {
   );
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -840,6 +842,7 @@ export default function CreateJobScreen({ navigation }) {
         </TouchableOpacity>
       </Modal>
     </View>
+    </ScreenWrapper>
   );
 }
 

@@ -17,6 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
@@ -331,6 +332,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
 
   // Same structure as JobsScreen - search header fixed, list scrolls
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       {/* Header */}
       <SubScreenHeader
@@ -373,6 +375,10 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
             }
             onEndReached={loadMoreConversations}
             onEndReachedThreshold={0.3}
+            windowSize={11}
+            maxToRenderPerBatch={10}
+            initialNumToRender={15}
+            removeClippedSubviews={Platform.OS !== 'web'}
             ListFooterComponent={loadingMore ? (
               <View style={{ paddingVertical: 20, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -486,6 +492,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
         </View>
       </Modal>
     </View>
+    </ScreenWrapper>
   );
 }
 

@@ -18,6 +18,7 @@ import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 // Support categories
 const CATEGORIES = [
@@ -549,6 +550,7 @@ export default function SupportScreen() {
   };
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <SubScreenHeader title="Help & Support" fallbackTab="Home" />
       {/* Tabs */}
@@ -601,6 +603,7 @@ export default function SupportScreen() {
         {activeTab === 'new' ? renderNewTicketForm() : renderTicketHistory()}
       </ScrollView>
     </View>
+    </ScreenWrapper>
   );
 }
 

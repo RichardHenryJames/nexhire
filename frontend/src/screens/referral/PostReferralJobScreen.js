@@ -19,6 +19,7 @@ import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 
 /**
  * PostReferralJobScreen - Simplified job posting for verified referrers
@@ -362,6 +363,7 @@ export default function PostReferralJobScreen({ navigation, route }) {
   }
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <SubScreenHeader title="Post Job" directBack="Referral" />
       <ScrollView
@@ -670,6 +672,7 @@ export default function PostReferralJobScreen({ navigation, route }) {
         </TouchableOpacity>
       </Modal>
     </View>
+    </ScreenWrapper>
   );
 }
 

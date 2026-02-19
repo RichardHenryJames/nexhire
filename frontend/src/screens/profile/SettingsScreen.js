@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1465,6 +1466,7 @@ export default function SettingsScreen({ navigation, route }) {
   }
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <View style={styles.innerContainer}>
         {/* Header */}
@@ -1580,6 +1582,7 @@ export default function SettingsScreen({ navigation, route }) {
       {renderLogoutModal()}
       {renderPasswordModal()}
     </View>
+    </ScreenWrapper>
   );
 }
 

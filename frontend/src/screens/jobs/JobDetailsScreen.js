@@ -18,6 +18,7 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -838,6 +839,7 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SubScreenHeader
         title="Job Details"
@@ -1390,6 +1392,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       </ResponsiveContainer>
     </ScrollView>
     </View>
+    </ScreenWrapper>
   );
 }
 

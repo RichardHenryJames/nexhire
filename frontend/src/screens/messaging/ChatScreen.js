@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from "@react-navigation/native";
+import ScreenWrapper from '../../components/ScreenWrapper';
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
 import { useAuth } from "../../contexts/AuthContext";
@@ -1052,7 +1053,7 @@ export default function ChatScreen({
 
   // MOBILE LAYOUT
   return (
-    <View style={styles.container}>
+    <ScreenWrapper withKeyboard style={styles.container}>
       <View style={styles.innerContainer}>
       {!hideHeader && (
       <View style={styles.header}>
@@ -1103,6 +1104,10 @@ export default function ChatScreen({
         contentContainerStyle={styles.messagesList}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        windowSize={15}
+        maxToRenderPerBatch={10}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS !== 'web'}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.loadingMore}>
@@ -1158,7 +1163,7 @@ export default function ChatScreen({
         </TouchableOpacity>
       </View>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 

@@ -23,6 +23,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -728,6 +729,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
   );
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <SubScreenHeader title="Resume Analyzer" fallbackTab="Services" />
 
@@ -962,6 +964,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
         </Animated.View>
       )}
     </View>
+    </ScreenWrapper>
   );
 }
 
