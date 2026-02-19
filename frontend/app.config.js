@@ -83,9 +83,25 @@ export default ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: currentEnvConfig.scheme,
+      infoPlist: {
+        NSCameraUsageDescription: 'RefOpen needs camera access to take profile photos.',
+        NSPhotoLibraryUsageDescription: 'RefOpen needs photo library access to upload profile images and documents.',
+        NSDocumentsFolderUsageDescription: 'RefOpen needs document access to upload your resume.',
+      },
     },
     android: {
       package: currentEnvConfig.scheme,
+      permissions: [
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'INTERNET',
+        'ACCESS_NETWORK_STATE',
+      ],
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#3B82F6',
+      },
       intentFilters: [
         {
           action: 'VIEW',
@@ -100,7 +116,23 @@ export default ({ config }) => {
     web: {
       bundler: 'metro',
     },
-    plugins: ['expo-router'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      [
+        'expo-document-picker',
+        {
+          iCloudContainerEnvironment: 'Production',
+        },
+      ],
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'RefOpen accesses your photos to let you upload profile images.',
+          cameraPermission: 'RefOpen accesses your camera to let you take profile photos.',
+        },
+      ],
+    ],
     experiments: {
       typedRoutes: true,
     },

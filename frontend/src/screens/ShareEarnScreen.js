@@ -52,8 +52,13 @@ export default function ShareEarnScreen() {
 
   const copyText = async (text, label) => {
     try {
-      if (Platform.OS === 'web' && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+        }
+      } else {
+        const Clipboard = require('expo-clipboard');
+        await Clipboard.setStringAsync(text);
       }
       showToast(`${label} copied!`, 'success');
     } catch (e) {

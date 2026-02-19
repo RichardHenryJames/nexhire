@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
@@ -14,34 +16,61 @@ export const useAuth = () => {
   return context;
 };
 
-// NEW: Helper functions for sessionStorage persistence
+// Cross-platform helper functions for Google Auth persistence
+// Uses sessionStorage on web (survives page reload) and AsyncStorage on native
+
 const GOOGLE_AUTH_STORAGE_KEY = 'refopen_pending_google_auth';
 
-const savePendingGoogleAuthToStorage = (data) => {
+const savePendingGoogleAuthToStorage = async (data) => {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        if (data) {
+          sessionStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
+        } else {
+          sessionStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
+        }
+      }
+    } else {
+      // Native: use AsyncStorage
       if (data) {
-        sessionStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
+        await AsyncStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
       } else {
-        sessionStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
+        await AsyncStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
       }
     }
   } catch (error) {
-    console.warn('Failed to save to sessionStorage:', error);
+    console.warn('Failed to save pending Google auth:', error);
   }
 };
 
 const loadPendingGoogleAuthFromStorage = () => {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    // Synchronous load only works on web (for initial state)
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
       const stored = sessionStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
       if (stored) {
-        const data = JSON.parse(stored);
-        return data;
+        return JSON.parse(stored);
+      }
+    }
+    // Native async load is handled in useEffect below
+  } catch (error) {
+    console.warn('Failed to load pending Google auth:', error);
+  }
+  return null;
+};
+
+// Async loader for native platforms
+const loadPendingGoogleAuthAsync = async () => {
+  try {
+    if (Platform.OS !== 'web') {
+      const stored = await AsyncStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
       }
     }
   } catch (error) {
-    console.warn('Failed to load from sessionStorage:', error);
+    console.warn('Failed to load pending Google auth async:', error);
   }
   return null;
 };
@@ -60,11 +89,20 @@ export const AuthProvider = ({ children }) => {
     return loadPendingGoogleAuthFromStorage();
   });
 
-  // NEW: Wrapper to sync with sessionStorage
+  // Wrapper to sync with storage (sessionStorage on web, AsyncStorage on native)
   const setPendingGoogleAuth = (data) => {
     setPendingGoogleAuthState(data);
     savePendingGoogleAuthToStorage(data);
   };
+
+  // Native: async-load pending Google auth from AsyncStorage on mount
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      loadPendingGoogleAuthAsync().then((data) => {
+        if (data) setPendingGoogleAuthState(data);
+      });
+    }
+  }, []);
 
   // Check for pending redirect on mount
   useEffect(() => {

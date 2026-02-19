@@ -13,6 +13,7 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
@@ -339,7 +340,7 @@ export default function ChatScreen({
 
     const connectSignalR = async () => {
       try {
-        const token = localStorage.getItem("refopen_token");
+        const token = await AsyncStorage.getItem("refopen_token");
         if (!token) {
           connectionStatusRef.current.polling = true;
           if (isMounted) setUsePolling(true);
