@@ -2396,7 +2396,11 @@ export default function AdminDashboardScreen() {
                       {v.AadhaarPhotoURL && (
                         <TouchableOpacity
                           onPress={() => {
-                            if (Platform.OS === 'web') window.open(v.AadhaarPhotoURL, '_blank');
+                            if (Platform.OS === 'web') {
+                              window.open(v.AadhaarPhotoURL, '_blank');
+                            } else {
+                              Linking.openURL(v.AadhaarPhotoURL).catch(() => {});
+                            }
                           }}
                           style={{ flex: 1 }}
                         >
@@ -2411,7 +2415,11 @@ export default function AdminDashboardScreen() {
                       {v.SelfiePhotoURL && (
                         <TouchableOpacity
                           onPress={() => {
-                            if (Platform.OS === 'web') window.open(v.SelfiePhotoURL, '_blank');
+                            if (Platform.OS === 'web') {
+                              window.open(v.SelfiePhotoURL, '_blank');
+                            } else {
+                              Linking.openURL(v.SelfiePhotoURL).catch(() => {});
+                            }
                           }}
                           style={{ flex: 1 }}
                         >

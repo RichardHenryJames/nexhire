@@ -395,6 +395,9 @@ export default function ViewReferralRequestModal({
                       try {
                         if (Platform.OS === 'web') {
                           await navigator.clipboard.writeText(referralRequest.ExtJobID);
+                        } else {
+                          const Clipboard = require('expo-clipboard');
+                          await Clipboard.setStringAsync(referralRequest.ExtJobID);
                         }
                         showToast('Copied!', 'success');
                       } catch (e) {
@@ -430,6 +433,9 @@ export default function ViewReferralRequestModal({
                         try {
                           if (Platform.OS === 'web') {
                             await navigator.clipboard.writeText(referralRequest.JobURL);
+                          } else {
+                            const Clipboard = require('expo-clipboard');
+                            await Clipboard.setStringAsync(referralRequest.JobURL);
                           }
                           showToast('Copied!', 'success');
                         } catch (e) {

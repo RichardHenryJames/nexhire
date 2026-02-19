@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl, ActivityIndicator,
-  Image, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
+  Image, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -150,13 +150,13 @@ export default function AdminVerificationsScreen() {
           <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Documents:</Text>
           <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
             {v.AadhaarPhotoURL && (
-              <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.AadhaarPhotoURL, '_blank')} style={{ flex: 1 }}>
+              <TouchableOpacity onPress={() => { if (Platform.OS === 'web') { window.open(v.AadhaarPhotoURL, '_blank'); } else { Linking.openURL(v.AadhaarPhotoURL).catch(() => {}); } }} style={{ flex: 1 }}>
                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Aadhaar Card</Text>
                 <Image source={{ uri: v.AadhaarPhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
               </TouchableOpacity>
             )}
             {v.SelfiePhotoURL && (
-              <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(v.SelfiePhotoURL, '_blank')} style={{ flex: 1 }}>
+              <TouchableOpacity onPress={() => { if (Platform.OS === 'web') { window.open(v.SelfiePhotoURL, '_blank'); } else { Linking.openURL(v.SelfiePhotoURL).catch(() => {}); } }} style={{ flex: 1 }}>
                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4, fontWeight: '600' }}>Selfie</Text>
                 <Image source={{ uri: v.SelfiePhotoURL }} style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.border }} resizeMode="contain" />
               </TouchableOpacity>

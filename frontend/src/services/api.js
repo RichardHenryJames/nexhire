@@ -240,10 +240,11 @@ class RefOpenAPI {
     this.onSessionExpired = handler;
   }
 
-  // Token management
+  // Token management — uses expo-secure-store on native, AsyncStorage on web
   async setTokens(accessToken, refreshToken) {
     try {
-      await AsyncStorage.multiSet([
+      const { secureMultiSet } = require('../utils/secureStorage');
+      await secureMultiSet([
         ['refopen_token', accessToken],
         ['refopen_refresh_token', refreshToken]
       ]);
@@ -258,7 +259,8 @@ class RefOpenAPI {
 
   async getToken(key) {
     try {
-      return await AsyncStorage.getItem(key);
+      const { secureGet } = require('../utils/secureStorage');
+      return await secureGet(key);
     } catch (error) {
       console.error(`❌ Failed to get token ${key}:`, error);
       return null;
@@ -267,8 +269,8 @@ class RefOpenAPI {
 
   async removeToken(key) {
     try {
-      // Tokens are stored in AsyncStorage in this codebase; remove them from the same store.
-      await AsyncStorage.removeItem(key);
+      const { secureRemove } = require('../utils/secureStorage');
+      await secureRemove(key);
     } catch (error) {
       console.error('Error removing token:', error);
     }

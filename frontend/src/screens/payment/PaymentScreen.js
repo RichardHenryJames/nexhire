@@ -66,10 +66,11 @@ export default function PaymentScreen({ route, navigation }) {
       setOrderDetails(orderResponse.data);
       const paymentUrl = createRazorpayPaymentUrl(orderResponse.data);
 
-      if (typeof window !== 'undefined') {
+      if (Platform.OS === 'web') {
         loadRazorpayScript(orderResponse.data, orderData);
       } else {
-        Linking.openURL(paymentUrl);
+        // Native: navigate to manual recharge or show payment link
+        showToast('Native payment integration coming soon. Please use the web app for payments.', 'info');
       }
     } catch (error) {
       console.error('Payment initiation error:', error);
@@ -80,6 +81,12 @@ export default function PaymentScreen({ route, navigation }) {
   };
 
   const loadRazorpayScript = (orderData, customerData) => {
+    // Web only — uses DOM script injection
+    if (Platform.OS !== 'web') {
+      // TODO: Integrate react-native-razorpay for native builds
+      showToast('Native payment integration coming soon. Please use the web app for payments.', 'info');
+      return;
+    }
     if (typeof window.Razorpay === 'undefined') {
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -122,6 +129,11 @@ export default function PaymentScreen({ route, navigation }) {
     if (!options.order_id || !/^order_/.test(options.order_id)) {
       console.warn('Razorpay order id missing or invalid format:', options.order_id);
       showToast('Invalid order id received. Please retry.', 'error');
+      return;
+    }
+
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.Razorpay) {
+      showToast('Payment gateway not available on this platform.', 'error');
       return;
     }
 
