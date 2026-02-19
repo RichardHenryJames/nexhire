@@ -15,6 +15,7 @@ import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { usePricing } from '../../contexts/PricingContext';
@@ -361,6 +362,7 @@ export default function WalletRechargeScreen({ navigation }) {
   };
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <SubScreenHeader title="Add Money" directBack="Wallet" />
       <View style={styles.innerContainer}>
@@ -672,6 +674,7 @@ export default function WalletRechargeScreen({ navigation }) {
         </ScrollView>
       </View>
     </View>
+    </ScreenWrapper>
   );
 }
 

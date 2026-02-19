@@ -225,6 +225,10 @@ const SavedJobsScreen = ({ navigation }) => {
           onScroll={onScrollNearEnd}
           scrollEventThrottle={16}
           onContentSizeChange={onContentSizeChange}
+          windowSize={7}
+          maxToRenderPerBatch={5}
+          initialNumToRender={10}
+          removeClippedSubviews={Platform.OS !== 'web'}
           ListFooterComponent={loadingMore ? (
             <View style={{ paddingVertical: 20, alignItems: 'center' }}>
               <ActivityIndicator size="small" color={colors.primary} />
