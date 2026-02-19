@@ -52,11 +52,13 @@
     "expo-clipboard": "~4.3.1",
     "expo-constants": "~14.4.2",
     "expo-crypto": "~12.4.1",
+    "expo-device": "~5.4.0",
     "expo-document-picker": "~11.5.4",
     "expo-file-system": "~15.4.5",
     "expo-image-picker": "~14.3.2",
     "expo-linear-gradient": "~12.3.0",
     "expo-linking": "~5.0.2",
+    "expo-notifications": "~0.20.1",
     "expo-router": "^2.0.0",
     "expo-secure-store": "~12.3.1",
     "expo-status-bar": "~1.6.0",
@@ -72,9 +74,7 @@
     "react-native-screens": "~3.22.0",
     "react-native-svg": "^13.9.0",
     "react-native-web": "~0.19.6",
-    "socket.io-client": "^4.8.1",
-    "expo-notifications": "~0.20.1",
-    "expo-device": "~5.4.0"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^1.1.7",

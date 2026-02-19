@@ -77,8 +77,14 @@ export default ({ config }) => {
     slug: 'refopen',
     version: '1.0.0',
     orientation: 'portrait',
+    icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     scheme: currentEnvConfig.scheme,
+    splash: {
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#0066FF',
+    },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
@@ -118,6 +124,14 @@ export default ({ config }) => {
     },
     plugins: [
       'expo-router',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/icon.png',
+          color: '#3B82F6',
+          sounds: [],
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
