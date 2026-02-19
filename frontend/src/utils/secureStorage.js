@@ -6,10 +6,20 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-let SecureStore = null;
-if (Platform.OS !== 'web') {
-  SecureStore = require('expo-secure-store');
-}
+// Lazy-load SecureStore only on native (avoid web build errors)
+let _secureStoreModule = null;
+const getSecureStore = () => {
+  if (Platform.OS === 'web') return null;
+  if (!_secureStoreModule) {
+    try {
+      _secureStoreModule = require('expo-secure-store');
+    } catch (e) {
+      console.warn('expo-secure-store not available, falling back to AsyncStorage');
+      return null;
+    }
+  }
+  return _secureStoreModule;
+};
 
 /**
  * Store a value securely
@@ -21,7 +31,8 @@ if (Platform.OS !== 'web') {
  */
 export async function secureSet(key, value) {
   try {
-    if (Platform.OS !== 'web' && SecureStore) {
+    const SecureStore = getSecureStore();
+    if (SecureStore) {
       await SecureStore.setItemAsync(key, value);
     } else {
       await AsyncStorage.setItem(key, value);
@@ -46,7 +57,8 @@ export async function secureSet(key, value) {
  */
 export async function secureGet(key) {
   try {
-    if (Platform.OS !== 'web' && SecureStore) {
+    const SecureStore = getSecureStore();
+    if (SecureStore) {
       return await SecureStore.getItemAsync(key);
     }
     return await AsyncStorage.getItem(key);
@@ -68,7 +80,8 @@ export async function secureGet(key) {
  */
 export async function secureRemove(key) {
   try {
-    if (Platform.OS !== 'web' && SecureStore) {
+    const SecureStore = getSecureStore();
+    if (SecureStore) {
       await SecureStore.deleteItemAsync(key);
     } else {
       await AsyncStorage.removeItem(key);
@@ -89,7 +102,8 @@ export async function secureRemove(key) {
  * @param {Array<[string, string]>} pairs - Array of [key, value] pairs
  */
 export async function secureMultiSet(pairs) {
-  if (Platform.OS !== 'web' && SecureStore) {
+  const SecureStore = getSecureStore();
+  if (SecureStore) {
     await Promise.all(pairs.map(([key, value]) => secureSet(key, value)));
   } else {
     await AsyncStorage.multiSet(pairs);
