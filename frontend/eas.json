@@ -18,6 +18,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "credentialsSource": "local",
       "ios": {
         "simulator": false
       },
@@ -42,16 +43,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
-      "android": {
-        "serviceAccountKeyPath": "",
-        "track": "internal"
-      }
-    }
+    "production": {}
   }
 }
