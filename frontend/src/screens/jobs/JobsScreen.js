@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import ProfileSlider from '../../components/ProfileSlider';
+import TabHeader from '../../components/TabHeader';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
@@ -289,9 +290,7 @@ export default function JobsScreen({ navigation, route }) {
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
 
-  // Profile slider state (same as HomeScreen)
-  const [profileSliderVisible, setProfileSliderVisible] = useState(false);
-  const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
+  // Profile photo handled by TabHeader
   const [referralBroadcastTime, setReferralBroadcastTime] = useState(null);
   const [pendingReferralJobId, setPendingReferralJobId] = useState(null);
 
@@ -1587,36 +1586,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   // ===== Render =====
   return (
     <View style={styles.container}>
-      {/* Fortune 500 Mode: Show custom header instead of search/filters */}
+      {/* Fortune 500 Mode: SubScreenHeader */}
       {filterF500 ? (
-        <View style={styles.f500Header}>
-          <TouchableOpacity 
-            style={styles.f500BackButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.f500Title}>Jobs by Top MNCs</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <SubScreenHeader title="Jobs by Top MNCs" fallbackTab="Home" />
       ) : (
-        <>
-          {/* Search Header */}
-          <View style={styles.searchHeader}>
-            {/* Profile avatar */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setProfileSliderVisible(true)}
-              style={{ marginRight: 10 }}
-            >
-              {profilePhotoUrl ? (
-                <Image source={{ uri: profilePhotoUrl }} style={styles.profilePicture} />
-              ) : (
-                <View style={styles.profilePicturePlaceholder}>
-                  <Ionicons name="person" size={20} color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
+        <TabHeader
+          navigation={navigation}
+          centerContent={
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
               <TextInput
@@ -1625,7 +1601,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 value={searchQuery}
                 onChangeText={(text) => {
                   setSearchQuery(text);
-                  // Clear jobs immediately when user starts typing
                   if (text.trim().length > 0) {
                     setJobs([]);
                     setLoading(true);
@@ -1640,12 +1615,18 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 </TouchableOpacity>
               )}
             </View>
+          }
+          rightContent={
             <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
               <Ionicons name="options-outline" size={24} color="#0066cc" />
             </TouchableOpacity>
-          </View>
+          }
+          showMessages={false}
+        />
+      )}
 
-          {/* Quick Filters Row */}
+      {/* Quick Filters Row — only in normal mode */}
+      {!filterF500 && (
           <View style={styles.quickFiltersContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
@@ -1738,7 +1719,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               )}
             </View>
           </View>
-        </>
       )}
 
       {/* Job List Container with FAB */}
@@ -1935,11 +1915,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         broadcastTime={referralBroadcastTime}
       />
 
-      {/* LinkedIn-style Profile Slider */}
-      <ProfileSlider
-        visible={profileSliderVisible}
-        onClose={() => setProfileSliderVisible(false)}
-      />
+      {/* LinkedIn-style Profile Slider handled by TabHeader */}
     </View>
   );
 }
