@@ -196,7 +196,7 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.white,
   },
   scrollView: {
-    flex: 1,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingBottom: 0,

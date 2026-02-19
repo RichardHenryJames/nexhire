@@ -294,7 +294,7 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textPrimary,
   },
   scrollView: {
-    flex: 1,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingBottom: 0,

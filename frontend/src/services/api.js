@@ -1536,7 +1536,7 @@ class RefOpenAPI {
         }
       } else {
         // React Native: Read file and convert to base64
-        const { FileSystem } = require('expo-file-system');
+        const FileSystem = require('expo-file-system');
         const base64Data = await FileSystem.readAsStringAsync(file.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -2631,7 +2631,7 @@ if (!resumeId) {
         }
       } else {
         // React Native: Read file using Expo FileSystem
-        const { FileSystem } = require('expo-file-system');
+        const FileSystem = require('expo-file-system');
 
         fileData = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.Base64,

@@ -529,7 +529,11 @@ export default function JobsScreen({ navigation, route }) {
   }, [successMessage, appliedJobId, triggerReload, refreshApplicationsData]);
 
   // 🔧 NEW: Function to refresh applications data
+  const lastRefreshTimeRef = useRef(0);
+  const REFRESH_STALENESS_MS = 30000; // 30 seconds
+
   const refreshApplicationsData = useCallback(async () => {
+    lastRefreshTimeRef.current = Date.now();
     try {
       const r = await refopenAPI.getMyApplications(1, 500);
       if (r?.success) {
@@ -573,7 +577,11 @@ export default function JobsScreen({ navigation, route }) {
   // 🔧 NEW: Add focus listener to refresh applications when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      refreshApplicationsData();
+      // ⚡ Only refetch if data is stale (older than 30s) to avoid lag on tab switch
+      const timeSinceLastRefresh = Date.now() - lastRefreshTimeRef.current;
+      if (timeSinceLastRefresh > REFRESH_STALENESS_MS) {
+        refreshApplicationsData();
+      }
     });
 
     return unsubscribe;
