@@ -20,8 +20,14 @@ import refopenAPI from '../../services/api';
 class CrossPlatformFileHandler {
   static async readAsBase64(uri, options = {}) {
     if (Platform.OS === 'web') {
-      // Web implementation using fetch + FileReader
       try {
+        // If already a data: URL, extract base64 directly (avoids CSP fetch block)
+        if (uri.startsWith('data:')) {
+          const base64Data = uri.includes(',') ? uri.split(',')[1] : uri;
+          return base64Data;
+        }
+
+        // For blob: or http: URLs, use fetch + FileReader
         const response = await fetch(uri);
         const blob = await response.blob();
         
