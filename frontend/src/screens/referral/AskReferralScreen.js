@@ -528,11 +528,6 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
 
         // Reset form
         resetForm();
-        
-        // Navigate back after overlay completes (2 second delay)
-        setTimeout(() => {
-          navigation.goBack();
-        }, 2000);
       } else {
         // ✅ NEW: Handle insufficient balance error
         if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -1155,7 +1150,10 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay
         visible={showReferralSuccessOverlay}
-        onComplete={() => setShowReferralSuccessOverlay(false)}
+        onComplete={() => {
+          setShowReferralSuccessOverlay(false);
+          navigation.goBack();
+        }}
         duration={3500}
         companyName={referralCompanyName}
         broadcastTime={referralBroadcastTime}
