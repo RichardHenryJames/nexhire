@@ -69,8 +69,8 @@ export default function PaymentScreen({ route, navigation }) {
       if (Platform.OS === 'web') {
         loadRazorpayScript(orderResponse.data, orderData);
       } else {
-        // Native: navigate to manual recharge or show payment link
-        showToast('Native payment integration coming soon. Please use the web app for payments.', 'info');
+        // Native: use react-native-razorpay SDK
+        openRazorpayNative(orderResponse.data, orderData);
       }
     } catch (error) {
       console.error('Payment initiation error:', error);
@@ -145,6 +145,50 @@ export default function PaymentScreen({ route, navigation }) {
       rzp.open();
     } catch (e) {
       showToast('Unable to open payment gateway. Please try again.', 'error');
+    }
+  };
+
+  // Native Razorpay checkout using react-native-razorpay SDK
+  const openRazorpayNative = async (orderData, customerData) => {
+    try {
+      const RazorpayCheckout = require('react-native-razorpay').default;
+      const key = frontendConfig?.razorpay?.keyId;
+      if (!key) {
+        showToast('Payment gateway key is not configured.', 'error');
+        return;
+      }
+
+      const options = {
+        key,
+        amount: orderData.amount,
+        currency: 'INR',
+        name: 'RefOpen',
+        description: `${customerData.planName} Subscription` || 'Subscription Payment',
+        order_id: orderData.orderId || orderData.id,
+        prefill: {
+          name: customerData.customerName || '',
+          email: customerData.customerEmail || '',
+        },
+        theme: { color: '#3B82F6' },
+      };
+
+      const response = await RazorpayCheckout.open(options);
+      // response contains razorpay_payment_id, razorpay_order_id, razorpay_signature
+      handlePaymentSuccess({
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_signature: response.razorpay_signature,
+        planId: plan.PlanID,
+        amount: orderData.amount,
+      });
+    } catch (error) {
+      // error.code === 'PAYMENT_CANCELLED' if user dismissed
+      if (error?.code === 'PAYMENT_CANCELLED' || error?.description?.includes('cancelled')) {
+        handlePaymentCancellation();
+      } else {
+        console.error('Native Razorpay error:', error);
+        handlePaymentFailure({ error: { description: error?.description || error?.message || 'Payment failed' } });
+      }
     }
   };
 
