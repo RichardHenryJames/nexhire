@@ -4214,3 +4214,22 @@ app.http("admin-reject-verification", {
   route: "management/verifications/{verificationId}/reject",
   handler: adminRejectVerification,
 });
+
+// ========================================================================
+// PUSH TOKENS
+// ========================================================================
+import { registerPushToken, unregisterPushToken } from "./src/controllers/pushToken.controller";
+
+app.http("push-token-register", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "push-tokens/register",
+  handler: registerPushToken,
+});
+
+app.http("push-token-unregister", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "push-tokens/unregister",
+  handler: unregisterPushToken,
+});
