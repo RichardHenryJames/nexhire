@@ -5,11 +5,20 @@
  * Both header components import from here to stay in sync.
  */
 
-import { Platform } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
+
+// Android: use StatusBar.currentHeight (typically 24-48px) + small padding
+// iOS: safe-area top inset is roughly 44-59px depending on device
+// Web: no padding needed
+const getTopPadding = () => {
+  if (Platform.OS === 'ios') return 54;
+  if (Platform.OS === 'android') return (StatusBar.currentHeight || 24) + 12;
+  return 12; // web
+};
 
 export const HEADER_PADDING = {
   paddingHorizontal: 12,
-  paddingTop: Platform.OS === 'ios' ? 44 : 12,
+  paddingTop: getTopPadding(),
   paddingBottom: 12,
 };
 

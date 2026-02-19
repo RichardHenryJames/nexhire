@@ -369,21 +369,24 @@ export default function UserProfileHeader({
       const fileName = `profile-${user?.UserID}-${Date.now()}.${fileExtension}`;
       
       // FIXED: Proper MIME type detection
+      // On Android, expo-image-picker returns type: 'image' (not a full MIME type)
+      // On iOS it may return undefined. Handle all cases.
+      const mimeMap = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg', 
+        'png': 'image/png',
+        'webp': 'image/webp'
+      };
       let mimeType = imageAsset.type;
-      if (!mimeType) {
-        // Fallback: determine from file extension
-        const mimeMap = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg', 
-          'png': 'image/png',
-          'webp': 'image/webp'
-        };
-        mimeType = mimeMap[fileExtension] || 'image/jpeg';
+
+      // Clean any data URL contamination first
+      if (mimeType && mimeType.includes('data:')) {
+        mimeType = mimeType.split(';')[0].replace('data:', '');
       }
 
-      // Clean any data URL contamination
-      if (mimeType.includes('data:')) {
-        mimeType = mimeType.split(';')[0].replace('data:', '');
+      // If type is missing, incomplete (e.g. 'image'), or not a valid MIME, derive from extension
+      if (!mimeType || !mimeType.includes('/') || mimeType === 'image') {
+        mimeType = mimeMap[fileExtension] || 'image/jpeg';
       }
 
       // Convert to base64
