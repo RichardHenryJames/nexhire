@@ -3123,6 +3123,37 @@ if (!resumeId) {
       };
     }
   }
+
+  // ========================================================================
+  // PUSH TOKENS
+  // ========================================================================
+
+  /**
+   * Register a device push token
+   * @param {string} token - Expo push token
+   * @param {string} platform - 'ios' or 'android'
+   * @param {string} [deviceId] - Unique device identifier
+   * @param {string} [deviceName] - Human-readable device name
+   * @returns {Promise<Object>}
+   */
+  async registerPushToken(token, platform, deviceId, deviceName) {
+    return this.apiCall('/push-tokens/register', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform, deviceId, deviceName, provider: 'expo' }),
+    });
+  }
+
+  /**
+   * Unregister a device push token (on logout)
+   * @param {string} token - Expo push token to deactivate
+   * @returns {Promise<Object>}
+   */
+  async unregisterPushToken(token) {
+    return this.apiCall('/push-tokens/unregister', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
 }
 
 export default new RefOpenAPI();

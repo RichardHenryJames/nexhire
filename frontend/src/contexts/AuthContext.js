@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerForPushNotifications, clearPushToken } from '../services/pushNotifications';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
@@ -140,6 +141,18 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
   }, [pendingGoogleAuth]);
 
+  // Helper: register push token after login (non-blocking)
+  const registerForPushNotificationsOnLogin = async () => {
+    try {
+      const token = await registerForPushNotifications();
+      if (token) {
+        await refopenAPI.registerPushToken(token, Platform.OS);
+      }
+    } catch (e) {
+      console.warn('Push token registration failed:', e);
+    }
+  };
+
   const checkAuthState = async () => {
     try {
       setLoading(true);
@@ -151,6 +164,10 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
+          // Register for push notifications on native after auth
+          if (Platform.OS !== 'web') {
+            registerForPushNotificationsOnLogin();
+          }
           // Fetch verification status for job seekers - await to ensure it completes before loading ends
           if (result.data?.UserType === 'JobSeeker') {
             await refreshVerificationStatus();
@@ -534,6 +551,19 @@ export const AuthProvider = ({ children }) => {
     try {
       
       setLoading(true);
+
+      // Unregister push token on native before logout
+      if (Platform.OS !== 'web') {
+        try {
+          const token = await AsyncStorage.getItem('refopen_push_token');
+          if (token) {
+            await refopenAPI.unregisterPushToken(token);
+            await clearPushToken();
+          }
+        } catch (e) {
+          console.warn('Failed to unregister push token:', e);
+        }
+      }
       
       // Revoke Google tokens if user signed in with Google
       if (user?.LoginMethod === 'Google' || user?.GoogleId) {

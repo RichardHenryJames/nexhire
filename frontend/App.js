@@ -18,6 +18,11 @@ import { ToastHost } from './src/components/Toast';
 import TermsConsentModal from './src/components/modals/TermsConsentModal';
 import refopenAPI from './src/services/api';
 import { frontendConfig } from './src/config/appConfig';
+import {
+  configureForegroundHandler,
+  setupNotificationResponseListener,
+  registerForPushNotifications,
+} from './src/services/pushNotifications';
 
 // Activity Tracking Helper Functions
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -189,6 +194,19 @@ function ThemedAppRoot() {
 
     return () => subscription?.remove();
   }, [trackScreenView, trackScreenExit]);
+
+  // Set up push notifications on native (foreground handler + tap routing)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    // Configure how notifications display when app is in foreground
+    configureForegroundHandler();
+
+    // Set up notification tap handler (routes to correct screen)
+    const cleanup = setupNotificationResponseListener(navigationRef);
+
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
