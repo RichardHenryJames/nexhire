@@ -18,6 +18,7 @@ import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import { usePricing } from '../../contexts/PricingContext';
 
 // Animated percentage badge with fill effect
 const BonusPercentBadge = ({ percent }) => {
@@ -76,9 +77,11 @@ const BonusPercentBadge = ({ percent }) => {
 
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { pricing } = usePricing();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(null);
   const [showBankDetails, setShowBankDetails] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState(null);
 
   // Bonus Packs
   const [bonusPacks, setBonusPacks] = useState([]);
@@ -546,11 +549,75 @@ const ManualRechargeScreen = ({ navigation }) => {
         {/* Need Help */}
         <TouchableOpacity
           onPress={() => navigation.navigate('Support')}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginBottom: 20 }}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginBottom: 10 }}
         >
           <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
           <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Need Help?</Text>
         </TouchableOpacity>
+
+        {/* FAQ Section */}
+        <View style={{ marginBottom: 32 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 10, paddingHorizontal: 4 }}>Frequently Asked Questions</Text>
+          {[
+            {
+              q: 'Can I withdraw my wallet balance?',
+              a: 'No. Wallet balance is non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.',
+            },
+            {
+              q: 'How does manual recharge work?',
+              a: 'Scan the QR code or transfer to our UPI/bank account, then tap "Already Paid? Submit Details" to upload your payment proof. We\'ll verify and credit your wallet.',
+            },
+            {
+              q: 'How long does it take to credit my wallet?',
+              a: 'Manual payments are usually verified within 1 minute to 24 hours. You\'ll receive a notification once your wallet is credited.',
+            },
+            {
+              q: 'What details do I need to submit after paying?',
+              a: 'Your payment amount and a screenshot or UTR/transaction reference number from your payment app.',
+            },
+            {
+              q: 'Do I still get pack bonuses with manual payment?',
+              a: 'Yes! Select a pack before paying, and the bonus will be applied when your payment is verified.',
+            },
+            {
+              q: 'Can I recharge a custom amount?',
+              a: `Yes. Enter any custom amount — the minimum is ₹${settings?.minAmount || 1}.`,
+            },
+            {
+              q: 'What can I spend wallet balance on?',
+              a: `• Referral request at a specific company — ₹${pricing.referralRequestCost}\n• Open-to-any-company referral — ₹${pricing.openToAnyReferralCost}\n• AI Job Recommendations (${pricing.aiAccessDurationDays} days) — ₹${pricing.aiJobsCost}\n• Profile Views (${pricing.profileViewAccessDurationDays} days) — ₹${pricing.profileViewCost}`,
+            },
+            {
+              q: 'What happens when I request a referral?',
+              a: `When you request a referral, ₹${pricing.referralRequestCost} is placed on hold (not deducted). If a referrer picks up your request, the hold converts to a debit. If no one picks it up within 14 days, the full amount is automatically released back to your wallet.`,
+            },
+            {
+              q: 'Who is Rocana?',
+              a: 'Rocana is our payment processing partner. All bank/UPI transfers go through Rocana\'s verified accounts.',
+            },
+            {
+              q: 'My payment was not credited?',
+              a: 'Make sure you\'ve submitted payment proof via "Already Paid? Submit Details". If already submitted and not credited within 24 hours, contact us via "Need Help?".',
+            },
+          ].map((item, idx) => (
+            <View key={idx} style={{ backgroundColor: colors.surface, borderRadius: 10, marginBottom: 6, borderWidth: 1, borderColor: colors.border + '40' }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12 }}
+              >
+                <Text style={{ flex: 1, fontSize: 12, fontWeight: '600', color: colors.text, marginRight: 8 }}>{item.q}</Text>
+                <Ionicons name={expandedFaq === idx ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
+              </TouchableOpacity>
+              {expandedFaq === idx && (
+                <View style={{ paddingHorizontal: 12, paddingBottom: 12, paddingTop: 0 }}>
+                  <View style={{ height: 1, backgroundColor: colors.border + '30', marginBottom: 8 }} />
+                  <Text style={{ fontSize: 11, color: colors.gray500, lineHeight: 17 }}>{item.a}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
 
       </ScrollView>
     </SafeAreaView>
