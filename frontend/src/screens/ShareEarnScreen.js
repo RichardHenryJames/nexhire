@@ -67,7 +67,7 @@ export default function ShareEarnScreen() {
       <SubScreenHeader
         title="Share & Earn"
         icon="close"
-        directBack="Home"
+        fallbackTab="Home"
       />
 
       <ScrollView 

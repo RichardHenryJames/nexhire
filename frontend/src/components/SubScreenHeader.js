@@ -56,8 +56,14 @@ export default function SubScreenHeader({
       return;
     }
     // Tier 2: Direct navigate (non-tab parent, e.g. 'Wallet')
+    // Handles both tab screens (Home, Jobs, Profile etc.) and stack screens (Wallet)
     if (directBack) {
-      nav.navigate(directBack);
+      const TAB_SCREENS = ['Home', 'Jobs', 'AskReferral', 'Services', 'Notifications', 'Profile', 'CreateJob', 'ActionCenter', 'Admin'];
+      if (TAB_SCREENS.includes(directBack)) {
+        nav.navigate('Main', { screen: 'MainTabs', params: { screen: directBack } });
+      } else {
+        nav.navigate(directBack);
+      }
       return;
     }
     // Tier 3: goBack if history, else fallback to tab
