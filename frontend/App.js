@@ -1,5 +1,8 @@
+// gesture-handler MUST be the very first import for @react-navigation/stack on native
+import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -268,8 +271,10 @@ function ThemedAppRoot() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <ThemedAppRoot />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <ThemedAppRoot />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
