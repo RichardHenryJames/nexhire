@@ -487,6 +487,8 @@ function MainTabNavigator() {
           paddingVertical: 0,
         },
         headerShown: false,
+        lazy: true, // Only mount tab screens when first focused
+        freezeOnBlur: true, // Freeze inactive tabs to save memory
       })}
     >
       {/* Show Home tab for all users including Admin */}
